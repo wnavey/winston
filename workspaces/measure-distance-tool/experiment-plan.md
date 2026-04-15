@@ -153,6 +153,35 @@ npm run conduct -- \
 cp -r workspace/output/runs workspace/output/experiment-runs
 ```
 
+### Fixture replay — exercise `measure-distance.ts` without the agent loop
+
+For iterating on the tool layer in isolation (no Claude tokens, no review prompt),
+replay the exact 14 calls the agent made during the 2026-04-15 run against the
+current `measure-distance.ts`. Requires the `test-script` workflow (conductor
+checklist-driven script steps, noetic-inc/conductor#119) and the `test-script`
+bureau workflow YAML.
+
+Fixture: `winston/workspaces/measure-distance-tool/replay/fixtures/experiment-2026-04-15-all-calls.json`
+(14 cases: 8 that reached the Python script + 6 that were rejected at MCP
+validation — useful for verifying conductor#118's schema fix).
+
+```bash
+cd ~/code/controlroom/conductor
+rm -rf workspace/output/measure-distance-calls workspace/output/replay
+npm run conduct -- \
+  --workflow=test-script \
+  --scriptName=measure-distance \
+  --testCasesPath=/Users/winston/workspace/winston/workspaces/measure-distance-tool/replay/fixtures/experiment-2026-04-15-all-calls.json \
+  --maxParallel=3 \
+  --skip-upload
+cp -r workspace/output/measure-distance-calls \
+      /Users/winston/workspace/winston/workspaces/measure-distance-tool/replay/results-$(date +%Y%m%d-%H%M%S)/
+```
+
+One call-dir per test case in `workspace/output/measure-distance-calls/`; compare
+`localization.json` + any `measure-distance.json` against the same directories
+under `experiment-runs/measure-distance-calls/` for regressions.
+
 After the run, inspect individual calls at `workspace/output/measure-distance-calls/<callId>/`.
 
 ### Compare (once `compare-findings.ts` exists)
