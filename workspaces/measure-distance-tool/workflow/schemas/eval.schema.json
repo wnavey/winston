@@ -1,0 +1,44 @@
+{
+  "type": "object",
+  "properties": {
+    "discipline": {
+      "type": "string",
+      "description": "Discipline code (e.g., 'de')"
+    },
+    "discipline_name": {
+      "type": "string",
+      "description": "Full discipline name (e.g., 'Drainage Engineering')"
+    },
+    "evaluations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "atomic_issue_id": {
+            "type": "string",
+            "description": "From atomic-mcr.json (e.g., 'de-5-1')"
+          },
+          "caught": {
+            "type": "boolean",
+            "description": "Whether the agent caught this issue"
+          },
+          "finding_ref": {
+            "type": ["string", "null"],
+            "description": "The ref of the matching flagged finding (e.g., 'de-4:4-03'), or null if not caught"
+          },
+          "evidence": {
+            "type": "string",
+            "description": "1-2 sentence summary — quote the finding if caught, or explain why not caught"
+          },
+          "confidence": {
+            "type": "string",
+            "enum": ["high", "medium", "low"],
+            "description": "high: clear match/miss, medium: judgment call, low: needs human review"
+          }
+        },
+        "required": ["atomic_issue_id", "caught", "finding_ref", "evidence", "confidence"]
+      }
+    }
+  },
+  "required": ["discipline", "discipline_name", "evaluations"]
+}

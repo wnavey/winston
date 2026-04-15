@@ -1,0 +1,93 @@
+{
+  "grouping": "el-12",
+  "findings": [
+    {
+      "deficiencyId": "EL-12.50",
+      "status": "fail",
+      "codeCitations": [
+        "Reviewer Convention"
+      ],
+      "applicableAreas": [
+        "Entire site plan document set"
+      ],
+      "sheetReferences": [
+        {
+          "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+          "sheetNumber": 21
+        }
+      ],
+      "documentReferences": [],
+      "observation": "Sheet 21 is titled \"Preliminary Electrical Design Plan\" in its title block. However, there are no notes on the site plan sheets (specifically the cover sheet, general notes, or electrical design sheets) that state the electric facilities shown are conceptual and represent preliminary design, not final design.",
+      "reasoning": "The grouping guidance explicitly states that \"Plans showing conceptual electric facilities marked as 'final' or 'approved' must include disclaimers that facilities are conceptual and not for bidding purposes.\" Sheet 21 shows transformer pads, meters, and underground electric routing, but the preliminary status is only indicated in the sheet title, not in plan notes where it would be visible to contractors and reviewers. Without explicit textual disclaimers, there is ambiguity about the design status, which could lead to construction based on incomplete design specifications.",
+      "comment": "Plans showing \"Preliminary Electrical Design Plan\" must include a note stating that electric facilities are conceptual design and final design will be coordinated with Austin Energy. Add disclaimer language to the general notes or electrical sheets."
+    },
+    {
+      "deficiencyId": "EL-12.51",
+      "status": "fail",
+      "codeCitations": [
+        "Reviewer Convention"
+      ],
+      "applicableAreas": [
+        "Entire site plan document set"
+      ],
+      "sheetReferences": [
+        {
+          "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+          "sheetNumber": 21
+        }
+      ],
+      "documentReferences": [],
+      "observation": "Sheet 21 shows preliminary electrical design (transformer pads, underground routing, meters) but no note appears anywhere on the plans indicating that the electric facility layout shown should not be used for bidding purposes. The existing general notes and utility coordination notes do not include this disclaimer.",
+      "reasoning": "Preliminary designs are not construction-ready and contain assumptions subject to change. Construction contractors who bid based on preliminary electric design may face significant cost overruns or changes during final AE Design coordination. The absence of this note creates liability for the applicant and City. The grouping identifies this as a common violation pattern: \"Plans showing conceptual electric facilities...must include disclaimers that facilities are conceptual and not for bidding purposes.\"",
+      "comment": "Plans must include note stating that electric facility layout shown should not be used for bidding purposes and will be subject to final Austin Energy design coordination."
+    },
+    {
+      "deficiencyId": "EL-12.7",
+      "status": "fail",
+      "codeCitations": [
+        "UCM § 1.10.4"
+      ],
+      "applicableAreas": [
+        "Four transformer pad locations on the site"
+      ],
+      "sheetReferences": [
+        {
+          "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+          "sheetNumber": 21
+        }
+      ],
+      "documentReferences": [],
+      "observation": "Sheet 21 (Preliminary Electrical Design Plan) identifies four locations labeled \"Electrical Transformer Pad\": (1) west of Building 1 near Unit 101, (2) west of Building 8 near Unit 801, (3) south of Building 5 near Unit 504, and (4) north of Building 7 near Unit 705. All four pads are shown as simple squares with no dimension lines showing clearances to adjacent buildings, parking areas, walkways, or structures. The site plan shows driveways and parking areas in close proximity to these pads, but no distances are dimensioned.",
+      "reasoning": "UCM § 1.10.4 Table 1.10.4 specifies clearance requirements for pad-mounted equipment based on the type of adjacent structures and whether the equipment has operator/control access. Required clearances range from 3 feet (non-operator sides, non-brick/masonry buildings) to 10 feet (hot-stick use area). The absence of dimensioned clearances prevents verification that the design complies with these minimum setbacks and prevents determination of whether reduced clearances (3 feet instead of 5 feet) require AE Design written approval per UCM § 1.10.4 footnote 2. Building construction type (brick/masonry with 2-hour fire rating vs. non-brick/masonry) must be documented to determine which clearance column in Table 1.10.4 applies.",
+      "comment": "Provide dimensioned clearances from all four transformer pads to adjacent buildings, parking areas, driveways, and structures per UCM § 1.10.4 requirements (10 feet for hot-stick use area, 5 feet for sides with operators/controls, 3-5 feet for other sides depending on building construction type). Confirm building construction types if any clearances are less than standard requirements."
+    },
+    {
+      "deficiencyId": "EL-12.44",
+      "status": "fail",
+      "codeCitations": [
+        "UCM § 1.16.0(8)"
+      ],
+      "applicableAreas": [
+        "Transmission easement area (if transmission facilities present on site)"
+      ],
+      "sheetReferences": [
+        {
+          "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+          "sheetNumber": 3
+        },
+        {
+          "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+          "sheetNumber": 11
+        },
+        {
+          "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+          "sheetNumber": 31
+        }
+      ],
+      "documentReferences": [],
+      "observation": "Sheet 3 (General Notes) contains an extensive \"Electric Transmission Notes\" section with 16 numbered items covering transmission clearances, digging restrictions, access requirements, and construction safety. However, examination of Sheet 11 (Grading Plan) shows no transmission-related notes—only standard utility easement references and general drainage/construction notes. Sheet 31 (Landscape Plan) likewise contains no transmission-related notes; the blocks shown reference only irrigation notes, general landscape notes, and legend definitions, with no text addressing transmission facilities, clearance zones, or construction restrictions related to transmission.",
+      "reasoning": "UCM § 1.16.0(8) requires that transmission notes be included on \"coversheet, note page, grading plans, and landscape sheets when transmission facilities are present.\" The presence of comprehensive transmission notes on Sheet 3 suggests transmission facilities exist on or immediately adjacent to the site. Transmission facilities have substantially different access and construction restrictions than distribution facilities and require special contractor awareness and coordination with Austin Energy (per the 16 transmission notes on Sheet 3, including 48-hour pre-construction safety meeting, 25-foot clearance from structures, OSHA 20-foot clearance from energized lines, etc.). Contractors and workers reviewing the grading plan or landscape plan would have no awareness of these transmission-specific constraints, which creates a safety and compliance risk.",
+      "comment": "Add transmission notes to Sheet 11 (Grading Plan) and Sheet 31 (Landscape Plan) referencing the detailed transmission clearance and access requirements shown on the general notes sheet, or verify that transmission facilities do not exist and remove transmission notes from Sheet 3 if inapplicable."
+    }
+  ]
+}

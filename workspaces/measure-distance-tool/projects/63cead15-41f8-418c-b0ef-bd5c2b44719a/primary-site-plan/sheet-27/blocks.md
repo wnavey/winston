@@ -1,0 +1,372 @@
+# Sheet 27 — Content Blocks
+
+## Block 1: diagram — This is a detailed plan view drawing of a duplex grinder pump system. It shows the layout of the 60" diameter wet well, the two pumps, the piping and valves inside the valve vault, and the yard box for the cleanout. Arrows indicate the direction of flow. Key components are labeled with callouts.
+
+Duplex Grinder Pump Plan
+(Not to Scale)
+
+Flow
+Flow
+Gravity Flow
+Vent
+60" Dia.
+Wet Well
+Pumps
+
+Check
+Valve
+Gate
+Valve
+Valve Vault
+with Lid
+
+2" Brass Gate
+Valve with
+Threaded Plug
+
+Yard Box
+for Cleanout
+
+Reference Basin Detail
+for Detailed Design and
+Elevations
+
+## Block 2: diagram — This section contains three detailed drawings showing different views of a manhole invert. The top drawing is an "Example Manhole Invert Plan View". The middle drawing is a cross-section of the "Flowline of Outlet Pipe" and "Flowline of Inlet Pipe". The bottom drawing shows two cross-sections of "U-Shaped Inverts Elevation Views". The section includes dimensions, notes, and labels for the various components.
+
+AUSTIN WATER SPECIAL DETAIL (6/24/24)
+PRECAST CONCRETE WASTEWATER MANHOLE
+4 OF 5
+
+USE OF THIS SPECIAL DETAIL
+1. THE ENGINEER/ARCHITECT ASSUMES RESPONSIBILITY FOR APPROPRIATE USE OF THIS SPECIAL DETAIL. MODIFICATIONS TO THIS SPECIAL DETAIL ARE PROHIBITED.
+2. THIS SPECIAL DETAIL IS TEMPORARY AND IS TO BE USED UNTIL A NEW STANDARD DETAIL IS ADOPTED TO REPLACE IT.
+
+INVERT "U" SHAPED CONCRETE CHANNEL
+BENCH AREA SLOPED 1:12 TO DRAIN TO INVERT
+4" TO 8" STRAIGHT SECTION BEFORE RADIUS BEGINS
+
+EXAMPLE MANHOLE INVERT PLAN VIEW
+
+FLOWLINE OF OUTLET PIPE
+SLIDE "U" SHAPED OR FILLET TO PROVIDE A SMOOTH TRANSITION FROM INLET TO OUTLET FLOWLINES
+
+FLOWLINE OF INLET PIPE
+NOTE:
+ELEVATION CHANGES OF MORE THAN 24" REQUIRE AN INTERNAL DROP STRUCTURE PER 506-AW-02
+
+BENCH (18" MIN. FOR PIPE 30" - 36")
+
+BENCH
+
+MIN. DEPTH IS 3/4 OF PIPE DIAMETER
+
+PIPE(S) ≤ 24"
+
+NOTE:
+DEPTH IS THE FULL PIPE DIAMETER
+1. TOP OF BENCH SHALL SLOPED 1:12 TO DRAIN AT LEAST 1/2" FALL PER FOOT
+2. PIPE LARGER THAN 36" DIAMETER REQUIRE SPECIAL DETAIL
+
+PIPE(S) 30" - 36"
+SEE NOTE 2
+
+U-SHAPED INVERTS ELEVATION VIEWS
+
+## Block 3: diagram — This is a detailed drawing showing the cross section of a typical precast base for a precast concrete wastewater manhole per Austin Water Special Detail (6/24/24). It includes dimensions, material specifications, and notes for the foundation, pipe connections, and manhole structure.
+
+AUSTIN WATER SPECIAL DETAIL (6/24/24)
+PRECAST CONCRETE WASTEWATER MANHOLE
+TYPICAL PRECAST BASE
+2 OF 5
+
+USE OF THIS SPECIAL DETAIL
+1. THE ENGINEER/ARCHITECT ASSUMES RESPONSIBILITY FOR APPROPRIATE USE OF THIS SPECIAL DETAIL. MODIFICATIONS TO THIS SPECIAL DETAIL ARE PROHIBITED.
+2. THIS SPECIAL DETAIL IS TEMPORARY AND IS TO BE USED UNTIL A NEW STANDARD DETAIL IS ADOPTED TO REPLACE IT.
+
+INSIDE DIAMETER
+48" MINIMUM
+72" MAXIMUM
+
+FOR WATERTIGHT MANHOLE - EXTERNAL JOINT WRAP PER SPL WW-146A AS REQUIRED PER PLAN AND UCM 2.9.4 AND WHEN GROUNDWATER IS ENCOUNTERED
+
+PIPE TO MANHOLE CONNECTOR PER SPL WW-146D (TYP.)
+FILL ANNULAR SPACE WITH NON-SHRINK GROUT
+PIPE TO END WITHIN WALL OF MANHOLE
+SMOOTH CONTINUOUS FLOW FROM IN-FLOW PIPE TO OUT-FLOW PIPE
+NEW PIPE SDR 26 PVC (TYP.)
+
+12" MIN.
+
+6" THICK LAYER (USING 1" MIN. COURSE AGGREGATE) TO EXTEND 12" MIN. ALL AROUND MANHOLE BASE
+COATING PER SPL WW-511
+PRECAST BASE PER SPL WW-146
+
+1:12 SLOPE
+1:12 SLOPE
+
+12" MIN.
+
+FOUNDATION
+U-SHAPED PIPE INVERT PER COA STD. SPEC. 506.5 AND SPL WW-146
+
+NOTES:
+1. THE CONTRACTOR SHALL LEVEL AND PLUMB THE BASE PRIOR TO SETTING THE PRECAST MANHOLE RISER SECTIONS ON THE PRECAST CONCRETE BASE.
+2. MANHOLE FOUNDATION SHALL MEET OR EXCEED COA STD. SPEC. 506.5B.
+
+## Block 4: diagram — This detail illustrates the cross-section of a manhole installation outside of pavement, showing the placement of the cover, bolted connections, foam, primer, adhesive, and the typical wedge seal, along with lining and precast section specifications.
+
+32" BOLTED COVER
+ADHESIVE
+FOAM
+PRIMER
+EXIST. GROUND
+TOP FLANGE RING AND 32" BOLTED
+COVER PER SPL WW-219
+MANHOLE SEAL PER
+SPL WW-146A, ENCAPSEAL
+34 1/2" ± 1/2"
+TYPICAL WEDGE
+SEAL PER SPL
+WW-146C
+PRECAST SECTION
+PER SPL WW-146
+80 MIL. LINING OF SPL
+WW-511 PRODUCT OR
+1/4 TO 1/2 INCH OF SPL
+WW-511B PRODUCT
+INSIDE DIAMETER
+48" MINIMUM
+72" MAXIMUM
+D 6" - 12" FOR MANHOLE LOCATED
+IN 100-YEAR FLOODPLAIN.
+2" - 12" FOR MANHOLE LOCATED
+OUTSIDE 100-YEAR FLOODPLAIN.
+NOTE:
+1. FOR USE IN UNPAVED AREAS ONLY.
+OUTSIDE PAVEMENT DETAIL
+
+## Block 5: diagram — This is a detailed drawing showing the cross section of a typical cast in place base for a precast concrete wastewater manhole per Austin Water Special Detail (6/24/24). It includes dimensions, material specifications, and notes for the foundation, pipe connections, and manhole structure.
+
+AUSTIN WATER SPECIAL DETAIL (6/24/24)
+PRECAST CONCRETE WASTEWATER MANHOLE
+TYPICAL CAST IN PLACE BASE
+3 OF 5
+
+USE OF THIS SPECIAL DETAIL
+1. THE ENGINEER/ARCHITECT ASSUMES RESPONSIBILITY FOR APPROPRIATE USE OF THIS SPECIAL DETAIL. MODIFICATIONS TO THIS SPECIAL DETAIL ARE PROHIBITED.
+2. THIS SPECIAL DETAIL IS TEMPORARY AND IS TO BE USED UNTIL A NEW STANDARD DETAIL IS ADOPTED TO REPLACE IT.
+
+INSIDE DIAMETER
+48" MINIMUM
+72" MAXIMUM
+
+FOR WATERTIGHT MANHOLE - EXTERNAL JOINT WRAP PER SPL WW-146A AS REQUIRED PER PLAN AND UCM 2.9.4 AND WHEN GROUNDWATER IS ENCOUNTERED
+
+12" MIN. (TYP.)
+PIPE TO BE CUT AND REMOVED AFTER CONCRETE IS CURED AND VACUUM TEST HAS BEEN PASSED
+EXISTING PIPE
+
+FIELD APPLIED WATERSTOP - CONTINUOUS BEAD, SPL WW-146A ADEKA P-201
+6" THICK LAYER (USING 1" MIN. COURSE AGGREGATE) TO EXTEND 12" MIN. ALL AROUND MANHOLE BASE
+CLASS A (3000 PSI) CONCRETE, PER COA STD. SPEC. 403S.6
+
+1:12 SLOPE
+1:12 SLOPE
+
+SOLID CMU BLOCKS MAY BE UTILIZED TO SUPPORT SECTION (4 STACKS MAX., EVENLY SPACED)
+CONCRETE INVERT SHAPED BY CONTRACTOR
+
+12" THICK MIN.
+U-SHAPED PIPE INVERT PER COA STD. DETAIL 506-AW-01, PAGE 4
+
+NOTES:
+1. FOR USE ONLY WHEN MANHOLE IS INSTALLED ON EXISTING MAIN.
+2. ALL PVC PIPE SHALL BE REMOVED FROM INVERT.
+3. CIP SECTION SHALL BE PLACED PLUMB, LEVEL, AND CONCRETE HAS ADEQUATELY CURED PRIOR TO SETTING ANY ADDITIONAL RISER SECTIONS.
+4. MANHOLE FOUNDATION SHALL MEET OR EXCEED COA STD. SPEC. 506.5B.
+5. DOGHOUSE MANHOLES NOT ALLOWED.
+
+## Block 6: diagram — This section contains three detailed drawings showing different views of a precast concrete wastewater manhole. The top drawing is a top view showing the invert "U" shaped concrete channel, the 1:12 slope, and the direction of flow. The middle drawing is a side view showing the precast base, the foundation, the pipe to manhole connector, and the invert "U" shaped concrete channel. Key dimensions and notes are included.
+
+AUSTIN WATER SPECIAL DETAIL (6/24/24)
+PRECAST CONCRETE WASTEWATER MANHOLE
+5 OF 5
+
+USE OF THIS SPECIAL DETAIL
+1. THE ENGINEER/ARCHITECT ASSUMES RESPONSIBILITY FOR APPROPRIATE USE OF THIS SPECIAL DETAIL. MODIFICATIONS TO THIS SPECIAL DETAIL ARE PROHIBITED.
+2. THIS SPECIAL DETAIL IS TEMPORARY AND IS TO BE USED UNTIL A NEW STANDARD DETAIL IS ADOPTED TO REPLACE IT.
+
+PIPE FACE CUT FLUSH TO WALL
+INVERT "U" SHAPED CONCRETE CHANNEL
+LESS THAN OR EQUAL TO 12"
+1:12 SLOPE PER ARROWS
+DIRECTION OF FLOW
+TOP VIEW
+
+INSIDE DIAMETER
+48" MINIMUM
+72" MAXIMUM
+
+6" THICK LAYER (USING 1" MIN. COURSE AGGREGATE) TO EXTEND 12" MIN. ALL AROUND MANHOLE BASE
+INVERT "U" SHAPED CONCRETE CHANNEL
+PIPE TO END WITHIN WALL OF MANHOLE
+MIN. 2% FALL
+PIPE TO MANHOLE CONNECTOR PER SPL WW-146D (TYP.)
+12" MIN.
+
+FOUNDATION
+SIDE VIEW
+
+END MANHOLE ON PRECAST BASE
+
+## Block 7: diagram — This detail shows the cross-section of a manhole installation inside pavement, detailing the placement of non-shrink grout, adjusting rings, liner, wedges, and covers, along with dimensions and specific product references.
+
+REUSE MANHOLE RING AND COVER
+FOR MINOR ADJUSTMENTS
+BOTTOM FLANGE RING AND 32"
+COVER PER SPL WW-219
+PAVEMENT REPAIR PER STD.
+DETAIL 1100S-1 (TYP.)
+34 1/2" ± 1/2"
+GRADE RINGS AS NEEDED
+PER. SPL WW-146G OR
+CONCRETE
+18" MIN.
+3" MIN. (ONE RING)
+21" MAX. FOR NEW
+24" MAX. FOR
+ADJUSTMENT
+NON-SHRINK GROUT
+PER SPL WW-704A IF
+USING CONCRETE
+GRADE RINGS
+80 MIL. LINING OF SPL
+WW-511 PRODUCT OR
+1/4 TO 1/2 INCH OF SPL
+WW-511B PRODUCT
+TYPICAL WEDGE SEAL
+PER SPL WW-146C
+PRECAST SECTION
+PER SPL WW-146
+INSIDE DIAMETER
+48" MINIMUM
+72" MAXIMUM
+NOTES:
+1. NON-SHRINK GROUT SHALL NOT
+EXCEED 1" IN ANY DIMENSION.
+2. IF ADJUSTMENT WILL RESULT IN
+CHIMNEY HEIGHT EXCEEDING
+24", CONE MUST BE REMOVED,
+ADDITIONAL RISER INSTALLED
+AND CONE REINSTALLED.
+3. FOR USE IN PAVED AREAS
+ONLY. USE DETAIL 1100S-1 FOR
+PORTLAND CEMENT CONCRETE
+OPTION OR HMAC OPTION.
+INSIDE PAVEMENT DETAIL
+
+## Block 8: diagram — This is a detailed profile drawing of a duplex grinder pump system. It shows the pump well, the pumps, the piping layout, valves, the valve vault, and the vent piping. Key components are labeled with callouts and notes. The drawing includes a "Reference Basin Detail for Detailed Design and Elevations" callout.
+
+Duplex Grinder Pump Profile
+(Not to Scale)
+
+3" Vent Piping
+
+10' Min.
+
+Fiberglass
+Pump Well
+
+-Pump Off
+
+-Pump On
+
+-Alarm Level
+
+Guide Rail
+-Lifting Chain
+
+Frame and Hatch
+Bilco J-4M H2O
+With Locking Hasp
+or Approved Equal
+
+Gate
+Valve
+Check
+Valve
+
+2" Isolation Valve
+
+Sump
+
+Reference Basin Detail
+for Detailed Design and
+Elevations
+
+Valve Vault
+With Lid
+
+2" Threaded
+Plug (Typ.)
+
+12" Thick
+Concrete
+Fill Base
+
+-PVC Male Adapter
+
+Cleanout
+
+Gravel Fill
+
+2" Brass
+Gate Valve
+With Female
+Threads (Typ.)
+
+2" Air Release Valve
+after Gate Valve
+
+Yard Box For Cleanout
+
+2 Layers Builder Felt
+Between Concrete & Pipe
+
+## Block 9: notes — Notes for the typical cast in place base detail, specifying conditions for use, pipe removal, placement of CIP section, foundation requirements, and prohibiting doghouse manholes.
+
+NOTES:
+1. FOR USE ONLY WHEN MANHOLE IS INSTALLED ON EXISTING MAIN.
+2. ALL PVC PIPE SHALL BE REMOVED FROM INVERT.
+3. CIP SECTION SHALL BE PLACED PLUMB, LEVEL, AND CONCRETE HAS ADEQUATELY CURED PRIOR TO SETTING
+ANY ADDITIONAL RISER SECTIONS.
+4. MANHOLE FOUNDATION SHALL MEET OR EXCEED COA STD. SPEC. 506.5B.
+5. DOGHOUSE MANHOLES NOT ALLOWED.
+
+## Block 10: notes — Notes for the inside pavement detail, specifying limits on non-shrink grout, procedures for adjustments exceeding 24 inches, and conditions for use in paved areas.
+
+NOTES:
+1. NON-SHRINK GROUT SHALL NOT
+EXCEED 1" IN ANY DIMENSION.
+2. IF ADJUSTMENT WILL RESULT IN
+CHIMNEY HEIGHT EXCEEDING
+24", CONE MUST BE REMOVED,
+ADDITIONAL RISER INSTALLED
+AND CONE REINSTALLED.
+3. FOR USE IN PAVED AREAS
+ONLY. USE DETAIL 1100S-1 FOR
+PORTLAND CEMENT CONCRETE
+OPTION OR HMAC OPTION.
+
+## Block 11: notes — Notes for the typical precast base detail, instructing the contractor to level and plumb the base and specifying foundation requirements.
+
+NOTES:
+1. THE CONTRACTOR SHALL LEVEL AND PLUMB THE BASE PRIOR TO SETTING THE PRECAST MANHOLE RISER
+SECTIONS ON THE PRECAST CONCRETE BASE.
+2. MANHOLE FOUNDATION SHALL MEET OR EXCEED COA STD. SPEC. 506.5B.
+
+## Block 13: text_block — A single note for the outside pavement detail, indicating it is for use in unpaved areas only.
+
+NOTE:
+1. FOR USE IN UNPAVED AREAS ONLY.
+

@@ -1,0 +1,194 @@
+# Review Workflow - N independent review passes with cross-run consolidation
+name: review-4.3
+description: Ensemble review — runs N independent Haiku passes and consolidates findings with confidence tiers. Adds measure-distance ruler tool for clearance verification.
+version: 4.3.0
+
+requiredEnv:
+  - OPENAI_API_KEY
+
+# Resources to prepare in workspace/ before starting workflow
+resources:
+  bureau: true
+  submissionVersion: "{{ input.submissionVersionId }}"
+  python: true
+
+# Input parameters
+inputs:
+  submissionVersionId:
+    type: string
+    required: true
+    description: Submission version ID from Supabase
+  jurisdiction:
+    type: string
+    required: true
+    description: Jurisdiction slug (e.g., 'austin')
+  guideCode:
+    type: string
+    required: true
+    description: Discipline code (e.g., 'de', 'tr', 'fire')
+  runs:
+    type: number
+    required: false
+    default: 3
+    description: Number of independent review runs
+  model:
+    type: string
+    required: false
+    default: claude-haiku-4-5-20251001
+    description: Model to use for review runs (cheap model — ensemble trades cost per run for N repetitions)
+  effort:
+    type: string
+    required: false
+    description: Agent effort level (low, medium, high). Only applied for models that support it (4.6+).
+  eval:
+    type: boolean
+    required: false
+    default: false
+    description: Run evaluation against atomic MCR after review completes
+  mcrFilename:
+    type: string
+    required: false
+    default: atomic-mcr.json
+    description: Filename of atomic MCR in Supabase eval-data folder (e.g., atomic-mcr-2.json for discipline-keyed MCR)
+  structureComments:
+    type: boolean
+    required: false
+    default: true
+    description: Run comment-structuring agent to organize findings into formatted review comments
+
+# Where to upload when done
+upload:
+  bucket: workflow-runs
+  prefix: "review/{{ input.projectId }}/{{ input.guideCode }}/{{ datetime }}"
+
+# Save eval scoring to workflow_runs.results (only written when file exists)
+results: "{{ WORKSPACE_PATH }}/output/eval/scoring.json"
+
+# Save review comments to reviews/review_sections/review_comments tables (only when file exists)
+review: "{{ WORKSPACE_PATH }}/output/review-comments.json"
+
+# Sequential steps
+steps:
+  # Step 1: Run N independent review passes in parallel across all checklist items
+  - name: review-runs
+    agent:
+      model: "{{ input.model }}"
+      effort: "{{ input.effort }}"
+      prompt: review.md
+    tools:
+      - vision
+      - script:measure-distance
+    checklistItems: "{{ WORKSPACE_PATH }}/bureau/jurisdictions/{{ input.jurisdiction }}/review-guides/{{ input.guideCode }}/*.md"
+    runs: "{{ input.runs }}"
+    schema: review.schema.json
+    output: "{{ WORKSPACE_PATH }}/output/runs/{{ runIndex }}/findings/{{ checklistItem }}.json"
+    retries: 2
+    maxWorkers: 30
+
+  # Step 2: Cross-run consolidation — flatten per-item findings, match across runs, assign confidence tiers
+  - name: cross-run-consolidate
+    script:
+      name: cross-run-consolidate
+      args:
+        runsDir: "{{ WORKSPACE_PATH }}/output/runs"
+        outputPath: "{{ WORKSPACE_PATH }}/output/consolidated-findings.json"
+        runCount: "{{ input.runs }}"
+
+  # Step 3: Download atomic MCR for evaluation (conditional - only if eval=true)
+  - name: download-atomic-mcr
+    if: "{{ input.eval }}"
+    script:
+      name: download-atomic-mcr
+      args:
+        projectId: "{{ input.projectId }}"
+        outputPath: "{{ WORKSPACE_PATH }}/atomic-mcr.json"
+        filename: "{{ input.mcrFilename }}"
+    retries: 2
+
+  # Step 4: Cluster findings by semantic similarity + code citations
+  - name: cluster-findings
+    if: "{{ input.structureComments }}"
+    script:
+      name: cluster-findings
+      args:
+        inputFile: "{{ WORKSPACE_PATH }}/output/consolidated-findings.json"
+        outputFolder: "{{ outputPath }}/comment-clusters"
+        maxClusterSize: 20
+
+  # Step 5: Parallel agents structure comments for each cluster
+  - name: structure-comments
+    if: "{{ input.structureComments }}"
+    agent:
+      model: claude-sonnet-4-6
+      prompt: structure-comments.md
+    inject:
+      clusterData:
+        file: "{{ outputPath }}/comment-clusters/{{ checklistItem }}"
+    checklistItems: "{{ outputPath }}/comment-clusters/*.json"
+    schema: structure-comments.schema.json
+    output: "{{ outputPath }}/structured-comments/{{ checklistItem }}"
+    maxWorkers: 20
+    retries: 2
+
+  # Step 6: Rejoin split cluster outputs before downstream steps
+  - name: join-structured-comments
+    if: "{{ input.structureComments }}"
+    script:
+      name: join-structured-comments
+      args:
+        commentsFolder: "{{ outputPath }}/structured-comments"
+
+  # Step 7: Build lightweight manifest for the organize-sections agent
+  - name: build-comments-manifest
+    if: "{{ input.structureComments }}"
+    script:
+      name: build-comments-manifest
+      args:
+        commentsFolder: "{{ outputPath }}/structured-comments"
+        outputFile: "{{ outputPath }}/comments-manifest.json"
+
+  # Step 8: Single agent groups comments into reviewer-coherent sections
+  - name: organize-sections
+    if: "{{ input.structureComments }}"
+    agent:
+      model: claude-haiku-4-5-20251001
+      prompt: organize-sections.md
+    schema: section-assignments.schema.json
+    output: "{{ outputPath }}/section-assignments.json"
+
+  # Step 9: Deterministic merge — assemble final review-comments.json
+  - name: merge-structured-comments
+    if: "{{ input.structureComments }}"
+    script:
+      name: merge-structured-comments
+      args:
+        commentsFolder: "{{ outputPath }}/structured-comments"
+        assignmentsFile: "{{ outputPath }}/section-assignments.json"
+        factsFile: "{{ WORKSPACE_PATH }}/projects/{{ input.projectId }}/facts.md"
+        outputFile: "{{ outputPath }}/review-comments.json"
+        bureauCommitHash: "{{ bureauCommitHash }}"
+        bureauArtifactPath: "jurisdictions/{{ input.jurisdiction }}/review-guides/{{ input.guideCode }}"
+
+  # Step 10: Per-run evaluations — score each independent run against atomic MCR (parallel)
+  - name: evaluate-per-run
+    if: "{{ input.eval }}"
+    agent:
+      model: claude-opus-4-6
+      prompt: eval-per-run.md
+    checklistSource: "{{ WORKSPACE_PATH }}/output/runs/runs-manifest.json"
+    checklistKey: runs
+    schema: eval.schema.json
+    output: "{{ WORKSPACE_PATH }}/output/eval/scoring-{{ checklistItem }}.json"
+    retries: 2
+    maxWorkers: 4
+
+  # Step 11: Merge per-run evals and compute union recall deterministically
+  # Union = issue caught if ANY run caught it
+  - name: merge-and-score-evals
+    if: "{{ input.eval }}"
+    script:
+      name: merge-and-score-evals
+      args:
+        runsDir: "{{ WORKSPACE_PATH }}/output/eval"
+        outputPath: "{{ WORKSPACE_PATH }}/output/eval/scoring.json"
+        runCount: "{{ input.runs }}"
