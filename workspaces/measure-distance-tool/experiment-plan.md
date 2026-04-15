@@ -9,6 +9,24 @@ The delta between the two isolates the tool's contribution to finding quality on
 
 ---
 
+## Status
+
+| # | Change | Status | Landed in |
+|---|---|---|---|
+| 1 | Trimmed guide folder `el-md-exp/` (7 invoking + 3 control items) | ✅ done | noetic-inc/bureau#218 |
+| 2 | Copy measure-distance scripts + python deps into `review/` | ✅ done | noetic-inc/bureau#218 |
+| 3 | Experiment overlay `review/experiments/measure-distance/` | ✅ done | noetic-inc/bureau#218 |
+| 4 | `python: true` in `review/workflow.yaml` resources | ✅ done | noetic-inc/bureau#218 |
+| 5 | Conductor `--experiment=<name>` flag + overlay loader | ✅ done | noetic-inc/conductor#116 |
+| 6 | `compare-findings.ts` script (baseline vs experiment diff) | ⬜ pending | — |
+
+**Verified IDs for Valley View Townhomes:**
+- Project: `63cead15-41f8-418c-b0ef-bd5c2b44719a`
+- Submission: `8fea702d-952c-4aa0-ab00-f848d8abf5b6`
+- Submission version (v1, only version): `55fb6548-814f-4287-bc4a-6018b756d730`
+
+---
+
 ## Design
 
 ### Experiment overlay pattern
@@ -114,35 +132,69 @@ Standalone — not a conductor step. Easier to iterate on.
 
 ## Running an experiment
 
+All commands run from `~/code/controlroom/conductor`.
+
+### Baseline — no measure-distance tool
+
 ```bash
-cd conductor
-
-# ---- BASELINE (no measure-distance) ----
+cd ~/code/controlroom/conductor
 rm -rf workspace/output/runs
-npm run conduct -- --workflow=review --guide-code=el-md-exp \
-  --submission-version-id=<SVD_ID> --step=review-runs --runs=3 --skip-upload
+npm run conduct -- \
+  --workflow=review \
+  --guide-code=el-md-exp \
+  --submission-version-id=55fb6548-814f-4287-bc4a-6018b756d730 \
+  --step=review-runs \
+  --runs=3 \
+  --skip-upload
 cp -r workspace/output/runs workspace/output/baseline-runs
-
-# ---- EXPERIMENT (with measure-distance) ----
-rm -rf workspace/output/runs
-npm run conduct -- --workflow=review --guide-code=el-md-exp \
-  --submission-version-id=<SVD_ID> --step=review-runs \
-  --experiment=measure-distance --runs=3 --skip-upload
-
-# ---- COMPARE ----
-npx tsx scripts/compare-findings.ts \
-  --baseline=workspace/output/baseline-runs \
-  --experiment=workspace/output/runs
 ```
 
-Iterating on the tool → change `measure-distance.ts` or the experiment's `review.md` → rerun just the experiment half → rerun compare. Baseline only needs to be regenerated if the guide set or model changes.
+### Experiment — with measure-distance tool
+
+```bash
+cd ~/code/controlroom/conductor
+rm -rf workspace/output/runs
+npm run conduct -- \
+  --workflow=review \
+  --guide-code=el-md-exp \
+  --submission-version-id=55fb6548-814f-4287-bc4a-6018b756d730 \
+  --step=review-runs \
+  --experiment=measure-distance \
+  --runs=3 \
+  --skip-upload
+cp -r workspace/output/runs workspace/output/experiment-runs
+```
+
+### Compare (once `compare-findings.ts` exists)
+
+```bash
+cd ~/code/controlroom/conductor
+npx tsx scripts/compare-findings.ts \
+  --baseline=workspace/output/baseline-runs \
+  --experiment=workspace/output/experiment-runs
+```
+
+### Iteration loop
+
+Changing `measure-distance.ts` or the experiment's `review.md` → rerun just the experiment block → rerun compare. Baseline only needs to be regenerated if the guide set or model changes.
+
+### Resuming a partial run
+
+If a run fails partway (e.g. rate limits or auth failure on a few checklist items):
+
+```bash
+cd ~/code/controlroom/conductor
+npm run conduct -- --resume --reset-failed
+```
+
+`--resume` reads the saved step from `workspace/workflow/status.json`; `--reset-failed` puts failed checklist items back in the queue.
 
 ---
 
 ## Blockers / unknowns
 
-1. **Submission version ID**: the Valley View Townhomes SVD_ID is needed. Project ID `63cead15-41f8-418c-b0ef-bd5c2b44719a` is already present in `conductor/workspace/projects/`.
+1. ~~**Submission version ID**~~ ✅ resolved: `55fb6548-814f-4287-bc4a-6018b756d730`.
 2. **Vercel AI Gateway key**: `measure-distance.ts` calls `gateway('google/gemini-3.1-pro-preview')`. Confirm `VERCEL_AI_GATEWAY_SECRET` (or equivalent) is in `conductor/.env`.
 3. **Timeouts**: the 2026-04-15 run had 13/19 measure-distance calls time out at the `createScriptTool` 120s cap. Options: increase the cap, or accept timeouts as useful signal — they already surface in the compare report as "tool unavailable" outcomes.
-4. **Control-group guide items**: see open question under change #1.
-5. **Cost**: 7 items × 3 runs × 2 variants = 42 agent invocations. Cheap on Haiku 4.5. Measure-distance adds Gemini Vision costs per tool call.
+4. **Control-group guide items**: landed with 3 controls (`1.md`, `5.md`, `10.md`) alongside the 7 invoking items. Easy to drop if noisy.
+5. **Cost**: 10 items × 3 runs × 2 variants = 60 agent invocations. Cheap on Haiku 4.5. Measure-distance adds Gemini Vision costs per tool call.
