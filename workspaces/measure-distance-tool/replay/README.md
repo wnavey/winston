@@ -49,10 +49,16 @@ the `measure-distance.ts` script layer without paying the agent-loop cost.
 }
 ```
 
-Fields consumed by `measure-distance.ts` when invoked as a script step:
-`documentId`, `sheetNum`, `objectA`, `objectB`, `scaleInchesPerFoot`. (The
-script infers `projectId` from the workspace, so the `projectId` field here is
-belt-and-suspenders.)
+Fields consumed by `measure-distance.ts` when invoked as a script step from
+the `test-script` workflow: `projectId`, `documentId`, `sheetNum`, `objectA`,
+`objectB`, `scaleInchesPerFoot`.
+
+Note: during a real `review` run, `measure-distance.ts` infers `projectId`
+from `workspace/projects/` (populated by the `submissionVersion` resource).
+The `test-script` workflow (`bureau/jurisdictions/austin/workflows/test-script/`)
+deliberately skips that resource — the fixture predetermines all lookups — so
+each test case must provide `projectId` explicitly. The fixture here already
+includes it for all 14 cases.
 
 ## Running the replay
 
