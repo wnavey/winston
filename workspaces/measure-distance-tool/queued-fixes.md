@@ -31,6 +31,7 @@ Tracks fixes shipped since the last experiment run, so the next run captures all
 | **#223** | 2026-04-15 | `test-script` workflow: replay a script over a JSON fixture without agent loop | Infrastructure for faster iteration |
 | **#224** | 2026-04-15 | `test-script` workflow: pass `projectId` from fixture through to script args | All 14 replay cases failed with "projectId not provided" |
 | **#225** | 2026-04-16 | **Prompt: measure before defaulting to not-verifiable** — explicit instruction to use the tool when plans lack dimensions; systematic coverage guidance; scale parameter must be numeric with examples (`0.05` for 1"=20') | Issues #3 (agent under-usage), #4 (wrong scale values) |
+| **#226** | 2026-04-16 | **Fix DB queries: wrong table + column names** — `plan_set_version_sheet` table renamed to `sheet_version`; `file_path`/`thumbnail_path` columns renamed to `storage_path`/`thumbnail_storage_path`. All three queries silently failed on every call. | Issues #1 (drawing block cropping) and #2 (legend identification) — both now unblocked |
 
 ### Conductor
 
@@ -50,13 +51,14 @@ With all the above merged, the next `--experiment=measure-distance` run should s
 1. **Dramatically more tool invocations** — prompt now says "measure before marking not-verifiable" and "systematically measure every applicable pair." Target: 50+ calls (up from 14).
 2. **Correct scale values** — prompt gives explicit numeric examples (`0.05`, `0.025`). Target: zero "1 inch = 20 feet" strings, zero bare `"1"` values.
 3. **Meaningful distances** — with correct scale, the Python compute-distance step should produce real-world-plausible measurements (e.g., 5-20 ft for transformer-to-building clearances).
-4. **Rich per-call artifacts** — every call produces `prompt.txt`, `cropped.jpg`, `response.txt`, `localization.json`, `metadata.json`, `debug.png`, `events.jsonl` in a unique call directory.
-5. **Attribution** — each call's metadata includes `checklistItem` and `runIndex` from conductor env vars.
+4. **Drawing-block cropping** — Gemini receives a cropped JPEG of just the drawing area (~77%×60% for sheet 21) instead of the full page with title blocks. Higher effective resolution for feature localization.
+5. **Legend context** — Gemini gets symbol descriptions from the sheet 31 "Key notes" block. Should improve identification of landscape symbols, OHE markers, etc.
+6. **Rich per-call artifacts** — every call produces `prompt.txt`, `cropped.jpg`, `response.txt`, `localization.json`, `metadata.json`, `debug.png`, `events.jsonl` in a unique call directory.
+7. **Attribution** — each call's metadata includes `checklistItem` and `runIndex` from conductor env vars.
 
 ### Still NOT fixed for next run (known limitations)
 
-- **No drawing-block cropping** (issue #1) — full page still sent to Gemini
-- **No legend context** (issue #2) — most sheets return `legendSource: "none"`
+- **Generic tool schema** — agent sees `args: Record<string, any>` with no per-field types or descriptions. A typed schema would enforce required fields, reject bad scale values at the MCP level, and give per-field guidance. Requires a conductor change to `createScriptTool`.
 - **Option A still a stub** (issue #8) — every call goes through Gemini
 - **No Gemini timeout** (issue #9) — pathological 200s+ calls still possible
 - **Python 90s timeout unchanged** (issue #7) — Option A still wastes 60-80s before failing
