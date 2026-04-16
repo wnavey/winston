@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>measure-distance viewer</title>
+<style>
+  :root {
+    --bg: #fafafa;
+    --panel: #fff;
+    --border: #e3e3e3;
+    --text: #1f2328;
+    --muted: #6b7280;
+    --accent: #2e7d32;
+    --accent-bg: rgba(46, 204, 113, 0.18);
+    --accent-stroke: rgba(46, 204, 113, 0.9);
+    --accent-active-bg: rgba(46, 204, 113, 0.38);
+    --bad: #c0392b;
+    --warn: #d68910;
+    --good: #1e8449;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: var(--text); background: var(--bg); }
+
+  body { display: flex; height: 100vh; }
+
+  /* ── LEFT NAV ── */
+  #nav { width: 280px; flex: 0 0 280px; background: var(--panel); border-right: 1px solid var(--border); overflow-y: auto; padding: 12px 0; }
+  #nav h1 { font-size: 13px; font-weight: 600; color: var(--muted); margin: 0 16px 8px; text-transform: uppercase; letter-spacing: 0.05em; }
+  #nav .run-head { font-size: 12px; color: var(--muted); margin: 12px 16px 4px; font-weight: 600; }
+  #nav ul { list-style: none; margin: 0; padding: 0; }
+  #nav li { padding: 8px 16px; cursor: pointer; border-left: 3px solid transparent; font-size: 13px; line-height: 1.3; }
+  #nav li:hover { background: #f3f4f6; }
+  #nav li.active { background: #eef6f0; border-left-color: var(--accent); }
+  #nav li .case-id { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; display: block; }
+  #nav li .case-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .pill { display: inline-block; padding: 1px 6px; border-radius: 8px; font-size: 10px; font-weight: 600; letter-spacing: 0.02em; }
+  .pill.good { background: #e7f5ea; color: var(--good); }
+  .pill.bad { background: #fdecea; color: var(--bad); }
+  .pill.warn { background: #fdf3e0; color: var(--warn); }
+
+  /* ── CENTER (image + bbox overlay) ── */
+  #center { flex: 1; display: flex; flex-direction: column; position: relative; overflow: hidden; }
+  #center header { padding: 10px 20px; border-bottom: 1px solid var(--border); background: var(--panel); display: flex; align-items: center; gap: 12px; }
+  #center header .title { font-weight: 600; font-family: ui-monospace, Menlo, monospace; font-size: 13px; }
+  #center header .subtitle { color: var(--muted); font-size: 12px; }
+  #center header .toggles { margin-left: auto; display: flex; gap: 12px; font-size: 12px; color: var(--muted); }
+  #center header label { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
+  #stage { flex: 1; overflow: auto; background: #2b2b2b; display: flex; align-items: flex-start; justify-content: center; padding: 20px; }
+  #canvas-wrap { position: relative; max-width: 100%; }
+  #canvas-wrap img { display: block; max-width: 100%; height: auto; }
+  #canvas-wrap canvas { position: absolute; inset: 0; cursor: default; }
+
+  .empty { color: var(--muted); padding: 40px; text-align: center; }
+
+  /* ── RIGHT PANEL ── */
+  #side { width: 440px; flex: 0 0 440px; background: var(--panel); border-left: 1px solid var(--border); overflow-y: auto; }
+  #side .section { padding: 14px 18px; border-bottom: 1px solid var(--border); }
+  #side .section h2 { font-size: 11px; font-weight: 600; margin: 0 0 8px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+  #side .row { display: grid; grid-template-columns: 130px 1fr; gap: 8px; font-size: 12px; line-height: 1.5; padding: 2px 0; }
+  #side .row .k { color: var(--muted); font-family: ui-monospace, Menlo, monospace; }
+  #side .row .v { font-family: ui-monospace, Menlo, monospace; word-break: break-word; }
+  #side .object-card { border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; margin-top: 8px; transition: box-shadow 0.15s, border-color 0.15s; }
+  #side .object-card.selected { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(46, 204, 113, 0.2); }
+  #side .object-card .head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  #side .object-card .swatch { width: 12px; height: 12px; border-radius: 3px; background: var(--accent-bg); border: 1px solid var(--accent-stroke); }
+  #side .object-card .label { font-weight: 600; font-size: 13px; }
+  #side .object-card .desc { font-size: 12px; color: var(--muted); margin: 4px 0; line-height: 1.4; }
+  #side .object-card code { background: #f3f4f6; padding: 1px 4px; border-radius: 3px; font-size: 11px; }
+  pre.json { background: #f7f7f8; border: 1px solid var(--border); border-radius: 4px; padding: 8px 10px; font-size: 11px; line-height: 1.45; overflow-x: auto; margin: 4px 0 0; max-height: 260px; }
+  .warn-note { background: #fff7e6; border: 1px solid #f7c77a; color: #7a4f00; padding: 6px 10px; font-size: 11px; line-height: 1.5; border-radius: 4px; margin-top: 8px; }
+  .err-note { background: #fdecea; border: 1px solid #f1a39a; color: var(--bad); padding: 6px 10px; font-size: 11px; line-height: 1.5; border-radius: 4px; margin-top: 8px; font-family: ui-monospace, Menlo, monospace; white-space: pre-wrap; word-break: break-word; max-height: 200px; overflow-y: auto; }
+</style>
+</head>
+<body>
+  <nav id="nav">
+    <h1>measure-distance viewer</h1>
+    <div id="nav-content"><div class="empty">loading…</div></div>
+  </nav>
+
+  <main id="center">
+    <header>
+      <span class="title" id="title">—</span>
+      <span class="subtitle" id="subtitle"></span>
+      <span class="toggles">
+        <label><input type="checkbox" id="toggle-bboxes" checked /> bboxes</label>
+        <label><input type="checkbox" id="toggle-points" checked /> nearestPoints</label>
+        <label title="Gemini returns points that may be ordered [y,x] — toggle to test interpretation">
+          <input type="checkbox" id="toggle-yx" /> swap pt axes (y,x→x,y)
+        </label>
+      </span>
+    </header>
+    <div id="stage">
+      <div id="canvas-wrap">
+        <img id="sheet" alt="cropped sheet" />
+        <canvas id="overlay"></canvas>
+      </div>
+    </div>
+  </main>
+
+  <aside id="side">
+    <div class="empty">select a case →</div>
+  </aside>
+
+<script type="module">
+const ACCENT = {
+  fill: 'rgba(46, 204, 113, 0.18)',
+  stroke: 'rgba(46, 204, 113, 0.9)',
+  activeFill: 'rgba(46, 204, 113, 0.38)',
+  pointFill: '#1e8449',
+};
+const LABEL = { A: '#1e8449', B: '#0f5a8c' };
+
+let manifest = null;
+let current = { runIdx: 0, caseIdx: 0, selectedObject: null };
+const $ = (id) => document.getElementById(id);
+const $img = $('sheet');
+const $canvas = $('overlay');
+const $wrap = document.getElementById('canvas-wrap');
+const $navContent = $('nav-content');
+const $side = $('side');
+
+$('toggle-bboxes').addEventListener('change', renderCanvas);
+$('toggle-points').addEventListener('change', renderCanvas);
+$('toggle-yx').addEventListener('change', renderCanvas);
+
+async function loadManifest() {
+  const res = await fetch('manifest.json');
+  if (!res.ok) {
+    $navContent.innerHTML = `<div class="empty">manifest.json not found. Run <code>./build-manifest.py</code>.</div>`;
+    return;
+  }
+  manifest = await res.json();
+  renderNav();
+  if (manifest.runs.length && manifest.runs[0].cases.length) {
+    selectCase(0, 0);
+  } else {
+    $side.innerHTML = `<div class="empty">no cases in manifest</div>`;
+  }
+}
+
+function renderNav() {
+  const html = manifest.runs.map((run, ri) => `
+    <div class="run-head">${escapeHtml(run.id)} · ${run.cases.length} cases</div>
+    <ul>
+      ${run.cases.map((c, ci) => `
+        <li data-ri="${ri}" data-ci="${ci}">
+          <span class="case-id">${escapeHtml(c.id)}</span>
+          <span class="case-meta">
+            ${outcomePill(c)} ·
+            sheet ${escapeHtml(String(c.inputs.sheetNum ?? '—'))} ·
+            scale ${escapeHtml(String(c.inputs.scaleInchesPerFoot ?? '—'))}
+            ${c.finalResult && c.finalResult.distanceFeet != null ? ` · <b>${c.finalResult.distanceFeet} ft</b>` : ''}
+          </span>
+        </li>
+      `).join('')}
+    </ul>
+  `).join('');
+  $navContent.innerHTML = html;
+  $navContent.querySelectorAll('li').forEach(li => {
+    li.addEventListener('click', () => selectCase(+li.dataset.ri, +li.dataset.ci));
+  });
+}
+
+function outcomePill(c) {
+  if (c.outcome === 'success') return `<span class="pill good">ok</span>`;
+  if (c.outcome === 'compute_error') return `<span class="pill bad">compute err</span>`;
+  if (c.outcome === 'gemini_failed') return `<span class="pill bad">gemini fail</span>`;
+  if (c.outcome === 'no_calldir') return `<span class="pill warn">no call-dir</span>`;
+  return `<span class="pill warn">?</span>`;
+}
+
+function selectCase(ri, ci) {
+  current = { runIdx: ri, caseIdx: ci, selectedObject: null };
+  $navContent.querySelectorAll('li').forEach(li => {
+    li.classList.toggle('active', +li.dataset.ri === ri && +li.dataset.ci === ci);
+  });
+  const c = manifest.runs[ri].cases[ci];
+  $('title').textContent = c.id;
+  $('subtitle').textContent = `sheet ${c.inputs.sheetNum} · scale ${c.inputs.scaleInchesPerFoot}`;
+  renderImage(c);
+  renderSide(c);
+}
+
+function renderImage(c) {
+  if (!c.croppedJpegPath) {
+    $img.removeAttribute('src');
+    $img.style.display = 'none';
+    $canvas.width = 0; $canvas.height = 0;
+    return;
+  }
+  $img.style.display = 'block';
+  $img.onload = () => {
+    $canvas.width = $img.naturalWidth;
+    $canvas.height = $img.naturalHeight;
+    $canvas.style.width = $img.clientWidth + 'px';
+    $canvas.style.height = $img.clientHeight + 'px';
+    renderCanvas();
+  };
+  $img.src = '../' + c.croppedJpegPath;   // viewer/ → workspace root
+}
+
+// Re-sync overlay canvas size on resize so CSS dims track the image.
+window.addEventListener('resize', () => {
+  if ($img.clientWidth) {
+    $canvas.style.width = $img.clientWidth + 'px';
+    $canvas.style.height = $img.clientHeight + 'px';
+  }
+});
+
+function currentCase() {
+  return manifest.runs[current.runIdx].cases[current.caseIdx];
+}
+
+function renderCanvas() {
+  const c = currentCase();
+  const loc = c.localization;
+  const ctx = $canvas.getContext('2d');
+  ctx.clearRect(0, 0, $canvas.width, $canvas.height);
+  if (!loc) return;
+
+  const showBbox = $('toggle-bboxes').checked;
+  const showPts = $('toggle-points').checked;
+  const swapAxes = $('toggle-yx').checked;
+
+  // Gemini bboxes are in 0-1000 normalized space
+  const W = $canvas.width, H = $canvas.height;
+  const denorm = (v, dim) => (v / 1000) * dim;
+
+  // Hit boxes in CSS pixel space for click detection
+  $canvas._hits = [];
+  const cssScaleX = $canvas.clientWidth / W;
+  const cssScaleY = $canvas.clientHeight / H;
+
+  ['objectA', 'objectB'].forEach(key => {
+    const obj = loc[key];
+    if (!obj || !obj.found || !obj.bbox) return;
+    const [x0, y0, x1, y1] = obj.bbox;
+    const px = denorm(x0, W);
+    const py = denorm(y0, H);
+    const pw = denorm(x1 - x0, W);
+    const ph = denorm(y1 - y0, H);
+
+    if (showBbox) {
+      const isActive = current.selectedObject === key;
+      ctx.fillStyle = isActive ? ACCENT.activeFill : ACCENT.fill;
+      ctx.strokeStyle = ACCENT.stroke;
+      ctx.lineWidth = isActive ? 4 : 2;
+      ctx.fillRect(px, py, pw, ph);
+      ctx.strokeRect(px, py, pw, ph);
+      // Label (A / B) in the corner
+      ctx.fillStyle = LABEL[key.slice(-1)] || ACCENT.stroke;
+      ctx.font = 'bold 22px -apple-system, sans-serif';
+      ctx.textBaseline = 'top';
+      ctx.fillText(key.slice(-1), px + 6, py + 4);
+    }
+
+    // Store hit rect in CSS space for click detection
+    $canvas._hits.push({
+      key,
+      x: px * cssScaleX,
+      y: py * cssScaleY,
+      w: pw * cssScaleX,
+      h: ph * cssScaleY,
+    });
+
+    // nearestPoint
+    if (showPts && obj.nearestPoint) {
+      let [a, b] = obj.nearestPoint;
+      const [npX, npY] = swapAxes ? [b, a] : [a, b];
+      const ppx = denorm(npX, W);
+      const ppy = denorm(npY, H);
+      ctx.beginPath();
+      ctx.arc(ppx, ppy, 7, 0, Math.PI * 2);
+      ctx.fillStyle = ACCENT.pointFill;
+      ctx.fill();
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+  });
+}
+
+$canvas.addEventListener('click', (e) => {
+  const rect = $canvas.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+  const hits = $canvas._hits || [];
+  for (const h of hits) {
+    if (x >= h.x && x <= h.x + h.w && y >= h.y && y <= h.y + h.h) {
+      current.selectedObject = h.key;
+      renderCanvas();
+      // Scroll right panel to the matching card
+      const card = document.getElementById('card-' + h.key);
+      if (card) {
+        card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        card.classList.add('selected');
+        setTimeout(() => {
+          document.querySelectorAll('#side .object-card').forEach(n => n.classList.remove('selected'));
+          if (current.selectedObject === h.key) {
+            document.getElementById('card-' + h.key)?.classList.add('selected');
+          }
+        }, 200);
+      }
+      return;
+    }
+  }
+  current.selectedObject = null;
+  renderCanvas();
+});
+
+function renderSide(c) {
+  const loc = c.localization || {};
+  const final = c.finalResult;
+  const meta = c.metadata || {};
+  const prov = c.provenance || {};
+  const captured = prov.capturedOutcome || {};
+
+  const html = `
+    <section class="section">
+      <h2>inputs</h2>
+      ${kv('projectId', c.inputs.projectId)}
+      ${kv('documentId', c.inputs.documentId)}
+      ${kv('sheetNum', c.inputs.sheetNum)}
+      ${kv('scaleInchesPerFoot', c.inputs.scaleInchesPerFoot)}
+      ${kv('objectA', c.inputs.objectA, true)}
+      ${kv('objectB', c.inputs.objectB, true)}
+    </section>
+
+    <section class="section">
+      <h2>gemini localization</h2>
+      ${objectCard('A', loc.objectA)}
+      ${objectCard('B', loc.objectB)}
+      ${!loc.objectA && !loc.objectB ? '<div class="empty">no localization data</div>' : ''}
+      <div class="warn-note">
+        Coordinates are in Gemini's 0–1000 normalized space. bbox=<code>[x0,y0,x1,y1]</code>.
+        nearestPoint format is undocumented in the Gemini response — if the dot appears outside
+        the bbox, try the <b>swap pt axes</b> toggle to test [y,x] interpretation.
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>final result</h2>
+      ${final ? `
+        ${kv('distanceFeet', final.distanceFeet)}
+        ${kv('distanceInches', final.distanceInches)}
+        ${kv('confidence', final.confidence)}
+        ${kv('scaleUsed', final.scaleUsed)}
+        ${kv('method', (final.localization || {}).method)}
+        ${kv('fallbackUsed', (final.localization || {}).fallbackUsed)}
+      ` : `
+        <div class="empty">no measure-distance.json (pipeline didn't complete)</div>
+        ${meta.error ? `<div class="err-note">${escapeHtml(String(meta.error).slice(0, 600))}${String(meta.error).length > 600 ? '…' : ''}</div>` : ''}
+      `}
+    </section>
+
+    <section class="section">
+      <h2>call metadata</h2>
+      ${kv('callId', meta.callId)}
+      ${kv('startedAt', meta.startedAt)}
+      ${kv('elapsedMs', meta.elapsedMs)}
+      ${kv('strategy', meta.strategy)}
+      ${kv('optionB.success', (meta.optionB || {}).success)}
+      ${kv('optionB.confidence', (meta.optionB || {}).geminiConfidence)}
+      ${kv('assets.drawingBbox', (meta.assets || {}).drawingBbox)}
+      ${kv('assets.legendSource', (meta.assets || {}).legendSource)}
+    </section>
+
+    <section class="section">
+      <h2>provenance (original agent call)</h2>
+      ${kv('tool_use_id', prov.sourceTool_use_id)}
+      ${kv('runIndex', prov.sourceRunIndex)}
+      ${kv('checklistItem', prov.sourceChecklistItem)}
+      ${kv('reachedScript (orig)', captured.reachedScript)}
+      ${kv('optionB_success (orig)', captured.optionB_success)}
+      ${kv('optionB_confidence (orig)', captured.optionB_geminiConfidence)}
+    </section>
+  `;
+
+  $side.innerHTML = html;
+}
+
+function kv(k, v, isLong) {
+  if (v == null) return `<div class="row"><span class="k">${escapeHtml(k)}</span><span class="v" style="color: #aaa">—</span></div>`;
+  const s = typeof v === 'object' ? JSON.stringify(v) : String(v);
+  return `<div class="row"><span class="k">${escapeHtml(k)}</span><span class="v" ${isLong ? 'style="font-family: inherit; font-size:12px"' : ''}>${escapeHtml(s)}</span></div>`;
+}
+
+function objectCard(label, obj) {
+  if (!obj) return '';
+  return `
+    <div class="object-card" id="card-object${label}">
+      <div class="head">
+        <span class="swatch"></span>
+        <span class="label">object ${label}</span>
+        <span style="margin-left:auto; font-size: 11px; color: var(--muted)">conf ${obj.confidence ?? '—'}</span>
+      </div>
+      <div class="desc">${escapeHtml(obj.description || '')}</div>
+      <div class="row"><span class="k">bbox</span><span class="v"><code>${obj.bbox ? `[${obj.bbox.join(', ')}]` : '—'}</code></span></div>
+      <div class="row"><span class="k">nearestPoint</span><span class="v"><code>${obj.nearestPoint ? `[${obj.nearestPoint.join(', ')}]` : '—'}</code></span></div>
+      <div class="row"><span class="k">found</span><span class="v">${obj.found}</span></div>
+    </div>
+  `;
+}
+
+function escapeHtml(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+loadManifest();
+</script>
+</body>
+</html>
