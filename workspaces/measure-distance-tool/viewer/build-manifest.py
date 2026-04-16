@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
-Scan test-script-runs/*/output/ and emit a manifest.json the viewer can
+Scan runs/test-script-2026-04-15/*/output/ and emit a manifest.json the viewer can
 consume. Browsers can't list directories, so we pre-compute this.
 
 Usage:
-  ./build-manifest.py                # scans ../test-script-runs/, writes ./manifest.json
+  ./build-manifest.py                # scans ../runs/test-script-2026-04-15/, writes ./manifest.json
   ./build-manifest.py --run test-1   # narrow to one run
 
 Output shape:
@@ -13,14 +13,14 @@ Output shape:
     "runs": [
       {
         "id": "test-1",
-        "fixturePath": "test-script-runs/test-1/input/<name>.json",
+        "fixturePath": "runs/test-script-2026-04-15/test-1/input/<name>.json",
         "cases": [
           {
             "id": "run-1-item-2-1",
             "inputs": { projectId, documentId, sheetNum, objectA, objectB, scaleInchesPerFoot },
             "provenance": {...},                 # from fixture, if present
-            "croppedJpegPath": "test-script-runs/.../cropped.jpg",  # relative to workspace root
-            "debugPngPath": "test-script-runs/.../debug.png" | null,
+            "croppedJpegPath": "runs/test-script-2026-04-15/.../cropped.jpg",  # relative to workspace root
+            "debugPngPath": "runs/test-script-2026-04-15/.../debug.png" | null,
             "localization": {...} | null,        # parsed localization.json
             "metadata": {...} | null,            # parsed metadata.json (trimmed)
             "finalResult": {...} | null,         # parsed measure-distance.json
@@ -41,7 +41,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent  # measure-distance-tool/
-RUNS_DIR = ROOT / 'test-script-runs'
+RUNS_DIR = ROOT / 'runs' / 'test-script-2026-04-15'
 
 
 def relpath(p: Path) -> str:
@@ -168,7 +168,7 @@ def main() -> int:
     args = parser.parse_args()
 
     if not RUNS_DIR.exists():
-        print(f'no test-script-runs/ directory at {RUNS_DIR}', file=sys.stderr)
+        print(f'no runs/test-script-2026-04-15/ directory at {RUNS_DIR}', file=sys.stderr)
         return 1
 
     run_dirs = sorted([d for d in RUNS_DIR.iterdir() if d.is_dir()])

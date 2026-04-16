@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Launch the viewer. Serves measure-distance-tool/ as the web root so
-# the HTML can reach both viewer/manifest.json and ../test-script-runs/...
+# the HTML can reach both viewer/manifest.json and runs/test-script-2026-04-15/...
 #
 # Usage:
 #   ./serve.sh          # serves on http://localhost:8401
@@ -13,7 +13,7 @@ PORT="${1:-8401}"
 HERE="$(cd "$(dirname "$0")" && pwd)"
 WORKSPACE_ROOT="$(cd "$HERE/.." && pwd)"
 
-# Regenerate the manifest first so new test-script-runs are picked up.
+# Regenerate the manifest first so new runs are picked up.
 python3 "$HERE/build-manifest.py"
 
 URL="http://localhost:${PORT}/viewer/"
