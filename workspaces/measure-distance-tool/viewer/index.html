@@ -327,6 +327,17 @@ function renderSide(c) {
       ${kv('objectB', c.inputs.objectB, true)}
     </section>
 
+    ${(c.likelyChecklistItems || []).length ? `
+    <section class="section">
+      <h2>likely checklist items</h2>
+      ${(c.likelyChecklistItems || []).map(item => `
+        <div style="margin-bottom:10px;">
+          <div style="font-size:12px;font-weight:600;font-family:ui-monospace,Menlo,monospace;color:var(--accent);">${escapeHtml(item.checklistId)}</div>
+          <div style="font-size:12px;color:var(--text);line-height:1.4;margin-top:2px;">${escapeHtml(item.checklistText)}</div>
+        </div>
+      `).join('')}
+    </section>` : ''}
+
     <section class="section">
       <h2>gemini localization</h2>
       ${objectCard('A', loc.objectA)}

@@ -83,6 +83,7 @@ def build_case(case_dir: Path, fixture_case: dict | None) -> dict:
             k: fixture_case.get(k)
             for k in ('projectId', 'documentId', 'sheetNum', 'objectA', 'objectB', 'scaleInchesPerFoot')
         }
+        out['likelyChecklistItems'] = fixture_case.get('likelyChecklistItems', [])
         out['provenance'] = fixture_case.get('_provenance')
 
     if call_dir:
