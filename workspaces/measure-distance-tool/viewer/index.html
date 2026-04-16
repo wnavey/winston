@@ -70,6 +70,9 @@
   pre.json { background: #f7f7f8; border: 1px solid var(--border); border-radius: 4px; padding: 8px 10px; font-size: 11px; line-height: 1.45; overflow-x: auto; margin: 4px 0 0; max-height: 260px; }
   .warn-note { background: #fff7e6; border: 1px solid #f7c77a; color: #7a4f00; padding: 6px 10px; font-size: 11px; line-height: 1.5; border-radius: 4px; margin-top: 8px; }
   .err-note { background: #fdecea; border: 1px solid #f1a39a; color: var(--bad); padding: 6px 10px; font-size: 11px; line-height: 1.5; border-radius: 4px; margin-top: 8px; font-family: ui-monospace, Menlo, monospace; white-space: pre-wrap; word-break: break-word; max-height: 200px; overflow-y: auto; }
+  .reasoning-box { background: #f0f7ff; border-left: 3px solid #3b82f6; padding: 10px 14px; font-size: 12px; line-height: 1.5; color: var(--text); margin-top: 4px; border-radius: 0 4px 4px 0; }
+  .checklist-tag { display: inline-block; background: #eef0f4; border: 1px solid #d1d5db; border-radius: 4px; padding: 2px 8px; font-size: 11px; font-family: ui-monospace, Menlo, monospace; color: #374151; margin: 2px 4px 2px 0; }
+  .checklist-tag.agent { background: #eff6ff; border-color: #93c5fd; color: #1e40af; }
 </style>
 </head>
 <body>
@@ -141,7 +144,7 @@ async function loadManifest() {
 
 function renderNav() {
   const html = manifest.runs.map((run, ri) => `
-    <div class="run-head">${escapeHtml(run.id)} · ${run.cases.length} cases</div>
+    <div class="run-head">${escapeHtml(run.id)} · ${run.cases.length} cases${run.source === 'experiment' ? ' · <span style="color:#3b82f6">experiment</span>' : ''}</div>
     <ul>
       ${run.cases.map((c, ci) => `
         <li data-ri="${ri}" data-ci="${ci}">
@@ -317,6 +320,8 @@ function renderSide(c) {
   const meta = c.metadata || {};
   const prov = c.provenance || {};
   const captured = prov.capturedOutcome || {};
+  const aci = c.applicableChecklistItems || [];
+  const lci = c.likelyChecklistItems || [];
 
   const html = `
     <section class="section">
@@ -329,13 +334,30 @@ function renderSide(c) {
       ${kv('objectB', c.inputs.objectB, true)}
     </section>
 
-    ${(c.likelyChecklistItems || []).length ? `
+    ${c.reasoning ? `
+    <section class="section">
+      <h2>agent reasoning</h2>
+      <div class="reasoning-box">${escapeHtml(c.reasoning)}</div>
+    </section>` : ''}
+
+    ${aci.length ? `
+    <section class="section">
+      <h2>agent-declared checklist items</h2>
+      ${aci.map(item => `
+        <div style="margin-bottom:10px;">
+          <span class="checklist-tag agent">${escapeHtml(item.checklist_id || item.checklistId || '')}</span>
+          <div style="font-size:12px;color:var(--text);line-height:1.4;margin-top:4px;">${escapeHtml(item.checklist_deficiency_text || item.checklistText || '')}</div>
+        </div>
+      `).join('')}
+    </section>` : ''}
+
+    ${lci.length ? `
     <section class="section">
       <h2>likely checklist items</h2>
-      ${(c.likelyChecklistItems || []).map(item => `
+      ${lci.map(item => `
         <div style="margin-bottom:10px;">
-          <div style="font-size:12px;font-weight:600;font-family:ui-monospace,Menlo,monospace;color:var(--accent);">${escapeHtml(item.checklistId)}</div>
-          <div style="font-size:12px;color:var(--text);line-height:1.4;margin-top:2px;">${escapeHtml(item.checklistText)}</div>
+          <span class="checklist-tag">${escapeHtml(item.checklistId || item.checklist_id || '')}</span>
+          <div style="font-size:12px;color:var(--text);line-height:1.4;margin-top:4px;">${escapeHtml(item.checklistText || item.checklist_deficiency_text || '')}</div>
         </div>
       `).join('')}
     </section>` : ''}
@@ -359,7 +381,7 @@ function renderSide(c) {
         ${kv('distanceInches', final.distanceInches)}
         ${kv('confidence', final.confidence)}
         ${kv('scaleUsed', final.scaleUsed)}
-        ${kv('method', (final.localization || {}).method)}
+        ${kv('method', final.method || (final.localization || {}).method)}
         ${kv('fallbackUsed', (final.localization || {}).fallbackUsed)}
       ` : `
         <div class="empty">no measure-distance.json (pipeline didn't complete)</div>

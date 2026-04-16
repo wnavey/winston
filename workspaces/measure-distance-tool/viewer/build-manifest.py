@@ -1,11 +1,16 @@
 #!/usr/bin/env python3
 """
-Scan runs/test-script-2026-04-15/*/output/ and emit a manifest.json the viewer can
-consume. Browsers can't list directories, so we pre-compute this.
+Scan test-script and experiment-run directories under runs/ and emit a
+manifest.json the viewer can consume. Browsers can't list directories,
+so we pre-compute this.
+
+Supported layouts:
+  1. test-script runs:  runs/test-script-*/test-N/output/<case-id>/measure-distance-calls/<callId>/
+  2. experiment runs:   runs/experiment-run*-*/measure-distance-calls/<callId>/  (flat, callId encodes run+item)
 
 Usage:
-  ./build-manifest.py                # scans ../runs/test-script-2026-04-15/, writes ./manifest.json
-  ./build-manifest.py --run test-1   # narrow to one run
+  ./build-manifest.py                # scans all matching dirs, writes ./manifest.json
+  ./build-manifest.py --run test-1   # narrow to one test-script run
 
 Output shape:
   {
@@ -13,14 +18,18 @@ Output shape:
     "runs": [
       {
         "id": "test-1",
-        "fixturePath": "runs/test-script-2026-04-15/test-1/input/<name>.json",
+        "source": "test-script" | "experiment",
+        "fixturePath": "...",
         "cases": [
           {
             "id": "run-1-item-2-1",
             "inputs": { projectId, documentId, sheetNum, objectA, objectB, scaleInchesPerFoot },
+            "reasoning": "...",                  # agent reasoning (experiment runs only)
+            "applicableChecklistItems": [...],   # agent-declared checklist items
+            "likelyChecklistItems": [...],       # post-hoc mapped checklist items
             "provenance": {...},                 # from fixture, if present
-            "croppedJpegPath": "runs/test-script-2026-04-15/.../cropped.jpg",  # relative to workspace root
-            "debugPngPath": "runs/test-script-2026-04-15/.../debug.png" | null,
+            "croppedJpegPath": "runs/.../cropped.jpg",  # relative to workspace root
+            "debugPngPath": "runs/.../debug.png" | null,
             "localization": {...} | null,        # parsed localization.json
             "metadata": {...} | null,            # parsed metadata.json (trimmed)
             "finalResult": {...} | null,         # parsed measure-distance.json
@@ -41,7 +50,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent  # measure-distance-tool/
-RUNS_DIR = ROOT / 'runs' / 'test-script-2026-04-15'
+RUNS_DIR = ROOT / 'runs'
 
 
 def relpath(p: Path) -> str:
@@ -56,19 +65,17 @@ def load_json(p: Path) -> dict | None:
         return None
 
 
-def build_case(case_dir: Path, fixture_case: dict | None) -> dict:
-    """Assemble one case entry from a case-dir + its fixture definition."""
-    cid = case_dir.name
-    calls_root = case_dir / 'measure-distance-calls'
-    call_dir = None
-    if calls_root.exists():
-        subs = sorted([d for d in calls_root.iterdir() if d.is_dir()])
-        if subs:
-            call_dir = subs[0]  # one invocation per test case in test-script
+# ── Shared: extract case dict from a call-dir ────────────────────────────
 
+def _case_from_call_dir(call_dir: Path | None, case_id: str,
+                        fixture_case: dict | None) -> dict:
+    """Assemble one case entry from a call-dir + its fixture definition."""
     out: dict = {
-        'id': cid,
+        'id': case_id,
         'inputs': {},
+        'reasoning': None,
+        'applicableChecklistItems': [],
+        'likelyChecklistItems': [],
         'provenance': None,
         'croppedJpegPath': None,
         'debugPngPath': None,
@@ -83,17 +90,18 @@ def build_case(case_dir: Path, fixture_case: dict | None) -> dict:
             k: fixture_case.get(k)
             for k in ('projectId', 'documentId', 'sheetNum', 'objectA', 'objectB', 'scaleInchesPerFoot')
         }
+        out['reasoning'] = fixture_case.get('reasoning') or None
+        out['applicableChecklistItems'] = fixture_case.get('applicableChecklistItems', [])
         out['likelyChecklistItems'] = fixture_case.get('likelyChecklistItems', [])
         out['provenance'] = fixture_case.get('_provenance')
 
-    if call_dir:
+    if call_dir and call_dir.exists():
         cropped = call_dir / 'cropped.jpg'
         debug = call_dir / 'debug.png'
         out['croppedJpegPath'] = relpath(cropped) if cropped.exists() else None
         out['debugPngPath'] = relpath(debug) if debug.exists() else None
         out['localization'] = load_json(call_dir / 'localization.json')
         meta = load_json(call_dir / 'metadata.json') or {}
-        # Trim the metadata: keep only the fields the viewer shows
         out['metadata'] = {
             'callId': meta.get('callId'),
             'startedAt': meta.get('startedAt'),
@@ -108,9 +116,30 @@ def build_case(case_dir: Path, fixture_case: dict | None) -> dict:
             'elapsedMs': meta.get('elapsedMs'),
         }
 
-    final = case_dir / 'measure-distance.json'
-    if final.exists():
-        out['finalResult'] = load_json(final)
+    # measure-distance.json lives in the case dir for test-script runs,
+    # but doesn't exist for experiment runs (result is inside metadata).
+    # Check the call_dir parent for test-script layout.
+    final_result = None
+    if call_dir and call_dir.exists():
+        # test-script layout: measure-distance.json is sibling to measure-distance-calls/
+        case_parent = call_dir.parent.parent  # up from <callId>/ -> measure-distance-calls/ -> case-dir/
+        final_json = case_parent / 'measure-distance.json'
+        if final_json.exists():
+            final_result = load_json(final_json)
+        # experiment layout: result is embedded in metadata
+        if not final_result:
+            meta = load_json(call_dir / 'metadata.json') or {}
+            r = meta.get('result')
+            if r and r.get('distanceFeet') is not None:
+                final_result = {
+                    'distanceFeet': r.get('distanceFeet'),
+                    'distanceInches': r.get('distanceInches'),
+                    'confidence': r.get('confidence'),
+                    'method': r.get('method'),
+                }
+
+    if final_result:
+        out['finalResult'] = final_result
 
     # Determine outcome
     if out['finalResult']:
@@ -119,7 +148,7 @@ def build_case(case_dir: Path, fixture_case: dict | None) -> dict:
         out['outcome'] = 'compute_error'
     elif out['metadata'] and not (out['metadata'].get('optionB') or {}).get('success'):
         out['outcome'] = 'gemini_failed'
-    elif not call_dir:
+    elif not call_dir or not call_dir.exists():
         out['outcome'] = 'no_calldir'
     else:
         out['outcome'] = 'unknown'
@@ -127,8 +156,20 @@ def build_case(case_dir: Path, fixture_case: dict | None) -> dict:
     return out
 
 
-def build_run(run_dir: Path) -> dict:
-    # Locate the fixture (one JSON in input/)
+# ── Test-script runs ─────────────────────────────────────────────────────
+
+def build_case_testscript(case_dir: Path, fixture_case: dict | None) -> dict:
+    """Assemble one case entry from a test-script case-dir."""
+    calls_root = case_dir / 'measure-distance-calls'
+    call_dir = None
+    if calls_root.exists():
+        subs = sorted([d for d in calls_root.iterdir() if d.is_dir()])
+        if subs:
+            call_dir = subs[0]
+    return _case_from_call_dir(call_dir, case_dir.name, fixture_case)
+
+
+def build_run_testscript(run_dir: Path) -> dict:
     input_dir = run_dir / 'input'
     fixture_path = None
     fixture = None
@@ -150,15 +191,103 @@ def build_run(run_dir: Path) -> dict:
             if not case_dir.is_dir():
                 continue
             fx = fixture_by_id.get(case_dir.name)
-            cases.append(build_case(case_dir, fx))
+            cases.append(build_case_testscript(case_dir, fx))
 
     return {
         'id': run_dir.name,
+        'source': 'test-script',
         'fixturePath': relpath(fixture_path) if fixture_path else None,
         'fixtureDescription': (fixture or {}).get('description'),
         'cases': cases,
     }
 
+
+# ── Experiment runs ──────────────────────────────────────────────────────
+
+def build_experiment_run(exp_dir: Path) -> list[dict]:
+    """Build manifest runs from an experiment directory.
+
+    An experiment dir has:
+      measure-distance-calls/<callId>/   (flat, callId suffix = run-N-M)
+
+    We also look for a matching fixture in replay/fixtures/ to get
+    the agent's reasoning and applicable_checklist_items.
+    """
+    calls_root = exp_dir / 'measure-distance-calls'
+    if not calls_root.exists():
+        return []
+
+    # Try to find a matching fixture
+    fixture_dir = ROOT / 'replay' / 'fixtures'
+    fixture = None
+    fixture_path = None
+    exp_name = exp_dir.name  # e.g. experiment-run2-2026-04-16
+    if fixture_dir.exists():
+        for p in sorted(fixture_dir.glob('*.json')):
+            if exp_name in p.stem:
+                fixture = load_json(p)
+                fixture_path = p
+                break
+
+    fixture_by_id = {}
+    if fixture:
+        for tc in fixture.get('testCases', []):
+            fixture_by_id[tc.get('id')] = tc
+
+    # Group call dirs by suffix (run-N-M) to build per-calldir cases
+    call_dirs = sorted([d for d in calls_root.iterdir() if d.is_dir()])
+
+    # Build a case for each fixture test case, matching to call dirs
+    # The fixture is ordered by time (matching tool_use order), so we
+    # consume call dirs in order per suffix group.
+    suffix_queues: dict[str, list[Path]] = {}
+    for cd in call_dirs:
+        parts = cd.name.split('-')
+        suffix = '-'.join(parts[-3:])  # run-N-M
+        suffix_queues.setdefault(suffix, []).append(cd)
+
+    cases = []
+    if fixture:
+        used_call_dirs = set()
+        for tc in fixture.get('testCases', []):
+            case_id = tc['id']
+            prov = tc.get('_provenance', {})
+            captured = prov.get('capturedOutcome', {})
+            expected_cd = captured.get('callDir')
+
+            call_dir = None
+            if expected_cd:
+                cd_path = calls_root / expected_cd
+                if cd_path.exists():
+                    call_dir = cd_path
+                    used_call_dirs.add(expected_cd)
+
+            cases.append(_case_from_call_dir(call_dir, case_id, tc))
+    else:
+        # No fixture: build cases directly from call dirs
+        for cd in call_dirs:
+            meta = load_json(cd / 'metadata.json') or {}
+            inputs = meta.get('inputs', {})
+            fake_fixture = {
+                'projectId': inputs.get('projectId'),
+                'documentId': inputs.get('documentId'),
+                'sheetNum': str(inputs.get('sheetNum', '')),
+                'objectA': inputs.get('objectA', ''),
+                'objectB': inputs.get('objectB', ''),
+                'scaleInchesPerFoot': str(inputs.get('scaleInchesPerFoot', '')),
+            }
+            cases.append(_case_from_call_dir(cd, cd.name, fake_fixture))
+
+    return [{
+        'id': exp_dir.name,
+        'source': 'experiment',
+        'fixturePath': relpath(fixture_path) if fixture_path else None,
+        'fixtureDescription': (fixture or {}).get('description'),
+        'cases': cases,
+    }]
+
+
+# ── Main ─────────────────────────────────────────────────────────────────
 
 def main() -> int:
     parser = argparse.ArgumentParser()
@@ -167,20 +296,33 @@ def main() -> int:
                         help='Where to write the manifest')
     args = parser.parse_args()
 
-    if not RUNS_DIR.exists():
-        print(f'no runs/test-script-2026-04-15/ directory at {RUNS_DIR}', file=sys.stderr)
-        return 1
+    all_runs: list[dict] = []
 
-    run_dirs = sorted([d for d in RUNS_DIR.iterdir() if d.is_dir()])
-    if args.run:
-        run_dirs = [d for d in run_dirs if d.name == args.run]
-        if not run_dirs:
-            print(f'no such run: {args.run}', file=sys.stderr)
-            return 1
+    # 1. Scan test-script-* directories
+    for ts_dir in sorted(RUNS_DIR.glob('test-script-*')):
+        if not ts_dir.is_dir():
+            continue
+        run_dirs = sorted([d for d in ts_dir.iterdir() if d.is_dir()])
+        if args.run:
+            run_dirs = [d for d in run_dirs if d.name == args.run]
+        for rd in run_dirs:
+            all_runs.append(build_run_testscript(rd))
+
+    # 2. Scan experiment-* directories (experiment-2026-04-15, experiment-run2-2026-04-16, etc.)
+    for exp_dir in sorted(RUNS_DIR.glob('experiment-*')):
+        if not exp_dir.is_dir():
+            continue
+        if args.run and exp_dir.name != args.run:
+            continue
+        all_runs.extend(build_experiment_run(exp_dir))
+
+    if not all_runs:
+        print('no runs found under runs/', file=sys.stderr)
+        return 1
 
     manifest = {
         'generatedAt': datetime.now(timezone.utc).isoformat(),
-        'runs': [build_run(d) for d in run_dirs],
+        'runs': all_runs,
     }
 
     output_path = Path(args.output)
