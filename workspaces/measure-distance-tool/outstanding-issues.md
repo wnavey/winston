@@ -1,96 +1,107 @@
 # Outstanding Issues — measure-distance tool
 
 Tracked issues and improvements identified during the A/B experiment work.
-Ordered roughly by impact, not effort.
+Ordered roughly by impact, not effort. Updated after experiment-run4.
 
 ---
 
-## Image quality & cropping
+## Image quality & localization
 
-### 1. Cropping to the drawing block (high impact)
+### 1. Cropping to the drawing block — RESOLVED
 
-Currently the tool sends the **entire sheet page** to Gemini as one JPEG. Site plan sheets are typically 24"×36" with a drawing area surrounded by title blocks, revision tables, and borders — Gemini has to locate features on a cluttered image where the actual drawing occupies maybe 60% of the pixel area.
+~~Currently the tool sends the entire sheet page to Gemini.~~
 
-**What should happen:** Crop to the largest `drawing`-category content block before sending to Gemini. The bounding box already exists in the DB (`content_block.bounding_box` where `category = 'drawing'`) — the code queries it (`findDrawingBlockBbox()`) but it returns **null** for the Valley View Townhomes sheets because no blocks are categorized as `drawing` in the DB for sheets 21 and 31. When the bbox is null, no cropping happens.
+**Status:** Fixed in bureau#233 (bbox format) + bureau#238 (two-call with
+300 DPI refined crop). Run4 confirmed: all measurements use real drawing-block
+crops, and call 2 operates on a 300 DPI refined region. Verified in the viewer.
 
-**Sub-issues:**
-- Why are these sheets missing drawing-category blocks? Is it a pre-processing gap, or are the blocks categorized differently?
-- If a sheet has multiple drawing blocks (e.g., plan view + detail insets), the tool currently picks the largest. It may need to pick the right one based on the objects being measured. This could be an agentic reasoning step or a second Gemini call ("which drawing area contains these objects?").
-- Effective DPI: a full-sheet JPEG at 120 DPI contains ~2000×3000 pixels. Cropping to a drawing area that's 60% of the sheet gives ~1200×1800 pixels for the actual content — still reasonable for Gemini, but features like transformer pads are only a few pixels wide. Higher DPI for the crop region would help localization precision.
+### 2. Legend identification — IN PROGRESS (Phase B)
 
-### 2. Legend identification and quality (medium impact)
+The tool currently sends ~15 KB of cross-sheet legend TEXT to Gemini. Issues:
+- Text descriptions lose visual symbol information (what does a tree symbol
+  actually look like?)
+- The text dump includes all legend entries from all sheets — mostly irrelevant
 
-The tool searches all sheets for legend/symbol blocks (`findLegendContext()`) and passes legend text to Gemini as symbol context. Current issues:
+**Phase B plan:** Use vector similarity search on `content_block_embedding` to
+find the specific legend blocks matching objectA/objectB, crop those blocks as
+images from the source sheet PDF at 300 DPI, and send them alongside the
+measurement image in BOTH Gemini calls. Implementation starting now.
 
-- **Empty legend for most test cases** — Valley View sheets 21 and 31 returned `legendSource: "none"`, so Gemini had zero symbol context for identifying features like transformer pads, OHE lines, or tree symbols.
-- **Color information lost** — JPEG compression and 120-DPI rendering may lose the color distinctions that legends rely on (e.g., blue for water, red for electric, green for landscape).
-- **Material pattern symbols** — engineering drawings use hatching patterns (concrete cross-hatch, gravel dots, etc.) that legends define. These are hard to describe in text and hard for Gemini to match without the actual legend image alongside the drawing.
-- **Legend should be sent as an image too** — currently it's text-only. Sending the legend block as a second image alongside the cropped drawing would let Gemini visually match symbols.
+See `analysis/improving-legend-and-bounding-box-plan.md` for full design.
+
+### 14. Outlier distances from two-call coordinate mapping (new, run4)
+
+Run4 produced 12 measurements exceeding 100 ft (max 462.8 ft) on a ~300 ft
+property. The two-call pipeline's coordinate mapping between call 1 → refined
+crop → call 2 appears to amplify errors when:
+- The refined crop is small relative to the full page
+- Call 1's coarse localization has low confidence (worst case: 0.30)
+
+**Needs fixing before run5.** Options:
+- Sanity-check upper bound: if measured distance > sheet physical dimensions,
+  flag as low confidence
+- Skip call 2 when call 1 confidence < threshold (e.g., 0.5)
+- Expand the refined crop padding when call 1 confidence is low
+
+### 15. Call 1 bbox bias on call 2 (new, investigation needed)
+
+Call 2's image is literally the region that call 1 identified. If call 1
+misidentifies the wrong feature, call 2 is looking at the wrong part of the
+sheet — it can't course-correct. The prompt doesn't pass call 1's coordinates
+to call 2 (good — no number-level bias), but the crop selection IS the bias.
+
+Possible mitigations:
+- Compare call 1 and call 2 object descriptions — if they disagree, flag
+  low confidence
+- Expand the crop when call 1 confidence is low
+- Send the full drawing to call 2 as well (defeats the DPI purpose)
 
 ---
 
 ## Agent behavior
 
-### 3. Agent under-uses the tool (high impact, prompt fix in flight)
+### 3. Agent under-uses the tool — IMPROVED
 
-Only 3 of 52 distance-measurable checklist items received a successful measurement in the experiment (5.8% coverage). The agent defaults to "not-verifiable" when plans lack dimensioned clearances, instead of using the tool to measure.
+**Run1:** 5/9 agents invoked MD. **Run4:** 6/9, including item 1.md for the
+first time. Prompt fix (bureau#225) is working. Still 3 agents that skip —
+2 are on item 1.md (vertical clearance) which is expected, 1 is stochastic.
 
-**Status:** Prompt fix landed in bureau#225 — adds explicit "measure before marking not-verifiable" instruction + systematic coverage guidance. Not yet tested in a full experiment run.
+### 4. Agent passes wrong scale values — RESOLVED
 
-### 4. Agent passes wrong scale values (high impact, prompt fix in flight)
-
-The `scaleInchesPerFoot` parameter was passed as:
-- `"1"` (wrong ratio — means 1:1 life-sized scale, producing 0.0 ft distances)
-- `"1 inch = 20 feet"` (descriptive string — Python argparse rejects it)
-- `"0.05"` (correct for 1"=20' scale — only some calls got this right)
-
-**Status:** Prompt fix in bureau#225 adds explicit numeric examples (`0.05` for 1"=20') and a "DO NOT pass strings" warning. Could also add TS-side validation to reject or auto-convert common bad formats.
+**Status:** Fixed in bureau#225 (prompt fix with numeric examples). Run3 and
+run4: 100% correct scale values (0.05 for 1"=20' sheets).
 
 ### 5. Agent should pass checklist context to the tool (medium impact)
 
-The tool currently doesn't know which checklist item(s) motivated the call. The agent picks objectA/objectB based on its reasoning, but doesn't tell the tool "I'm checking EL-13.1 (5ft from buildings)." If the tool knew the threshold, it could:
-- Return a pass/fail verdict directly ("4.7 ft < 5 ft threshold → fail")
-- Prioritize precision at the threshold boundary
-- Log the checklist context for attribution without post-hoc guessing
-
-This could be an optional `--checklistContext` parameter the prompt instructs the agent to provide.
+The tool doesn't know which checklist item motivated the call. Agent passes
+`reasoning` and `applicableChecklistItems` (bureau#235), but the tool doesn't
+use them for threshold comparison. Future: auto-verdict.
 
 ### 6. How pre-processed blocks drive agent tool usage (research question)
 
-From the run-1/13.md trace: the agent read `blocks.md` for sheet 21 and discovered transformer pad descriptions in the transcribed content. It then used the vision tool to visually confirm locations, and only then called measure-distance.
-
-**Open questions:**
-- Does the quality/specificity of blocks.md content determine whether the agent even knows there are features to measure?
-- Would richer block transcriptions (e.g., "transformer pad, approximately 4 ft from building 1 facade") prompt more tool usage?
-- Could we add a "distance-relevant features" annotation to blocks.md during pre-processing to prime the agent?
+Does blocks.md quality determine whether the agent knows there are features
+to measure? Open research question for Phase 3.
 
 ---
 
 ## Tool reliability & performance
 
-### 7. Python compute-distance timeout (medium impact)
+### 7. Python compute-distance timeout — PARTIALLY RESOLVED
 
-`callPython()` in `measure-distance.ts` has a hardcoded 90-second timeout. In the test-script replay, 1 of 12 real attempts hit this ceiling exactly (8% timeout rate). The timeout is consumed by:
-- **Option A** (v1 stub): spends 60-80s extracting and clustering 64k vector paths from unfiltered sheets before inevitably failing. Short-circuiting Option A when `drawingBbox` is null would save ~1 minute per call.
-- **Compute-distance**: usually 2-30s, but one call reached 90s.
+Option A short-circuited (bureau#236), conductor timeout bumped to 600s
+(conductor#125). Run4: zero timeouts. The 90s Python timeout remains but is
+no longer the bottleneck.
 
-**Fix:** (a) Short-circuit Option A when drawingBbox is null. (b) Bump timeout to 180s as a safety net. (c) Investigate what makes compute-distance occasionally slow.
+### 8. Option A vector matching is a v1 stub (low urgency)
 
-### 8. Option A vector matching is a v1 stub (low urgency, high eventual value)
-
-The Python `attempt_vector_matching()` function extracts vector paths via PyMuPDF, clusters them, then returns `success: false` with reason "Pattern matching not yet implemented." Every call falls through to Option B (Gemini Vision).
-
-**When this matters:** Option A would be faster (no LLM call), deterministic, and more precise for features that have clean vector representations in the PDF (transformer pads are rectangles, utility lines are polylines). But implementing real pattern matching against the variety of CAD export styles is a substantial R&D project.
-
-**For now:** Option A should at least short-circuit instantly when it can't help (no drawing bbox, rasterized PDF) rather than spending 60s on futile path extraction.
+Fully disabled in bureau#236. Every call goes through Option B (Gemini).
+Future R&D project to implement real pattern matching.
 
 ### 9. Gemini response time variability (medium impact)
 
-Option B (Gemini 3.1 Pro via Vercel AI Gateway) response times ranged from 5s to **201s** in the test-script replay. The 201s outlier is likely a cold start or rate-limit backoff.
-
-**No timeout currently exists** on the Gemini call — it runs inside the TS process (not a subprocess), so neither the 90s Python timeout nor conductor's 120s script-tool timeout applies.
-
-**Fix:** Wrap `generateText()` in an `AbortController` with a 90s cap. A 3+ minute Gemini call is almost certainly wasted.
+No Gemini-level timeout exists. Run4 completed all Gemini calls within the
+600s conductor timeout, but long-tail 200s+ calls are still possible.
+Should add an AbortController on the generateText() call.
 
 ---
 
@@ -98,31 +109,39 @@ Option B (Gemini 3.1 Pro via Vercel AI Gateway) response times ranged from 5s to
 
 ### 10. Vertical distance measurement (hard problem, high value)
 
-23 of 101 checklist items (23%) require **vertical** clearance verification (e.g., "16-foot vertical clearance for driveways under OHE", "35-foot vertical clearance in niches"). The tool currently only measures horizontal/lateral distances in plan view.
-
-**What's needed:**
-- Profile/section sheets show vertical relationships, but they're drawn differently from plan views — they have elevation axes, ground lines, and vertical dimension lines.
-- The tool would need to identify profile sheets, locate the relevant cross-section, and read the vertical dimension.
-- **Redlines** (hand-drawn or digital annotations showing measured clearances on profile views) are the standard workflow for this. Integrating redline generation or reading would unlock the vertical items.
-
-This is a separate tool or a major extension — not a quick fix.
+23% of EL items need vertical clearance. Not addressable by the current
+horizontal tool. Tracked as a separate roadmap item.
 
 ---
 
 ## Infrastructure & analysis
 
-### 11. Compare-findings analysis script (pending)
+### 11. Compare-findings script — DONE
 
-Step 8 in the experiment plan — `compare-findings.ts` that diffs baseline vs experiment findings. Not yet built. Should be built against real data once we have a successful experiment run with the prompt improvements.
+Implemented as `scripts/compare-findings.py`. Phase 1 metrics computed for
+runs 2, 3, and 4. Finding conversion rate: ~15-22%.
 
-### 12. Conductor shell-quoting fix needs merge (blocking replays)
+### 12. Conductor shell-quoting fix — RESOLVED
 
-noetic-inc/conductor#121 fixes two bugs in the script-step executor:
-- Shell metacharacters in arg values (parentheses in objectA/objectB text) break `/bin/sh` parsing
-- Missing `NODE_PATH` prevents scripts from importing conductor's dependencies
+Merged in conductor#121 + conductor#123.
 
-**Status:** PR open, not yet merged. Blocks all `test-script` workflow replay runs.
+### 13. experiment-plan.md paths — RESOLVED
 
-### 13. experiment-plan.md references stale paths (minor)
+Updated to use relative paths and `$CONDUCTOR_DIR`.
 
-The fixture replay section in `experiment-plan.md` references `/Users/winston/workspace/winston/...` which is a different machine's path. Should be corrected to the actual path or made relative.
+---
+
+## Follow-up items (lower priority)
+
+### F1. Category-filtered RPC for legend block search
+
+Current implementation (Phase B) uses the existing `search_content_blocks_hybrid`
+RPC and post-filters to legend/symbol/diagram categories in TS. A purpose-built
+RPC with an optional `categories` parameter would be more efficient. Requires
+a cityhall migration. Track as a follow-up after Phase B is validated.
+
+### F2. Per-phase latency logging
+
+Bureau#241 (merged) adds `downloadMs`, `contextMs`, `geminiMs`, `pythonMs` to
+metadata.json. Run4 was executed before this PR merged, so run4 data doesn't
+have per-phase timing. Run5 will capture it.

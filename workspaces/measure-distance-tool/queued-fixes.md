@@ -8,31 +8,33 @@ Tracks fixes shipped since the last experiment run, so the next run captures all
 
 | Field | Value |
 |---|---|
-| **Run** | experiment-run3 |
-| **Date** | 2026-04-17 ~17:00–17:25 UTC |
+| **Run** | experiment-run4 |
+| **Date** | 2026-04-17 ~20:31–21:13 UTC |
 | **Workflow** | `review` v5.1.0 with `--experiment=measure-distance` overlay |
 | **Guide set** | `el-md-exp` (items 1.md, 2.md, 13.md) |
 | **Runs** | 3 (ensemble) |
 | **Model** | `claude-haiku-4-5-20251001` |
 | **Project** | Valley View Townhomes (`63cead15-41f8-418c-b0ef-bd5c2b44719a`) |
-| **Outputs** | `runs/experiment-run3/` |
-| **Results** | 26 call-dirs, 12 completed, 9 non-zero distances (2.3–31.8 ft). First run with correct scale formula, real image cropping, objectPairs batching. |
+| **Outputs** | `runs/experiment-run4/` |
+| **Results** | 55 call-dirs, 41 results (two-call pipeline, 100% call2 success), 35 non-zero (85%). First run with two-call Gemini (300 DPI). 12 outliers >100 ft need investigation. |
 
 ---
 
-## Fixes shipped since experiment-run3
+## Fixes shipped since experiment-run4
 
-### Bureau
+### Bureau (queued for run5)
 
-| PR | Merged | Fix | Expected impact |
+| PR | Status | Fix | Expected impact |
 |---|---|---|---|
-| **#238** | 2026-04-17 | **Two-call Gemini approach** (Phase A): call 1 at 120 DPI for coarse localization → refined crop rendered from PDF at 300 DPI → call 2 for precise nearestPoints. Includes `computeRefinedCropBbox()` (union + padding + quadrant floor) and `renderPdfRegion()` (PyMuPDF high-DPI render). | 2.5–6× effective DPI in the measurement region. Should improve localization precision for close objects that currently return 0 ft. |
+| **#241** | merged | **Per-phase latency logging** — downloadMs, contextMs, geminiMs, pythonMs in metadata.json | Latency visibility per pipeline phase |
+| **Phase B** | in progress | **Legend symbol images** — vector search for legend blocks matching objectA/objectB, crop at 300 DPI, send as images to both Gemini calls | Better object identification; Gemini sees what symbols look like instead of reading text descriptions |
+| TBD | queued | **Distance sanity-check** — flag measurements exceeding sheet physical dimensions as low confidence | Fix the 29% outlier rate (>100 ft) from run4's two-call pipeline |
 
-### Winston
+### Previously shipped (in experiment-run4)
 
-| PR | Merged | Fix | Expected impact |
-|---|---|---|---|
-| **#11** | 2026-04-17 | **Viewer step toggle** for two-call mode. Call 1 and call 2 are independently inspectable in the Detection step. Build-manifest detects `call1-*`/`call2-*` prefixed artifacts. | Debug visibility into each Gemini call — can compare coarse vs refined localization. |
+Bureau: #235 (reasoning capture), #236 (Option A short-circuit), #238 (two-call Gemini Phase A)
+Conductor: #125 (600s timeout)
+Winston: #11 (viewer step toggle)
 
 ### Previously shipped (in experiment-run3)
 
@@ -46,25 +48,32 @@ Conductor: #117, #118, #119, #121
 
 ---
 
-## What experiment-run4 will test
+## What experiment-run5 will test
 
-With bureau#238 merged, the next run introduces the **two-call Gemini pipeline**. Expected improvements:
+With Phase B (legend symbol images) and the distance sanity-check, run5 should show:
 
-1. **Higher effective DPI** — call 2 operates on a refined crop rendered at 300 DPI (vs 120 DPI for the full drawing). For a quadrant crop, that's 2.5× the pixel density in the measurement region.
+1. **Visual legend context** — Gemini sees cropped images of the relevant legend
+   symbols instead of a 15 KB text dump. Should improve object identification,
+   especially for ambiguous symbols (tree types, transformer vs pull-box, etc.).
 
-2. **More precise nearestPoints** — with more pixels per inch, Gemini should distinguish features that appear overlapping at 120 DPI. The 3 cases in run3 that returned 0 ft (tree directly on OHE line) may show small but non-zero separations.
+2. **Legend images on both calls** — fetched upfront before call 1, attached to
+   both call 1 and call 2. Call 1 gets visual help identifying the right features
+   for the refined crop.
 
-3. **Call 1 → call 2 fallback** — if call 2 times out (a risk since it's a second sequential Gemini call), the pipeline falls back to call 1's coarse localization. Existing behavior preserved.
+3. **Distance sanity-check** — measurements exceeding the sheet's physical
+   dimensions flagged as low confidence. Should eliminate the 29% outlier rate
+   from run4.
 
-4. **Prefixed artifacts** — each call-dir now has `call1-*` and `call2-*` artifacts, visible in the viewer via the step toggle.
+4. **Per-phase latency** — downloadMs, contextMs, geminiMs, pythonMs captured
+   in metadata.json (bureau#241).
 
-### Still NOT fixed for run4 (known limitations)
+### Still NOT fixed for run5 (known limitations)
 
-- **No legend symbol images** (Phase B — future) — legend context is still text, not visual
-- **Option A still a stub** — every call goes through Gemini
-- **No Gemini timeout** — pathological 200s+ calls still possible
+- **Call 1 bbox bias on call 2** — if call 1 misidentifies, call 2 looks at the wrong region
+- **Option A still disabled** — every call goes through Gemini
+- **No Gemini-level timeout** — long-tail 200s+ calls still possible
 - **No vertical distance support**
-- **Agent tracing schema** — Review 5.0 not yet updated with observation/reasoning fields
+- **Agent tracing schema** — Review 5.0 not yet updated
 
 ---
 

@@ -338,18 +338,29 @@ matching a natural-language description. We can reuse this pattern.
 
 #### Where in the pipeline this happens
 
-The legend block search and image extraction can happen in parallel with
-call 1 (coarse localization), since both only need the object descriptions
-as input. This hides the legend-fetch latency behind the coarse-call latency:
+Legend block search and image extraction happen **before call 1**, during the
+shared setup phase (alongside drawing bbox and text legend lookup). The legend
+images are then attached to **both** Gemini calls:
 
 ```
-          ┌─ Call 1: coarse localization ──────────────┐
-  ──start─┤                                            ├── merge ── Call 2
-          └─ Legend block search + image extraction ───┘
+  ── shared setup ──
+      1. Download PDF + JPEG
+      2. Find drawing bbox
+      3. Find legend blocks (text) ← existing
+      4. Find legend block IMAGES (vector search + crop) ← NEW
+      5. Crop drawing area
+  ── per-pair loop ──
+      Call 1 (coarse, 120 DPI) ← gets legend images
+      Refined crop (300 DPI)
+      Call 2 (refined, 300 DPI) ← gets legend images
 ```
 
-By the time call 1 returns with coarse bboxes, the legend images are already
-downloaded and cropped, ready to attach to call 2.
+**Why upfront, not parallel with call 1?** The legend fetch is ~2-3 seconds
+(one Supabase vector query + one PDF crop). The Gemini calls are 30-90s each.
+Saving 2-3s by parallelizing is not worth the complexity, and sending legend
+images to call 1 improves coarse localization — which is critical because
+call 1's bboxes determine the refined crop region for call 2. A bad call 1
+cascades into call 2 looking at the wrong part of the sheet.
 
 #### Relationship to current legend pipeline
 
