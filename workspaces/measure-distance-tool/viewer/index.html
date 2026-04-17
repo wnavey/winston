@@ -36,7 +36,7 @@
   .run-head .tag { font-size: 9px; color: var(--blue); margin-left: auto; }
   .run-cases { display: none; }
   .run-cases.open { display: block; }
-  .run-cases li { list-style: none; padding: 5px 12px 5px 28px; cursor: pointer; font-family: var(--mono); font-size: 11px; line-height: 1.3; border-left: 3px solid transparent; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .run-cases li { list-style: none; padding: 5px 8px 5px 16px; cursor: pointer; font-family: var(--mono); font-size: 11px; line-height: 1.3; border-left: 3px solid transparent; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .run-cases li:hover { background: #f3f4f6; }
   .run-cases li.active { background: #eef6f0; border-left-color: var(--accent); }
   .pill { display: inline-block; padding: 1px 5px; border-radius: 8px; font-size: 9px; font-weight: 600; letter-spacing: 0.02em; margin-left: 4px; vertical-align: middle; }
@@ -99,6 +99,11 @@
   .result-card { background: var(--panel); border: 1px solid var(--border); border-radius: 6px; padding: 16px; margin-top: 10px; }
   .result-big { font-size: 28px; font-weight: 700; color: var(--accent); margin-bottom: 8px; }
   .result-big.error { color: var(--bad); font-size: 18px; }
+
+  /* -- Resizable dividers -- */
+  .divider { width: 4px; flex: 0 0 4px; cursor: col-resize; background: transparent; position: relative; z-index: 10; }
+  .divider:hover, .divider.dragging { background: var(--accent-stroke); }
+  .divider::after { content: ''; position: absolute; inset: -2px; }  /* wider hit area */
 </style>
 </head>
 <body>
@@ -108,10 +113,14 @@
     <div id="run-tree-content"><div class="empty-msg" style="padding:20px 12px; color:var(--muted); font-size:11px;">loading...</div></div>
   </nav>
 
+  <div class="divider" id="divider-1"></div>
+
   <div id="steps-panel">
     <h2>Steps</h2>
     <div id="steps-content"><div class="empty-msg">select a case</div></div>
   </div>
+
+  <div class="divider" id="divider-2"></div>
 
   <main id="content">
     <div class="empty">Select a run and case from the left panel to begin debugging.</div>
@@ -124,6 +133,7 @@ let state = { runIdx: -1, caseIdx: -1, stepIdx: 0 };
 const fileCache = {};  // path -> content
 
 const STEPS = [
+  { num: 0, label: 'Summary' },
   { num: 1, label: 'Inputs' },
   { num: 2, label: 'Asset Download' },
   { num: 3, label: 'Drawing Crop' },
@@ -276,15 +286,123 @@ async function renderContent() {
   area.innerHTML = '<div class="empty">Loading...</div>';
 
   switch (state.stepIdx) {
-    case 0: area.innerHTML = renderStep1(c); break;
-    case 1: area.innerHTML = await renderStep2(c); break;
-    case 2: area.innerHTML = await renderStep3(c); break;
-    case 3: area.innerHTML = await renderStep4(c); break;
-    case 4: area.innerHTML = await renderStep5(c); break;
-    case 5: area.innerHTML = await renderStep6(c); setupCanvas(c); break;
-    case 6: area.innerHTML = await renderStep7(c); break;
-    case 7: area.innerHTML = renderStep8(c); break;
+    case 0: area.innerHTML = renderStepSummary(c); break;
+    case 1: area.innerHTML = renderStep1(c); break;
+    case 2: area.innerHTML = await renderStep2(c); break;
+    case 3: area.innerHTML = await renderStep3(c); break;
+    case 4: area.innerHTML = await renderStep4(c); break;
+    case 5: area.innerHTML = await renderStep5(c); break;
+    case 6: area.innerHTML = await renderStep6(c); setupCanvas(c); break;
+    case 7: area.innerHTML = await renderStep7(c); break;
+    case 8: area.innerHTML = renderStep8(c); break;
   }
+}
+
+// ── Step 0: Summary ──
+function renderStepSummary(c) {
+  const meta = c.metadata || {};
+  const final = c.finalResult;
+  const aci = c.applicableChecklistItems || [];
+  const lci = c.likelyChecklistItems || [];
+  const loc = c.localization || {};
+  const assets = (meta.assets || {});
+
+  // Pipeline status per step
+  const steps = [
+    { name: 'Asset Download', ok: !!c.sheetJpegPath || !!assets.pdfStoragePath },
+    { name: 'Drawing Crop', ok: !!c.croppedJpegPath },
+    { name: 'Legend Context', ok: assets.legendSource && assets.legendSource !== 'none' },
+    { name: 'Option A', ok: false, note: 'v1 stub — always skipped' },
+    { name: 'Gemini Vision', ok: !!(meta.optionB || {}).success },
+    { name: 'Python Compute', ok: !!final && !meta.error },
+    { name: 'Final Result', ok: !!final && final.distanceFeet != null },
+  ];
+
+  const pipelineHtml = steps.map(s =>
+    `<div style="display:flex;align-items:center;gap:8px;padding:3px 0;font-size:12px;">
+      <span style="width:8px;height:8px;border-radius:50%;background:${s.ok ? 'var(--good)' : s.note ? 'var(--border)' : 'var(--bad)'};flex-shrink:0;"></span>
+      <span>${escapeHtml(s.name)}</span>
+      ${s.note ? `<span style="color:var(--muted);font-size:11px;">(${escapeHtml(s.note)})</span>` : ''}
+    </div>`
+  ).join('');
+
+  // Result headline
+  let resultHtml = '';
+  if (final) {
+    const dist = final.distanceFeet != null ? `${final.distanceFeet} ft` : '—';
+    resultHtml = `
+      <div class="result-card">
+        <div class="result-big">${escapeHtml(dist)}</div>
+        <div class="kv-grid">
+          ${kv('confidence', final.confidence)}
+          ${kv('method', final.method || (final.localization || {}).method)}
+          ${kv('scaleUsed', final.scaleUsed)}
+          ${kv('elapsed', meta.elapsedMs ? (meta.elapsedMs / 1000).toFixed(1) + 's' : '—')}
+        </div>
+      </div>`;
+  } else {
+    resultHtml = `<div class="result-card"><div class="result-big error">${escapeHtml(c.outcome || 'no result')}</div>
+      ${meta.error ? `<div class="err-note">${escapeHtml(String(meta.error).slice(0, 400))}</div>` : ''}
+    </div>`;
+  }
+
+  // Checklist items
+  let checklistHtml = '';
+  if (aci.length) {
+    checklistHtml += `<div class="section"><h3>Agent-Declared Checklist Items</h3>
+      ${aci.map(item => `<div style="margin-bottom:8px;">
+        <span class="checklist-tag agent">${escapeHtml(item.checklist_id || item.checklistId || '')}</span>
+        <span style="font-size:12px;color:var(--text);">${escapeHtml(item.checklist_deficiency_text || item.checklistText || '')}</span>
+      </div>`).join('')}</div>`;
+  }
+  if (lci.length) {
+    checklistHtml += `<div class="section"><h3>Likely Checklist Items</h3>
+      ${lci.map(item => `<div style="margin-bottom:8px;">
+        <span class="checklist-tag">${escapeHtml(item.checklistId || item.checklist_id || '')}</span>
+        <span style="font-size:12px;color:var(--text);">${escapeHtml(item.checklistText || item.checklist_deficiency_text || '')}</span>
+      </div>`).join('')}</div>`;
+  }
+
+  return `
+    <div class="section">
+      <h3>Result</h3>
+      ${resultHtml}
+    </div>
+
+    ${c.reasoning ? `<div class="section"><h3>Agent Reasoning</h3>
+      <div class="reasoning-box">${escapeHtml(c.reasoning)}</div>
+    </div>` : ''}
+
+    ${checklistHtml}
+
+    <div class="section">
+      <h3>Key Inputs</h3>
+      <div class="kv-grid">
+        ${kv('objectA', c.inputs.objectA, { plain: true })}
+        ${kv('objectB', c.inputs.objectB, { plain: true })}
+        ${kv('sheetNum', c.inputs.sheetNum)}
+        ${kv('scale', c.inputs.scaleInchesPerFoot)}
+        ${kv('callId', (meta.callId || '').slice(0, 30))}
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>Pipeline Status</h3>
+      ${pipelineHtml}
+    </div>
+
+    <div class="section">
+      <h3>Gemini Confidence</h3>
+      <div class="kv-grid">
+        ${kv('objectA found', loc.objectA?.found ?? '—')}
+        ${kv('objectA confidence', loc.objectA?.confidence ?? '—')}
+        ${kv('objectB found', loc.objectB?.found ?? '—')}
+        ${kv('objectB confidence', loc.objectB?.confidence ?? '—')}
+        ${kv('legendSource', assets.legendSource)}
+        ${kv('drawingBbox', assets.drawingBbox ? 'yes' : 'none')}
+      </div>
+    </div>
+  `;
 }
 
 // ── Step 1: Inputs ──
@@ -713,8 +831,42 @@ function renderStep8(c) {
   return html;
 }
 
+// ── Resizable dividers ──
+function setupDivider(dividerId, leftPanelId) {
+  const divider = document.getElementById(dividerId);
+  const panel = document.getElementById(leftPanelId);
+  if (!divider || !panel) return;
+
+  let startX, startW;
+  function onMouseMove(e) {
+    const delta = e.clientX - startX;
+    const newW = Math.max(100, Math.min(500, startW + delta));
+    panel.style.width = newW + 'px';
+    panel.style.flex = `0 0 ${newW}px`;
+  }
+  function onMouseUp() {
+    divider.classList.remove('dragging');
+    document.removeEventListener('mousemove', onMouseMove);
+    document.removeEventListener('mouseup', onMouseUp);
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+  }
+  divider.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    startX = e.clientX;
+    startW = panel.getBoundingClientRect().width;
+    divider.classList.add('dragging');
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+  });
+}
+
 // ── Init ──
 loadManifest();
+setupDivider('divider-1', 'run-tree');
+setupDivider('divider-2', 'steps-panel');
 </script>
 </body>
 </html>
