@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<title>measure-distance viewer</title>
+<title>measure-distance debugger</title>
 <style>
   :root {
     --bg: #fafafa;
@@ -17,264 +17,584 @@
     --bad: #c0392b;
     --warn: #d68910;
     --good: #1e8449;
+    --blue: #3b82f6;
+    --blue-bg: #eff6ff;
+    --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
   }
 
-  * { box-sizing: border-box; }
-  html, body { margin: 0; height: 100%; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: var(--text); background: var(--bg); }
+  * { box-sizing: border-box; margin: 0; }
+  html, body { height: 100%; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: var(--text); background: var(--bg); }
+  body { display: flex; height: 100vh; overflow: hidden; }
 
-  body { display: flex; height: 100vh; }
-
-  /* ── LEFT NAV ── */
-  #nav { width: 280px; flex: 0 0 280px; background: var(--panel); border-right: 1px solid var(--border); overflow-y: auto; padding: 12px 0; }
-  #nav h1 { font-size: 13px; font-weight: 600; color: var(--muted); margin: 0 16px 8px; text-transform: uppercase; letter-spacing: 0.05em; }
-  #nav .run-head { font-size: 12px; color: var(--muted); margin: 12px 16px 4px; font-weight: 600; }
-  #nav ul { list-style: none; margin: 0; padding: 0; }
-  #nav li { padding: 8px 16px; cursor: pointer; border-left: 3px solid transparent; font-size: 13px; line-height: 1.3; }
-  #nav li:hover { background: #f3f4f6; }
-  #nav li.active { background: #eef6f0; border-left-color: var(--accent); }
-  #nav li .case-id { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; display: block; }
-  #nav li .case-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
-  .pill { display: inline-block; padding: 1px 6px; border-radius: 8px; font-size: 10px; font-weight: 600; letter-spacing: 0.02em; }
+  /* -- Run Tree (left panel) -- */
+  #run-tree { width: 200px; flex: 0 0 200px; background: var(--panel); border-right: 1px solid var(--border); overflow-y: auto; padding: 10px 0; font-size: 12px; }
+  #run-tree h1 { font-size: 11px; font-weight: 600; color: var(--muted); margin: 0 12px 8px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .run-group { margin-bottom: 2px; }
+  .run-head { padding: 6px 12px; cursor: pointer; font-weight: 600; color: var(--text); display: flex; align-items: center; gap: 4px; user-select: none; }
+  .run-head:hover { background: #f3f4f6; }
+  .run-head .arrow { font-size: 10px; color: var(--muted); width: 12px; display: inline-block; }
+  .run-head .tag { font-size: 9px; color: var(--blue); margin-left: auto; }
+  .run-cases { display: none; }
+  .run-cases.open { display: block; }
+  .run-cases li { list-style: none; padding: 5px 12px 5px 28px; cursor: pointer; font-family: var(--mono); font-size: 11px; line-height: 1.3; border-left: 3px solid transparent; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .run-cases li:hover { background: #f3f4f6; }
+  .run-cases li.active { background: #eef6f0; border-left-color: var(--accent); }
+  .pill { display: inline-block; padding: 1px 5px; border-radius: 8px; font-size: 9px; font-weight: 600; letter-spacing: 0.02em; margin-left: 4px; vertical-align: middle; }
   .pill.good { background: #e7f5ea; color: var(--good); }
   .pill.bad { background: #fdecea; color: var(--bad); }
   .pill.warn { background: #fdf3e0; color: var(--warn); }
 
-  /* ── CENTER (image + bbox overlay) ── */
-  #center { flex: 1; display: flex; flex-direction: column; position: relative; overflow: hidden; }
-  #center header { padding: 10px 20px; border-bottom: 1px solid var(--border); background: var(--panel); display: flex; align-items: center; gap: 12px; }
-  #center header .title { font-weight: 600; font-family: ui-monospace, Menlo, monospace; font-size: 13px; }
-  #center header .subtitle { color: var(--muted); font-size: 12px; }
-  #center header .toggles { margin-left: auto; display: flex; gap: 12px; font-size: 12px; color: var(--muted); }
-  #center header label { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
-  #stage { flex: 1; overflow: auto; background: #2b2b2b; display: flex; align-items: flex-start; justify-content: center; padding: 20px; }
-  #canvas-wrap { position: relative; max-width: 100%; }
-  #canvas-wrap img { display: block; max-width: 100%; height: auto; }
-  #canvas-wrap canvas { position: absolute; inset: 0; cursor: default; }
+  /* -- Steps panel -- */
+  #steps-panel { width: 180px; flex: 0 0 180px; background: var(--panel); border-right: 1px solid var(--border); overflow-y: auto; padding: 10px 0; }
+  #steps-panel h2 { font-size: 11px; font-weight: 600; color: var(--muted); margin: 0 14px 8px; text-transform: uppercase; letter-spacing: 0.05em; }
+  #steps-panel .step-item { padding: 7px 14px; cursor: pointer; font-size: 12px; display: flex; align-items: center; gap: 8px; color: var(--text); border-left: 3px solid transparent; }
+  #steps-panel .step-item:hover { background: #f3f4f6; }
+  #steps-panel .step-item.active { background: #eef6f0; border-left-color: var(--accent); font-weight: 600; }
+  #steps-panel .step-item .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--border); flex-shrink: 0; }
+  #steps-panel .step-item.active .dot { background: var(--accent); }
+  #steps-panel .empty-msg { color: var(--muted); font-size: 11px; padding: 20px 14px; text-align: center; }
 
-  .empty { color: var(--muted); padding: 40px; text-align: center; }
+  /* -- Content area -- */
+  #content { flex: 1; overflow-y: auto; padding: 20px 28px; background: var(--bg); }
+  #content .empty { color: var(--muted); text-align: center; padding: 60px 20px; font-size: 13px; }
 
-  /* ── RIGHT PANEL ── */
-  #side { width: 440px; flex: 0 0 440px; background: var(--panel); border-left: 1px solid var(--border); overflow-y: auto; }
-  #side .section { padding: 14px 18px; border-bottom: 1px solid var(--border); }
-  #side .section h2 { font-size: 11px; font-weight: 600; margin: 0 0 8px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
-  #side .row { display: grid; grid-template-columns: 130px 1fr; gap: 8px; font-size: 12px; line-height: 1.5; padding: 2px 0; }
-  #side .row .k { color: var(--muted); font-family: ui-monospace, Menlo, monospace; }
-  #side .row .v { font-family: ui-monospace, Menlo, monospace; word-break: break-word; }
-  #side .object-card { border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; margin-top: 8px; transition: box-shadow 0.15s, border-color 0.15s; }
-  #side .object-card.selected { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(46, 204, 113, 0.2); }
-  #side .object-card .head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
-  #side .object-card .swatch { width: 12px; height: 12px; border-radius: 3px; background: var(--accent-bg); border: 1px solid var(--accent-stroke); }
-  #side .object-card .label { font-weight: 600; font-size: 13px; }
-  #side .object-card .desc { font-size: 12px; color: var(--muted); margin: 4px 0; line-height: 1.4; }
-  #side .object-card code { background: #f3f4f6; padding: 1px 4px; border-radius: 3px; font-size: 11px; }
-  pre.json { background: #f7f7f8; border: 1px solid var(--border); border-radius: 4px; padding: 8px 10px; font-size: 11px; line-height: 1.45; overflow-x: auto; margin: 4px 0 0; max-height: 260px; }
-  .warn-note { background: #fff7e6; border: 1px solid #f7c77a; color: #7a4f00; padding: 6px 10px; font-size: 11px; line-height: 1.5; border-radius: 4px; margin-top: 8px; }
-  .err-note { background: #fdecea; border: 1px solid #f1a39a; color: var(--bad); padding: 6px 10px; font-size: 11px; line-height: 1.5; border-radius: 4px; margin-top: 8px; font-family: ui-monospace, Menlo, monospace; white-space: pre-wrap; word-break: break-word; max-height: 200px; overflow-y: auto; }
-  .reasoning-box { background: #f0f7ff; border-left: 3px solid #3b82f6; padding: 10px 14px; font-size: 12px; line-height: 1.5; color: var(--text); margin-top: 4px; border-radius: 0 4px 4px 0; }
-  .checklist-tag { display: inline-block; background: #eef0f4; border: 1px solid #d1d5db; border-radius: 4px; padding: 2px 8px; font-size: 11px; font-family: ui-monospace, Menlo, monospace; color: #374151; margin: 2px 4px 2px 0; }
-  .checklist-tag.agent { background: #eff6ff; border-color: #93c5fd; color: #1e40af; }
+  /* -- Shared content styles -- */
+  .section { margin-bottom: 20px; }
+  .section h3 { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; }
+  .kv-grid { display: grid; grid-template-columns: 160px 1fr; gap: 4px 12px; font-size: 12px; line-height: 1.6; }
+  .kv-grid .k { color: var(--muted); font-family: var(--mono); font-size: 11px; }
+  .kv-grid .v { font-family: var(--mono); font-size: 11px; word-break: break-word; }
+  .kv-grid .v.plain { font-family: inherit; font-size: 12px; }
+
+  .reasoning-box { background: #f0f7ff; border-left: 3px solid var(--blue); padding: 10px 14px; font-size: 12px; line-height: 1.5; border-radius: 0 4px 4px 0; margin-top: 4px; }
+  .checklist-tag { display: inline-block; background: #eef0f4; border: 1px solid #d1d5db; border-radius: 4px; padding: 2px 8px; font-size: 11px; font-family: var(--mono); color: #374151; margin: 2px 4px 2px 0; }
+  .checklist-tag.agent { background: var(--blue-bg); border-color: #93c5fd; color: #1e40af; }
+
+  pre.code-block { background: #f7f7f8; border: 1px solid var(--border); border-radius: 4px; padding: 10px 12px; font-size: 11px; line-height: 1.45; overflow-x: auto; margin: 4px 0; max-height: 400px; overflow-y: auto; font-family: var(--mono); white-space: pre-wrap; word-break: break-word; }
+  .warn-note { background: #fff7e6; border: 1px solid #f7c77a; color: #7a4f00; padding: 8px 12px; font-size: 12px; line-height: 1.5; border-radius: 4px; margin-top: 8px; }
+  .err-note { background: #fdecea; border: 1px solid #f1a39a; color: var(--bad); padding: 8px 12px; font-size: 12px; line-height: 1.5; border-radius: 4px; margin-top: 8px; font-family: var(--mono); white-space: pre-wrap; word-break: break-word; max-height: 300px; overflow-y: auto; }
+  .info-note { background: var(--blue-bg); border: 1px solid #93c5fd; color: #1e40af; padding: 8px 12px; font-size: 12px; line-height: 1.5; border-radius: 4px; margin-top: 8px; }
+
+  .image-container { margin: 10px 0; background: #2b2b2b; border-radius: 6px; padding: 12px; display: inline-block; max-width: 100%; }
+  .image-container img { display: block; max-width: 100%; height: auto; border-radius: 3px; }
+  .image-container .label { color: #aaa; font-size: 10px; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.05em; }
+
+  /* -- Canvas overlay for Step 6 -- */
+  .canvas-stage { background: #2b2b2b; border-radius: 6px; padding: 12px; margin: 10px 0; display: inline-block; max-width: 100%; }
+  .canvas-stage .toolbar { display: flex; gap: 14px; margin-bottom: 8px; font-size: 12px; color: #ccc; }
+  .canvas-stage .toolbar label { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
+  .canvas-wrap { position: relative; display: inline-block; }
+  .canvas-wrap img { display: block; max-width: 100%; height: auto; border-radius: 3px; }
+  .canvas-wrap canvas { position: absolute; inset: 0; cursor: default; }
+
+  .object-card { border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; margin-top: 8px; background: var(--panel); }
+  .object-card .head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .object-card .swatch { width: 12px; height: 12px; border-radius: 3px; }
+  .object-card .swatch.a { background: rgba(30, 132, 73, 0.3); border: 1px solid #1e8449; }
+  .object-card .swatch.b { background: rgba(15, 90, 140, 0.3); border: 1px solid #0f5a8c; }
+  .object-card .label { font-weight: 600; font-size: 13px; }
+  .object-card .desc { font-size: 12px; color: var(--muted); margin: 4px 0; line-height: 1.4; }
+  .object-card code { background: #f3f4f6; padding: 1px 4px; border-radius: 3px; font-size: 11px; }
+
+  .result-card { background: var(--panel); border: 1px solid var(--border); border-radius: 6px; padding: 16px; margin-top: 10px; }
+  .result-big { font-size: 28px; font-weight: 700; color: var(--accent); margin-bottom: 8px; }
+  .result-big.error { color: var(--bad); font-size: 18px; }
 </style>
 </head>
 <body>
-  <nav id="nav">
-    <h1>measure-distance viewer</h1>
-    <div id="nav-content"><div class="empty">loading…</div></div>
+
+  <nav id="run-tree">
+    <h1>measure-distance</h1>
+    <div id="run-tree-content"><div class="empty-msg" style="padding:20px 12px; color:var(--muted); font-size:11px;">loading...</div></div>
   </nav>
 
-  <main id="center">
-    <header>
-      <span class="title" id="title">—</span>
-      <span class="subtitle" id="subtitle"></span>
-      <span class="toggles">
-        <label><input type="checkbox" id="toggle-bboxes" checked /> bboxes</label>
-        <label><input type="checkbox" id="toggle-points" checked /> nearestPoints</label>
-        <label title="Gemini may return coords in [y,x] order — toggle to swap both bboxes and nearestPoints">
-          <input type="checkbox" id="toggle-yx" /> swap axes (y,x→x,y)
-        </label>
-      </span>
-    </header>
-    <div id="stage">
-      <div id="canvas-wrap">
-        <img id="sheet" alt="cropped sheet" />
-        <canvas id="overlay"></canvas>
-      </div>
-    </div>
+  <div id="steps-panel">
+    <h2>Steps</h2>
+    <div id="steps-content"><div class="empty-msg">select a case</div></div>
+  </div>
+
+  <main id="content">
+    <div class="empty">Select a run and case from the left panel to begin debugging.</div>
   </main>
 
-  <aside id="side">
-    <div class="empty">select a case →</div>
-  </aside>
+<script>
+// ── State ──
+let manifest = null;
+let state = { runIdx: -1, caseIdx: -1, stepIdx: 0 };
+const fileCache = {};  // path -> content
 
-<script type="module">
+const STEPS = [
+  { num: 1, label: 'Inputs' },
+  { num: 2, label: 'Asset Download' },
+  { num: 3, label: 'Drawing Crop' },
+  { num: 4, label: 'Legend Context' },
+  { num: 5, label: 'Option A (Vector)' },
+  { num: 6, label: 'Gemini Vision' },
+  { num: 7, label: 'Python Compute' },
+  { num: 8, label: 'Final Results' },
+];
+
 const ACCENT = {
   fill: 'rgba(46, 204, 113, 0.18)',
   stroke: 'rgba(46, 204, 113, 0.9)',
   activeFill: 'rgba(46, 204, 113, 0.38)',
   pointFill: '#1e8449',
 };
-const LABEL = { A: '#1e8449', B: '#0f5a8c' };
+const LABEL_COLORS = { A: '#1e8449', B: '#0f5a8c' };
 
-let manifest = null;
-let current = { runIdx: 0, caseIdx: 0, selectedObject: null };
-const $ = (id) => document.getElementById(id);
-const $img = $('sheet');
-const $canvas = $('overlay');
-const $wrap = document.getElementById('canvas-wrap');
-const $navContent = $('nav-content');
-const $side = $('side');
-
-$('toggle-bboxes').addEventListener('change', renderCanvas);
-$('toggle-points').addEventListener('change', renderCanvas);
-$('toggle-yx').addEventListener('change', renderCanvas);
-
-async function loadManifest() {
-  const res = await fetch('manifest.json');
-  if (!res.ok) {
-    $navContent.innerHTML = `<div class="empty">manifest.json not found. Run <code>./build-manifest.py</code>.</div>`;
-    return;
-  }
-  manifest = await res.json();
-  renderNav();
-  if (manifest.runs.length && manifest.runs[0].cases.length) {
-    selectCase(0, 0);
-  } else {
-    $side.innerHTML = `<div class="empty">no cases in manifest</div>`;
-  }
+// ── Utils ──
+function escapeHtml(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
-function renderNav() {
-  const html = manifest.runs.map((run, ri) => `
-    <div class="run-head">${escapeHtml(run.id)} · ${run.cases.length} cases${run.source === 'experiment' ? ' · <span style="color:#3b82f6">experiment</span>' : ''}</div>
-    <ul>
-      ${run.cases.map((c, ci) => `
-        <li data-ri="${ri}" data-ci="${ci}">
-          <span class="case-id">${escapeHtml(c.id)}</span>
-          <span class="case-meta">
-            ${outcomePill(c)} ·
-            sheet ${escapeHtml(String(c.inputs.sheetNum ?? '—'))} ·
-            scale ${escapeHtml(String(c.inputs.scaleInchesPerFoot ?? '—'))}
-            ${c.finalResult && c.finalResult.distanceFeet != null ? ` · <b>${c.finalResult.distanceFeet} ft</b>` : ''}
-          </span>
-        </li>
-      `).join('')}
-    </ul>
-  `).join('');
-  $navContent.innerHTML = html;
-  $navContent.querySelectorAll('li').forEach(li => {
-    li.addEventListener('click', () => selectCase(+li.dataset.ri, +li.dataset.ci));
-  });
+function kv(key, value, opts = {}) {
+  if (value == null || value === undefined) {
+    return `<span class="k">${escapeHtml(key)}</span><span class="v" style="color:#bbb">&mdash;</span>`;
+  }
+  const s = typeof value === 'object' ? JSON.stringify(value) : String(value);
+  const cls = opts.plain ? 'v plain' : 'v';
+  return `<span class="k">${escapeHtml(key)}</span><span class="${cls}">${escapeHtml(s)}</span>`;
 }
 
 function outcomePill(c) {
-  if (c.outcome === 'success') return `<span class="pill good">ok</span>`;
-  if (c.outcome === 'compute_error') return `<span class="pill bad">compute err</span>`;
-  if (c.outcome === 'gemini_failed') return `<span class="pill bad">gemini fail</span>`;
-  if (c.outcome === 'no_calldir') return `<span class="pill warn">no call-dir</span>`;
-  return `<span class="pill warn">?</span>`;
+  if (c.outcome === 'success') return '<span class="pill good">ok</span>';
+  if (c.outcome === 'compute_error') return '<span class="pill bad">err</span>';
+  if (c.outcome === 'gemini_failed') return '<span class="pill bad">fail</span>';
+  if (c.outcome === 'no_calldir') return '<span class="pill warn">no dir</span>';
+  return '<span class="pill warn">?</span>';
+}
+
+async function fetchFile(path) {
+  if (!path) return null;
+  if (fileCache[path] !== undefined) return fileCache[path];
+  try {
+    const res = await fetch('../' + path);
+    if (!res.ok) { fileCache[path] = null; return null; }
+    const text = await res.text();
+    fileCache[path] = text;
+    return text;
+  } catch { fileCache[path] = null; return null; }
+}
+
+function currentCase() {
+  if (state.runIdx < 0 || state.caseIdx < 0) return null;
+  return manifest.runs[state.runIdx].cases[state.caseIdx];
+}
+
+// ── Load ──
+async function loadManifest() {
+  try {
+    const res = await fetch('manifest.json');
+    if (!res.ok) throw new Error('not found');
+    manifest = await res.json();
+  } catch {
+    document.getElementById('run-tree-content').innerHTML = '<div class="empty-msg">manifest.json not found. Run <code>python3 build-manifest.py</code></div>';
+    return;
+  }
+  renderRunTree();
+}
+
+// ── Run Tree ──
+function renderRunTree() {
+  const container = document.getElementById('run-tree-content');
+  let html = '';
+  manifest.runs.forEach((run, ri) => {
+    const caseItems = run.cases.map((c, ci) =>
+      `<li data-ri="${ri}" data-ci="${ci}">${escapeHtml(c.id)} ${outcomePill(c)}</li>`
+    ).join('');
+    html += `<div class="run-group">
+      <div class="run-head" data-ri="${ri}">
+        <span class="arrow">&#9656;</span>
+        <span>${escapeHtml(run.id)}</span>
+        ${run.source === 'experiment' ? '<span class="tag">exp</span>' : ''}
+      </div>
+      <ul class="run-cases" data-ri="${ri}">${caseItems}</ul>
+    </div>`;
+  });
+  container.innerHTML = html;
+
+  // Run head click -> toggle expand
+  container.querySelectorAll('.run-head').forEach(el => {
+    el.addEventListener('click', () => {
+      const ri = el.dataset.ri;
+      const cases = container.querySelector(`.run-cases[data-ri="${ri}"]`);
+      const isOpen = cases.classList.toggle('open');
+      el.querySelector('.arrow').innerHTML = isOpen ? '&#9662;' : '&#9656;';
+    });
+  });
+
+  // Case click -> select
+  container.querySelectorAll('.run-cases li').forEach(el => {
+    el.addEventListener('click', () => selectCase(+el.dataset.ri, +el.dataset.ci));
+  });
 }
 
 function selectCase(ri, ci) {
-  current = { runIdx: ri, caseIdx: ci, selectedObject: null };
-  $navContent.querySelectorAll('li').forEach(li => {
-    li.classList.toggle('active', +li.dataset.ri === ri && +li.dataset.ci === ci);
+  state = { runIdx: ri, caseIdx: ci, stepIdx: 0 };
+
+  // Ensure the run is expanded
+  const cases = document.querySelector(`.run-cases[data-ri="${ri}"]`);
+  if (cases && !cases.classList.contains('open')) {
+    cases.classList.add('open');
+    const head = document.querySelector(`.run-head[data-ri="${ri}"]`);
+    if (head) head.querySelector('.arrow').innerHTML = '&#9662;';
+  }
+
+  // Highlight active case
+  document.querySelectorAll('.run-cases li').forEach(el => {
+    el.classList.toggle('active', +el.dataset.ri === ri && +el.dataset.ci === ci);
   });
-  const c = manifest.runs[ri].cases[ci];
-  $('title').textContent = c.id;
-  $('subtitle').textContent = `sheet ${c.inputs.sheetNum} · scale ${c.inputs.scaleInchesPerFoot}`;
-  renderImage(c);
-  renderSide(c);
+
+  renderSteps();
+  renderContent();
 }
 
-function renderImage(c) {
-  if (!c.croppedJpegPath) {
-    $img.removeAttribute('src');
-    $img.style.display = 'none';
-    $canvas.width = 0; $canvas.height = 0;
-    return;
-  }
-  $img.style.display = 'block';
-  $img.onload = () => {
-    $canvas.width = $img.naturalWidth;
-    $canvas.height = $img.naturalHeight;
-    $canvas.style.width = $img.clientWidth + 'px';
-    $canvas.style.height = $img.clientHeight + 'px';
-    renderCanvas();
-  };
-  $img.src = '../' + c.croppedJpegPath;   // viewer/ → workspace root
+// ── Steps Panel ──
+function renderSteps() {
+  const container = document.getElementById('steps-content');
+  container.innerHTML = STEPS.map((s, i) =>
+    `<div class="step-item${i === state.stepIdx ? ' active' : ''}" data-si="${i}">
+      <span class="dot"></span>
+      <span>${s.num} ${escapeHtml(s.label)}</span>
+    </div>`
+  ).join('');
+  container.querySelectorAll('.step-item').forEach(el => {
+    el.addEventListener('click', () => {
+      state.stepIdx = +el.dataset.si;
+      renderSteps();
+      renderContent();
+    });
+  });
 }
 
-// Re-sync overlay canvas size on resize so CSS dims track the image.
-window.addEventListener('resize', () => {
-  if ($img.clientWidth) {
-    $canvas.style.width = $img.clientWidth + 'px';
-    $canvas.style.height = $img.clientHeight + 'px';
-  }
-});
-
-function currentCase() {
-  return manifest.runs[current.runIdx].cases[current.caseIdx];
-}
-
-function renderCanvas() {
+// ── Content Dispatch ──
+async function renderContent() {
   const c = currentCase();
+  const area = document.getElementById('content');
+  if (!c) { area.innerHTML = '<div class="empty">Select a case</div>'; return; }
+
+  area.innerHTML = '<div class="empty">Loading...</div>';
+
+  switch (state.stepIdx) {
+    case 0: area.innerHTML = renderStep1(c); break;
+    case 1: area.innerHTML = await renderStep2(c); break;
+    case 2: area.innerHTML = await renderStep3(c); break;
+    case 3: area.innerHTML = await renderStep4(c); break;
+    case 4: area.innerHTML = await renderStep5(c); break;
+    case 5: area.innerHTML = await renderStep6(c); setupCanvas(c); break;
+    case 6: area.innerHTML = await renderStep7(c); break;
+    case 7: area.innerHTML = renderStep8(c); break;
+  }
+}
+
+// ── Step 1: Inputs ──
+function renderStep1(c) {
+  const meta = c.metadata || {};
+  const aci = c.applicableChecklistItems || [];
+  const lci = c.likelyChecklistItems || [];
+
+  let aciHtml = '';
+  if (aci.length) {
+    aciHtml = `<div class="section"><h3>Applicable Checklist Items</h3>` +
+      aci.map(item => `<span class="checklist-tag agent">${escapeHtml(item.checklist_id || item.checklistId || '')}</span>
+        <span style="font-size:11px;color:var(--muted);margin-right:12px">${escapeHtml(item.checklist_deficiency_text || item.checklistText || '')}</span>`).join('<br>') +
+      `</div>`;
+  }
+
+  let lciHtml = '';
+  if (lci.length) {
+    lciHtml = `<div class="section"><h3>Likely Checklist Items</h3>` +
+      lci.map(item => `<span class="checklist-tag">${escapeHtml(item.checklistId || item.checklist_id || '')}</span>
+        <span style="font-size:11px;color:var(--muted);margin-right:12px">${escapeHtml(item.checklistText || item.checklist_deficiency_text || '')}</span>`).join('<br>') +
+      `</div>`;
+  }
+
+  return `
+    <div class="section"><h3>MCP Tool Inputs</h3>
+      <div class="kv-grid">
+        ${kv('callId', meta.callId)}
+        ${kv('documentId', c.inputs.documentId)}
+        ${kv('sheetNum', c.inputs.sheetNum)}
+        ${kv('objectA', c.inputs.objectA, { plain: true })}
+        ${kv('objectB', c.inputs.objectB, { plain: true })}
+        ${kv('scaleInchesPerFoot', c.inputs.scaleInchesPerFoot)}
+        ${kv('strategy', meta.strategy)}
+      </div>
+    </div>
+    ${c.reasoning ? `<div class="section"><h3>Agent Reasoning</h3><div class="reasoning-box">${escapeHtml(c.reasoning)}</div></div>` : ''}
+    ${aciHtml}
+    ${lciHtml}
+  `;
+}
+
+// ── Step 2: Asset Download ──
+async function renderStep2(c) {
+  const assets = (c.metadata || {}).assets || {};
+  let html = `<div class="section"><h3>Supabase Storage Paths</h3>
+    <div class="kv-grid">
+      ${kv('bucket', assets.bucket)}
+      ${kv('pdfStoragePath', assets.pdfStoragePath)}
+      ${kv('jpegStoragePath', assets.jpegStoragePath)}
+    </div>
+  </div>`;
+
+  if (c.sheetPdfPath) {
+    html += `<div class="section"><h3>Sheet PDF</h3>
+      <object data="../${escapeHtml(c.sheetPdfPath)}" type="application/pdf" width="100%" height="600" style="border:1px solid var(--border); border-radius:4px;">
+        <p>PDF preview not available. <a href="../${escapeHtml(c.sheetPdfPath)}" target="_blank">Download PDF</a></p>
+      </object>
+    </div>`;
+  }
+
+  if (c.sheetJpegPath) {
+    html += `<div class="section"><h3>Full-Page JPEG</h3>
+      <div class="image-container">
+        <div class="label">sheet.jpg</div>
+        <img src="../${escapeHtml(c.sheetJpegPath)}" alt="full page JPEG" />
+      </div>
+    </div>`;
+  }
+
+  if (!c.sheetPdfPath && !c.sheetJpegPath) {
+    html += `<div class="warn-note">tmp/ files not archived for this run &mdash; sheet PDF and JPEG are not available locally.</div>`;
+  }
+
+  return html;
+}
+
+// ── Step 3: Drawing Block Crop ──
+async function renderStep3(c) {
+  const assets = (c.metadata || {}).assets || {};
+  const bbox = assets.drawingBbox;
+  const isFullPage = !bbox || (bbox.x0 === 0 && bbox.y0 === 0 && bbox.x1 === 1 && bbox.y1 === 1);
+
+  let html = `<div class="section"><h3>Drawing Block BBox (normalized)</h3>
+    <pre class="code-block">${escapeHtml(JSON.stringify(bbox, null, 2))}</pre>
+  </div>`;
+
+  if (isFullPage) {
+    html += `<div class="warn-note">No drawing block found &mdash; full page was sent to Gemini (no crop applied).</div>`;
+  }
+
+  if (c.croppedJpegPath) {
+    html += `<div class="section"><h3>Cropped Image (sent to Gemini)</h3>
+      <div class="image-container">
+        <div class="label">cropped.jpg</div>
+        <img src="../${escapeHtml(c.croppedJpegPath)}" alt="cropped drawing" />
+      </div>
+    </div>`;
+  } else {
+    html += `<div class="warn-note">No cropped image available.</div>`;
+  }
+
+  return html;
+}
+
+// ── Step 4: Legend Context ──
+async function renderStep4(c) {
+  const assets = (c.metadata || {}).assets || {};
+  let html = `<div class="section"><h3>Legend Source</h3>
+    <div class="kv-grid">${kv('legendSource', assets.legendSource)}</div>
+  </div>`;
+
+  if (assets.legendSource === 'none') {
+    html += `<div class="warn-note">No legend context was available for this measurement. The model had to interpret scale markings and symbols without legend reference.</div>`;
+  }
+
+  if (c.legendPath) {
+    const content = await fetchFile(c.legendPath);
+    if (content) {
+      html += `<div class="section"><h3>Legend Content</h3>
+        <pre class="code-block">${escapeHtml(content)}</pre>
+      </div>`;
+    }
+  }
+
+  return html;
+}
+
+// ── Step 5: Option A (Vector) ──
+async function renderStep5(c) {
+  let html = `<div class="section"><h3>Option A: Vector Matching</h3>
+    <div class="info-note">Option A is a v1 stub that always fails. Pattern matching on vector PDF paths is not yet implemented.</div>
+  </div>`;
+
+  if (c.eventsPath) {
+    const raw = await fetchFile(c.eventsPath);
+    if (raw) {
+      try {
+        const lines = raw.trim().split('\n').map(l => JSON.parse(l));
+        const optAEvents = lines.filter(e => e.phase === 'option-a' || (e.event && e.event.includes('option-a')));
+        if (optAEvents.length) {
+          html += `<div class="section"><h3>Option A Events</h3>
+            <pre class="code-block">${escapeHtml(JSON.stringify(optAEvents, null, 2))}</pre>
+          </div>`;
+        } else {
+          // Show all events if no specific option-a events found
+          const summary = lines.filter(e => e.phase === 'option-a' || e.step === 'option-a');
+          if (summary.length) {
+            html += `<div class="section"><h3>Option A Events</h3>
+              <pre class="code-block">${escapeHtml(JSON.stringify(summary, null, 2))}</pre>
+            </div>`;
+          }
+        }
+      } catch {
+        html += `<div class="section"><h3>Raw Events</h3>
+          <pre class="code-block">${escapeHtml(raw)}</pre>
+        </div>`;
+      }
+    }
+  }
+
+  return html;
+}
+
+// ── Step 6: Gemini Vision (Option B) ──
+async function renderStep6(c) {
+  const loc = c.localization || {};
+
+  // Canvas overlay section
+  let html = '';
+  if (c.croppedJpegPath) {
+    html += `<div class="section"><h3>Gemini Localization Overlay</h3>
+      <div class="canvas-stage">
+        <div class="toolbar">
+          <label><input type="checkbox" id="toggle-bboxes" checked /> bboxes</label>
+          <label><input type="checkbox" id="toggle-points" checked /> nearestPoints</label>
+          <label title="Gemini may return coords in [y,x] order"><input type="checkbox" id="toggle-yx" /> swap axes</label>
+        </div>
+        <div class="canvas-wrap" id="canvas-wrap">
+          <img id="overlay-img" src="../${escapeHtml(c.croppedJpegPath)}" alt="cropped" />
+          <canvas id="overlay-canvas"></canvas>
+        </div>
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px;">
+        Coordinates are in Gemini's 0&ndash;1000 normalized space. bbox=[x0,y0,x1,y1]. If bboxes appear misplaced, try <b>swap axes</b>.
+      </div>
+    </div>`;
+  } else {
+    html += `<div class="warn-note">No cropped image available for overlay.</div>`;
+  }
+
+  // Object cards
+  html += `<div class="section"><h3>Parsed Localization</h3>`;
+  html += objectCardHtml('A', loc.objectA);
+  html += objectCardHtml('B', loc.objectB);
+  if (!loc.objectA && !loc.objectB) html += '<div style="color:var(--muted);font-size:12px">No localization data</div>';
+  html += `</div>`;
+
+  // Prompt
+  if (c.promptPath) {
+    const prompt = await fetchFile(c.promptPath);
+    if (prompt) {
+      html += `<div class="section"><h3>Gemini Prompt</h3>
+        <pre class="code-block">${escapeHtml(prompt)}</pre>
+      </div>`;
+    }
+  }
+
+  // Response
+  if (c.responsePath) {
+    const response = await fetchFile(c.responsePath);
+    if (response) {
+      html += `<div class="section"><h3>Gemini Raw Response</h3>
+        <pre class="code-block">${escapeHtml(response)}</pre>
+      </div>`;
+    }
+  }
+
+  return html;
+}
+
+function objectCardHtml(label, obj) {
+  if (!obj) return '';
+  const swatchCls = label === 'A' ? 'a' : 'b';
+  return `
+    <div class="object-card">
+      <div class="head">
+        <span class="swatch ${swatchCls}"></span>
+        <span class="label">Object ${escapeHtml(label)}</span>
+        <span style="margin-left:auto;font-size:11px;color:var(--muted)">conf ${obj.confidence ?? '&mdash;'}</span>
+      </div>
+      <div class="desc">${escapeHtml(obj.description || '')}</div>
+      <div class="kv-grid" style="margin-top:6px">
+        ${kv('bbox', obj.bbox ? '[' + obj.bbox.join(', ') + ']' : null)}
+        ${kv('nearestPoint', obj.nearestPoint ? '[' + obj.nearestPoint.join(', ') + ']' : null)}
+        ${kv('found', obj.found)}
+      </div>
+    </div>`;
+}
+
+// ── Canvas Setup (Step 6) ──
+function setupCanvas(c) {
+  const img = document.getElementById('overlay-img');
+  const canvas = document.getElementById('overlay-canvas');
+  if (!img || !canvas) return;
+
+  const draw = () => {
+    canvas.width = img.naturalWidth;
+    canvas.height = img.naturalHeight;
+    canvas.style.width = img.clientWidth + 'px';
+    canvas.style.height = img.clientHeight + 'px';
+    renderOverlay(c, canvas);
+  };
+
+  if (img.complete && img.naturalWidth) draw();
+  else img.onload = draw;
+
+  // Toggle handlers
+  ['toggle-bboxes', 'toggle-points', 'toggle-yx'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('change', () => renderOverlay(c, canvas));
+  });
+
+  // Resize
+  const resizeObs = new ResizeObserver(() => {
+    if (img.clientWidth) {
+      canvas.style.width = img.clientWidth + 'px';
+      canvas.style.height = img.clientHeight + 'px';
+    }
+  });
+  resizeObs.observe(img);
+}
+
+function renderOverlay(c, canvas) {
   const loc = c.localization;
-  const ctx = $canvas.getContext('2d');
-  ctx.clearRect(0, 0, $canvas.width, $canvas.height);
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
   if (!loc) return;
 
-  const showBbox = $('toggle-bboxes').checked;
-  const showPts = $('toggle-points').checked;
-  const swapAxes = $('toggle-yx').checked;
+  const showBbox = document.getElementById('toggle-bboxes')?.checked ?? true;
+  const showPts = document.getElementById('toggle-points')?.checked ?? true;
+  const swapAxes = document.getElementById('toggle-yx')?.checked ?? false;
 
-  // Gemini bboxes are in 0-1000 normalized space
-  const W = $canvas.width, H = $canvas.height;
+  const W = canvas.width, H = canvas.height;
   const denorm = (v, dim) => (v / 1000) * dim;
-
-  // Hit boxes in CSS pixel space for click detection
-  $canvas._hits = [];
-  const cssScaleX = $canvas.clientWidth / W;
-  const cssScaleY = $canvas.clientHeight / H;
 
   ['objectA', 'objectB'].forEach(key => {
     const obj = loc[key];
     if (!obj || !obj.found || !obj.bbox) return;
     const [a0, b0, a1, b1] = obj.bbox;
-    // When swapAxes is on, interpret bbox as [y0, x0, y1, x1] → swap to [x0, y0, x1, y1]
     const [x0, y0, x1, y1] = swapAxes ? [b0, a0, b1, a1] : [a0, b0, a1, b1];
-    const px = denorm(x0, W);
-    const py = denorm(y0, H);
-    const pw = denorm(x1 - x0, W);
-    const ph = denorm(y1 - y0, H);
+    const px = denorm(x0, W), py = denorm(y0, H);
+    const pw = denorm(x1 - x0, W), ph = denorm(y1 - y0, H);
 
     if (showBbox) {
-      const isActive = current.selectedObject === key;
-      ctx.fillStyle = isActive ? ACCENT.activeFill : ACCENT.fill;
+      ctx.fillStyle = ACCENT.fill;
       ctx.strokeStyle = ACCENT.stroke;
-      ctx.lineWidth = isActive ? 4 : 2;
+      ctx.lineWidth = 2;
       ctx.fillRect(px, py, pw, ph);
       ctx.strokeRect(px, py, pw, ph);
-      // Label (A / B) in the corner
-      ctx.fillStyle = LABEL[key.slice(-1)] || ACCENT.stroke;
+      ctx.fillStyle = LABEL_COLORS[key.slice(-1)] || ACCENT.stroke;
       ctx.font = 'bold 22px -apple-system, sans-serif';
       ctx.textBaseline = 'top';
       ctx.fillText(key.slice(-1), px + 6, py + 4);
     }
 
-    // Store hit rect in CSS space for click detection
-    $canvas._hits.push({
-      key,
-      x: px * cssScaleX,
-      y: py * cssScaleY,
-      w: pw * cssScaleX,
-      h: ph * cssScaleY,
-    });
-
-    // nearestPoint
     if (showPts && obj.nearestPoint) {
       let [a, b] = obj.nearestPoint;
       const [npX, npY] = swapAxes ? [b, a] : [a, b];
-      const ppx = denorm(npX, W);
-      const ppy = denorm(npY, H);
+      const ppx = denorm(npX, W), ppy = denorm(npY, H);
       ctx.beginPath();
       ctx.arc(ppx, ppy, 7, 0, Math.PI * 2);
       ctx.fillStyle = ACCENT.pointFill;
@@ -286,162 +606,114 @@ function renderCanvas() {
   });
 }
 
-$canvas.addEventListener('click', (e) => {
-  const rect = $canvas.getBoundingClientRect();
-  const x = e.clientX - rect.left;
-  const y = e.clientY - rect.top;
-  const hits = $canvas._hits || [];
-  for (const h of hits) {
-    if (x >= h.x && x <= h.x + h.w && y >= h.y && y <= h.y + h.h) {
-      current.selectedObject = h.key;
-      renderCanvas();
-      // Scroll right panel to the matching card
-      const card = document.getElementById('card-' + h.key);
-      if (card) {
-        card.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        card.classList.add('selected');
-        setTimeout(() => {
-          document.querySelectorAll('#side .object-card').forEach(n => n.classList.remove('selected'));
-          if (current.selectedObject === h.key) {
-            document.getElementById('card-' + h.key)?.classList.add('selected');
-          }
-        }, 200);
-      }
-      return;
-    }
-  }
-  current.selectedObject = null;
-  renderCanvas();
-});
-
-function renderSide(c) {
+// ── Step 7: Python Distance Computation ──
+async function renderStep7(c) {
   const loc = c.localization || {};
+  const meta = c.metadata || {};
+  const final = c.finalResult || {};
+
+  let html = `<div class="section"><h3>Python Script Inputs</h3>
+    <div class="kv-grid">
+      ${kv('strategy', meta.strategy)}
+      ${kv('scaleInchesPerFoot', c.inputs.scaleInchesPerFoot)}
+      ${kv('objectA', c.inputs.objectA, { plain: true })}
+      ${kv('objectB', c.inputs.objectB, { plain: true })}
+    </div>
+  </div>`;
+
+  html += `<div class="section"><h3>Localization Input</h3>
+    <pre class="code-block">${escapeHtml(JSON.stringify(loc, null, 2))}</pre>
+  </div>`;
+
+  if (c.debugPngPath) {
+    html += `<div class="section"><h3>Debug Annotated Image</h3>
+      <div class="image-container">
+        <div class="label">debug.png (Python output)</div>
+        <img src="../${escapeHtml(c.debugPngPath)}" alt="debug measurement image" />
+      </div>
+    </div>`;
+  } else {
+    html += `<div class="warn-note">No debug.png available &mdash; Python computation may not have run.</div>`;
+  }
+
+  html += `<div class="section"><h3>Computation Result</h3>
+    <div class="kv-grid">
+      ${kv('distanceFeet', final.distanceFeet)}
+      ${kv('distanceInches', final.distanceInches)}
+      ${kv('confidence', final.confidence)}
+      ${kv('method', final.method || (final.localization || {}).method)}
+      ${kv('fallbackUsed', (final.localization || {}).fallbackUsed)}
+    </div>
+  </div>`;
+
+  return html;
+}
+
+// ── Step 8: Final Results ──
+function renderStep8(c) {
   const final = c.finalResult;
   const meta = c.metadata || {};
+
+  let resultHtml;
+  if (final) {
+    const ft = final.distanceFeet ?? '?';
+    const inches = final.distanceInches ?? '?';
+    resultHtml = `
+      <div class="result-card">
+        <div class="result-big">${escapeHtml(String(ft))} ft (${escapeHtml(String(inches))} in)</div>
+        <div class="kv-grid">
+          ${kv('confidence', final.confidence)}
+          ${kv('scaleUsed', final.scaleUsed)}
+          ${kv('method', final.method || (final.localization || {}).method)}
+          ${kv('fallbackUsed', (final.localization || {}).fallbackUsed)}
+          ${kv('legendSource', (final.localization || {}).legendSource)}
+        </div>
+      </div>`;
+  } else {
+    resultHtml = `
+      <div class="result-card">
+        <div class="result-big error">No Result</div>
+        <div style="font-size:12px;color:var(--muted)">Pipeline did not produce a measure-distance.json</div>
+      </div>`;
+  }
+
+  let html = `<div class="section"><h3>Final Result</h3>${resultHtml}</div>`;
+
+  html += `<div class="section"><h3>Timing &amp; Status</h3>
+    <div class="kv-grid">
+      ${kv('outcome', c.outcome)}
+      ${kv('elapsedMs', meta.elapsedMs)}
+      ${kv('startedAt', meta.startedAt)}
+      ${kv('callId', meta.callId)}
+    </div>
+  </div>`;
+
+  if (meta.error) {
+    html += `<div class="section"><h3>Error</h3>
+      <div class="err-note">${escapeHtml(String(meta.error).slice(0, 1200))}${String(meta.error).length > 1200 ? '...' : ''}</div>
+    </div>`;
+  }
+
+  // Provenance
   const prov = c.provenance || {};
   const captured = prov.capturedOutcome || {};
-  const aci = c.applicableChecklistItems || [];
-  const lci = c.likelyChecklistItems || [];
-
-  const html = `
-    <section class="section">
-      <h2>inputs</h2>
-      ${kv('projectId', c.inputs.projectId)}
-      ${kv('documentId', c.inputs.documentId)}
-      ${kv('sheetNum', c.inputs.sheetNum)}
-      ${kv('scaleInchesPerFoot', c.inputs.scaleInchesPerFoot)}
-      ${kv('objectA', c.inputs.objectA, true)}
-      ${kv('objectB', c.inputs.objectB, true)}
-    </section>
-
-    ${c.reasoning ? `
-    <section class="section">
-      <h2>agent reasoning</h2>
-      <div class="reasoning-box">${escapeHtml(c.reasoning)}</div>
-    </section>` : ''}
-
-    ${aci.length ? `
-    <section class="section">
-      <h2>agent-declared checklist items</h2>
-      ${aci.map(item => `
-        <div style="margin-bottom:10px;">
-          <span class="checklist-tag agent">${escapeHtml(item.checklist_id || item.checklistId || '')}</span>
-          <div style="font-size:12px;color:var(--text);line-height:1.4;margin-top:4px;">${escapeHtml(item.checklist_deficiency_text || item.checklistText || '')}</div>
-        </div>
-      `).join('')}
-    </section>` : ''}
-
-    ${lci.length ? `
-    <section class="section">
-      <h2>likely checklist items</h2>
-      ${lci.map(item => `
-        <div style="margin-bottom:10px;">
-          <span class="checklist-tag">${escapeHtml(item.checklistId || item.checklist_id || '')}</span>
-          <div style="font-size:12px;color:var(--text);line-height:1.4;margin-top:4px;">${escapeHtml(item.checklistText || item.checklist_deficiency_text || '')}</div>
-        </div>
-      `).join('')}
-    </section>` : ''}
-
-    <section class="section">
-      <h2>gemini localization</h2>
-      ${objectCard('A', loc.objectA)}
-      ${objectCard('B', loc.objectB)}
-      ${!loc.objectA && !loc.objectB ? '<div class="empty">no localization data</div>' : ''}
-      <div class="warn-note">
-        Coordinates are in Gemini's 0–1000 normalized space. bbox=<code>[x0,y0,x1,y1]</code>.
-        Gemini may return coords in [y,x] order — if bboxes or dots appear misplaced,
-        try the <b>swap axes</b> toggle to test the alternate interpretation.
+  if (prov.sourceTool_use_id || prov.sourceRunIndex) {
+    html += `<div class="section"><h3>Provenance</h3>
+      <div class="kv-grid">
+        ${kv('tool_use_id', prov.sourceTool_use_id)}
+        ${kv('runIndex', prov.sourceRunIndex)}
+        ${kv('checklistItem', prov.sourceChecklistItem)}
+        ${kv('orig reachedScript', captured.reachedScript)}
+        ${kv('orig optionB_success', captured.optionB_success)}
+        ${kv('orig optionB_confidence', captured.optionB_geminiConfidence)}
       </div>
-    </section>
+    </div>`;
+  }
 
-    <section class="section">
-      <h2>final result</h2>
-      ${final ? `
-        ${kv('distanceFeet', final.distanceFeet)}
-        ${kv('distanceInches', final.distanceInches)}
-        ${kv('confidence', final.confidence)}
-        ${kv('scaleUsed', final.scaleUsed)}
-        ${kv('method', final.method || (final.localization || {}).method)}
-        ${kv('fallbackUsed', (final.localization || {}).fallbackUsed)}
-      ` : `
-        <div class="empty">no measure-distance.json (pipeline didn't complete)</div>
-        ${meta.error ? `<div class="err-note">${escapeHtml(String(meta.error).slice(0, 600))}${String(meta.error).length > 600 ? '…' : ''}</div>` : ''}
-      `}
-    </section>
-
-    <section class="section">
-      <h2>call metadata</h2>
-      ${kv('callId', meta.callId)}
-      ${kv('startedAt', meta.startedAt)}
-      ${kv('elapsedMs', meta.elapsedMs)}
-      ${kv('strategy', meta.strategy)}
-      ${kv('optionB.success', (meta.optionB || {}).success)}
-      ${kv('optionB.confidence', (meta.optionB || {}).geminiConfidence)}
-      ${kv('assets.drawingBbox', (meta.assets || {}).drawingBbox)}
-      ${kv('assets.legendSource', (meta.assets || {}).legendSource)}
-    </section>
-
-    <section class="section">
-      <h2>provenance (original agent call)</h2>
-      ${kv('tool_use_id', prov.sourceTool_use_id)}
-      ${kv('runIndex', prov.sourceRunIndex)}
-      ${kv('checklistItem', prov.sourceChecklistItem)}
-      ${kv('reachedScript (orig)', captured.reachedScript)}
-      ${kv('optionB_success (orig)', captured.optionB_success)}
-      ${kv('optionB_confidence (orig)', captured.optionB_geminiConfidence)}
-    </section>
-  `;
-
-  $side.innerHTML = html;
+  return html;
 }
 
-function kv(k, v, isLong) {
-  if (v == null) return `<div class="row"><span class="k">${escapeHtml(k)}</span><span class="v" style="color: #aaa">—</span></div>`;
-  const s = typeof v === 'object' ? JSON.stringify(v) : String(v);
-  return `<div class="row"><span class="k">${escapeHtml(k)}</span><span class="v" ${isLong ? 'style="font-family: inherit; font-size:12px"' : ''}>${escapeHtml(s)}</span></div>`;
-}
-
-function objectCard(label, obj) {
-  if (!obj) return '';
-  return `
-    <div class="object-card" id="card-object${label}">
-      <div class="head">
-        <span class="swatch"></span>
-        <span class="label">object ${label}</span>
-        <span style="margin-left:auto; font-size: 11px; color: var(--muted)">conf ${obj.confidence ?? '—'}</span>
-      </div>
-      <div class="desc">${escapeHtml(obj.description || '')}</div>
-      <div class="row"><span class="k">bbox</span><span class="v"><code>${obj.bbox ? `[${obj.bbox.join(', ')}]` : '—'}</code></span></div>
-      <div class="row"><span class="k">nearestPoint</span><span class="v"><code>${obj.nearestPoint ? `[${obj.nearestPoint.join(', ')}]` : '—'}</code></span></div>
-      <div class="row"><span class="k">found</span><span class="v">${obj.found}</span></div>
-    </div>
-  `;
-}
-
-function escapeHtml(s) {
-  return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-}
-
+// ── Init ──
 loadManifest();
 </script>
 </body>
