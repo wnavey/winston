@@ -571,10 +571,10 @@ async function renderStep5(c) {
 async function renderStep6(c) {
   const loc = c.localization || {};
 
-  // Canvas overlay section
-  let html = '';
+  // Center: cropped image with bbox overlay
+  let centerHtml = '';
   if (c.croppedJpegPath) {
-    html += `<div class="section"><h3>Gemini Localization Overlay</h3>
+    centerHtml = `
       <div class="canvas-stage">
         <div class="toolbar">
           <label><input type="checkbox" id="toggle-bboxes" checked /> bboxes</label>
@@ -587,26 +587,28 @@ async function renderStep6(c) {
         </div>
       </div>
       <div style="font-size:11px;color:var(--muted);margin-top:4px;">
-        Coordinates are in Gemini's 0&ndash;1000 normalized space. bbox=[x0,y0,x1,y1]. If bboxes appear misplaced, try <b>swap axes</b>.
-      </div>
-    </div>`;
+        Coordinates in Gemini 0&ndash;1000 space. If bboxes appear misplaced, try <b>swap axes</b>.
+      </div>`;
   } else {
-    html += `<div class="warn-note">No cropped image available for overlay.</div>`;
+    centerHtml = '<div class="warn-note">No cropped image available for overlay.</div>';
   }
 
+  // Right: localization cards, prompt, response
+  let rightHtml = '';
+
   // Object cards
-  html += `<div class="section"><h3>Parsed Localization</h3>`;
-  html += objectCardHtml('A', loc.objectA);
-  html += objectCardHtml('B', loc.objectB);
-  if (!loc.objectA && !loc.objectB) html += '<div style="color:var(--muted);font-size:12px">No localization data</div>';
-  html += `</div>`;
+  rightHtml += `<div class="section"><h3>Parsed Localization</h3>`;
+  rightHtml += objectCardHtml('A', loc.objectA);
+  rightHtml += objectCardHtml('B', loc.objectB);
+  if (!loc.objectA && !loc.objectB) rightHtml += '<div style="color:var(--muted);font-size:12px">No localization data</div>';
+  rightHtml += `</div>`;
 
   // Prompt
   if (c.promptPath) {
     const prompt = await fetchFile(c.promptPath);
     if (prompt) {
-      html += `<div class="section"><h3>Gemini Prompt</h3>
-        <pre class="code-block">${escapeHtml(prompt)}</pre>
+      rightHtml += `<div class="section"><h3>Gemini Prompt</h3>
+        <pre class="code-block" style="max-height:250px;">${escapeHtml(prompt)}</pre>
       </div>`;
     }
   }
@@ -615,13 +617,16 @@ async function renderStep6(c) {
   if (c.responsePath) {
     const response = await fetchFile(c.responsePath);
     if (response) {
-      html += `<div class="section"><h3>Gemini Raw Response</h3>
+      rightHtml += `<div class="section"><h3>Gemini Raw Response</h3>
         <pre class="code-block">${escapeHtml(response)}</pre>
       </div>`;
     }
   }
 
-  return html;
+  return `<div style="display:flex;gap:20px;align-items:flex-start;">
+    <div style="flex:1;min-width:0;">${centerHtml}</div>
+    <div style="width:360px;flex:0 0 360px;overflow-y:auto;max-height:calc(100vh - 60px);">${rightHtml}</div>
+  </div>`;
 }
 
 function objectCardHtml(label, obj) {
@@ -750,14 +755,6 @@ async function renderStep7(c) {
       </div>`;
   } else {
     centerHtml = '<div class="warn-note">No cropped image available.</div>';
-  }
-
-  if (c.debugPngPath) {
-    centerHtml += `
-      <div class="image-container" style="margin-top:16px;">
-        <div class="label">debug.png — Python's annotated measurement</div>
-        <img src="../${escapeHtml(c.debugPngPath)}" alt="debug measurement" />
-      </div>`;
   }
 
   const rightHtml = `
