@@ -265,16 +265,106 @@ can show side-by-side crops.
 
 ### Phase B — Legend symbol images
 
-1. During step 3b (legend context collection), also crop the legend
-   block regions from the sheet as images
-2. In call 2, attach 1–2 legend images alongside the refined crop
-3. Update the prompt to reference the legend images
+The legend for a given symbol may not be on the same sheet we're measuring.
+For example, if we're measuring transformer-pad-to-building on Sheet 21,
+the transformer icon definition might live on Sheet 3 (General Notes) or
+Sheet 1 (Cover/Legend). We need a cross-sheet lookup that finds the right
+legend block regardless of which sheet it's on.
 
-**Estimated effort:** 1 day on top of Phase A.
+**Key insight:** the site-plan preprocessing pipeline already computes
+embeddings for every content block. The **completeness-check workflow**
+has a block vector search tool that queries these embeddings to find blocks
+matching a natural-language description. We can reuse this pattern.
 
-**Validation:** Visual inspection via the viewer. Check if the
-legend image matches the target objects. Compare Gemini confidence
-between with-legend and without-legend variants.
+#### Finding the right legend block
+
+1. **Extract object names from the tool call.** The agent already provides
+   `objectA` and `objectB` as natural-language descriptions (e.g., "mitigation
+   tree marked M", "overhead electric line (OHE)"). These are the search
+   queries.
+
+2. **Block vector search.** Query Supabase's `content_block_embedding` table
+   (same as the completeness-check workflow's block-search tool) with the
+   object descriptions. Filter to blocks whose `category` is `legend`,
+   `diagram`, or `symbol`. The embedding similarity search returns the most
+   relevant legend blocks across ALL sheets in the plan set — not just the
+   sheet being measured.
+
+   This mirrors how the completeness-check workflow finds specific blocks:
+   it calls `findBlocksByDescription(query, planSetVersionId, { categories })`.
+   We can reuse that Supabase query pattern directly.
+
+3. **Download and crop the legend block.** For each matched block:
+   - Identify which sheet it lives on (via `sheet_version_id`)
+   - Download that sheet's PDF (or reuse it if already cached)
+   - Use the block's bounding box to crop just the legend entry at high DPI
+   - This produces a small, focused image of the specific symbol
+
+4. **Attach to the Gemini call.** Send the cropped legend image(s) alongside
+   the main measurement image in call 2 (or call 1 if the legend context
+   would help with initial identification too).
+
+#### Implementation steps
+
+1. Add a `findLegendBlockImages(objectDescriptions, planSetVersionId)` function
+   to `measure-distance.ts` that:
+   - Queries `content_block_embedding` with vector similarity search
+   - Filters to legend/symbol/diagram categories
+   - Returns block metadata (sheet, bounding box, description) for the top-N
+     matches
+2. For each matched block, download the sheet PDF and crop the block region at
+   300 DPI (reuse the existing `downloadAsset` + PyMuPDF rendering pattern)
+3. In the Gemini prompt for call 2, include the cropped legend images as
+   additional context images:
+   ```
+   [Image 1: High-DPI crop of measurement region]
+   [Image 2: Legend block showing the tree symbol definition]
+   [Image 3: Legend block showing the OHE line symbol definition]
+
+   "Locate objectA (mitigation tree — see legend image 2 for the symbol)
+    and objectB (OHE line — see legend image 3 for the symbol)."
+   ```
+4. Persist the legend images to the call-dir for debugging/viewer inspection
+
+#### Where in the pipeline this happens
+
+The legend block search and image extraction can happen in parallel with
+call 1 (coarse localization), since both only need the object descriptions
+as input. This hides the legend-fetch latency behind the coarse-call latency:
+
+```
+          ┌─ Call 1: coarse localization ──────────────┐
+  ──start─┤                                            ├── merge ── Call 2
+          └─ Legend block search + image extraction ───┘
+```
+
+By the time call 1 returns with coarse bboxes, the legend images are already
+downloaded and cropped, ready to attach to call 2.
+
+#### Relationship to current legend pipeline
+
+Today's `findLegendContext()` in `measure-distance.ts` queries `content_block`
+for blocks whose `description` contains keywords like "legend", "symbol",
+"abbreviat", etc., and concatenates their TEXT content. Phase B replaces this
+text-dump approach with:
+
+- **Targeted search** via embeddings (not keyword matching) — finds the
+  specific legend entry for the specific objects being measured
+- **Visual context** via cropped images (not text transcriptions) — the model
+  sees what the symbol actually looks like, not a description of it
+- **Cross-sheet reach** via plan-set-wide embedding search — finds the right
+  legend even if it's on a different sheet
+
+The existing keyword-based text context can remain as a fallback for cases
+where the embedding search returns no results or the block has no bounding box.
+
+**Estimated effort:** 2–3 days on top of Phase A. The embedding query pattern
+exists in the completeness-check workflow; the main work is wiring it into
+`measure-distance.ts` and handling the per-block PDF download + crop.
+
+**Validation:** Visual inspection via the viewer (verify the legend images
+are relevant). Compare Gemini confidence and localization precision between
+with-legend-images and without. A/B via test-script fixture replay.
 
 ### Phase C — Skip heuristic
 
@@ -310,8 +400,12 @@ average ±0.8 ft error, that's a clear quantitative improvement.
    separate call.
 
 2. **Legend block granularity:** Some sheets have one big legend with 30+
-   entries. Do we send the whole thing, or try to crop just the relevant
-   entries? Sending the whole legend block at 300 DPI may be large.
+   entries. The embedding search approach (Phase B) targets specific entries
+   rather than sending the whole legend. However, if the matching block IS
+   a full-page legend, we may still need to crop to just the relevant row.
+   Consider: if the matched block area exceeds a threshold (e.g., >20% of
+   the sheet), fall back to sending the text transcription instead of the
+   image, or implement row-level cropping within the block.
 
 3. **Scale bar in the refined crop:** If we crop tightly, we may lose the
    scale bar. The model doesn't use the scale bar (we pass the numeric
