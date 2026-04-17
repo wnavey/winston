@@ -14,9 +14,9 @@ Tracks fixes shipped since the last experiment run, so the next run captures all
 | **Runs** | 3 (ensemble) |
 | **Model** | `claude-haiku-4-5-20251001` |
 | **Project** | Valley View Townhomes (`63cead15-41f8-418c-b0ef-bd5c2b44719a`) |
-| **Outputs** | `runs/experiment-2026-04-15/` (findings + measure-distance-calls + logs) |
+| **Outputs** | `runs/experiment-run1/` (findings + measure-distance-calls + logs) |
 | **Baseline** | `runs/baseline-2026-04-15/` (same items, no tool) |
-| **Test-script replay** | `runs/test-script-2026-04-15/test-1/` (14 fixture cases) |
+| **Test-script replay** | `runs/run1-test-fixture-1/` (14 fixture cases) |
 | **Results** | 14 tool calls attempted, 0 useful distances (wrong scale + infra bugs) |
 
 ---

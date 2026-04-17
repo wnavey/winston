@@ -35,7 +35,7 @@ else
 fi
 
 # ── Resolve fixture ──
-DEFAULT_FIXTURE="$WORKSPACE_ROOT/replay/fixtures/experiment-run2-2026-04-16-all-calls.json"
+DEFAULT_FIXTURE="$WORKSPACE_ROOT/replay/fixtures/experiment-run2-all-calls.json"
 FIXTURE="${1:-$DEFAULT_FIXTURE}"
 if [[ "$FIXTURE" != /* ]]; then
   FIXTURE="$(cd "$(dirname "$FIXTURE")" && pwd)/$(basename "$FIXTURE")"

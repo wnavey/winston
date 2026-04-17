@@ -5,8 +5,8 @@ manifest.json the viewer can consume. Browsers can't list directories,
 so we pre-compute this.
 
 Supported layouts:
-  1. test-script runs:  runs/test-script-*/test-N/output/<case-id>/measure-distance-calls/<callId>/
-  2. experiment runs:   runs/experiment-run*-*/measure-distance-calls/<callId>/  (flat, callId encodes run+item)
+  1. test-fixture runs: runs/*-test-fixture-*/{input,output}/<case-id>/measure-distance-calls/<callId>/
+  2. experiment runs:   runs/experiment-run*/measure-distance-calls/<callId>/  (flat, callId encodes run+item)
 
 Usage:
   ./build-manifest.py                # scans all matching dirs, writes ./manifest.json
@@ -298,18 +298,17 @@ def main() -> int:
 
     all_runs: list[dict] = []
 
-    # 1. Scan test-script-* directories
-    for ts_dir in sorted(RUNS_DIR.glob('test-script-*')):
-        if not ts_dir.is_dir():
+    # 1. Scan *-test-fixture-* directories (e.g., run1-test-fixture-1/)
+    #    These have input/ and output/ directly inside.
+    for tf_dir in sorted(RUNS_DIR.glob('*-test-fixture-*')):
+        if not tf_dir.is_dir():
             continue
-        run_dirs = sorted([d for d in ts_dir.iterdir() if d.is_dir()])
-        if args.run:
-            run_dirs = [d for d in run_dirs if d.name == args.run]
-        for rd in run_dirs:
-            all_runs.append(build_run_testscript(rd))
+        if args.run and tf_dir.name != args.run:
+            continue
+        all_runs.append(build_run_testscript(tf_dir))
 
-    # 2. Scan experiment-* directories (experiment-2026-04-15, experiment-run2-2026-04-16, etc.)
-    for exp_dir in sorted(RUNS_DIR.glob('experiment-*')):
+    # 2. Scan experiment-run* directories (e.g., experiment-run1/, experiment-run2/)
+    for exp_dir in sorted(RUNS_DIR.glob('experiment-run*')):
         if not exp_dir.is_dir():
             continue
         if args.run and exp_dir.name != args.run:

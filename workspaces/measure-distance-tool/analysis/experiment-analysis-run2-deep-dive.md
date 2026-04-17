@@ -1,6 +1,6 @@
 # Experiment Run2 Deep Dive — 2026-04-16
 
-Detailed analysis of `experiment-run2-2026-04-16`, the second iteration of the
+Detailed analysis of `experiment-run2`, the second iteration of the
 `el-md-exp` A/B experiment. Guide subset: `1.md`, `2.md`, `13.md`. Model:
 Haiku 4.5. 3 independent runs × 3 items = 9 agents. Overlay:
 `--experiment=measure-distance`.

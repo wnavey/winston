@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Launch the viewer. Serves measure-distance-tool/ as the web root so
-# the HTML can reach both viewer/manifest.json and runs/test-script-2026-04-15/...
+# the HTML can reach both viewer/manifest.json and runs/.../**/cropped.jpg
 #
 # Usage:
 #   ./serve.sh          # serves on http://localhost:8401

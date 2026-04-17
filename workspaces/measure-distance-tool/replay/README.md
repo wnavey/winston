@@ -5,9 +5,9 @@ the `measure-distance.ts` script layer without paying the agent-loop cost.
 
 ## What's here
 
-- [`fixtures/experiment-2026-04-15-all-calls.json`](./fixtures/experiment-2026-04-15-all-calls.json)
+- [`fixtures/experiment-run1-all-calls.json`](./fixtures/experiment-run1-all-calls.json)
   — **all 14** `run_measure_distance` tool invocations the agent made during the
-  experiment run, captured verbatim from `experiment-runs/logs/review.log`
+  experiment run, captured verbatim from `runs/experiment-run1/logs/review.log`
   `tool_use` events. Includes both:
   - **8 calls that reached the Python script** (all of which produced
     Gemini-localized bboxes but then failed at compute-distance due to the
@@ -70,7 +70,7 @@ cd ~/code/controlroom/conductor
 npm run conduct -- \
   --workflow=test-script \
   --scriptName=measure-distance \
-  --testCasesPath=/Users/winston/workspace/winston/workspaces/measure-distance-tool/replay/fixtures/experiment-2026-04-15-all-calls.json \
+  --testCasesPath=/Users/winston/workspace/winston/workspaces/measure-distance-tool/replay/fixtures/experiment-run1-all-calls.json \
   --maxParallel=3 \
   --skip-upload
 ```
@@ -78,8 +78,8 @@ npm run conduct -- \
 ## Regenerating the fixture
 
 If a future experiment run produces a new set of captured calls, the fixture
-can be regenerated from `experiment-runs/logs/review.log` and
-`experiment-runs/measure-distance-calls/`. The extraction script lived inline
+can be regenerated from `runs/experiment-run1/logs/review.log` and
+`runs/experiment-run1/measure-distance-calls/`. The extraction script lived inline
 in the PR that introduced this directory (noetic-inc/winston#N) — re-use or
 reproduce it from `checklist-item-gemini-call-mapping.md`'s methodology
 section.

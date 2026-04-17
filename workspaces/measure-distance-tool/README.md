@@ -14,7 +14,7 @@ cd viewer && ./serve.sh     # opens localhost:8401
 # Replay the measure-distance script against captured fixtures
 cd ~/code/controlroom/conductor
 npm run conduct -- --workflow=test-script --scriptName=measure-distance \
-  --testCasesPath="$(pwd)/../winston/workspaces/measure-distance-tool/replay/fixtures/experiment-2026-04-15-all-calls.json" \
+  --testCasesPath="$(pwd)/../winston/workspaces/measure-distance-tool/replay/fixtures/experiment-run1-all-calls.json" \
   --maxParallel=3 --skip-upload
 
 # Run a full experiment (baseline + tool-enabled)
@@ -42,15 +42,16 @@ measure-distance-tool/
 ├── valley-view-townhomes/          # site plan data (conductor project format)
 │   └── projects/63cead15-.../      # README.md, facts.md, sheet-NN/{guide,blocks}.md
 │
-├── runs/                           # all conductor run outputs, dated
+├── runs/                           # all conductor run outputs
 │   ├── original-review-4.3-2026-04-15/   # pre-experiment full pipeline run
 │   ├── baseline-2026-04-15/               # baseline (no tool, review v5.1.0)
-│   ├── experiment-2026-04-15/             # experiment (with tool + rich logging)
-│   └── test-script-2026-04-15/            # replay of 14 fixture cases
+│   ├── experiment-run1/                   # experiment run 1 (pre-fixes)
+│   ├── experiment-run2/                   # experiment run 2 (all fixes applied)
+│   └── run1-test-fixture-1/              # replay of run 1's 14 fixture cases
 │
 ├── replay/                         # test-script fixtures for tool-layer iteration
 │   ├── README.md
-│   └── fixtures/experiment-2026-04-15-all-calls.json
+│   └── fixtures/{experiment-run1,experiment-run2}-all-calls.json
 │
 └── viewer/                         # HTML debug viewer (Gemini bbox overlay)
     ├── serve.sh                    # launch: ./serve.sh (localhost:8401)

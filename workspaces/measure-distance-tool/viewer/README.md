@@ -17,18 +17,18 @@ normalized coordinate space.
 ```
 
 The script:
-1. Runs `build-manifest.py` to scan `../runs/test-script-2026-04-15/*/output/` and emit
-   `manifest.json` — the viewer consumes this.
+1. Runs `build-manifest.py` to scan `../runs/` for test-fixture and experiment
+   directories, then emits `manifest.json` — the viewer consumes this.
 2. Launches `python3 -m http.server` rooted at `measure-distance-tool/`, so
    the HTML can reach both `viewer/manifest.json` and the captured JPEGs
-   under `../runs/test-script-2026-04-15/…/cropped.jpg`.
+   under `../runs/…/cropped.jpg`.
 3. Opens the browser (macOS only — elsewhere, follow the printed URL).
 
 No dependencies beyond Python 3 stdlib. No build step.
 
 ## What you see
 
-- **Left nav**: every test case across every `runs/test-script-2026-04-15/test-N` run,
+- **Left nav**: every test case across all runs (test-fixtures + experiments),
   labeled with status pill (`ok` / `compute err` / `gemini fail` / `no call-dir`),
   sheet number, scale value, and final distance (if completed).
 - **Center**: the exact JPEG sent to Gemini, with green-shaded bboxes (A and B)
@@ -53,11 +53,11 @@ No dependencies beyond Python 3 stdlib. No build step.
 | File | Purpose |
 |---|---|
 | `index.html` | Self-contained UI (HTML + CSS + JS, no build) |
-| `build-manifest.py` | Scans `runs/test-script-2026-04-15/` and emits `manifest.json` |
+| `build-manifest.py` | Scans `runs/` for test-fixtures and experiments, emits `manifest.json` |
 | `manifest.json` | Generated — do not hand-edit |
 | `serve.sh` | Launch wrapper (rebuilds manifest, starts server, opens browser) |
 
 ## Refreshing after a new test-script run
 
 Just re-run `./serve.sh` (or `./build-manifest.py` alone if the server is
-still up) — it rescans every `runs/test-script-2026-04-15/test-N/` directory every time.
+still up) — it rescans all `runs/` directories every time.
