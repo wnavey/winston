@@ -29,6 +29,7 @@ Tracks fixes shipped since the last experiment run, so the next run captures all
 | **#229** | 2026-04-17 | Swap nearestPoint axis order to match Gemini [y, x] convention | Python was reading nearestPoint as [x, y] but Gemini returns [y, x] |
 | **#232** | 2026-04-17 | **Scale formula inverted** (`*` → `/`), **disable vector refinement** (overwriting Gemini's correct nearestPoints with garbage), **standardize Gemini prompt** to [y, x] for both bbox and nearestPoint | The three root causes of 0.0 ft distances |
 | **#233** | 2026-04-17 | **Fix drawing bbox format** — DB stores `{x, y, width, height}`, code expected `{x0, y0, x1, y1}`. All keys missed, defaults produced full-page bbox, no cropping ever happened. | Outstanding issue #1 (drawing block cropping) |
+| **#234** | 2026-04-17 | **objectPairs array** — tool accepts array of `{objectA, objectB}` pairs per call. Shared asset download + crop, one Gemini call per pair. Agent can batch all measurements on one sheet into a single tool call. | Agent was describing multiple pairs in reasoning but only submitting one |
 
 ### Conductor
 
@@ -51,7 +52,8 @@ With all the above merged, the next test-script replay (or experiment run) shoul
 1. **Real distances** — scale formula fixed (`/` not `*`), vector refinement disabled. Expect 5-100 ft range for typical clearances instead of 0.0.
 2. **Actual image cropping** — drawing bbox parsed correctly from `{x, y, width, height}` format. Sheet 21 crops to 88%×94%, sheet 31 to 65%×60%. Gemini gets focused drawing at higher effective resolution.
 3. **Consistent coordinate axes** — Gemini prompt asks for [y, x] everywhere (bbox + nearestPoint). Python reads [y, x] everywhere. No more axis-swap ambiguity.
-4. **Typed tool schema** (conductor#122, #123) — agent sees per-field types/descriptions, Zod rejects bad inputs at MCP level.
+4. **objectPairs batching** — agent can submit multiple `{objectA, objectB}` pairs per tool call. Expect higher measurement coverage per invocation (e.g., all 3 transformers vs their buildings in one call).
+5. **Typed tool schema** (conductor#122, #123) — agent sees per-field types/descriptions, Zod rejects bad inputs at MCP level.
 
 ### Still NOT fixed for next run (known limitations)
 
