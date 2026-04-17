@@ -256,12 +256,22 @@ approach for the hard ones.
 5. Coordinate mapping: call 2's 0–1000 coords are relative to the
    refined crop; map back to full-page before compute-distance
 
-**Estimated effort:** 1–2 days. Mostly TS orchestrator changes +
-Python coordinate mapping.
+6. **Update the debug UI (viewer).** The viewer should treat call 1 and
+   call 2 as separate inspectable steps. For each test case:
+   - Step toggle: view call 1 (coarse) or call 2 (refined) independently
+   - Call 1 view: the drawing-block crop at 120 DPI with coarse bboxes overlaid
+   - Call 2 view: the high-DPI refined crop with precise bboxes overlaid
+   - Side panel shows per-call metadata (image dimensions, DPI, Gemini
+     confidence, elapsed time) so you can compare the two calls
+   - The existing "swap axes" and bbox/nearestPoint toggles apply to
+     whichever call is currently selected
+
+**Estimated effort:** 2–3 days. TS orchestrator changes + Python coordinate
+mapping + viewer updates.
 
 **Validation:** Re-run the test-script fixture. Compare distance values
 and debug.png precision against the single-call baseline. The viewer
-can show side-by-side crops.
+shows both calls side-by-side for visual comparison.
 
 ### Phase B — Legend symbol images
 
