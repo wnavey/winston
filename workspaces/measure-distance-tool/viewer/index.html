@@ -101,6 +101,13 @@
   .result-big { font-size: 28px; font-weight: 700; color: var(--accent); margin-bottom: 8px; }
   .result-big.error { color: var(--bad); font-size: 18px; }
 
+  .call-toggle { display: flex; gap: 0; margin-bottom: 12px; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+  .call-toggle button { flex: 1; padding: 8px 12px; font-size: 12px; font-weight: 500; border: none; background: var(--panel); color: var(--muted); cursor: pointer; border-right: 1px solid var(--border); }
+  .call-toggle button:last-child { border-right: none; }
+  .call-toggle button:hover { background: #f3f4f6; }
+  .call-toggle button.active { background: var(--accent); color: #fff; }
+  .call-toggle button .dpi-tag { font-size: 10px; opacity: 0.8; margin-left: 4px; }
+
   /* -- Resizable dividers -- */
   .divider { width: 4px; flex: 0 0 4px; cursor: col-resize; background: transparent; position: relative; z-index: 10; }
   .divider:hover, .divider.dragging { background: var(--accent-stroke); }
@@ -130,7 +137,7 @@
 <script>
 // ── State ──
 let manifest = null;
-let state = { runIdx: -1, caseIdx: -1, stepIdx: 0 };
+let state = { runIdx: -1, caseIdx: -1, stepIdx: 0, callView: 'final' }; // callView: 'call1' | 'call2' | 'final'
 const fileCache = {};
 
 const STEPS = [
@@ -473,15 +480,64 @@ async function renderStepLegend(c) {
 }
 
 // ── Step 3: Detection & Distance Computation (merged old Steps 6+7) ──
+
+/** Get the localization, image path, prompt path, and response path for the currently selected call view. */
+function getCallViewData(c) {
+  const v = state.callView;
+  if (c.twoCallMode && v === 'call1' && c.call1) {
+    return {
+      loc: c.call1.localization || {},
+      imgPath: c.call1.croppedJpegPath,
+      promptPath: c.call1.promptPath,
+      responsePath: c.call1.responsePath,
+      label: 'Call 1 — Coarse (120 DPI)',
+    };
+  }
+  if (c.twoCallMode && v === 'call2' && c.call2) {
+    return {
+      loc: c.call2.localization || {},
+      imgPath: c.call2.croppedJpegPath,
+      promptPath: c.call2.promptPath,
+      responsePath: c.call2.responsePath,
+      label: 'Call 2 — Refined (300 DPI)',
+    };
+  }
+  // 'final' or legacy single-call
+  return {
+    loc: c.localization || {},
+    imgPath: c.croppedJpegPath,
+    promptPath: c.promptPath,
+    responsePath: c.responsePath,
+    label: c.twoCallMode ? 'Final (used for measurement)' : 'Gemini Vision',
+  };
+}
+
 async function renderStepDetection(c) {
-  const loc = c.localization || {};
   const meta = c.metadata || {};
   const final = c.finalResult || {};
+  const vd = getCallViewData(c);
+  const loc = vd.loc;
+
+  // Call toggle (only shown for two-call mode)
+  let toggleHtml = '';
+  if (c.twoCallMode) {
+    const mkBtn = (val, label, dpi) => {
+      const active = state.callView === val ? ' active' : '';
+      const dpiTag = dpi ? `<span class="dpi-tag">${dpi}</span>` : '';
+      return `<button class="cv-btn${active}" data-cv="${val}">${escapeHtml(label)}${dpiTag}</button>`;
+    };
+    toggleHtml = `<div class="call-toggle">
+      ${mkBtn('call1', 'Call 1 — Coarse', '120 DPI')}
+      ${mkBtn('call2', 'Call 2 — Refined', '300 DPI')}
+      ${mkBtn('final', 'Final', '')}
+    </div>`;
+  }
 
   // Center: single canvas with layered overlays
   let centerHtml = '';
-  if (c.croppedJpegPath) {
+  if (vd.imgPath) {
     centerHtml = `
+      ${toggleHtml}
       <div class="canvas-stage">
         <div class="toolbar">
           <label><input type="checkbox" id="det-toggle-gemini" checked /> Gemini Bounding Boxes</label>
@@ -489,30 +545,31 @@ async function renderStepDetection(c) {
           <label title="Gemini returns coords in [y,x] order — uncheck to test [x,y] interpretation"><input type="checkbox" id="det-toggle-yx" checked /> swap axes</label>
         </div>
         <div class="canvas-wrap" id="det-wrap">
-          <img id="det-img" src="../${escapeHtml(c.croppedJpegPath)}" alt="cropped" />
+          <img id="det-img" src="../${escapeHtml(vd.imgPath)}" alt="${escapeHtml(vd.label)}" />
           <canvas id="det-canvas"></canvas>
         </div>
       </div>
       <div style="font-size:11px;color:var(--muted);margin-top:4px;">
+        <b>${escapeHtml(vd.label)}</b> &mdash;
         Coordinates in Gemini 0&ndash;1000 space. Green = Gemini bboxes, purple = Python nearestPoint + distance line.
       </div>`;
   } else {
-    centerHtml = '<div class="warn-note">No cropped image available for overlay.</div>';
+    centerHtml = toggleHtml + '<div class="warn-note">No cropped image available for this call view.</div>';
   }
 
   // Right panel: combined Gemini + Python data
   let rightHtml = '';
 
   // Section: Gemini Localization
-  rightHtml += `<div class="section"><h3>Gemini Localization</h3>`;
+  rightHtml += `<div class="section"><h3>Gemini Localization${c.twoCallMode ? ` <span style="font-weight:normal;color:var(--muted);">(${escapeHtml(vd.label)})</span>` : ''}</h3>`;
   rightHtml += objectCardHtml('A', loc.objectA);
   rightHtml += objectCardHtml('B', loc.objectB);
   if (!loc.objectA && !loc.objectB) rightHtml += '<div style="color:var(--muted);font-size:12px">No localization data</div>';
   rightHtml += `</div>`;
 
   // Section: Gemini Prompt
-  if (c.promptPath) {
-    const prompt = await fetchFile(c.promptPath);
+  if (vd.promptPath) {
+    const prompt = await fetchFile(vd.promptPath);
     if (prompt) {
       rightHtml += `<div class="section"><h3>Gemini Prompt</h3>
         <pre class="code-block" style="max-height:250px;">${escapeHtml(prompt)}</pre>
@@ -521,13 +578,28 @@ async function renderStepDetection(c) {
   }
 
   // Section: Gemini Response
-  if (c.responsePath) {
-    const response = await fetchFile(c.responsePath);
+  if (vd.responsePath) {
+    const response = await fetchFile(vd.responsePath);
     if (response) {
       rightHtml += `<div class="section"><h3>Gemini Response</h3>
         <pre class="code-block">${escapeHtml(response)}</pre>
       </div>`;
     }
+  }
+
+  // Call comparison (show both call confidences when in two-call mode)
+  if (c.twoCallMode) {
+    const c1 = (c.call1 || {}).localization || {};
+    const c2 = (c.call2 || {}).localization || {};
+    rightHtml += `<div class="section"><h3>Call Comparison</h3>
+      <div class="kv-grid">
+        ${kv('call1 A conf', (c1.objectA || {}).confidence)}
+        ${kv('call1 B conf', (c1.objectB || {}).confidence)}
+        ${kv('call2 A conf', (c2.objectA || {}).confidence)}
+        ${kv('call2 B conf', (c2.objectB || {}).confidence)}
+        ${kv('used for result', state.callView === 'final' ? (c.call2 ? 'call2' : 'call1') : state.callView)}
+      </div>
+    </div>`;
   }
 
   // Section: Python Computation
@@ -607,6 +679,14 @@ function setupDetectionCanvas(c) {
     if (el) el.addEventListener('change', () => renderDetectionOverlay(c, canvas));
   });
 
+  // Call-toggle buttons (two-call mode)
+  document.querySelectorAll('.cv-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      state.callView = btn.dataset.cv;
+      renderContent();  // full re-render to swap image + data
+    });
+  });
+
   const resizeObs = new ResizeObserver(() => {
     if (img.clientWidth) {
       canvas.style.width = img.clientWidth + 'px';
@@ -617,7 +697,8 @@ function setupDetectionCanvas(c) {
 }
 
 function renderDetectionOverlay(c, canvas) {
-  const loc = c.localization;
+  const vd = getCallViewData(c);
+  const loc = vd.loc;
   const ctx = canvas.getContext('2d');
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   if (!loc) return;
