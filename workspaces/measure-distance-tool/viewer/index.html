@@ -579,7 +579,7 @@ async function renderStep6(c) {
         <div class="toolbar">
           <label><input type="checkbox" id="toggle-bboxes" checked /> bboxes</label>
           <label><input type="checkbox" id="toggle-points" checked /> nearestPoints</label>
-          <label title="Gemini may return coords in [y,x] order"><input type="checkbox" id="toggle-yx" /> swap axes</label>
+          <label title="Gemini returns coords in [y,x] order — uncheck to test [x,y] interpretation"><input type="checkbox" id="toggle-yx" checked /> swap axes</label>
         </div>
         <div class="canvas-wrap" id="canvas-wrap">
           <img id="overlay-img" src="../${escapeHtml(c.croppedJpegPath)}" alt="cropped" />
@@ -746,7 +746,7 @@ async function renderStep7(c) {
         <div class="toolbar">
           <label><input type="checkbox" id="s7-toggle-bboxes" checked /> bboxes</label>
           <label><input type="checkbox" id="s7-toggle-points" checked /> nearestPoints</label>
-          <label title="Swap [y,x] → [x,y]"><input type="checkbox" id="s7-toggle-yx" /> swap axes</label>
+          <label title="Swap [y,x] → [x,y] — uncheck to test raw interpretation"><input type="checkbox" id="s7-toggle-yx" checked /> swap axes</label>
         </div>
         <div class="canvas-wrap">
           <img id="s7-img" src="${imgSrc}" alt="cropped drawing" />
