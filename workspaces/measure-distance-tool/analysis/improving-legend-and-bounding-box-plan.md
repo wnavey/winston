@@ -392,29 +392,85 @@ approach should bring measurements closer to human-verified distances.
 If 120 DPI measurements average ±2 ft error and 300 DPI measurements
 average ±0.8 ft error, that's a clear quantitative improvement.
 
-## Open questions
+## Resolved questions
 
-1. **Gemini multi-image support:** Can we send multiple images in a single
-   Gemini Vision call? (Main crop + legend images.) If not, the legend
-   images would need to be composited into the main image or sent as a
-   separate call.
+### Multi-image support — confirmed
 
-2. **Legend block granularity:** Some sheets have one big legend with 30+
-   entries. The embedding search approach (Phase B) targets specific entries
-   rather than sending the whole legend. However, if the matching block IS
-   a full-page legend, we may still need to crop to just the relevant row.
-   Consider: if the matched block area exceeds a threshold (e.g., >20% of
-   the sheet), fall back to sending the text transcription instead of the
-   image, or implement row-level cropping within the block.
+Gemini supports multiple images per API call as a first-class feature across
+all current models (1.5 Pro, 2.0 Flash/Pro, 2.5 Pro/Flash). Each image is a
+separate `Part` in the `contents` array:
 
-3. **Scale bar in the refined crop:** If we crop tightly, we may lose the
-   scale bar. The model doesn't use the scale bar (we pass the numeric
-   scale), but losing visual context about relative sizes might affect
-   localization quality. Consider always including the scale bar region
-   in the refined crop.
+```ts
+// Vercel AI SDK (what measure-distance.ts uses)
+const result = await generateText({
+  model: google("gemini-2.5-pro-preview"),
+  messages: [{
+    role: "user",
+    content: [
+      { type: "text", text: "In the first image, locate objectA and objectB..." },
+      { type: "image", image: mainCropBuffer },       // high-DPI measurement region
+      { type: "image", image: legendBlockBuffer },     // cropped legend symbol
+    ],
+  }],
+});
+```
 
-4. **Non-rectangular features:** The OHE line is a thin horizontal line
-   spanning the sheet. The union bbox of "tree (small) + OHE line (wide)"
-   may still be a very wide crop with relatively low height — not
-   dramatically smaller than the original. Need to handle this gracefully,
-   possibly by padding vertically to maintain aspect ratio.
+The model processes parts in order and understands ordinal references ("In the
+first image, find X. The second image shows the legend symbol for X.").
+
+No hard per-image count limit — constrained only by the context window token
+budget. Each image consumes ~258–1K+ tokens depending on resolution. For our
+use case (1 main crop + 1–2 legend images), token cost is negligible.
+
+### Crop floor for non-rectangular features — quadrant minimum
+
+When one object spans the full width of the sheet (e.g., an OHE line), the
+union bbox of "small tree + wide OHE line" would still be a very wide crop.
+But we don't need the entire line — only the segment closest to the tree.
+
+**Strategy:** After call 1 returns coarse bboxes, compute the refined crop
+as follows:
+
+1. Find the nearestPoint on each object's bbox to the other (or just use
+   the center-to-center axis).
+2. Crop a region centered on the midpoint between the two nearestPoints.
+3. Set a **crop floor** of 25% of the sheet area (one quadrant). If the
+   union bbox plus padding is smaller than a quadrant, expand to a quadrant.
+   If it's larger, use the union bbox as-is — we still get the DPI benefit
+   of rendering just that region at 300 DPI.
+
+This guarantees:
+- We never crop to less than a quadrant (preserving local context)
+- For the OHE-line case, we capture just the ~10" section of line nearest
+  the tree, not the full 36" span
+- For well-separated objects, the crop may be larger than a quadrant but
+  still focused on the relevant area
+
+**Crop floor math at 300 DPI:**
+
+| Crop fraction | Area (on 36"×24" sheet) | Pixels at 300 DPI | DPI benefit |
+|--------------|------------------------|-------------------|------------|
+| 100% (full sheet) | 864 sq in | 10800 × 7200 | 1× (baseline) |
+| 25% (one quadrant) | 216 sq in | 5400 × 3600 | **2.5×** |
+| 10% (tight crop) | 86 sq in | ~3240 × 2400 | **6×** |
+
+Even at the quadrant floor, we get 2.5× the effective DPI — a significant
+improvement over the current full-sheet approach.
+
+## Possible future improvements
+
+These are worth tracking but not needed for the first iteration:
+
+1. **Legend block row-level cropping.** Some sheets have one large legend
+   with 30+ entries. The embedding search (Phase B) targets specific blocks,
+   but if the matched block IS a full-page legend, we may need to crop to
+   just the relevant row within it. Options: fall back to text transcription
+   for oversized legend blocks (>20% of sheet area), or implement row-level
+   cropping using OCR line detection.
+
+2. **Scale bar preservation.** Tight cropping may exclude the scale bar.
+   The model doesn't use the scale bar (we pass the numeric scale as a
+   parameter), but losing visual scale context might subtly affect
+   localization quality. If we see regression, consider always including
+   the scale bar region in the refined crop regardless of the union bbox
+   location.
