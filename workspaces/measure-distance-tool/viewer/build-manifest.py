@@ -104,23 +104,62 @@ def _case_from_call_dir(call_dir: Path | None, case_id: str,
 
     if call_dir and call_dir.exists():
         out['callDirPath'] = relpath(call_dir)
-        cropped = call_dir / 'cropped.jpg'
         debug = call_dir / 'debug.png'
         sheet_jpg = call_dir / 'tmp' / 'sheet.jpg'
         sheet_pdf = call_dir / 'tmp' / 'sheet.pdf'
-        prompt = call_dir / 'prompt.txt'
-        response = call_dir / 'response.txt'
         legend = call_dir / 'legend.txt'
         events = call_dir / 'events.jsonl'
-        out['croppedJpegPath'] = relpath(cropped) if cropped.exists() else None
         out['debugPngPath'] = relpath(debug) if debug.exists() else None
         out['sheetJpegPath'] = relpath(sheet_jpg) if sheet_jpg.exists() else None
         out['sheetPdfPath'] = relpath(sheet_pdf) if sheet_pdf.exists() else None
-        out['promptPath'] = relpath(prompt) if prompt.exists() else None
-        out['responsePath'] = relpath(response) if response.exists() else None
         out['legendPath'] = relpath(legend) if legend.exists() else None
         out['eventsPath'] = relpath(events) if events.exists() else None
-        out['localization'] = load_json(call_dir / 'localization.json')
+
+        # Detect two-call vs single-call artifact pattern.
+        # Two-call: call1-cropped.jpg, call1-localization.json, call2-cropped.jpg, etc.
+        # Single-call (legacy): cropped.jpg, localization.json, prompt.txt, etc.
+        has_two_calls = (call_dir / 'call1-localization.json').exists() or \
+                        (call_dir / 'call2-localization.json').exists()
+
+        if has_two_calls:
+            out['twoCallMode'] = True
+            for prefix in ('call1', 'call2'):
+                step: dict = {
+                    'croppedJpegPath': None,
+                    'promptPath': None,
+                    'responsePath': None,
+                    'localization': None,
+                }
+                cropped = call_dir / f'{prefix}-cropped.jpg'
+                prompt = call_dir / f'{prefix}-prompt.txt'
+                response = call_dir / f'{prefix}-response.txt'
+                loc = call_dir / f'{prefix}-localization.json'
+                step['croppedJpegPath'] = relpath(cropped) if cropped.exists() else None
+                step['promptPath'] = relpath(prompt) if prompt.exists() else None
+                step['responsePath'] = relpath(response) if response.exists() else None
+                step['localization'] = load_json(loc)
+                out[prefix] = step
+
+            # The "final" localization used by compute-distance is whichever
+            # call won — prefer call2, fall back to call1.
+            out['localization'] = (out.get('call2') or {}).get('localization') \
+                               or (out.get('call1') or {}).get('localization')
+            # The "final" cropped image is the one compute-distance used
+            out['croppedJpegPath'] = (out.get('call2') or {}).get('croppedJpegPath') \
+                                  or (out.get('call1') or {}).get('croppedJpegPath')
+            out['promptPath'] = (out.get('call2') or {}).get('promptPath') \
+                             or (out.get('call1') or {}).get('promptPath')
+            out['responsePath'] = (out.get('call2') or {}).get('responsePath') \
+                               or (out.get('call1') or {}).get('responsePath')
+        else:
+            out['twoCallMode'] = False
+            cropped = call_dir / 'cropped.jpg'
+            prompt = call_dir / 'prompt.txt'
+            response = call_dir / 'response.txt'
+            out['croppedJpegPath'] = relpath(cropped) if cropped.exists() else None
+            out['promptPath'] = relpath(prompt) if prompt.exists() else None
+            out['responsePath'] = relpath(response) if response.exists() else None
+            out['localization'] = load_json(call_dir / 'localization.json')
         meta = load_json(call_dir / 'metadata.json') or {}
         out['metadata'] = {
             'callId': meta.get('callId'),
