@@ -103,6 +103,13 @@ def _case_from_call_dir(call_dir: Path | None, case_id: str,
         out['provenance'] = fixture_case.get('_provenance')
 
     if call_dir and call_dir.exists():
+        # Pull reasoning + checklist items from metadata if not already set by fixture
+        meta_for_reasoning = load_json(call_dir / 'metadata.json') or {}
+        if not out['reasoning']:
+            out['reasoning'] = meta_for_reasoning.get('reasoning') or None
+        if not out['applicableChecklistItems']:
+            out['applicableChecklistItems'] = meta_for_reasoning.get('applicableChecklistItems', [])
+
         out['callDirPath'] = relpath(call_dir)
         debug = call_dir / 'debug.png'
         sheet_jpg = call_dir / 'tmp' / 'sheet.jpg'
@@ -325,9 +332,13 @@ def build_experiment_run(exp_dir: Path) -> list[dict]:
 
             cases.append(_case_from_call_dir(call_dir, case_id, tc))
     else:
-        # No fixture: build cases directly from call dirs
+        # No fixture: build cases directly from call dirs that have metadata.
+        # Skip session dirs (shared-setup containers with just legend.txt) —
+        # they don't have metadata.json and aren't individual measurements.
         for cd in call_dirs:
-            meta = load_json(cd / 'metadata.json') or {}
+            meta = load_json(cd / 'metadata.json')
+            if not meta:
+                continue  # session dir — no measurement here
             inputs = meta.get('inputs', {})
             fake_fixture = {
                 'projectId': inputs.get('projectId'),
@@ -336,6 +347,8 @@ def build_experiment_run(exp_dir: Path) -> list[dict]:
                 'objectA': inputs.get('objectA', ''),
                 'objectB': inputs.get('objectB', ''),
                 'scaleInchesPerFoot': str(inputs.get('scaleInchesPerFoot', '')),
+                'reasoning': meta.get('reasoning'),
+                'applicableChecklistItems': meta.get('applicableChecklistItems', []),
             }
             cases.append(_case_from_call_dir(cd, cd.name, fake_fixture))
 
