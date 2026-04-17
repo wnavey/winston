@@ -77,8 +77,15 @@ def _case_from_call_dir(call_dir: Path | None, case_id: str,
         'applicableChecklistItems': [],
         'likelyChecklistItems': [],
         'provenance': None,
+        'callDirPath': None,
         'croppedJpegPath': None,
         'debugPngPath': None,
+        'sheetJpegPath': None,
+        'sheetPdfPath': None,
+        'promptPath': None,
+        'responsePath': None,
+        'legendPath': None,
+        'eventsPath': None,
         'localization': None,
         'metadata': None,
         'finalResult': None,
@@ -96,10 +103,23 @@ def _case_from_call_dir(call_dir: Path | None, case_id: str,
         out['provenance'] = fixture_case.get('_provenance')
 
     if call_dir and call_dir.exists():
+        out['callDirPath'] = relpath(call_dir)
         cropped = call_dir / 'cropped.jpg'
         debug = call_dir / 'debug.png'
+        sheet_jpg = call_dir / 'tmp' / 'sheet.jpg'
+        sheet_pdf = call_dir / 'tmp' / 'sheet.pdf'
+        prompt = call_dir / 'prompt.txt'
+        response = call_dir / 'response.txt'
+        legend = call_dir / 'legend.txt'
+        events = call_dir / 'events.jsonl'
         out['croppedJpegPath'] = relpath(cropped) if cropped.exists() else None
         out['debugPngPath'] = relpath(debug) if debug.exists() else None
+        out['sheetJpegPath'] = relpath(sheet_jpg) if sheet_jpg.exists() else None
+        out['sheetPdfPath'] = relpath(sheet_pdf) if sheet_pdf.exists() else None
+        out['promptPath'] = relpath(prompt) if prompt.exists() else None
+        out['responsePath'] = relpath(response) if response.exists() else None
+        out['legendPath'] = relpath(legend) if legend.exists() else None
+        out['eventsPath'] = relpath(events) if events.exists() else None
         out['localization'] = load_json(call_dir / 'localization.json')
         meta = load_json(call_dir / 'metadata.json') or {}
         out['metadata'] = {
@@ -111,6 +131,8 @@ def _case_from_call_dir(call_dir: Path | None, case_id: str,
                 'drawingBbox': (meta.get('assets') or {}).get('drawingBbox'),
                 'legendSource': (meta.get('assets') or {}).get('legendSource'),
                 'bucket': (meta.get('assets') or {}).get('bucket'),
+                'pdfStoragePath': (meta.get('assets') or {}).get('pdfStoragePath'),
+                'jpegStoragePath': (meta.get('assets') or {}).get('jpegStoragePath'),
             },
             'error': meta.get('error'),
             'elapsedMs': meta.get('elapsedMs'),
