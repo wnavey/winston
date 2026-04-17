@@ -28,9 +28,11 @@ The delta between the two isolates the tool's contribution to finding quality on
 
 | Run | When | Guide set | Tool enabled? | Outcome |
 |---|---|---|---|---|
-| **Baseline (10-item)** | 2026-04-15 | `el-md-exp` (10 items) | No | ✅ completed. Archived to `winston/workspaces/measure-distance-tool/baseline-runs/`. |
-| **Experiment attempt #1** | 2026-04-15 | `el-md-exp` (10 items) | Yes (v5.1.0 overlay) | ❌ cancelled — logging was insufficient to debug tool behavior. Cancelled mid-flight so we could ship PRs #117 + #219 first. |
-| **Experiment #2 (current)** | 2026-04-15 in progress | `el-md-exp` trimmed to `1.md`, `2.md`, `13.md` | Yes + rich logging | 🟡 running |
+| **Baseline** | 2026-04-15 | `el-md-exp` (3 items) | No | ✅ completed. `runs/baseline-2026-04-15/`. |
+| **Experiment run1** | 2026-04-15 | `el-md-exp` (3 items) | Yes (v5.1.0 overlay) | ⚠️ 14 MD calls, 0 results (Python 3.9 crash + MCP type reject). `runs/experiment-run1/`. |
+| **Experiment run2** | 2026-04-16 | `el-md-exp` (3 items) | Yes + rich logging | ⚠️ 13 MD calls, 7 results, all ~0 ft (scale inverted + axis swap + trivial bbox). `runs/experiment-run2/`. |
+| **Experiment run3** | 2026-04-17 | `el-md-exp` (3 items) | Yes + all axis/scale/bbox fixes | ✅ 26 call-dirs, 12 results, **9 non-zero** (2.3–31.8 ft). First real measurements. `runs/experiment-run3/`. |
+| **Experiment run4** | upcoming | `el-md-exp` (3 items) | Yes + **two-call Gemini** (300 DPI refined crop) | 🟡 next — tests the Phase A DPI improvement. |
 
 **Dataset trimmed**: from the original 10 items down to **3 items** for faster iteration:
 - `1.md` — control (no prior tool usage, null-effect check)

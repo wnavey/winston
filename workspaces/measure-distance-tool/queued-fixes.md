@@ -8,35 +8,36 @@ Tracks fixes shipped since the last experiment run, so the next run captures all
 
 | Field | Value |
 |---|---|
-| **Date** | 2026-04-16 ~14:43–15:15 UTC |
+| **Run** | experiment-run3 |
+| **Date** | 2026-04-17 ~17:00–17:25 UTC |
 | **Workflow** | `review` v5.1.0 with `--experiment=measure-distance` overlay |
 | **Guide set** | `el-md-exp` (items 1.md, 2.md, 13.md) |
 | **Runs** | 3 (ensemble) |
 | **Model** | `claude-haiku-4-5-20251001` |
 | **Project** | Valley View Townhomes (`63cead15-41f8-418c-b0ef-bd5c2b44719a`) |
-| **Outputs** | `runs/experiment-run2/` |
-| **Test-script replay** | `runs/run2-test-fixture-1/` (13 fixture cases, with bureau#229 axis fix) |
-| **Results** | 12 tool calls, all returned 0.0 ft (scale formula inverted + vector refinement overwriting Gemini points + bbox format mismatch) |
+| **Outputs** | `runs/experiment-run3/` |
+| **Results** | 26 call-dirs, 12 completed, 9 non-zero distances (2.3–31.8 ft). First run with correct scale formula, real image cropping, objectPairs batching. |
 
 ---
 
-## Fixes shipped since experiment-run2
+## Fixes shipped since experiment-run3
 
 ### Bureau
 
-| PR | Merged | Fix | Addresses issue |
+| PR | Merged | Fix | Expected impact |
 |---|---|---|---|
-| **#229** | 2026-04-17 | Swap nearestPoint axis order to match Gemini [y, x] convention | Python was reading nearestPoint as [x, y] but Gemini returns [y, x] |
-| **#232** | 2026-04-17 | **Scale formula inverted** (`*` → `/`), **disable vector refinement** (overwriting Gemini's correct nearestPoints with garbage), **standardize Gemini prompt** to [y, x] for both bbox and nearestPoint | The three root causes of 0.0 ft distances |
-| **#233** | 2026-04-17 | **Fix drawing bbox format** — DB stores `{x, y, width, height}`, code expected `{x0, y0, x1, y1}`. All keys missed, defaults produced full-page bbox, no cropping ever happened. | Outstanding issue #1 (drawing block cropping) |
-| **#234** | 2026-04-17 | **objectPairs array** — tool accepts array of `{objectA, objectB}` pairs per call. Shared asset download + crop, one Gemini call per pair. Agent can batch all measurements on one sheet into a single tool call. | Agent was describing multiple pairs in reasoning but only submitting one |
+| **#238** | 2026-04-17 | **Two-call Gemini approach** (Phase A): call 1 at 120 DPI for coarse localization → refined crop rendered from PDF at 300 DPI → call 2 for precise nearestPoints. Includes `computeRefinedCropBbox()` (union + padding + quadrant floor) and `renderPdfRegion()` (PyMuPDF high-DPI render). | 2.5–6× effective DPI in the measurement region. Should improve localization precision for close objects that currently return 0 ft. |
 
-### Conductor
+### Winston
 
-| PR | Merged | Fix | Addresses issue |
+| PR | Merged | Fix | Expected impact |
 |---|---|---|---|
-| **#122** | 2026-04-16 | Typed tool schema with per-field types/descriptions | Agent sees named params, Zod validates before script runs |
-| **#123** | 2026-04-16 | Array support in tool schema + shell quoting for JSON values | Enables `applicable_checklist_items` array field |
+| **#11** | 2026-04-17 | **Viewer step toggle** for two-call mode. Call 1 and call 2 are independently inspectable in the Detection step. Build-manifest detects `call1-*`/`call2-*` prefixed artifacts. | Debug visibility into each Gemini call — can compare coarse vs refined localization. |
+
+### Previously shipped (in experiment-run3)
+
+Bureau: #229 (axis swap), #232 (scale formula + disable vector refinement), #233 (bbox format), #234 (objectPairs)
+Conductor: #122 (typed tool schema), #123 (array + JSON quoting)
 
 ### Previously shipped (in experiment-run2)
 
@@ -45,33 +46,29 @@ Conductor: #117, #118, #119, #121
 
 ---
 
-## What the next run will test
+## What experiment-run4 will test
 
-With all the above merged, the next test-script replay (or experiment run) should show:
+With bureau#238 merged, the next run introduces the **two-call Gemini pipeline**. Expected improvements:
 
-1. **Real distances** — scale formula fixed (`/` not `*`), vector refinement disabled. Expect 5-100 ft range for typical clearances instead of 0.0.
-2. **Actual image cropping** — drawing bbox parsed correctly from `{x, y, width, height}` format. Sheet 21 crops to 88%×94%, sheet 31 to 65%×60%. Gemini gets focused drawing at higher effective resolution.
-3. **Consistent coordinate axes** — Gemini prompt asks for [y, x] everywhere (bbox + nearestPoint). Python reads [y, x] everywhere. No more axis-swap ambiguity.
-4. **objectPairs batching** — agent can submit multiple `{objectA, objectB}` pairs per tool call. Expect higher measurement coverage per invocation (e.g., all 3 transformers vs their buildings in one call).
-5. **Typed tool schema** (conductor#122, #123) — agent sees per-field types/descriptions, Zod rejects bad inputs at MCP level.
+1. **Higher effective DPI** — call 2 operates on a refined crop rendered at 300 DPI (vs 120 DPI for the full drawing). For a quadrant crop, that's 2.5× the pixel density in the measurement region.
 
-### Still NOT fixed for next run (known limitations)
+2. **More precise nearestPoints** — with more pixels per inch, Gemini should distinguish features that appear overlapping at 120 DPI. The 3 cases in run3 that returned 0 ft (tree directly on OHE line) may show small but non-zero separations.
 
-- **Option A still a stub** (issue #8) — every call goes through Gemini
-- **No Gemini timeout** (issue #9) — pathological 200s+ calls still possible
-- **Python 90s timeout unchanged** (issue #7) — but much faster now that vector refinement is disabled
-- **No vertical distance support** (issue #10)
+3. **Call 1 → call 2 fallback** — if call 2 times out (a risk since it's a second sequential Gemini call), the pipeline falls back to call 1's coarse localization. Existing behavior preserved.
+
+4. **Prefixed artifacts** — each call-dir now has `call1-*` and `call2-*` artifacts, visible in the viewer via the step toggle.
+
+### Still NOT fixed for run4 (known limitations)
+
+- **No legend symbol images** (Phase B — future) — legend context is still text, not visual
+- **Option A still a stub** — every call goes through Gemini
+- **No Gemini timeout** — pathological 200s+ calls still possible
+- **No vertical distance support**
+- **Agent tracing schema** — Review 5.0 not yet updated with observation/reasoning fields
 
 ---
 
-## How to run the next test-script replay
-
-```bash
-cd ~/code/controlroom/winston/workspaces/measure-distance-tool/scripts
-./run-test-script.sh  # defaults to experiment-run2 fixture
-```
-
-## How to run a full experiment
+## How to run experiment-run4
 
 ```bash
 cd ~/code/controlroom/conductor
@@ -79,4 +76,18 @@ npm run conduct -- --workflow=review --guide-code=el-md-exp \
   --submission-version-id=55fb6548-814f-4287-bc4a-6018b756d730 \
   --step=review-runs --experiment=measure-distance --runs=3 \
   --max-workers=9 --skip-upload --clean
+```
+
+After completion, archive to `runs/experiment-run4/` and run the viewer:
+
+```bash
+cd ~/code/controlroom/winston/workspaces/measure-distance-tool/viewer
+./serve.sh
+```
+
+## How to run the test-script fixture replay (faster, no agent loop)
+
+```bash
+cd ~/code/controlroom/winston/workspaces/measure-distance-tool
+./scripts/run-test-script.sh
 ```
