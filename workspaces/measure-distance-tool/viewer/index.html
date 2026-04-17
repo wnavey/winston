@@ -19,6 +19,7 @@
     --good: #1e8449;
     --blue: #3b82f6;
     --blue-bg: #eff6ff;
+    --purple: #9333ea;
     --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
   }
 
@@ -79,7 +80,7 @@
   .image-container img { display: block; max-width: 100%; height: auto; border-radius: 3px; }
   .image-container .label { color: #aaa; font-size: 10px; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.05em; }
 
-  /* -- Canvas overlay for Step 6 -- */
+  /* -- Canvas overlay -- */
   .canvas-stage { background: #2b2b2b; border-radius: 6px; padding: 12px; margin: 10px 0; display: inline-block; max-width: 100%; }
   .canvas-stage .toolbar { display: flex; gap: 14px; margin-bottom: 8px; font-size: 12px; color: #ccc; }
   .canvas-stage .toolbar label { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
@@ -103,7 +104,7 @@
   /* -- Resizable dividers -- */
   .divider { width: 4px; flex: 0 0 4px; cursor: col-resize; background: transparent; position: relative; z-index: 10; }
   .divider:hover, .divider.dragging { background: var(--accent-stroke); }
-  .divider::after { content: ''; position: absolute; inset: -2px; }  /* wider hit area */
+  .divider::after { content: ''; position: absolute; inset: -2px; }
 </style>
 </head>
 <body>
@@ -130,26 +131,21 @@
 // ── State ──
 let manifest = null;
 let state = { runIdx: -1, caseIdx: -1, stepIdx: 0 };
-const fileCache = {};  // path -> content
+const fileCache = {};
 
 const STEPS = [
   { num: 0, label: 'Summary' },
-  { num: 1, label: 'Inputs' },
-  { num: 2, label: 'Asset Download' },
-  { num: 3, label: 'Drawing Crop' },
-  { num: 4, label: 'Legend Context' },
-  { num: 5, label: 'Option A (Vector)' },
-  { num: 6, label: 'Gemini Vision' },
-  { num: 7, label: 'Python Compute' },
-  { num: 8, label: 'Final Results' },
+  { num: 1, label: 'Asset Download & Crop' },
+  { num: 2, label: 'Legend Context' },
+  { num: 3, label: 'Detection & Distance' },
+  { num: 4, label: 'Final Results' },
 ];
 
-const ACCENT = {
+const GEMINI_COLORS = {
   fill: 'rgba(46, 204, 113, 0.18)',
   stroke: 'rgba(46, 204, 113, 0.9)',
-  activeFill: 'rgba(46, 204, 113, 0.38)',
-  pointFill: '#1e8449',
 };
+const PURPLE = '#9333ea';
 const LABEL_COLORS = { A: '#1e8449', B: '#0f5a8c' };
 
 // ── Utils ──
@@ -223,7 +219,6 @@ function renderRunTree() {
   });
   container.innerHTML = html;
 
-  // Run head click -> toggle expand
   container.querySelectorAll('.run-head').forEach(el => {
     el.addEventListener('click', () => {
       const ri = el.dataset.ri;
@@ -233,7 +228,6 @@ function renderRunTree() {
     });
   });
 
-  // Case click -> select
   container.querySelectorAll('.run-cases li').forEach(el => {
     el.addEventListener('click', () => selectCase(+el.dataset.ri, +el.dataset.ci));
   });
@@ -242,7 +236,6 @@ function renderRunTree() {
 function selectCase(ri, ci) {
   state = { runIdx: ri, caseIdx: ci, stepIdx: 0 };
 
-  // Ensure the run is expanded
   const cases = document.querySelector(`.run-cases[data-ri="${ri}"]`);
   if (cases && !cases.classList.contains('open')) {
     cases.classList.add('open');
@@ -250,7 +243,6 @@ function selectCase(ri, ci) {
     if (head) head.querySelector('.arrow').innerHTML = '&#9662;';
   }
 
-  // Highlight active case
   document.querySelectorAll('.run-cases li').forEach(el => {
     el.classList.toggle('active', +el.dataset.ri === ri && +el.dataset.ci === ci);
   });
@@ -287,32 +279,27 @@ async function renderContent() {
 
   switch (state.stepIdx) {
     case 0: area.innerHTML = renderStepSummary(c); break;
-    case 1: area.innerHTML = renderStep1(c); break;
-    case 2: area.innerHTML = await renderStep2(c); break;
-    case 3: area.innerHTML = await renderStep3(c); break;
-    case 4: area.innerHTML = await renderStep4(c); break;
-    case 5: area.innerHTML = await renderStep5(c); break;
-    case 6: area.innerHTML = await renderStep6(c); setupCanvas(c); break;
-    case 7: area.innerHTML = await renderStep7(c); setupStep7Canvas(c); break;
-    case 8: area.innerHTML = renderStep8(c); break;
+    case 1: area.innerHTML = await renderStepAssets(c); break;
+    case 2: area.innerHTML = await renderStepLegend(c); break;
+    case 3: area.innerHTML = await renderStepDetection(c); setupDetectionCanvas(c); break;
+    case 4: area.innerHTML = renderStepFinal(c); break;
   }
 }
 
-// ── Step 0: Summary ──
+// ── Step 0: Summary (merged with old Inputs) ──
 function renderStepSummary(c) {
   const meta = c.metadata || {};
   const final = c.finalResult;
   const aci = c.applicableChecklistItems || [];
   const lci = c.likelyChecklistItems || [];
   const loc = c.localization || {};
-  const assets = (meta.assets || {});
+  const assets = meta.assets || {};
 
-  // Pipeline status per step
+  // Pipeline status dots
   const steps = [
     { name: 'Asset Download', ok: !!c.sheetJpegPath || !!assets.pdfStoragePath },
     { name: 'Drawing Crop', ok: !!c.croppedJpegPath },
     { name: 'Legend Context', ok: assets.legendSource && assets.legendSource !== 'none' },
-    { name: 'Option A', ok: false, note: 'v1 stub — always skipped' },
     { name: 'Gemini Vision', ok: !!(meta.optionB || {}).success },
     { name: 'Python Compute', ok: !!final && !meta.error },
     { name: 'Final Result', ok: !!final && final.distanceFeet != null },
@@ -320,16 +307,15 @@ function renderStepSummary(c) {
 
   const pipelineHtml = steps.map(s =>
     `<div style="display:flex;align-items:center;gap:8px;padding:3px 0;font-size:12px;">
-      <span style="width:8px;height:8px;border-radius:50%;background:${s.ok ? 'var(--good)' : s.note ? 'var(--border)' : 'var(--bad)'};flex-shrink:0;"></span>
+      <span style="width:8px;height:8px;border-radius:50%;background:${s.ok ? 'var(--good)' : 'var(--bad)'};flex-shrink:0;"></span>
       <span>${escapeHtml(s.name)}</span>
-      ${s.note ? `<span style="color:var(--muted);font-size:11px;">(${escapeHtml(s.note)})</span>` : ''}
     </div>`
   ).join('');
 
   // Result headline
   let resultHtml = '';
   if (final) {
-    const dist = final.distanceFeet != null ? `${final.distanceFeet} ft` : '—';
+    const dist = final.distanceFeet != null ? `${final.distanceFeet} ft` : '\u2014';
     resultHtml = `
       <div class="result-card">
         <div class="result-big">${escapeHtml(dist)}</div>
@@ -337,7 +323,7 @@ function renderStepSummary(c) {
           ${kv('confidence', final.confidence)}
           ${kv('method', final.method || (final.localization || {}).method)}
           ${kv('scaleUsed', final.scaleUsed)}
-          ${kv('elapsed', meta.elapsedMs ? (meta.elapsedMs / 1000).toFixed(1) + 's' : '—')}
+          ${kv('elapsed', meta.elapsedMs ? (meta.elapsedMs / 1000).toFixed(1) + 's' : '\u2014')}
         </div>
       </div>`;
   } else {
@@ -346,10 +332,29 @@ function renderStepSummary(c) {
     </div>`;
   }
 
+  // Full MCP Tool Inputs (merged from old Step 1)
+  const inputsHtml = `
+    <div class="section"><h3>MCP Tool Inputs</h3>
+      <div class="kv-grid">
+        ${kv('callId', meta.callId)}
+        ${kv('documentId', c.inputs.documentId)}
+        ${kv('sheetNum', c.inputs.sheetNum)}
+        ${kv('objectA', c.inputs.objectA, { plain: true })}
+        ${kv('objectB', c.inputs.objectB, { plain: true })}
+        ${kv('scaleInchesPerFoot', c.inputs.scaleInchesPerFoot)}
+        ${kv('strategy', meta.strategy)}
+      </div>
+    </div>`;
+
+  // Agent reasoning
+  const reasoningHtml = c.reasoning
+    ? `<div class="section"><h3>Agent Reasoning</h3><div class="reasoning-box">${escapeHtml(c.reasoning)}</div></div>`
+    : '';
+
   // Checklist items
   let checklistHtml = '';
   if (aci.length) {
-    checklistHtml += `<div class="section"><h3>Agent-Declared Checklist Items</h3>
+    checklistHtml += `<div class="section"><h3>Applicable Checklist Items (agent)</h3>
       ${aci.map(item => `<div style="margin-bottom:8px;">
         <span class="checklist-tag agent">${escapeHtml(item.checklist_id || item.checklistId || '')}</span>
         <span style="font-size:12px;color:var(--text);">${escapeHtml(item.checklist_deficiency_text || item.checklistText || '')}</span>
@@ -364,40 +369,21 @@ function renderStepSummary(c) {
   }
 
   return `
-    <div class="section">
-      <h3>Result</h3>
-      ${resultHtml}
-    </div>
-
-    ${c.reasoning ? `<div class="section"><h3>Agent Reasoning</h3>
-      <div class="reasoning-box">${escapeHtml(c.reasoning)}</div>
-    </div>` : ''}
-
+    <div class="section"><h3>Result</h3>${resultHtml}</div>
+    ${inputsHtml}
+    ${reasoningHtml}
     ${checklistHtml}
-
-    <div class="section">
-      <h3>Key Inputs</h3>
-      <div class="kv-grid">
-        ${kv('objectA', c.inputs.objectA, { plain: true })}
-        ${kv('objectB', c.inputs.objectB, { plain: true })}
-        ${kv('sheetNum', c.inputs.sheetNum)}
-        ${kv('scale', c.inputs.scaleInchesPerFoot)}
-        ${kv('callId', (meta.callId || '').slice(0, 30))}
-      </div>
-    </div>
-
     <div class="section">
       <h3>Pipeline Status</h3>
       ${pipelineHtml}
     </div>
-
     <div class="section">
       <h3>Gemini Confidence</h3>
       <div class="kv-grid">
-        ${kv('objectA found', loc.objectA?.found ?? '—')}
-        ${kv('objectA confidence', loc.objectA?.confidence ?? '—')}
-        ${kv('objectB found', loc.objectB?.found ?? '—')}
-        ${kv('objectB confidence', loc.objectB?.confidence ?? '—')}
+        ${kv('objectA found', loc.objectA?.found ?? '\u2014')}
+        ${kv('objectA confidence', loc.objectA?.confidence ?? '\u2014')}
+        ${kv('objectB found', loc.objectB?.found ?? '\u2014')}
+        ${kv('objectB confidence', loc.objectB?.confidence ?? '\u2014')}
         ${kv('legendSource', assets.legendSource)}
         ${kv('drawingBbox', assets.drawingBbox ? 'yes' : 'none')}
       </div>
@@ -405,49 +391,12 @@ function renderStepSummary(c) {
   `;
 }
 
-// ── Step 1: Inputs ──
-function renderStep1(c) {
-  const meta = c.metadata || {};
-  const aci = c.applicableChecklistItems || [];
-  const lci = c.likelyChecklistItems || [];
-
-  let aciHtml = '';
-  if (aci.length) {
-    aciHtml = `<div class="section"><h3>Applicable Checklist Items</h3>` +
-      aci.map(item => `<span class="checklist-tag agent">${escapeHtml(item.checklist_id || item.checklistId || '')}</span>
-        <span style="font-size:11px;color:var(--muted);margin-right:12px">${escapeHtml(item.checklist_deficiency_text || item.checklistText || '')}</span>`).join('<br>') +
-      `</div>`;
-  }
-
-  let lciHtml = '';
-  if (lci.length) {
-    lciHtml = `<div class="section"><h3>Likely Checklist Items</h3>` +
-      lci.map(item => `<span class="checklist-tag">${escapeHtml(item.checklistId || item.checklist_id || '')}</span>
-        <span style="font-size:11px;color:var(--muted);margin-right:12px">${escapeHtml(item.checklistText || item.checklist_deficiency_text || '')}</span>`).join('<br>') +
-      `</div>`;
-  }
-
-  return `
-    <div class="section"><h3>MCP Tool Inputs</h3>
-      <div class="kv-grid">
-        ${kv('callId', meta.callId)}
-        ${kv('documentId', c.inputs.documentId)}
-        ${kv('sheetNum', c.inputs.sheetNum)}
-        ${kv('objectA', c.inputs.objectA, { plain: true })}
-        ${kv('objectB', c.inputs.objectB, { plain: true })}
-        ${kv('scaleInchesPerFoot', c.inputs.scaleInchesPerFoot)}
-        ${kv('strategy', meta.strategy)}
-      </div>
-    </div>
-    ${c.reasoning ? `<div class="section"><h3>Agent Reasoning</h3><div class="reasoning-box">${escapeHtml(c.reasoning)}</div></div>` : ''}
-    ${aciHtml}
-    ${lciHtml}
-  `;
-}
-
-// ── Step 2: Asset Download ──
-async function renderStep2(c) {
+// ── Step 1: Asset Download & Crop (merged old Steps 2+3) ──
+async function renderStepAssets(c) {
   const assets = (c.metadata || {}).assets || {};
+  const bbox = assets.drawingBbox;
+  const isFullPage = !bbox || (bbox.x0 === 0 && bbox.y0 === 0 && bbox.x1 === 1 && bbox.y1 === 1);
+
   let html = `<div class="section"><h3>Supabase Storage Paths</h3>
     <div class="kv-grid">
       ${kv('bucket', assets.bucket)}
@@ -477,16 +426,8 @@ async function renderStep2(c) {
     html += `<div class="warn-note">tmp/ files not archived for this run &mdash; sheet PDF and JPEG are not available locally.</div>`;
   }
 
-  return html;
-}
-
-// ── Step 3: Drawing Block Crop ──
-async function renderStep3(c) {
-  const assets = (c.metadata || {}).assets || {};
-  const bbox = assets.drawingBbox;
-  const isFullPage = !bbox || (bbox.x0 === 0 && bbox.y0 === 0 && bbox.x1 === 1 && bbox.y1 === 1);
-
-  let html = `<div class="section"><h3>Drawing Block BBox (normalized)</h3>
+  // Drawing crop section (from old Step 3)
+  html += `<div class="section"><h3>Drawing Block BBox (normalized)</h3>
     <pre class="code-block">${escapeHtml(JSON.stringify(bbox, null, 2))}</pre>
   </div>`;
 
@@ -508,8 +449,8 @@ async function renderStep3(c) {
   return html;
 }
 
-// ── Step 4: Legend Context ──
-async function renderStep4(c) {
+// ── Step 2: Legend Context ──
+async function renderStepLegend(c) {
   const assets = (c.metadata || {}).assets || {};
   let html = `<div class="section"><h3>Legend Source</h3>
     <div class="kv-grid">${kv('legendSource', assets.legendSource)}</div>
@@ -531,79 +472,45 @@ async function renderStep4(c) {
   return html;
 }
 
-// ── Step 5: Option A (Vector) ──
-async function renderStep5(c) {
-  let html = `<div class="section"><h3>Option A: Vector Matching</h3>
-    <div class="info-note">Option A is a v1 stub that always fails. Pattern matching on vector PDF paths is not yet implemented.</div>
-  </div>`;
-
-  if (c.eventsPath) {
-    const raw = await fetchFile(c.eventsPath);
-    if (raw) {
-      try {
-        const lines = raw.trim().split('\n').map(l => JSON.parse(l));
-        const optAEvents = lines.filter(e => e.phase === 'option-a' || (e.event && e.event.includes('option-a')));
-        if (optAEvents.length) {
-          html += `<div class="section"><h3>Option A Events</h3>
-            <pre class="code-block">${escapeHtml(JSON.stringify(optAEvents, null, 2))}</pre>
-          </div>`;
-        } else {
-          // Show all events if no specific option-a events found
-          const summary = lines.filter(e => e.phase === 'option-a' || e.step === 'option-a');
-          if (summary.length) {
-            html += `<div class="section"><h3>Option A Events</h3>
-              <pre class="code-block">${escapeHtml(JSON.stringify(summary, null, 2))}</pre>
-            </div>`;
-          }
-        }
-      } catch {
-        html += `<div class="section"><h3>Raw Events</h3>
-          <pre class="code-block">${escapeHtml(raw)}</pre>
-        </div>`;
-      }
-    }
-  }
-
-  return html;
-}
-
-// ── Step 6: Gemini Vision (Option B) ──
-async function renderStep6(c) {
+// ── Step 3: Detection & Distance Computation (merged old Steps 6+7) ──
+async function renderStepDetection(c) {
   const loc = c.localization || {};
+  const meta = c.metadata || {};
+  const final = c.finalResult || {};
 
-  // Center: cropped image with bbox overlay
+  // Center: single canvas with layered overlays
   let centerHtml = '';
   if (c.croppedJpegPath) {
     centerHtml = `
       <div class="canvas-stage">
         <div class="toolbar">
-          <label><input type="checkbox" id="toggle-bboxes" checked /> bboxes</label>
-          <label><input type="checkbox" id="toggle-points" checked /> nearestPoints</label>
-          <label title="Gemini returns coords in [y,x] order — uncheck to test [x,y] interpretation"><input type="checkbox" id="toggle-yx" checked /> swap axes</label>
+          <label><input type="checkbox" id="det-toggle-gemini" checked /> Gemini Bounding Boxes</label>
+          <label><input type="checkbox" id="det-toggle-python" checked /> Python Distance</label>
+          <label title="Gemini returns coords in [y,x] order — uncheck to test [x,y] interpretation"><input type="checkbox" id="det-toggle-yx" checked /> swap axes</label>
         </div>
-        <div class="canvas-wrap" id="canvas-wrap">
-          <img id="overlay-img" src="../${escapeHtml(c.croppedJpegPath)}" alt="cropped" />
-          <canvas id="overlay-canvas"></canvas>
+        <div class="canvas-wrap" id="det-wrap">
+          <img id="det-img" src="../${escapeHtml(c.croppedJpegPath)}" alt="cropped" />
+          <canvas id="det-canvas"></canvas>
         </div>
       </div>
       <div style="font-size:11px;color:var(--muted);margin-top:4px;">
-        Coordinates in Gemini 0&ndash;1000 space. If bboxes appear misplaced, try <b>swap axes</b>.
+        Coordinates in Gemini 0&ndash;1000 space. Green = Gemini bboxes, purple = Python nearestPoint + distance line.
       </div>`;
   } else {
     centerHtml = '<div class="warn-note">No cropped image available for overlay.</div>';
   }
 
-  // Right: localization cards, prompt, response
+  // Right panel: combined Gemini + Python data
   let rightHtml = '';
 
-  // Object cards
-  rightHtml += `<div class="section"><h3>Parsed Localization</h3>`;
+  // Section: Gemini Localization
+  rightHtml += `<div class="section"><h3>Gemini Localization</h3>`;
   rightHtml += objectCardHtml('A', loc.objectA);
   rightHtml += objectCardHtml('B', loc.objectB);
   if (!loc.objectA && !loc.objectB) rightHtml += '<div style="color:var(--muted);font-size:12px">No localization data</div>';
   rightHtml += `</div>`;
 
-  // Prompt
+  // Section: Gemini Prompt
   if (c.promptPath) {
     const prompt = await fetchFile(c.promptPath);
     if (prompt) {
@@ -613,15 +520,45 @@ async function renderStep6(c) {
     }
   }
 
-  // Response
+  // Section: Gemini Response
   if (c.responsePath) {
     const response = await fetchFile(c.responsePath);
     if (response) {
-      rightHtml += `<div class="section"><h3>Gemini Raw Response</h3>
+      rightHtml += `<div class="section"><h3>Gemini Response</h3>
         <pre class="code-block">${escapeHtml(response)}</pre>
       </div>`;
     }
   }
+
+  // Section: Python Computation
+  rightHtml += `<div class="section"><h3>Python Computation</h3>
+    <div class="kv-grid">
+      ${kv('strategy', meta.strategy)}
+      ${kv('scaleInchesPerFoot', c.inputs.scaleInchesPerFoot)}
+      ${kv('objectA', c.inputs.objectA, { plain: true })}
+      ${kv('objectB', c.inputs.objectB, { plain: true })}
+    </div>
+    <pre class="code-block" style="max-height:300px;margin-top:8px;">${escapeHtml(JSON.stringify(loc, null, 2))}</pre>
+  </div>`;
+
+  // Section: Result
+  rightHtml += `<div class="section"><h3>Result</h3>`;
+  if (final.distanceFeet != null) {
+    rightHtml += `
+      <div class="result-card">
+        <div class="result-big">${escapeHtml(String(final.distanceFeet))} ft</div>
+        <div class="kv-grid">
+          ${kv('distanceInches', final.distanceInches)}
+          ${kv('confidence', final.confidence)}
+          ${kv('method', final.method || (final.localization || {}).method)}
+          ${kv('fallbackUsed', (final.localization || {}).fallbackUsed)}
+        </div>
+      </div>`;
+  } else {
+    rightHtml += `<div class="warn-note">No computation result &mdash; Python may have failed.</div>
+      ${meta.error ? `<div class="err-note">${escapeHtml(String(meta.error).slice(0, 400))}</div>` : ''}`;
+  }
+  rightHtml += `</div>`;
 
   return `<div style="display:flex;gap:20px;align-items:flex-start;">
     <div style="flex:1;min-width:0;">${centerHtml}</div>
@@ -648,10 +585,10 @@ function objectCardHtml(label, obj) {
     </div>`;
 }
 
-// ── Canvas Setup (Step 6) ──
-function setupCanvas(c) {
-  const img = document.getElementById('overlay-img');
-  const canvas = document.getElementById('overlay-canvas');
+// ── Detection Canvas Setup (single canvas, two overlay layers) ──
+function setupDetectionCanvas(c) {
+  const img = document.getElementById('det-img');
+  const canvas = document.getElementById('det-canvas');
   if (!img || !canvas) return;
 
   const draw = () => {
@@ -659,19 +596,17 @@ function setupCanvas(c) {
     canvas.height = img.naturalHeight;
     canvas.style.width = img.clientWidth + 'px';
     canvas.style.height = img.clientHeight + 'px';
-    renderOverlay(c, canvas);
+    renderDetectionOverlay(c, canvas);
   };
 
   if (img.complete && img.naturalWidth) draw();
   else img.onload = draw;
 
-  // Toggle handlers
-  ['toggle-bboxes', 'toggle-points', 'toggle-yx'].forEach(id => {
+  ['det-toggle-gemini', 'det-toggle-python', 'det-toggle-yx'].forEach(id => {
     const el = document.getElementById(id);
-    if (el) el.addEventListener('change', () => renderOverlay(c, canvas));
+    if (el) el.addEventListener('change', () => renderDetectionOverlay(c, canvas));
   });
 
-  // Resize
   const resizeObs = new ResizeObserver(() => {
     if (img.clientWidth) {
       canvas.style.width = img.clientWidth + 'px';
@@ -681,211 +616,79 @@ function setupCanvas(c) {
   resizeObs.observe(img);
 }
 
-function renderOverlay(c, canvas) {
+function renderDetectionOverlay(c, canvas) {
   const loc = c.localization;
   const ctx = canvas.getContext('2d');
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   if (!loc) return;
 
-  const showBbox = document.getElementById('toggle-bboxes')?.checked ?? true;
-  const showPts = document.getElementById('toggle-points')?.checked ?? true;
-  const swapAxes = document.getElementById('toggle-yx')?.checked ?? false;
+  const showGemini = document.getElementById('det-toggle-gemini')?.checked ?? true;
+  const showPython = document.getElementById('det-toggle-python')?.checked ?? true;
+  const swapAxes = document.getElementById('det-toggle-yx')?.checked ?? false;
 
   const W = canvas.width, H = canvas.height;
   const denorm = (v, dim) => (v / 1000) * dim;
 
-  ['objectA', 'objectB'].forEach(key => {
-    const obj = loc[key];
-    if (!obj || !obj.found || !obj.bbox) return;
-    const [a0, b0, a1, b1] = obj.bbox;
-    const [x0, y0, x1, y1] = swapAxes ? [b0, a0, b1, a1] : [a0, b0, a1, b1];
-    const px = denorm(x0, W), py = denorm(y0, H);
-    const pw = denorm(x1 - x0, W), ph = denorm(y1 - y0, H);
+  // Layer 1: Green Gemini bounding boxes (drawn first, underneath)
+  if (showGemini) {
+    ['objectA', 'objectB'].forEach(key => {
+      const obj = loc[key];
+      if (!obj || !obj.found || !obj.bbox) return;
+      const [a0, b0, a1, b1] = obj.bbox;
+      const [x0, y0, x1, y1] = swapAxes ? [b0, a0, b1, a1] : [a0, b0, a1, b1];
+      const px = denorm(x0, W), py = denorm(y0, H);
+      const pw = denorm(x1 - x0, W), ph = denorm(y1 - y0, H);
 
-    if (showBbox) {
-      ctx.fillStyle = ACCENT.fill;
-      ctx.strokeStyle = ACCENT.stroke;
+      ctx.fillStyle = GEMINI_COLORS.fill;
+      ctx.strokeStyle = GEMINI_COLORS.stroke;
       ctx.lineWidth = 2;
       ctx.fillRect(px, py, pw, ph);
       ctx.strokeRect(px, py, pw, ph);
-      ctx.fillStyle = LABEL_COLORS[key.slice(-1)] || ACCENT.stroke;
+
+      // A/B label
+      ctx.fillStyle = LABEL_COLORS[key.slice(-1)] || GEMINI_COLORS.stroke;
       ctx.font = 'bold 22px -apple-system, sans-serif';
       ctx.textBaseline = 'top';
       ctx.fillText(key.slice(-1), px + 6, py + 4);
-    }
-
-    if (showPts && obj.nearestPoint) {
-      let [a, b] = obj.nearestPoint;
-      const [npX, npY] = swapAxes ? [b, a] : [a, b];
-      const ppx = denorm(npX, W), ppy = denorm(npY, H);
-      ctx.beginPath();
-      ctx.arc(ppx, ppy, 7, 0, Math.PI * 2);
-      ctx.fillStyle = ACCENT.pointFill;
-      ctx.fill();
-      ctx.strokeStyle = '#fff';
-      ctx.lineWidth = 2;
-      ctx.stroke();
-    }
-  });
-}
-
-// ── Step 7: Python Distance Computation ──
-async function renderStep7(c) {
-  const loc = c.localization || {};
-  const meta = c.metadata || {};
-  const final = c.finalResult || {};
-
-  // Center: cropped image with bbox overlay + debug image below
-  // Right: script inputs, localization, computation result
-  const imgSrc = c.croppedJpegPath ? `../${escapeHtml(c.croppedJpegPath)}` : '';
-
-  let centerHtml = '';
-  if (imgSrc) {
-    centerHtml = `
-      <div class="canvas-stage">
-        <div class="toolbar">
-          <label><input type="checkbox" id="s7-toggle-bboxes" checked /> bboxes</label>
-          <label><input type="checkbox" id="s7-toggle-points" checked /> nearestPoints</label>
-          <label title="Swap [y,x] → [x,y] — uncheck to test raw interpretation"><input type="checkbox" id="s7-toggle-yx" checked /> swap axes</label>
-        </div>
-        <div class="canvas-wrap">
-          <img id="s7-img" src="${imgSrc}" alt="cropped drawing" />
-          <canvas id="s7-canvas"></canvas>
-        </div>
-      </div>`;
-  } else {
-    centerHtml = '<div class="warn-note">No cropped image available.</div>';
+    });
   }
 
-  const rightHtml = `
-    <div class="section"><h3>Script Inputs</h3>
-      <div class="kv-grid">
-        ${kv('strategy', meta.strategy)}
-        ${kv('scaleInchesPerFoot', c.inputs.scaleInchesPerFoot)}
-        ${kv('objectA', c.inputs.objectA, { plain: true })}
-        ${kv('objectB', c.inputs.objectB, { plain: true })}
-      </div>
-    </div>
-    <div class="section"><h3>Localization Input</h3>
-      <pre class="code-block" style="max-height:300px;">${escapeHtml(JSON.stringify(loc, null, 2))}</pre>
-    </div>
-    <div class="section"><h3>Computation Result</h3>
-      ${final.distanceFeet != null ? `
-        <div class="result-card">
-          <div class="result-big">${escapeHtml(String(final.distanceFeet))} ft</div>
-          <div class="kv-grid">
-            ${kv('distanceInches', final.distanceInches)}
-            ${kv('confidence', final.confidence)}
-            ${kv('method', final.method || (final.localization || {}).method)}
-            ${kv('fallbackUsed', (final.localization || {}).fallbackUsed)}
-          </div>
-        </div>
-      ` : `<div class="warn-note">No computation result — Python may have failed.</div>
-        ${meta.error ? `<div class="err-note">${escapeHtml(String(meta.error).slice(0, 400))}</div>` : ''}
-      `}
-    </div>`;
-
-  return `<div style="display:flex;gap:20px;align-items:flex-start;">
-    <div style="flex:1;min-width:0;">${centerHtml}</div>
-    <div style="width:360px;flex:0 0 360px;overflow-y:auto;max-height:calc(100vh - 60px);">${rightHtml}</div>
-  </div>`;
-}
-
-function setupStep7Canvas(c) {
-  const img = document.getElementById('s7-img');
-  const canvas = document.getElementById('s7-canvas');
-  if (!img || !canvas) return;
-
-  function draw() {
-    canvas.width = img.naturalWidth;
-    canvas.height = img.naturalHeight;
-    canvas.style.width = img.clientWidth + 'px';
-    canvas.style.height = img.clientHeight + 'px';
-    renderStep7Overlay(c, canvas);
-  }
-  if (img.complete && img.naturalWidth) draw();
-  else img.onload = draw;
-
-  ['s7-toggle-bboxes', 's7-toggle-points', 's7-toggle-yx'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.addEventListener('change', () => renderStep7Overlay(c, canvas));
-  });
-
-  const obs = new ResizeObserver(() => {
-    if (img.clientWidth) {
-      canvas.style.width = img.clientWidth + 'px';
-      canvas.style.height = img.clientHeight + 'px';
-    }
-  });
-  obs.observe(img);
-}
-
-function renderStep7Overlay(c, canvas) {
-  const loc = c.localization;
-  const ctx = canvas.getContext('2d');
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  if (!loc) return;
-
-  const showBbox = document.getElementById('s7-toggle-bboxes')?.checked ?? true;
-  const showPts = document.getElementById('s7-toggle-points')?.checked ?? true;
-  const swapAxes = document.getElementById('s7-toggle-yx')?.checked ?? false;
-
-  const W = canvas.width, H = canvas.height;
-  const denorm = (v, dim) => (v / 1000) * dim;
-
-  ['objectA', 'objectB'].forEach(key => {
-    const obj = loc[key];
-    if (!obj || !obj.found || !obj.bbox) return;
-    const [a0, b0, a1, b1] = obj.bbox;
-    const [x0, y0, x1, y1] = swapAxes ? [b0, a0, b1, a1] : [a0, b0, a1, b1];
-    const px = denorm(x0, W), py = denorm(y0, H);
-    const pw = denorm(x1 - x0, W), ph = denorm(y1 - y0, H);
-
-    if (showBbox) {
-      ctx.fillStyle = ACCENT.fill;
-      ctx.strokeStyle = ACCENT.stroke;
-      ctx.lineWidth = 2;
-      ctx.fillRect(px, py, pw, ph);
-      ctx.strokeRect(px, py, pw, ph);
-      ctx.fillStyle = LABEL_COLORS[key.slice(-1)] || ACCENT.stroke;
-      ctx.font = 'bold 22px -apple-system, sans-serif';
-      ctx.textBaseline = 'top';
-      ctx.fillText(key.slice(-1), px + 6, py + 4);
-    }
-
-    if (showPts && obj.nearestPoint) {
-      let [a, b] = obj.nearestPoint;
+  // Layer 2: Purple Python nearestPoint dots + dashed distance line (drawn on top)
+  if (showPython) {
+    const points = {};
+    ['objectA', 'objectB'].forEach(key => {
+      const obj = loc[key];
+      if (!obj || !obj.found || !obj.nearestPoint) return;
+      const [a, b] = obj.nearestPoint;
       const [npX, npY] = swapAxes ? [b, a] : [a, b];
       const ppx = denorm(npX, W), ppy = denorm(npY, H);
+      points[key] = { x: ppx, y: ppy };
+
       ctx.beginPath();
       ctx.arc(ppx, ppy, 8, 0, Math.PI * 2);
-      ctx.fillStyle = '#9333ea';  // purple
+      ctx.fillStyle = PURPLE;
       ctx.fill();
       ctx.strokeStyle = '#fff';
       ctx.lineWidth = 2;
       ctx.stroke();
-    }
-  });
+    });
 
-  // Draw line between nearest points if both exist
-  if (showPts && loc.objectA?.nearestPoint && loc.objectB?.nearestPoint) {
-    let [a1a, a1b] = loc.objectA.nearestPoint;
-    let [a2a, a2b] = loc.objectB.nearestPoint;
-    const [npAx, npAy] = swapAxes ? [a1b, a1a] : [a1a, a1b];
-    const [npBx, npBy] = swapAxes ? [a2b, a2a] : [a2a, a2b];
-    ctx.beginPath();
-    ctx.moveTo(denorm(npAx, W), denorm(npAy, H));
-    ctx.lineTo(denorm(npBx, W), denorm(npBy, H));
-    ctx.strokeStyle = '#9333ea';
-    ctx.lineWidth = 2;
-    ctx.setLineDash([6, 4]);
-    ctx.stroke();
-    ctx.setLineDash([]);
+    // Dashed line between nearest points
+    if (points.objectA && points.objectB) {
+      ctx.beginPath();
+      ctx.moveTo(points.objectA.x, points.objectA.y);
+      ctx.lineTo(points.objectB.x, points.objectB.y);
+      ctx.strokeStyle = PURPLE;
+      ctx.lineWidth = 2;
+      ctx.setLineDash([6, 4]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
   }
 }
 
-// ── Step 8: Final Results ──
-function renderStep8(c) {
+// ── Step 4: Final Results ──
+function renderStepFinal(c) {
   const final = c.finalResult;
   const meta = c.metadata || {};
 
