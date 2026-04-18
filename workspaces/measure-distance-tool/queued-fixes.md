@@ -27,7 +27,7 @@ Tracks fixes shipped since the last experiment run, so the next run captures all
 | PR | Status | Fix | Expected impact |
 |---|---|---|---|
 | **#241** | merged | **Per-phase latency logging** — downloadMs, contextMs, geminiMs, pythonMs in metadata.json | Latency visibility per pipeline phase |
-| **Phase B** | in progress | **Legend symbol images** — vector search for legend blocks matching objectA/objectB, crop at 300 DPI, send as images to both Gemini calls | Better object identification; Gemini sees what symbols look like instead of reading text descriptions |
+| **#243** | merged | **Legend symbol images (Phase B)** — vector search for legend blocks matching objectA/objectB, crop at 300 DPI, send as images to both Gemini calls. Replaces 15 KB text dump with short reference + visual images in the happy path; text dump remains as fallback when no legend images found. | Better object identification; Gemini sees what symbols look like instead of reading text descriptions |
 | TBD | queued | **Distance sanity-check** — flag measurements exceeding sheet physical dimensions as low confidence | Fix the 29% outlier rate (>100 ft) from run4's two-call pipeline |
 
 ### Previously shipped (in experiment-run4)

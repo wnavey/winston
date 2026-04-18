@@ -15,17 +15,16 @@ Ordered roughly by impact, not effort. Updated after experiment-run4.
 300 DPI refined crop). Run4 confirmed: all measurements use real drawing-block
 crops, and call 2 operates on a 300 DPI refined region. Verified in the viewer.
 
-### 2. Legend identification — IN PROGRESS (Phase B)
+### 2. Legend identification — RESOLVED (Phase B)
 
-The tool currently sends ~15 KB of cross-sheet legend TEXT to Gemini. Issues:
-- Text descriptions lose visual symbol information (what does a tree symbol
-  actually look like?)
-- The text dump includes all legend entries from all sheets — mostly irrelevant
+~~The tool sends ~15 KB of cross-sheet legend TEXT to Gemini.~~
 
-**Phase B plan:** Use vector similarity search on `content_block_embedding` to
-find the specific legend blocks matching objectA/objectB, crop those blocks as
-images from the source sheet PDF at 300 DPI, and send them alongside the
-measurement image in BOTH Gemini calls. Implementation starting now.
+**Status:** Fixed in bureau#243. The tool now uses vector similarity search
+to find specific legend blocks matching the objects being measured, crops them
+at 300 DPI, and sends them as images to both Gemini calls. In the happy path,
+the 15 KB text dump is replaced with a short reference + visual images. The
+text dump remains as a fallback when no legend images are found (missing
+OPENAI_API_KEY, no matching blocks, no bounding boxes, etc.).
 
 See `analysis/improving-legend-and-bounding-box-plan.md` for full design.
 
