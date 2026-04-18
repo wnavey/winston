@@ -65,6 +65,23 @@ Possible mitigations:
 first time. Prompt fix (bureau#225) is working. Still 3 agents that skip —
 2 are on item 1.md (vertical clearance) which is expected, 1 is stochastic.
 
+### 16. EL-13.20: agent should measure transformer pad-to-pad distance (TODO)
+
+In run4, EL-13.20 (minimum 5-foot clearance between transformer pads) stayed
+`not-verifiable` across all runs. The agent noted "five transformer pads shown
+on Electrical Plan, no clearance dimensions provided between any pairs" but
+never invoked the MD tool to measure the distances itself.
+
+This is a textbook MD candidate: both objects (pad A and pad B) are visible on
+Sheet 21, the scale is known (1"=20'), and the threshold is clear (5 feet).
+The agent should be calling MD with objectPairs for each pad pair.
+
+**Follow-up:** Investigate whether this is a prompt gap (agent doesn't think to
+measure pad-to-pad), a tool-description gap (agent doesn't know it can measure
+between two features of the same type), or stochastic (some runs might catch
+it). Consider adding a worked example in the prompt for same-type-feature
+measurements.
+
 ### 4. Agent passes wrong scale values — RESOLVED
 
 **Status:** Fixed in bureau#225 (prompt fix with numeric examples). Run3 and
