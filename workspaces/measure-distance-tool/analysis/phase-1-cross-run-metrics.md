@@ -1,8 +1,15 @@
 # Phase 1 — Cross-Run Metrics: el-md-exp (EL guides 1, 2, 13)
 
 All metrics are against the `baseline-2026-04-15` (no MD tool). Scope: EL
-discipline guides 1.md, 2.md, 13.md — 101 checklist items, 51 horizontal-eligible.
-Model: Haiku 4.5. 3 runs × 3 items = 9 agents per experiment.
+discipline guides 1.md, 2.md, 13.md — 101 checklist items total. Model:
+Haiku 4.5. 3 runs × 3 items = 9 agents per experiment.
+
+**Item classification:**
+- 36 **distance-only** — distance measurement alone resolves the verdict
+- 15 **distance-plus** — distance needed but verdict also requires species
+  verification, orientation ID, or other non-distance checks
+- 28 **not-applicable** — documentation, material, methodology checks
+- 22 **vertical-or-mixed** — needs vertical/3D clearance (tool can't measure)
 
 ---
 
@@ -10,14 +17,15 @@ Model: Haiku 4.5. 3 runs × 3 items = 9 agents per experiment.
 
 | Metric | Run1 (04-15) | Run2 (04-16) | Run3 (04-17) | Run4 (04-17) |
 |--------|-------------:|-------------:|-------------:|-------------:|
-| **Invocation recall** | 47.5% | 65.2% | 53.3% | 56.1% |
+| **Recall (distance-only)** | 43.9% | 50.0% | 42.4% | 46.9% |
+| Recall (distance-plus) | 56.5% | 88.9% | 66.7% | 68.0% |
+| Recall (all-horizontal) | 47.5% | 65.2% | 53.3% | 56.1% |
 | **Completion rate** | 0.0% | 100.0% | 100.0% | 95.3% |
-| **Finding conversion** | 2.4% | 21.6% | 14.7% | 15.4% |
+| **Conversion (distance-only)** | 3.8% (1/26) | 5.0% (1/20) | 5.6% (1/18) | 8.3% (2/24) |
+| Conversion (distance-plus) | 0.0% (0/15) | 41.2% (7/17) | 25.0% (4/16) | 26.7% (4/15) |
+| Conversion (all-horizontal) | 2.4% (1/41) | 21.6% (8/37) | 14.7% (5/34) | 15.4% (6/39) |
 | MD invocations | 14 | 13 | 10 | 13 |
-| Call-dirs total | 8 | 12 | 26 | 55 |
-| Call-dirs with metadata | 8 | 7 | 12 | 43 |
 | Results produced | 0 | 7 | 12 | 41 |
-| Non-zero distances | 0 | 1 | 9 | 35 |
 | Agents using MD (of 9) | 5 | 6 | 5 | 6 |
 
 ---
@@ -26,100 +34,88 @@ Model: Haiku 4.5. 3 runs × 3 items = 9 agents per experiment.
 
 ### Invocation recall
 
-Of eligible (horizontal-distance) checklist items, how often did the agent
-have access to MD tool results?
+Of eligible items, how often did the agent have access to MD tool results?
 
-**Denominator:** eligible item × run opportunities. Each agent (run, item)
-session reviews multiple deficiency IDs; each horizontal-classified ID is one
-opportunity.
+**Three scopes:**
+- **distance-only** (primary): items where distance alone resolves the verdict (36 items)
+- **distance-plus**: items needing distance + additional info (15 items)
+- **all-horizontal**: both combined (51 items)
 
-**Numerator:** opportunities where the agent made ≥1 MD call in that session.
-
-**Limitation:** agent-level attribution — if the agent called MD once, ALL
-eligible items in that session count as "invoked." Overstates recall since
-the agent may not have measured every eligible item. Per-finding attribution
-requires Review 5.0 agent tracing (Phase 3).
+**Attribution:** agent-level — if the agent called MD ≥1 time in a session,
+all eligible items in that session count as "invoked." Overstates recall.
 
 ### Completion rate
 
-Of call-dirs that reached the pipeline (have `metadata.json`), how many
-produced a final measurement?
-
-**Formula:** `results_produced / call_dirs_with_metadata`
-
-This excludes parent batch-orchestrator dirs (which have no metadata of their
-own) and dirs where the Gemini call timed out before writing metadata. It
-gives a clean measure of "when the pipeline ran, did it finish?"
+Of call-dirs with metadata, how many produced a final measurement?
 
 ### Finding conversion rate
 
-Of eligible items that were `not-verifiable` in the baseline, how many
-converted to `pass` or `fail` in the experiment?
-
-**Formula:** `(nv → pass + nv → fail) / (nv → any)`
-
-Paired by (run-index, item-file, deficiency-ID). Items present in the
-experiment but missing from the baseline are excluded.
+Of items that were `not-verifiable` in the baseline, how many converted to
+`pass` or `fail` in the experiment?
 
 ---
 
-## Interpretation
+## Key insight: distance-plus items convert at higher rates
 
-### Invocation recall (~50-65%)
+The counterintuitive finding: distance-plus items (which need BOTH distance
+AND some additional check) convert at **3× the rate** of distance-only items:
 
-Stable across runs at roughly 50-65%. The 3 agents on item 1.md consistently
-skip MD (vertical-clearance item, expected). The remaining variance is
-stochastic — individual agents decide whether to call the tool based on their
-exploration of the site plan data.
+| Scope | Run4 conversion | Why |
+|-------|----------------:|-----|
+| distance-only | 8.3% (2/24) | The tool's clean win — purely distance-resolved verdicts |
+| distance-plus | 26.7% (4/15) | Distance violations are often so severe (0 ft from OHE) that the "plus" requirement is moot |
+| all-horizontal | 15.4% (6/39) | Combined rate |
 
-**Improvement lever:** Phase 3 agent tracing will show exactly which eligible
-items the agent considered and why it decided not to measure. The prompt nudge
-(bureau#225) improved recall from run1→run2 but it's plateaued since.
+**Example:** EL-2.3 requires species verification (distance-plus) AND 25-ft
+clearance from OHE. Trees measured at 0 feet lateral distance — the distance
+alone is conclusive regardless of species. The agent correctly calls this a
+fail.
 
-### Completion rate (0% → 95-100%)
-
-The dramatic jump from 0% (run1, Python 3.9 crash) to 100% (run2/run3) to
-95% (run4) reflects the infrastructure fixes. The 95% in run4 is because 2
-of 43 call-dirs with metadata didn't produce a result (likely the low-confidence
-pairs that produced outlier distances).
-
-**This metric is effectively solved.** The pipeline completes reliably.
-
-### Finding conversion (~15-22%)
-
-Roughly 1 in 5-7 previously-unverifiable findings converts to a concrete
-pass/fail verdict with measured evidence. This has been consistent across
-runs 2-4 despite massive improvements in measurement quality.
-
-**Why hasn't it improved more?** Two reasons:
-1. Many `not-verifiable` items in the baseline are about missing documentation
-   (elevation sheets, surveyor data, plan notes) — not missing dimension
-   measurements. The MD tool can't help with those.
-2. The finding conversion metric only counts items that were `not-verifiable`
-   in the baseline AND changed to pass/fail. Items where both baseline and
-   experiment say `fail` (the tool provides better evidence but the verdict
-   is the same) don't register as "conversions."
-
-**Better metric for Phase 3:** finding-level precision and recall — did the
-tool's measurements lead to CORRECT verdicts?
+This means the tool's impact is BROADER than the "distance-only" count
+suggests. Even items that technically need additional verification benefit
+when the distance violation is clear-cut.
 
 ---
 
-## Run progression narrative
+## Invocation recall pattern
 
-| Run | What changed | Key result |
-|-----|-------------|------------|
-| **Run1** | First experiment attempt | 0% completion — Python 3.9 crash, MCP rejects |
-| **Run2** | Python compat, MCP fix, prompt fix, DB fix | 100% completion, but all distances ~0 ft (scale inverted, axis swap) |
-| **Run3** | Axis fix, scale fix, real cropping, objectPairs | 100% completion, 75% non-zero, distances 2-32 ft |
-| **Run4** | Two-call Gemini (300 DPI), Option A skip, 600s timeout | 95% completion, 85% non-zero, distances 0-462 ft, 3.4× volume |
+Recall is stable at ~45-50% for distance-only, ~60-70% for distance-plus:
+
+| | Distance-only | Distance-plus |
+|---|---:|---:|
+| Run1 | 43.9% | 56.5% |
+| Run2 | 50.0% | 88.9% |
+| Run3 | 42.4% | 66.7% |
+| Run4 | 46.9% | 68.0% |
+
+Distance-plus items have HIGHER recall because they tend to be tree-clearance
+items (guides 2.md) where the agent naturally investigates the landscape plan
+and invokes the tool. Distance-only items include transformer-pad checks
+(guide 13.md) where the agent sometimes doesn't think to measure pad-to-pad
+or pad-to-feature distances.
+
+---
+
+## Conversion progression
+
+| | Distance-only | Distance-plus | All-horizontal |
+|---|---:|---:|---:|
+| Run1 | 3.8% | 0.0% | 2.4% |
+| Run2 | 5.0% | 41.2% | 21.6% |
+| Run3 | 5.6% | 25.0% | 14.7% |
+| Run4 | 8.3% | 26.7% | 15.4% |
+
+Distance-only conversion is climbing slowly (3.8% → 8.3%). Distance-plus
+had a spike in run2 (41.2%) then settled at ~25-27%. The run2 spike is likely
+because that was the first run where measurements actually completed —
+all the "low-hanging fruit" conversions happened at once.
 
 ---
 
 ## Methodology notes
 
-- Item classification: `analysis/item-classification.json` (101 items, 51 horizontal)
+- Item classification: `analysis/guides/el-md-exp/item-classification.json`
+  with `subClassification` field (distance-only vs distance-plus)
 - Baseline: `runs/baseline-2026-04-15/` (3 items × 3 runs, no MD tool)
-- Script: `scripts/compare-findings.py` with corrected completion rate
-  (denominator = call-dirs with metadata, not MCP invocations)
-- All runs use the same site plan (Valley View Townhomes) and model (Haiku 4.5)
+- Script: `scripts/compare-findings.py` with scoped breakdown
+- All runs use Valley View Townhomes and Haiku 4.5

@@ -109,35 +109,38 @@ def compute_metrics(
     """Compute all Phase 1 metrics."""
 
     # ── Invocation recall ──
-    # For each (run, item) agent in the experiment, count eligible items
-    # and how many had at least one MD call that targeted them.
-    eligible_opportunities = 0
-    eligible_with_invocation = 0
-    eligible_without_invocation = []
-    items_per_agent = defaultdict(lambda: {'eligible': 0, 'invoked': 0})
+    # Computed for three scopes: distance-only, distance-plus, all-horizontal.
+    # Primary metric uses distance-only (items where distance alone can resolve).
+    scopes = {
+        'distance-only': lambda c: c.get('classification') == 'horizontal' and c.get('subClassification') == 'distance-only',
+        'distance-plus': lambda c: c.get('classification') == 'horizontal' and c.get('subClassification') == 'distance-plus',
+        'all-horizontal': lambda c: c.get('classification') == 'horizontal',
+    }
 
-    for (run, item), findings in experiment_findings.items():
-        agent_invocations = md_invocations.get((run, item), [])
-        for did, finding in findings.items():
-            cls = classification.get(did, {})
-            if cls.get('classification') != 'horizontal':
-                continue
-            eligible_opportunities += 1
-            items_per_agent[(run, item)]['eligible'] += 1
-            # Did the agent invoke MD at all for this agent session?
-            # (We can't attribute a specific invocation to a specific deficiency ID
-            # without agent tracing — so we use agent-level: ≥1 MD call for this
-            # agent means all eligible items in that session "had access" to the tool)
-            if agent_invocations:
-                eligible_with_invocation += 1
-                items_per_agent[(run, item)]['invoked'] += 1
-            else:
-                eligible_without_invocation.append({
-                    'run': run, 'item': item, 'deficiencyId': did,
-                    'status': finding.get('status'),
-                })
+    invocation_by_scope = {}
+    for scope_name, scope_filter in scopes.items():
+        eligible_opportunities = 0
+        eligible_with_invocation = 0
+        for (run, item), findings in experiment_findings.items():
+            agent_invocations = md_invocations.get((run, item), [])
+            for did, finding in findings.items():
+                cls = classification.get(did, {})
+                if not scope_filter(cls):
+                    continue
+                eligible_opportunities += 1
+                if agent_invocations:
+                    eligible_with_invocation += 1
+        recall = eligible_with_invocation / eligible_opportunities if eligible_opportunities else 0
+        invocation_by_scope[scope_name] = {
+            'eligible': eligible_opportunities,
+            'with_invocation': eligible_with_invocation,
+            'recall': recall,
+        }
 
-    invocation_recall = eligible_with_invocation / eligible_opportunities if eligible_opportunities else 0
+    # Primary: distance-only
+    eligible_opportunities = invocation_by_scope['distance-only']['eligible']
+    eligible_with_invocation = invocation_by_scope['distance-only']['with_invocation']
+    invocation_recall = invocation_by_scope['distance-only']['recall']
 
     # ── More granular: agent-level invocation rate ──
     agents_total = len(experiment_findings)
@@ -156,33 +159,52 @@ def compute_metrics(
     completion_rate = completed_with_result / call_dirs_with_metadata if call_dirs_with_metadata else 0
 
     # ── Finding conversion rate ──
-    # For each eligible item, compare baseline status to experiment status
-    conversions = Counter()
+    # Computed for each scope. Primary uses distance-only.
+    conversion_by_scope = {}
     conversion_details = []
-    total_paired = 0
 
-    for (run, item), exp_findings in experiment_findings.items():
-        base_findings = baseline_findings.get((run, item), {})
-        for did in exp_findings:
-            cls = classification.get(did, {})
-            if cls.get('classification') != 'horizontal':
-                continue
-            base_status = base_findings.get(did, {}).get('status', 'missing')
-            exp_status = exp_findings[did].get('status', 'missing')
-            total_paired += 1
-            conversions[f'{base_status} → {exp_status}'] += 1
+    for scope_name, scope_filter in scopes.items():
+        conversions = Counter()
+        total_paired = 0
 
-            if base_status == 'not-verifiable' and exp_status in ('pass', 'fail'):
-                conversion_details.append({
-                    'run': run, 'item': item, 'deficiencyId': did,
-                    'baseline': base_status, 'experiment': exp_status,
-                    'comment': exp_findings[did].get('comment', '')[:200],
-                })
+        for (run, item), exp_findings in experiment_findings.items():
+            base_findings = baseline_findings.get((run, item), {})
+            for did in exp_findings:
+                cls = classification.get(did, {})
+                if not scope_filter(cls):
+                    continue
+                base_status = base_findings.get(did, {}).get('status', 'missing')
+                exp_status = exp_findings[did].get('status', 'missing')
+                total_paired += 1
+                conversions[f'{base_status} → {exp_status}'] += 1
 
-    nv_total = sum(v for k, v in conversions.items() if k.startswith('not-verifiable'))
-    nv_converted = sum(v for k, v in conversions.items()
-                       if k.startswith('not-verifiable') and ('pass' in k or 'fail' in k))
-    conversion_rate = nv_converted / nv_total if nv_total else 0
+                if scope_name == 'distance-only' and base_status == 'not-verifiable' and exp_status in ('pass', 'fail'):
+                    conversion_details.append({
+                        'run': run, 'item': item, 'deficiencyId': did,
+                        'baseline': base_status, 'experiment': exp_status,
+                        'subClassification': cls.get('subClassification'),
+                        'additionalRequirements': cls.get('additionalRequirements', []),
+                        'comment': exp_findings[did].get('comment', '')[:200],
+                    })
+
+        nv_total = sum(v for k, v in conversions.items() if k.startswith('not-verifiable'))
+        nv_converted = sum(v for k, v in conversions.items()
+                           if k.startswith('not-verifiable') and ('pass' in k or 'fail' in k))
+        conversion_rate = nv_converted / nv_total if nv_total else 0
+        conversion_by_scope[scope_name] = {
+            'total_paired': total_paired,
+            'conversions': dict(conversions),
+            'nv_total': nv_total,
+            'nv_converted': nv_converted,
+            'rate': conversion_rate,
+        }
+
+    # Primary scope for backward-compatible fields
+    conv_primary = conversion_by_scope['distance-only']
+    nv_total = conv_primary['nv_total']
+    nv_converted = conv_primary['nv_converted']
+    conversion_rate = conv_primary['rate']
+    conversions = Counter(conv_primary['conversions'])
 
     return {
         'invocation_recall': {
@@ -192,7 +214,8 @@ def compute_metrics(
             'agents_total': agents_total,
             'agents_with_md': agents_with_md,
             'agents_without_md': agents_without_md,
-            'note': 'Agent-level attribution: an eligible item counts as "invoked" if its agent made ≥1 MD call. Without per-finding tracing, we cannot attribute specific invocations to specific items.',
+            'by_scope': invocation_by_scope,
+            'note': 'Primary metric uses distance-only items (where distance alone resolves the verdict). Agent-level attribution: counts as "invoked" if agent made ≥1 MD call.',
         },
         'completion': {
             'total_invocations': total_invocations,
@@ -203,12 +226,13 @@ def compute_metrics(
             'completion_rate': completion_rate,
         },
         'finding_conversion': {
-            'total_paired_eligible': total_paired,
+            'total_paired_eligible': conv_primary['total_paired'],
             'conversions': dict(conversions),
             'nv_baseline_count': nv_total,
             'nv_converted_count': nv_converted,
             'conversion_rate': conversion_rate,
             'conversion_details': conversion_details,
+            'by_scope': conversion_by_scope,
         },
     }
 
@@ -219,26 +243,39 @@ def format_report(metrics: dict, baseline_name: str, experiment_name: str) -> st
     comp = metrics['completion']
     conv = metrics['finding_conversion']
 
+    inv_scopes = inv.get('by_scope', {})
+    conv_scopes = conv.get('by_scope', {})
+
     lines = [
         '# Phase 1 — Pilot Metrics: Measure-Distance Tool Validation',
         '',
         f'Baseline: `{baseline_name}` · Experiment: `{experiment_name}`',
-        f'Scope: EL guides 1, 2, 13 (101 items, 51 horizontal-eligible) × 3 runs = 9 agents',
+        f'Scope: EL guides 1, 2, 13 (101 items: 36 distance-only, 15 distance-plus, 28 not-applicable, 22 vertical)',
         '',
         '---',
         '',
         '## 1. Invocation recall',
         '',
-        'Of eligible (horizontal-distance) items, how often did the agent have',
-        'access to MD tool results?',
+        'Of distance-only items (where distance alone resolves the verdict),',
+        'how often did the agent have access to MD tool results?',
         '',
         f'| Metric | Value |',
         f'|--------|------:|',
-        f'| Eligible item × run opportunities | {inv["eligible_opportunities"]} |',
+        f'| Distance-only opportunities | {inv["eligible_opportunities"]} |',
         f'| Opportunities where agent invoked MD ≥1 time | {inv["eligible_with_invocation"]} |',
-        f'| **Invocation recall** | **{inv["recall"]:.1%}** |',
+        f'| **Invocation recall (distance-only)** | **{inv["recall"]:.1%}** |',
         f'| Agents that called MD (of {inv["agents_total"]}) | {inv["agents_with_md"]} |',
         f'| Agents that never called MD | {inv["agents_without_md"]} |',
+        '',
+        '### By item scope',
+        '',
+        '| Scope | Eligible | Invoked | Recall |',
+        '|-------|--------:|--------:|-------:|',
+    ]
+    for scope_name in ['distance-only', 'distance-plus', 'all-horizontal']:
+        s = inv_scopes.get(scope_name, {})
+        lines.append(f'| {scope_name} | {s.get("eligible", 0)} | {s.get("with_invocation", 0)} | {s.get("recall", 0):.1%} |')
+    lines.extend([
         '',
         f'> **Note**: {inv["note"]}',
         '',
@@ -257,12 +294,12 @@ def format_report(metrics: dict, baseline_name: str, experiment_name: str) -> st
         '',
         '## 3. Finding conversion rate',
         '',
-        'Of eligible items that were `not-verifiable` in the baseline, how many',
-        'converted to `pass` or `fail` in the experiment?',
+        'Of **distance-only** items that were `not-verifiable` in the baseline,',
+        'how many converted to `pass` or `fail` in the experiment?',
         '',
         f'| Transition | Count |',
         f'|-----------|------:|',
-    ]
+    ])
     for k, v in conv['conversions'].items():
         if v > 0:
             lines.append(f'| {k.replace("_", " ")} | {v} |')
@@ -270,11 +307,24 @@ def format_report(metrics: dict, baseline_name: str, experiment_name: str) -> st
         '',
         f'| Metric | Value |',
         f'|--------|------:|',
-        f'| Baseline not-verifiable (eligible items) | {conv["nv_baseline_count"]} |',
+        f'| Baseline not-verifiable (distance-only) | {conv["nv_baseline_count"]} |',
         f'| Converted to pass or fail | {conv["nv_converted_count"]} |',
         f'| **Conversion rate** | **{conv["conversion_rate"]:.1%}** |',
         '',
     ])
+
+    # Scope comparison
+    lines.extend([
+        '',
+        '### Conversion by item scope',
+        '',
+        '| Scope | NV baseline | Converted | Rate |',
+        '|-------|----------:|----------:|-----:|',
+    ])
+    for scope_name in ['distance-only', 'distance-plus', 'all-horizontal']:
+        s = conv_scopes.get(scope_name, {})
+        lines.append(f'| {scope_name} | {s.get("nv_total", 0)} | {s.get("nv_converted", 0)} | {s.get("rate", 0):.1%} |')
+    lines.append('')
 
     if conv['conversion_details']:
         lines.extend([
