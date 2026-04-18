@@ -145,11 +145,15 @@ def compute_metrics(
     agents_without_md = agents_total - agents_with_md
 
     # ── Completion rate ──
+    # Use call-dirs with metadata (excludes parent batch-orchestrator dirs) as
+    # the denominator. This gives a meaningful rate even with objectPairs batching
+    # where one MCP invocation fans out into multiple call-dirs.
     total_invocations = sum(len(v) for v in md_invocations.values())
     total_call_dirs = len(call_dir_results)
+    call_dirs_with_metadata = sum(1 for v in call_dir_results.values() if v['has_metadata'])
     completed_with_result = sum(1 for v in call_dir_results.values() if v['has_result'])
     completed_with_error = sum(1 for v in call_dir_results.values() if v['error'])
-    completion_rate = completed_with_result / total_invocations if total_invocations else 0
+    completion_rate = completed_with_result / call_dirs_with_metadata if call_dirs_with_metadata else 0
 
     # ── Finding conversion rate ──
     # For each eligible item, compare baseline status to experiment status
@@ -193,6 +197,7 @@ def compute_metrics(
         'completion': {
             'total_invocations': total_invocations,
             'total_call_dirs': total_call_dirs,
+            'call_dirs_with_metadata': call_dirs_with_metadata,
             'completed_with_result': completed_with_result,
             'completed_with_error': completed_with_error,
             'completion_rate': completion_rate,
@@ -244,10 +249,11 @@ def format_report(metrics: dict, baseline_name: str, experiment_name: str) -> st
         f'| Metric | Value |',
         f'|--------|------:|',
         f'| Total MD invocations (from review.log) | {comp["total_invocations"]} |',
-        f'| Call-dirs created (reached script) | {comp["total_call_dirs"]} |',
+        f'| Call-dirs created | {comp["total_call_dirs"]} |',
+        f'| Call-dirs with metadata (denominator) | {comp["call_dirs_with_metadata"]} |',
         f'| Completed with a result | {comp["completed_with_result"]} |',
         f'| Completed with an error | {comp["completed_with_error"]} |',
-        f'| **Completion rate** | **{comp["completion_rate"]:.1%}** |',
+        f'| **Completion rate** (results / call-dirs with metadata) | **{comp["completion_rate"]:.1%}** |',
         '',
         '## 3. Finding conversion rate',
         '',
@@ -290,7 +296,7 @@ def format_report(metrics: dict, baseline_name: str, experiment_name: str) -> st
         f'- **Invocation recall: {inv["recall"]:.1%}** — {inv["eligible_with_invocation"]} of '
         f'{inv["eligible_opportunities"]} eligible opportunities had an agent that called MD.',
         f'- **Completion rate: {comp["completion_rate"]:.1%}** — {comp["completed_with_result"]} of '
-        f'{comp["total_invocations"]} invocations produced a measurement.',
+        f'{comp["call_dirs_with_metadata"]} call-dirs with metadata produced a measurement.',
         f'- **Finding conversion rate: {conv["conversion_rate"]:.1%}** — {conv["nv_converted_count"]} of '
         f'{conv["nv_baseline_count"]} not-verifiable baseline findings converted to pass/fail.',
         '',
@@ -369,7 +375,7 @@ def main() -> int:
     conv = metrics['finding_conversion']
     print(f'\n=== Phase 1 Summary ===')
     print(f'  Invocation recall:     {inv["recall"]:.1%} ({inv["eligible_with_invocation"]}/{inv["eligible_opportunities"]})')
-    print(f'  Completion rate:       {comp["completion_rate"]:.1%} ({comp["completed_with_result"]}/{comp["total_invocations"]})')
+    print(f'  Completion rate:       {comp["completion_rate"]:.1%} ({comp["completed_with_result"]}/{comp["call_dirs_with_metadata"]} call-dirs)')
     print(f'  Finding conversion:    {conv["conversion_rate"]:.1%} ({conv["nv_converted_count"]}/{conv["nv_baseline_count"]})')
 
     return 0
