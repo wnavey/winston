@@ -1,7 +1,8 @@
 # Phase 1 — Pilot Metrics: Measure-Distance Tool Validation
 
 Baseline: `baseline-2026-04-15` · Experiment: `experiment-run4`
-Scope: EL guides 1, 2, 13 (101 items) × 3 runs = 9 agents
+Review guide: `el-md-exp` (EL guides 1, 2, 13 — 101 checklist items) × 3 runs = 9 agents
+Per-item detail: `analysis/guides/el-md-exp/item-conversion-baseline-run4.md`
 
 ---
 
