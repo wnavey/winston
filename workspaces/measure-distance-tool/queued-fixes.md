@@ -28,6 +28,8 @@ Tracks fixes shipped since the last experiment run, so the next run captures all
 |---|---|---|---|
 | **#241** | merged | **Per-phase latency logging** — downloadMs, contextMs, geminiMs, pythonMs in metadata.json | Latency visibility per pipeline phase |
 | **#243** | merged | **Legend symbol images (Phase B)** — vector search for legend blocks matching objectA/objectB, crop at 300 DPI, send as images to both Gemini calls. Replaces 15 KB text dump with short reference + visual images in the happy path; text dump remains as fallback when no legend images found. | Better object identification; Gemini sees what symbols look like instead of reading text descriptions |
+| **#246** | merged | **Fix applicable_checklist_items arg name** — snake_case vs camelCase mismatch between tool schema and parseArgs. Agent was sending the data but script dropped it silently. | Checklist items now captured in metadata + visible in debug UI |
+| **#248** | open | **Fix two-call bbox mismatch (~2x distance error)** — Python mapped call 2's coordinates using the original full-drawing bbox instead of the refined crop bbox. All distances were ~2× too large. Fix: use `localization["drawingBbox"]`. | Distances drop from ~2× inflated to correct values (e.g., 41.9 ft → 20.2 ft) |
 | TBD | queued | **Distance sanity-check** — flag measurements exceeding sheet physical dimensions as low confidence | Fix the 29% outlier rate (>100 ft) from run4's two-call pipeline |
 
 ### Previously shipped (in experiment-run4)
@@ -50,19 +52,18 @@ Conductor: #117, #118, #119, #121
 
 ## What experiment-run5 will test
 
-With Phase B (legend symbol images) and the distance sanity-check, run5 should show:
+With the bbox fix, legend images, and metadata improvements, run5 should show:
 
-1. **Visual legend context** — Gemini sees cropped images of the relevant legend
+1. **Correct distances** — the ~2× inflation from the two-call bbox mismatch
+   is fixed (bureau#248). Run4's 41.9 ft measurements should become ~20 ft.
+   This alone should eliminate most of the 29% outlier rate (>100 ft).
+
+2. **Visual legend context** — Gemini sees cropped images of the relevant legend
    symbols instead of a 15 KB text dump. Should improve object identification,
    especially for ambiguous symbols (tree types, transformer vs pull-box, etc.).
 
-2. **Legend images on both calls** — fetched upfront before call 1, attached to
-   both call 1 and call 2. Call 1 gets visual help identifying the right features
-   for the refined crop.
-
-3. **Distance sanity-check** — measurements exceeding the sheet's physical
-   dimensions flagged as low confidence. Should eliminate the 29% outlier rate
-   from run4.
+3. **Checklist items captured** — applicable_checklist_items now saved to
+   metadata.json and visible in the debug UI (bureau#246).
 
 4. **Per-phase latency** — downloadMs, contextMs, geminiMs, pythonMs captured
    in metadata.json (bureau#241).
@@ -77,7 +78,7 @@ With Phase B (legend symbol images) and the distance sanity-check, run5 should s
 
 ---
 
-## How to run experiment-run4
+## How to run experiment-run5
 
 ```bash
 cd ~/code/controlroom/conductor
@@ -87,7 +88,7 @@ npm run conduct -- --workflow=review --guide-code=el-md-exp \
   --max-workers=9 --skip-upload --clean
 ```
 
-After completion, archive to `runs/experiment-run4/` and run the viewer:
+After completion, archive to `runs/experiment-run5/` and run the viewer:
 
 ```bash
 cd ~/code/controlroom/winston/workspaces/measure-distance-tool/viewer
