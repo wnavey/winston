@@ -129,23 +129,56 @@ Improving tool invocation consistency (issue #3) would close this gap.
 
 ## 4. Summary comparison
 
+**Important**: the denominators differ between union and majority because the
+consolidation rule changes what counts as "flagged" in the baseline. Under union,
+a single run flagging an item makes it a baseline finding. Under majority, you
+need 2+ runs. So the majority baseline is smaller — not because items are
+missing, but because single-run stochastic flags are filtered out.
+
+### Not-verifiable conversions
+
 | Metric | Union (production) | Majority vote |
 |---|---:|---:|
 | Baseline not-verifiable | 31 | 19 |
-| Converted to pass/fail | 12 | 9 |
-| **Conversion rate** | **38.7%** | **47.4%** |
-| not-verifiable → pass | 4 | 7 |
-| not-verifiable → fail | 8 | 2 |
+| Converted to pass or fail | 12 | 9 |
+| **NV conversion rate** | **38.7%** | **47.4%** |
+| → pass | 4 | 7 |
+| → fail | 8 | 2 |
 
-**Key insight**: Majority vote shows a higher conversion rate (47.4% vs 38.7%)
-and more not-verifiable → pass conversions (7 vs 4). The union rule's lower
-pass count reflects stochastic agent behavior — runs that don't invoke the tool
-leave items as not-verifiable, which blocks the union-consolidated result from
-becoming a pass even when the other 2 runs measured compliance.
+### Fail conversions (also significant)
 
-**Implication**: Improving invocation consistency (getting all 3 runs to use the
-tool for the same items) would significantly close the gap between union and
-majority metrics. The tool's impact is larger than the union rule alone suggests.
+| Metric | Union (production) | Majority vote |
+|---|---:|---:|
+| Baseline fail | 35 | 34 |
+| Changed status | 21 | 21 |
+| **Fail change rate** | **60.0%** | **61.8%** |
+| → not-verifiable | 20 | 16 |
+| → pass | 1 | 5 |
+
+The fail→not-verifiable transitions are mostly items where the baseline agent
+made a definitive (sometimes incorrect) call, and the tool-equipped agent was
+more conservative — measuring rather than guessing. The fail→pass transitions
+under majority (5 items) represent cases where the tool confirmed compliance
+that the baseline incorrectly flagged as violations.
+
+### Combined tool impact
+
+| Metric | Union | Majority |
+|---|---:|---:|
+| Total baseline findings (fail + NV) | 66 | 53 |
+| Items that changed status | 33 | 30 |
+| **Overall change rate** | **50.0%** | **56.6%** |
+| Converted to pass | 5 | 12 |
+| **Pass conversion rate** | **7.6%** | **22.6%** |
+
+Under majority vote, the tool converts nearly 1 in 4 previously-flagged items
+to a clean pass. Under union, it's 1 in 13 — the gap is entirely due to
+stochastic runs that don't invoke the tool.
+
+**Key insight**: The tool's real accuracy is better reflected by majority vote.
+The union gap is an invocation-consistency problem (issue #3), not a tool
+accuracy problem. If all 3 runs used the tool for the same items, the union
+pass rate would approach the majority rate.
 
 ---
 
