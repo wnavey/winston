@@ -228,16 +228,131 @@ function renderRunTree() {
 
   container.querySelectorAll('.run-head').forEach(el => {
     el.addEventListener('click', () => {
-      const ri = el.dataset.ri;
+      const ri = +el.dataset.ri;
       const cases = container.querySelector(`.run-cases[data-ri="${ri}"]`);
-      const isOpen = cases.classList.toggle('open');
-      el.querySelector('.arrow').innerHTML = isOpen ? '&#9662;' : '&#9656;';
+      if (!cases.classList.contains('open')) {
+        cases.classList.add('open');
+        el.querySelector('.arrow').innerHTML = '&#9662;';
+      }
+      selectRun(ri);
     });
   });
 
   container.querySelectorAll('.run-cases li').forEach(el => {
     el.addEventListener('click', () => selectCase(+el.dataset.ri, +el.dataset.ci));
   });
+}
+
+function selectRun(ri) {
+  state = { runIdx: ri, caseIdx: -1, stepIdx: 0 };
+
+  // Clear case selection highlight
+  document.querySelectorAll('.run-cases li').forEach(el => el.classList.remove('active'));
+
+  // Clear steps panel
+  document.getElementById('steps-content').innerHTML = '<div class="empty-msg">select a case or browse below</div>';
+
+  // Render run overview
+  renderRunOverview(ri);
+}
+
+function renderRunOverview(ri) {
+  const run = manifest.runs[ri];
+  const area = document.getElementById('content');
+
+  // Build table rows: checklist items → case IDs
+  // Group by checklist items from applicableChecklistItems
+  const rows = [];
+  run.cases.forEach((c, ci) => {
+    const aci = c.applicableChecklistItems || [];
+    if (aci.length) {
+      aci.forEach(item => {
+        rows.push({
+          checklistId: item.checklist_id || item.checklistId || '',
+          checklistText: item.checklist_deficiency_text || item.checklistText || '',
+          caseId: c.id,
+          caseIdx: ci,
+          outcome: c.outcome,
+          distanceFeet: c.finalResult?.distanceFeet,
+          objectA: c.inputs?.objectA || '',
+          objectB: c.inputs?.objectB || '',
+        });
+      });
+    } else {
+      rows.push({
+        checklistId: '—',
+        checklistText: '(no checklist items declared)',
+        caseId: c.id,
+        caseIdx: ci,
+        outcome: c.outcome,
+        distanceFeet: c.finalResult?.distanceFeet,
+        objectA: c.inputs?.objectA || '',
+        objectB: c.inputs?.objectB || '',
+      });
+    }
+  });
+
+  // Sort by checklist ID
+  rows.sort((a, b) => a.checklistId.localeCompare(b.checklistId, undefined, { numeric: true }));
+
+  const filterHtml = `
+    <div style="margin-bottom:16px;">
+      <input type="text" id="run-overview-filter" placeholder="Filter by checklist ID (e.g. EL-13)"
+        style="padding:6px 12px;font-size:13px;border:1px solid var(--border);border-radius:4px;width:300px;font-family:var(--mono);" />
+    </div>`;
+
+  const tableHtml = `
+    <table style="width:100%;border-collapse:collapse;font-size:12px;" id="run-overview-table">
+      <thead>
+        <tr style="border-bottom:2px solid var(--border);text-align:left;">
+          <th style="padding:6px 8px;color:var(--muted);font-size:11px;text-transform:uppercase;">Checklist ID</th>
+          <th style="padding:6px 8px;color:var(--muted);font-size:11px;text-transform:uppercase;">Deficiency</th>
+          <th style="padding:6px 8px;color:var(--muted);font-size:11px;text-transform:uppercase;">Case</th>
+          <th style="padding:6px 8px;color:var(--muted);font-size:11px;text-transform:uppercase;">Result</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows.map(r => `
+          <tr class="run-overview-row" data-ri="${ri}" data-ci="${r.caseIdx}" data-checklist-id="${escapeHtml(r.checklistId)}"
+              style="border-bottom:1px solid var(--border);cursor:pointer;"
+              onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background=''">
+            <td style="padding:6px 8px;font-family:var(--mono);font-weight:600;color:var(--accent);white-space:nowrap;">${escapeHtml(r.checklistId)}</td>
+            <td style="padding:6px 8px;color:var(--text);line-height:1.4;max-width:400px;">${escapeHtml(r.checklistText).slice(0, 120)}${r.checklistText.length > 120 ? '…' : ''}</td>
+            <td style="padding:6px 8px;font-family:var(--mono);font-size:11px;white-space:nowrap;">${escapeHtml(r.caseId)} ${outcomePill(r)}</td>
+            <td style="padding:6px 8px;font-family:var(--mono);white-space:nowrap;">${r.distanceFeet != null ? r.distanceFeet + ' ft' : '—'}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>`;
+
+  area.innerHTML = `
+    <div class="section">
+      <h3>${escapeHtml(run.id)} — ${run.cases.length} cases</h3>
+      <div style="color:var(--muted);font-size:12px;margin-bottom:12px;">
+        ${run.source === 'experiment' ? 'Experiment run' : 'Test-script replay'} ·
+        ${rows.length} checklist item associations
+      </div>
+      ${filterHtml}
+      ${tableHtml}
+    </div>`;
+
+  // Wire up row clicks
+  area.querySelectorAll('.run-overview-row').forEach(row => {
+    row.addEventListener('click', () => selectCase(+row.dataset.ri, +row.dataset.ci));
+  });
+
+  // Wire up filter
+  const filterInput = document.getElementById('run-overview-filter');
+  if (filterInput) {
+    filterInput.addEventListener('input', () => {
+      const query = filterInput.value.toLowerCase().trim();
+      area.querySelectorAll('.run-overview-row').forEach(row => {
+        const id = (row.dataset.checklistId || '').toLowerCase();
+        row.style.display = !query || id.includes(query) ? '' : 'none';
+      });
+    });
+    filterInput.focus();
+  }
 }
 
 function selectCase(ri, ci) {
