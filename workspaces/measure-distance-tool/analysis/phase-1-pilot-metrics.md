@@ -127,58 +127,91 @@ Improving tool invocation consistency (issue #3) would close this gap.
 
 ---
 
-## 4. Summary comparison
+## 4. Consolidated status: Union rule (production)
 
-**Important**: the denominators differ between union and majority because the
-consolidation rule changes what counts as "flagged" in the baseline. Under union,
-a single run flagging an item makes it a baseline finding. Under majority, you
-need 2+ runs. So the majority baseline is smaller — not because items are
-missing, but because single-run stochastic flags are filtered out.
+Production uses **union**: a deficiency is flagged if ANY of the 3 runs flags
+it. Fail wins over not-verifiable. This is the most conservative rule — a
+single stochastic flag keeps an item in the output.
 
-### Not-verifiable conversions
+71 unique (item, deficiency) pairs were flagged by at least one run across
+baseline and experiment combined.
 
-| Metric | Union (production) | Majority vote |
-|---|---:|---:|
-| Baseline not-verifiable | 31 | 19 |
-| Converted to pass or fail | 12 | 9 |
-| **NV conversion rate** | **38.7%** | **47.4%** |
-| → pass | 4 | 7 |
-| → fail | 8 | 2 |
+| Status | Baseline | Experiment | Delta |
+|---|---:|---:|---:|
+| **Pass** | 5 | 5 | — |
+| **Not-verifiable** | 31 | 44 | +13 |
+| **Fail** | 35 | 22 | −13 |
 
-### Fail conversions (also significant)
+Under union, the tool's main effect is **shifting fail → not-verifiable** (20
+items). The tool-equipped agent is more conservative — measuring rather than
+guessing — so definitive fail calls become "I measured but can't definitively
+confirm." 4 items converted from not-verifiable to pass (tool confirmed
+compliance). The net pass count is flat because 5 items that were pass in
+baseline got flagged by the tool-equipped agent (new findings).
 
-| Metric | Union (production) | Majority vote |
-|---|---:|---:|
-| Baseline fail | 35 | 34 |
-| Changed status | 21 | 21 |
-| **Fail change rate** | **60.0%** | **61.8%** |
-| → not-verifiable | 20 | 16 |
-| → pass | 1 | 5 |
+**Union transitions:**
 
-The fail→not-verifiable transitions are mostly items where the baseline agent
-made a definitive (sometimes incorrect) call, and the tool-equipped agent was
-more conservative — measuring rather than guessing. The fail→pass transitions
-under majority (5 items) represent cases where the tool confirmed compliance
-that the baseline incorrectly flagged as violations.
+| From → To | Count |
+|---|---:|
+| not-verifiable → pass | 4 |
+| not-verifiable → not-verifiable | 19 |
+| not-verifiable → fail | 8 |
+| fail → pass | 1 |
+| fail → not-verifiable | 20 |
+| fail → fail | 14 |
+| pass → not-verifiable | 5 |
 
-### Combined tool impact
+---
 
-| Metric | Union | Majority |
-|---|---:|---:|
-| Total baseline findings (fail + NV) | 66 | 53 |
-| Items that changed status | 33 | 30 |
-| **Overall change rate** | **50.0%** | **56.6%** |
-| Converted to pass | 5 | 12 |
-| **Pass conversion rate** | **7.6%** | **22.6%** |
+## 5. Consolidated status: Majority vote (2 of 3)
 
-Under majority vote, the tool converts nearly 1 in 4 previously-flagged items
-to a clean pass. Under union, it's 1 in 13 — the gap is entirely due to
-stochastic runs that don't invoke the tool.
+Under **majority vote**, a deficiency is only flagged if 2+ runs agree. This
+filters out stochastic single-run flags and better reflects the tool's
+consistent impact.
 
-**Key insight**: The tool's real accuracy is better reflected by majority vote.
-The union gap is an invocation-consistency problem (issue #3), not a tool
-accuracy problem. If all 3 runs used the tool for the same items, the union
-pass rate would approach the majority rate.
+| Status | Baseline | Experiment | Delta |
+|---|---:|---:|---:|
+| **Pass** | 18 | 27 | **+9** |
+| **Not-verifiable** | 19 | 28 | +9 |
+| **Fail** | 34 | 16 | **−18** |
+
+The picture is much clearer under majority: **pass items increase by 9** and
+**fail items drop by 18**. The tool is both confirming compliance (→ pass) and
+replacing guesswork with measurement (fail → NV or pass).
+
+**Majority transitions:**
+
+| From → To | Count |
+|---|---:|
+| pass → pass | 15 |
+| pass → not-verifiable | 2 |
+| pass → fail | 1 |
+| not-verifiable → pass | 7 |
+| not-verifiable → not-verifiable | 10 |
+| not-verifiable → fail | 2 |
+| fail → pass | 5 |
+| fail → not-verifiable | 16 |
+| fail → fail | 13 |
+
+---
+
+## 6. Why the rules tell different stories
+
+The union rule shows a flat pass count (5 → 5) while majority shows +9 passes.
+The difference is entirely **invocation consistency**: when only 2 of 3 runs
+use the tool and confirm compliance, majority counts that as a pass (2 > 1),
+but union keeps it flagged because the 1 run that skipped the tool still has
+a not-verifiable or fail entry.
+
+Example: **EL-13.1** (transformer-to-building clearance)
+- Baseline: all 3 runs flag it (2 NV, 1 fail) → union=fail, majority=fail
+- Experiment: run-1 flags NV (didn't use tool), runs 2+3 pass (tool measured > 5 ft)
+  → union=not-verifiable (1 flag keeps it), majority=pass (only 1/3, below threshold)
+
+**The tool works when invoked.** The gap between union and majority is a measure
+of how often the tool is NOT invoked — the invocation-consistency problem
+(outstanding issue #3). If all 3 runs consistently used the tool, union results
+would converge toward majority results.
 
 ---
 
