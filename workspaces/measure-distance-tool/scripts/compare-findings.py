@@ -160,42 +160,80 @@ def compute_metrics(
 
     # ── Finding conversion rate ──
     # Computed for each scope. Primary uses distance-only.
+    #
+    # IMPORTANT: Missing experiment findings = implicit pass. The review workflow
+    # only emits findings for non-compliant items. If the baseline had a
+    # not-verifiable finding but the experiment has NO finding for that item,
+    # the agent evaluated it and determined it was compliant.
+    #
+    # We iterate over BASELINE findings (not just experiment), so we catch both:
+    #   - baseline NV → experiment fail/nv (explicit finding in both)
+    #   - baseline NV → experiment missing (implicit pass)
     conversion_by_scope = {}
     conversion_details = []
 
     for scope_name, scope_filter in scopes.items():
         conversions = Counter()
-        total_paired = 0
+        total_evaluated = 0
 
-        for (run, item), exp_findings in experiment_findings.items():
-            base_findings = baseline_findings.get((run, item), {})
-            for did in exp_findings:
-                cls = classification.get(did, {})
-                if not scope_filter(cls):
+        for (run, item), base_findings in baseline_findings.items():
+            exp_findings_for_agent = experiment_findings.get((run, item), {})
+            for did, base_finding in base_findings.items():
+                cls_item = classification.get(did, {})
+                if not scope_filter(cls_item):
                     continue
-                base_status = base_findings.get(did, {}).get('status', 'missing')
-                exp_status = exp_findings[did].get('status', 'missing')
-                total_paired += 1
+                base_status = base_finding.get('status', 'missing')
+                exp_finding = exp_findings_for_agent.get(did)
+                # Missing from experiment = implicit pass (agent found it compliant)
+                exp_status = exp_finding['status'] if exp_finding else 'pass (implicit)'
+                total_evaluated += 1
                 conversions[f'{base_status} → {exp_status}'] += 1
 
-                if scope_name == 'distance-only' and base_status == 'not-verifiable' and exp_status in ('pass', 'fail'):
+                if base_status == 'not-verifiable' and (
+                    exp_status in ('pass', 'fail') or exp_status == 'pass (implicit)'
+                ):
                     conversion_details.append({
                         'run': run, 'item': item, 'deficiencyId': did,
-                        'baseline': base_status, 'experiment': exp_status,
-                        'subClassification': cls.get('subClassification'),
-                        'additionalRequirements': cls.get('additionalRequirements', []),
-                        'comment': exp_findings[did].get('comment', '')[:200],
+                        'baseline': base_status,
+                        'experiment': exp_status,
+                        'subClassification': cls_item.get('subClassification'),
+                        'additionalRequirements': cls_item.get('additionalRequirements', []),
+                        'comment': (exp_finding.get('comment', '')[:200] if exp_finding
+                                    else '(no finding — item passed)'),
                     })
+
+            # Also catch experiment findings for items NOT in baseline
+            # (new items the experiment agent found)
+            for did in exp_findings_for_agent:
+                if did in base_findings:
+                    continue  # already handled above
+                cls_item = classification.get(did, {})
+                if not scope_filter(cls_item):
+                    continue
+                exp_status = exp_findings_for_agent[did].get('status', 'missing')
+                total_evaluated += 1
+                conversions[f'missing → {exp_status}'] += 1
 
         nv_total = sum(v for k, v in conversions.items() if k.startswith('not-verifiable'))
         nv_converted = sum(v for k, v in conversions.items()
-                           if k.startswith('not-verifiable') and ('pass' in k or 'fail' in k))
+                           if k.startswith('not-verifiable') and
+                           ('pass' in k or 'fail' in k))
         conversion_rate = nv_converted / nv_total if nv_total else 0
+
+        # Also compute explicit-only rate for comparison
+        nv_explicit = sum(v for k, v in conversions.items()
+                          if k.startswith('not-verifiable') and
+                          ('fail' in k and 'implicit' not in k))
+        nv_implicit_pass = sum(v for k, v in conversions.items()
+                               if k.startswith('not-verifiable') and 'implicit' in k)
+
         conversion_by_scope[scope_name] = {
-            'total_paired': total_paired,
+            'total_evaluated': total_evaluated,
             'conversions': dict(conversions),
             'nv_total': nv_total,
             'nv_converted': nv_converted,
+            'nv_to_fail': nv_explicit,
+            'nv_to_pass_implicit': nv_implicit_pass,
             'rate': conversion_rate,
         }
 
@@ -205,6 +243,7 @@ def compute_metrics(
     nv_converted = conv_primary['nv_converted']
     conversion_rate = conv_primary['rate']
     conversions = Counter(conv_primary['conversions'])
+    total_paired = conv_primary['total_evaluated']
 
     return {
         'invocation_recall': {
@@ -226,7 +265,7 @@ def compute_metrics(
             'completion_rate': completion_rate,
         },
         'finding_conversion': {
-            'total_paired_eligible': conv_primary['total_paired'],
+            'total_paired_eligible': conv_primary['total_evaluated'],
             'conversions': dict(conversions),
             'nv_baseline_count': nv_total,
             'nv_converted_count': nv_converted,
@@ -245,6 +284,7 @@ def format_report(metrics: dict, baseline_name: str, experiment_name: str) -> st
 
     inv_scopes = inv.get('by_scope', {})
     conv_scopes = conv.get('by_scope', {})
+    conv_do = conv_scopes.get('distance-only', {})
 
     lines = [
         '# Phase 1 — Pilot Metrics: Measure-Distance Tool Validation',
@@ -295,7 +335,11 @@ def format_report(metrics: dict, baseline_name: str, experiment_name: str) -> st
         '## 3. Finding conversion rate',
         '',
         'Of **distance-only** items that were `not-verifiable` in the baseline,',
-        'how many converted to `pass` or `fail` in the experiment?',
+        'how many converted to `pass` (implicit or explicit) or `fail`?',
+        '',
+        'Missing experiment finding = **implicit pass** (agent evaluated the item',
+        'and found it compliant — the review workflow only emits findings for',
+        'non-compliant items).',
         '',
         f'| Transition | Count |',
         f'|-----------|------:|',
@@ -308,7 +352,10 @@ def format_report(metrics: dict, baseline_name: str, experiment_name: str) -> st
         f'| Metric | Value |',
         f'|--------|------:|',
         f'| Baseline not-verifiable (distance-only) | {conv["nv_baseline_count"]} |',
-        f'| Converted to pass or fail | {conv["nv_converted_count"]} |',
+        f'| → explicit fail | {conv_do.get("nv_to_fail", 0)} |',
+        f'| → implicit pass (no finding in experiment) | {conv_do.get("nv_to_pass_implicit", 0)} |',
+        f'| → still not-verifiable | {conv["nv_baseline_count"] - conv["nv_converted_count"]} |',
+        f'| **Total converted (fail + implicit pass)** | **{conv["nv_converted_count"]}** |',
         f'| **Conversion rate** | **{conv["conversion_rate"]:.1%}** |',
         '',
     ])
@@ -318,12 +365,18 @@ def format_report(metrics: dict, baseline_name: str, experiment_name: str) -> st
         '',
         '### Conversion by item scope',
         '',
-        '| Scope | NV baseline | Converted | Rate |',
-        '|-------|----------:|----------:|-----:|',
+        '| Scope | NV baseline | To fail | To pass (implicit) | Still NV | Converted | Rate |',
+        '|-------|----------:|---------:|-------------------:|---------:|----------:|-----:|',
     ])
     for scope_name in ['distance-only', 'distance-plus', 'all-horizontal']:
         s = conv_scopes.get(scope_name, {})
-        lines.append(f'| {scope_name} | {s.get("nv_total", 0)} | {s.get("nv_converted", 0)} | {s.get("rate", 0):.1%} |')
+        nv = s.get('nv_total', 0)
+        to_fail = s.get('nv_to_fail', 0)
+        to_pass = s.get('nv_to_pass_implicit', 0)
+        still_nv = nv - s.get('nv_converted', 0)
+        converted = s.get('nv_converted', 0)
+        rate = s.get('rate', 0)
+        lines.append(f'| {scope_name} | {nv} | {to_fail} | {to_pass} | {still_nv} | {converted} | {rate:.1%} |')
     lines.append('')
 
     if conv['conversion_details']:
@@ -348,7 +401,9 @@ def format_report(metrics: dict, baseline_name: str, experiment_name: str) -> st
         f'- **Completion rate: {comp["completion_rate"]:.1%}** — {comp["completed_with_result"]} of '
         f'{comp["call_dirs_with_metadata"]} call-dirs with metadata produced a measurement.',
         f'- **Finding conversion rate: {conv["conversion_rate"]:.1%}** — {conv["nv_converted_count"]} of '
-        f'{conv["nv_baseline_count"]} not-verifiable baseline findings converted to pass/fail.',
+        f'{conv["nv_baseline_count"]} not-verifiable baseline findings resolved '
+        f'({conv_do.get("nv_to_fail", 0)} to fail, '
+        f'{conv_do.get("nv_to_pass_implicit", 0)} to implicit pass).',
         '',
         '## Methodology notes',
         '',
@@ -426,7 +481,8 @@ def main() -> int:
     print(f'\n=== Phase 1 Summary ===')
     print(f'  Invocation recall:     {inv["recall"]:.1%} ({inv["eligible_with_invocation"]}/{inv["eligible_opportunities"]})')
     print(f'  Completion rate:       {comp["completion_rate"]:.1%} ({comp["completed_with_result"]}/{comp["call_dirs_with_metadata"]} call-dirs)')
-    print(f'  Finding conversion:    {conv["conversion_rate"]:.1%} ({conv["nv_converted_count"]}/{conv["nv_baseline_count"]})')
+    do = conv.get('by_scope', {}).get('distance-only', {})
+    print(f'  Finding conversion:    {conv["conversion_rate"]:.1%} ({conv["nv_converted_count"]}/{conv["nv_baseline_count"]}) — {do.get("nv_to_fail", 0)} fail + {do.get("nv_to_pass_implicit", 0)} implicit pass')
 
     return 0
 
