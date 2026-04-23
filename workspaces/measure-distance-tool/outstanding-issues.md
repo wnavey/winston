@@ -15,16 +15,28 @@ Ordered roughly by impact, not effort. Updated after experiment-run4.
 300 DPI refined crop). Run4 confirmed: all measurements use real drawing-block
 crops, and call 2 operates on a 300 DPI refined region. Verified in the viewer.
 
-### 2. Legend identification — RESOLVED (Phase B)
+### 2. Legend identification — CODE DEPLOYED, NOT YET EFFECTIVE
 
-~~The tool sends ~15 KB of cross-sheet legend TEXT to Gemini.~~
+Bureau#243 (Phase B) deployed the legend image search code. It runs on every
+call — `legend-search` events appear in run5 call-dirs. However, **all
+searches return 0 results** because Valley View Townhomes lacks
+`content_block` embeddings.
 
-**Status:** Fixed in bureau#243. The tool now uses vector similarity search
-to find specific legend blocks matching the objects being measured, crops them
-at 300 DPI, and sends them as images to both Gemini calls. In the happy path,
-the 15 KB text dump is replaced with a short reference + visual images. The
-text dump remains as a fallback when no legend images are found (missing
-OPENAI_API_KEY, no matching blocks, no bounding boxes, etc.).
+**Root cause:** The `search_content_blocks_hybrid` RPC needs non-null
+`embedding` values on `content_block` rows. VVT's blocks have null embeddings.
+
+**Fix:** Run embedding backfill from cityhall:
+```bash
+npx tsx scripts/backfill-content-block-embeddings.ts 63cead15-41f8-418c-b0ef-bd5c2b44719a
+```
+
+**Current behavior:** Falls back to the 15 KB text dump (same as pre-Phase B).
+Run5's 89% conversion rate was achieved WITHOUT legend images — that's all
+from the bbox fix.
+
+**Once embeddings are computed:** Legend images should provide visual symbol
+context to Gemini, potentially improving object identification accuracy on
+ambiguous symbols.
 
 See `analysis/improving-legend-and-bounding-box-plan.md` for full design.
 
@@ -135,7 +147,8 @@ horizontal tool. Tracked as a separate roadmap item.
 ### 11. Compare-findings script — DONE
 
 Implemented as `scripts/compare-findings.py`. Phase 1 metrics computed for
-runs 2, 3, and 4. Finding conversion rate: ~15-22%.
+runs 1-5. Updated to treat missing experiment findings as implicit passes.
+Run5 distance-only conversion: 89% (3 fail + 36 implicit pass / 44).
 
 ### 12. Conductor shell-quoting fix — RESOLVED
 
@@ -156,8 +169,31 @@ RPC and post-filters to legend/symbol/diagram categories in TS. A purpose-built
 RPC with an optional `categories` parameter would be more efficient. Requires
 a cityhall migration. Track as a follow-up after Phase B is validated.
 
-### F2. Per-phase latency logging
+### F2. Per-phase latency logging — SHIPPED
 
-Bureau#241 (merged) adds `downloadMs`, `contextMs`, `geminiMs`, `pythonMs` to
-metadata.json. Run4 was executed before this PR merged, so run4 data doesn't
-have per-phase timing. Run5 will capture it.
+Bureau#241 merged. Run5 captures per-phase timing in metadata.json.
+
+### F3. Training v5.0 → v5.1 classification drift
+
+Bureau#245 (training v5.1) changed item counts and deficiency text across all
+departments. Only ZLU has been re-classified against v5.1 (1,517 → 1,672
+items). Other departments' classifications are stale.
+
+Impact: cross-department summary numbers (12,278 items, 1,537 horizontal)
+are based on v5.0 and may be inaccurate for v5.1. Re-classification needed
+before using these numbers in reports or the investment case.
+
+### F4. Embedding backfill for experiment site plans
+
+Phase B legend images require `content_block` embeddings. Valley View
+Townhomes (the only experiment site plan so far) lacks embeddings. Any new
+site plan used for experiments also needs the backfill run:
+```bash
+npx tsx scripts/backfill-content-block-embeddings.ts <projectId>
+```
+
+### F5. zlu-md-exp guide subset (bureau#263)
+
+New ZLU experiment guide with the 3 highest-horizontal guides (15, 16, 32).
+In review. Once merged, enables `--guide-code=zlu-md-exp` for cross-department
+measure-distance experiments.
