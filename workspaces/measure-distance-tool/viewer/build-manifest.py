@@ -290,14 +290,27 @@ def build_experiment_run(exp_dir: Path) -> list[dict]:
     if not calls_root.exists():
         return []
 
-    # Try to find a matching fixture
+    # Try to find a matching fixture. Use exact prefix match to avoid
+    # cross-guide collisions (e.g., v5.1/zlu-md-exp/experiment-run1 should
+    # NOT match replay/fixtures/experiment-run1-all-calls.json which is
+    # from v5.0/el-md-exp).
     fixture_dir = ROOT / 'replay' / 'fixtures'
     fixture = None
     fixture_path = None
-    exp_name = exp_dir.name  # e.g. experiment-run2-2026-04-16
+    exp_name = exp_dir.name  # e.g. experiment-run1
+    # Include the guide name if the experiment is nested under a guide dir
+    guide_prefix = ''
+    if exp_dir.parent.name not in ('runs',) and not exp_dir.parent.name.startswith('v'):
+        guide_prefix = exp_dir.parent.name + '-'
     if fixture_dir.exists():
         for p in sorted(fixture_dir.glob('*.json')):
-            if exp_name in p.stem:
+            # Match with guide prefix first (e.g., "zlu-md-exp-experiment-run1")
+            # then fall back to exact stem match
+            if guide_prefix and p.stem.startswith(guide_prefix + exp_name):
+                fixture = load_json(p)
+                fixture_path = p
+                break
+            elif not guide_prefix and p.stem.startswith(exp_name):
                 fixture = load_json(p)
                 fixture_path = p
                 break
