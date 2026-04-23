@@ -385,8 +385,8 @@ def main() -> int:
             if version:
                 run['version'] = version
             runs.append(run)
-        # Experiment runs
-        for exp_dir in sorted(scan_root.glob('experiment-run*')):
+        # Experiment runs (match experiment-run*, experiment-5.1-run*, etc.)
+        for exp_dir in sorted(scan_root.glob('experiment-*')):
             if not exp_dir.is_dir():
                 continue
             if args.run and exp_dir.name != args.run:
