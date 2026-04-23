@@ -1,0 +1,71 @@
+{
+  "callId": "20260423T153511753Z-xvto-run-1-13-p0",
+  "callDir": "/Users/wnavey/code/controlroom/conductor/workspace/output/measure-distance-calls/20260423T153511753Z-xvto-run-1-13-p0",
+  "sessionCallId": "20260423T153511753Z-xvto-run-1-13",
+  "runIndex": "run-1",
+  "checklistItem": "13.md",
+  "checklistIndex": "2",
+  "startedAt": "2026-04-23T15:35:11.753Z",
+  "strategy": "a-then-b",
+  "pairIndex": 0,
+  "reasoning": "The electrical plan shows three transformer pads. The site plan (Sheet 9) shows transformer locations adjacent to buildings, parking areas, and other site features. To verify compliance with clearance requirements in UCM § 1.10.4 Table 1.10.4, I need to measure horizontal distances from each transformer pad to: (1) adjacent buildings to verify the 5-foot clearance minimum, (2) parking areas to determine if bollards are needed (within 4 feet), (3) fire lanes to verify 15-foot clearance, and (4) other transformers to verify 5-foot separation. The site is drawn at 1\" = 20', so scaleInchesPerFoot = 0.05.",
+  "applicableChecklistItems": [
+    {
+      "checklist_id": "EL-13.1",
+      "checklist_deficiency_text": "Transformer pads lack minimum 5-foot clearance from buildings, structures, and building foundations"
+    },
+    {
+      "checklist_id": "EL-13.20",
+      "checklist_deficiency_text": "Transformer pads lack minimum 5-foot clearance from other transformer pads"
+    },
+    {
+      "checklist_id": "EL-13.38",
+      "checklist_deficiency_text": "Equipment pad installed within 4 feet of parking areas or vehicle routes lacks required 4-inch minimum diameter galvanized rigid metal posts (bollards) per AE Design equipment pad details, or bollards not spaced to allow equipment door opening"
+    }
+  ],
+  "inputs": {
+    "projectId": "63cead15-41f8-418c-b0ef-bd5c2b44719a",
+    "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+    "sheetNum": "9",
+    "objectA": "West side transformer pad located in landscaped island north of Building 8",
+    "objectB": "nearest edge of Building 8 to the south",
+    "scaleInchesPerFoot": "0.05"
+  },
+  "assets": {
+    "pdfStoragePath": "63cead15-41f8-418c-b0ef-bd5c2b44719a/plan-sets/1144b126-1216-4dee-a89c-178950fa7777/v2/sheets/9.pdf",
+    "jpegStoragePath": "63cead15-41f8-418c-b0ef-bd5c2b44719a/plan-sets/1144b126-1216-4dee-a89c-178950fa7777/v2/sheets/9.jpg",
+    "bucket": "submission-data",
+    "drawingBbox": {
+      "x0": 0.096,
+      "y0": 0.02,
+      "x1": 0.867,
+      "y1": 0.617
+    },
+    "legendSource": "cross-sheet",
+    "legendPath": "legend.txt",
+    "croppedImagePath": "call2-cropped.jpg"
+  },
+  "optionB": {
+    "promptPath": "call2-prompt.txt",
+    "responsePath": "call2-response.txt",
+    "success": true,
+    "geminiConfidence": 0.95,
+    "parsedResponsePath": "call2-localization.json",
+    "usedCall": 2
+  },
+  "call1": {
+    "promptPath": "call1-prompt.txt",
+    "responsePath": "call1-response.txt",
+    "success": true,
+    "geminiConfidence": 0.95,
+    "parsedResponsePath": "call1-localization.json"
+  },
+  "result": {
+    "distanceFeet": 29.9,
+    "distanceInches": 359.2,
+    "confidence": "medium",
+    "method": "vision",
+    "debugImagePath": "debug.png"
+  },
+  "elapsedMs": 140122
+}
