@@ -37,9 +37,16 @@
   .run-head .tag { font-size: 9px; color: var(--blue); margin-left: auto; }
   .run-cases { display: none; }
   .run-cases.open { display: block; }
-  .run-cases li { list-style: none; padding: 5px 8px 5px 16px; cursor: pointer; font-family: var(--mono); font-size: 11px; line-height: 1.3; border-left: 3px solid transparent; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .run-cases li:hover { background: #f3f4f6; }
-  .run-cases li.active { background: #eef6f0; border-left-color: var(--accent); }
+  .session-group { margin: 0; }
+  .session-head { padding: 4px 8px 4px 12px; cursor: pointer; font-size: 11px; font-weight: 600; color: var(--muted); display: flex; align-items: center; gap: 3px; user-select: none; }
+  .session-head:hover { background: #f3f4f6; }
+  .session-head .arrow { font-size: 9px; width: 10px; display: inline-block; }
+  .session-head .count { font-size: 9px; color: var(--blue); margin-left: auto; }
+  .session-cases { display: none; }
+  .session-cases.open { display: block; }
+  .run-cases li, .session-cases li { list-style: none; padding: 5px 8px 5px 20px; cursor: pointer; font-family: var(--mono); font-size: 11px; line-height: 1.3; border-left: 3px solid transparent; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .run-cases li:hover, .session-cases li:hover { background: #f3f4f6; }
+  .run-cases li.active, .session-cases li.active { background: #eef6f0; border-left-color: var(--accent); }
   .pill { display: inline-block; padding: 1px 5px; border-radius: 8px; font-size: 9px; font-weight: 600; letter-spacing: 0.02em; margin-left: 4px; vertical-align: middle; }
   .pill.good { background: #e7f5ea; color: var(--good); }
   .pill.bad { background: #fdecea; color: var(--bad); }
@@ -208,24 +215,74 @@ async function loadManifest() {
 }
 
 // ── Run Tree ──
+/** Extract the session ID from a case ID (strip -pN suffix) */
+function sessionIdFromCase(caseId) {
+  const m = caseId.match(/^(.+)-p(\d+)$/);
+  return m ? m[1] : caseId;
+}
+
+/** Short display label for a case (just the -pN or full id if no suffix) */
+function caseSuffix(caseId) {
+  const m = caseId.match(/-p(\d+)$/);
+  return m ? `pair ${m[1]}` : caseId.split('-').slice(-3).join('-');
+}
+
 function renderRunTree() {
   const container = document.getElementById('run-tree-content');
   let html = '';
   manifest.runs.forEach((run, ri) => {
-    const caseItems = run.cases.map((c, ci) =>
-      `<li data-ri="${ri}" data-ci="${ci}">${escapeHtml(c.id)} ${outcomePill(c)}</li>`
-    ).join('');
+    // Group cases by session
+    const groups = new Map();
+    run.cases.forEach((c, ci) => {
+      const sid = sessionIdFromCase(c.id);
+      if (!groups.has(sid)) groups.set(sid, []);
+      groups.get(sid).push({ c, ci });
+    });
+
+    let casesHtml = '';
+    if (groups.size === run.cases.length) {
+      // No grouping needed (each case is its own session, e.g., test-script runs)
+      casesHtml = run.cases.map((c, ci) =>
+        `<li data-ri="${ri}" data-ci="${ci}">${escapeHtml(c.id)} ${outcomePill(c)}</li>`
+      ).join('');
+    } else {
+      // Grouped by session
+      for (const [sid, cases] of groups) {
+        const shortSid = sid.split('-').slice(-3).join('-'); // e.g., "run-2-13"
+        if (cases.length === 1) {
+          // Single case — no sub-group needed
+          const { c, ci } = cases[0];
+          casesHtml += `<li data-ri="${ri}" data-ci="${ci}">${escapeHtml(shortSid)} ${outcomePill(c)}</li>`;
+        } else {
+          // Multi-pair session — collapsible sub-group
+          const innerItems = cases.map(({ c, ci }) =>
+            `<li data-ri="${ri}" data-ci="${ci}">${escapeHtml(caseSuffix(c.id))} ${outcomePill(c)}</li>`
+          ).join('');
+          casesHtml += `
+            <div class="session-group">
+              <div class="session-head" data-ri="${ri}" data-sid="${escapeHtml(sid)}">
+                <span class="arrow">&#9656;</span>
+                <span>${escapeHtml(shortSid)}</span>
+                <span class="count">${cases.length}</span>
+              </div>
+              <ul class="session-cases" data-sid="${escapeHtml(sid)}">${innerItems}</ul>
+            </div>`;
+        }
+      }
+    }
+
     html += `<div class="run-group">
       <div class="run-head" data-ri="${ri}">
         <span class="arrow">&#9656;</span>
         <span>${escapeHtml(run.id)}</span>
         ${run.source === 'experiment' ? '<span class="tag">exp</span>' : ''}
       </div>
-      <ul class="run-cases" data-ri="${ri}">${caseItems}</ul>
+      <ul class="run-cases" data-ri="${ri}">${casesHtml}</ul>
     </div>`;
   });
   container.innerHTML = html;
 
+  // Run head click → expand + show run overview
   container.querySelectorAll('.run-head').forEach(el => {
     el.addEventListener('click', () => {
       const ri = +el.dataset.ri;
@@ -238,8 +295,115 @@ function renderRunTree() {
     });
   });
 
-  container.querySelectorAll('.run-cases li').forEach(el => {
-    el.addEventListener('click', () => selectCase(+el.dataset.ri, +el.dataset.ci));
+  // Session head click → toggle sub-group + show session summary
+  container.querySelectorAll('.session-head').forEach(el => {
+    el.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const sid = el.dataset.sid;
+      const ri = +el.dataset.ri;
+      const subcases = container.querySelector(`.session-cases[data-sid="${CSS.escape(sid)}"]`);
+      const isOpen = subcases.classList.toggle('open');
+      el.querySelector('.arrow').innerHTML = isOpen ? '&#9662;' : '&#9656;';
+      selectSession(ri, sid);
+    });
+  });
+
+  // Case click → select individual case
+  container.querySelectorAll('.run-cases li, .session-cases li').forEach(el => {
+    if (el.dataset.ri !== undefined && el.dataset.ci !== undefined) {
+      el.addEventListener('click', (e) => {
+        e.stopPropagation();
+        selectCase(+el.dataset.ri, +el.dataset.ci);
+      });
+    }
+  });
+}
+
+function selectSession(ri, sessionId) {
+  state = { runIdx: ri, caseIdx: -1, stepIdx: 0 };
+
+  // Clear case highlight
+  document.querySelectorAll('.run-cases li, .session-cases li').forEach(el => el.classList.remove('active'));
+
+  // Clear steps panel
+  document.getElementById('steps-content').innerHTML = '<div class="empty-msg">select a case or browse below</div>';
+
+  // Render session summary
+  const run = manifest.runs[ri];
+  const sessionCases = run.cases.filter(c => sessionIdFromCase(c.id) === sessionId);
+  renderSessionSummary(ri, sessionId, sessionCases);
+}
+
+function renderSessionSummary(ri, sessionId, cases) {
+  const area = document.getElementById('content');
+  const shortSid = sessionId.split('-').slice(-3).join('-');
+
+  // Shared context from first case
+  const first = cases[0] || {};
+  const meta = first.metadata || {};
+
+  let html = `<div class="section">
+    <h3>${escapeHtml(shortSid)} — ${cases.length} measurement${cases.length !== 1 ? 's' : ''}</h3>
+    <div style="color:var(--muted);font-size:12px;margin-bottom:4px;">Session: ${escapeHtml(sessionId)}</div>
+  </div>`;
+
+  // Agent reasoning (shared across the session)
+  if (first.reasoning) {
+    html += `<div class="section"><h3>Agent Reasoning</h3>
+      <div class="reasoning-box">${escapeHtml(first.reasoning)}</div>
+    </div>`;
+  }
+
+  // Applicable checklist items (shared)
+  const aci = first.applicableChecklistItems || [];
+  if (aci.length) {
+    html += `<div class="section"><h3>Applicable Checklist Items</h3>
+      ${aci.map(item => `<div style="margin-bottom:8px;">
+        <span class="checklist-tag agent">${escapeHtml(item.checklist_id || item.checklistId || '')}</span>
+        <span style="font-size:12px;color:var(--text);">${escapeHtml(item.checklist_deficiency_text || item.checklistText || '')}</span>
+      </div>`).join('')}</div>`;
+  }
+
+  // Per-pair results table
+  html += `<div class="section"><h3>Measurements</h3>
+    <table style="width:100%;border-collapse:collapse;font-size:12px;">
+      <thead>
+        <tr style="border-bottom:2px solid var(--border);text-align:left;">
+          <th style="padding:6px 8px;color:var(--muted);font-size:11px;text-transform:uppercase;">Pair</th>
+          <th style="padding:6px 8px;color:var(--muted);font-size:11px;text-transform:uppercase;">Object A</th>
+          <th style="padding:6px 8px;color:var(--muted);font-size:11px;text-transform:uppercase;">Object B</th>
+          <th style="padding:6px 8px;color:var(--muted);font-size:11px;text-transform:uppercase;">Sheet</th>
+          <th style="padding:6px 8px;color:var(--muted);font-size:11px;text-transform:uppercase;">Scale</th>
+          <th style="padding:6px 8px;color:var(--muted);font-size:11px;text-transform:uppercase;">Distance</th>
+          <th style="padding:6px 8px;color:var(--muted);font-size:11px;text-transform:uppercase;">Confidence</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${cases.map((c, i) => {
+          const f = c.finalResult || {};
+          const inp = c.inputs || {};
+          return `
+          <tr data-ri="${ri}" data-ci="${manifest.runs[ri].cases.indexOf(c)}"
+              style="border-bottom:1px solid var(--border);cursor:pointer;"
+              onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background=''">
+            <td style="padding:6px 8px;font-family:var(--mono);font-size:11px;">${escapeHtml(caseSuffix(c.id))}</td>
+            <td style="padding:6px 8px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeHtml(inp.objectA || '')}">${escapeHtml((inp.objectA || '').slice(0, 60))}</td>
+            <td style="padding:6px 8px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeHtml(inp.objectB || '')}">${escapeHtml((inp.objectB || '').slice(0, 60))}</td>
+            <td style="padding:6px 8px;font-family:var(--mono);">${escapeHtml(String(inp.sheetNum || ''))}</td>
+            <td style="padding:6px 8px;font-family:var(--mono);">${escapeHtml(String(inp.scaleInchesPerFoot || ''))}</td>
+            <td style="padding:6px 8px;font-family:var(--mono);font-weight:600;">${f.distanceFeet != null ? f.distanceFeet + ' ft' : '—'}</td>
+            <td style="padding:6px 8px;">${outcomePill(c)} ${f.confidence || ''}</td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>
+  </div>`;
+
+  area.innerHTML = html;
+
+  // Wire up row clicks to select individual cases
+  area.querySelectorAll('tr[data-ri]').forEach(row => {
+    row.addEventListener('click', () => selectCase(+row.dataset.ri, +row.dataset.ci));
   });
 }
 
@@ -247,7 +411,7 @@ function selectRun(ri) {
   state = { runIdx: ri, caseIdx: -1, stepIdx: 0 };
 
   // Clear case selection highlight
-  document.querySelectorAll('.run-cases li').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.run-cases li, .session-cases li').forEach(el => el.classList.remove('active'));
 
   // Clear steps panel
   document.getElementById('steps-content').innerHTML = '<div class="empty-msg">select a case or browse below</div>';
@@ -365,7 +529,7 @@ function selectCase(ri, ci) {
     if (head) head.querySelector('.arrow').innerHTML = '&#9662;';
   }
 
-  document.querySelectorAll('.run-cases li').forEach(el => {
+  document.querySelectorAll('.run-cases li, .session-cases li').forEach(el => {
     el.classList.toggle('active', +el.dataset.ri === ri && +el.dataset.ci === ci);
   });
 
