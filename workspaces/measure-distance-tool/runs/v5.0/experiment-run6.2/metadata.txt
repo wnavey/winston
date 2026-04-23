@@ -1,0 +1,21 @@
+Experiment Run 6.2
+==================
+Date: 2026-04-23
+Workflow: review v5.1.0 with --experiment=measure-distance overlay
+Model: claude-haiku-4-5-20251001
+Guide set: el-md-exp (items 1.md, 2.md, 13.md)
+Runs: 3 (ensemble)
+Project: Valley View Townhomes (63cead15-41f8-418c-b0ef-bd5c2b44719a)
+Submission version: 55fb6548-814f-4287-bc4a-6018b756d730
+
+Fixes applied since experiment-run6:
+- bureau#260: Fix legend image search version scoping — walk plan_set_versions
+  to find the first with embedded content blocks, pass via
+  target_plan_set_version_id. Also adds diagnostic logging.
+- cityhall: Fix content block search RPC version scoping — new optional
+  target_plan_set_version_id parameter on search_content_blocks_hybrid.
+- Valley View v1 embeddings backfilled (559 content blocks).
+
+Results: 30 call dirs, 9 findings files (3 items × 3 runs). 188MB artifacts.
+First run where legend image cropping should actually work (embeddings
+present + version scoping fixed).
