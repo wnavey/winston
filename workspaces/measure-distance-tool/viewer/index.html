@@ -230,7 +230,20 @@ function caseSuffix(caseId) {
 function renderRunTree() {
   const container = document.getElementById('run-tree-content');
   let html = '';
+
+  // Group runs by version
+  const versions = new Map();
   manifest.runs.forEach((run, ri) => {
+    const ver = run.version || 'ungrouped';
+    if (!versions.has(ver)) versions.set(ver, []);
+    versions.get(ver).push({ run, ri });
+  });
+
+  for (const [version, runs] of versions) {
+    if (version !== 'ungrouped' && versions.size > 1) {
+      html += `<div style="padding:6px 12px 2px;font-size:10px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:0.06em;">${escapeHtml(version)}</div>`;
+    }
+    runs.forEach(({ run, ri }) => {
     // Group cases by session
     const groups = new Map();
     run.cases.forEach((c, ci) => {
@@ -288,7 +301,8 @@ function renderRunTree() {
       </div>
       <ul class="run-cases" data-ri="${ri}">${casesHtml}</ul>
     </div>`;
-  });
+    });
+  }
   container.innerHTML = html;
 
   // Run head click → expand + show run overview

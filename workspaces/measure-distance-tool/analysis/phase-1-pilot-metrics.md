@@ -218,8 +218,8 @@ would converge toward majority results.
 
 ## Methodology notes
 
-- Baseline: `runs/baseline-2026-04-15/` (no measure-distance tool)
-- Experiment: `runs/experiment-run4/` (with tool, two-call Gemini pipeline)
+- Baseline: `runs/v5.0/baseline-el-md-exp/` (no measure-distance tool)
+- Experiment: `runs/v5.0/experiment-run4/` (with tool, two-call Gemini pipeline)
 - **Union consolidation**: deficiency flagged if ≥1 run flags it. Status: fail > not-verifiable > pass.
 - **Majority consolidation**: deficiency flagged if ≥2 runs flag it. Same status precedence.
 - **Pass**: absence from findings output (the review prompt says "omit pass and n/a items").

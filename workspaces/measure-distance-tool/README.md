@@ -42,12 +42,14 @@ measure-distance-tool/
 ├── valley-view-townhomes/          # site plan data (conductor project format)
 │   └── projects/63cead15-.../      # README.md, facts.md, sheet-NN/{guide,blocks}.md
 │
-├── runs/                           # all conductor run outputs
-│   ├── original-review-4.3-2026-04-15/   # pre-experiment full pipeline run
-│   ├── baseline-2026-04-15/               # baseline (no tool, review v5.1.0)
-│   ├── experiment-run1/                   # experiment run 1 (pre-fixes)
-│   ├── experiment-run2/                   # experiment run 2 (all fixes applied)
-│   └── run1-test-fixture-1/              # replay of run 1's 14 fixture cases
+├── runs/                           # all conductor run outputs, versioned by training
+│   ├── v5.0/                             # training v5.0 (el-md-exp subset: guides 1, 2, 13)
+│   │   ├── baseline-el-md-exp/           # baseline (no tool)
+│   │   ├── experiment-run1..run5/        # progressive experiment iterations
+│   │   └── run1-test-fixture-1/          # test-script replays
+│   ├── v5.1/                             # training v5.1 (full el discipline)
+│   │   └── (baseline + experiments TBD)
+│   └── original-review-4.3-2026-04-15/  # pre-experiment full pipeline run
 │
 ├── replay/                         # test-script fixtures for tool-layer iteration
 │   ├── README.md

@@ -9,7 +9,7 @@ Computes:
 
 Usage:
   ./compare-findings.py
-  ./compare-findings.py --baseline ../runs/baseline-2026-04-15 --experiment ../runs/experiment-run2
+  ./compare-findings.py --baseline ../runs/v5.0/baseline-el-md-exp --experiment ../runs/experiment-run2
   ./compare-findings.py --output ../analysis/phase-1-pilot-metrics.md
 """
 
@@ -425,8 +425,8 @@ def format_report(metrics: dict, baseline_name: str, experiment_name: str) -> st
 
 def main() -> int:
     parser = argparse.ArgumentParser(description='Phase 1 pilot metrics')
-    parser.add_argument('--baseline', default=str(ROOT / 'runs' / 'baseline-2026-04-15'))
-    parser.add_argument('--experiment', default=str(ROOT / 'runs' / 'experiment-run4'))
+    parser.add_argument('--baseline', default=str(ROOT / 'runs' / 'v5.0' / 'baseline-el-md-exp'))
+    parser.add_argument('--experiment', default=str(ROOT / 'runs' / 'v5.0' / 'experiment-run5'))
     parser.add_argument('--classification', default=str(ROOT / 'analysis' / 'guides' / 'el-md-exp' / 'item-classification.json'))
     parser.add_argument('--output', default=str(ROOT / 'analysis' / 'phase-1-pilot-metrics.md'))
     parser.add_argument('--json-output', default=str(ROOT / 'analysis' / 'phase-1-pilot-metrics.json'))

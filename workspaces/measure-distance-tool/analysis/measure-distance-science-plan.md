@@ -136,7 +136,7 @@ a human has:
 For each discipline/site-plan combo, run the review workflow WITHOUT the
 measure-distance tool enabled. Archive findings.
 
-**Already captured for EL (3 items)**: `runs/baseline-2026-04-15/` (3 runs,
+**Already captured for EL (3 items)**: `runs/v5.0/baseline-el-md-exp/` (3 runs,
 items 1.md + 2.md + 13.md).
 
 **Needed for full EL discipline**: baseline on all 20 EL guide files × 3 runs.
@@ -147,7 +147,7 @@ Estimated cost: 60 Haiku agents, ~$2–5 in Claude tokens.
 Same configuration as baseline but with `--experiment=measure-distance`.
 Archive findings + measure-distance-calls artifacts.
 
-**Already captured for EL (3 items)**: `runs/experiment-run2/` (3 runs,
+**Already captured for EL (3 items)**: `runs/v5.0/experiment-run2/` (3 runs,
 items 1.md + 2.md + 13.md).
 
 **Needed for full EL discipline**: experiment on all 20 guide files × 3 runs.
@@ -215,8 +215,8 @@ rate on the data we already have.
      `pass` or `fail`?
    - Outputs a structured JSON + markdown summary
 2. Run the comparison on existing data:
-   - Baseline: `runs/baseline-2026-04-15/`
-   - Experiment: `runs/experiment-run2/`
+   - Baseline: `runs/v5.0/baseline-el-md-exp/`
+   - Experiment: `runs/v5.0/experiment-run2/`
 
 **Estimated effort**: 1–2 days. No new runs needed.
 

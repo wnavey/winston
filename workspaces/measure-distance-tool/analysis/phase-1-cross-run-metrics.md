@@ -116,6 +116,6 @@ all the "low-hanging fruit" conversions happened at once.
 
 - Item classification: `analysis/guides/el-md-exp/item-classification.json`
   with `subClassification` field (distance-only vs distance-plus)
-- Baseline: `runs/baseline-2026-04-15/` (3 items × 3 runs, no MD tool)
+- Baseline: `runs/v5.0/baseline-el-md-exp/` (3 items × 3 runs, no MD tool)
 - Script: `scripts/compare-findings.py` with scoped breakdown
 - All runs use Valley View Townhomes and Haiku 4.5

@@ -1,8 +1,8 @@
 # Item Conversion: Baseline → Experiment Run 4
 
 **Review guide**: `el-md-exp` (EL guides 1, 2, 13 — 101 checklist items)
-**Baseline**: `runs/baseline-2026-04-15` (no measure-distance tool)
-**Experiment**: `runs/experiment-run4` (with tool, two-call Gemini pipeline)
+**Baseline**: `runs/v5.0/baseline-el-md-exp` (no measure-distance tool)
+**Experiment**: `runs/v5.0/experiment-run4` (with tool, two-call Gemini pipeline)
 
 Each table shows the consolidated status transition for every checklist item
 that changed or was flagged. Items that were pass in both baseline and

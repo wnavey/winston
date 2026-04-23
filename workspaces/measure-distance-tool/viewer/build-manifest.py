@@ -370,24 +370,51 @@ def main() -> int:
                         help='Where to write the manifest')
     args = parser.parse_args()
 
+    all_versions: list[dict] = []
+
+    def scan_dir_for_runs(scan_root: Path, version: str | None = None):
+        """Scan a directory for test-fixture and experiment runs."""
+        runs = []
+        # Test-fixture runs
+        for tf_dir in sorted(scan_root.glob('*-test-fixture-*')):
+            if not tf_dir.is_dir():
+                continue
+            if args.run and tf_dir.name != args.run:
+                continue
+            run = build_run_testscript(tf_dir)
+            if version:
+                run['version'] = version
+            runs.append(run)
+        # Experiment runs
+        for exp_dir in sorted(scan_root.glob('experiment-run*')):
+            if not exp_dir.is_dir():
+                continue
+            if args.run and exp_dir.name != args.run:
+                continue
+            for run in build_experiment_run(exp_dir):
+                if version:
+                    run['version'] = version
+                runs.append(run)
+        return runs
+
     all_runs: list[dict] = []
 
-    # 1. Scan *-test-fixture-* directories (e.g., run1-test-fixture-1/)
-    #    These have input/ and output/ directly inside.
-    for tf_dir in sorted(RUNS_DIR.glob('*-test-fixture-*')):
-        if not tf_dir.is_dir():
+    # Scan versioned directories (runs/v5.0/, runs/v5.1/, etc.)
+    for version_dir in sorted(RUNS_DIR.glob('v*')):
+        if not version_dir.is_dir():
             continue
-        if args.run and tf_dir.name != args.run:
-            continue
-        all_runs.append(build_run_testscript(tf_dir))
+        version_name = version_dir.name  # e.g., "v5.0"
+        version_runs = scan_dir_for_runs(version_dir, version_name)
+        if version_runs:
+            all_versions.append({
+                'version': version_name,
+                'runCount': len(version_runs),
+            })
+            all_runs.extend(version_runs)
 
-    # 2. Scan experiment-run* directories (e.g., experiment-run1/, experiment-run2/)
-    for exp_dir in sorted(RUNS_DIR.glob('experiment-run*')):
-        if not exp_dir.is_dir():
-            continue
-        if args.run and exp_dir.name != args.run:
-            continue
-        all_runs.extend(build_experiment_run(exp_dir))
+    # Also scan top-level runs/ for backward compat (non-versioned runs)
+    top_level_runs = scan_dir_for_runs(RUNS_DIR)
+    all_runs.extend(top_level_runs)
 
     if not all_runs:
         print('no runs found under runs/', file=sys.stderr)
@@ -395,6 +422,7 @@ def main() -> int:
 
     manifest = {
         'generatedAt': datetime.now(timezone.utc).isoformat(),
+        'versions': all_versions,
         'runs': all_runs,
     }
 

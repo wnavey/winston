@@ -15,7 +15,7 @@ Tracks fixes shipped since the last experiment run, so the next run captures all
 | **Runs** | 3 (ensemble) |
 | **Model** | `claude-haiku-4-5-20251001` |
 | **Project** | Valley View Townhomes (`63cead15-41f8-418c-b0ef-bd5c2b44719a`) |
-| **Outputs** | `runs/experiment-run4/` |
+| **Outputs** | `runs/v5.0/experiment-run4/` |
 | **Results** | 55 call-dirs, 41 results (two-call pipeline, 100% call2 success), 35 non-zero (85%). First run with two-call Gemini (300 DPI). 12 outliers >100 ft need investigation. |
 
 ---
@@ -88,7 +88,7 @@ npm run conduct -- --workflow=review --guide-code=el-md-exp \
   --max-workers=9 --skip-upload --clean
 ```
 
-After completion, archive to `runs/experiment-run5/` and run the viewer:
+After completion, archive to `runs/v5.0/experiment-run5/` and run the viewer:
 
 ```bash
 cd ~/code/controlroom/winston/workspaces/measure-distance-tool/viewer

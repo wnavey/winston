@@ -28,10 +28,10 @@ The delta between the two isolates the tool's contribution to finding quality on
 
 | Run | When | Guide set | Tool enabled? | Outcome |
 |---|---|---|---|---|
-| **Baseline** | 2026-04-15 | `el-md-exp` (3 items) | No | ✅ completed. `runs/baseline-2026-04-15/`. |
-| **Experiment run1** | 2026-04-15 | `el-md-exp` (3 items) | Yes (v5.1.0 overlay) | ⚠️ 14 MD calls, 0 results (Python 3.9 crash + MCP type reject). `runs/experiment-run1/`. |
-| **Experiment run2** | 2026-04-16 | `el-md-exp` (3 items) | Yes + rich logging | ⚠️ 13 MD calls, 7 results, all ~0 ft (scale inverted + axis swap + trivial bbox). `runs/experiment-run2/`. |
-| **Experiment run3** | 2026-04-17 | `el-md-exp` (3 items) | Yes + all axis/scale/bbox fixes | ✅ 26 call-dirs, 12 results, **9 non-zero** (2.3–31.8 ft). First real measurements. `runs/experiment-run3/`. |
+| **Baseline** | 2026-04-15 | `el-md-exp` (3 items) | No | ✅ completed. `runs/v5.0/baseline-el-md-exp/`. |
+| **Experiment run1** | 2026-04-15 | `el-md-exp` (3 items) | Yes (v5.1.0 overlay) | ⚠️ 14 MD calls, 0 results (Python 3.9 crash + MCP type reject). `runs/v5.0/experiment-run1/`. |
+| **Experiment run2** | 2026-04-16 | `el-md-exp` (3 items) | Yes + rich logging | ⚠️ 13 MD calls, 7 results, all ~0 ft (scale inverted + axis swap + trivial bbox). `runs/v5.0/experiment-run2/`. |
+| **Experiment run3** | 2026-04-17 | `el-md-exp` (3 items) | Yes + all axis/scale/bbox fixes | ✅ 26 call-dirs, 12 results, **9 non-zero** (2.3–31.8 ft). First real measurements. `runs/v5.0/experiment-run3/`. |
 | **Experiment run4** | upcoming | `el-md-exp` (3 items) | Yes + **two-call Gemini** (300 DPI refined crop) | 🟡 next — tests the Phase A DPI improvement. |
 
 **Dataset trimmed**: from the original 10 items down to **3 items** for faster iteration:
