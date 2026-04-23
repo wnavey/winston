@@ -190,11 +190,15 @@ def _case_from_call_dir(call_dir: Path | None, case_id: str,
     final_result = None
     if call_dir and call_dir.exists():
         # test-script layout: measure-distance.json is sibling to measure-distance-calls/
-        case_parent = call_dir.parent.parent  # up from <callId>/ -> measure-distance-calls/ -> case-dir/
+        # Only use it if it has a flat structure (distanceFeet at top level),
+        # NOT the objectPairs combined format ({measurements: [...]}).
+        case_parent = call_dir.parent.parent
         final_json = case_parent / 'measure-distance.json'
         if final_json.exists():
-            final_result = load_json(final_json)
-        # experiment layout: result is embedded in metadata
+            candidate = load_json(final_json)
+            if candidate and 'distanceFeet' in candidate and 'measurements' not in candidate:
+                final_result = candidate
+        # Experiment/dispatcher layout: per-pair result is embedded in metadata
         if not final_result:
             meta = load_json(call_dir / 'metadata.json') or {}
             r = meta.get('result')
