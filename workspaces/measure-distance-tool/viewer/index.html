@@ -250,9 +250,18 @@ function renderRunTree() {
       for (const [sid, cases] of groups) {
         const shortSid = sid.split('-').slice(-3).join('-'); // e.g., "run-2-13"
         if (cases.length === 1) {
-          // Single case — no sub-group needed
+          // Single case — still show as a collapsible group for consistency
           const { c, ci } = cases[0];
-          casesHtml += `<li data-ri="${ri}" data-ci="${ci}">${escapeHtml(shortSid)} ${outcomePill(c)}</li>`;
+          const innerItem = `<li data-ri="${ri}" data-ci="${ci}">${escapeHtml(caseSuffix(c.id))} ${outcomePill(c)}</li>`;
+          casesHtml += `
+            <div class="session-group">
+              <div class="session-head" data-ri="${ri}" data-sid="${escapeHtml(sid)}">
+                <span class="arrow">&#9656;</span>
+                <span>${escapeHtml(shortSid)}</span>
+                <span class="count">1</span>
+              </div>
+              <ul class="session-cases" data-sid="${escapeHtml(sid)}">${innerItem}</ul>
+            </div>`;
         } else {
           // Multi-pair session — collapsible sub-group
           const innerItems = cases.map(({ c, ci }) =>
