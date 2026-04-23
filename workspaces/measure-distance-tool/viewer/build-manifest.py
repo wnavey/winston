@@ -281,7 +281,12 @@ def build_experiment_run(exp_dir: Path) -> list[dict]:
     We also look for a matching fixture in replay/fixtures/ to get
     the agent's reasoning and applicable_checklist_items.
     """
+    # Support two layouts:
+    #   Local conductor: measure-distance-calls/ directly in the run dir
+    #   Dispatcher:      output/measure-distance-calls/ (one level deeper)
     calls_root = exp_dir / 'measure-distance-calls'
+    if not calls_root.exists():
+        calls_root = exp_dir / 'output' / 'measure-distance-calls'
     if not calls_root.exists():
         return []
 
@@ -372,8 +377,8 @@ def main() -> int:
 
     all_versions: list[dict] = []
 
-    def scan_dir_for_runs(scan_root: Path, version: str | None = None):
-        """Scan a directory for test-fixture and experiment runs."""
+    def scan_dir_for_runs(scan_root: Path, version: str | None = None, guide: str | None = None):
+        """Scan a directory for test-fixture, experiment, and baseline runs."""
         runs = []
         # Test-fixture runs
         for tf_dir in sorted(scan_root.glob('*-test-fixture-*')):
@@ -382,39 +387,70 @@ def main() -> int:
             if args.run and tf_dir.name != args.run:
                 continue
             run = build_run_testscript(tf_dir)
-            if version:
-                run['version'] = version
+            if version: run['version'] = version
+            if guide: run['guide'] = guide
             runs.append(run)
-        # Experiment runs (match experiment-run*, experiment-5.1-run*, etc.)
+        # Experiment runs (match experiment-*)
         for exp_dir in sorted(scan_root.glob('experiment-*')):
             if not exp_dir.is_dir():
                 continue
             if args.run and exp_dir.name != args.run:
                 continue
             for run in build_experiment_run(exp_dir):
-                if version:
-                    run['version'] = version
+                if version: run['version'] = version
+                if guide: run['guide'] = guide
                 runs.append(run)
+        # Baseline runs (have output/ or runs/ subdirectory)
+        for bl_dir in sorted(scan_root.glob('baseline*')):
+            if not bl_dir.is_dir():
+                continue
+            if args.run and bl_dir.name != args.run:
+                continue
+            # Baselines with output/runs/ structure (from dispatcher)
+            runs_subdir = bl_dir / 'output' / 'runs'
+            if runs_subdir.exists():
+                for run in build_experiment_run(bl_dir):
+                    if version: run['version'] = version
+                    if guide: run['guide'] = guide
+                    run['source'] = 'baseline'
+                    runs.append(run)
         return runs
 
     all_runs: list[dict] = []
 
-    # Scan versioned directories (runs/v5.0/, runs/v5.1/, etc.)
+    # Scan versioned directories: runs/v5.0/el-md-exp/..., runs/v5.1/zlu/...
+    # Structure: version → guide → run directories
     for version_dir in sorted(RUNS_DIR.glob('v*')):
         if not version_dir.is_dir():
             continue
         version_name = version_dir.name  # e.g., "v5.0"
-        version_runs = scan_dir_for_runs(version_dir, version_name)
-        if version_runs:
+
+        # Scan guide subdirectories (el-md-exp, el, zlu, zlu-md-exp, etc.)
+        for guide_dir in sorted(version_dir.iterdir()):
+            if not guide_dir.is_dir() or guide_dir.name.startswith('.'):
+                continue
+            # Skip version-info.txt etc
+            if not any((guide_dir / d).exists() for d in ['output', 'runs', 'logs', 'measure-distance-calls', 'workflow-status.json']
+                       ) and not any(guide_dir.glob('experiment-*')) and not any(guide_dir.glob('*-test-fixture-*')) and not any(guide_dir.glob('baseline*')):
+                # Check if this dir has run subdirs
+                has_runs = any(
+                    scan_dir_for_runs(guide_dir, version_name, guide_dir.name)
+                    for _ in [None]
+                )
+                if not has_runs:
+                    continue
+
+            guide_name = guide_dir.name
+            guide_runs = scan_dir_for_runs(guide_dir, version_name, guide_name)
+            all_runs.extend(guide_runs)
+
+        # Collect version stats
+        version_run_count = sum(1 for r in all_runs if r.get('version') == version_name)
+        if version_run_count:
             all_versions.append({
                 'version': version_name,
-                'runCount': len(version_runs),
+                'runCount': version_run_count,
             })
-            all_runs.extend(version_runs)
-
-    # Also scan top-level runs/ for backward compat (non-versioned runs)
-    top_level_runs = scan_dir_for_runs(RUNS_DIR)
-    all_runs.extend(top_level_runs)
 
     if not all_runs:
         print('no runs found under runs/', file=sys.stderr)

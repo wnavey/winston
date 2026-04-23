@@ -1,0 +1,28 @@
+Run 1 Test Fixture Replay
+=========================
+Date: 2026-04-15 (ran several hours after experiment-run1)
+Workflow: test-script (deterministic script replay, no agent loop)
+Fixture: replay/fixtures/experiment-2026-04-15-all-calls.json
+Cases: 14 (all measure-distance tool calls from experiment-run1)
+
+Purpose: Replay experiment-run1's exact tool inputs through the measure-distance
+script to test infra fixes without re-running the agent loop.
+
+Fixes applied between experiment-run1 and this replay:
+- bureau#221: Python 3.9 compat (str | None → Optional[str]) — all 8 calls
+  that reached Python in run 1 failed at import time; now fixed
+- bureau#224: test-script workflow passes projectId from fixture — all 14
+  cases were failing with "projectId not provided"
+- conductor#118: MCP input validation accepts numeric args — 6 of 14 calls
+  in run 1 were rejected because sheetNum/scaleInchesPerFoot were numbers
+  against a string-only schema
+- conductor#119: Script steps support checklist-driven parallel iteration —
+  enables the test-script workflow itself
+- conductor#121: Shell-quote script-step arg values + NODE_PATH — fixture
+  values with parentheses (e.g., "OHE (Overhead Electric)") broke /bin/sh
+  parsing; scripts couldn't import conductor dependencies
+
+Result: 11 of 14 cases completed (3 failed — 1 Python timeout, 1 bad scale
+string "1 inch = 20 feet", 1 Gemini timeout). First successful distance
+measurements produced, though all returned 0.0 ft due to wrong scale values
+in the fixture (scaleInchesPerFoot: "1" instead of 0.05).

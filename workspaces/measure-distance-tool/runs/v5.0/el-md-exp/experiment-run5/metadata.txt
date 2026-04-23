@@ -1,0 +1,20 @@
+Experiment Run 5
+================
+Date: 2026-04-21
+Workflow: review v5.1.0 with --experiment=measure-distance overlay
+Model: claude-haiku-4-5-20251001
+Guide set: el-md-exp (items 1.md, 2.md, 13.md)
+Runs: 3 (ensemble)
+Project: Valley View Townhomes (63cead15-41f8-418c-b0ef-bd5c2b44719a)
+Submission version: 55fb6548-814f-4287-bc4a-6018b756d730
+
+Fixes applied since experiment-run4:
+- bureau#241: Per-phase latency logging (downloadMs, contextMs, geminiMs, pythonMs)
+- bureau#243: Legend symbol images (Phase B) — visual legend crops sent to Gemini
+- bureau#246: Fix applicable_checklist_items arg name (snake_case mismatch)
+- bureau#248: Fix two-call bbox mismatch (~2x distance error) — Python now uses
+  localization["drawingBbox"] instead of the original full-drawing bbox
+
+Results: 62 call dirs, 9 findings files (3 items × 3 runs). 446MB of per-call
+artifacts including legend images and 300 DPI refined crops. First run with
+correct two-call coordinate mapping (no more ~2x inflation).

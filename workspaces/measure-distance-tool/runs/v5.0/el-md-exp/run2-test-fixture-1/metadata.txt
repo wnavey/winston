@@ -1,0 +1,22 @@
+Run 2 Test Fixture Replay
+=========================
+Date: 2026-04-17
+Workflow: test-script (deterministic script replay, no agent loop)
+Fixture: replay/fixtures/experiment-run2-all-calls.json
+Cases: 13 (all measure-distance tool calls from experiment-run2)
+
+Purpose: Replay experiment-run2's exact tool inputs through the measure-distance
+script to test the nearestPoint axis fix without re-running the agent loop.
+
+Fixes applied between experiment-run2 and this replay:
+- bureau#229: Swap nearestPoint axis order to match Gemini [y, x] convention.
+  The Python distance computation was interpreting Gemini's nearestPoint as
+  [x, y] but Gemini actually returns [y, x]. This caused the computed
+  distances to be wrong (measuring along the wrong axis). With the fix,
+  the points are swapped before distance computation.
+
+Result: 13/13 cases completed. 2 cases now return non-zero distances
+(0.1 ft and 0.6 ft) where all were previously 0.0 ft. Several others
+show fractional inches instead of exact zeros — the axis fix is producing
+more accurate vector math even where the final feet value still rounds
+to zero.

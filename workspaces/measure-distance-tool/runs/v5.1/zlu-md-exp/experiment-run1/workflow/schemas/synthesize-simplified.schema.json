@@ -1,0 +1,108 @@
+{
+  "type": "object",
+  "required": ["comments"],
+  "properties": {
+    "comments": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "headline",
+          "summary",
+          "sheets",
+          "applicableArea",
+          "severity",
+          "confidence",
+          "crossDep",
+          "attn",
+          "details"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "headline": {
+            "type": "string",
+            "description": "3-12 word standalone summary of the issue"
+          },
+          "summary": {
+            "type": "string",
+            "description": "1-3 sentence plain-language description of what is wrong"
+          },
+          "sheets": {
+            "type": "array",
+            "items": { "type": "integer" },
+            "description": "Page/sheet numbers in the primary site plan document"
+          },
+          "applicableArea": {
+            "type": "string",
+            "description": "Canonical physical zone (e.g. 'Site Interior', 'MoPac Expressway Frontage')"
+          },
+          "severity": {
+            "type": "integer",
+            "description": "0 = suggestion, 1 = low, 2 = medium, 3 = high"
+          },
+          "confidence": {
+            "type": "integer",
+            "description": "Holistic confidence in this comment (1 = low, 2 = medium, 3 = high)"
+          },
+          "crossDep": {
+            "type": "string",
+            "description": "Cross-department coordination note, or empty string if not applicable"
+          },
+          "attn": {
+            "type": "string",
+            "description": "Reviewer attention note, or empty string if not applicable"
+          },
+          "details": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["text", "citation", "sourceId", "confidence", "runComments"],
+              "additionalProperties": false,
+              "properties": {
+                "text": {
+                  "type": "string",
+                  "description": "Merged description of the deficiency for this checklist item"
+                },
+                "citation": {
+                  "type": "string",
+                  "description": "Code citation(s) for this specific checklist item"
+                },
+                "sourceId": {
+                  "type": "string",
+                  "description": "Checklist item ID (e.g. '10:SDUF-10.12')"
+                },
+                "confidence": {
+                  "type": "integer",
+                  "description": "Confidence for this detail (1 = low, 2 = medium, 3 = high)"
+                },
+                "runComments": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": ["runNum", "status", "comment"],
+                    "additionalProperties": false,
+                    "properties": {
+                      "runNum": {
+                        "type": "integer",
+                        "description": "Run number (1, 2, 3, ...)"
+                      },
+                      "status": {
+                        "type": "string",
+                        "enum": ["fail", "nv"],
+                        "description": "What the review agent assigned: fail or not-verifiable"
+                      },
+                      "comment": {
+                        "type": "string",
+                        "description": "The review agent's comment text from this run"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

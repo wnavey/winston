@@ -1,0 +1,71 @@
+{
+  "callId": "20260417T204123492Z-tfut-run-2-13-p3",
+  "callDir": "/Users/wnavey/code/controlroom/conductor/workspace/output/measure-distance-calls/20260417T204123492Z-tfut-run-2-13-p3",
+  "sessionCallId": "20260417T204123492Z-tfut-run-2-13",
+  "runIndex": "run-2",
+  "checklistItem": "13.md",
+  "checklistIndex": "5",
+  "startedAt": "2026-04-17T20:41:23.492Z",
+  "strategy": "a-then-b",
+  "pairIndex": 3,
+  "reasoning": "Verify transformer pad clearances from underground utilities (water, wastewater, storm drain). UCM \u00a7 2.9.1.B.2 requires minimum 5-foot horizontal clearance from water, wastewater, and storm drain lines (EL-13.21, EL-13.22, EL-13.23). The utility tap plan (Sheet 19) shows utility routing. I need to measure distances from each transformer pad location to the nearest utility lines. Since transformer pads were identified on Sheet 21 electrical plan, I'll reference that spatial layout while measuring against the utility routing shown on Sheet 19.",
+  "inputs": {
+    "projectId": "63cead15-41f8-418c-b0ef-bd5c2b44719a",
+    "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+    "sheetNum": "19",
+    "objectA": "Transformer Pad 4 in southeast area",
+    "objectB": "Nearest water line",
+    "scaleInchesPerFoot": "0.05"
+  },
+  "assets": {
+    "pdfStoragePath": "63cead15-41f8-418c-b0ef-bd5c2b44719a/plan-sets/1144b126-1216-4dee-a89c-178950fa7777/v1/sheets/19.pdf",
+    "jpegStoragePath": "63cead15-41f8-418c-b0ef-bd5c2b44719a/plan-sets/1144b126-1216-4dee-a89c-178950fa7777/v1/sheets/19.jpg",
+    "bucket": "submission-data",
+    "drawingBbox": {
+      "x0": 0.021,
+      "y0": 0.02,
+      "x1": 0.91,
+      "y1": 0.975
+    },
+    "legendSource": "cross-sheet",
+    "legendPath": "legend.txt",
+    "croppedImagePath": "call2-cropped.jpg"
+  },
+  "optionB": {
+    "promptPath": "call2-prompt.txt",
+    "responsePath": "call2-response.txt",
+    "success": true,
+    "geminiConfidence": 0.404,
+    "parsedResponsePath": "call2-localization.json",
+    "usedCall": 2
+  },
+  "call1": {
+    "promptPath": "call1-prompt.txt",
+    "responsePath": "call1-response.txt",
+    "success": true,
+    "geminiConfidence": 0.3,
+    "parsedResponsePath": "call1-localization.json"
+  },
+  "result": {
+    "distanceFeet": 260.7,
+    "distanceInches": 3127.9,
+    "confidence": "medium",
+    "method": "vision",
+    "debugImagePath": "debug.png"
+  },
+  "elapsedMs": 184261,
+  "applicableChecklistItems": [
+    {
+      "checklist_id": "EL-13.21",
+      "checklist_deficiency_text": "Transformer pads lack minimum 5-foot horizontal clearance from water lines"
+    },
+    {
+      "checklist_id": "EL-13.22",
+      "checklist_deficiency_text": "Transformer pads lack minimum 5-foot horizontal clearance from wastewater lines"
+    },
+    {
+      "checklist_id": "EL-13.23",
+      "checklist_deficiency_text": "Transformer pads lack minimum 5-foot horizontal clearance from storm drain lines"
+    }
+  ]
+}

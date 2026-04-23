@@ -1,0 +1,21 @@
+Experiment Run 3
+================
+Date: 2026-04-17
+Workflow: review v5.1.0 with --experiment=measure-distance overlay
+Model: claude-haiku-4-5-20251001
+Guide set: el-md-exp (items 1.md, 2.md, 13.md)
+Runs: 3 (ensemble)
+Project: Valley View Townhomes (63cead15-41f8-418c-b0ef-bd5c2b44719a)
+Submission version: 55fb6548-814f-4287-bc4a-6018b756d730
+
+Fixes applied since experiment-run2:
+- bureau#229: Swap nearestPoint axis order to match Gemini [y, x] convention
+- bureau#232: Scale formula inverted (* → /), disable vector refinement,
+  standardize Gemini prompt to [y, x] for both bbox and nearestPoint
+- bureau#233: Fix drawing bbox format ({x,y,width,height} → {x0,y0,x1,y1})
+- bureau#234: objectPairs array — batch multiple measurements per tool call
+- conductor#122: Typed tool schema with per-field types/descriptions
+- conductor#123: Array support in tool schema + shell quoting for JSON values
+
+Results: 26 measure-distance calls (up from 12 in run2). First run with
+correct scale formula, actual image cropping, and objectPairs batching.

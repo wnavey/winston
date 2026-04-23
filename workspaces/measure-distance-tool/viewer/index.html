@@ -231,18 +231,25 @@ function renderRunTree() {
   const container = document.getElementById('run-tree-content');
   let html = '';
 
-  // Group runs by version
-  const versions = new Map();
+  // Group runs by version → guide
+  const tree = new Map(); // version → Map(guide → [{run, ri}])
   manifest.runs.forEach((run, ri) => {
     const ver = run.version || 'ungrouped';
-    if (!versions.has(ver)) versions.set(ver, []);
-    versions.get(ver).push({ run, ri });
+    const guide = run.guide || '';
+    if (!tree.has(ver)) tree.set(ver, new Map());
+    const guides = tree.get(ver);
+    if (!guides.has(guide)) guides.set(guide, []);
+    guides.get(guide).push({ run, ri });
   });
 
-  for (const [version, runs] of versions) {
-    if (version !== 'ungrouped' && versions.size > 1) {
+  for (const [version, guides] of tree) {
+    if (version !== 'ungrouped' && tree.size > 1) {
       html += `<div style="padding:6px 12px 2px;font-size:10px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:0.06em;">${escapeHtml(version)}</div>`;
     }
+    for (const [guide, runs] of guides) {
+      if (guide) {
+        html += `<div style="padding:3px 12px 1px 16px;font-size:10px;font-weight:600;color:var(--muted);letter-spacing:0.03em;">${escapeHtml(guide)}</div>`;
+      }
     runs.forEach(({ run, ri }) => {
     // Group cases by session
     const groups = new Map();
@@ -302,6 +309,7 @@ function renderRunTree() {
       <ul class="run-cases" data-ri="${ri}">${casesHtml}</ul>
     </div>`;
     });
+    }
   }
   container.innerHTML = html;
 

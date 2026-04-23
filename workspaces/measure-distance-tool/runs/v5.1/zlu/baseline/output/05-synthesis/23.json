@@ -1,0 +1,189 @@
+{
+  "comments": [
+    {
+      "headline": "Property identification documentation errors and inconsistencies",
+      "summary": "Property identification documents contain errors in legal description page references, inconsistent property acreage across sources, and TCAD parcel ID in incomplete format with inconsistent formatting across documents.",
+      "sheets": [
+        1,
+        2
+      ],
+      "applicableArea": "Plan Documentation",
+      "severity": 2,
+      "confidence": 2,
+      "crossDep": "",
+      "attn": "Reconcile all property identification data against current Travis County Clerk plat records, TCAD tax records, and COA GIS before resubmission.",
+      "details": [
+        {
+          "text": "Application form legal description shows 'LOT 1 MECEY SUBD, V.73, P.6' but correct recording is V.73, P.76 — page number is off by 70 pages.",
+          "citation": "Director's Rules (LDC § 25-1-82)",
+          "sourceId": "23:ZLU-23.32",
+          "confidence": 3,
+          "runComments": [
+            {
+              "runNum": 1,
+              "status": "fail",
+              "comment": "Cover sheet legal description references 'Volume 73, Page 75' but the recorded plat is Volume 73, Page 76. Application legal description field shows 'V.73, P.6' instead of 'V.73, P.76'. Both contain inaccurate recording page references that do not match the actual recorded plat."
+            },
+            {
+              "runNum": 2,
+              "status": "fail",
+              "comment": "Legal description on the consolidated site plan application form contains an error. The form states 'LOT 1 MECEY SUBD, V.73, P.6' but should read 'LOT 1 MECEY SUBD, V.73, P.76'. The correct page reference is Page 76, not Page 6, as confirmed by the recorded plat in Sheet 2 and the cover sheet legal description. This must be corrected to match the recorded final plat."
+            },
+            {
+              "runNum": 3,
+              "status": "fail",
+              "comment": "Application form legal description field contains incomplete plat page reference. Form shows 'LOT 1 MECEY SUBD, V.73, P.6' but should reference 'V.73, P.76' (page 76, not page 6). The required legal description must include the complete volume and page designation of the subdivision plat."
+            }
+          ]
+        },
+        {
+          "text": "Cover sheet legal description references Volume 73, Page 75, but recorded Mecey Subdivision plat is actually Volume 73, Page 76 per county clerk records.",
+          "citation": "Director's Rules (LDC § 25-1-82); UCM 2.5.1.E.9",
+          "sourceId": "23:ZLU-23.39",
+          "confidence": 1,
+          "runComments": [
+            {
+              "runNum": 1,
+              "status": "fail",
+              "comment": "Discrepancy between cover sheet legal description (Page 75) and recorded final plat (Page 76). Cover sheet references 'Volume 73, Page 75, Plat Records of Travis County' but the actual recording is 'Volume 73, Page 76' per county clerk filing information and plat document. This discrepancy has not been explained or reconciled."
+            }
+          ]
+        },
+        {
+          "text": "Property acreage inconsistent across documents: site plan cover sheet 2.16 acres; TCAD tax certificate 2.1970 acres; deed reference 2.158 acres; COA GIS 2.111 acres. Controlling acreage must be determined and all impervious cover calculations verified.",
+          "citation": "Director's Rules (LDC § 25-1-82)",
+          "sourceId": "23:ZLU-23.40",
+          "confidence": 1,
+          "runComments": [
+            {
+              "runNum": 2,
+              "status": "fail",
+              "comment": "Legal description acreage is inconsistent across documents and must be reconciled. Site plan cover sheet shows 2.16 acres; TCAD tax certificate shows 2.1970 acres; facts.md deed reference shows 2.158 acres; COA GIS parcel shows 2.111 acres. The controlling acreage must be determined and all references updated for consistency. If GIS acreage (2.111 ac) is controlling, impervious cover calculations based on 2.16 acres may require recalculation."
+            }
+          ]
+        },
+        {
+          "text": "TCAD parcel ID shown as '308163' (6 digits) must be corrected to required 10-digit format '0406100252' per standard TCAD identification.",
+          "citation": "Reviewer Convention",
+          "sourceId": "23:ZLU-23.45",
+          "confidence": 3,
+          "runComments": [
+            {
+              "runNum": 1,
+              "status": "fail",
+              "comment": "Tax Parcel Number shown as '308163' in the application, which is only 6 digits. Required format is 10 digits (e.g., '0406100252' as shown on Travis County Tax Certificate account number). Application must provide complete TCAD parcel ID in 10-digit format."
+            },
+            {
+              "runNum": 2,
+              "status": "fail",
+              "comment": "TCAD parcel ID is not provided in the required 10-digit format. The application shows '308163' which is not in the standard 10-digit format (should be '0406100252'). All TCAD parcel IDs must be corrected to the full 10-digit format per the Reviewer Convention threshold."
+            },
+            {
+              "runNum": 3,
+              "status": "fail",
+              "comment": "TCAD parcel ID provided on application is incomplete and not in required 10-digit format. Application shows '308163' instead of the complete 10-digit parcel ID '0406100252' per Travis County tax records. All TCAD parcel IDs must be provided in the standard 10-digit format."
+            }
+          ]
+        },
+        {
+          "text": "TCAD parcel ID inconsistent across documents: application '308163'; TCAD account number '04-0610-0252-0000'; standard 10-digit '0406100252' — all lot and parcel designations must be reconciled against TCAD, AMANDA, and recorded documents.",
+          "citation": "Director's Rules (LDC § 25-1-82); UCM 2.5.1.E.9",
+          "sourceId": "23:ZLU-23.41",
+          "confidence": 2,
+          "runComments": [
+            {
+              "runNum": 2,
+              "status": "fail",
+              "comment": "TCAD parcel ID designations are inconsistent. Application form lists tax parcel number as '308163' while the TCAD tax certificate account number is '04-0610-0252-0000' and the standard 10-digit parcel ID is '0406100252'. All references must be cross-referenced to the current TCAD records and any discrepancies explained."
+            },
+            {
+              "runNum": 3,
+              "status": "fail",
+              "comment": "TCAD parcel ID designation inconsistent with tax records. Application shows '308163' but Travis County Tax Certificate shows account number '04-0610-0252-0000' corresponding to 10-digit parcel ID '0406100252'. All lot and parcel designations must be reconciled across the tax certificate, recorded plat, AMANDA system, and application materials."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "headline": "Required supporting documents and easement depictions missing",
+      "summary": "Recorded deed and TCAD appraisal documentation not submitted with plan set; easements from recorded plat and title are not consistently depicted on site and utility plans; historical plat acknowledgment language requirements unclear.",
+      "sheets": [
+        1,
+        2,
+        9,
+        11,
+        12
+      ],
+      "applicableArea": "Plan Documentation",
+      "severity": 2,
+      "confidence": 2,
+      "crossDep": "Coordinate with TCAD and tax assessor to confirm deed and appraisal submission requirements; coordinate with utility departments regarding easement depiction on utility plans (Sheets 11, 12).",
+      "attn": "Verify whether recorded deed and appraisal must be submitted with plan set or referenced only in AMANDA. Clarify whether LDC § 25-4-83 acknowledgment language applies to historical plats (1975) or only new subdivisions. Confirm all recorded easements are depicted on grading, drainage, and utility plans with no conflicts with proposed improvements.",
+      "details": [
+        {
+          "text": "Recorded deed (Document 2019197883, Special Warranty Deed dated 2019-12-11) referenced in application but actual deed document not submitted with plan set or included in supplementary materials.",
+          "citation": "Reviewer Convention",
+          "sourceId": "23:ZLU-23.43",
+          "confidence": 2,
+          "runComments": [
+            {
+              "runNum": 2,
+              "status": "nv",
+              "comment": "The recorded deed showing the legal description of the property cannot be verified as included in the plan set. The application references deed Document 2019197883 (Special Warranty Deed, 2019-12-11) but the actual recorded deed document itself does not appear to be submitted as a separate sheet or included in the supplementary documents. The deed must be provided to verify coverage of the entire property and match against the legal description."
+            },
+            {
+              "runNum": 3,
+              "status": "nv",
+              "comment": "Recorded deed showing the legal description of the property cannot be verified in submitted materials. Application references deed document number 2019197883 (Acquisition Deed from SHG Resources LP to WM 41 Austin RE LLC, dated 2019-12-11), but the actual recorded deed document is not located in the supplementary materials provided. Confirm that the recorded deed covering the entire property is submitted with the plan set."
+            }
+          ]
+        },
+        {
+          "text": "TCAD appraisal printout documentation not included in supplementary documents — only Tax Certificate provided; appraisal needed to verify complete parcel information.",
+          "citation": "Reviewer Convention",
+          "sourceId": "23:ZLU-23.46",
+          "confidence": 1,
+          "runComments": [
+            {
+              "runNum": 1,
+              "status": "nv",
+              "comment": "Only a Travis County Tax Certificate is provided in supplementary documents. TCAD appraisal printout documentation required to verify complete parcel information and confirm land value is shown separately from full property appraised value is not included in the plan set."
+            }
+          ]
+        },
+        {
+          "text": "Easements on recorded Mecey Subdivision plat (25' Drainage, 10' Water/Wastewater, 3' Electric, 5' PUE) not fully depicted on site and utility plans; additionally, two recorded easements entirely absent: Greenbelt Access & Use Easement (Instrument 2010070731, 0.31 acres, NE interior no-build zone) and City of Austin Drainage Easement (Instrument 2011021137, 0.130 acres, NE corner) — totaling ~0.44 acres of undepicted restrictions.",
+          "citation": "Reviewer Convention",
+          "sourceId": "23:ZLU-23.21",
+          "confidence": 1,
+          "runComments": [
+            {
+              "runNum": 2,
+              "status": "nv",
+              "comment": "Plat notes and easement restrictions may not be fully reflected on site plan sheets. The recorded Mecey Subdivision plat (Sheet 2) references easements including 25' Drainage Easement, 10' Water/Wastewater Easement, 3' Electric Easement, and 5' PUE. Additionally, facts.md identifies two critical recorded easements not depicted: Greenbelt Access & Use Easement (Instrument 2010070731, 0.31 acres, NE interior no-build zone) and City of Austin Drainage Easement (Instrument 2011021137, 0.130 acres, NE corner). Verify that all recorded easements are accurately depicted on the site plan, grading plan, and utility plans, and that no proposed structures or improvements conflict with easement restrictions, particularly the two undepicted no-build zones totaling ~0.44 acres."
+            }
+          ]
+        },
+        {
+          "text": "Recorded 1975 Mecey Subdivision plat lacks modern LDC § 25-4-83 acknowledgment language regarding owner responsibility for subdivision improvements, plat vacation/replatting requirements, and no guarantee of variances — applicability to historical plats unclear.",
+          "citation": "LDC § 25-4-83; LDC § 30-2-83",
+          "sourceId": "23:ZLU-23.51",
+          "confidence": 2,
+          "runComments": [
+            {
+              "runNum": 1,
+              "status": "nv",
+              "comment": "Recorded 1975 historical plat does not include the modern required acknowledgment language per LDC § 25-4-83. Plat shows notarized owner acknowledgment from 1975 but lacks the current verbatim language regarding responsibility for construction compliance, potential plat vacation, and no guarantee of variances. Applicability of this requirement to historical plats recorded under prior regulations is unclear from provided guidance."
+            },
+            {
+              "runNum": 3,
+              "status": "nv",
+              "comment": "Required plat acknowledgment note cannot be verified on the submitted historical plat. The Mecey Subdivision plat (recorded December 11, 1975) contains owner dedication and notarized owner acknowledgment as required at the time of recording, but does not include the modern LDC § 25-4-83 language regarding owner responsibility for subdivision improvements, requirement for plat vacation/replatting, and no guarantee of future variances. Clarify whether this requirement applies to historical plats predating the LDC, or whether supplemental acknowledgment language must be added to the current plan set."
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

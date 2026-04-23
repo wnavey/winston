@@ -1,0 +1,126 @@
+{
+  "comments": [
+    {
+      "headline": "Plan documentation contains inconsistencies and duplicate information",
+      "summary": "Technical data and sheet references contain errors and duplicate content across multiple sheets. Correct these to ensure clarity and plan accuracy.",
+      "sheets": [
+        3,
+        9,
+        23,
+        28,
+        29,
+        30,
+        32
+      ],
+      "applicableArea": "Plan Documentation",
+      "severity": 2,
+      "confidence": 2,
+      "crossDep": "",
+      "attn": "",
+      "details": [
+        {
+          "text": "Building finished floor elevations differ across sheets: Building 1 shown as 687.50 on Sheet 9 but 688.50 on Sheet 30; Building 3 shown as 685.50 on Sheet 9 but 688.0 on Sheet 30 (2.50-ft difference). Reconcile and identify single authoritative source.",
+          "citation": "Reviewer Convention",
+          "sourceId": "4:ZLU-4.24",
+          "confidence": 3,
+          "runComments": [
+            {
+              "runNum": 2,
+              "status": "fail",
+              "comment": "Building Finished Floor Elevations (FFE) are inconsistent across sheets. Sheet 9 lists Bldg 1 FFE as 687.50, Bldg 3 as 685.50, and Bldg 4 as 685.50. Sheet 30 lists Bldg 1 FFE as 688.50, Bldg 3 as 688.0, and Bldg 4 as 685.0. Technical design data must be identical across all occurrences. Update the Existing Tree Plan (Sheet 30) to match the authoritative values shown on the Site Plan (Sheet 9)."
+            },
+            {
+              "runNum": 3,
+              "status": "fail",
+              "comment": "Building finished floor elevations are inconsistent across sheets: Building 1 shown as FFE 687.50 on Sheet 29 but 688.50 on Sheet 30 (0.50-ft difference); Building 3 shown as FFE 685.50 on Sheet 29 but 688.0 on Sheet 30 (2.50-ft difference). Conflicts must be reconciled and authoritative sheet identified."
+            }
+          ]
+        },
+        {
+          "text": "Sheet 30 cross-reference states 'REFER SHEET 28 FOR TREE LIST,' but Sheet 28 contains Construction Details 7 (storm drain infrastructure). Tree List is located on Sheet 32. Correct reference to Sheet 32.",
+          "citation": "Reviewer Convention",
+          "sourceId": "4:ZLU-4.28",
+          "confidence": 1,
+          "runComments": [
+            {
+              "runNum": 3,
+              "status": "fail",
+              "comment": "Sheet 30 contains a cross-reference note stating 'REFER SHEET 28 FOR TREE LIST,' but Sheet 28 contains Construction Details 7 (storm drain manholes and catch basins). The Tree List is located on Sheet 32. Incorrect sheet number must be corrected to reference Sheet 32."
+            }
+          ]
+        },
+        {
+          "text": "Texas 811 'Call Before You Dig' utility notification logo appears on both Sheet 3 (General Notes) and Sheet 9 (Site Plan). Remove from secondary location to comply with single-placement convention.",
+          "citation": "Reviewer Convention",
+          "sourceId": "4:ZLU-4.33",
+          "confidence": 1,
+          "runComments": [
+            {
+              "runNum": 1,
+              "status": "fail",
+              "comment": "The Texas 811 'Call Before You Dig' utility notification logo appears on both Sheet 3 (General Notes) and Sheet 9 (Site Plan). Per ZLU-4.33, this logo should appear once only on the most appropriate primary reference sheet. Remove the logo from one of these sheets to comply."
+            }
+          ]
+        },
+        {
+          "text": "Sheet 23 contains identical fire hydrant installation notes appearing in both Block 7 and Block 9. Consolidate into single authoritative instance and delete duplicate entries.",
+          "citation": "Reviewer Convention",
+          "sourceId": "4:ZLU-4.31",
+          "confidence": 1,
+          "runComments": [
+            {
+              "runNum": 3,
+              "status": "fail",
+              "comment": "Sheet 23 contains duplicate fire hydrant installation notes appearing in both Block 7 and Block 9, with identical content. Duplicate construction details must be consolidated into a single authoritative instance and removed from secondary locations."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "headline": "Austin Water utility documentation incomplete and potentially non-compliant",
+      "summary": "Construction details sheets require verification of proper departmental segregation, and meter notice fields on Sheet 18 need completion per Austin Water standards.",
+      "sheets": [
+        18,
+        23,
+        24,
+        25,
+        26,
+        27
+      ],
+      "applicableArea": "Utilities & Infrastructure",
+      "severity": 2,
+      "confidence": 1,
+      "crossDep": "Austin Water Department — verify standard segregation and meter notice requirements",
+      "attn": "Sheets 23-27 require visual inspection to confirm Austin Water standard segregation; Sheet 18 Meter Notice Address field must be completed",
+      "details": [
+        {
+          "text": "Sheets 23-27 contain construction details for Austin Water utility infrastructure (water, wastewater, fire service). Verify that Austin Water standard detail drawings appear on dedicated AW sheets only and are not mixed with other departments' standards (e.g., DPD) per UCM 2.5.1.E.20.",
+          "citation": "UCM 2.5.1.E.20",
+          "sourceId": "4:ZLU-4.32",
+          "confidence": 1,
+          "runComments": [
+            {
+              "runNum": 1,
+              "status": "nv",
+              "comment": "Sheets 23-27 contain construction details for Austin Water utility infrastructure (water, wastewater, fire service). The requirement under UCM 2.5.1.E.20 states that Austin Water standard detail drawings must appear on dedicated AW detail sheets and not be mixed with details from other departments. Available documentation does not provide sufficient detail to confirm whether these sheets contain only AW utility standards or if they mix AW standards with non-AW department standards (e.g., DPD or other city departments). Visual inspection of the actual sheets is required to verify compliance."
+            }
+          ]
+        },
+        {
+          "text": "Austin Water General Notes sheet (Sheet 18) Meter Notice Potable Meter(s) section has blank Address fields for both 6\" Combination Potable Domestic & Fire meter and 3/4\" Irrigation meter. Complete all required fields per current Austin Water standards.",
+          "citation": "UCM 2.5.1.E.22",
+          "sourceId": "4:ZLU-4.61",
+          "confidence": 1,
+          "runComments": [
+            {
+              "runNum": 2,
+              "status": "fail",
+              "comment": "The Austin Water General Notes sheet contains required fields that are left blank. Specifically, the Address field in the Meter Notice Potable Meter(s) section is blank for both the 6\" Combination Potable Domestic & Fire meter and the 3/4\" Irrigation meter. Complete all required fields in the Meter Notice section per current Austin Water standards."
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
