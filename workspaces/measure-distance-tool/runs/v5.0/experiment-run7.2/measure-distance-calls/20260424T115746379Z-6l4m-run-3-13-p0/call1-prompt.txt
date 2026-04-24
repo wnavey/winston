@@ -1,0 +1,39 @@
+You are analyzing an engineering site plan drawing. Locate these two objects on the image and return their positions.
+
+## Symbol Reference
+The following legend images show the symbols relevant to the objects you are looking for. Use them to visually match the correct features on the main drawing.
+- Image 2: Legend from sheet 34 — "Drawing and photograph of the critical root zone impact for tree 4034. Shows the location of existing trees to be preserved, proposed building, proposed transformer, proposed sidewalk, retaining wall, and proposed curb."
+- Image 3: Legend from sheet 22 — "City of Austin standard detail 433S-2 for Type II Driveway. It includes a table for allowable grades and general notes for driveway construction."
+- Image 4: Legend from sheet 34 — "Drawing of the critical root zone impact for tree 4038H. Shows the location of existing trees to be preserved, proposed driveway, existing pavement to be removed, proposed building, proposed sidewalk, and proposed transformer."
+- Image 5: Legend from sheet 22 — "City of Austin standard detail 710S-6C for Furnishing Location in 12' Wide or Less Sidewalks - Bicycle Rack Detail. It shows linear and parallel rack installation requirements."
+- Image 6: Legend from sheet 22 — "City of Austin standard detail 439S-1 for Parking Lot Bumper Curb. It shows plan, longitudinal section, and cross-section views of a concrete bumper curb."
+
+## Objects to Locate
+
+Object A: transformer pad in top-left area near site entry
+Object B: nearest edge of the parking area/driveway
+
+## Instructions
+
+1. Find each object on the drawing
+2. Return a bounding box for each object (normalized 0-1000 coordinates relative to the image)
+3. Return the point on each object's boundary that is nearest to the other object
+4. Rate your confidence (0.0 to 1.0) for each localization
+
+Return your response as JSON with this exact schema:
+{
+  "objectA": {
+    "found": true/false,
+    "bbox": [y0, x0, y1, x1],
+    "nearestPoint": [y, x],
+    "confidence": 0.0-1.0,
+    "description": "what you identified as this object"
+  },
+  "objectB": {
+    "found": true/false,
+    "bbox": [y0, x0, y1, x1],
+    "nearestPoint": [y, x],
+    "confidence": 0.0-1.0,
+    "description": "what you identified as this object"
+  }
+}
