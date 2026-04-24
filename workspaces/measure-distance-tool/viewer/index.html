@@ -777,6 +777,39 @@ async function renderStepLegend(c) {
     html += `<div class="warn-note">No legend context was available for this measurement. The model had to interpret scale markings and symbols without legend reference.</div>`;
   }
 
+  // Legend search queries
+  const searches = c.legendSearches || [];
+  const summary = c.legendSummary || {};
+  if (searches.length) {
+    html += `<div class="section"><h3>Legend Search Queries (${searches.length})</h3>
+      <table style="width:100%;border-collapse:collapse;font-size:12px;">
+        <thead>
+          <tr style="border-bottom:2px solid var(--border);text-align:left;">
+            <th style="padding:4px 8px;color:var(--muted);font-size:10px;text-transform:uppercase;">Query</th>
+            <th style="padding:4px 8px;color:var(--muted);font-size:10px;text-transform:uppercase;">Results</th>
+            <th style="padding:4px 8px;color:var(--muted);font-size:10px;text-transform:uppercase;">Legend</th>
+            <th style="padding:4px 8px;color:var(--muted);font-size:10px;text-transform:uppercase;">Category</th>
+            <th style="padding:4px 8px;color:var(--muted);font-size:10px;text-transform:uppercase;">Similarity</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${searches.map(s => `
+            <tr style="border-bottom:1px solid var(--border);">
+              <td style="padding:4px 8px;max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeHtml(s.query)}">${escapeHtml(s.query)}</td>
+              <td style="padding:4px 8px;font-family:var(--mono);text-align:center;">${s.totalResults ?? '—'}</td>
+              <td style="padding:4px 8px;font-family:var(--mono);text-align:center;${s.legendResults > 0 ? 'color:var(--good);font-weight:600' : ''}">${s.legendResults ?? '—'}</td>
+              <td style="padding:4px 8px;">${escapeHtml(s.topCategory || s.error || '—')}</td>
+              <td style="padding:4px 8px;font-family:var(--mono);">${s.topSimilarity != null ? s.topSimilarity.toFixed(3) : '—'}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+      ${summary.imagesFound != null ? `<div style="margin-top:8px;font-size:12px;color:var(--muted);">
+        ${summary.queriedDescriptions} queries → ${summary.imagesFound} legend image${summary.imagesFound !== 1 ? 's' : ''} found
+      </div>` : ''}
+    </div>`;
+  }
+
   // Legend images (Phase B — cropped from PDF at 300 DPI)
   const legendImages = c.legendImagePaths || [];
   if (legendImages.length) {

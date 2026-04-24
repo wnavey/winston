@@ -122,6 +122,35 @@ def _case_from_call_dir(call_dir: Path | None, case_id: str,
         out['legendPath'] = relpath(legend) if legend.exists() else None
         out['eventsPath'] = relpath(events) if events.exists() else None
 
+        # Extract legend search queries from events.jsonl
+        if events.exists():
+            legend_searches = []
+            legend_summary = None
+            for line in events.read_text().splitlines():
+                try:
+                    ev = json.loads(line)
+                except Exception:
+                    continue
+                if ev.get('event') == 'measure-distance:legend-search':
+                    legend_searches.append({
+                        'query': ev.get('objectDescription', ''),
+                        'totalResults': ev.get('totalResults'),
+                        'legendResults': ev.get('legendResults'),
+                        'topCategory': ev.get('topCategory'),
+                        'topSimilarity': ev.get('topSimilarity'),
+                        'error': ev.get('error'),
+                    })
+                elif ev.get('event') == 'measure-distance:legend-images':
+                    legend_summary = {
+                        'queriedDescriptions': ev.get('queriedDescriptions'),
+                        'imagesFound': ev.get('imagesFound'),
+                        'blocks': ev.get('blocks'),
+                    }
+            if legend_searches:
+                out['legendSearches'] = legend_searches
+            if legend_summary:
+                out['legendSummary'] = legend_summary
+
         # Detect two-call vs single-call artifact pattern.
         # Two-call: call1-cropped.jpg, call1-localization.json, call2-cropped.jpg, etc.
         # Single-call (legacy): cropped.jpg, localization.json, prompt.txt, etc.
