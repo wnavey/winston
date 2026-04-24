@@ -136,6 +136,7 @@ def _case_from_call_dir(call_dir: Path | None, case_id: str,
                     'promptPath': None,
                     'responsePath': None,
                     'localization': None,
+                    'legendImagePaths': [],
                 }
                 cropped = call_dir / f'{prefix}-cropped.jpg'
                 prompt = call_dir / f'{prefix}-prompt.txt'
@@ -145,6 +146,9 @@ def _case_from_call_dir(call_dir: Path | None, case_id: str,
                 step['promptPath'] = relpath(prompt) if prompt.exists() else None
                 step['responsePath'] = relpath(response) if response.exists() else None
                 step['localization'] = load_json(loc)
+                # Discover legend images: call1-legend-0.jpg, call1-legend-1.jpg, etc.
+                legend_imgs = sorted(call_dir.glob(f'{prefix}-legend-*.jpg'))
+                step['legendImagePaths'] = [relpath(p) for p in legend_imgs]
                 out[prefix] = step
 
             # The "final" localization used by compute-distance is whichever
@@ -158,6 +162,11 @@ def _case_from_call_dir(call_dir: Path | None, case_id: str,
                              or (out.get('call1') or {}).get('promptPath')
             out['responsePath'] = (out.get('call2') or {}).get('responsePath') \
                                or (out.get('call1') or {}).get('responsePath')
+            # Collect all legend images across both calls
+            out['legendImagePaths'] = (
+                (out.get('call1') or {}).get('legendImagePaths', []) +
+                (out.get('call2') or {}).get('legendImagePaths', [])
+            )
         else:
             out['twoCallMode'] = False
             cropped = call_dir / 'cropped.jpg'

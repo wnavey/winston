@@ -777,10 +777,28 @@ async function renderStepLegend(c) {
     html += `<div class="warn-note">No legend context was available for this measurement. The model had to interpret scale markings and symbols without legend reference.</div>`;
   }
 
+  // Legend images (Phase B — cropped from PDF at 300 DPI)
+  const legendImages = c.legendImagePaths || [];
+  if (legendImages.length) {
+    html += `<div class="section"><h3>Legend Images (${legendImages.length})</h3>
+      <div style="display:flex;flex-wrap:wrap;gap:12px;">
+        ${legendImages.map((p, i) => {
+          const label = p.includes('call1-') ? 'call 1' : p.includes('call2-') ? 'call 2' : '';
+          const idx = p.match(/legend-(\d+)/)?.[1] || i;
+          return `<div class="image-container" style="max-width:400px;">
+            <div class="label">legend ${idx}${label ? ' · ' + label : ''}</div>
+            <img src="../${escapeHtml(p)}" alt="legend crop ${i}" style="max-height:300px;" />
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  }
+
+  // Legend text content (fallback or supplementary)
   if (c.legendPath) {
     const content = await fetchFile(c.legendPath);
     if (content) {
-      html += `<div class="section"><h3>Legend Content</h3>
+      html += `<div class="section"><h3>Legend Text${legendImages.length ? ' (fallback/supplementary)' : ''}</h3>
         <pre class="code-block">${escapeHtml(content)}</pre>
       </div>`;
     }
