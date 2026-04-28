@@ -66,18 +66,31 @@ python3 variance.py <consolidated-findings.json> <out-dir> \
 
 The script depends only on the Python standard library.
 
+## Layout
+
+Per-review artifacts live in `<project>/<review-id>/`:
+
+```
+cc-variance-testing/
+├── README.md                       (this file)
+├── variance.py                     (the analyzer)
+└── 1700-S-Lamar/
+    └── 6ec3acdf-737b-47b2-8191-49b376ea3404/
+        ├── report.md               (hand-written analysis)
+        ├── variance-summary.md     (auto-generated summary)
+        ├── variance-per-ref.tsv
+        ├── variance-split-refs.tsv
+        └── variance-detection.tsv
+```
+
+When the runs=10 experiment lands, drop its outputs into a sibling
+`<review-id>/` under the same `1700-S-Lamar/` directory (or under a new
+project directory if it's run against a different submission).
+
 ## Smoke test: 1700 S. Lamar 3-run (2026-04-28)
 
-Files in this directory are the output of running `variance.py` against the
-`consolidated-findings.json` from the completeness-check review for
-1700 S. Lamar at `2026-04-28T17:29Z`.
-
-- **Review:** `6ec3acdf-737b-47b2-8191-49b376ea3404`
-- **Workflow run:** `8b6a8f2b-e387-4593-9abc-b219adfcdf6c`
-- **`runs` config:** 3
-- **Storage path:** `workflow-runs/completeness-check/23301a8a-4cdb-4751-ac0c-93b97f0f5c12/2026-04-28-172841/`
-
-Headline numbers (3 runs, 198 refs):
+See [`1700-S-Lamar/6ec3acdf-737b-47b2-8191-49b376ea3404/report.md`](1700-S-Lamar/6ec3acdf-737b-47b2-8191-49b376ea3404/report.md)
+for the full analysis. Headline numbers (3 runs, 198 refs):
 
 | Class | Count |
 |---|---:|
@@ -89,8 +102,6 @@ The 18 detection-variance refs are **all** in `cc-13` (Architecture
 Worksheet). `cc-13` also accounts for 11 of 25 split-verdict refs. That
 grouping is the obvious place to look first when running the higher-N
 experiment.
-
-See `variance-summary.md` for the full breakdown.
 
 ## Next: runs=10 experiment
 
