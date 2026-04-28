@@ -7,6 +7,10 @@
 **Runs config:** `runs=3` (cross-run majority voting)  
 **Run completed:** `2026-04-28 17:29 UTC`
 
+**Companion deep-dives:**
+- [`high-variance-items-analysis.md`](./high-variance-items-analysis.md) — top-10 split refs, per-run agent traces, hypotheses
+- [`gap-items-analysis.md`](./gap-items-analysis.md) — all 18 detection-variance refs, root-cause analysis (spoiler: it's run-2 checklist drift)
+
 ---
 
 ## Executive summary

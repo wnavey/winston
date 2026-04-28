@@ -72,12 +72,14 @@ Per-review artifacts live in `<project>/<review-id>/`:
 
 ```
 cc-variance-testing/
-├── README.md                       (this file)
-├── variance.py                     (the analyzer)
+├── README.md                              (this file)
+├── variance.py                            (the analyzer)
 └── 1700-S-Lamar/
     └── 6ec3acdf-737b-47b2-8191-49b376ea3404/
-        ├── report.md               (hand-written analysis)
-        ├── variance-summary.md     (auto-generated summary)
+        ├── report.md                      (overview analysis — variance classes, focus areas)
+        ├── high-variance-items-analysis.md (top-10 split refs, per-run trace deep-dive + hypotheses)
+        ├── gap-items-analysis.md          (all 18 detection-variance refs, per-run trace + root cause)
+        ├── variance-summary.md            (auto-generated summary)
         ├── variance-per-ref.tsv
         ├── variance-split-refs.tsv
         └── variance-detection.tsv
@@ -89,8 +91,12 @@ project directory if it's run against a different submission).
 
 ## Smoke test: 1700 S. Lamar 3-run (2026-04-28)
 
-See [`1700-S-Lamar/6ec3acdf-737b-47b2-8191-49b376ea3404/report.md`](1700-S-Lamar/6ec3acdf-737b-47b2-8191-49b376ea3404/report.md)
-for the full analysis. Headline numbers (3 runs, 198 refs):
+Three reports cover the smoke run from different angles:
+- [`report.md`](1700-S-Lamar/6ec3acdf-737b-47b2-8191-49b376ea3404/report.md) — overview, variance classes, focus areas
+- [`high-variance-items-analysis.md`](1700-S-Lamar/6ec3acdf-737b-47b2-8191-49b376ea3404/high-variance-items-analysis.md) — top-10 split refs deep-dived against agent traces
+- [`gap-items-analysis.md`](1700-S-Lamar/6ec3acdf-737b-47b2-8191-49b376ea3404/gap-items-analysis.md) — all 18 detection-variance refs and the root-cause hypothesis
+
+Headline numbers (3 runs, 198 refs):
 
 | Class | Count |
 |---|---:|
