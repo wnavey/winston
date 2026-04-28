@@ -94,7 +94,8 @@ project directory if it's run against a different submission).
 Three reports cover the smoke run from different angles:
 - [`report.md`](1700-S-Lamar/6ec3acdf-737b-47b2-8191-49b376ea3404/report.md) — overview, variance classes, focus areas
 - [`high-variance-items-analysis.md`](1700-S-Lamar/6ec3acdf-737b-47b2-8191-49b376ea3404/high-variance-items-analysis.md) — top-10 split refs deep-dived against agent traces
-- [`gap-items-analysis.md`](1700-S-Lamar/6ec3acdf-737b-47b2-8191-49b376ea3404/gap-items-analysis.md) — all 18 detection-variance refs and the root-cause hypothesis
+- [`gap-items-analysis.md`](1700-S-Lamar/6ec3acdf-737b-47b2-8191-49b376ea3404/gap-items-analysis.md) — all 18 detection-variance refs and per-item hypotheses
+- [`run-2-drift-root-cause.md`](1700-S-Lamar/6ec3acdf-737b-47b2-8191-49b376ea3404/run-2-drift-root-cause.md) — log-traced mechanism: post-compaction StructuredOutput overwrite
 
 Headline numbers (3 runs, 198 refs):
 

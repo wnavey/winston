@@ -2,6 +2,12 @@
 
 **Review:** `6ec3acdf-737b-47b2-8191-49b376ea3404` · 3-run completeness-check (`runs=3`) · checklist `v2.5-trimmed` · 2026-04-28T17:29Z
 
+> **Update (post-log-investigation):** This report originally hypothesized that run-2 was using "cached older-checklist knowledge from training data". The hypothesis turned out to be only partially right. After tracing the conductor logs ([`run-2-drift-root-cause.md`](./run-2-drift-root-cause.md)), the actual mechanism is:
+>
+> Run-2 successfully emitted the **correct 37-item v2.5 findings** in StructuredOutput call #2. A harness `Stop hook` then force-prompted it to emit again; context compaction kicked in mid-recovery; **post-compaction**, the model reconstructed findings (drawing in part on training-data knowledge of older AW checklists) and emitted a 45-item drifted payload as StructuredOutput call #3. The orchestrator persisted the *last* call as canonical, overwriting the correct one.
+>
+> The per-item hypotheses below remain accurate descriptions of *what* drifted; the section "Cross-cutting hypotheses" is superseded by the root-cause doc. Read the root-cause doc first if you want the mechanism.
+
 This report covers **all 18 items** with detection variance — i.e., refs where `runCount < totalRuns` (some run produced no finding for the ref). For every item, we pull the checklist text from `bureau/jurisdictions/austin/completeness-check/v2.5-trimmed/cc-13.md` (or note its absence), read the agent traces from the run(s) that *did* produce findings, and form hypotheses about why the other run(s) skipped it.
 
 ---
