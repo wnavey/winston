@@ -43,6 +43,7 @@ behind an experiment overlay during incubation — same model as
 | `sheetNum` | string | yes | Sheet number. String to tolerate `C4-1` etc. |
 | `question` | string | yes | The question to answer. Should reference visible features/labels — not abstract checklist text. |
 | `expectedAnswerType` | enum | no | One of `boolean`, `count`, `description`. Default `boolean`. Tells the model which structured field to populate; the response shape is the same either way. |
+| `cropMode` | enum/string | no | One of `drawing` *(default)*, `full-sheet`, or `block:<contentBlockId>`. Controls what region of the sheet gets sent to the model. See "Cropping strategy." |
 | `regionHint` | string | no | Optional natural-language hint for *where* on the drawing to look (e.g., "along the east property frontage"). **Treated as a hint, not a constraint** — see "Hallucination guardrails." |
 | `reasoning` | string | no | Agent's rationale for invoking the tool (for logs/eval, not used in the prompt). |
 | `applicable_checklist_items` | array | no | Same shape as `measure-distance` — for traceability and post-hoc analysis. |
@@ -117,15 +118,45 @@ Type-specific fields are optional and populated based on the question type.
 
 ### Phase 1 (single pass) — start simple
 
-1. Look up the **largest `category='drawing'` `content_block`** for the
-   target sheet (same query `measure-distance.findDrawingBlockBbox` already
-   uses). Render the PDF region to JPEG at ~150 DPI via PyMuPDF.
-2. One Gemini call: `(drawing crop, question)` → structured JSON.
-3. If no drawing block exists for the sheet, fall back to the full-sheet
-   JPEG (and flag that in `_meta`).
+Cropping is driven by `cropMode` (input field):
+
+| `cropMode` | Behavior |
+|---|---|
+| `drawing` *(default)* | Look up the **largest `category='drawing'` `content_block`** for the target sheet (same query `measure-distance.findDrawingBlockBbox` uses). Render the PDF region to JPEG at ~150 DPI via PyMuPDF. If no drawing block exists, auto-fall back to `full-sheet` and flag it in `_meta.cropFallback`. |
+| `full-sheet` | No crop — render the whole sheet at ~150 DPI and send that. Use when the answer might lie outside the drawing block (legends, schedules, title-block context) or when the agent has reason to think `drawing`-cropping would lose information. |
+| `block:<contentBlockId>` | Crop to a specific content block by ID — useful when the agent has already done block discovery (via `blocks.md` or `semantic-search-blocks`) and knows exactly which region matters. |
+
+`_meta` records the resolved `cropMode`, the bbox actually used, and any
+fallback that fired — so post-hoc analysis can ask "of `unanswerable`
+results, what fraction were `drawing`-cropped and might have succeeded
+on `full-sheet`?"
+
+#### Prompt-level gating
+
+The tool description, registered with `createScriptTool`, must steer the
+agent toward drawing-region questions and away from misuse:
+
+> Use this tool only for questions whose answer requires reasoning about
+> the drawing area of a sheet — lines, symbols, spatial relationships,
+> shapes. For legend/schedule/title-block lookups or general page text,
+> use the `vision` tool instead. Before calling, confirm the target sheet
+> has a `category=drawing` block (check `blocks.md` or a prior
+> `semantic-search-blocks` result). If the answer might depend on
+> non-drawing context (e.g., comparing a drawing symbol to a legend
+> entry), set `cropMode=full-sheet` or do a separate `vision` lookup
+> first.
 
 This is enough to answer most questions, and lets us measure the
 "crop-to-drawing-block" baseline before adding complexity.
+
+#### What we are *not* doing in Phase 1
+
+- **Auto-detecting `cropMode` from the question** (LLM routing): another
+  model call, more failure surface, hard to debug. Defer indefinitely.
+- **Auto-bundling the legend block with the drawing crop**: measure-distance
+  does this for object disambiguation, but for cc the agent can do a
+  separate `vision` lookup on the legend if needed. Revisit if fixture
+  results show legend context is consistently the bottleneck.
 
 ### Phase 2 (two pass) — refined crop
 
@@ -215,18 +246,30 @@ the motivating questions) to keep iteration fast — analogous to
 `el-md-exp` for measure-distance. TBD once we have a fixture set.
 
 ### Per-call artifact directory
-Same convention as measure-distance:
+
+Same convention as measure-distance — every tool invocation produces a
+self-contained directory on disk so calls can be replayed, audited, and
+visualized offline. **The exact image sent to Gemini is saved as a JPEG**
+so we can always inspect what the model actually saw.
+
 ```
 workspace/output/inspect-drawing-calls/<callId>/
-  metadata.json          # inputs, drawingBbox, timing, result
+  metadata.json          # inputs (incl. cropMode), resolved bbox, timing, result
   prompt.txt             # full Gemini prompt
-  cropped.jpg            # the image sent to Gemini
-  call1-prompt.txt        # (Phase 2+) per-pass artifacts
-  call1-cropped.jpg
+  cropped.jpg            # ★ the image sent to Gemini — exactly what it saw
+  response.txt           # raw Gemini response (Phase 1 — single pass)
+  call1-prompt.txt       # (Phase 2+) per-pass artifacts
+  call1-cropped.jpg      # ★ pass-1 image
   call1-response.txt
+  call2-cropped.jpg      # ★ pass-2 refined image
   call2-...
-  events.jsonl
+  events.jsonl           # per-step structured log
 ```
+
+That `cropped.jpg` is the same artifact measure-distance writes — it's
+what makes the debug viewer ("did Gemini see what we expected?")
+possible. The `_meta.cropMode` + `_meta.bbox` recorded in `metadata.json`
+let post-hoc analysis correlate crop choices with answer quality.
 
 Conductor already stamps `WORKFLOW_RUN_ID`, `RUN_LABEL`,
 `CHECKLIST_ITEM`, etc. into the env (conductor#117) — reuse for cost
