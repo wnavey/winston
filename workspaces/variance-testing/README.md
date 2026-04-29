@@ -101,6 +101,28 @@ Headline finding: detection variance was a deterministic harness bug, not
 model nondeterminism. See `run-2-drift-root-cause.md`. Tracked in beads
 `workspace-925`.
 
+### cc — 1700 S. Lamar runs=10 baseline (2026-04-28)
+
+[`cc/1700-S-Lamar/24f98e83-282e-48c4-bae2-767e454810a5/`](cc/1700-S-Lamar/24f98e83-282e-48c4-bae2-767e454810a5/)
+
+Same project + checklist version as the 3-run; bumped `runs=10` (no code
+changes) to estimate the cc-13 drift recurrence rate.
+
+10 runs, 185 refs:
+
+| Class | Count |
+|---|---:|
+| unanimous | 139 |
+| partial-detection | 0 |
+| split-verdict | 46 |
+
+**Drift did not recur.** 0 of 10 runs hit the cc-13 detection drift
+(vs 1 of 3 in the prior baseline). Compaction events: 0/130 tasks. The
+3-run drift was a low-probability event amplified by compaction, not a
+deterministic bug. Three of the 25 split-verdict refs from the 3-run
+flipped winning verdict at 10 runs, confirming run-2's prior drift had
+been distorting merged outputs.
+
 ### review — Valley View Townhomes 5-run el-md-exp (2026-04-28)
 
 [`review/Valley-View-Townhomes/3509b097-764e-4962-b023-8d8ae8fd7a4c/`](review/Valley-View-Townhomes/3509b097-764e-4962-b023-8d8ae8fd7a4c/)
