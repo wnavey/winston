@@ -319,6 +319,64 @@ distance rendering.
 
 ---
 
+## Phase 1 setup decisions
+
+Locked in before implementation starts:
+
+| Decision | Value |
+|---|---|
+| **Target project** | 1700 S. Lamar (already used in cc-audit + cc-variance-testing) |
+| **Fixture sourcing** | Manual port of failing cases from prior cc runs into `winston/workspaces/inspect-drawing-tool/replay/fixtures/` |
+| **Model** | `google/gemini-3.1-pro-preview` via Vercel AI Gateway (same as measure-distance) |
+| **Phase 1 DPI** | 150 (single pass) |
+| **JSON parse retry** | Reuse measure-distance's parse-and-retry pattern |
+
+### Scoring (Phase 1 — intentionally loose)
+
+Phase 1 is for *building intuition*, not hitting a hard accuracy bar.
+Two complementary signals, no locked-in metric:
+
+1. **Inter-run variance** with `runs=3` (or 5) on the same fixture set —
+   does the agent + tool give the same answer each time? High variance
+   means the tool is unstable; that's a louder signal than headline
+   accuracy.
+2. **Manual inspection per call** — for each invocation, look at:
+   - Was inspect-drawing the right tool to call here? (vs. `vision`,
+     `semantic-search-blocks`, or no tool)
+   - What `cropMode` / `expectedAnswerType` did the agent pick?
+   - What was the cropped image — did the model see what we expected?
+   - What did the prompt to Gemini look like?
+   - Did the structured output match what we'd grade as correct?
+
+The viewer is the workhorse for #2 — every call has a `cropped.jpg`,
+`prompt.txt`, `response.txt`, and `metadata.json` on disk, all rendered
+side-by-side. We iterate on the tool prompt and cropping logic from
+what we see, not from a single accuracy number.
+
+A sharper metric (exact-match for boolean/count, manual grade for
+description) can come later if we want to A/B against a baseline.
+
+### Bureau-side prep gotchas
+
+Two things measure-distance hit that we should not re-discover:
+
+- **`python: true` in `completeness-check/workflow.yaml`'s `resources:`**
+  — required so the script can shell out to PyMuPDF. Confirm and add if
+  missing in the bureau PR.
+- **Inline `buildGatewayProviderOptions`** at the top of `inspect-drawing.ts`
+  — don't import from conductor; bureau scripts run sandboxed without
+  conductor sources on the import path. Copy verbatim from
+  `measure-distance.ts:27`.
+
+### Prompt iteration is a Phase 1 deliverable
+
+Iterating on the Gemini system prompt against the first 2–3 fixtures is
+likely ~30% of Phase 1 effort, not script plumbing. Budget for it
+explicitly. The prompt lives next to the script (e.g., `inspect-drawing-prompt.md`)
+and is loaded at runtime — no rebuild required to iterate.
+
+---
+
 ## Phasing
 
 | Phase | What lands | Where |
@@ -336,23 +394,27 @@ Each post-Phase-0 phase is its own PR (or PR pair: bureau + winston).
 ## Open questions
 
 1. **Scope of first experiment** — all 13 cc groupings or a trimmed subset?
-   Decide after we capture the fixture set (Phase 1 prep).
-2. **DPI for Phase 1** — `measure-distance` learned that 120 DPI for the
-   coarse pass is sometimes too low to read fine line work. Inspect-drawing
-   has the same risk. Default to 150 DPI for the single-pass MVP and
-   re-evaluate from fixture results.
-3. **Prompt template versioning** — same `prompts/` directory pattern, with
-   a top-level `inspect-drawing.md` system prompt and per-question hints
-   merged in? Or one big template with branching?
-4. **Concurrent calls** — does the cc agent ever make N parallel
+   Decide after we capture the fixture set; trimming likely once we see
+   which groupings the motivating questions live under.
+2. **Concurrent calls** — does the cc agent ever make N parallel
    inspect-drawing calls? If so, do we batch (`questionPairs`-style) like
    measure-distance does for object pairs? Defer until usage data shows it
    matters.
-5. **Reference-image retrieval (Phase 3)** — manually curated only, or eventually
+3. **Reference-image retrieval (Phase 3)** — manually curated only, or eventually
    auto-retrieved via embedding search over a labeled corpus? Curated only
    for v1.
-6. **Eval ground truth** — for fixtures, do we hand-label all expected
-   answers, or seed from prior reviewer comments? Hybrid likely.
+4. **Sharper eval methodology** — Phase 1 uses inter-run variance + manual
+   inspection. If we want to A/B against a baseline later, lock in
+   exact-match (boolean/count) + manual grade (description). Defer.
+
+### Resolved
+
+- *Target project for Phase 1*: 1700 S. Lamar.
+- *Fixture sourcing*: manual port of failing cases from prior cc runs.
+- *Model*: `google/gemini-3.1-pro-preview` (same as measure-distance).
+- *Phase 1 DPI*: 150 (single pass).
+- *Prompt iteration*: budget ~30% of Phase 1 for it; loaded at runtime so
+  no rebuild needed to iterate.
 
 ---
 
