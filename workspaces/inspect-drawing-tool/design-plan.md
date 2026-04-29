@@ -42,28 +42,47 @@ behind an experiment overlay during incubation — same model as
 | `documentId` | string | yes | Plan-set ID (same as `vision` / `measure-distance`). |
 | `sheetNum` | string | yes | Sheet number. String to tolerate `C4-1` etc. |
 | `question` | string | yes | The question to answer. Should reference visible features/labels — not abstract checklist text. |
+| `expectedAnswerType` | enum | no | One of `boolean`, `count`, `description`. Default `boolean`. Tells the model which structured field to populate; the response shape is the same either way. |
 | `regionHint` | string | no | Optional natural-language hint for *where* on the drawing to look (e.g., "along the east property frontage"). **Treated as a hint, not a constraint** — see "Hallucination guardrails." |
 | `reasoning` | string | no | Agent's rationale for invoking the tool (for logs/eval, not used in the prompt). |
 | `applicable_checklist_items` | array | no | Same shape as `measure-distance` — for traceability and post-hoc analysis. |
 
+`expectedAnswerType` exists so agents can branch reliably:
+- `boolean` (default): "Are flow arrows shown?" → populates `classification`.
+- `count`: "How many transformers?" → populates `count`.
+- `description`: "What style of fence is shown?" → free-form `answerText` only.
+
+Measurement-style questions ("what is the diameter of the pad?") are
+**out of scope for v1** but not architecturally precluded — they currently
+belong to `measure-distance`. A future revision could either add a
+`measurement` answer type here or have inspect-drawing delegate to
+measure-distance internally. Don't design for that now; keep the schema
+forward-compatible by leaving room for new `expectedAnswerType` values.
+
 ### Output (JSON written to `outputPath`)
+
+Universal shape — same response keys regardless of `expectedAnswerType`.
+Type-specific fields are optional and populated based on the question type.
 
 ```jsonc
 {
-  "answer": "yes" | "no" | "partial" | "unclear",
-  "answerText": "Free-form 1-3 sentence answer for the agent to read.",
-  "confidence": 0.0,                      // 0.0–1.0 from the model
+  "answerText": "1-3 sentence human-readable answer. Always populated.",
+  "classification": "yes" | "no" | "partial",   // populated iff expectedAnswerType=boolean
+  "count": 3,                                   // populated iff expectedAnswerType=count
+  "unanswerable": false,                        // type-agnostic 'I can't tell'
+  "confidence": 0.0,                            // 0.0–1.0 from the model
   "evidence": [
     {
-      "bbox": [y0, x0, y1, x1],          // Gemini 0–1000 normalized, drawing-relative
-      "bboxAbsolute": { "x0": 0.31, ... }, // 0–1 page-relative, computed in TS
+      "bbox": [y0, x0, y1, x1],                 // Gemini 0–1000 normalized, drawing-relative
+      "bboxAbsolute": { "x0": 0.31, ... },      // 0–1 page-relative, computed in TS
       "description": "Direction arrow on 8\" SS line near MH-3"
     }
   ],
   "reasoning": "Why the model concluded what it concluded.",
-  "regionHintHonored": true | false,      // did the model crop where the hint suggested?
+  "regionHintHonored": true | false,            // did the model crop where the hint suggested?
   "_meta": {
     "callId": "...",
+    "expectedAnswerType": "boolean",
     "drawingBbox": { ... },
     "passes": [ /* one entry per Gemini call */ ],
     "model": "google/gemini-3.1-pro-preview"
@@ -71,10 +90,26 @@ behind an experiment overlay during incubation — same model as
 }
 ```
 
-`answer` is a closed enum so the calling agent can branch reliably. `partial`
-covers the wastewater case where some segments have arrows and others don't.
-`unclear` is a *first-class* answer — the model is encouraged to use it
-rather than guess.
+**Why this shape:**
+- `answerText` is the universal fallback — always populated, always
+  human-readable. Description-type questions live entirely here.
+- `classification` (boolean) and `count` (count) are the typed channels
+  agents branch on for structured downstream logic. `partial` covers the
+  wastewater case where some segments have arrows and others don't.
+- `unanswerable: true` is the **type-agnostic hallucination guardrail** —
+  replaces overloading "unclear" into the boolean enum. When `true`, the
+  typed fields (`classification` / `count`) are null and `answerText`
+  explains what's missing.
+- `evidence` is always an array (possibly empty). For count questions,
+  `count` and `evidence.length` should agree — disagreement is a tool-side
+  validation error, downgrade to `unanswerable`.
+
+**Validation rules enforced in TS before returning:**
+- If `expectedAnswerType=boolean` and `classification ∈ {yes, partial}` but
+  `evidence` is empty → set `unanswerable=true`, null out `classification`.
+- If `expectedAnswerType=count` and `count > 0` but `evidence.length !==
+  count` → set `unanswerable=true`, null out `count`.
+- If `unanswerable=true` then `classification` and `count` must be null.
 
 ---
 
@@ -130,19 +165,23 @@ snowball into a confident wrong answer. Concrete defenses:
    > region and answer based on what you actually see. Set
    > `regionHintHonored=false` if you had to relocate."
 
-2. **`unclear` is a valid answer.** The prompt explicitly authorizes it
-   ("If you cannot tell with high confidence, answer `unclear` and explain
-   what's missing"). Mirrors the `measure-distance` lesson where the agent
-   was nudged to *measure before falling back to `not-verifiable`* — here
-   we want the *opposite* nudge: prefer `unclear` to hallucinated `yes`.
+2. **`unanswerable=true` is a valid answer.** The prompt explicitly
+   authorizes it ("If you cannot tell with high confidence, set
+   `unanswerable=true` and explain what's missing in `answerText`").
+   Mirrors the `measure-distance` lesson where the agent was nudged to
+   *measure before falling back to `not-verifiable`* — here we want the
+   *opposite* nudge: prefer `unanswerable` to a hallucinated `yes` /
+   inflated count.
 
-3. **Every positive claim must have a bbox.** If `answer ∈ {yes, partial}`
-   and `evidence` is empty, treat as a tool-side error and downgrade to
-   `unclear`.
+3. **Every positive claim must have a bbox.** Enforced in the TS
+   validation rules above (boolean `yes/partial` with empty evidence,
+   or `count > 0` with mismatched evidence length, both downgrade to
+   `unanswerable`).
 
-4. **Two-pass divergence check (Phase 2).** If pass 1 says `yes` and pass 2
-   says `no` (or vice versa), bubble up `unclear` with both passes in
-   `_meta.passes`. Don't silently take pass 2.
+4. **Two-pass divergence check (Phase 2).** If pass 1 and pass 2 disagree
+   on `classification` / `count` (beyond a small tolerance for counts),
+   bubble up `unanswerable=true` with both passes in `_meta.passes`.
+   Don't silently take pass 2.
 
 ---
 

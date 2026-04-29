@@ -69,16 +69,25 @@ improve recall here.
 The two examples above span several question types. The tool must handle all
 of them without a different code path per type:
 
-| Type | Example | Expected answer shape |
-|---|---|---|
-| **Presence (binary)** | "Is a north arrow shown on the survey sheet?" | yes/no + bbox |
-| **Spatial-relationship** | "Are flow arrows *on* the wastewater line (not just nearby)?" | yes/partial/no + per-instance evidence bboxes |
-| **Count** | "How many fire hydrants are shown within the project boundary?" | integer + bbox per item |
-| **Subtle-pattern recognition** | "Are adjacent driveways depicted along the street frontages?" | yes/partial/no + bbox per frontage |
-| **Symbol-vs-legend match** | "Does the symbol used for `existing tree` appear anywhere on the drawing?" | yes/no + bbox of first match |
+| Type | Example | `expectedAnswerType` | Populates |
+|---|---|---|---|
+| **Presence (binary)** | "Is a north arrow shown on the survey sheet?" | `boolean` | `classification: yes/no` + bbox |
+| **Spatial-relationship** | "Are flow arrows *on* the wastewater line (not just nearby)?" | `boolean` | `classification: yes/partial/no` + per-instance evidence bboxes |
+| **Count** | "How many fire hydrants are shown within the project boundary?" | `count` | `count: integer` + one bbox per item (length must match) |
+| **Subtle-pattern recognition** | "Are adjacent driveways depicted along the street frontages?" | `boolean` | `classification: yes/partial/no` + bbox per frontage |
+| **Symbol-vs-legend match** | "Does the symbol used for `existing tree` appear anywhere on the drawing?" | `boolean` | `classification: yes/no` + bbox of first match |
+| **Description (free-form)** | "What style of perimeter fence is shown along the north property line?" | `description` | `answerText` only (no typed field) |
+
+For any type, the model can return `unanswerable: true` instead — that's
+the type-agnostic guardrail when it can't tell with high confidence.
 
 These all reduce to: *"Look at this drawing region, answer this question,
 ground every claim in a bbox."*
+
+Out of scope for v1 — **measurement** ("what is the diameter of the
+transformer pad?"). Routes to `measure-distance` today. Could become a
+fourth `expectedAnswerType` later, or inspect-drawing could delegate
+internally — undecided.
 
 ---
 
