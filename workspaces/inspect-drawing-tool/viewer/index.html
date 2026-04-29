@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>inspect-drawing debugger</title>
+<style>
+  :root {
+    --bg: #fafafa;
+    --panel: #fff;
+    --border: #e3e3e3;
+    --text: #1f2328;
+    --muted: #6b7280;
+    --accent: #2e7d32;
+    --accent-bg: rgba(46, 125, 50, 0.12);
+    --bad: #c0392b;
+    --warn: #d68910;
+    --good: #1e8449;
+    --blue: #3b82f6;
+    --blue-bg: #eff6ff;
+    --purple: #9333ea;
+    --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  html, body { height: 100%; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: var(--text); background: var(--bg); }
+  body { display: flex; height: 100vh; overflow: hidden; }
+
+  #run-tree { width: 240px; flex: 0 0 240px; background: var(--panel); border-right: 1px solid var(--border); overflow-y: auto; padding: 10px 0; font-size: 12px; }
+  #run-tree h1 { font-size: 11px; font-weight: 600; color: var(--muted); margin: 0 12px 8px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .run-group { margin-bottom: 4px; }
+  .run-head { padding: 6px 12px; cursor: pointer; font-weight: 600; display: flex; gap: 4px; user-select: none; }
+  .run-head:hover { background: #f3f4f6; }
+  .run-head .arrow { font-size: 10px; color: var(--muted); width: 12px; }
+  .run-head .tag { font-size: 9px; color: var(--blue); margin-left: auto; }
+  .run-cases { display: none; }
+  .run-cases.open { display: block; }
+  .run-cases li { list-style: none; padding: 5px 8px 5px 22px; cursor: pointer; font-family: var(--mono); font-size: 11px; line-height: 1.3; border-left: 3px solid transparent; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .run-cases li:hover { background: #f3f4f6; }
+  .run-cases li.active { background: var(--accent-bg); border-left-color: var(--accent); }
+  .pill { display: inline-block; padding: 1px 5px; border-radius: 8px; font-size: 9px; font-weight: 600; margin-left: 4px; vertical-align: middle; }
+  .pill.good { background: #e7f5ea; color: var(--good); }
+  .pill.bad { background: #fdecea; color: var(--bad); }
+  .pill.warn { background: #fdf3e0; color: var(--warn); }
+  .pill.muted { background: #f3f4f6; color: var(--muted); }
+
+  #main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  #toolbar { padding: 10px 16px; border-bottom: 1px solid var(--border); background: var(--panel); display: flex; align-items: baseline; gap: 16px; font-size: 12px; }
+  #toolbar #case-id { font-family: var(--mono); font-size: 13px; font-weight: 600; }
+  #toolbar #case-meta { color: var(--muted); }
+
+  #content { flex: 1; overflow: hidden; display: flex; }
+  #left-col { flex: 1; min-width: 0; overflow-y: auto; padding: 14px 18px; border-right: 1px solid var(--border); background: var(--panel); }
+  #right-col { flex: 1; min-width: 0; overflow-y: auto; padding: 14px 18px; background: var(--panel); }
+
+  .field-row { margin-bottom: 12px; }
+  .field-label { font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+  .field-val { font-size: 13px; line-height: 1.45; }
+  .field-val.mono { font-family: var(--mono); font-size: 12px; }
+  .question { font-size: 15px; line-height: 1.5; padding: 10px 14px; background: var(--blue-bg); border-left: 3px solid var(--blue); border-radius: 4px; margin-bottom: 14px; }
+
+  .img-container { position: relative; display: inline-block; max-width: 100%; }
+  .img-container img { display: block; max-width: 100%; height: auto; border: 1px solid var(--border); }
+  .bbox-overlay { position: absolute; pointer-events: none; }
+  .bbox-rect { position: absolute; border: 2px solid var(--accent); background: rgba(46, 125, 50, 0.14); }
+  .bbox-label { position: absolute; top: 0; left: 0; transform: translateY(-100%); background: var(--accent); color: white; font-family: var(--mono); font-size: 10px; padding: 1px 4px; white-space: nowrap; }
+
+  .result-row { display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; margin-bottom: 12px; }
+  .result-pill { display: inline-flex; align-items: baseline; gap: 6px; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; }
+  .result-pill.classification-yes { background: #e7f5ea; color: var(--good); }
+  .result-pill.classification-no { background: #fdecea; color: var(--bad); }
+  .result-pill.classification-partial { background: #fdf3e0; color: var(--warn); }
+  .result-pill.unanswerable { background: #f3f4f6; color: var(--muted); }
+  .result-pill.count { background: var(--blue-bg); color: var(--blue); }
+  .result-pill.confidence { background: #faf5ff; color: var(--purple); }
+
+  .text-block { font-family: var(--mono); font-size: 11.5px; line-height: 1.5; white-space: pre-wrap; padding: 10px 14px; background: #f9fafb; border: 1px solid var(--border); border-radius: 4px; max-height: 360px; overflow: auto; }
+  .text-block.compact { max-height: 180px; }
+
+  .tab-bar { display: flex; gap: 0; border-bottom: 1px solid var(--border); margin-bottom: 8px; }
+  .tab { padding: 6px 12px; cursor: pointer; font-size: 12px; color: var(--muted); border-bottom: 2px solid transparent; }
+  .tab.active { color: var(--text); border-bottom-color: var(--accent); font-weight: 600; }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  .placeholder { color: var(--muted); padding: 40px; text-align: center; font-size: 13px; }
+  details { margin: 8px 0; font-size: 12px; }
+  details summary { cursor: pointer; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<aside id="run-tree">
+  <h1>Runs</h1>
+  <div id="run-list"></div>
+</aside>
+
+<main id="main">
+  <div id="toolbar">
+    <span id="case-id">—</span>
+    <span id="case-meta"></span>
+  </div>
+  <div id="content">
+    <div id="left-col">
+      <div id="case-content" class="placeholder">Pick a case from the left.</div>
+    </div>
+    <div id="right-col">
+      <div id="image-content" class="placeholder">No image.</div>
+    </div>
+  </div>
+</main>
+
+<script>
+const STATE = { manifest: null, current: null };
+
+async function init() {
+  const res = await fetch('manifest.json', { cache: 'no-cache' });
+  STATE.manifest = await res.json();
+  renderRunTree();
+  // Auto-pick first case
+  for (const run of STATE.manifest.runs ?? []) {
+    if (run.cases?.length) { selectCase(run.id, run.cases[0].id); break; }
+  }
+}
+
+function renderRunTree() {
+  const root = document.getElementById('run-list');
+  root.innerHTML = '';
+  for (const run of (STATE.manifest.runs ?? [])) {
+    const group = document.createElement('div');
+    group.className = 'run-group';
+    const head = document.createElement('div');
+    head.className = 'run-head';
+    head.innerHTML = `<span class="arrow">▾</span><span>${run.id}</span><span class="tag">${run.source}</span>`;
+    const ul = document.createElement('ul');
+    ul.className = 'run-cases open';
+    for (const c of run.cases) {
+      const li = document.createElement('li');
+      const pillClass = outcomePillClass(c.outcome);
+      li.innerHTML = `<span title="${c.id}">${c.id}</span><span class="pill ${pillClass}">${c.outcome}</span>`;
+      li.dataset.runId = run.id;
+      li.dataset.caseId = c.id;
+      li.onclick = () => selectCase(run.id, c.id);
+      ul.appendChild(li);
+    }
+    head.onclick = () => ul.classList.toggle('open');
+    group.appendChild(head);
+    group.appendChild(ul);
+    root.appendChild(group);
+  }
+}
+
+function outcomePillClass(outcome) {
+  if (outcome === 'answered') return 'good';
+  if (outcome === 'unanswerable') return 'warn';
+  if (outcome === 'no_calldir') return 'muted';
+  return 'bad';
+}
+
+function selectCase(runId, caseId) {
+  const run = STATE.manifest.runs.find(r => r.id === runId);
+  if (!run) return;
+  const c = run.cases.find(x => x.id === caseId);
+  if (!c) return;
+  STATE.current = { runId, caseId, case: c };
+  document.querySelectorAll('#run-list li').forEach(li => {
+    li.classList.toggle('active', li.dataset.runId === runId && li.dataset.caseId === caseId);
+  });
+  renderCase(c, run);
+}
+
+function renderCase(c, run) {
+  document.getElementById('case-id').textContent = `${run.id} / ${c.id}`;
+  const inputs = c.inputs ?? {};
+  const meta = c.metadata ?? {};
+  const result = c.result ?? {};
+  const cropResolution = meta.cropResolution ?? {};
+  document.getElementById('case-meta').textContent =
+    `sheet ${inputs.sheetNum ?? '?'} • ${inputs.expectedAnswerType ?? 'boolean'} • cropMode=${inputs.cropMode ?? 'drawing'}` +
+    (cropResolution.fallbackFromDrawing ? ' (fallback→full-sheet)' : '');
+
+  const left = document.getElementById('case-content');
+  left.classList.remove('placeholder');
+  left.innerHTML = `
+    <div class="question">${escapeHtml(inputs.question ?? '(no question)')}</div>
+
+    ${renderResult(result)}
+
+    <div class="field-row">
+      <div class="field-label">Inputs</div>
+      <div class="field-val mono">documentId: ${escapeHtml(inputs.documentId ?? '')}<br>sheetNum: ${escapeHtml(String(inputs.sheetNum ?? ''))}<br>expectedAnswerType: ${escapeHtml(inputs.expectedAnswerType ?? 'boolean')}<br>cropMode: ${escapeHtml(inputs.cropMode ?? 'drawing')}${inputs.regionHint ? `<br>regionHint: ${escapeHtml(inputs.regionHint)}` : ''}</div>
+    </div>
+
+    ${result.reasoning ? `<div class="field-row"><div class="field-label">Reasoning</div><div class="field-val">${escapeHtml(result.reasoning)}</div></div>` : ''}
+
+    ${renderEvidenceList(result.evidence ?? [])}
+
+    ${renderTabs(c)}
+  `;
+  bindTabs();
+
+  renderImage(c);
+}
+
+function renderResult(result) {
+  if (!result || Object.keys(result).length === 0) {
+    return `<div class="result-row"><span class="result-pill unanswerable">no result yet</span></div>`;
+  }
+  const pills = [];
+  if (result.unanswerable) {
+    pills.push(`<span class="result-pill unanswerable">unanswerable</span>`);
+  } else {
+    if (result.classification) {
+      pills.push(`<span class="result-pill classification-${result.classification}">${result.classification}</span>`);
+    }
+    if (typeof result.count === 'number') {
+      pills.push(`<span class="result-pill count">count = ${result.count}</span>`);
+    }
+  }
+  if (typeof result.confidence === 'number') {
+    pills.push(`<span class="result-pill confidence">conf ${result.confidence.toFixed(2)}</span>`);
+  }
+  return `
+    <div class="result-row">${pills.join('')}</div>
+    ${result.answerText ? `<div class="field-row"><div class="field-label">Answer</div><div class="field-val">${escapeHtml(result.answerText)}</div></div>` : ''}
+  `;
+}
+
+function renderEvidenceList(evidence) {
+  if (!evidence?.length) return '';
+  const rows = evidence.map((e, i) => {
+    const bbox = (e.bbox ?? []).join(', ');
+    return `<li>#${i + 1} <span class="mono" style="color: var(--muted); font-size: 11px;">[${bbox}]</span> ${escapeHtml(e.description ?? '')}</li>`;
+  }).join('');
+  return `
+    <div class="field-row">
+      <div class="field-label">Evidence (${evidence.length})</div>
+      <ul style="font-size: 12px; padding-left: 20px; margin-top: 4px;">${rows}</ul>
+    </div>
+  `;
+}
+
+function renderTabs(c) {
+  return `
+    <div class="tab-bar">
+      <div class="tab active" data-tab="prompt">Prompt</div>
+      <div class="tab" data-tab="response">Raw response</div>
+      <div class="tab" data-tab="meta">Metadata</div>
+    </div>
+    <div class="tab-content active" data-content="prompt">${c.promptPath ? `<div id="prompt-block" class="text-block">loading…</div>` : `<div class="placeholder">No prompt.</div>`}</div>
+    <div class="tab-content" data-content="response">${c.responsePath ? `<div id="response-block" class="text-block">loading…</div>` : `<div class="placeholder">No response.</div>`}</div>
+    <div class="tab-content" data-content="meta"><div class="text-block">${escapeHtml(JSON.stringify(c.metadata ?? {}, null, 2))}</div></div>
+  `;
+}
+
+function bindTabs() {
+  const tabs = document.querySelectorAll('.tab');
+  const contents = document.querySelectorAll('.tab-content');
+  tabs.forEach(t => {
+    t.onclick = () => {
+      tabs.forEach(x => x.classList.remove('active'));
+      contents.forEach(x => x.classList.remove('active'));
+      t.classList.add('active');
+      document.querySelector(`.tab-content[data-content="${t.dataset.tab}"]`).classList.add('active');
+    };
+  });
+
+  // Lazy-load prompt/response text.
+  const c = STATE.current?.case;
+  if (c?.promptPath) {
+    fetch('../' + c.promptPath, { cache: 'no-cache' })
+      .then(r => r.text())
+      .then(t => { const el = document.getElementById('prompt-block'); if (el) el.textContent = t; });
+  }
+  if (c?.responsePath) {
+    fetch('../' + c.responsePath, { cache: 'no-cache' })
+      .then(r => r.text())
+      .then(t => { const el = document.getElementById('response-block'); if (el) el.textContent = t; });
+  }
+}
+
+function renderImage(c) {
+  const right = document.getElementById('image-content');
+  if (!c.croppedJpegPath) {
+    right.classList.add('placeholder');
+    right.textContent = 'No cropped image (call may not have completed).';
+    return;
+  }
+  right.classList.remove('placeholder');
+  const evidence = c.result?.evidence ?? [];
+  // Each bbox is [y0, x0, y1, x1] in 0–1000.
+  const overlays = evidence.map((e, i) => {
+    const bb = e.bbox ?? [];
+    if (bb.length !== 4) return '';
+    const [y0, x0, y1, x1] = bb;
+    const top = (y0 / 10).toFixed(2) + '%';
+    const left = (x0 / 10).toFixed(2) + '%';
+    const w = ((x1 - x0) / 10).toFixed(2) + '%';
+    const h = ((y1 - y0) / 10).toFixed(2) + '%';
+    return `<div class="bbox-rect" style="top:${top};left:${left};width:${w};height:${h};"><div class="bbox-label">#${i + 1}</div></div>`;
+  }).join('');
+  right.innerHTML = `
+    <div class="field-label">Cropped image (Gemini saw exactly this)</div>
+    <div class="img-container">
+      <img src="../${c.croppedJpegPath}" alt="cropped" />
+      <div class="bbox-overlay" style="position:absolute; top:0; left:0; right:0; bottom:0;">
+        ${overlays}
+      </div>
+    </div>
+    <details>
+      <summary>Crop resolution</summary>
+      <pre class="text-block compact">${escapeHtml(JSON.stringify(c.metadata?.cropResolution ?? {}, null, 2))}</pre>
+    </details>
+  `;
+}
+
+function escapeHtml(s) {
+  if (s == null) return '';
+  return String(s).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+}
+
+init().catch(err => {
+  document.getElementById('case-content').textContent = 'Failed to load manifest: ' + err.message;
+});
+</script>
+</body>
+</html>

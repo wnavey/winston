@@ -1,0 +1,47 @@
+{
+  "description": "Starter fixture for inspect-drawing Phase 1, scoped to 1700 S. Lamar. Two motivating examples carried over from the design plan, with TBD documentId/sheetNum slots that need to be populated by hand-curation from a prior cc run before this fixture is replay-ready.",
+  "source": {
+    "project": "1700 S. Lamar Blvd.",
+    "projectId": "23301a8a-4cdb-4751-ac0c-93b97f0f5c12",
+    "captureDate": "2026-04-29",
+    "notes": "Hand-curated from prior cc runs in winston/workspaces/cc-audit/ and winston/workspaces/variance-testing/cc/1700-S-Lamar/. Both example test cases below are placeholders — documentId and sheetNum still need to be filled in."
+  },
+  "testCases": [
+    {
+      "id": "wastewater-flow-arrows-PLACEHOLDER",
+      "projectId": "23301a8a-4cdb-4751-ac0c-93b97f0f5c12",
+      "documentId": "TBD-LOOK-UP-FROM-PROJECT-README",
+      "sheetNum": "TBD",
+      "question": "Do the wastewater lines have direction-of-flow arrows on the line itself, not just nearby callouts?",
+      "expectedAnswerType": "boolean",
+      "cropMode": "drawing",
+      "regionHint": null,
+      "expectedAnswer": null,
+      "expectedEvidence": [],
+      "_provenance": {
+        "sourcePriorRun": "TBD",
+        "sourceChecklistItem": "cc-7.md (wastewater grouping; exact item TBD)",
+        "captureDate": "2026-04-29",
+        "notes": "Carried over from motivating-examples.md. Generic vision tool answers this inconsistently because adjacent lines and callouts confuse the model. Replay this case once Phase 1 is wired up to confirm the cropped drawing block helps."
+      }
+    },
+    {
+      "id": "adjacent-driveways-PLACEHOLDER",
+      "projectId": "23301a8a-4cdb-4751-ac0c-93b97f0f5c12",
+      "documentId": "TBD-LOOK-UP-FROM-PROJECT-README",
+      "sheetNum": "TBD",
+      "question": "Are adjacent driveways depicted along the street frontages? Look for elongated U shapes or small J shapes indicating curb-return curves on the neighboring parcels.",
+      "expectedAnswerType": "boolean",
+      "cropMode": "drawing",
+      "regionHint": "along the street frontages outside the project property line",
+      "expectedAnswer": null,
+      "expectedEvidence": [],
+      "_provenance": {
+        "sourcePriorRun": "TBD",
+        "sourceChecklistItem": "TBD (transportation grouping)",
+        "captureDate": "2026-04-29",
+        "notes": "Carried over from motivating-examples.md. Subtle-pattern recognition test case — driveway curb returns are easy to miss. Good Phase 3 candidate for per-question reference images."
+      }
+    }
+  ]
+}

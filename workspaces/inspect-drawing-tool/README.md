@@ -27,10 +27,34 @@ HTML debug viewer.
 | [`design-plan.md`](./design-plan.md) | Living plan: motivating examples → tool surface → phasing → debug UI → open questions |
 | [`motivating-examples.md`](./motivating-examples.md) | Concrete completeness-check items the tool needs to handle, with a question taxonomy |
 | [`reference/architecture-pointers.md`](./reference/architecture-pointers.md) | Pointers into `bureau` / `conductor` / `measure-distance-tool/` — where to look when implementing |
+| [`viewer/`](./viewer/) | HTML debug viewer for inspecting per-call artifacts. `cd viewer && ./serve.sh` |
+| [`replay/`](./replay/) | Test-script fixtures for tool-layer iteration without burning agent tokens |
+| [`runs/`](./runs/) | Local conductor run outputs (gitignored as data) |
 
 ## Status
 
-Phase 0: planning. No code shipped yet.
+**Phase 1** — single-pass MVP shipped to bureau (noetic-inc/bureau#282).
+Viewer + replay scaffolding shipped here. No real runs yet — fixture
+testCases need their `documentId` / `sheetNum` populated by hand from
+prior 1700 S. Lamar runs before Phase 1 is replay-ready.
+
+## Quick start
+
+```bash
+# 1. Populate replay/fixtures/1700-s-lamar-starter.json with real
+#    documentId/sheetNum from a prior cc run.
+
+# 2. Run the script-only replay (no agent loop) once bureau#282 is merged:
+cd ~/code/controlroom/conductor
+npm run conduct -- \
+  --workflow=test-script \
+  --scriptName=inspect-drawing \
+  --testCasesPath="$(pwd)/../winston/workspaces/inspect-drawing-tool/replay/fixtures/1700-s-lamar-starter.json" \
+  --maxParallel=3 --skip-upload
+
+# 3. Inspect outputs in the viewer.
+cd ~/workspace/winston/workspaces/inspect-drawing-tool/viewer && ./serve.sh
+```
 
 ## Related
 
