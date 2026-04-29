@@ -151,6 +151,7 @@ The interpretation from the prior report still holds: this ref's checklist text 
 ## Companion deep-dives
 
 - [`high-variance-items-analysis.md`](./high-variance-items-analysis.md) — top-10 split-verdict refs sorted by entropy with per-run trace deep-dive. Identifies 5 distinct variance mechanisms; vision-tool nondeterminism dominates (4 of 10 refs).
+- [`vision-usage-analysis.md`](./vision-usage-analysis.md) — vision tool invocation counts per grouping (590 total). Top 3 by absolute load: cc-23, cc-2, cc-1. Per-task TSV at [`vision-usage-by-task.tsv`](./vision-usage-by-task.tsv).
 
 No separate `gap-items` doc because detection variance was 0 in this baseline (the 3-run's `gap-items-analysis.md` covers the cc-13 drift mechanism that did not recur here).
 
