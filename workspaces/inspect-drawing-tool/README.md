@@ -38,14 +38,46 @@ Viewer + replay scaffolding shipped here. No real runs yet — fixture
 testCases need their `documentId` / `sheetNum` populated by hand from
 prior 1700 S. Lamar runs before Phase 1 is replay-ready.
 
-## Quick start
+## Quick start — full cc run with the experiment
+
+The fastest way to exercise the tool end-to-end: run completeness-check
+against a real submission with `--experiment=inspect-drawing`, then pull
+the `inspect-drawing-calls/` artifacts into this workspace's `runs/` and
+view them.
+
+```bash
+# 1. Kick off a 5-run completeness-check for 1700 S. Lamar submission v2.
+cd ~/workspace/conductor
+npm run conduct -- \
+  --workflow=completeness-check \
+  --submission-version-id=eb67ee21-76b1-4065-b20d-c32f674add12 \
+  --checklist-version=v2.5-trimmed \
+  --runs=5 \
+  --experiment=inspect-drawing
+
+# 2. Pull the artifacts back into runs/<datetime>/.
+cd ~/workspace/winston/workspaces/inspect-drawing-tool
+./scripts/pull-run.py --latest         # or --datetime=<dir>, or --list
+
+# 3. Open the viewer.
+cd viewer && ./serve.sh                 # http://localhost:8402
+```
+
+`pull-run.py` defaults to project `23301a8a-...` (1700 S. Lamar) and
+reads `PUBLIC_SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` from
+`~/workspace/conductor/.env` if not in the shell env.
+
+## Quick start — script-only replay (no agent loop)
+
+For tool-layer iteration without burning agent tokens:
 
 ```bash
 # 1. Populate replay/fixtures/1700-s-lamar-starter.json with real
-#    documentId/sheetNum from a prior cc run.
+#    documentId/sheetNum from a prior cc run (use the `pull-run.py`
+#    artifacts from a real run as a source).
 
-# 2. Run the script-only replay (no agent loop) once bureau#282 is merged:
-cd ~/code/controlroom/conductor
+# 2. Replay the script against the fixture.
+cd ~/workspace/conductor
 npm run conduct -- \
   --workflow=test-script \
   --scriptName=inspect-drawing \
