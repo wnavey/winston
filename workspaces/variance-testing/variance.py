@@ -1,16 +1,19 @@
 #!/usr/bin/env python3
-"""Compute per-ref variance metrics from a completeness-check consolidated-findings.json.
+"""Compute per-ref variance metrics from a workflow consolidated-findings.json.
 
-Reads the consolidated-findings.json produced by the completeness-check workflow
-(N-run majority voting) and writes:
+Works for both completeness-check and review workflow outputs. Auto-detects:
+  - per-run findings field name: `perRunFindings` (cc) or `findings` (review)
+  - status set: discovered from the data, not hardcoded
+  - grouping / checklistItemId: extracted from `ref` (split on ':') when not present
 
+Writes:
   - variance-per-ref.tsv      every ref, full metrics, sorted by ref
-  - variance-split-refs.tsv   only refs where runs disagreed on status, sorted by entropy desc
-  - variance-detection.tsv    only refs where runCount < totalRuns, sorted by detection_rate asc
-  - variance-summary.md       human summary with histograms and the top variant refs
+  - variance-split-refs.tsv   only refs where runs disagreed on status
+  - variance-detection.tsv    only refs where runCount < totalRuns
+  - variance-summary.md       human summary
 
 Usage:
-  python variance.py <consolidated-findings.json> <out-dir> [--review-id ID] [--label STR]
+  python variance.py <consolidated-findings.json> <out-dir> [--review-id ID] [--label STR] [--workflow-kind cc|review]
 """
 
 from __future__ import annotations
@@ -21,8 +24,6 @@ import math
 import sys
 from collections import Counter
 from pathlib import Path
-
-STATUSES = ["pass", "fail", "not-applicable", "unclear"]
 
 
 def shannon_entropy(counts: dict[str, int]) -> float:
@@ -38,16 +39,28 @@ def shannon_entropy(counts: dict[str, int]) -> float:
     return h
 
 
-def per_ref_row(entry: dict) -> dict:
-    per_run = entry.get("perRunFindings") or []
+def per_run_findings(entry: dict) -> list[dict]:
+    return entry.get("perRunFindings") or entry.get("findings") or []
+
+
+def split_ref(ref: str) -> tuple[str, str]:
+    """Split 'cc-13:AW-05' or '1:EL-1.1' into (grouping, item_id)."""
+    if ":" in ref:
+        g, _, i = ref.partition(":")
+        return g, i
+    return "", ref
+
+
+def per_ref_row(entry: dict, all_statuses: list[str]) -> dict:
+    per_run = per_run_findings(entry)
     status_counts = Counter(f.get("status", "missing") for f in per_run)
     run_count = entry.get("runCount", len(per_run))
     total_runs = entry.get("totalRuns", run_count)
     missing_runs = max(0, total_runs - run_count)
 
-    verdict_entropy = shannon_entropy({s: status_counts.get(s, 0) for s in STATUSES})
+    verdict_entropy = shannon_entropy({s: status_counts.get(s, 0) for s in all_statuses})
 
-    distinct_statuses = sum(1 for s in STATUSES if status_counts.get(s, 0) > 0)
+    distinct_statuses = sum(1 for s in all_statuses if status_counts.get(s, 0) > 0)
     if missing_runs == 0 and distinct_statuses == 1:
         variance_class = "unanimous"
     elif missing_runs == total_runs:
@@ -59,18 +72,19 @@ def per_ref_row(entry: dict) -> dict:
     else:
         variance_class = "split-and-partial"
 
-    return {
-        "ref": entry.get("ref", ""),
-        "checklist_item_id": entry.get("checklistItemId", ""),
-        "grouping": entry.get("grouping", ""),
+    ref = entry.get("ref", "")
+    g_from_ref, id_from_ref = split_ref(ref)
+    grouping = entry.get("grouping") or g_from_ref
+    checklist_item_id = entry.get("checklistItemId") or id_from_ref
+
+    row = {
+        "ref": ref,
+        "checklist_item_id": checklist_item_id,
+        "grouping": grouping,
         "total_runs": total_runs,
         "run_count": run_count,
         "missing_runs": missing_runs,
         "detection_rate": (run_count / total_runs) if total_runs else 0.0,
-        "pass": status_counts.get("pass", 0),
-        "fail": status_counts.get("fail", 0),
-        "not_applicable": status_counts.get("not-applicable", 0),
-        "unclear": status_counts.get("unclear", 0),
         "winning_status": entry.get("status", ""),
         "winning_confidence": entry.get("confidence", ""),
         "verdict_entropy": round(verdict_entropy, 4),
@@ -79,6 +93,10 @@ def per_ref_row(entry: dict) -> dict:
             sorted(f.get("status", "missing") for f in per_run)
         ),
     }
+    # Add per-status counts as columns (one per status seen across the dataset)
+    for s in all_statuses:
+        row[f"count_{s}"] = status_counts.get(s, 0)
+    return row
 
 
 def write_tsv(path: Path, rows: list[dict], columns: list[str]) -> None:
@@ -114,7 +132,7 @@ def render_summary(
     )
 
     lines: list[str] = []
-    title = f"# Completeness-Check Variance — {label}" if label else "# Completeness-Check Variance"
+    title = f"# Variance Summary — {label}" if label else "# Variance Summary"
     lines.append(title)
     lines.append("")
     if review_id:
@@ -206,13 +224,29 @@ def main() -> int:
         print("error: consolidated-findings.json is not an array", file=sys.stderr)
         return 2
 
-    rows = [per_ref_row(e) for e in data]
+    # Discover the status set from the data
+    all_statuses_set: set[str] = set()
+    for entry in data:
+        for f in per_run_findings(entry):
+            s = f.get("status")
+            if s:
+                all_statuses_set.add(s)
+        if entry.get("status"):
+            all_statuses_set.add(entry["status"])
+    # Stable order: known cc statuses first, then sorted others
+    preferred = ["pass", "fail", "not-applicable", "unclear", "not-verifiable"]
+    all_statuses = [s for s in preferred if s in all_statuses_set]
+    all_statuses += sorted(all_statuses_set - set(all_statuses))
+
+    rows = [per_ref_row(e, all_statuses) for e in data]
     rows.sort(key=lambda r: r["ref"])
 
-    columns = [
+    base_columns = [
         "ref", "checklist_item_id", "grouping",
         "total_runs", "run_count", "missing_runs", "detection_rate",
-        "pass", "fail", "not_applicable", "unclear",
+    ]
+    status_columns = [f"count_{s}" for s in all_statuses]
+    columns = base_columns + status_columns + [
         "winning_status", "winning_confidence",
         "verdict_entropy", "variance_class", "per_run_pattern",
     ]

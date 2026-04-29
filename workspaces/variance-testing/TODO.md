@@ -1,4 +1,4 @@
-# cc-variance-testing — TODO
+# variance-testing — TODO
 
 Open follow-ups from the 1700 S. Lamar 3-run smoke test analysis.
 
@@ -7,7 +7,7 @@ Open follow-ups from the 1700 S. Lamar 3-run smoke test analysis.
 **Beads:** `workspace-925`
 **Status:** open
 
-The 1700 S. Lamar root-cause investigation ([`run-2-drift-root-cause.md`](./1700-S-Lamar/6ec3acdf-737b-47b2-8191-49b376ea3404/run-2-drift-root-cause.md)) identified two synthetic events in the conductor log that drive harness-induced output drift but are invisible to downstream consumers:
+The 1700 S. Lamar root-cause investigation ([`cc/1700-S-Lamar/6ec3acdf-737b-47b2-8191-49b376ea3404/run-2-drift-root-cause.md`](./cc/1700-S-Lamar/6ec3acdf-737b-47b2-8191-49b376ea3404/run-2-drift-root-cause.md)) identified two synthetic events in the conductor log that drive harness-induced output drift but are invisible to downstream consumers:
 
 - **Stop hooks** — `isSynthetic: true` user messages starting with `"Stop hook feedback: You MUST call the StructuredOutput tool…"`
 - **Compaction** — `isSynthetic: true` user messages starting with `"This session is being continued from a previous conversation that ran out of context."`
@@ -33,4 +33,4 @@ Without this, harness-induced drift looks identical to model variance, polluting
 
 - PR: https://github.com/wnavey/winston/pull/18
 - Beads: workspace-925
-- Worked example: 1700 S. Lamar review `6ec3acdf-737b-47b2-8191-49b376ea3404`, cc-13.md, run-2 — file at `1700-S-Lamar/6ec3acdf-737b-47b2-8191-49b376ea3404/run-2-drift-root-cause.md`
+- Worked example: 1700 S. Lamar review `6ec3acdf-737b-47b2-8191-49b376ea3404`, cc-13.md, run-2 — file at `cc/1700-S-Lamar/6ec3acdf-737b-47b2-8191-49b376ea3404/run-2-drift-root-cause.md`
