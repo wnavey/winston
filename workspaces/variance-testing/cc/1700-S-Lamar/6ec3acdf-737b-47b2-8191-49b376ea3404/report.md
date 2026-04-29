@@ -9,7 +9,8 @@
 
 **Companion deep-dives:**
 - [`high-variance-items-analysis.md`](./high-variance-items-analysis.md) — top-10 split refs, per-run agent traces, hypotheses
-- [`gap-items-analysis.md`](./gap-items-analysis.md) — all 18 detection-variance refs, root-cause analysis (spoiler: it's run-2 checklist drift)
+- [`gap-items-analysis.md`](./gap-items-analysis.md) — all 18 detection-variance refs (spoiler: it's run-2 checklist drift)
+- [`run-2-drift-root-cause.md`](./run-2-drift-root-cause.md) — log-traced root cause of the run-2 drift: harness-induced post-compaction overwrite of a successful StructuredOutput call
 
 ---
 
