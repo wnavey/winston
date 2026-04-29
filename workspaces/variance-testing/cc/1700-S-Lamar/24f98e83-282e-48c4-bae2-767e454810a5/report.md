@@ -150,8 +150,8 @@ The interpretation from the prior report still holds: this ref's checklist text 
 
 ## Companion deep-dives
 
-This baseline doesn't need separate `gap-items` or `high-variance` files because the variance picture is much cleaner than the 3-run:
+- [`high-variance-items-analysis.md`](./high-variance-items-analysis.md) — top-10 split-verdict refs sorted by entropy with per-run trace deep-dive. Identifies 5 distinct variance mechanisms; vision-tool nondeterminism dominates (4 of 10 refs).
 
-- **No gap items** to investigate (detection variance = 0).
-- **High-variance refs** are documented in `variance-summary.md` and the discussion above. The actionable subset is the seven status flips, all covered in this report.
-- **Harness analysis** is summarized in the "Harness events at scale" section above. The 3-run's `run-2-drift-root-cause.md` remains the canonical write-up of the underlying mechanism — this baseline confirms its predictions but doesn't add new failure modes.
+No separate `gap-items` doc because detection variance was 0 in this baseline (the 3-run's `gap-items-analysis.md` covers the cc-13 drift mechanism that did not recur here).
+
+Harness analysis is summarized in the "Harness events at scale" section above. The 3-run's `run-2-drift-root-cause.md` remains the canonical write-up of the underlying mechanism — this baseline confirms its predictions but doesn't add new failure modes.
