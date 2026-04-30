@@ -173,5 +173,34 @@ Refactor into shared helpers when a third workflow needs them.
 
 PRs:
 
-- winston: this plan doc — TBD
-- bureau: workflow scaffold + scripts + prompts — TBD
+- winston: this plan doc — wnavey/winston#27
+- bureau: workflow scaffold + scripts + prompts — noetic-inc/bureau#285
+
+## Future improvements (deferred)
+
+- **`bureauCommitOverride` conductor input.** Conductor's `engine.ts:208` pins
+  bureau to `priorReview.metadata.bureauCommitHash` for any re-review. For SDUF
+  this is correct (review-guides at the same path → commit *is* the version).
+  For CC it's overkill — versions are already side-by-side directories
+  (`v2.3-trimmed/`, `v2.4-trimmed/`, …). The pin can prevent backtests where
+  the newer review used a newer checklist not present at the prior commit
+  (e.g., 6e921f33 pinned to `66c5070a`, which has v2.3-trimmed but not
+  v2.4-trimmed). A small conductor change to honor an explicit
+  `bureauCommitOverride` input (or `bureauRef=HEAD`) would unblock cleaner
+  backtests and any future anchored runs where the checklist has moved
+  forward.
+
+- **Doc-change tracking precision.** `extract-prior-cc-findings` flips
+  `documentsChanged: true` for any comment that cites docs whenever any doc
+  in the manifest changed. Match comment `documentReferences[]` to manifest
+  entries by name once doc-name normalization is reliable.
+
+- **LLM-rephrased forced outcomes.** `finalize-cc-re-review` re-applies the
+  `forceOutcomes.tsv` by status override + raw TSV explanation. The fresh-
+  review `apply-forced-outcomes.ts` calls Claude to generate natural
+  observation/reasoning/explanation/resolution. Port that LLM step into the
+  re-review finalize once we want polished forced-comment narratives.
+
+- **Standard-note `resolutionDetails` re-diff.** Currently cleared when status
+  changes; could be re-diffed against the revised plans to keep the rich UI
+  payload accurate.
