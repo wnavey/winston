@@ -27,10 +27,66 @@ HTML debug viewer.
 | [`design-plan.md`](./design-plan.md) | Living plan: motivating examples → tool surface → phasing → debug UI → open questions |
 | [`motivating-examples.md`](./motivating-examples.md) | Concrete completeness-check items the tool needs to handle, with a question taxonomy |
 | [`reference/architecture-pointers.md`](./reference/architecture-pointers.md) | Pointers into `bureau` / `conductor` / `measure-distance-tool/` — where to look when implementing |
+| [`viewer/`](./viewer/) | HTML debug viewer for inspecting per-call artifacts. `cd viewer && ./serve.sh` |
+| [`replay/`](./replay/) | Test-script fixtures for tool-layer iteration without burning agent tokens |
+| [`runs/`](./runs/) | Local conductor run outputs (gitignored as data) |
 
 ## Status
 
-Phase 0: planning. No code shipped yet.
+**Phase 1** — single-pass MVP shipped to bureau (noetic-inc/bureau#282).
+Viewer + replay scaffolding shipped here. No real runs yet — fixture
+testCases need their `documentId` / `sheetNum` populated by hand from
+prior 1700 S. Lamar runs before Phase 1 is replay-ready.
+
+## Quick start — full cc run with the experiment
+
+The fastest way to exercise the tool end-to-end: run completeness-check
+against a real submission with `--experiment=inspect-drawing`, then pull
+the `inspect-drawing-calls/` artifacts into this workspace's `runs/` and
+view them.
+
+```bash
+# 1. Kick off a 5-run completeness-check for 1700 S. Lamar submission v2.
+cd ~/workspace/conductor
+npm run conduct -- \
+  --workflow=completeness-check \
+  --submission-version-id=eb67ee21-76b1-4065-b20d-c32f674add12 \
+  --checklist-version=v2.5-trimmed \
+  --runs=5 \
+  --experiment=inspect-drawing
+
+# 2. Pull the artifacts back into runs/<datetime>/.
+cd ~/workspace/winston/workspaces/inspect-drawing-tool
+./scripts/pull-run.py --latest         # or --datetime=<dir>, or --list
+
+# 3. Open the viewer.
+cd viewer && ./serve.sh                 # http://localhost:8402
+```
+
+`pull-run.py` defaults to project `23301a8a-...` (1700 S. Lamar) and
+reads `PUBLIC_SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` from
+`~/workspace/conductor/.env` if not in the shell env.
+
+## Quick start — script-only replay (no agent loop)
+
+For tool-layer iteration without burning agent tokens:
+
+```bash
+# 1. Populate replay/fixtures/1700-s-lamar-starter.json with real
+#    documentId/sheetNum from a prior cc run (use the `pull-run.py`
+#    artifacts from a real run as a source).
+
+# 2. Replay the script against the fixture.
+cd ~/workspace/conductor
+npm run conduct -- \
+  --workflow=test-script \
+  --scriptName=inspect-drawing \
+  --testCasesPath="$(pwd)/../winston/workspaces/inspect-drawing-tool/replay/fixtures/1700-s-lamar-starter.json" \
+  --maxParallel=3 --skip-upload
+
+# 3. Inspect outputs in the viewer.
+cd ~/workspace/winston/workspaces/inspect-drawing-tool/viewer && ./serve.sh
+```
 
 ## Related
 
