@@ -5,9 +5,7 @@ Reference data for grading whether the cc agent reaches for the
 with a single `grade` value that captures both the descriptive tool
 fit and the grading semantics for an agent run.
 
-**Scope:** `cc-13`, `cc-1`, `cc-2`, `cc-3`, `cc-5`, `cc-6`, `cc-10`,
-`cc-15`, `cc-19` (9 of 13 groupings, 144 items). Remaining 4
-groupings (cc-20, cc-22, cc-23, cc-24) staged for follow-up commits.
+**Scope:** All 13 v2.5-trimmed groupings, 185 items. Complete.
 
 **Source of truth:** [`cc-classification.tsv`](./cc-classification.tsv).
 Markdown report wraps it for human review and stat reporting.
@@ -49,23 +47,24 @@ classify each call:
 
 ---
 
-## Cumulative stats across the 9 classified groupings
+## Final cumulative stats — all 13 groupings
 
 | Grade | Count | % |
 |---|---:|---:|
-| `inspect-drawing-required` | 7 | 5% |
-| `inspect-drawing-optional` | 27 | 19% |
-| `vision-only` | 80 | 56% |
-| `no-tool` | 30 | 21% |
-| **Total** | **144** | |
+| `inspect-drawing-required` | 8 | 4% |
+| `inspect-drawing-optional` | 46 | 25% |
+| `vision-only` | 100 | 54% |
+| `no-tool` | 31 | 17% |
+| **Total** | **185** | |
 
-Reference set for "should have called inspect-drawing": **34 of 144
-items (24%)** where the call is at least acceptable. Of those, **7
-(5%) are MUST-call** — not calling them is a miss.
+**Reference set for "should have called inspect-drawing":** 8 required +
+46 optional = **54 of 185 items (29%)** where calling
+`inspect-drawing` is at least acceptable. Of those, **8 (4%) are
+MUST-call** — not calling them is a miss.
 
 ### Per-grouping breakdown
 
-| Grouping | Total | required | optional | vision-only | no-tool |
+| Grouping | Total | req | opt | vis | no |
 |---|---:|---:|---:|---:|---:|
 | `cc-1` (Intake & Core Submittal) | 33 | 0 | 3 | 16 | 14 |
 | `cc-2` (Base Sheet Requirements) | 6 | 0 | 4 | 2 | 0 |
@@ -76,33 +75,12 @@ items (24%)** where the call is at least acceptable. Of those, **7
 | `cc-13` (AW General Requirements) | 37 | 5 | 7 | 23 | 2 |
 | `cc-15` (Trees & Environmental) | 14 | 0 | 2 | 11 | 1 |
 | `cc-19` (Floodplain & RSMP) | 22 | 2 | 2 | 5 | 13 |
+| `cc-20` (WQ & Drainage Engineering) | 7 | 0 | 3 | 4 | 0 |
+| `cc-22` (Transportation Core) | 14 | 1 | 9 | 3 | 1 |
+| `cc-23` (Transportation Infrastructure) | 11 | 0 | 7 | 4 | 0 |
+| `cc-24` (LDE & ROW) | 9 | 0 | 0 | 9 | 0 |
 
-### Notable observations
-
-1. **`inspect-drawing-required` items now span 2 groupings.** cc-13
-   (5 items) and cc-19 (2 items: drainage easement contains 100-yr
-   floodplain — a polygon-containment check; and drainage area maps
-   missing flow arrows / contours / spot elevations). cc-19's flow-arrow
-   item mirrors AW-23 directly.
-2. **`cc-1` and `cc-19` together hold 27 of 30 `no-tool` items.**
-   These are the two heaviest "submittal package" groupings — most
-   items are document-existence checks against the supplementary docs
-   index. Strong negative reference set for inspect-drawing.
-3. **`cc-6` (Compatibility) is 100% `inspect-drawing-optional`.**
-   Tightest visual grouping: 3 items, all about graphic content — land
-   use map, building elevations, residential setbacks. Highest density
-   of inspect-drawing signal per item, but each is plausibly answerable
-   by vision given labels.
-4. **`cc-3` remains 91% `vision-only`.** Verbatim notes blocks
-   dominate. Misuse risk: an agent calling inspect-drawing here is
-   almost certainly wrong.
-5. **`cc-15` is mostly `vision-only` (79%)** despite covering trees
-   and environmental — because most items are about table/notes/sheet
-   presence, not the visual content of the plan. Only CEFs+buffers
-   (CC-15-12) and CWQZ/floodplain delineation (CC-15-13) are
-   inspect-drawing-optional.
-
-### Required-item summary (7 items across 2 groupings)
+### Required-item reference set (8 items, 3 groupings)
 
 | Grouping | ID | Item |
 |---|---|---|
@@ -113,6 +91,37 @@ items (24%)** where the call is at least acceptable. Of those, **7
 | cc-13 | AW-39 | Drain field delineation |
 | cc-19 | CC-19-05 | Drainage easements contain 100-year floodplain |
 | cc-19 | CC-19-19 | Drainage area maps missing flow arrows / contours / spot elevations |
+| cc-22 | CC-22-14 | Adjacent driveways within 300 feet shown |
+
+CC-22-14 is interesting — the validation methodology *itself* spells
+out a drawing-region symbology pattern ("two wide flat-bottomed U/J
+shapes side-by-side, opening same direction"). That's the strongest
+signal in the entire corpus that vision is the wrong tool: even the
+human-written checklist methodology is reaching for symbology
+pattern recognition.
+
+### Top-level observations
+
+1. **All 8 required items live in 3 groupings: cc-13, cc-19, cc-22.**
+   Roughly: utility-plan symbology (cc-13), drainage spatial reasoning
+   (cc-19), and driveway pattern recognition (cc-22). Other groupings
+   either have visual content with strong text labels (so vision
+   plausibly works) or no visual content at all.
+2. **`cc-6` is the densest visual grouping per item ratio
+   (3/3 = 100% optional)** but contributes zero `required` items —
+   land use map, elevations, and setbacks all have labels.
+3. **`cc-1` (42% no-tool) and `cc-19` (59% no-tool) are the two
+   "submittal package" groupings.** Together they hold 27 of 31 no-tool
+   items. An agent calling `inspect-drawing` for cc-1 or RSMP-section
+   cc-19 items is almost certainly misusing the tool.
+4. **`cc-24` is 100% `vision-only`** — License/Encroachment Agreement
+   references on plans, AULCC notes. No drawing-area content.
+5. **`cc-3` is 91% `vision-only`** — verbatim notes-block matching.
+   Strong "do not call inspect-drawing" reference.
+6. **Transportation groupings (cc-22, cc-23) skew heavily optional**
+   — driveway dimensions, parking stall dimensions, accessible routes,
+   ROW improvements. All have visual features but typically with
+   dimension/label annotations alongside.
 
 ---
 
@@ -226,60 +235,57 @@ so optional is correct.
 
 ---
 
-## Per-grouping detail — the four new groupings
+## Per-grouping detail — the final four groupings
 
-### cc-6 — `Compatibility Standards` (3 items)
+### cc-20 — `Water Quality & Drainage Engineering` (7 items)
 
-Smallest grouping. All 3 items (land use map, building elevations,
-residential-adjacent setbacks) are graphic content — `inspect-drawing-
-optional` across the board. Each is presence-only per the validation
-methodology, so labels alongside the visual feature make vision
-plausibly workable.
+Half engineering documentation (front-page seal, ESL with required
+topic coverage, RSMP application or flood-control documentation —
+`vision-only`), half cross-section / detail diagrams (detention pond
+cross-section with WSEs, outlet structure detail with calcs, WQ pond
+cross-section — `inspect-drawing-optional`). Stage-storage discharge
+table is vision-only (table read).
 
-### cc-10 — `Austin Energy & Green Building` (4 items)
+### cc-22 — `Transportation Core` (14 items)
 
-Half text, half drawing-area: AE-01 (verbatim AE notes — vision-only)
-and AEGB-02 (LOI signed by both parties — vision-only) on the text
-side; AE-02/AE-03 (existing/proposed electric utility facilities on
-plan sheets — `inspect-drawing-optional`) on the drawing side.
-Mirrors the cc-2 utility-line items.
+The driveway / parking / accessibility grouping. Mostly
+`inspect-drawing-optional` because almost every item is a
+"dimensioned X" or "shown Y" check on the site plan with annotations
+alongside the visual feature. Vision-only: parking-table reads (land
+use × sq ft, totals, type identification). One `no-tool` item: TIA
+report document presence.
 
-### cc-15 — `Trees & Environmental` (14 items)
+The single `required` item — **CC-22-14** (adjacent driveways within
+300 ft) — stands out because the validation methodology itself spells
+out the drawing-region symbology pattern ("two wide flat-bottomed
+U/J shapes side-by-side, parallel or curving, both opening same
+direction"). That's pattern recognition over the drawing area; vision
+cannot reliably structure-output it.
 
-Mostly vision: tree survey, tree counts on application form, watershed
-classification on cover sheet, ECM Appendix Q-1/Q-2 tables, ESC plan
-sheet presence. Two items break out as inspect-drawing-optional:
-CC-15-12 (CEFs and buffers/setbacks identified on plans — visible
-symbology + boundary overlays) and CC-15-13 (CWQZ/WQTZ and 100-yr
-floodplains delineated — boundary overlays). One `no-tool` item:
-ERI report or waiver presence.
+### cc-23 — `Transportation Infrastructure & Construction` (11 items)
 
-### cc-19 — `Floodplain & RSMP` (22 items)
+Heavy `inspect-drawing-optional` (7/11): ROW widths, behind-the-curb
+improvements, grading-plan grade lines, ROW improvement dimensions,
+horizontal/vertical roadway views, dumpster locations, encroachment
+identification. All have visual features with dimension/label
+annotations. Vision-only items: target-speed text, signage/striping
+plan presence, retaining-wall elevation labels, sealed structural
+drawings for ROW retaining walls.
 
-By far the most `no-tool`-heavy grouping (59% of items). RSMP is
-fundamentally a documentation-package grouping — Feasibility
-Determination, Application Form, modeling files, cost estimates,
-prior case documentation, etc., all about file existence in the
-submittal.
+### cc-24 — `Land Development Engineering & ROW` (9 items)
 
-Two `inspect-drawing-required` items here are notable:
-
-- **CC-19-05** (drainage easements contain 100-yr floodplain) — a
-  polygon-containment check. Vision can confirm both polygons are
-  drawn, but the *containment* relation is a spatial-reasoning task
-  inspect-drawing is built for.
-- **CC-19-19** (drainage area maps missing flow arrows, contours, spot
-  elevations) — flow arrows are the AW-23 case verbatim, plus contours
-  and symbol-level features that resist OCR.
-
-CC-19-03 and CC-19-04 (FEMA / fully developed floodplain delineation)
-are `inspect-drawing-optional` rather than required because the items
-are presence-of-overlay checks, not geometric correctness checks —
-labels on the overlay let vision confirm presence.
+100% `vision-only`. Every item is "License Agreement / Encroachment
+Agreement / AULCC reference submitted or referenced on plans" — the
+agent reads either a text reference on plans or confirms a
+supplementary document. No drawing-area content. Strongest
+"do-not-call inspect-drawing" reference grouping in the corpus
+alongside cc-3.
 
 ---
 
-## Next
+## Done
 
-Four groupings remaining: **cc-20, cc-22, cc-23, cc-24**. Will continue
-staging in batches per your token-monitoring preference.
+All 13 v2.5-trimmed groupings classified (185 items). The TSV is the
+single source of truth — join against any agent-run tool-call log on
+`(grouping, item_id)` to grade tool choices per the rules in the
+"How to use" section.
