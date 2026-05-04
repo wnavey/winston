@@ -5,8 +5,9 @@ Reference data for grading whether the cc agent reaches for the
 with a single `grade` value that captures both the descriptive tool
 fit and the grading semantics for an agent run.
 
-**Scope of v1:** `cc-13` only — pilot to validate the labeling scheme
-before doing the other 12 grouping files.
+**Scope:** `cc-13`, `cc-1`, `cc-2`, `cc-3`, `cc-5` (5 of 13 groupings,
+101 items). Remaining 8 groupings (cc-6, cc-10, cc-15, cc-19, cc-20,
+cc-22, cc-23, cc-24) staged for follow-up commits.
 
 **Source of truth:** [`cc-classification.tsv`](./cc-classification.tsv).
 Markdown report wraps it for human review and stat reporting.
@@ -45,6 +46,59 @@ classify each call:
 | Agent did NOT call `inspect-drawing` | `inspect-drawing-optional` | ✅ acceptable |
 | Agent did NOT call `inspect-drawing` | `vision-only` | ✅ correct |
 | Agent did NOT call `inspect-drawing` | `no-tool` | ✅ correct |
+
+---
+
+## Cumulative stats across the 5 classified groupings
+
+| Grade | Count | % |
+|---|---|---|
+| `inspect-drawing-required` | 5 | 5% |
+| `inspect-drawing-optional` | 18 | 18% |
+| `vision-only` | 62 | 61% |
+| `no-tool` | 16 | 16% |
+| **Total** | **101** | |
+
+Reference set for "should have called inspect-drawing": **23 of 101
+items (23%)** where the call is at least acceptable. Of those, **5
+(5%) are MUST-call** — not calling them is a miss.
+
+### Per-grouping breakdown
+
+| Grouping | Total | required | optional | vision-only | no-tool |
+|---|---:|---:|---:|---:|---:|
+| `cc-1` (Intake & Core Submittal) | 33 | 0 | 3 | 16 | 14 |
+| `cc-2` (Base Sheet Requirements) | 6 | 0 | 4 | 2 | 0 |
+| `cc-3` (Cover Sheet Notes / Approvals) | 11 | 0 | 1 | 10 | 0 |
+| `cc-5` (Plan Content / Data Tables / HCR) | 14 | 0 | 3 | 11 | 0 |
+| `cc-13` (AW General Requirements) | 37 | 5 | 7 | 23 | 2 |
+
+**All 5 `inspect-drawing-required` items live in cc-13** (Austin Water
+utility plan content). The other 4 groupings have visual content but
+none that *fundamentally* requires drawing-region reasoning — labels
+and text are typically present alongside any visual feature, so vision
+is at least workable.
+
+### Notable observations
+
+1. **`cc-1` is dominated by `no-tool` (42%).** Most items are document-
+   existence checks (CC Application, Tax Cert, ESL, TIA, PRF, optional
+   cert letters, facade photos) — answerable from the file index without
+   any vision tool. This is a useful baseline: an agent calling
+   `inspect-drawing` on cc-1 items is almost certainly misuse.
+2. **`cc-3` is 91% `vision-only`.** Verbatim notes blocks, approval
+   blocks, sheet index — all OCR / text comparison. Only CC-3-27 (Great
+   Streets / UNO boundaries) is plausibly an inspect-drawing call.
+3. **`cc-2` is the highest concentration of `inspect-drawing-optional`
+   (67%).** Boundary lines, easements, utility lines on plan sheets —
+   the validation methodology already calls these out as "vision model"
+   tasks, but they're geometric features where inspect-drawing is at
+   least as appropriate as vision.
+4. **`cc-13` is the only grouping with required items.** Confirms the
+   first experiment-run hypothesis: cc-13 items (wastewater flow arrows,
+   double-line pipe styling, retaining-wall components, cross sections,
+   drain fields) are the cases where the agent should reach for
+   inspect-drawing.
 
 ---
 
@@ -108,13 +162,68 @@ AW-46 (roadway/drive labels), AW-49 (title-block fields), AW-53
 
 ---
 
-## Open question
+## Per-grouping detail — the four new groupings
 
-Confidence on cc-13 is high enough that I'm ready to extend this to
-the other 12 v2.5-trimmed groupings (cc-1, cc-2, cc-3, cc-5, cc-6,
-cc-10, cc-15, cc-19, cc-20, cc-22, cc-23, cc-24).
+### cc-1 — `Intake & Core Submittal` (33 items)
 
-**Spot-check one more first, or proceed straight through?** If
-spot-checking, cc-3 (Roadway / drive — high inspect-drawing density
-expected) or cc-15 (Site Plan General — heavy text/title-block) would
-be the most informative second sample.
+Almost entirely about whether documents are present in the submittal
+package and whether forms are completed/signed. Heavy `no-tool` tail:
+
+- **`no-tool` (14):** CC-1-01 (CC App PDF), -08 (Tax Cert), -10 (ESL
+  presence), -14 (TIA report when required), -15 (PRF), -18 (VR
+  Petition), -20 (plan set), -22 (Legal Description), -27 (extension
+  prior set), -29 (revision unmarked set), -31 (SMART), -32 (DB90),
+  -34 (facade photos), -41 (PDF format).
+- **`vision-only` (16):** Reading form fields, signatures, seals, dates,
+  PE certifications, project review form contents.
+- **`inspect-drawing-optional` (3):** CC-1-23 (limits of construction /
+  property boundaries with bearings/dims), CC-1-24 (existing utilities
+  + crossovers), CC-1-25 (existing easements + setbacks). These are
+  the only items where the agent needs to look at drawing content vs
+  forms/text.
+
+### cc-2 — `Base Sheet Requirements` (6 items)
+
+Tightest grouping. Half is reading text (watershed in ESL, PE seals on
+sheets); the other 4 items are about drawn features on plan sheets
+(boundary lines + bearings, easements, overhead/underground utility
+lines). All 4 are `inspect-drawing-optional` because labels typically
+accompany the geometric features.
+
+### cc-3 — `Cover Sheet Notes, Approval Blocks & Standard Notes` (11 items)
+
+The "verbatim text comparison" grouping. 10 of 11 items are checking
+that specific note blocks (Ordinance Requirements, Compatibility,
+General Construction, ADA, Developer Info, Director DSD approval, BSZ
+approval, Austin Fire notes) match the canonical Notes and Templates
+DOCX. Pure text matching. Only CC-3-27 (Great Streets / UNO boundaries
+on the site plan) escapes into `inspect-drawing-optional`.
+
+### cc-5 — `Plan Content, Data Tables & Conditional Plan Requirements` (14 items)
+
+Mix of addressing labels (ADR-01/04/07/08), data table reads (DAT-01..07),
+and Hill Country Roadway conditional items. 11 are `vision-only`
+(label/table reading); 3 are `inspect-drawing-optional` — ADR-05
+(driveway/handicap-parking/garage/sidewalk identification — labels +
+visual ID), HCR-01 (construction lines + cut/fill), HCR-02
+(mechanical equipment screening). HCR-01/-02 sit closest to "required"
+but the items typically have labels accompanying the visual features,
+so optional is correct.
+
+---
+
+## Next
+
+Eight groupings remaining: **cc-6, cc-10, cc-15, cc-19, cc-20, cc-22,
+cc-23, cc-24**. These cover (rough guesses pre-read):
+
+- `cc-6` — likely transportation / drive details (drawing-heavy)
+- `cc-10` — TBD; could be tree/landscape (vision-heavy)
+- `cc-15` — Site Plan General (mixed)
+- `cc-19` — TBD
+- `cc-20` — TBD
+- `cc-22` — TBD
+- `cc-23` — TBD
+- `cc-24` — TBD
+
+I'll keep staging in batches per your token-monitoring preference.
