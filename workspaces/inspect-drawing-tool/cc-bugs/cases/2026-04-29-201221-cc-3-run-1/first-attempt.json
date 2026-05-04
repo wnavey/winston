@@ -1,0 +1,206 @@
+{
+  "findings": [
+    {
+      "checklistItemId": "CC-3-14",
+      "observation": "Cover sheet examined via vision tool. City of Austin Revision/Corrections Table found in top-left corner of Sheet 1.",
+      "reasoning": "The checklist requires a Revision/Correction Table in the Notes and Templates format on the cover sheet. The table is present on the cover sheet with the proper City of Austin heading, satisfying the requirement.",
+      "tools_used": [
+        "vision"
+      ],
+      "status": "pass",
+      "explanation": "City of Austin Revision/Corrections Table present on cover sheet in top-left corner.",
+      "evidenceLocations": [
+        {
+          "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+          "label": "Cover Sheet",
+          "sheetNumber": 1
+        }
+      ],
+      "resolution": null,
+      "resolutionDetails": null
+    },
+    {
+      "checklistItemId": "CC-3-17",
+      "observation": "Cover sheet examined via vision tool. Sheet Index found on right side of Sheet 1, listing all 52 sheets in the plan set. README.md confirms the plan set contains 52 sheets total.",
+      "reasoning": "The checklist requires an index of all site plan sheets on the cover sheet or 2nd sheet. The Sheet Index is present on the cover sheet and lists all sheets from 01 to 52, matching the total sheet count.",
+      "tools_used": [
+        "vision"
+      ],
+      "status": "pass",
+      "explanation": "Sheet Index present on cover sheet, listing all 52 sheets in the plan set.",
+      "evidenceLocations": [
+        {
+          "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+          "label": "Cover Sheet",
+          "sheetNumber": 1
+        }
+      ],
+      "resolution": null,
+      "resolutionDetails": null
+    },
+    {
+      "checklistItemId": "CC-3-18",
+      "observation": "Cover sheet examined via vision tool - found 9 numbered 'NOTES:' but these are general project notes, not the 'Ordinance Requirements' notes. No section headedOrdinance Requirements' found on cover sheet. Sheet 5 examined and contains 'ORDINANCE REQUIREMENTS' section with 9 numbered notes matching the required content.",
+      "reasoning": "The checklist explicitly requires 'Ordinance Requirements' notes on the cover sheet (location binding: explicit). The 9 required notes exist in the plan set but are located on Sheet 5 rather than the cover sheet. This violates the explicit location requirement.",
+      "tools_used": [
+        "vision",
+        "semantic-search-blocks"
+      ],
+      "status": "fail",
+      "explanation": "Ordinance Requirements notes (9 notes) found on Sheet 5 instead of cover sheet.",
+      "evidenceLocations": [
+        {
+          "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+          "label": "General Notes Sheet",
+          "sheetNumber": 5
+        }
+      ],
+      "resolution": "Relocate the 9 Ordinance Requirements notes from Sheet 5 to the cover sheet.",
+      "resolutionDetails": null
+    },
+    {
+      "checklistItemId": "CC-3-19",
+      "observation": "Compatibility Standards apply per facts.md showing SF-3 zoning to west (triggers LDC 25-2-1051 compatibility requirements). Cover sheet examined via vision tool - no 'Compatibility' section found. Sheet 5 examined and contains 'COMPATIBILITY' section with 5 numbered notes covering reflective materials, noise, lighting, and dumpster setback.",
+      "reasoning": "The site is subject to Compatibility Standards due to adjacent SF-3 zoning to the west. The checklist explicitly requires these 5 notes on the cover sheet (location binding: explicit). The notes exist on Sheet 5 but not on the cover sheet, violating the explicit location requirement.",
+      "tools_used": [
+        "vision",
+        "semantic-search-blocks"
+      ],
+      "status": "fail",
+      "explanation": "Compatibility notes (5 notes) found on Sheet 5 instead of cover sheet; required due to adjacent SF-3 zoning.",
+      "evidenceLocations": [
+        {
+          "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+          "label": "General Notes Sheet",
+          "sheetNumber": 5
+        }
+      ],
+      "resolution": "Relocate the 5 Compatibility notes from Sheet 5 to the cover sheet.",
+      "resolutionDetails": null
+    },
+    {
+      "checklistItemId": "CC-3-21",
+      "observation": "Sheet 5 examined via vision tool. 'GENERAL CONSTRUCTION NOTES' section found with 6 numbered items covering plan adequacy, Texas 811, pre-construction meeting, OSHA, environmental requirements, and engineer certification.",
+      "reasoning": "The checklist allows General Construction notes on any plan sheet (location binding: flexible). Sheet 5 contains all 6 required notes matching the Notes and Templates DOCX content. The flexible location allowance is satisfied.",
+      "tools_used": [
+        "vision",
+        "semantic-search-blocks"
+      ],
+      "status": "pass",
+      "explanation": "General Construction notes (6 notes) present on Sheet 5; flexible location allows any plan sheet.",
+      "evidenceLocations": [
+        {
+          "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+          "label": "General Notes Sheet",
+          "sheetNumber": 5
+        }
+      ],
+      "resolution": null,
+      "resolutionDetails": null
+    },
+    {
+      "checklistItemId": "CC-3-22",
+      "observation": "Sheet 5 examined. Block 6 contains 'AMERICANS WITH DISABILITIES ACT' disclaimer stating the City has reviewed for compliance with City regulations only and that applicant/owner/occupant are responsible for determining compliance with all other laws.",
+      "reasoning": "The checklist allows the ADA disclaimer on any plan sheet (location binding: flexible). Sheet 5 contains the required disclaimer text matching the Notes and Templates DOCX content.",
+      "tools_used": [
+        "semantic-search-blocks"
+      ],
+      "status": "pass",
+      "explanation": "ADA disclaimer present on Sheet 5; flexible location allows any plan sheet.",
+      "evidenceLocations": [
+        {
+          "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+          "label": "General Notes Sheet",
+          "sheetNumber": 5
+        }
+      ],
+      "resolution": null,
+      "resolutionDetails": null
+    },
+    {
+      "checklistItemId": "CC-3-23",
+      "observation": "Sheet 5 examined via vision tool. Developer Information block found within the 'TEMPORARY AND PERMANENT EROSION AND SEDIMENTATION CONTROL NOTES' section (note 10). Block contains: Owner (Southline Capital Partners with address and phone), Owner's Representative (Pape-Dawson with phone), and two additional fields for erosion control and tree protection contacts (phone numbers blank).",
+      "reasoning": "The checklist allows Developer Information block on any plan sheet (location binding: flexible). Per validation methodology, only 'Developer Information' and 'Owner's Representative Responsible for Plan Alterations' must be filled in - both are present with complete information. The two blank fields are acceptable.",
+      "tools_used": [
+        "vision"
+      ],
+      "status": "pass",
+      "explanation": "Developer Information block present on Sheet 5 with required Owner and Owner's Representative fields filled.",
+      "evidenceLocations": [
+        {
+          "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+          "label": "General Notes Sheet",
+          "sheetNumber": 5
+        }
+      ],
+      "resolution": null,
+      "resolutionDetails": null
+    },
+    {
+      "checklistItemId": "CC-3-24",
+      "observation": "Cover sheet examined via vision tool. 'SITE PLAN RELEASE' approval block found in bottom-right corner above sheet number. Block contains fields for Site Plan Approval, Case Number, Application Date, Approved On (with Administrative/Commission checkboxes), Expiration Date, Case Manager, Project Expiration Date, plus signature lines for Austin Development Services and Compliance/Zoning approval stamps.",
+      "reasoning": "The checklist requires a Director DSD approval block or Site Plan/SDP Number block on the cover sheet. The Site Plan Release block serves this function and contains all necessary approval fields including the Director of Development Services Department signature line.",
+      "tools_used": [
+        "vision"
+      ],
+      "status": "pass",
+      "explanation": "Site Plan Release approval block present on cover sheet with required approval fields.",
+      "evidenceLocations": [
+        {
+          "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+          "label": "Cover Sheet",
+          "sheetNumber": 1
+        }
+      ],
+      "resolution": null,
+      "resolutionDetails": null
+    },
+    {
+      "checklistItemId": "CC-3-26",
+      "observation": "Facts.md reviewed. Barton Springs Zone field shows 'No'. Project is in West Bouldin Creek watershed, classified as Urban Watershed, Desired Development Zone. No Edwards Aquifer recharge or contributing zone involvement.",
+      "reasoning": "The checklist condition requires this block 'If commercial/multifamily in Barton Springs Zone.' The project is commercial/multifamily but is not located in the Barton Springs Zone per the surveyed facts, so the condition is not met.",
+      "tools_used": [],
+      "status": "not-applicable",
+      "explanation": "Project is not located in Barton Springs Zone.",
+      "evidenceLocations": [],
+      "resolution": null,
+      "resolutionDetails": null
+    },
+    {
+      "checklistItemId": "CC-3-27",
+      "observation": "Facts.md reviewed. UNO Overlay field shows 'None'. Downtown Austin field shows 'Not in downtown district'. Project is at 1700 S Lamar, outside the Great Streets boundary (MLK/Lady Bird Lake/IH-35/Lamar) and outside the UNO district (West Campus area).",
+      "reasoning": "The checklist condition requires indication 'If within Great Streets or UNO boundaries.' The project is neither within Great Streets boundaries (downtown area) nor within the University Neighborhood Overlay district per the surveyed facts, so the condition is not met.",
+      "tools_used": [],
+      "status": "not-applicable",
+      "explanation": "Project is not within Great Streets or UNO boundaries.",
+      "evidenceLocations": [],
+      "resolution": null,
+      "resolutionDetails": null
+    },
+    {
+      "checklistItemId": "AF-01",
+      "observation": "Sheet 5 examined via vision tool and guide.md. 'FIRE DEPARTMENT' section found with 7 numbered notes. Notes cover: (1) all-weather driving surface, (2) hydrant installation specs, (3) timing of installation, (4) pervious/decorative paving for 80,000 lb loads, (5) combustible construction non-conformance storage restrictions, (6) fire lane registration, (7) vertical clearance 14 feet. Reference document reviewed - note 5 should be about commercial dumpsters (1.5 cu yd or greater not within 10 ft of openings/combustible walls/eaves), not combustible construction non-conformance.",
+      "reasoning": "The validation methodology requires ~90% semantic matching with the Notes and Templates DOCX Fire Department section. Six of the seven notes match well semantically. However, note 5 is substantively different: the plan has a note about combustible construction storage, while the required note is about commercial dumpster placement. This is a missing required note, not a semantic variation. Per validation methodology, flag as deficient when required notes are missing or substantively altered.",
+      "tools_used": [
+        "vision",
+        "semantic-search-blocks"
+      ],
+      "status": "fail",
+      "explanation": "Fire Department note about commercial dumpsters missing; replaced with combustible construction non-conformance note.",
+      "evidenceLocations": [
+        {
+          "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+          "label": "General Notes Sheet",
+          "sheetNumber": 5
+        }
+      ],
+      "resolution": "Replace Fire Department note 5 with required text: 'Commercial dumpsters and containers with an individual capacity of 1.5 cubic yards or greater shall not be stored or placed within ten feet of openings, combustible walls, or combustible eave lines.' See the CoA standard notes template for the expected notes.",
+      "resolutionDetails": {
+        "type": "standard_note_diff",
+        "expected": "Commercial dumpsters and containers with an individual capacity of 1.5 cubic yards or greater shall not be stored or placed within ten feet of openings, combustible walls, or combustible eave lines.",
+        "actual": "COMBUSTIBLE CONSTRUCTION NON-CONFORMANCE: NO COMBUSTIBLE CONSTRUCTION NON-CONFORMANCE SHALL BE STORED OR PLACED WITHIN TEN FEET OF APPROVED COMBUSTIBLE WALLS, OR COMBUSTIBLE EAVE LINES.",
+        "referenceUrl": "https://austin.widen.net/s/vxznrtmfwf/sp_consolidatedsiteplanapplication_notestemplates"
+      }
+    }
+  ]
+}
