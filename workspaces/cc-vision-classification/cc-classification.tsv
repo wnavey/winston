@@ -1,0 +1,38 @@
+grouping	item_id	primary_tool	secondary_tool	confidence	location	condition	rationale
+cc-13	AW-01	generic-vision		high	AW general info sheet	always	Read title block + version stamp on a specific sheet. OCR / text.
+cc-13	AW-02	generic-vision		high	AW general info sheet	always	Compare presence of template boxes/tables/text against canonical template. Layout + text, no drawing reasoning.
+cc-13	AW-03	generic-vision		high	AW general info sheet	always	Read fields in Project Info / Demand Data table — text/values in cells.
+cc-13	AW-05	generic-vision		high	AW general info sheet	always	Read AW Infrastructure Info table cells (product, size, length, services).
+cc-13	AW-06	generic-vision		high	AW general info sheet	always	Inspect Meter Notice fields/checkboxes for completion.
+cc-13	AW-07	generic-vision		high	AW general info sheet	conditional	Read Building Water Meter Size Table cells.
+cc-13	AW-08	generic-vision		high	AW general info sheet	always	Verify checkboxes and fill-ins on OWRS / Reclaimed / Automated Metering sections.
+cc-13	AW-10	generic-vision		high	AW general info sheet	always	Read AULCC checkbox + UCC number text or pending acknowledgment.
+cc-13	AW-11	generic-vision		high	AW general info sheet (page 2)	conditional	Read fire-flow test result text/table.
+cc-13	AW-12	generic-vision		medium	AW general info sheet (page 2)	conditional	Verify presence of a fire-flow MAP graphic on page 2. Item is presence-only — vision can confirm a map-like figure exists. Inspect-drawing only needed if validating map contents.
+cc-13	AW-13	generic-vision		high	AW general info sheet (page 2)	conditional	Verify SER section + map exhibit present, or that text indicates SER is pending/under review.
+cc-13	AW-14	generic-vision		high	AW general info sheet	conditional	Read UCM Waiver Summary table.
+cc-13	AW-16	generic-vision		high	plan set / AW general info sheet	always	Verify text reference indicating SER design is submitted or pending.
+cc-13	AW-18	inspect-drawing	generic-vision	medium	utility plan	always	"Plan view at top half / profile view present" — sheet-layout question. Vision could read 'PLAN' / 'PROFILE' labels; inspect-drawing handles the spatial layout assertion. Either tool plausibly works.
+cc-13	AW-19	generic-vision		high	location map	always	Read 'Grid' and 'Mapsco' labels on the location map page.
+cc-13	AW-20	generic-vision		high	general notes	always	Semantic comparison of construction-notes block vs canonical Notes and Templates DOCX. Pure text matching.
+cc-13	AW-21	inspect-drawing	generic-vision	high	utility plan	always	Pipe sizes/material/location relative to easements/ROW + double-line styling for pipes >=24". Double-line check is a pure drawing-region symbology question. Material/size labels are vision.
+cc-13	AW-22	inspect-drawing	generic-vision	medium	utility plan	always	Existing W/WW infrastructure shown with location/size/material. Labels are vision; depiction (visible lines on plan) is inspect-drawing. Genuine 'both'.
+cc-13	AW-23	inspect-drawing		high	utility plan	always	Wastewater flow direction arrows on plan views. Canonical inspect-drawing case — visual symbology on lines.
+cc-13	AW-25	generic-vision		high	AW general info sheet	always	Read available fire-flow GPM value on info sheet.
+cc-13	AW-27	inspect-drawing	generic-vision	medium	utility plan	always	Recorded easement recordation numbers (vision: text) AND proposed easement limits indicated (inspect-drawing: visible boundaries on plan). Genuine 'both'.
+cc-13	AW-28	inspect-drawing		high	utility plan	always	Retaining wall components (geogrid, straps, tie-backs) shown and identified. Drawing-detail question with labels.
+cc-13	AW-29	inspect-drawing	generic-vision	high	utility plan	always	Physical obstructions (poles, trees, inlets) within ROW affecting utilities — visual identification on plans, sometimes labels.
+cc-13	AW-30	inspect-drawing	generic-vision	high	utility plan	always	TCEQ crossing compliance — locating where W/WW/reclaimed mains cross (inspect-drawing) and reading the compliance callout text (vision).
+cc-13	AW-31	generic-vision	inspect-drawing	medium	utility plan	always	Curve data normally appears in a labeled curve table with PI/R/L/Δ. Reading the table is vision; verifying it's geometrically tied to plan curves is inspect-drawing. Lean vision.
+cc-13	AW-32	inspect-drawing		high	utility plan	always	Typical cross sections for private streets/easements — visual diagrams of cross sections.
+cc-13	AW-33	generic-vision	inspect-drawing	medium	location map	conditional	Overall location/key maps for utility lines crossing >=3 sheets. Presence-of-map question is vision; geometric coverage check is inspect-drawing.
+cc-13	AW-36	generic-vision		high	utility plan	always	Read scale annotation in title block + check sheet size. Both metadata/text.
+cc-13	AW-37	no-vision-tool-req		high	plan set	always	Recorded plat / land-status determination — existence of a supplementary document in the plan set. Answerable from README / document index without vision.
+cc-13	AW-38a	inspect-drawing	generic-vision	high	utility plan	conditional	Floodplain / CWQZ / erosion-hazard zones shown — boundary overlays on the drawing area.
+cc-13	AW-38b	inspect-drawing	generic-vision	high	utility plan	always	Storm sewers, easements, watercourse centerlines shown on plans — drawn linework with labels.
+cc-13	AW-39	inspect-drawing		high	site plan	conditional	Drain-field delineation on plan — visual outlined area.
+cc-13	AW-41	no-vision-tool-req		high	plan set	conditional	TCEQ Ch. 217 engineer's report — separate document existence check (supplementary docs / README).
+cc-13	AW-45	generic-vision		high	site plan	always	Read street-address labels on sheets.
+cc-13	AW-46	generic-vision	inspect-drawing	medium	site plan	always	Roadways/drives/bridges/culverts/pavers labeled. Item is about labeling — vision. Inspect-drawing only if confirming the visual feature exists at all.
+cc-13	AW-49	generic-vision		high	all plan sheets	always	Title block fields — project title, date, revision dates. Text.
+cc-13	AW-53	generic-vision		high	cover sheet	always	Subdivision file number on cover sheet — text in title block / cover area.
