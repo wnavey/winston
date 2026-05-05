@@ -1,0 +1,19 @@
+# Inspect-Drawing experiment overlay
+#
+# Loaded by conductor when --experiment=inspect-drawing is passed to the
+# completeness-check workflow. Overrides the `review` step to:
+#   - use this directory's review.md (baseline prompt + inspect-drawing instructions)
+#   - expose the script:inspect-drawing tool alongside vision and semantic-search-blocks
+#
+# Baseline (no --experiment flag) keeps the workflow's default prompt and
+# tools list — vision + semantic-search-blocks only, no inspect-drawing
+# mentioned and not registered.
+name: inspect-drawing
+description: Enable inspect-drawing tool for drawing-region question answering during completeness check.
+overrides:
+  review:
+    prompt: review.md
+    tools:
+      - vision
+      - script:semantic-search-blocks
+      - script:inspect-drawing

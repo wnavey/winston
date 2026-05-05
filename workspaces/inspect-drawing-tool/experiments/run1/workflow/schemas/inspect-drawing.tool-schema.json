@@ -1,0 +1,54 @@
+{
+  "description": "Answer a structured question about the drawing area of a site plan sheet — lines, symbols, spatial relationships, shapes. Crops to the drawing block by default and asks Gemini Vision the question, returning a typed answer (boolean/count/description), confidence, and bbox-grounded evidence. Use this only for questions whose answer requires reasoning about the drawing itself. For legend/schedule/title-block lookups or general page text, use the `vision` tool instead. Before calling, confirm the target sheet has a `category=drawing` block (check `blocks.md` or a prior `semantic-search-blocks` result). If the answer might depend on non-drawing context (e.g., comparing a drawing symbol to a legend entry), set `cropMode=full-sheet` or do a separate `vision` lookup first. The model is instructed to answer `unanswerable=true` rather than guess when it cannot tell with high confidence.",
+  "parameters": {
+    "reasoning": {
+      "type": "string",
+      "description": "Explain in 1-4 sentences why you are calling this tool. Describe the compliance question you are trying to answer, what you have already tried (vision, blocks.md), and why a drawing-region inspection is needed."
+    },
+    "applicable_checklist_items": {
+      "type": "array",
+      "description": "The checklist items this inspection is intended to verify. Include every checklist item from your grouping file whose pass/fail determination depends on the question being asked.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "checklist_id": {
+            "type": "string",
+            "description": "The checklist item ID from the grouping file (e.g., 'CC-7.3')."
+          },
+          "checklist_deficiency_text": {
+            "type": "string",
+            "description": "The full deficiency text from the checklist (e.g., 'Wastewater lines lack required direction-of-flow arrows')."
+          }
+        }
+      }
+    },
+    "documentId": {
+      "type": "string",
+      "description": "Plan set ID — the document UUID from the project README.md. This is NOT the projectId."
+    },
+    "sheetNum": {
+      "type": "string",
+      "description": "Sheet number containing the drawing to inspect. String to tolerate composite identifiers like 'C4-1'."
+    },
+    "question": {
+      "type": "string",
+      "description": "The question to answer about the drawing. Be specific and reference visible features or labels rather than abstract checklist text. Examples: 'Do the wastewater lines have direction-of-flow arrows on the line itself, not just nearby callouts?', 'How many fire hydrants are shown within the project boundary?', 'Are adjacent driveways depicted along the street frontages?'."
+    },
+    "expectedAnswerType": {
+      "type": "string",
+      "required": false,
+      "description": "Tells the model which structured field to populate. 'boolean' (default) populates `classification` (yes/no/partial). 'count' populates `count` (integer). 'description' populates `answerText` only. The response shape is the same in all cases.",
+      "enum": ["boolean", "count", "description"]
+    },
+    "cropMode": {
+      "type": "string",
+      "required": false,
+      "description": "What region of the sheet to send to the model. 'drawing' (default) crops to the largest category=drawing content_block; falls back to full-sheet if none exists. 'full-sheet' sends the whole page — use when the answer might depend on context outside the drawing block (legend, schedule, title block) or when you suspect drawing-cropping would lose information. 'block:<contentBlockId>' crops to a specific content block by id — use when you have already done block discovery via blocks.md or semantic-search-blocks and know exactly which region matters."
+    },
+    "regionHint": {
+      "type": "string",
+      "required": false,
+      "description": "Optional natural-language hint for where on the drawing to look (e.g., 'along the east property frontage', 'near the southern detention pond'). Treated as a hypothesis, not a constraint — the model is instructed to relocate if the hint looks wrong, and `regionHintHonored=false` will be set in that case."
+    }
+  }
+}
