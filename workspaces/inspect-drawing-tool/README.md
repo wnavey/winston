@@ -27,6 +27,7 @@ HTML debug viewer.
 | [`design-plan.md`](./design-plan.md) | Living plan: motivating examples → tool surface → phasing → debug UI → open questions |
 | [`motivating-examples.md`](./motivating-examples.md) | Concrete completeness-check items the tool needs to handle, with a question taxonomy |
 | [`reference/architecture-pointers.md`](./reference/architecture-pointers.md) | Pointers into `bureau` / `conductor` / `measure-distance-tool/` — where to look when implementing |
+| [`ai-loop-exploration.md`](./ai-loop-exploration.md) | Research into adding a Gemini agentic loop — options, SDK capabilities, recommendation |
 
 ## Status
 
