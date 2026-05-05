@@ -1,0 +1,186 @@
+grouping	item_id	grade	confidence	location	condition	rationale
+cc-13	AW-01	vision-only	high	AW general info sheet	always	Read title block + version stamp on a specific sheet. OCR / text.
+cc-13	AW-02	vision-only	high	AW general info sheet	always	Compare presence of template boxes/tables/text against canonical template. Layout + text, no drawing reasoning.
+cc-13	AW-03	vision-only	high	AW general info sheet	always	Read fields in Project Info / Demand Data table — text/values in cells.
+cc-13	AW-05	vision-only	high	AW general info sheet	always	Read AW Infrastructure Info table cells (product, size, length, services).
+cc-13	AW-06	vision-only	high	AW general info sheet	always	Inspect Meter Notice fields/checkboxes for completion.
+cc-13	AW-07	vision-only	high	AW general info sheet	conditional	Read Building Water Meter Size Table cells.
+cc-13	AW-08	vision-only	high	AW general info sheet	always	Verify checkboxes and fill-ins on OWRS / Reclaimed / Automated Metering sections.
+cc-13	AW-10	vision-only	high	AW general info sheet	always	Read AULCC checkbox + UCC number text or pending acknowledgment.
+cc-13	AW-11	vision-only	high	AW general info sheet (page 2)	conditional	Read fire-flow test result text/table.
+cc-13	AW-12	vision-only	medium	AW general info sheet (page 2)	conditional	Verify presence of a fire-flow MAP graphic on page 2. Item is presence-only — vision can confirm a map-like figure exists. Inspect-drawing only needed if validating map contents.
+cc-13	AW-13	vision-only	high	AW general info sheet (page 2)	conditional	Verify SER section + map exhibit present, or that text indicates SER is pending/under review.
+cc-13	AW-14	vision-only	high	AW general info sheet	conditional	Read UCM Waiver Summary table.
+cc-13	AW-16	vision-only	high	plan set / AW general info sheet	always	Verify text reference indicating SER design is submitted or pending.
+cc-13	AW-18	inspect-drawing-optional	medium	utility plan	always	Profile view present + plan view at top half. Spatial layout question — vision can read PLAN/PROFILE labels; inspect-drawing handles the layout assertion. Either tool plausibly works.
+cc-13	AW-19	vision-only	high	location map	always	Read 'Grid' and 'Mapsco' labels on the location map page.
+cc-13	AW-20	vision-only	high	general notes	always	Semantic comparison of construction-notes block vs canonical Notes and Templates DOCX. Pure text matching.
+cc-13	AW-21	inspect-drawing-required	high	utility plan	always	Pipe sizes/material/location vs easements/ROW + double-line styling for pipes >=24". Double-line check is a pure drawing-region symbology question vision cannot reliably structure-output.
+cc-13	AW-22	inspect-drawing-optional	medium	utility plan	always	Existing W/WW infrastructure shown with location/size/material. Labels are vision; depiction (visible lines on plan) is inspect-drawing. Either tool plausibly produces an answer.
+cc-13	AW-23	inspect-drawing-required	high	utility plan	always	Wastewater flow direction arrows on plan views. Canonical inspect-drawing case — visual symbology on lines, vision cannot reliably structure this.
+cc-13	AW-25	vision-only	high	AW general info sheet	always	Read available fire-flow GPM value on info sheet.
+cc-13	AW-27	inspect-drawing-optional	medium	utility plan	always	Recorded easement recordation numbers (vision: text) AND proposed easement limits indicated (inspect-drawing: visible boundaries). Either tool plausibly answers, depending on which sub-condition is being checked.
+cc-13	AW-28	inspect-drawing-required	high	utility plan	always	Retaining wall components (geogrid, straps, tie-backs) shown and identified. Drawing-detail/section reading — symbology required.
+cc-13	AW-29	inspect-drawing-optional	high	utility plan	always	Physical obstructions (poles, trees, inlets) within ROW affecting utilities. Visual identification with labels — vision could answer if obstructions are clearly labeled.
+cc-13	AW-30	inspect-drawing-optional	high	utility plan	always	TCEQ crossing compliance — locating crossings (inspect-drawing) and reading compliance callouts (vision). Either tool can plausibly identify a crossing's compliance label.
+cc-13	AW-31	vision-only	medium	utility plan	always	Curve data normally appears in a labeled curve table with PI/R/L/Δ. Reading the table is vision; lean vision-only.
+cc-13	AW-32	inspect-drawing-required	high	utility plan	always	Typical cross sections for private streets/easements — visual diagram of cross section, requires drawing-region reasoning.
+cc-13	AW-33	vision-only	medium	location map	conditional	Overall location/key maps for utility lines crossing >=3 sheets. Presence-of-map question is vision-answerable.
+cc-13	AW-36	vision-only	high	utility plan	always	Read scale annotation in title block + check sheet size. Both metadata/text.
+cc-13	AW-37	no-tool	high	plan set	always	Recorded plat / land-status determination — existence of a supplementary document. Answerable from README / document index without vision.
+cc-13	AW-38a	inspect-drawing-optional	high	utility plan	conditional	Floodplain / CWQZ / erosion-hazard zones shown — boundary overlays. If overlays are clearly labeled vision could answer presence; inspect-drawing better for boundary verification.
+cc-13	AW-38b	inspect-drawing-optional	high	utility plan	always	Storm sewers, easements, watercourse centerlines shown — drawn linework with labels. Either tool can verify presence given labels.
+cc-13	AW-39	inspect-drawing-required	high	site plan	conditional	Drain-field delineation on plan — visual outlined area, requires drawing-region reasoning.
+cc-13	AW-41	no-tool	high	plan set	conditional	TCEQ Ch. 217 engineer's report — separate document existence check (supplementary docs / README).
+cc-13	AW-45	vision-only	high	site plan	always	Read street-address labels on sheets.
+cc-13	AW-46	vision-only	medium	site plan	always	Roadways/drives/bridges/culverts/pavers labeled. Item is about labeling — vision-only.
+cc-13	AW-49	vision-only	high	all plan sheets	always	Title block fields — project title, date, revision dates. Text.
+cc-13	AW-53	vision-only	high	cover sheet	always	Subdivision file number on cover sheet — text in title block / cover area.
+cc-1	CC-1-01	no-tool	high	application form	always	CC Application PDF presence — file existence in submittal package.
+cc-1	CC-1-02	vision-only	high	application form	always	Read CC Application Sections 1–11 fields for completion.
+cc-1	CC-1-03	vision-only	high	application form	always	Read Section 13 signature/printed name/firm/date fields.
+cc-1	CC-1-04	vision-only	high	application form	always	Read Section 14 signature/printed name/firm/date fields.
+cc-1	CC-1-05	vision-only	high	application form	always	Read Section 15 signature/printed name/date fields.
+cc-1	CC-1-06	vision-only	high	application form	always	Read owner authorization signature OR agent authorization letter contents.
+cc-1	CC-1-08	no-tool	high	tax certificates	always	Tax Certificate document presence — file existence.
+cc-1	CC-1-09	vision-only	high	engineering report	conditional	Read front-page seal/signature/date on Engineering Report.
+cc-1	CC-1-10	no-tool	high	engineer's summary letter	always	Engineer's Summary Letter document presence — separate from Engineering Report.
+cc-1	CC-1-11	vision-only	high	engineer's summary letter	always	Read PE seal/signature/date on Engineer's Summary Letter.
+cc-1	CC-1-12	vision-only	medium	plan set	conditional	Read documentation of small-project exception — text-based.
+cc-1	CC-1-13	vision-only	high	TIA determination worksheet	always	Read TIA Determination Worksheet for completion + signature.
+cc-1	CC-1-14	no-tool	high	TIA report	conditional	TIA report document presence (when required).
+cc-1	CC-1-15	no-tool	high	project review form	always	PRF document presence.
+cc-1	CC-1-16	vision-only	high	project review form	always	Read PRF fields (Project Name, Address, Legal Description, codes, signature, date).
+cc-1	CC-1-17	vision-only	high	project review form	conditional	Read PRF Box C status + Vested Rights Review approval.
+cc-1	CC-1-18	no-tool	high	project review form	conditional	Vested Rights Petition document attachment — file existence.
+cc-1	CC-1-19	vision-only	high	location map	always	Validation methodology specifies vision model: read site marked in red on legible map.
+cc-1	CC-1-20	no-tool	high	plan set	always	Plan set + cover sheet presence — file existence.
+cc-1	CC-1-21	vision-only	high	cover sheet	always	Read engineer's signature/seal on cover sheet.
+cc-1	CC-1-22	no-tool	high	plan set	always	Legal description / Land Status Report document presence.
+cc-1	CC-1-23	inspect-drawing-optional	medium	site plan	always	Limits of construction / property boundaries with bearings & dimensions — boundary lines (drawing) + bearing/dim labels (vision).
+cc-1	CC-1-24	inspect-drawing-optional	medium	site plan	always	Existing utilities and crossovers identified — visible linework + labels.
+cc-1	CC-1-25	inspect-drawing-optional	medium	site plan	always	Existing easements and setbacks shown — visible boundaries + labels.
+cc-1	CC-1-26	vision-only	high	all plan sheets	always	Read PE seals/signatures/firm registration on every plan sheet.
+cc-1	CC-1-27	no-tool	high	plan set	conditional	Previously approved plan-set document presence (extension applications).
+cc-1	CC-1-28	vision-only	high	project review form	conditional	Read VR-verification status on previously approved PRF.
+cc-1	CC-1-29	no-tool	high	plan set	conditional	Previously approved unmarked plan-set presence (revisions).
+cc-1	CC-1-30	vision-only	medium	plan set	conditional	Verify red change-markings on proposed revision plan set — colored annotation, OCR-style.
+cc-1	CC-1-31	no-tool	high	SMART Housing certification letter	conditional	SMART Housing certification letter document presence.
+cc-1	CC-1-32	no-tool	high	Density Bonus 90 certification letter	conditional	DB90 certification letter document presence.
+cc-1	CC-1-34	no-tool	high	facade photographs	conditional	Facade photographs document presence.
+cc-1	CC-1-41	no-tool	high	plan set	always	Submittal files in PDF format — filesystem/file-extension check.
+cc-2	CC-2-02	vision-only	high	engineer's summary letter	always	Read watershed name/classification text in ESL.
+cc-2	CC-2-14	vision-only	high	all plan sheets	always	Read engineer's seal/signature/date on every plan sheet.
+cc-2	CC-2-16	inspect-drawing-optional	high	existing conditions sheet, overall site plan sheet	always	Boundary lines with bearings and dimensions — visible boundary linework + textual bearing/dim labels.
+cc-2	CC-2-21	inspect-drawing-optional	high	all plan sheets	always	Existing/future easements shown — visible boundary overlays + labels.
+cc-2	CC-2-23	inspect-drawing-optional	high	various	always	Overhead utility lines shown on applicable sheets — visible linework + labels.
+cc-2	CC-2-24	inspect-drawing-optional	high	various	always	Underground utility lines shown on applicable sheets — visible linework + labels.
+cc-3	CC-3-14	vision-only	high	cover sheet	always	Verify Revision/Correction Table presence + format match against Notes and Templates.
+cc-3	CC-3-17	vision-only	high	cover sheet	always	Read Index of Sheets list.
+cc-3	CC-3-18	vision-only	high	cover sheet	always	Verbatim Ordinance Requirements notes — text comparison vs Notes and Templates DOCX.
+cc-3	CC-3-19	vision-only	high	cover sheet	conditional	Verbatim Compatibility notes — text comparison.
+cc-3	CC-3-21	vision-only	high	plan set	always	Verbatim General Construction notes — text comparison; may appear on any plan sheet.
+cc-3	CC-3-22	vision-only	high	plan set	always	ADA disclaimer note — text presence/match.
+cc-3	CC-3-23	vision-only	high	plan set	always	Developer Information block — read fields (Owner, contacts).
+cc-3	CC-3-24	vision-only	high	cover sheet	always	Director DSD approval block presence — text/template.
+cc-3	CC-3-26	vision-only	high	cover sheet	conditional	BSZ Operating Permit approval block presence — text/template.
+cc-3	CC-3-27	inspect-drawing-optional	medium	site plan	conditional	Great Streets / UNO boundaries indicated on site plan — boundary overlay annotation. Could be vision if labeled, inspect-drawing for visible boundary verification.
+cc-3	AF-01	vision-only	high	plan set	always	Standard Austin Fire notes — verbatim text comparison vs Notes and Templates.
+cc-5	ADR-01	vision-only	high	site plan	always	Verify Addressing Plan sheet presence + listed in Sheet Index.
+cc-5	ADR-04	vision-only	high	site plan	always	Read entrance/door/entry/access-point labels on site plan.
+cc-5	ADR-05	inspect-drawing-optional	medium	site plan, architectural plan	always	Driveway/handicap-parking/garage/sidewalk-access identification — labels (vision) + visual identification (inspect-drawing).
+cc-5	ADR-07	vision-only	high	site plan	always	Read project name text — check for leading address number.
+cc-5	ADR-08	vision-only	high	site plan	conditional	Read sequential building labels (Bldg 1, Bldg 2, ...).
+cc-5	DAT-01	vision-only	high	site plan	always	Read FAR row in data table.
+cc-5	DAT-02	vision-only	high	site plan	always	Read impervious cover row in data table.
+cc-5	DAT-03	vision-only	high	site plan	always	Read building coverage row in data table.
+cc-5	DAT-04	vision-only	high	site plan	always	Read unit count row in data table.
+cc-5	DAT-05	vision-only	high	site plan	always	Read building height row in data table.
+cc-5	DAT-06	vision-only	high	site plan	always	Read GFA row in data table.
+cc-5	DAT-07	vision-only	high	site plan	conditional	Read open space row in data table.
+cc-5	HCR-01	inspect-drawing-optional	medium	site plan	conditional	Construction lines for buildings/parking/cut-fill — visible linework + cut/fill contours; labels typically present so either tool plausibly answers.
+cc-5	HCR-02	inspect-drawing-optional	medium	site plan	conditional	Mechanical equipment screening shown — architectural detail / elevation reading; either tool plausibly identifies labeled screening features.
+cc-6	CMP-01	inspect-drawing-optional	high	site plan	conditional	Land use map showing adjacent land uses — graphic with labels. Presence-only check per methodology; either tool plausibly verifies a map exists with adjacent zoning labels.
+cc-6	CMP-02	inspect-drawing-optional	high	building elevations	conditional	Building elevations showing architectural elements — visual diagrams; either tool plausibly verifies presence/content.
+cc-6	CMP-03	inspect-drawing-optional	high	site plan	conditional	Setbacks adjacent to residential — visible setback geometry + dimension/zoning labels.
+cc-10	AE-01	vision-only	high	plan set	always	Standard Austin Energy notes — verbatim text comparison vs Notes and Templates DOCX.
+cc-10	AE-02	inspect-drawing-optional	high	all plan sheets	always	Existing electric utility facilities (overhead/underground) shown — visible symbology + labels (mirrors cc-2 utility lines).
+cc-10	AE-03	inspect-drawing-optional	high	all plan sheets	always	Proposed electric utility facilities shown — visible symbology + labels.
+cc-10	AEGB-02	vision-only	high	letter of intent	conditional	LOI signed by both AEGB staff and development POC — read signatures on a separate document.
+cc-15	CC-15-01	vision-only	high	tree survey	always	Tree survey presence + surveyor certification — read sheet content + cert text.
+cc-15	CC-15-02	vision-only	high	erosion control plan	always	Tree protection plan presence in plan set — read sheet index + sheet content (sheet name flexibility per methodology).
+cc-15	CC-15-04	vision-only	high	application form	always	CC Application Section 12 — read tree count fields.
+cc-15	CC-15-05	vision-only	high	application form	conditional	Read Consultation Tree Permit Number field on application.
+cc-15	CC-15-06	vision-only	high	cover sheet	always	Read watershed name + classification text on cover sheet.
+cc-15	CC-15-07	vision-only	high	cover sheet	always	Watershed classification + standard environmental notes — text presence in notes.
+cc-15	CC-15-08	no-tool	high	plan set	conditional	ERI report or approved waiver — document existence.
+cc-15	CC-15-09	vision-only	high	erosion control plan	always	ESC plan sheet presence — read sheet index/content (sheet name flexibility per methodology).
+cc-15	CC-15-10	vision-only	high	plan set	conditional	ECM Appendix Q-1 net site area table — table presence/content.
+cc-15	CC-15-11	vision-only	high	landscape plan	always	Landscape plans — ECM Appendix C calcs + notes + planting details (text + tables).
+cc-15	CC-15-12	inspect-drawing-optional	high	site plan	conditional	CEFs and buffers/setbacks identified — visible symbology + boundary overlays + labels.
+cc-15	CC-15-13	inspect-drawing-optional	high	site plan	conditional	CWQZ/WQTZ and 100-year floodplains delineated — boundary overlays on the drawing.
+cc-15	CC-15-14	vision-only	high	tree protection plan	always	Tree Protection Plan sheet presence — read sheet index/content (sheet name flexibility).
+cc-15	CC-15-15	vision-only	high	plan set	conditional	ECM Appendix Q-2 table — table presence/content.
+cc-19	CC-19-01	vision-only	high	drainage report	conditional	Floodplain Study presence + PE seal/signature — read seal and confirm document.
+cc-19	CC-19-02	vision-only	high	plan set	always	Lowest FFE in MSL labeled on each proposed structure — read elevation labels.
+cc-19	CC-19-03	inspect-drawing-optional	high	site plan	conditional	FEMA 100-year floodplain delineation on plan — boundary overlay; either tool plausibly verifies presence given labels.
+cc-19	CC-19-04	inspect-drawing-optional	high	site plan	conditional	Fully developed 25-yr and 100-yr floodplains delineated — boundary overlays.
+cc-19	CC-19-05	inspect-drawing-required	high	site plan	conditional	Drainage easements CONTAIN 100-year floodplain — geometric containment check (polygon A contains polygon B). Spatial reasoning vision cannot reliably structure-output.
+cc-19	CC-19-06	no-tool	high	plan set	conditional	Depth certification document presence — supplementary document.
+cc-19	CC-19-07	no-tool	high	plan set	conditional	RSMP Feasibility Determination — document existence.
+cc-19	CC-19-08	no-tool	high	plan set	conditional	RSMP Feasibility Meeting documentation — document existence.
+cc-19	CC-19-09	no-tool	high	plan set	conditional	RSMP Application Form — document existence.
+cc-19	CC-19-10	vision-only	high	engineer's summary letter	conditional	Read RSMP participation reference text in ESL.
+cc-19	CC-19-11	vision-only	high	plan set	conditional	Summary table of existing/proposed flows (2/10/25/100-yr) — table presence/content.
+cc-19	CC-19-12	no-tool	high	plan set	conditional	Appraisal information / certified appraisal — document existence.
+cc-19	CC-19-13	no-tool	high	plan set	conditional	Allowable Exclusion documentation — document existence.
+cc-19	CC-19-14	no-tool	high	plan set	conditional	Smart Housing Certification Letter — document existence.
+cc-19	CC-19-15	no-tool	high	plan set	conditional	Modeling files / drainage analyses (zipped) — file existence.
+cc-19	CC-19-16	no-tool	high	plan set	conditional	Prior RSMP case numbers + approval letters — document existence.
+cc-19	CC-19-17	no-tool	high	plan set	conditional	Zipped modeling files (drainage infrastructure only) — file existence.
+cc-19	CC-19-18	no-tool	high	plan set	conditional	Engineering cost estimate — document existence.
+cc-19	CC-19-19	inspect-drawing-required	high	drainage plan	conditional	Drainage area maps missing analysis points, contours, spot elevations, or flow arrows. Flow arrows = canonical inspect-drawing case; contours/symbology require drawing-region reasoning vision cannot reliably structure-output.
+cc-19	CC-19-20	no-tool	high	drainage plan	conditional	Existing/proposed grading plans presence — sheet existence in plan set.
+cc-19	CC-19-21	no-tool	high	drainage plan	conditional	Plan and profile sheets for drainage infrastructure — sheet existence.
+cc-19	CC-19-22	vision-only	high	cover sheet	always	Floodplain note on cover sheet — FEMA FIRM Panel #, revision letter, effective date — read text.
+cc-20	CC-20-01	vision-only	high	drainage report	always	Read engineer's signature/seal/date on bound WQ/drainage doc front page; flag "preliminary"/"draft" qualifiers.
+cc-20	CC-20-02	vision-only	high	engineer's summary letter	always	Document presence + read content for required topics (2-yr peak flow, WQ compliance discussion).
+cc-20	CC-20-03	vision-only	high	drainage report	always	Flood control compliance documented OR RSMP application included — text/note check.
+cc-20	CC-20-20	inspect-drawing-optional	medium	drainage plan	conditional	Detention pond cross-section diagram with WSEs at 2/10/25/100-yr — visual diagram presence + labeled WSEs. Either tool plausibly verifies presence given labels.
+cc-20	CC-20-21	inspect-drawing-optional	medium	drainage plan	conditional	Detention outlet structure detail diagram with calculations — engineering-detail diagram + calc table.
+cc-20	CC-20-22	vision-only	high	drainage report	conditional	Stage-storage discharge table — table presence/content.
+cc-20	CC-20-25	inspect-drawing-optional	medium	drainage plan	conditional	WQ pond cross-section diagram with WQ surface elevation annotated — visual diagram + label.
+cc-22	CC-22-08	no-tool	high	traffic impact analysis	conditional	TIA report and technical addendum — document existence in submittal.
+cc-22	CC-22-12	inspect-drawing-optional	high	site plan	conditional	Driveway spacing dimensions on plans — dimension annotations on visual features.
+cc-22	CC-22-13	inspect-drawing-optional	high	site plan	conditional	Driveway widths / curb return radii dimensioned — dimension labels on visual features.
+cc-22	CC-22-14	inspect-drawing-required	high	site plan	always	Adjacent driveways within 300 feet shown. Validation methodology calls out specific drawing-region symbology pattern (two wide flat-bottomed U/J shapes side-by-side, opening same direction) — pure visual pattern recognition vision cannot reliably structure-output.
+cc-22	CC-22-15	inspect-drawing-optional	high	site plan	conditional	Offsets from opposing driveways dimensioned — dimension labels on visual features.
+cc-22	CC-22-17	vision-only	high	site plan	always	Parking table — read land use(s) + square footage cells.
+cc-22	CC-22-18	vision-only	high	site plan	always	Total provided parking spaces (vehicle + bicycle) — read counts from table.
+cc-22	CC-22-19	inspect-drawing-optional	medium	site plan	always	Parking stall width/depth/angle dimensioned — dimension annotations on stalls.
+cc-22	CC-22-20	inspect-drawing-optional	medium	site plan	always	Parking aisle / internal driveway widths dimensioned — dimension annotations.
+cc-22	CC-22-21	vision-only	high	site plan	always	Parking spaces identified by type — read type labels (HC, BIKE, COMPACT, STD).
+cc-22	CC-22-25	inspect-drawing-optional	high	site plan	always	Accessible route of travel shown — visible path + labels. Methodology specifies "Vision model: Accessible route identification".
+cc-22	CC-22-27	inspect-drawing-optional	high	site plan	always	Ramps connecting accessible elements shown — visible ramp symbology + labels.
+cc-22	OSP-01	inspect-drawing-optional	high	site plan	conditional	Pedestrian ramp locations between off-site parking and public entrances shown — visible location markers + labels.
+cc-22	OSP-02	inspect-drawing-optional	high	site plan	conditional	Walking distance dimensioned on plans — dimension annotation.
+cc-23	CC-23-01	inspect-drawing-optional	high	existing conditions sheet	always	Existing ROW width shown + dimensioned — dimension annotation on visible ROW.
+cc-23	CC-23-02	inspect-drawing-optional	high	grading plan	always	Existing/proposed behind-the-curb improvements (sidewalks, ramps, landscape strips, trees, lighting) shown — visible symbology + labels.
+cc-23	CC-23-03	inspect-drawing-optional	medium	grading plan	always	Grading plan with grade lines (contours) — visible linework + elevation labels. Borderline required since contours are geometric, but elevation labels make vision plausibly workable.
+cc-23	CC-23-04	inspect-drawing-optional	high	plan set	always	ROW improvement dimensions shown — dimension annotations (sheet flexible).
+cc-23	CC-23-05	inspect-drawing-optional	high	site plan	conditional	Plan and profile views provided for new roadway — sheet-layout question (mirrors AW-18).
+cc-23	CC-23-06	vision-only	high	site plan	conditional	Target speed noted on roadway — read text label.
+cc-23	CC-23-07	vision-only	high	site plan	conditional	Signage and striping plan provided — sheet presence + content (mostly labeled symbology).
+cc-23	CC-23-08	vision-only	medium	site plan	conditional	Retaining wall top + bottom elevations shown — read elevation labels.
+cc-23	CC-23-09	vision-only	high	site plan	conditional	Sealed structural drawings for retaining walls in ROW/easements — document presence + seal verification.
+cc-23	CC-23-10	inspect-drawing-optional	high	site plan	always	Dumpster / garbage cart locations shown — visible symbology + labels.
+cc-23	CC-23-11	inspect-drawing-optional	high	site plan	always	Proposed work adjacent to / encroaching into ROW identified and labeled — visible identification + labels.
+cc-24	CC-24-01	vision-only	high	plan set	conditional	License Agreement for tower crane submitted or referenced — read note/reference on plans (or doc presence).
+cc-24	CC-24-02	vision-only	high	plan set	conditional	License Agreement for retention/excavation support — same.
+cc-24	CC-24-03	vision-only	high	plan set	conditional	License Agreement for streetscape elements — same.
+cc-24	CC-24-04	vision-only	high	plan set	conditional	License Agreement for street trees/landscaping/irrigation — same.
+cc-24	CC-24-05	vision-only	high	plan set	conditional	License Agreement for outdoor dining — same.
+cc-24	CC-24-06	vision-only	high	plan set	conditional	License Agreement for pedestrian lighting — same.
+cc-24	CC-24-13	vision-only	high	plan set	conditional	Required License or Encroachment Agreement application — read reference on plans (or doc presence).
+cc-24	CC-24-15	vision-only	high	utility plan	conditional	AULCC reference on utility plans when excavations exceed DAPCZ/citywide thresholds — read text reference.
+cc-24	CC-24-16	vision-only	high	utility plan	conditional	AULCC reference when License Agreement or tower crane involved — read text reference.
