@@ -556,7 +556,74 @@ Acceptance:
    could contribute (e.g., distance + drawing-inspect for the same
    checklist question). Folds into the
    [`../inspect-drawing-tool/ai-loop-exploration.md`](../inspect-drawing-tool/ai-loop-exploration.md)
-   discussion.
+   discussion. See also the measurement chain decision below.
+
+   ### Measurement-route arg construction (chain inspect-drawing → measure-distance)
+
+   **Status:** deferred from Phase B. Captured here so future iterations
+   start from the right framing.
+
+   **Problem.** Phase B's classifier identifies `measurement` items, but
+   `measure-distance` requires `objectPairs: [{objectA, objectB}]` and
+   `scaleInchesPerFoot` — args that need visual grounding to construct
+   correctly (an object description like *"transformer pad in the
+   northwest area near Building 1"* only comes from looking at the
+   sheet). Phase B falls back to generic vision for `measurement` and
+   logs the route so we still get hit-rate signal.
+
+   **Decision (deferred, not designed).** When we wire up the
+   measurement route, **compose existing tools**:
+
+   ```
+   measurement route:
+     inspect-drawing(question = "locate the relevant object pairs for this measurement")
+       → returns evidence bboxes/descriptions
+     derive objectPairs and scale
+     measure-distance(documentId, sheetNum, objectPairs, scale)
+       → returns measurements
+   ```
+
+   Don't invent a new specialist (`extract-measurement-args` etc.).
+   inspect-drawing is already the visually-grounded tool that returns
+   bbox+description evidence — composing it with measure-distance is the
+   architectural shape the whole initiative is about.
+
+   **Rationale captured from the design conversation:**
+
+   - The chain is **not** more expensive than today. Today's flow already
+     involves the agent calling `vision` for context + `measure-distance`
+     (which makes 2 internal Gemini calls). The chain is essentially the
+     same call count, with the difference that the object pairs come from
+     a *grounded* call instead of the agent's *ungrounded* guess.
+   - Identifying wrong objects is already a failure mode today. The chain
+     doesn't add a new failure surface; it replaces an ungrounded guess
+     with a grounded one. Net better.
+   - State propagation between specialists is the *whole point* of this
+     initiative — vision_check is supposed to compose specialists. Chain
+     orchestration is what we're building toward.
+   - **Principle:** compose existing tools rather than inventing new
+     specialists. Inventing specialists is the failure mode to avoid.
+     If a problem looks like it needs a new tool, first ask whether
+     existing tools (especially inspect-drawing's evidence array) can
+     express it.
+
+   **Open implementation questions to resolve when this comes off the
+   shelf:**
+
+   - inspect-drawing's current contract is single-question, not
+     "enumerate object pairs." Likely needs a new mode (e.g.,
+     `expectedAnswerType: "object-pairs"`) or a question-shaping
+     convention that nudges the model to populate `evidence[]` with the
+     pair candidates.
+   - `scaleInchesPerFoot` from the title block. Two options: (a) extend
+     measure-distance to read scale from the title block itself when
+     not provided, (b) read it once per sheet at submission ingest time
+     and cache it. Either way, NOT a new specialist.
+   - Phase B's metadata.json has `dispatch.fallback_reason:
+     "measurement_arg_construction_not_implemented"` for items that hit
+     this gap. When the chain lands, those items start producing real
+     measure-distance calls — Phase D's eval will tell us if the chain
+     produces the recall lift we expect.
 3. **Confidence-thresholded fallback** — if low-confidence classifier
    decisions are systematically wrong in iter 1 data, add a confidence
    threshold below which we route to `generic`.
