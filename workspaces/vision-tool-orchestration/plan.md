@@ -237,6 +237,10 @@ Captured 2026-05-05 from initial design conversation.
 - Why: dispatch logic doesn't need per-workflow customization, but
   taxonomy does. This keeps code DRY while letting domain experts
   iterate on the prompt without touching conductor.
+- **Acknowledged tradeoff:** code is split across two repos (conductor
+  for dispatch, bureau for prompt). Not ideal. Earmarked to revisit if
+  it becomes painful — e.g., consolidating into a single bureau script-
+  tool if the conductor side stays trivial after iter 1.
 - **C2.** Specialists are reached via the same script-tool path the
   agent uses today; ~1s subprocess overhead per call is acceptable.
 - **C3.** `vision_check` args: `(checklist_item, project_id, document_id,
@@ -244,13 +248,24 @@ Captured 2026-05-05 from initial design conversation.
   they need them. Same shape as today's specialist tools.
 
 ### Top-level agent prompt change
-- **D.** **Combined (D-combined):** in this iteration, both add
-  `vision_check` to the agent's vision tool list AND remove `vision`,
-  `inspect-drawing`, `measure-distance` from the agent's tool list. The
-  3 specialists remain in the codebase, only callable via dispatch.
-- Why: agent currently picks the wrong tool ~88% of the time per the
-  rigorous metrics; there's not much to A/B against. Cleaner to commit
-  to the architecture and measure the improvement.
+- **D.** Use the existing **experiment-overlay pattern** (mirroring
+  `--experiment=inspect-drawing` and `--experiment=measure-distance`):
+  - **Control prompt** = current production prompt, unchanged.
+  - **Experimental prompt** = a new bureau experiment overlay
+    (`workflows/<workflow>/experiments/vision-check/`) that swaps in
+    its own `review.md` and its own tool list:
+    - Tool list: `vision_check` (+ `script:semantic-search-blocks` for
+      text search) only.
+    - `vision`, `script:inspect-drawing`, `script:measure-distance`
+      are **not** in the experimental tool list — they remain in the
+      codebase, callable only by `vision_check`'s internal dispatch.
+  - The experimental `review.md` deletes the "Using the Vision Tool",
+    "Using the Inspect-Drawing Tool", and "Using the Measure-Distance
+    Tool" sections, replacing them with a single "Using the Vision
+    Check Tool" section. Semantic-search-blocks section is preserved.
+- Why: matches the existing experiment-overlay convention; lets us run
+  control vs experiment side-by-side on the same submission; keeps the
+  baseline production path untouched while we validate.
 
 ### Routing edge cases
 - **E1.** Classifier picks **one** problem type — the dominant question
@@ -284,6 +299,139 @@ Captured 2026-05-05 from initial design conversation.
   - the agent's final finding was `not-verifiable`
   - the agent's reasoning cited "vision tool limitations" or similar.
   Cluster these logs across runs to identify candidate new specialists.
+
+---
+
+## Iteration 1 — concrete spec
+
+Locked-in once the open questions above are resolved. This is the
+minimum-viable build.
+
+### File layout
+
+| Where | What | Notes |
+|---|---|---|
+| `conductor/src/tools/vision-check/index.ts` | Conductor MCP tool: classifier call + dispatch + per-call artifact emission | Reads bureau prompt at tool-init, given `workflowPath`. |
+| `conductor/src/tools/vision-check/dispatch.ts` | Maps `problem_type` → specialist call (vision, inspect-drawing, measure-distance) | Reuses existing tool entry points; no new wire formats. |
+| `bureau/jurisdictions/austin/workflows/completeness-check/experiments/vision-check/experiment.yaml` | Overlay manifest | New experiment for cc. |
+| `bureau/jurisdictions/austin/workflows/completeness-check/experiments/vision-check/review.md` | Experimental review prompt | Deletes 3 vision-tool sections, adds 1 "Using vision_check" section. |
+| `bureau/jurisdictions/austin/workflows/completeness-check/prompts/vision-router.md` | Classifier prompt + taxonomy + few-shot examples | Loaded by `vision-check/index.ts` at init. |
+| `bureau/jurisdictions/austin/workflows/review/experiments/vision-check/{experiment.yaml,review.md}` | Same shape, for the `review` workflow. | |
+| `bureau/jurisdictions/austin/workflows/review/prompts/vision-router.md` | Classifier prompt for the review workflow (different examples — measure-distance heavy). | |
+
+### Classifier prompt — initial seed
+
+```
+Classify this site-plan-review checklist item into ONE of:
+  - measurement: requires plan-view distance/clearance measurement
+  - drawing_inspect: requires reasoning about lines, symbols, spatial
+    relationships, or shapes in a drawing area
+  - generic: any other visual question (label readout, table read,
+    note presence, title-block check)
+
+Examples (cc + el-md-exp):
+"Trees within 10 lateral feet of OHE conductor"          → measurement
+"Transformer pads lack 5-foot clearance from buildings"  → measurement
+"Drainage easements contain 100-year floodplain"         → measurement
+"Wastewater flow direction not indicated on plan views"  → drawing_inspect
+"Pipes ≥24 inches not shown as double lines"             → drawing_inspect
+"Adjacent driveways within 300 feet shown"               → drawing_inspect
+"Standard AE notes missing or incomplete"                → generic
+"AW Infrastructure Information table incomplete"         → generic
+"Subdivision file number missing from cover sheet"       → generic
+
+Return JSON:
+{
+  "problem_type": "measurement" | "drawing_inspect" | "generic",
+  "reasoning": "<one sentence>",
+  "confidence": 0.0-1.0
+}
+
+Item to classify: {checklistItemText}
+```
+
+### Experimental review.md — replacement section
+
+Replaces the three "Using the X Tool" sections (vision, inspect-drawing,
+measure-distance — whichever apply per workflow) with this single
+section:
+
+```markdown
+## Using the Vision Check Tool
+
+For ANY question requiring visual inspection of a site plan sheet —
+measurements, drawing inspection, label reading, presence checks —
+call `vision_check`. This is the single entry point for all visual
+questions.
+
+Internally `vision_check` classifies the question and dispatches to
+the appropriate specialist (measurement, drawing inspection, or
+generic vision). You do not need to choose a specialist yourself —
+the tool handles it.
+
+**Required parameters:** `checklistItemText`, `documentId`, `sheetNum`.
+The projectId is inferred from the workspace.
+
+**Optional parameter:** `regionHint` — short natural-language pointer
+("along the east property frontage"). Treated as a hypothesis, not a
+constraint.
+
+**Returns:** `{ answer, evidence, confidence, problemType,
+specialistCalled, classifierReasoning }`. Branch on `confidence` first;
+treat low-confidence answers as unclear rather than guessing.
+
+Per-call artifacts are saved under `output/vision-check-calls/<callId>/`
+for offline audit.
+```
+
+The `semantic-search-blocks` section is preserved unchanged.
+
+### Per-call artifact layout
+
+```
+output/vision-check-calls/<callId>/
+  metadata.json     # inputs, classifier output, specialist result, timing
+  classifier.txt    # full classifier prompt + raw response
+  events.jsonl      # per-step structured log
+  → and the dispatched specialist's own per-call artifacts continue
+    to land under output/<specialist>-calls/<...>/ as today, with the
+    callId cross-referenced in metadata.json
+```
+
+### Eval harness
+
+Two parallel suites.
+
+**cc:** run completeness-check with `--experiment=vision-check` against
+1700 S. Lamar v2, runs=3. Compare against the run1 baseline (the
+inspect-drawing experiment we already have data for). Score:
+
+- **Routing accuracy** (per checklist item, by `cc-vision-classification`
+  ground truth): of items the labeled grade is `inspect-drawing-required`,
+  what fraction did the classifier route to `drawing_inspect`? Same per
+  type. Confusion matrix.
+- **Conditional execution accuracy** (per specialist call): of items
+  routed to `drawing_inspect`, what fraction of inspect-drawing calls
+  produced a non-`unanswerable` answer matching the human-graded
+  expected outcome? Same per specialist.
+- **Headline recall** (vs the rigorous frame): % of `should_call=yes`
+  items that received any vision_check call (≥1 specialist invocation).
+
+**el-md-exp:** run review workflow with `--experiment=vision-check`
+against Valley View Townhomes, runs=3. Compare against
+experiment-run7's rigorous metrics as the baseline. Same three score
+families.
+
+### Organic signal collection
+
+In `vision-check/index.ts`, when classifier routes to `generic` AND any of
+the following is observed, append to `output/vision-check-calls/_signal.jsonl`:
+
+- generic vision response includes "unable to determine" / low confidence
+- final review finding for the item is `not-verifiable`
+- agent's reasoning string contains "vision tool limitations" or similar
+
+Cluster across runs after iter 1 to surface candidate new specialists.
 
 ---
 
