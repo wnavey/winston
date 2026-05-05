@@ -1,0 +1,82 @@
+{
+  "run_id": "experiment-run6.2",
+  "version": "v5.0",
+  "guide_set": "el-md-exp",
+  "total_items": 101,
+  "run_indices": [
+    "run-1",
+    "run-2",
+    "run-3"
+  ],
+  "calls_summary": {
+    "pair_call_dirs": 22,
+    "session_call_dirs": 8,
+    "has_per_call_attribution": true
+  },
+  "headline": {
+    "recall": 0.085,
+    "recall_hits": 13,
+    "recall_opportunities": 153,
+    "misuse": 0.0,
+    "misuse_hits": 0,
+    "misuse_opportunities": 150,
+    "misuse_inflated": 0.0133,
+    "misuse_inflated_hits": 2,
+    "misuse_note": "Real misuse: cells where at least one pair-call's applicableChecklistItems list contained ONLY should_call=no items. Inflated count includes cells where the call legitimately tagged a should_call=yes item but ALSO over-tagged a should_call=no item."
+  },
+  "by_classification": {
+    "horizontal": {
+      "opportunities": 153,
+      "hits": 13,
+      "rate": 0.085
+    },
+    "not-applicable": {
+      "opportunities": 84,
+      "hits": 2,
+      "rate": 0.0238
+    },
+    "vertical-or-mixed": {
+      "opportunities": 66,
+      "hits": 0,
+      "rate": 0.0
+    }
+  },
+  "by_subclass": {
+    "distance-only": {
+      "opportunities": 108,
+      "hits": 5,
+      "rate": 0.0463
+    },
+    "(none)": {
+      "opportunities": 150,
+      "hits": 2,
+      "rate": 0.0133
+    },
+    "distance-plus": {
+      "opportunities": 45,
+      "hits": 8,
+      "rate": 0.1778
+    }
+  },
+  "per_run_recall": {
+    "run-1": {
+      "opportunities": 51,
+      "hits": 2,
+      "rate": 0.0392
+    },
+    "run-2": {
+      "opportunities": 51,
+      "hits": 4,
+      "rate": 0.0784
+    },
+    "run-3": {
+      "opportunities": 51,
+      "hits": 7,
+      "rate": 0.1373
+    }
+  },
+  "diagnostics": {
+    "over_tagged_calls": 7,
+    "over_tagged_calls_note": "Calls where applicableChecklistItems lists both should_call=yes and should_call=no items. Real misuse rate is 0 if every misuse hit traces back to a call also tagging a should_call=yes item."
+  }
+}

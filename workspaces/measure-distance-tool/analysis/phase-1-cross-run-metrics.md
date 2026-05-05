@@ -1,5 +1,13 @@
 # Phase 1 — Cross-Run Metrics: el-md-exp (EL guides 1, 2, 13)
 
+> ⚠️ **Superseded — 2026-05-05.** This doc reports invocation recall using
+> agent-session-level attribution and a baseline-NV-only denominator. The
+> rigorous per-(item × run) framing in
+> [`rigorous-metrics/README.md`](./rigorous-metrics/README.md) is now the
+> canonical methodology and reports recall ~5× lower than the numbers
+> below for the same runs. See `measure-distance-science-plan.md` for
+> the methodology update. Numbers here kept for historical reference.
+
 All metrics are against the `baseline-2026-04-15` (no MD tool). Scope: EL
 discipline guides 1.md, 2.md, 13.md — 101 checklist items total. Model:
 Haiku 4.5. 3 runs × 3 items = 9 agents per experiment.

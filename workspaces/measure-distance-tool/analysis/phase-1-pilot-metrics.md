@@ -1,5 +1,12 @@
 # Phase 1 — Pilot Metrics: Measure-Distance Tool Validation
 
+> ⚠️ **Superseded — 2026-05-05.** Invocation recall here uses agent-session-
+> level attribution and a baseline-NV-only denominator that inflate the
+> number ~5× vs the rigorous per-(item × run) framing. See
+> [`rigorous-metrics/experiment-run4.md`](./rigorous-metrics/experiment-run4.md)
+> for the rigorous numbers and `measure-distance-science-plan.md` for the
+> methodology update.
+
 Baseline: `baseline-2026-04-15` · Experiment: `experiment-run4`
 Review guide: `el-md-exp` (EL guides 1, 2, 13 — 101 checklist items) × 3 runs = 9 agents
 Per-item detail: `analysis/guides/el-md-exp/item-conversion-baseline-run4.md`

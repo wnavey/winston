@@ -3,6 +3,16 @@
 A data-science-driven plan for proving the efficacy of the measure-distance
 tool and quantifying its impact on review quality.
 
+> **Methodology update — 2026-05-05:** invocation recall is now computed
+> using the rigorous **per-(item × run) framing** documented in
+> [`rigorous-metrics/README.md`](./rigorous-metrics/README.md). The earlier
+> phase-1 metrics (`phase-1-pilot-metrics.md`, `phase-1-cross-run-metrics.md`,
+> `phase-1-run7*-metrics.md`) used agent-session-level attribution and a
+> baseline-NV-only denominator that inflated the recall number ~5× vs the
+> rigorous count. Those legacy docs are kept for historical reference but
+> all new analysis should use the rigorous framing.
+>
+
 ## Goals
 
 1. **Quantify tool adoption**: How often does the agent invoke the tool when
@@ -23,10 +33,32 @@ tool and quantifying its impact on review quality.
 
 | Metric | Definition | Formula | Data source |
 |--------|-----------|---------|-------------|
-| **Invocation recall** | Of items where MD is appropriate, how often does the agent call it? | `MD_invocations / eligible_items` | review.log `tool_use` events + item classification |
+| **Invocation recall** | Of (item × run) cells where the agent should call MD (`should_call=yes`), how often did at least one pair-call tag that deficiency? | `cells_with_call / cells_should_call_yes` | per-pair `metadata.json` `applicableChecklistItems` × item-classification.json |
+| **Misuse rate** | Of cells where the agent should NOT call MD (`should_call=no`), how often did a "no-only" pair-call (applicable list contains only `should_call=no` items) tag the cell? | `real_misuse_cells / cells_should_call_no` | same |
 | **Completion rate** | Of MD invocations, how often does the pipeline produce a result? | `successful_results / MD_invocations` | call-dir `metadata.json` + `measure-distance.json` |
 | **Measurement accuracy** | Of successful results, how often is the distance within tolerance of ground truth? | `correct_measurements / successful_results` | ground-truth dataset |
 | **Finding conversion rate** | Of `not-verifiable` baseline findings on eligible items, how many convert to `pass` or `fail` in the experiment? | `(pass + fail)_experiment / not-verifiable_baseline` (same items) | baseline vs experiment findings |
+
+**Implementation:** see [`scripts/compute-rigorous-metrics.py`](./scripts/compute-rigorous-metrics.py).
+Run it from the workspace root or anywhere — it discovers all
+`runs/*/<guide-set>/experiment-run*/measure-distance-calls/` directories and
+emits per-run + cross-run reports in [`rigorous-metrics/`](./rigorous-metrics/).
+
+#### Why this differs from earlier "invocation recall"
+
+The earlier framing computed `MD_invocations / eligible_items` where:
+- **`MD_invocations`** counted at agent-session level — any agent that made
+  ≥1 call counted every eligible item in that session as "invoked." This
+  inflates the numerator: if an agent made 1 call to measure EL-13.5, the
+  legacy numerator credits all distance-only items in that agent session.
+- **`eligible_items`** filtered to baseline-`not-verifiable` items only. This
+  shrinks the denominator: 26 instead of 108 (36 distance-only items × 3
+  runs), since most distance-only items had a `not-verifiable` verdict in
+  baseline anyway.
+
+Combined effect: legacy recall was ~5× the rigorous number. See
+[`rigorous-metrics/README.md`](./rigorous-metrics/README.md) for the full
+side-by-side.
 
 ### Extended metrics (Phase 3+)
 
