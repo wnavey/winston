@@ -282,6 +282,27 @@ Captured 2026-05-05 from initial design conversation.
   the catchall. The router has 3 outputs (measurement, drawing_inspect,
   generic), no fourth "skip" route.
 
+### Cross-workflow consistency
+- **Same taxonomy** (`measurement` / `drawing_inspect` / `generic`) across
+  cc and review for iter 1.
+- **Different few-shot examples** per workflow — cc's seeded set leans
+  `drawing_inspect` + `generic` (matches what cc items look like);
+  review's seeded set leans `measurement` (matches el-md-exp). Each
+  workflow gets its own `vision-router.md` in bureau, sharing the
+  same template + taxonomy section but its own examples block.
+
+### Versioning + reproducibility
+- Every `vision-check` call records the **classifier model id** and the
+  **bureau commit hash for `vision-router.md`** in
+  `output/vision-check-calls/<callId>/metadata.json`. So when we change
+  the classifier prompt or upgrade the model, runs from different
+  points in time stay comparable: any cross-run analysis can filter on
+  classifier version.
+- Field names: `metadata.classifier.modelId`, `metadata.classifier.promptCommitSha`.
+- Conductor already passes `bureauCommitHash` through the workflow run
+  context (see `metadata.bureauCommitHash` in the reviews table); reuse
+  that pipeline.
+
 ### Iteration success criteria
 - **F1.** **Headline goal: ≥80% recall on should-call items** across
   both eval suites (cc and el-md-exp). Higher is better.
@@ -432,6 +453,97 @@ the following is observed, append to `output/vision-check-calls/_signal.jsonl`:
 - agent's reasoning string contains "vision tool limitations" or similar
 
 Cluster across runs after iter 1 to surface candidate new specialists.
+
+---
+
+## Phased execution plan
+
+Iter 1 build broken into 4 ship-able phases. Each phase is a separate
+PR; each leaves the system in a working state.
+
+### Phase 0 — design docs (this PR)
+
+- This workspace (`README.md`, `problem-statement.md`, `plan.md`)
+- No code changes. Output is reviewable design that a fresh
+  Claude session can read and continue from.
+
+**Status:** in progress.
+
+### Phase A — conductor MCP tool skeleton
+
+Files:
+- `conductor/src/tools/vision-check/index.ts` — registers an MCP tool.
+- `conductor/src/tools/vision-check/dispatch.ts` — routes by problem_type;
+  initially every route forwards to the existing `vision` tool (no
+  classifier yet).
+- Conductor `tools/index.ts` — register the new tool name.
+
+Behavior:
+- Agent can call `vision_check(checklistItemText, documentId, sheetNum)`.
+- Tool currently always dispatches to generic vision regardless of input.
+- Per-call artifact directory created under
+  `output/vision-check-calls/<callId>/` with stub `metadata.json`.
+
+Acceptance:
+- New tool callable from a test workflow.
+- Per-call artifact directory written.
+- No new specialist behavior (still always generic vision).
+
+### Phase B — classifier wired in
+
+Files:
+- Classifier-call helper in `vision-check/index.ts` — text-only
+  Anthropic call, Haiku 4.5, returns `{ problem_type, reasoning, confidence }`.
+- Update `dispatch.ts` to actually route based on classifier output.
+- `metadata.json` records classifier inputs, outputs, model id, and
+  bureau commit hash for the loaded `vision-router.md`.
+
+Behavior:
+- Classifier prompt + few-shot examples loaded from
+  `bureau/.../prompts/vision-router.md` at tool init.
+- `dispatch.ts` calls the right specialist (vision /
+  inspect-drawing / measure-distance) per the classifier's output.
+
+Acceptance:
+- Classifier output deterministic for a fixed input + same model.
+- Dispatch traces specialist calls back to the originating
+  vision_check callId via the per-call artifacts.
+
+### Phase C — bureau experiment overlays + prompts
+
+Files:
+- `bureau/.../completeness-check/experiments/vision-check/{experiment.yaml,review.md}`
+- `bureau/.../completeness-check/prompts/vision-router.md` (cc-tuned examples)
+- `bureau/.../review/experiments/vision-check/{experiment.yaml,review.md}`
+- `bureau/.../review/prompts/vision-router.md` (review-tuned examples)
+
+Behavior:
+- `--experiment=vision-check` on cc and review now activates the new
+  prompt and tools list.
+
+Acceptance:
+- End-to-end run of `--experiment=vision-check` against 1700 S. Lamar
+  (cc) completes and produces `output/vision-check-calls/`.
+- Same for `el-md-exp` against Valley View Townhomes (review).
+
+### Phase D — eval + writeup
+
+Files (in this winston workspace, under
+`workspaces/vision-tool-orchestration/experiments/run1/`):
+- Pulled artifacts from each of the two runs
+- `analytics/analysis.md` writeup with:
+  - Routing accuracy confusion matrix
+  - Conditional execution accuracy per specialist
+  - Headline recall vs the inspect-drawing run1 + measure-distance
+    run7 baselines (the rigorous numbers from problem-statement.md)
+  - Which failure mode dominates (selection vs execution vs
+    classifier accuracy)
+  - Recommendation for iter 2 path per the F1 trigger split
+
+Acceptance:
+- Headline recall ≥80% on should-call items (both eval suites), or
+  a documented reason it isn't.
+- Iter 2 path picked based on dominant failure mode.
 
 ---
 
