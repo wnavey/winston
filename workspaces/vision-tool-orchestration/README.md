@@ -18,7 +18,11 @@ Read these in order:
 1. **[`problem-statement.md`](./problem-statement.md)** — current
    measure-distance and inspect-drawing recall numbers (~11% and ~8%
    respectively, well below acceptable). Why this matters.
-2. **[`plan.md`](./plan.md)** — full design.
+2. **[`architecture.md`](./architecture.md)** — how conductor's tool
+   registry works, how bureau prompts/schemas/scripts wire in, and
+   where `vision_check` sits in the system. Has a high-level diagram
+   and a per-call sequence diagram. Read before touching tool code.
+3. **[`plan.md`](./plan.md)** — full design.
    - "Goal" + "Architecture" sections at top describe what
      `vision_check` is.
    - "Decisions log" captures every commitment from the design
@@ -56,7 +60,8 @@ That's everything you need to know what to build and why.
 |---|---|
 | [`README.md`](./README.md) | This file — orientation + cold-start guide |
 | [`problem-statement.md`](./problem-statement.md) | Current hit rates with citations to rigorous metrics |
-| [`plan.md`](./plan.md) | Full design — architecture, decisions log, iter 1 spec, phased execution plan, follow-ups |
+| [`architecture.md`](./architecture.md) | Tool scaffolding/dispatching architecture; how conductor + bureau cooperate; where `vision_check` sits. Diagrams + glossary. |
+| [`plan.md`](./plan.md) | Full design — decisions log, iter 1 spec, phased execution plan, follow-ups |
 
 ## How to continue from here
 
