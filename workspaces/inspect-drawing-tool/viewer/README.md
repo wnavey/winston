@@ -11,16 +11,27 @@ result with bbox overlays.
 ./serve.sh 9002      # custom port
 ```
 
-`serve.sh` regenerates `manifest.json` from `runs/` before serving, so new
-runs are picked up automatically.
+`serve.sh` regenerates `manifest.json` from `runs/` and `experiments/`
+before serving, so new runs are picked up automatically.
 
 ## Layouts it understands
 
-The manifest builder scans `../runs/` and recognizes:
+The manifest builder scans two source directories:
 
-- **Test-fixture layout** — `runs/<id>-test-fixture/{input/<fixture>.json, output/<case-id>/inspect-drawing-calls/<callId>/}`
-- **Experiment layout (flat)** — `runs/<id>/inspect-drawing-calls/<callId>/` (or `runs/<id>/output/inspect-drawing-calls/...`)
-- **Per-run-index layout** — `runs/<id>/output/runs/<n>/inspect-drawing-calls/<callId>/`
+- **`../runs/`** — gitignored. Local conductor outputs you've pulled with
+  `scripts/pull-run.py`. Use this for active iteration.
+- **`../experiments/`** — checked in. Experiment runs we've ported into
+  the repo so anyone with a clone can view them. Use this when you want
+  someone else (or a fresh checkout) to be able to reproduce the view.
+
+Both directories support the same per-run layouts:
+
+- **Test-fixture layout** — `<id>-test-fixture/{input/<fixture>.json, output/<case-id>/inspect-drawing-calls/<callId>/}`
+- **Experiment layout (flat)** — `<id>/inspect-drawing-calls/<callId>/` (or `<id>/output/inspect-drawing-calls/...`)
+- **Per-run-index layout** — `<id>/output/runs/<n>/inspect-drawing-calls/<callId>/`
+
+If the same run id exists in both source dirs, `runs/` wins so a local
+re-pull can shadow the committed copy.
 
 Each call dir is expected to contain (per the bureau-side script):
 
