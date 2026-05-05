@@ -200,4 +200,107 @@ reliably."
 
 ## Decisions log
 
-(empty — to be filled as we converge)
+Captured 2026-05-05 from initial design conversation.
+
+### Eval harness
+- **A1.** Iteration 1 runs **two parallel eval suites** — one against
+  cc `v2.5-trimmed`, one against `el-md-exp`. Routing accuracy reports
+  as a per-workflow × per-route confusion matrix; conditional execution
+  accuracy reports per-specialist regardless of source workflow.
+- **Follow-up (high-value, deferred):** synthetic harness pulling
+  curated items from multiple review-guides, including those we haven't
+  yet classified. This serves two purposes: (1) more representative
+  routing eval, (2) source of signal for identifying additional vision
+  problem-types beyond the initial 3. Deferred because it's
+  token-expensive to scan all review-guides; do this once iter 1 runs
+  validate the routing concept.
+
+### Classifier
+- **B1.** Model: **Haiku 4.5**. Cheap and fast for a 1-call text
+  classification. If it underfits we escalate.
+- **B2.** Prompt + taxonomy + examples live in **bureau per workflow**
+  at `jurisdictions/austin/workflows/<workflow>/prompts/vision-router.md`
+  (or similar). Allows cc and review to evolve independently.
+- **B3.** **3–5 hand-picked canonical examples per type, frozen** for
+  iter 1. Sourced from existing classifications (cc-vision-classification
+  + el-md-exp/item-classification.json).
+- **Few-shot purpose:** examples are pasted into the classifier prompt
+  itself so the LLM has concrete labeled patterns to match against,
+  not just abstract category definitions.
+
+### Implementation surface
+- **C1.** **Hybrid:** `vision_check` dispatch + classifier-call code
+  lives in **conductor** as an MCP tool (one TypeScript file, generic
+  across workflows). The classifier **prompt, taxonomy, and few-shot
+  examples** live in **bureau per workflow**, read by conductor at
+  runtime (same pattern `createScriptTool` uses for schemas).
+- Why: dispatch logic doesn't need per-workflow customization, but
+  taxonomy does. This keeps code DRY while letting domain experts
+  iterate on the prompt without touching conductor.
+- **C2.** Specialists are reached via the same script-tool path the
+  agent uses today; ~1s subprocess overhead per call is acceptable.
+- **C3.** `vision_check` args: `(checklist_item, project_id, document_id,
+  sheet_num)`. Specialists fetch transcription blocks themselves if
+  they need them. Same shape as today's specialist tools.
+
+### Top-level agent prompt change
+- **D.** **Combined (D-combined):** in this iteration, both add
+  `vision_check` to the agent's vision tool list AND remove `vision`,
+  `inspect-drawing`, `measure-distance` from the agent's tool list. The
+  3 specialists remain in the codebase, only callable via dispatch.
+- Why: agent currently picks the wrong tool ~88% of the time per the
+  rigorous metrics; there's not much to A/B against. Cleaner to commit
+  to the architecture and measure the improvement.
+
+### Routing edge cases
+- **E1.** Classifier picks **one** problem type — the dominant question
+  type for the item. Multi-specialist orchestration (where one item
+  needs both `measure-distance` AND `inspect-drawing`) is **earmarked
+  for a future iteration** as part of the broader vision-agent loop
+  exploration ([`../inspect-drawing-tool/ai-loop-exploration.md`](../inspect-drawing-tool/ai-loop-exploration.md)).
+- **E2.** **No confidence threshold for routing.** Always dispatch to
+  the named specialist. Instrument confidence so we can see whether
+  low-confidence cases are systematically wrong. Add fall-through
+  later if data warrants.
+- **E3.** **No `none` route.** If the agent called `vision_check`, we
+  respect that and dispatch to *some* specialist — generic vision is
+  the catchall. The router has 3 outputs (measurement, drawing_inspect,
+  generic), no fourth "skip" route.
+
+### Iteration success criteria
+- **F1.** **Headline goal: ≥80% recall on should-call items** across
+  both eval suites (cc and el-md-exp). Higher is better.
+- **F1.** **Iter 2 trigger split:**
+  - If text-only classifier accuracy ≥85% AND specialist execution
+    accuracy is the bottleneck → iter 2 focuses on **specialist
+    input quality**, not the classifier.
+  - If text-only classifier accuracy <70% AND failures cluster on
+    items where text alone is genuinely ambiguous → iter 2 adds an
+    **outer-grounding low-DPI vision pass** to the classifier.
+  - The dominant failure mode at end of iter 1 picks the path.
+- **F2.** **Organic signal collection (in scope for iter 1):**
+  log items where the classifier routed to `generic` AND any of:
+  - generic vision returned unanswerable / low confidence
+  - the agent's final finding was `not-verifiable`
+  - the agent's reasoning cited "vision tool limitations" or similar.
+  Cluster these logs across runs to identify candidate new specialists.
+
+---
+
+## Earmarked follow-ups (after iter 1 lands)
+
+1. **Synthetic / cross-guide test harness** — sample items from
+   additional review-guides to validate routing on a more representative
+   set and surface candidate new vision problem-types.
+2. **Multi-specialist orchestration** — items where multiple specialists
+   could contribute (e.g., distance + drawing-inspect for the same
+   checklist question). Folds into the
+   [`../inspect-drawing-tool/ai-loop-exploration.md`](../inspect-drawing-tool/ai-loop-exploration.md)
+   discussion.
+3. **Confidence-thresholded fallback** — if low-confidence classifier
+   decisions are systematically wrong in iter 1 data, add a confidence
+   threshold below which we route to `generic`.
+4. **`tools_used` tracking bug** — fixing the agent SDK / build-review-
+   comments path so per-finding tool-call attribution captures
+   `inspect-drawing` and `vision_check` (currently misses inspect-drawing).
+   Required before the routing-accuracy metric is reliable per-finding.
