@@ -1,0 +1,98 @@
+{
+  "type": "object",
+  "required": ["grouping", "findings"],
+  "properties": {
+    "grouping": {
+      "type": "string",
+      "description": "The grouping ID without file extension (e.g., 'cc-8')"
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["checklistItemId", "observation", "reasoning", "tools_used", "status", "explanation", "evidenceLocations"],
+        "properties": {
+          "checklistItemId": {
+            "type": "string",
+            "description": "ID from checklist table (e.g., 'FP-01', 'AW-05')"
+          },
+          "observation": {
+            "type": "string",
+            "description": "What you observed from pre-processed docs, vision tool calls, and which sheets were considered. Document what you saw before making a determination."
+          },
+          "reasoning": {
+            "type": "string",
+            "description": "How your observations align with the checklist deficiency text. Explain why your observations drive your conclusion, whether the sheets analyzed were correct, and any implicit or unstated assumptions."
+          },
+          "tools_used": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Names of tools invoked while evaluating this item (e.g., 'vision', 'semantic-search-blocks'). Empty array if no tools were called."
+          },
+          "status": {
+            "type": "string",
+            "enum": ["pass", "fail", "not-applicable"]
+          },
+          "explanation": {
+            "type": "string",
+            "description": "Brief (6-30 word) explanation of the determination — what was found or not found"
+          },
+          "resolution": {
+            "type": ["string", "null"],
+            "description": "For fail: specific corrective action the applicant must take. For pass/not-applicable: null."
+          },
+          "resolutionDetails": {
+            "type": ["object", "null"],
+            "description": "Optional structured resolution data for rich UI rendering. Only for verbatim/standard note failures.",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": ["standard_note_diff"],
+                "description": "The kind of structured resolution data."
+              },
+              "expected": {
+                "type": "string",
+                "description": "The full expected standard note text from the checklist."
+              },
+              "actual": {
+                "type": "string",
+                "description": "The text actually found on the submitted plan."
+              },
+              "referenceUrl": {
+                "type": "string",
+                "description": "URL to the official reference document (e.g., CoA standard notes template)."
+              }
+            },
+            "required": ["type", "expected", "actual", "referenceUrl"]
+          },
+          "evidenceLocations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["documentId", "label"],
+              "properties": {
+                "documentId": {
+                  "type": "string",
+                  "description": "Document ID from site plan README.md"
+                },
+                "sheetNumber": {
+                  "type": "integer",
+                  "description": "Sheet number within the document, if applicable"
+                },
+                "label": {
+                  "type": "string",
+                  "description": "Human-readable label (e.g., 'Cover Sheet', 'Drainage Report')"
+                }
+              }
+            },
+            "description": "Where evidence was found (for pass) or where it was expected but missing (for fail). Empty array for not-applicable."
+          }
+        }
+      }
+    },
+    "summary": {
+      "type": "string",
+      "description": "One-sentence summary: X of Y items pass, Z items fail, etc."
+    }
+  }
+}

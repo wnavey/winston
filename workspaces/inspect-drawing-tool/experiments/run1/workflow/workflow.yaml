@@ -1,0 +1,142 @@
+# Completeness Check Workflow - validates document presence and data completeness
+name: completeness-check
+description: Completeness review — checks site plan submissions for required documents, data, and formatting before technical review
+version: 1.0.0
+
+# Env vars used (set at conductor level, not declared as required because tools
+# degrade gracefully):
+#   - PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY — used by script:semantic-search-blocks
+#   - OPENAI_API_KEY — used by script:semantic-search-blocks (falls back to keyword-only
+#     search if missing)
+
+resources:
+  bureau: true
+  submissionVersion: "{{ input.submissionVersionId }}"
+  # python: true is intentionally always-on (not gated to the experiment).
+  # Experiment overlays in conductor (src/orchestrator/experiment-loader.ts)
+  # can only override per-step `prompt` and `tools` — not workflow-level
+  # `resources`. Required by script:inspect-drawing (PyMuPDF + Pillow) when
+  # --experiment=inspect-drawing is set; a no-op for baseline runs aside
+  # from one-time venv provisioning.
+  python: true
+
+inputs:
+  submissionVersionId:
+    type: string
+    required: true
+    description: Submission version ID from Supabase
+  priorReviewId:
+    type: string
+    required: false
+    description: Prior CC review ID to link this run to. Conductor writes it to reviews.prior_review_id, which lets City Hall surface comment_triage from the prior review chain (matched by comment_number). Findings themselves are not anchored — use completeness-check-anchored for that.
+  checklistsDir:
+    type: string
+    required: false
+    description: Bureau-relative path to checklist files. Computed from checklistVersion if not provided.
+  model:
+    type: string
+    required: false
+    default: claude-sonnet-4-5-20250929
+    description: Model for review agents. Sonnet recommended — few checklist items per run, quality matters more than cost.
+  effort:
+    type: string
+    required: false
+    description: Agent effort level (low, medium, high). Only applied for models that support it (4.6+).
+  departmentCode:
+    type: string
+    required: false
+    default: cc
+    description: Department code for DB storage. Always 'cc' for completeness check.
+  runs:
+    type: number
+    required: false
+    default: 1
+    description: Number of independent review runs per checklist grouping. When >1, a cross-run consolidation step performs majority vote across runs to assign final status and confidence.
+  checklistVersion:
+    type: string
+    required: false
+    default: v1
+    description: Checklist version (e.g., 'legacy', 'v1'). Determines which bureau checklist directory to use. Defaults to latest.
+  commentNumberingMap:
+    type: string
+    required: false
+    description: Filename of a TSV mapping checklist item IDs to comment numbers, located in the checklist directory (e.g., 'pape-dawson-comment-num-mapping.tsv'). If omitted, assigns sequential comment numbers.
+  forceOutcomes:
+    type: string
+    required: false
+    description: Filename of a TSV with forced checklist outcomes, located in the checklist directory. Columns (tab-separated with header row) — checklist_id (composite, e.g. cc-3:AF-01), status (pass/fail/warn/not-applicable), explanation (human reason for forcing). Forced items override organic agent findings with AI-generated narratives and are tagged in the agent trace.
+
+upload:
+  bucket: workflow-runs
+  prefix: "completeness-check/{{ input.projectId }}/{{ datetime }}"
+
+# Save review comments to reviews/review_sections/review_comments tables
+review: "{{ WORKSPACE_PATH }}/output/review-comments.json"
+
+steps:
+  # Single step: run one agent per checklist file (cc-1.md, cc-2.md, ..., cc-13.md)
+  # Each agent processes all checklist items within its grouping file
+  - name: review
+    agent:
+      model: "{{ input.model }}"
+      effort: "{{ input.effort }}"
+      prompt: review.md
+    tools:
+      - vision
+      - script:semantic-search-blocks
+    checklistItems: "{{ WORKSPACE_PATH }}/bureau/{{ input.checklistsDir }}/*.md"
+    runs: "{{ input.runs }}"
+    schema: completeness.schema.json
+    output: "{{ WORKSPACE_PATH }}/output/runs/{{ runIndex }}/findings/{{ checklistItem }}.json"
+    retries: 5
+    maxWorkers: 13
+
+  # Cross-run consolidation — majority vote across runs, writes per-grouping findings for enrich-findings
+  - name: cross-run-consolidate-cc
+    script:
+      name: cross-run-consolidate-cc
+      args:
+        runsDir: "{{ WORKSPACE_PATH }}/output/runs"
+        findingsDir: "{{ WORKSPACE_PATH }}/output/findings"
+        runCount: "{{ input.runs }}"
+
+  # Apply forced outcomes — override organic findings for specific checklist items
+  # with AI-generated narratives. No-op if forceOutcomes input is not provided.
+  - name: apply-forced-outcomes
+    script:
+      name: apply-forced-outcomes
+      args:
+        forceOutcomesFile: "{{ WORKSPACE_PATH }}/bureau/{{ input.checklistsDir }}/{{ input.forceOutcomes }}"
+        findingsDir: "{{ WORKSPACE_PATH }}/output/findings"
+        checklistsDir: "{{ WORKSPACE_PATH }}/bureau/{{ input.checklistsDir }}"
+        model: "{{ input.model }}"
+
+  # Enrich findings with checklist titles and item text from source markdown
+  - name: enrich-findings
+    script:
+      name: enrich-findings
+      args:
+        findingsDir: "{{ WORKSPACE_PATH }}/output/findings"
+        checklistsDir: "{{ WORKSPACE_PATH }}/bureau/{{ input.checklistsDir }}"
+        outputFile: "{{ WORKSPACE_PATH }}/output/enriched-findings.json"
+
+  # Agent formats human-readable reports and produces rephrased item titles
+  - name: format-reports
+    agent:
+      model: claude-sonnet-4-5-20250929
+      prompt: format-reports.md
+
+  # Build review-comments.json for DB save (uses rephrased titles from format-reports agent)
+  - name: build-review-comments
+    script:
+      name: build-review-comments
+      args:
+        enrichedFile: "{{ WORKSPACE_PATH }}/output/enriched-findings.json"
+        rephrasedFile: "{{ WORKSPACE_PATH }}/output/rephrased-items.json"
+        outputFile: "{{ WORKSPACE_PATH }}/output/review-comments.json"
+        checklistVersion: "{{ input.checklistVersion }}"
+        bureauCommitHash: "{{ bureauCommitHash }}"
+        bureauArtifactPath: "{{ input.checklistsDir }}"
+        totalRuns: "{{ input.runs }}"
+        consolidatedFile: "{{ WORKSPACE_PATH }}/output/consolidated-findings.json"
+        commentNumberingMapFile: "{{ WORKSPACE_PATH }}/bureau/{{ input.checklistsDir }}/{{ input.commentNumberingMap }}"
