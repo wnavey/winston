@@ -161,21 +161,21 @@ in conductor#143). It's a thin wrapper:
 sequenceDiagram
   autonumber
   participant Agent
-  participant VC as vision_check<br/>(conductor MCP tool)
-  participant CL as Classifier<br/>(Haiku 4.5 — Phase B)
+  participant VC as vision_check (MCP tool)
+  participant CL as Classifier (Haiku 4.5, Phase B)
   participant DI as dispatch.ts
-  participant Spec as Specialist<br/>(vision/inspect-drawing/<br/>measure-distance)
-  participant Art as output/vision-check-calls/<br/>&lt;callId&gt;/
+  participant Spec as Specialist
+  participant Art as Per-call artifact dir
 
   Agent->>VC: vision_check(checklistItemText, documentId, sheetNum?, regionHint?)
-  Note over VC: generate callId,<br/>start metadata.json
+  Note over VC: generate callId, start metadata.json
   VC->>CL: classify(checklistItemText)
-  CL-->>VC: { problem_type, reasoning, confidence }
+  CL-->>VC: problem_type, reasoning, confidence
   VC->>DI: dispatch(problem_type, inputs)
-  DI->>Spec: route to specialist
-  Spec-->>DI: { answer, evidence, ... }
-  DI-->>VC: DispatchResult { answer, specialistCalled, success }
-  VC->>Art: write metadata.json<br/>(inputs + classifier output + dispatch result)
+  DI->>Spec: route to vision / inspect-drawing / measure-distance
+  Spec-->>DI: answer, evidence
+  DI-->>VC: DispatchResult (answer, specialistCalled, success)
+  VC->>Art: write output/vision-check-calls/[callId]/metadata.json
   VC-->>Agent: text answer
 ```
 
