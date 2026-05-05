@@ -1,20 +1,29 @@
 #!/usr/bin/env python3
 """Build manifest.json for the inspect-drawing debug viewer.
 
-Scans run directories under `runs/` and emits one entry per call dir
-under `<run>/.../inspect-drawing-calls/<callId>/`. Browsers can't list
-directories, so the viewer reads this manifest at load time.
+Scans run directories under `runs/` and `experiments/` and emits one
+entry per call dir under `<run>/.../inspect-drawing-calls/<callId>/`.
+Browsers can't list directories, so the viewer reads this manifest at
+load time.
 
-Supported layouts (mirrors measure-distance-tool's conventions):
+Two source directories with different conventions:
+  - `runs/` is gitignored (local conductor outputs).
+  - `experiments/` is checked into the repo so anyone cloning the workspace
+    can run the viewer against committed experiment data without local
+    setup.
+
+Supported layouts within each source dir (mirrors measure-distance-tool):
   1. test-fixture runs:
-        runs/<id>-test-fixture/output/<case-id>/inspect-drawing-calls/<callId>/
-        runs/<id>-test-fixture/input/<fixture>.json
+        <id>-test-fixture/output/<case-id>/inspect-drawing-calls/<callId>/
+        <id>-test-fixture/input/<fixture>.json
   2. experiment runs (flat):
-        runs/<id>/inspect-drawing-calls/<callId>/  (or .../output/inspect-drawing-calls/...)
+        <id>/inspect-drawing-calls/<callId>/                       OR
+        <id>/output/inspect-drawing-calls/<callId>/                OR
+        <id>/output/runs/<runIdx>/inspect-drawing-calls/<callId>/
 
 Usage:
-  ./build-manifest.py                # scans runs/, writes ./manifest.json
-  ./build-manifest.py --run <id>     # narrow to a single run
+  ./build-manifest.py                # scans runs/ + experiments/, writes ./manifest.json
+  ./build-manifest.py --run <id>     # narrow to a single run id
 """
 from __future__ import annotations
 
@@ -25,7 +34,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent  # inspect-drawing-tool/
-RUNS_DIR = ROOT / "runs"
+SOURCE_DIRS = [ROOT / "runs", ROOT / "experiments"]
 
 
 def relpath(p: Path) -> str:
@@ -228,11 +237,19 @@ def main() -> int:
     args = parser.parse_args()
 
     runs: list[dict] = []
-    if RUNS_DIR.exists():
-        for run_dir in sorted(RUNS_DIR.iterdir()):
+    seen_ids: set[str] = set()
+    for source_dir in SOURCE_DIRS:
+        if not source_dir.exists():
+            continue
+        for run_dir in sorted(source_dir.iterdir()):
             if not run_dir.is_dir() or run_dir.name.startswith("."):
                 continue
             if args.run and run_dir.name != args.run:
+                continue
+            if run_dir.name in seen_ids:
+                # If a run id appears in both runs/ and experiments/, prefer
+                # the first source listed in SOURCE_DIRS (runs/ wins so a
+                # local re-pull can shadow the committed copy).
                 continue
             # Heuristic: input/ + output/ → test-fixture layout; else flat.
             has_input = (run_dir / "input").exists()
@@ -241,9 +258,11 @@ def main() -> int:
             )
             if has_input and has_output_with_cases:
                 runs.append(build_run_testfixture(run_dir))
+                seen_ids.add(run_dir.name)
             else:
                 if discover_call_dirs(run_dir):
                     runs.append(build_run_flat(run_dir))
+                    seen_ids.add(run_dir.name)
 
     manifest = {
         "generatedAt": datetime.now(timezone.utc).isoformat(),
