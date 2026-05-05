@@ -32,7 +32,9 @@ measure-distance-tool/
 │   ├── items-requiring-distance-measurement.md   # 101-item deep dive (52 need measurement)
 │   ├── checklist-item-gemini-call-mapping.md      # mapping tool calls → checklist items
 │   ├── invocation-by-checklist-item.md            # which guide items invoked the tool
-│   └── usage-nudging-analysis.md                  # why agents under-use the tool
+│   ├── usage-nudging-analysis.md                  # why agents under-use the tool
+│   ├── rigorous-metrics/                          # ★ canonical hit-rate metrics, per-(item × run)
+│   └── scripts/compute-rigorous-metrics.py        # reproduces rigorous-metrics/ from per-call data
 │
 ├── reference/                      # tool architecture + overview docs
 │   ├── architecture-overview.md    # TS/Python split, Option A/B, data flow
