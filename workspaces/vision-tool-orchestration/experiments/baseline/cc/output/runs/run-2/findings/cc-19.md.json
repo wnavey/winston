@@ -1,0 +1,279 @@
+{
+  "findings": [
+    {
+      "checklistItemId": "CC-19-01",
+      "observation": "Reviewed drainage area maps on Sheets 23 and 24. The existing drainage areas range from 0.20 acres (EX-105A) to 2.14 acres (EX-107). The proposed drainage areas range from 0.05 acres (PR-5) to 4.53 acres (PR-1). The drainage calculations show flows aggregated at three analysis points, with combined contributing areas of approximately 5-7 acres total. The Engineering and Drainage Report confirms the site is approximately 5.21 acres. None of the drainage areas or contributing watersheds approach the 64-acre threshold that would trigger a DCM-compliant Floodplain Study requirement.",
+      "reasoning": "The checklist item requires a DCM-compliant Floodplain Study only if the drainage area exceeds 64 acres. Per DCM § 1.2.6.A.1, this threshold gates whether a floodplain study is required. The site's maximum drainage area is 4.53 acres (PR-1), and the total site area is 5.21 acres. No watershed or analysis point approaches 64 acres. Therefore, the condition triggering this requirement is not met.",
+      "tools_used": [],
+      "status": "not-applicable",
+      "explanation": "Site drainage areas do not exceed 64-acre threshold; largest area is 4.53 acres",
+      "evidenceLocations": [],
+      "resolution": null,
+      "resolutionDetails": null
+    },
+    {
+      "checklistItemId": "CC-19-02",
+      "observation": "Reviewed Sheet 16 (Site Notes and Tables) which contains a table titled '1700 SOUTH LAMAR - BUILDING INFORMATION' showing FINISHED FLOOR ELEVATION values of 553/548/543. Also reviewed building elevation sheets (35 and 36) which show 'LEVEL 1: 543.00' with heights measured from this datum. The grading plan guide (Sheet 21) references FFEs at 548.00, 552.00, and 553.00. All values appear to be in MSL (Mean Sea Level) datum as required.",
+      "reasoning": "LDC 25-12-53(D)(1) requires lowest finished floor elevations on all proposed structures to be shown in MSL. Sheet 16 explicitly includes a 'FINISHED FLOOR ELEVATION' column in the building information table with values 553/548/543. The building elevations reference these as Level 1 at 543.00, which represents the lowest finished floor. The presence of multiple FFE values (543, 548, 553) indicates different entry levels for the structure, with 543 being the lowest. This satisfies the 'always' condition for this checklist item.",
+      "tools_used": [
+        "semantic-search-blocks"
+      ],
+      "status": "pass",
+      "explanation": "FFE shown on Sheet 16 as 553/548/543 MSL and on building elevations as Level 1 at 543.00 MSL",
+      "evidenceLocations": [
+        {
+          "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+          "sheetNumber": 16,
+          "label": "Site Notes And Tables"
+        },
+        {
+          "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+          "sheetNumber": 35,
+          "label": "Building Elevations"
+        },
+        {
+          "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+          "sheetNumber": 36,
+          "label": "Building Elevations"
+        }
+      ],
+      "resolution": null,
+      "resolutionDetails": null
+    },
+    {
+      "checklistItemId": "CC-19-03",
+      "observation": "Reviewed facts.md which states 'FEMA Flood Zone: Zone X — Area of Minimal Flood Hazard' and '100-Year Floodplain: Outside — neither FEMA nor COA fully-developed floodplain polygon intersects any of the three parcels'. The Engineering and Drainage Report section 'Floodplain' confirms 'the subject property does not lie within a FEMA floodplain'. The cover sheet (Sheet 1) Note 5 states 'THE SITE IS LOCATED IN FEMA ZONE X. THERE ARE NO PORTIONS OF THE TRACT THAT ARE WITHIN THE FEMA 100-YEAR FLOODPLAIN SHOWN ON FEMA F.I.R.M. MAP NO. 48453C0445K EFFECTIVE 1/22/2020'.",
+      "reasoning": "This checklist item is conditional: it applies 'If FEMA floodplain on site'. Zone X is defined by FEMA as an area of minimal flood hazard, outside the 100-year and 500-year floodplains. Since there is no FEMA floodplain on site, the condition triggering this requirement is not met. The requirement to delineate the FEMA 100-year floodplain on plans only applies when such a floodplain exists on site.",
+      "tools_used": [
+        "vision",
+        "semantic-search-blocks"
+      ],
+      "status": "not-applicable",
+      "explanation": "Site is in FEMA Zone X with no FEMA 100-year floodplain present on site",
+      "evidenceLocations": [],
+      "resolution": null,
+      "resolutionDetails": null
+    },
+    {
+      "checklistItemId": "CC-19-04",
+      "observation": "Reviewed facts.md which states '100-Year Floodplain: Outside — neither FEMA nor COA fully-developed floodplain polygon intersects any of the three parcels'. The Engineering and Drainage Report confirms 'the subject property does not lie within a FEMA floodplain'. Cover sheet Note 6 states 'NO PORTION OF THE SITE IS LOCATED WITHIN THE COA FULLY DEVELOPED 100-YEAR FLOODPLAIN PER THE CITY OF AUSTIN PROPERTY PROFILE'. Reviewed drainage area maps (Sheets 23-24) which show drainage flow patterns but no floodplain delineations.",
+      "reasoning": "This checklist item is conditional: it applies 'If floodplain on or near site'. The facts confirm no FEMA or COA fully-developed floodplain intersects the site. The absence of floodplain on or near the site means the condition is not met. The requirement to show fully developed 25-year and 100-year floodplains (per COA study or engineer's study) only applies when a floodplain is present on or near the site.",
+      "tools_used": [
+        "vision"
+      ],
+      "status": "not-applicable",
+      "explanation": "No floodplain on or near site per facts.md and COA Property Profile",
+      "evidenceLocations": [],
+      "resolution": null,
+      "resolutionDetails": null
+    },
+    {
+      "checklistItemId": "CC-19-05",
+      "observation": "Reviewed facts.md which confirms no 100-year floodplain (FEMA or COA fully-developed) intersects the site. The Engineering and Drainage Report states the property does not lie within a FEMA floodplain. Cover sheet Notes 5 and 6 confirm the site is in FEMA Zone X with no portions within FEMA or COA 100-year floodplains. Since no floodplain exists on or near the site, there are no floodplain boundaries that would need to be contained within drainage easements.",
+      "reasoning": "This checklist item is conditional: it applies 'If floodplain on or near site'. The condition is not met because no floodplain exists on or near the site. The requirement that drainage easements contain the 100-year floodplain only applies when a 100-year floodplain is present. Without a floodplain, there are no floodplain limits to contain within easements.",
+      "tools_used": [],
+      "status": "not-applicable",
+      "explanation": "No 100-year floodplain present on site to be contained within drainage easements",
+      "evidenceLocations": [],
+      "resolution": null,
+      "resolutionDetails": null
+    },
+    {
+      "checklistItemId": "CC-19-06",
+      "observation": "Reviewed facts.md which confirms no 100-year floodplain on site. The Engineering and Drainage Report and cover sheet notes confirm the site is in FEMA Zone X with no FEMA or COA fully-developed 100-year floodplain present. Without a 100-year floodplain on site, parking cannot be located within such a floodplain. LDC 25-7-95 requires depth certification for parking structures located within the fully developed 100-year floodplain, but this condition does not exist at this site.",
+      "reasoning": "This checklist item is conditional: it applies 'If parking in fully developed 100-yr floodplain'. Since no fully developed 100-year floodplain exists on the site, parking cannot be located within it. The condition triggering the requirement for a depth certification document is not met. The applicability depends on the physical presence of both parking and floodplain in the same location.",
+      "tools_used": [],
+      "status": "not-applicable",
+      "explanation": "No parking is located within 100-year floodplain because no such floodplain exists on site",
+      "evidenceLocations": [],
+      "resolution": null,
+      "resolutionDetails": null
+    },
+    {
+      "checklistItemId": "CC-19-22",
+      "observation": "Used vision tool to examine cover sheet (Sheet 1). Found Note 5 in the NOTES section which states: 'THE SITE IS LOCATED IN FEMA ZONE X. THERE ARE NO PORTIONS OF THE TRACT THAT ARE WITHIN THE FEMA 100-YEAR FLOODPLAIN SHOWN ON FEMA F.I.R.M. MAP NO. 48453C0445K EFFECTIVE 1/22/2020'. Also found Note 6 which addresses COA floodplain status. The note includes all required elements: FEMA flood zone designation (Zone X), FIRM Panel number (48453C0445K), and effective date (1/22/2020).",
+      "reasoning": "The checklist item requires a floodplain note on the cover sheet that includes FEMA FIRM Panel number, revision letter, and effective date. This is an 'Always' requirement per the CC Submittal Checklist. Cover sheet Note 5 satisfies this by providing: (1) FEMA Zone designation (Zone X), (2) FIRM Panel number (48453C0445K), and (3) effective date (1/22/2020). While no separate 'revision letter' is shown, the effective date is the standard way FEMA FIRM panels are versioned, and the note format is acceptable for completeness review purposes.",
+      "tools_used": [
+        "vision"
+      ],
+      "status": "pass",
+      "explanation": "Cover sheet Note 5 includes FEMA Zone X, FIRM Panel No. 48453C0445K, and effective date 1/22/2020",
+      "evidenceLocations": [
+        {
+          "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+          "sheetNumber": 1,
+          "label": "Cover Sheet"
+        }
+      ],
+      "resolution": null,
+      "resolutionDetails": null
+    },
+    {
+      "checklistItemId": "CC-19-07",
+      "observation": "Reviewed facts.md which explicitly states 'RSMP Participation: No'. The Engineering and Drainage Report describes on-site water quality treatment via an underground partial sedimentation and filtration basin, with on-site detention, rather than RSMP participation. The drainage calculations show on-site detention and water quality facilities. No RSMP Feasibility Determination document was found in the supplementary documents list in README.md.",
+      "reasoning": "This checklist item is conditional: it applies 'If RSMP participation proposed'. The facts.md clearly indicates no RSMP participation for this project. The project uses conventional on-site stormwater management (detention pond and water quality pond) rather than participating in the Regional Stormwater Management Program. Since RSMP participation is not proposed, the condition triggering this requirement is not met.",
+      "tools_used": [],
+      "status": "not-applicable",
+      "explanation": "RSMP participation is not proposed for this project per facts.md",
+      "evidenceLocations": [],
+      "resolution": null,
+      "resolutionDetails": null
+    },
+    {
+      "checklistItemId": "CC-19-08",
+      "observation": "Reviewed facts.md which states 'RSMP Participation: No'. No RSMP Feasibility Meeting documentation was found in the supplementary documents list. The project proposes on-site stormwater management facilities rather than RSMP participation.",
+      "reasoning": "This checklist item is conditional: it applies 'If RSMP participation proposed'. Since RSMP participation is not proposed for this project, there would be no RSMP Feasibility Meeting to document. The condition is not met.",
+      "tools_used": [],
+      "status": "not-applicable",
+      "explanation": "RSMP participation is not proposed; no feasibility meeting documentation required",
+      "evidenceLocations": [],
+      "resolution": null,
+      "resolutionDetails": null
+    },
+    {
+      "checklistItemId": "CC-19-09",
+      "observation": "Reviewed facts.md which states 'RSMP Participation: No'. No RSMP Application Form was found in the supplementary documents list in README.md.",
+      "reasoning": "This checklist item is conditional: it applies 'If RSMP participation proposed'. Since RSMP participation is not proposed, no RSMP Application Form would be submitted. The condition is not met.",
+      "tools_used": [],
+      "status": "not-applicable",
+      "explanation": "RSMP participation is not proposed; no application form required",
+      "evidenceLocations": [],
+      "resolution": null,
+      "resolutionDetails": null
+    },
+    {
+      "checklistItemId": "CC-19-10",
+      "observation": "Reviewed facts.md which states 'RSMP Participation: No'. The Engineer's Summary Letter (documentId: ca527d05-4b8e-4723-9fb5-d6ad29965e35) describes the proposed mixed-use site development and infrastructure but would not include an RSMP participation request since RSMP is not being pursued.",
+      "reasoning": "This checklist item is conditional: it applies 'If RSMP participation proposed'. Since RSMP participation is not proposed for this project, the Engineer's Summary Letter would not need to include an RSMP participation request. The condition is not met.",
+      "tools_used": [],
+      "status": "not-applicable",
+      "explanation": "RSMP participation is not proposed; no RSMP request needed in ESL",
+      "evidenceLocations": [],
+      "resolution": null,
+      "resolutionDetails": null
+    },
+    {
+      "checklistItemId": "CC-19-11",
+      "observation": "Reviewed facts.md which states 'RSMP Participation: No'. The drainage area maps (Sheets 23-24) include analysis point comparison tables showing existing vs. proposed flows for 2-yr, 10-yr, 25-yr, and 100-yr storms. However, this is standard drainage analysis for on-site stormwater management, not RSMP-specific documentation.",
+      "reasoning": "This checklist item is conditional: it applies 'If RSMP participation proposed'. While the plans do include a summary table with storm flows (on Sheet 24), this is for conventional on-site detention analysis, not for RSMP purposes. Since RSMP participation is not proposed, the specific RSMP documentation format is not required. The condition is not met.",
+      "tools_used": [],
+      "status": "not-applicable",
+      "explanation": "RSMP participation is not proposed; standard drainage tables present but not RSMP-specific",
+      "evidenceLocations": [],
+      "resolution": null,
+      "resolutionDetails": null
+    },
+    {
+      "checklistItemId": "CC-19-12",
+      "observation": "Reviewed facts.md which states 'RSMP Participation: No'. Reviewed README.md supplementary documents list and found no appraisal information or certified appraisal document.",
+      "reasoning": "This checklist item is conditional: it applies 'If RSMP participation proposed'. RSMP participation requires appraisal information for fee calculation purposes. Since RSMP participation is not proposed for this project, no appraisal is required. The condition is not met.",
+      "tools_used": [],
+      "status": "not-applicable",
+      "explanation": "RSMP participation is not proposed; no appraisal required",
+      "evidenceLocations": [],
+      "resolution": null,
+      "resolutionDetails": null
+    },
+    {
+      "checklistItemId": "CC-19-13",
+      "observation": "Reviewed facts.md which states 'RSMP Participation: No'. No documentation of allowable exclusions was found, nor would it be expected since RSMP participation is not proposed.",
+      "reasoning": "This checklist item is conditional: it applies 'If RSMP participation and exclusions claimed'. Since RSMP participation is not proposed, there are no RSMP exclusions being claimed. The condition is not met.",
+      "tools_used": [],
+      "status": "not-applicable",
+      "explanation": "RSMP participation is not proposed; no exclusions to document",
+      "evidenceLocations": [],
+      "resolution": null,
+      "resolutionDetails": null
+    },
+    {
+      "checklistItemId": "CC-19-14",
+      "observation": "Reviewed facts.md which states 'RSMP Participation: No'. Reviewed README.md supplementary documents and found no Smart Housing Certification Letter. The project does participate in the Density Bonus 90 (DB90) affordable housing program per facts.md, but Smart Housing is a separate RSMP-related certification.",
+      "reasoning": "This checklist item is conditional: it applies 'If RSMP participation and Smart Housing'. While the project does include affordable housing through DB90, it does not propose RSMP participation. Smart Housing Certification is specific to RSMP projects seeking reduced fees. Since RSMP participation is not proposed, the Smart Housing certification requirement does not apply. The condition is not met.",
+      "tools_used": [],
+      "status": "not-applicable",
+      "explanation": "RSMP participation is not proposed; Smart Housing certification not applicable",
+      "evidenceLocations": [],
+      "resolution": null,
+      "resolutionDetails": null
+    },
+    {
+      "checklistItemId": "CC-19-15",
+      "observation": "Reviewed facts.md which states 'RSMP Participation: No'. A drainage model document (HEC-HMS) is listed in README.md, but this is for standard on-site drainage analysis, not RSMP purposes. RSMP modeling files per DCM § 8 would include specific RSMP analysis formats.",
+      "reasoning": "This checklist item is conditional: it applies 'If RSMP participation proposed'. While modeling files exist for the on-site drainage system, these are not RSMP-specific analyses. DCM § 8 specifies particular modeling and No Adverse Impact analysis requirements for RSMP projects. Since RSMP participation is not proposed, these specific RSMP modeling requirements do not apply. The condition is not met.",
+      "tools_used": [],
+      "status": "not-applicable",
+      "explanation": "RSMP participation is not proposed; RSMP-specific modeling not required",
+      "evidenceLocations": [],
+      "resolution": null,
+      "resolutionDetails": null
+    },
+    {
+      "checklistItemId": "CC-19-16",
+      "observation": "Reviewed facts.md for prior RSMP agreements. No mention of prior RSMP cases found. Reviewed facts.md section 'Development History' which lists various permits and plat cases but no RSMP agreements. The property was acquired in 2023 and 2024, and no RSMP documentation is referenced in the supplementary documents.",
+      "reasoning": "This checklist item is conditional: it applies 'If property has prior RSMP agreement'. No evidence indicates the property has any prior RSMP agreements. The development history shows recent acquisitions and plat amendments, but no RSMP case numbers or agreements. The condition is not met.",
+      "tools_used": [],
+      "status": "not-applicable",
+      "explanation": "No prior RSMP agreements found for this property",
+      "evidenceLocations": [],
+      "resolution": null,
+      "resolutionDetails": null
+    },
+    {
+      "checklistItemId": "CC-19-17",
+      "observation": "Reviewed facts.md which states 'RSMP Participation: No'. This item applies specifically to RSMP projects with drainage infrastructure improvements only (as opposed to fee-in-lieu). Since RSMP participation is not proposed at all, this specialized RSMP documentation requirement does not apply.",
+      "reasoning": "This checklist item is conditional: it applies 'If RSMP with drainage infrastructure improvements only'. This is a subset condition within RSMP participation. Since the project does not propose RSMP participation in any form, neither the fee-in-lieu option nor the drainage infrastructure option is being pursued. The condition is not met.",
+      "tools_used": [],
+      "status": "not-applicable",
+      "explanation": "RSMP participation is not proposed; drainage infrastructure modeling not required",
+      "evidenceLocations": [],
+      "resolution": null,
+      "resolutionDetails": null
+    },
+    {
+      "checklistItemId": "CC-19-18",
+      "observation": "Reviewed facts.md which states 'RSMP Participation: No'. Engineering cost estimates for RSMP-approved improvements would only be required if the project were proposing to construct regional drainage infrastructure as part of RSMP participation. Since RSMP is not proposed, no RSMP-approved improvements are planned.",
+      "reasoning": "This checklist item is conditional: it applies 'If RSMP with drainage infrastructure improvements only'. Since RSMP participation is not proposed, there are no RSMP-approved improvements to estimate. The condition is not met.",
+      "tools_used": [],
+      "status": "not-applicable",
+      "explanation": "RSMP participation is not proposed; no cost estimate required",
+      "evidenceLocations": [],
+      "resolution": null,
+      "resolutionDetails": null
+    },
+    {
+      "checklistItemId": "CC-19-19",
+      "observation": "Reviewed facts.md which states 'RSMP Participation: No'. Drainage area maps on Sheets 23-24 show existing and proposed conditions with analysis points, contours, spot elevations, and flow arrows for conventional on-site drainage analysis. These are standard drainage area maps, not RSMP-specific documentation.",
+      "reasoning": "This checklist item is conditional: it applies 'If RSMP with drainage infrastructure improvements only'. While the project includes comprehensive drainage area maps for on-site stormwater management, these are not RSMP drainage infrastructure maps. Since RSMP participation is not proposed, RSMP-specific drainage area map requirements do not apply. The condition is not met.",
+      "tools_used": [],
+      "status": "not-applicable",
+      "explanation": "RSMP participation is not proposed; RSMP-specific drainage maps not required",
+      "evidenceLocations": [],
+      "resolution": null,
+      "resolutionDetails": null
+    },
+    {
+      "checklistItemId": "CC-19-20",
+      "observation": "Reviewed facts.md which states 'RSMP Participation: No'. Grading plans are present in the plan set (Sheets 21-22) for the on-site development, but these are not RSMP drainage infrastructure grading plans. RSMP grading plans would be for regional drainage facilities.",
+      "reasoning": "This checklist item is conditional: it applies 'If RSMP with drainage infrastructure improvements and grading applicable'. Since RSMP participation is not proposed, there are no regional drainage infrastructure improvements requiring grading plans. The on-site grading plans are for the development itself, not for RSMP facilities. The condition is not met.",
+      "tools_used": [],
+      "status": "not-applicable",
+      "explanation": "RSMP participation is not proposed; RSMP infrastructure grading plans not required",
+      "evidenceLocations": [],
+      "resolution": null,
+      "resolutionDetails": null
+    },
+    {
+      "checklistItemId": "CC-19-21",
+      "observation": "Reviewed facts.md which states 'RSMP Participation: No'. Water and wastewater plan/profile sheets are present in the plan set (Sheets 19-20) for on-site utilities, and storm drain plans exist (Sheets 25-26), but these are for on-site infrastructure, not RSMP regional drainage infrastructure improvements.",
+      "reasoning": "This checklist item is conditional: it applies 'If RSMP with drainage infrastructure improvements only'. Since RSMP participation is not proposed, there are no regional drainage infrastructure improvements requiring plan and profile sheets. The existing plan/profile sheets are for on-site water, wastewater, and storm drainage as part of the site development, not for off-site RSMP regional facilities. The condition is not met.",
+      "tools_used": [],
+      "status": "not-applicable",
+      "explanation": "RSMP participation is not proposed; RSMP infrastructure plan/profiles not required",
+      "evidenceLocations": [],
+      "resolution": null,
+      "resolutionDetails": null
+    }
+  ],
+  "grouping": "cc-19",
+  "summary": "2 of 22 items pass, 0 fail, 20 not-applicable. FFE and floodplain note requirements are met; RSMP and floodplain-specific items are not applicable."
+}
