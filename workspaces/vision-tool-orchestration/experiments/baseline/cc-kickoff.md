@@ -1,4 +1,4 @@
-# Baseline run — kickoff state
+# Baseline run — cc — kickoff state
 
 **Fired:** 2026-05-06 ~15:29 UTC
 **Status at write time:** in_progress
@@ -8,7 +8,8 @@ the baseline against which the experiment runs are compared.
 
 See [`../eval-plan.md`](../eval-plan.md) for the full eval methodology
 and the "Maybe we over-estimated how much vision was needed?" framing
-that makes this baseline the disambiguating run.
+that makes this baseline the disambiguating run. See
+[`review-kickoff.md`](./review-kickoff.md) for the parallel review baseline.
 
 ---
 

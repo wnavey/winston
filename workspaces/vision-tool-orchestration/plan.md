@@ -561,9 +561,18 @@ Both runs use `setCurrent: false` to leave existing current reviews
 untouched. Submission versions match the existing rigorous baselines
 so eval is directly comparable:
 
-- cc baseline: inspect-drawing run1 (1700 S. Lamar v2, runs=3)
-- review baseline: measure-distance experiment-run7 (Valley View v2,
+- cc reference: inspect-drawing run1 (1700 S. Lamar v2, runs=3)
+- review reference: measure-distance experiment-run7 (Valley View v2,
   el-md-exp, runs=3)
+
+**Note (2026-05-06):** these are *aspirational ceilings* from prior
+experiments, not A/B baseline floors. The vision-check A/B uses
+freshly-fired baselines (no `experiment` flag, vision-only tools) —
+see the runs status table below and the kickoff docs in
+[`experiments/baseline/`](experiments/baseline/). experiment-run7 was
+originally framed as the "review baseline" but it actually had the
+measure-distance experiment overlay applied, so it's a ceiling
+reference for headline recall, not a floor for the A/B comparison.
 
 **CC payload** (`workflow/run` Inngest event):
 
@@ -618,9 +627,10 @@ working from this dev machine.
 | Run | `runLabel` | Inngest event | `workflow_runs.id` | Status |
 |---|---|---|---|---|
 | CC experiment run 1 (local) | n/a | local conductor | n/a | done — see [`experiments/run1/analytics/analysis.md`](experiments/run1/analytics/analysis.md) |
-| CC baseline | `VISION_CHECK_CC_BASELINE` | `01KQYYG6G4JHPRMGK0WK9CAWYZ` | `1cea1a70-5860-4068-bd25-e67ce5529eee` | in_progress — kickoff state in [`experiments/baseline/kickoff.md`](experiments/baseline/kickoff.md) |
+| CC baseline | `VISION_CHECK_CC_BASELINE` | `01KQYYG6G4JHPRMGK0WK9CAWYZ` | `1cea1a70-5860-4068-bd25-e67ce5529eee` | in_progress — kickoff state in [`experiments/baseline/cc-kickoff.md`](experiments/baseline/cc-kickoff.md) |
+| Review baseline (el-md-exp) | `VISION_CHECK_REVIEW_EL_MD_EXP_BASELINE` | `01KQZ1X0NMDDZ6E4SA3P1S3Q1E` | `300eb8a1-9bb1-4257-a88a-745bf696b805` | in_progress — kickoff state in [`experiments/baseline/review-kickoff.md`](experiments/baseline/review-kickoff.md) |
 | CC experiment run 2 | `VISION_CHECK_CC_RUN_2` | (pending bureau PR #301 merge) | — | not yet fired |
-| Review experiment run 1 | `VISION_CHECK_REVIEW_EL_MD_EXP_RUN_1` | — | — | not yet fired |
+| Review experiment run 1 | `VISION_CHECK_REVIEW_EL_MD_EXP_RUN_1` | (pending bureau PR #301 merge) | — | not yet fired |
 
 **Open prompt change in flight:** [bureau PR #301](https://github.com/noetic-inc/bureau/pull/301)
 adds dimension/bearing anchors to the classifier router to fix
