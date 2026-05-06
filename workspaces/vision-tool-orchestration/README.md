@@ -6,8 +6,16 @@ replacing the current setup where the top-level review agent picks
 among `vision`, `inspect-drawing`, and `measure-distance` directly and
 gets it wrong most of the time.
 
-**Current status:** Phase 0 — design + spec.
-**Next:** Phase A — conductor MCP tool skeleton.
+**Current status:** Phase D — eval runs queued (kickoff pending; see `plan.md`).
+**Phases A, B, C are complete and merged.**
+
+| Phase | Repo | PR | Status |
+|---|---|---|---|
+| 0 — design + spec | winston | #37 | ✅ merged |
+| A — conductor MCP tool skeleton | conductor | #143 | ✅ merged |
+| B — classifier wired in + dispatch | conductor | #144 | ✅ merged |
+| C — bureau experiment overlays | bureau | #297 | ✅ merged |
+| D — eval runs + writeup | winston | TBD | 🟡 in progress (kickoff queued) |
 
 ---
 

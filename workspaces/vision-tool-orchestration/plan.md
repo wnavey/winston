@@ -461,15 +461,25 @@ Cluster across runs after iter 1 to surface candidate new specialists.
 Iter 1 build broken into 4 ship-able phases. Each phase is a separate
 PR; each leaves the system in a working state.
 
-### Phase 0 — design docs (this PR)
+### Status snapshot
+
+| Phase | Repo | PR | Status |
+|---|---|---|---|
+| 0 — design docs | winston | #37 | ✅ merged |
+| A — conductor MCP tool skeleton | conductor | #143 | ✅ merged |
+| B — classifier wired in + dispatch | conductor | #144 | ✅ merged |
+| C — bureau experiment overlays | bureau | #297 | ✅ merged |
+| D — eval runs + writeup | winston | TBD | 🟡 in progress |
+
+### Phase 0 — design docs (winston PR #37, merged)
 
 - This workspace (`README.md`, `problem-statement.md`, `plan.md`)
 - No code changes. Output is reviewable design that a fresh
   Claude session can read and continue from.
 
-**Status:** in progress.
+**Status:** ✅ merged.
 
-### Phase A — conductor MCP tool skeleton
+### Phase A — conductor MCP tool skeleton (conductor PR #143, merged)
 
 Files:
 - `conductor/src/tools/vision-check/index.ts` — registers an MCP tool.
@@ -489,7 +499,7 @@ Acceptance:
 - Per-call artifact directory written.
 - No new specialist behavior (still always generic vision).
 
-### Phase B — classifier wired in
+### Phase B — classifier wired in (conductor PR #144, merged)
 
 Files:
 - Classifier-call helper in `vision-check/index.ts` — text-only
@@ -509,7 +519,7 @@ Acceptance:
 - Dispatch traces specialist calls back to the originating
   vision_check callId via the per-call artifacts.
 
-### Phase C — bureau experiment overlays + prompts
+### Phase C — bureau experiment overlays + prompts (bureau PR #297, merged)
 
 Files:
 - `bureau/.../completeness-check/experiments/vision-check/{experiment.yaml,review.md}`
@@ -526,7 +536,7 @@ Acceptance:
   (cc) completes and produces `output/vision-check-calls/`.
 - Same for `el-md-exp` against Valley View Townhomes (review).
 
-### Phase D — eval + writeup
+### Phase D — eval + writeup (in progress)
 
 Files (in this winston workspace, under
 `workspaces/vision-tool-orchestration/experiments/run1/`):
@@ -544,6 +554,94 @@ Acceptance:
 - Headline recall ≥80% on should-call items (both eval suites), or
   a documented reason it isn't.
 - Iter 2 path picked based on dominant failure mode.
+
+#### Phase D — kickoff inputs (locked in, queued)
+
+Both runs use `setCurrent: false` to leave existing current reviews
+untouched. Submission versions match the existing rigorous baselines
+so eval is directly comparable:
+
+- cc baseline: inspect-drawing run1 (1700 S. Lamar v2, runs=3)
+- review baseline: measure-distance experiment-run7 (Valley View v2,
+  el-md-exp, runs=3)
+
+**CC payload** (`workflow/run` Inngest event):
+
+```json
+{
+  "workflowName": "completeness-check",
+  "jurisdiction": "austin",
+  "inputs": {
+    "projectId": "23301a8a-4cdb-4751-ac0c-93b97f0f5c12",
+    "submissionVersionId": "eb67ee21-76b1-4065-b20d-c32f674add12",
+    "checklistVersion": "v2.5-trimmed",
+    "runs": 3,
+    "experiment": "vision-check",
+    "setCurrent": false,
+    "runLabel": "VISION_CHECK_CC_RUN_1"
+  }
+}
+```
+
+**Review payload** (el-md-exp):
+
+```json
+{
+  "workflowName": "review",
+  "jurisdiction": "austin",
+  "inputs": {
+    "submissionVersionId": "48f705aa-39cc-44a5-8128-2898c4a2cb7f",
+    "departmentCode": "el",
+    "guideCode": "el-md-exp",
+    "runs": 3,
+    "experiment": "vision-check",
+    "setCurrent": false,
+    "runLabel": "VISION_CHECK_REVIEW_EL_MD_EXP_RUN_1"
+  }
+}
+```
+
+#### Phase D — kickoff path
+
+Triggering goes through Substation (replaced Dispatcher), via the
+Noetic MCP server's `inngest_trigger` action sending event
+`workflow/run`. The legacy `trigger-workflow` CLI is gone. See the
+`noetic-tools:dispatcher-run` skill in `claude-plugins` for the full
+flow.
+
+**Current blocker (2026-05-06):** Noetic MCP authentication on
+this dev machine is failing — `/mcp` reports the connector as
+unauthorized after browser sign-in attempts. Once auth lands either
+in this session or another, fire both payloads and capture:
+
+1. The Inngest event id returned from `inngest_trigger`
+2. The `workflow_runs.id` once Substation creates the DB record
+   (poll: `SELECT id, status, started_at, outputs_path FROM
+   workflow_runs WHERE inputs->>'runLabel' = '<label>' ORDER BY
+   created_at DESC LIMIT 1`)
+3. The `outputs_path` once status flips to `done` — that's the
+   storage prefix to download artifacts into
+   `experiments/run1/{cc,review}/`.
+
+#### Phase D — analysis tasks (after artifacts pulled)
+
+Once both runs complete and artifacts are pulled into
+`experiments/run1/{cc,review}/`:
+
+1. Run a **cc-side analysis script** modeled on
+   [`../inspect-drawing-tool/experiments/run1/analytics/analyze.py`](../inspect-drawing-tool/experiments/run1/analytics/analyze.py).
+   Join `output/vision-check-calls/<callId>/metadata.json` against
+   [`../cc-vision-classification/cc-classification.tsv`](../cc-vision-classification/cc-classification.tsv).
+   Produce: routing accuracy confusion matrix, per-route execution
+   accuracy, recall + misuse vs the inspect-drawing run1 baseline.
+2. Run a **review-side analysis script** modeled on
+   [`../measure-distance-tool/analysis/scripts/compute-rigorous-metrics.py`](../measure-distance-tool/analysis/scripts/compute-rigorous-metrics.py).
+   Join against
+   [`../measure-distance-tool/analysis/guides/el-md-exp/item-classification.json`](../measure-distance-tool/analysis/guides/el-md-exp/item-classification.json).
+   Compare against measure-distance experiment-run7 rigorous metrics.
+3. Write `experiments/run1/analytics/analysis.md` with the headline +
+   per-route + per-workflow breakdown + iter-2 path recommendation
+   per the F1 trigger split above.
 
 ---
 
