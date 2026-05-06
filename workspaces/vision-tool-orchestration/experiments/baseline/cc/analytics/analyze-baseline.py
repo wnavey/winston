@@ -150,6 +150,20 @@ def main():
         # use the first status to keep parity with run1 schema
         status = statuses[0] if statuses else ""
 
+        agent_majority = runs_called >= 2 and runs_total >= 1
+        label_should_call = grade in ("inspect-drawing-required",
+                                      "inspect-drawing-optional",
+                                      "vision-only")
+
+        if label_should_call and agent_majority:
+            agreement = "agree-call"
+        elif label_should_call and not agent_majority:
+            agreement = "label-only-call"
+        elif not label_should_call and agent_majority:
+            agreement = "agent-only-call"
+        else:
+            agreement = "agree-skip"
+
         item_rows.append({
             "checklist_item_id": f"{grouping}:{item_id}",
             "checklist_item_deficiency_text": deficiency,
@@ -157,6 +171,10 @@ def main():
             "condition": condition,
             "expected_vision_tool_call": _expected_tool(grade),
             "actual_vision_tool_call": actual,
+            "runs_called": runs_called,
+            "runs_total": runs_total,
+            "agent_majority_called": "yes" if agent_majority else "no",
+            "label_vs_agent_agreement": agreement,
             "finding_status": status,
         })
 
@@ -254,6 +272,54 @@ def main():
     print("-" * 55)
     if app_should:
         print(f"  {'APPLICABLE SHOULD-CALL':<26s} {app_called:>8d} / {app_should:>5d}   {100*app_called/app_should:>5.1f}%")
+
+    # Agent-majority reference (≥2/3 runs called)
+    print(f"\n── AGENT-MAJORITY REFERENCE (≥2/3 runs called vision) ──")
+    print(f"This is a second 'expected vision call' reference: items the agent")
+    print(f"consistently calls vision on across runs. Compare to ground-truth")
+    print(f"labels to test the 'labels too aggressive' hypothesis.\n")
+
+    cross_tab = defaultdict(lambda: defaultdict(int))
+    for row in item_rows:
+        label_should = "should-call" if row["grade"] in (
+            "inspect-drawing-required", "inspect-drawing-optional", "vision-only"
+        ) else "should-skip"
+        agent_majority = "agent-call" if row["agent_majority_called"] == "yes" else "agent-skip"
+        cross_tab[label_should][agent_majority] += 1
+
+    print(f"  {'':>14s} {'agent-call':>12s} {'agent-skip':>12s} {'total':>8s}")
+    print(f"  {'-'*14} {'-'*12:>12s} {'-'*12:>12s} {'-'*8:>8s}")
+    for label_bucket in ("should-call", "should-skip"):
+        ac = cross_tab[label_bucket]["agent-call"]
+        as_ = cross_tab[label_bucket]["agent-skip"]
+        tot = ac + as_
+        print(f"  {label_bucket:<14s} {ac:>12d} {as_:>12d} {tot:>8d}")
+    col_call = cross_tab["should-call"]["agent-call"] + cross_tab["should-skip"]["agent-call"]
+    col_skip = cross_tab["should-call"]["agent-skip"] + cross_tab["should-skip"]["agent-skip"]
+    print(f"  {'-'*14} {'-'*12:>12s} {'-'*12:>12s} {'-'*8:>8s}")
+    print(f"  {'total':<14s} {col_call:>12d} {col_skip:>12d} {col_call+col_skip:>8d}")
+
+    # Agreement framing
+    agreement_counts = defaultdict(int)
+    for row in item_rows:
+        agreement_counts[row["label_vs_agent_agreement"]] += 1
+    print(f"\n  Agreement breakdown:")
+    for k in ("agree-call", "agree-skip", "label-only-call", "agent-only-call"):
+        v = agreement_counts.get(k, 0)
+        pct = 100 * v / len(item_rows) if item_rows else 0
+        print(f"    {k:<22s} {v:>4d}  ({pct:.1f}%)")
+
+    # Items where label and agent disagree
+    label_only = [r for r in item_rows if r["label_vs_agent_agreement"] == "label-only-call"]
+    agent_only = [r for r in item_rows if r["label_vs_agent_agreement"] == "agent-only-call"]
+    print(f"\n  LABEL-ONLY-CALL items ({len(label_only)} — labels say vision, agent disagrees):")
+    for r in label_only[:15]:
+        print(f"    [{r['grade']:<28s}] {r['checklist_item_id']:<18s} ({r['runs_called']}/{r['runs_total']} runs)")
+    if len(label_only) > 15:
+        print(f"    ... and {len(label_only) - 15} more")
+    print(f"\n  AGENT-ONLY-CALL items ({len(agent_only)} — agent calls vision, labels say no):")
+    for r in agent_only:
+        print(f"    [{r['grade']:<28s}] {r['checklist_item_id']:<18s} ({r['runs_called']}/{r['runs_total']} runs)")
 
 
 if __name__ == "__main__":
