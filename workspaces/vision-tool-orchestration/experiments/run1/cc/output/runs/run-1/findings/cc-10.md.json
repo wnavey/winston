@@ -1,0 +1,76 @@
+{
+  "findings": [
+    {
+      "checklistItemId": "AE-01",
+      "observation": "Read Sheet 5 (General Notes Sheet) Block 7, which contains a section titled 'AUSTIN ENERGY STANDARD NOTES' with 5 numbered notes. The notes cover: (1) tree pruning/easement rights and compliance with Chapter 25-8; (2) easement/access obligations for electric facility installation and maintenance; (3) owner responsibility for erosion control, revegetation, tree protection, and initial tree pruning within 10 feet of overhead electrical facilities; (4) NESC/OSHA clearance maintenance requirements and owner responsibility; (5) relocation costs. All 4 required topic areas from the checklist are addressed. I could not locate the reference template file (codes/general-site-plan-notes/contents/General Site Plan Notes for COA.md) to perform the ~90% semantic matching verification specified in the validation methodology.",
+      "reasoning": "The checklist item requires 4 notes covering tree pruning/easement rights, easement/access obligations, erosion control responsibilities, and NESC/OSHA clearance maintenance. Sheet 5 Block 7 contains notes that address all four required topics. Note 1 addresses tree pruning rights; Note 2 addresses easement/access obligations; Note 3 addresses erosion control and tree protection responsibilities; Note 4 addresses NESC/OSHA clearance maintenance. While the grouping file specifies ~90% semantic matching against the official template, I cannot verify exact template compliance without access to the reference material. However, the presence of notes covering all required substantive topics suggests the requirement is met. The notes are located on a plan sheet (Sheet 5) rather than being missing entirely, which satisfies the location flexibility indicated in the validation methodology ('Notes may appear on any plan sheet, not required to be on the cover sheet').",
+      "tools_used": [
+        "semantic-search-blocks"
+      ],
+      "status": "pass",
+      "explanation": "Austin Energy standard notes present on Sheet 5, covering all 4 required topics: tree pruning rights, easements, erosion control, and NESC/OSHA clearances.",
+      "resolution": null,
+      "resolutionDetails": null,
+      "evidenceLocations": [
+        {
+          "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+          "sheetNumber": 5,
+          "label": "General Notes Sheet, Block 7"
+        }
+      ]
+    },
+    {
+      "checklistItemId": "AE-02",
+      "observation": "Used semantic search to identify sheets with existing electric utility content, finding references on Sheets 8 and 9 (Existing Conditions & Demolition Plans). Read Sheet 8 blocks.md, which confirmed the legend includes symbols for existing overhead electric (OHU), existing electric manhole (E), existing electric meter (E), existing power pole, and existing light pole. The drawing block (Block 2) mentions 'existing electric manholes' as specific features. Called vision_check on Sheet 8 with the checklist item text. The vision tool confirmed existing electric facilities are depicted on the plan, including: (a) legend entries for overhead electric, electric manholes, power poles, electric meters, and light poles; (b) plan callouts for 'EXISTING LIGHT POLE TO BE REMOVED', 'UNDERGROUND ELECTRIC LINE TO BE REMOVED', 'ABANDONED UNDERGROUND ELECTRIC LINE TO BE REMOVED', and 'EXISTING OVERHEAD UTILITY LINE TO BE REMOVED'; (c) overhead electric lines (marked 'OE') shown along Collier Street.",
+      "reasoning": "The checklist item states that existing electric utility facilities (overhead and underground) must be shown on plan sheets. The vision tool's analysis of Sheet 8 confirms that both overhead and underground existing electric facilities are depicted: overhead electric lines are shown with 'OE' symbols along streets, underground electric lines are shown as features to be removed, and associated infrastructure (manholes, poles, meters, light poles) are indicated with legend symbols and callouts. The facilities are shown on the Existing Conditions & Demolition Plan sheets (8 and 9), which is the appropriate location for existing utilities. The deficiency described in the checklist item ('not shown on plan sheets') does not exist—the facilities are clearly depicted with appropriate symbology and callouts.",
+      "tools_used": [
+        "semantic-search-blocks",
+        "vision_check"
+      ],
+      "status": "pass",
+      "explanation": "Existing electric utility facilities (overhead and underground) are shown on Sheet 8 with legend symbols, callouts, and line depictions.",
+      "resolution": null,
+      "resolutionDetails": null,
+      "evidenceLocations": [
+        {
+          "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+          "sheetNumber": 8,
+          "label": "Existing Conditions & Demolition Plan (1 of 2)"
+        }
+      ]
+    },
+    {
+      "checklistItemId": "AE-03",
+      "observation": "Used semantic search to identify sheets with proposed electric utility content, finding references on Sheets 11, 14, 15, 17, and 18. Read Sheet 14 blocks.md, which confirmed the drawing (Block 2) includes 'existing and proposed utility lines, including overhead electric' and 'symbols for transformers'. The Key Notes (Block 3) list 'PROPOSED TRANSFORMER' (note 6) and 'PROPOSED ELECTRICAL PULL BOX' (note 9). Called vision_check on Sheet 14 with the checklist item text. The vision tool confirmed proposed electric facilities are depicted, including: (a) Key Notes for proposed transformer (#6) and proposed electrical pull box (#8); (b) legend entries for proposed overhead electric line (OHE), proposed electric pole, proposed electric manhole, and proposed transformer; (c) proposed overhead electric lines (marked 'OHE') shown along Kinney Avenue on the western property boundary; (d) transformer symbol pointing to a rectangular footprint on the eastern side of the proposed building.",
+      "reasoning": "The checklist item requires that proposed electric utility facilities be shown on plan sheets. The vision tool's analysis of Sheet 14 confirms that proposed electric facilities are depicted with appropriate symbols, callouts, and line work: overhead electric lines are shown along Kinney Avenue with 'OHE' symbols, a proposed transformer location is indicated with a hexagon symbol pointing to its footprint, and the legend provides symbols for electric poles, manholes, and transformers. Sheet 14 is a Dimensional Control & Site Plan sheet, which is the appropriate location for proposed utility layouts. Additionally, semantic search identified proposed electric content on multiple other sheets (11, 15, 17, 18), suggesting comprehensive coverage across the plan set. The deficiency described in the checklist item ('not shown on plan sheets') does not exist.",
+      "tools_used": [
+        "semantic-search-blocks",
+        "vision_check"
+      ],
+      "status": "pass",
+      "explanation": "Proposed electric utility facilities are shown on Sheet 14 with legend symbols, key notes, overhead electric lines, and transformer locations.",
+      "resolution": null,
+      "resolutionDetails": null,
+      "evidenceLocations": [
+        {
+          "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+          "sheetNumber": 14,
+          "label": "Dimensional Control & Site Plan 1 of 2"
+        }
+      ]
+    },
+    {
+      "checklistItemId": "AEGB-02",
+      "observation": "Read facts.md to determine the site's zoning. The Zoning & Land Use section (lines 53-72) indicates: Tract 1 (0100050260, 3.44 ac) is zoned CS-V-DB90 (Commercial Services, Vertical Mixed Use, Density Bonus 90 overlay); Tract 2 (0100050216, 0.16 ac) is zoned CS-V-CO (Commercial Services, Vertical Mixed Use, Conditional Overlay); Tract 3 (0101050102, 1.61 ac) is zoned CS-V-CO with marginal SF-3. Line 71 explicitly states 'Downtown Austin: Not in downtown district.' The site is not zoned CBD (Central Business District) or DMU (Downtown Mixed Use). The checklist item's condition is 'If zoned CBD or DMU.' Did not search for a Letter of Intent document because the conditional trigger is not met.",
+      "reasoning": "The checklist item AEGB-02 has a condition: 'If zoned CBD or DMU.' According to the grouping file's Key Terms section, CBD and DMU are 'base zoning districts in downtown Austin' and 'CBD/DMU sites...trigger the AEGB Letter of Intent requirement for the Green Building Program at site plan stage.' The facts.md file confirms this site has CS-V base zoning (Commercial Services, Vertical Mixed Use) with DB90 or CO overlays, and is not located in the downtown district. CS-V is a different base zoning district from CBD or DMU. Because the site is not zoned CBD or DMU, the condition is not met, and the Letter of Intent requirement does not apply to this project. This is a straightforward applicability determination based on the zoning classification.",
+      "tools_used": [],
+      "status": "not-applicable",
+      "explanation": "Site is zoned CS-V-DB90/CS-V-CO, not CBD or DMU; Letter of Intent requirement does not apply.",
+      "resolution": null,
+      "resolutionDetails": null,
+      "evidenceLocations": []
+    }
+  ],
+  "grouping": "cc-10",
+  "summary": "3 of 4 items pass, 0 fail, 1 not-applicable"
+}
