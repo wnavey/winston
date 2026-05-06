@@ -24,15 +24,16 @@ ENVIRONMENT
 
 NOTES
     - Stdlib only (urllib, concurrent.futures). No pip install required.
-    - Storage layout assumed:
+    - Storage layouts handled (we scan the full output/ tree and filter to
+      paths whose parent is named `inspect-drawing-calls`):
           workflow-runs/completeness-check/<projectId>/<datetime>/
-              output/inspect-drawing-calls/<callId>/{metadata.json,
-                                                     prompt.txt,
-                                                     cropped.jpg,
-                                                     response.txt,
-                                                     events.jsonl}
-    - Output layout (matches viewer/build-manifest.py expectations):
+              output/inspect-drawing-calls/<callId>/...                 (legacy flat layout)
+              output/runs/run-<n>/inspect-drawing-calls/<callId>/...    (per-run-index layout used
+                                                                         by vision-check experiments
+                                                                         with runs > 1)
+    - Output layout preserved locally (matches viewer/build-manifest.py):
           runs/<datetime>/output/inspect-drawing-calls/<callId>/...
+          runs/<datetime>/output/runs/run-<n>/inspect-drawing-calls/<callId>/...
 """
 from __future__ import annotations
 
@@ -47,7 +48,16 @@ from urllib import error, parse, request
 DEFAULT_PROJECT_ID = "23301a8a-4cdb-4751-ac0c-93b97f0f5c12"  # 1700 S. Lamar
 BUCKET = "workflow-runs"
 WORKFLOW_PREFIX = "completeness-check"
-SUBPATH = "output/inspect-drawing-calls"
+# We scan the entire output/ tree and filter to paths whose parent is named
+# `inspect-drawing-calls` so we pick up calls regardless of nesting:
+#   output/inspect-drawing-calls/<callId>/...                       (legacy flat layout)
+#   output/runs/run-<n>/inspect-drawing-calls/<callId>/...          (per-run-index layout used
+#                                                                    by vision-check experiments
+#                                                                    when runs > 1)
+# Local layout preserves the relative path under `<datetime>/`, which the viewer's
+# build-manifest.py already understands.
+OUTPUT_SUBPATH = "output"
+CALL_DIR_NAME = "inspect-drawing-calls"
 WORKSPACE_ROOT = Path(__file__).resolve().parent.parent
 RUNS_DIR = WORKSPACE_ROOT / "runs"
 CONCURRENCY = 10
@@ -143,12 +153,21 @@ def list_run_datetimes(project_id: str) -> list[str]:
 
 
 def pull_run(project_id: str, datetime_dir: str, dest_root: Path) -> None:
-    remote_root = f"{WORKFLOW_PREFIX}/{project_id}/{datetime_dir}/{SUBPATH}"
+    remote_root = f"{WORKFLOW_PREFIX}/{project_id}/{datetime_dir}/{OUTPUT_SUBPATH}"
     print(f"  listing  {BUCKET}/{remote_root}/", file=sys.stderr)
-    files = storage_list_recursive(remote_root)
+    all_files = storage_list_recursive(remote_root)
+    # Keep only files whose path contains a /inspect-drawing-calls/ segment.
+    # This handles both flat (output/inspect-drawing-calls/...) and per-run-index
+    # (output/runs/run-N/inspect-drawing-calls/...) layouts in one pass.
+    needle = f"/{CALL_DIR_NAME}/"
+    files = [f for f in all_files if needle in f]
     if not files:
-        print(f"  no files found under {remote_root} — was the experiment flag set?",
-              file=sys.stderr)
+        print(
+            f"  no inspect-drawing call dirs found under {remote_root} — was the\n"
+            f"  experiment flag set, and did the classifier route any items to\n"
+            f"  drawing_inspect with a successful dispatch?",
+            file=sys.stderr,
+        )
         return
     print(f"  found {len(files)} file(s); downloading to {dest_root}/", file=sys.stderr)
     dest_root.mkdir(parents=True, exist_ok=True)
