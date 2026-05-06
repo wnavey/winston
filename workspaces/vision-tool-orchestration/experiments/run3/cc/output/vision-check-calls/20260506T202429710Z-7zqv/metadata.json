@@ -1,0 +1,31 @@
+{
+  "callId": "20260506T202429710Z-7zqv",
+  "startedAt": "2026-05-06T20:24:29.710Z",
+  "completedAt": "2026-05-06T20:26:00.324Z",
+  "inputs": {
+    "checklistItemId": "cc-24:CC-24-03",
+    "checklistItemText": "License Agreement for streetscape elements in ROW (awnings, canopies, benches, bike racks, trash) not submitted or referenced (LDE-03)",
+    "question": "Are any bike racks, benches, trash receptacles, or other streetscape elements shown within the public right-of-way on this site plan?",
+    "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+    "sheetNum": 14
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "7a99bffdf9efcc44b8fffdfdcb1341d5e6512304f58b8778bf383e46a441e057",
+    "promptSource": "bureau",
+    "promptSourcePath": "/vercel/sandbox/workspace/bureau/jurisdictions/austin/workflows/completeness-check/prompts/vision-router.md",
+    "output": {
+      "problemType": "generic",
+      "reasoning": "The agent is asking a presence/feature-identification question: do streetscape elements appear anywhere on the plan at all? This is a preliminary visual scan before any licensing or dimensional compliance would be checked. The checklist requirement concerns license-agreement documentation, but the agent's narrower question is simply whether such elements are depicted on the drawing—a feature-presence check, not a drawing-annotation inspection or measurement.",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "vision",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": null
+  },
+  "phase": "B"
+}

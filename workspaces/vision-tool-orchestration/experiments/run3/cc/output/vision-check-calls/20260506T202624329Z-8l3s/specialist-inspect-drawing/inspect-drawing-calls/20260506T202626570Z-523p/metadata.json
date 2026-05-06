@@ -1,0 +1,70 @@
+{
+  "callId": "20260506T202626570Z-523p",
+  "inputs": {
+    "projectId": "23301a8a-4cdb-4751-ac0c-93b97f0f5c12",
+    "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+    "sheetNum": "27",
+    "question": "Looking at the cross-section drawings (Section A-A, Section B-B, etc.) on this sheet, do any of them show the water quality elevation (WQE) labeled? These sections should be separate from the plan view.",
+    "expectedAnswerType": "boolean",
+    "cropMode": "drawing",
+    "regionHint": "Cross-section details showing vertical profiles of the pond structure",
+    "reasoning": "The agent is asking whether a specific annotation (WQE label) appears on cross-section drawings, which is a drawing-element inspection task. Although the checklist requirement is about cross-section presence/completeness, the agent question is narrowly focused on whether elevation labels are shown on existing sections—a drawing-inspection task, not a document-presence check.",
+    "applicableChecklistItems": [
+      {
+        "checklist_id": "cc-20:CC-20-25",
+        "checklist_deficiency_text": "WQ pond cross-section not provided showing WQ surface elevation (WQD-25)"
+      }
+    ],
+    "dpi": 150
+  },
+  "cropResolution": {
+    "bbox": {
+      "x0": 0.05,
+      "y0": 0.048,
+      "x1": 0.629,
+      "y1": 0.483
+    },
+    "source": "drawing-block"
+  },
+  "renderResult": {
+    "width": 3127,
+    "height": 1567
+  },
+  "result": {
+    "answerText": "The provided image only shows a plan view of the basins and pond. The requested cross-section drawings (Section A-A, Section B-B, etc.) are not visible in this crop.",
+    "classification": null,
+    "count": null,
+    "unanswerable": true,
+    "confidence": 0.95,
+    "evidence": [],
+    "reasoning": "The image contains a plan view with section cut lines (e.g., A-A, B-B) indicating where cross-sections are taken, but the actual vertical profile drawings corresponding to these cuts are not included in the visible area.",
+    "regionHintHonored": false,
+    "_meta": {
+      "callId": "20260506T202626570Z-523p",
+      "expectedAnswerType": "boolean",
+      "cropMode": "drawing",
+      "cropResolution": {
+        "bbox": {
+          "x0": 0.05,
+          "y0": 0.048,
+          "x1": 0.629,
+          "y1": 0.483
+        },
+        "source": "drawing-block"
+      },
+      "cropBbox": {
+        "x0": 0.05,
+        "y0": 0.048,
+        "x1": 0.629,
+        "y1": 0.483
+      },
+      "model": "google/gemini-3.1-pro-preview",
+      "promptLength": 4468,
+      "validationNotes": []
+    }
+  },
+  "timing": {
+    "startedAt": 1778099186572,
+    "finishedAt": 1778099193304
+  }
+}

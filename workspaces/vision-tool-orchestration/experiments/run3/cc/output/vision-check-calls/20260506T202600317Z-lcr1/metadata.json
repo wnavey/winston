@@ -1,0 +1,31 @@
+{
+  "callId": "20260506T202600317Z-lcr1",
+  "startedAt": "2026-05-06T20:26:00.317Z",
+  "completedAt": "2026-05-06T20:26:02.089Z",
+  "inputs": {
+    "checklistItemId": "cc-1:CC-1-19",
+    "checklistItemText": "Legible location map missing, not a separate PDF, or site area not marked in red (INT-19)",
+    "question": "Is the site area marked in red on this location map?",
+    "documentId": "dd5b866a-144e-457d-8bc3-fbf523e3d3cb"
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "7a99bffdf9efcc44b8fffdfdcb1341d5e6512304f58b8778bf383e46a441e057",
+    "promptSource": "bureau",
+    "promptSourcePath": "/vercel/sandbox/workspace/bureau/jurisdictions/austin/workflows/completeness-check/prompts/vision-router.md",
+    "output": {
+      "problemType": "drawing_inspect",
+      "reasoning": "The agent is asking whether a specific visual marking (red color) is present on a drawing element (the location map), which requires inspection of lines, symbols, and spatial relationships in the drawing itself, not a measurement or document-presence check.",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "inspect-drawing",
+    "success": false,
+    "errorMessage": "Command failed: npx tsx /vercel/sandbox/workspace/bureau/jurisdictions/austin/workflows/completeness-check/scripts/inspect-drawing.ts --outputPath='/vercel/sandbox/workspace/output/vision-check-calls/20260506T202600317Z-lcr1/specialist-inspect-drawing/output.json' --documentId='dd5b866a-144e-457d-8bc3-fbf523e3d3cb' --sheetNum='' --question='Is the site area marked in red on this location map?' --expectedAnswerType='boolean' --cropMode='drawing' --reasoning='The agent is asking whether a specific visual marking (red color) is present on a drawing element (the location map), which requires inspection of lines, symbols, and spatial relationships in the drawing itself, not a measurement or document-presence check.' --applicable_checklist_items='[{\"checklist_id\":\"cc-1:CC-1-19\",\"checklist_deficiency_text\":\"Legible location map missing, not a separate PDF, or site area not marked in red (INT-19)\"}]'\nInferred projectId from workspace: 23301a8a-4cdb-4751-ac0c-93b97f0f5c12\nMissing required arguments. Required: documentId, sheetNum, question, outputPath. Optional: projectId (inferred from workspace), expectedAnswerType, cropMode, regionHint, dpi.\n",
+    "fallbackReason": null,
+    "specialistCallDir": null
+  },
+  "phase": "B"
+}

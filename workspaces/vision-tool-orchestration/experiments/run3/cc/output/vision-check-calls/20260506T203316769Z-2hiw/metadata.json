@@ -1,0 +1,31 @@
+{
+  "callId": "20260506T203316769Z-2hiw",
+  "startedAt": "2026-05-06T20:33:16.769Z",
+  "completedAt": "2026-05-06T20:34:11.649Z",
+  "inputs": {
+    "checklistItemId": "cc-2:CC-2-24",
+    "checklistItemText": "Underground utility lines (existing and proposed) not shown on applicable sheets (BAS-14b)",
+    "question": "Are existing underground utility lines (such as water, wastewater, storm drain, gas, or underground electric lines) shown on this Existing Conditions sheet?",
+    "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+    "sheetNum": 8
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "7a99bffdf9efcc44b8fffdfdcb1341d5e6512304f58b8778bf383e46a441e057",
+    "promptSource": "bureau",
+    "promptSourcePath": "/vercel/sandbox/workspace/bureau/jurisdictions/austin/workflows/completeness-check/prompts/vision-router.md",
+    "output": {
+      "problemType": "generic",
+      "reasoning": "The agent is asking a presence/feature-discovery question: whether existing underground utility lines appear anywhere on the Existing Conditions sheet. This is a sheet-level feature presence check, not a drawing-element inspection (which would require identifying line types, symbols, or annotations) or a measurement. The checklist requirement is about completeness across applicable sheets, and the agent is performing the first-pass presence verification.",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "vision",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": null
+  },
+  "phase": "B"
+}

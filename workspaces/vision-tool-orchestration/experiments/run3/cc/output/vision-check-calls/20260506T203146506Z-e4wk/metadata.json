@@ -1,0 +1,32 @@
+{
+  "callId": "20260506T203146506Z-e4wk",
+  "startedAt": "2026-05-06T20:31:46.506Z",
+  "completedAt": "2026-05-06T20:32:31.426Z",
+  "inputs": {
+    "checklistItemId": "cc-23:CC-23-08",
+    "checklistItemText": "Retaining wall top and bottom elevations not shown (RDW-04)",
+    "question": "Looking at the grading plan, are there spot elevations or grade information near the retaining walls with guardrails that would indicate their approximate height? Look for elevation changes or grade breaks along the northern property boundary where the retaining walls are located.",
+    "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+    "sheetNum": 21,
+    "regionHint": "Northern boundary along Collier Street where retaining walls are shown on Sheet 14"
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "7a99bffdf9efcc44b8fffdfdcb1341d5e6512304f58b8778bf383e46a441e057",
+    "promptSource": "bureau",
+    "promptSourcePath": "/vercel/sandbox/workspace/bureau/jurisdictions/austin/workflows/completeness-check/prompts/vision-router.md",
+    "output": {
+      "problemType": "drawing_inspect",
+      "reasoning": "The agent is asking whether elevation annotations or grade information are visually present and labeled on the grading plan near the retaining walls—a drawing-element inspection task. Although the checklist requirement concerns elevation data completeness, the agent question is specifically asking to inspect the drawing for the presence of spot elevations or grade markings as drawn elements, not to measure or calculate elevations.",
+      "confidence": 0.92,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "inspect-drawing",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": "/vercel/sandbox/workspace/output/vision-check-calls/20260506T203146506Z-e4wk/specialist-inspect-drawing"
+  },
+  "phase": "B"
+}

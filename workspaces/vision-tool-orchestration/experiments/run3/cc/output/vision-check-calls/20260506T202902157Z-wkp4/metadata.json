@@ -1,0 +1,31 @@
+{
+  "callId": "20260506T202902157Z-wkp4",
+  "startedAt": "2026-05-06T20:29:02.157Z",
+  "completedAt": "2026-05-06T20:30:07.770Z",
+  "inputs": {
+    "checklistItemId": "cc-22:CC-22-14",
+    "checklistItemText": "Adjacent driveways within 300 feet not shown on plans (DRV-04)",
+    "question": "Are adjacent driveways on neighboring properties shown on this sheet? Look for driveways on properties adjacent to the subject site along all street frontages (South Lamar Blvd, Collier Street, Evergreen Avenue). Adjacent driveways would appear as wide, flat-bottomed U-shapes or J-shapes opening toward the street on adjacent parcels.",
+    "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+    "sheetNum": 13
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "7a99bffdf9efcc44b8fffdfdcb1341d5e6512304f58b8778bf383e46a441e057",
+    "promptSource": "bureau",
+    "promptSourcePath": "/vercel/sandbox/workspace/bureau/jurisdictions/austin/workflows/completeness-check/prompts/vision-router.md",
+    "output": {
+      "problemType": "generic",
+      "reasoning": "The agent is asking a presence/feature-identification question (do adjacent driveways appear on this sheet at all?), which is a prerequisite to the measurement requirement. The checklist requires verification that adjacent driveways within 300 feet are shown, but the agent is first determining whether any adjacent driveways are visible on the plan—a sheet-discovery and feature-presence check, not a distance measurement or drawing-annotation inspection.",
+      "confidence": 0.92,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "vision",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": null
+  },
+  "phase": "B"
+}

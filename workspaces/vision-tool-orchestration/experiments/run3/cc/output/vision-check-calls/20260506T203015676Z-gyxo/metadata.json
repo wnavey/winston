@@ -1,0 +1,32 @@
+{
+  "callId": "20260506T203015676Z-gyxo",
+  "startedAt": "2026-05-06T20:30:15.676Z",
+  "completedAt": "2026-05-06T20:30:45.193Z",
+  "inputs": {
+    "checklistItemId": "cc-23:CC-23-08",
+    "checklistItemText": "Retaining wall top and bottom elevations not shown (RDW-04)",
+    "question": "Are there retaining walls with guardrails shown on this dimensional control and site plan? If yes, do they show top and bottom elevations? Look for the retaining wall symbol from the legend and any elevation labels.",
+    "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+    "sheetNum": 14,
+    "regionHint": "Look for retaining walls with guardrails throughout the site"
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "7a99bffdf9efcc44b8fffdfdcb1341d5e6512304f58b8778bf383e46a441e057",
+    "promptSource": "bureau",
+    "promptSourcePath": "/vercel/sandbox/workspace/bureau/jurisdictions/austin/workflows/completeness-check/prompts/vision-router.md",
+    "output": {
+      "problemType": "drawing_inspect",
+      "reasoning": "The agent is asking whether retaining walls are present on the plan AND whether elevation labels (top and bottom) are annotated on those walls—both are drawing-element inspection tasks (symbol identification and annotation presence), not measurements of physical distances or clearances.",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "inspect-drawing",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": "/vercel/sandbox/workspace/output/vision-check-calls/20260506T203015676Z-gyxo/specialist-inspect-drawing"
+  },
+  "phase": "B"
+}

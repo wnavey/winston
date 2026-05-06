@@ -1,0 +1,32 @@
+{
+  "callId": "20260506T202429683Z-v3vy",
+  "startedAt": "2026-05-06T20:24:29.683Z",
+  "completedAt": "2026-05-06T20:26:00.313Z",
+  "inputs": {
+    "checklistItemId": "cc-13:AW-19",
+    "checklistItemText": "General location map missing, or Grid number and Mapsco Page number not shown",
+    "question": "What is the Mapsco Grid number shown on the location map?",
+    "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+    "sheetNum": 1,
+    "regionHint": "location map in center of cover sheet"
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "7a99bffdf9efcc44b8fffdfdcb1341d5e6512304f58b8778bf383e46a441e057",
+    "promptSource": "bureau",
+    "promptSourcePath": "/vercel/sandbox/workspace/bureau/jurisdictions/austin/workflows/completeness-check/prompts/vision-router.md",
+    "output": {
+      "problemType": "generic",
+      "reasoning": "The agent is performing a label readout / data extraction task (reading the Mapsco Grid number from the location map), which is a generic visual question, not a measurement or drawing-inspection task. This is a progressive presence/content check before any spatial reasoning would occur.",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "vision",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": null
+  },
+  "phase": "B"
+}

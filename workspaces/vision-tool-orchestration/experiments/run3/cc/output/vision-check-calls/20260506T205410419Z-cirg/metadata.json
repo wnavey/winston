@@ -1,0 +1,31 @@
+{
+  "callId": "20260506T205410419Z-cirg",
+  "startedAt": "2026-05-06T20:54:10.419Z",
+  "completedAt": "2026-05-06T20:54:40.730Z",
+  "inputs": {
+    "checklistItemId": "cc-13:AW-31",
+    "checklistItemText": "Curve data for roads, property lines, water, and reclaimed water lines not shown",
+    "question": "Are there any curved water lines on this utility plan, and if so, is curve data (radius, length, delta, etc.) provided for those curves?",
+    "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+    "sheetNum": 19
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "7a99bffdf9efcc44b8fffdfdcb1341d5e6512304f58b8778bf383e46a441e057",
+    "promptSource": "bureau",
+    "promptSourcePath": "/vercel/sandbox/workspace/bureau/jurisdictions/austin/workflows/completeness-check/prompts/vision-router.md",
+    "output": {
+      "problemType": "drawing_inspect",
+      "reasoning": "The agent is asking whether curve data annotations (radius, length, delta, etc.) are shown on the drawing itself for curved water lines. This is a drawing-element inspection question—checking for the presence and labeling of curve parameters on plan features—not a measurement task or generic presence check.",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "inspect-drawing",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": "/vercel/sandbox/workspace/output/vision-check-calls/20260506T205410419Z-cirg/specialist-inspect-drawing"
+  },
+  "phase": "B"
+}

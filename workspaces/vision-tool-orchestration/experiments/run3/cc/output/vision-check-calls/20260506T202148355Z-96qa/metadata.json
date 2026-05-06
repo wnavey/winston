@@ -1,0 +1,32 @@
+{
+  "callId": "20260506T202148355Z-96qa",
+  "startedAt": "2026-05-06T20:21:48.355Z",
+  "completedAt": "2026-05-06T20:22:24.502Z",
+  "inputs": {
+    "checklistItemId": "cc-5:ADR-01",
+    "checklistItemText": "Addressing information not shown on an Addressing Plan sheet or the overall site plan sheet, or not listed in Sheet Index",
+    "question": "Is there a sheet titled \"Addressing Plan\" or similar listed in the sheet index table?",
+    "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+    "sheetNum": 1,
+    "regionHint": "Top right area where the sheet index table is located"
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "7a99bffdf9efcc44b8fffdfdcb1341d5e6512304f58b8778bf383e46a441e057",
+    "promptSource": "bureau",
+    "promptSourcePath": "/vercel/sandbox/workspace/bureau/jurisdictions/austin/workflows/completeness-check/prompts/vision-router.md",
+    "output": {
+      "problemType": "generic",
+      "reasoning": "The agent is performing a sheet-discovery check (looking for the presence of an 'Addressing Plan' sheet in the sheet index), which is a document/table presence verification task, not a drawing inspection or measurement. This is a progressive check before verifying addressing information content.",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "vision",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": null
+  },
+  "phase": "B"
+}

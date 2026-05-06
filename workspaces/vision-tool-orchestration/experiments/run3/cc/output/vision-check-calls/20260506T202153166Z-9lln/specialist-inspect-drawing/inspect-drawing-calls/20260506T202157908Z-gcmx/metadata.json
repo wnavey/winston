@@ -1,0 +1,161 @@
+{
+  "callId": "20260506T202157908Z-gcmx",
+  "inputs": {
+    "projectId": "23301a8a-4cdb-4751-ac0c-93b97f0f5c12",
+    "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+    "sheetNum": "15",
+    "question": "Are the adjacent properties labeled with their land uses (e.g., residential, commercial, etc.) on this site plan sheet? I'm looking for labels that describe what the adjacent properties are used for, not just zoning designations.",
+    "expectedAnswerType": "boolean",
+    "cropMode": "drawing",
+    "regionHint": null,
+    "reasoning": "The agent is asking whether land-use labels are present and visible on the site plan drawing itself—a question about annotation and labeling of features on the plan. This is a drawing-element inspection, not a document-presence check or generic label readout.",
+    "applicableChecklistItems": [
+      {
+        "checklist_id": "cc-6:CMP-01",
+        "checklist_deficiency_text": "Land use map showing adjacent land uses not provided"
+      }
+    ],
+    "dpi": 150
+  },
+  "cropResolution": {
+    "bbox": {
+      "x0": 0.034,
+      "y0": 0.028,
+      "x1": 0.915,
+      "y1": 0.9650000000000001
+    },
+    "source": "drawing-block"
+  },
+  "renderResult": {
+    "width": 4758,
+    "height": 3374
+  },
+  "result": {
+    "answerText": "Yes, the adjacent properties are labeled with their specific land uses. Labels such as \"USE: COMMERCIAL\", \"USE: APARTMENT/CONDO\", \"USE: OFFICE\", and \"USE: GOVERNMENT SERVICES\" can be seen in the text blocks describing the surrounding lots.",
+    "classification": "yes",
+    "count": null,
+    "unanswerable": false,
+    "confidence": 1,
+    "evidence": [
+      {
+        "bbox": [
+          131,
+          116,
+          148,
+          159
+        ],
+        "bboxAbsolute": {
+          "x0": 0.136196,
+          "y0": 0.15074700000000002,
+          "x1": 0.174079,
+          "y1": 0.166676
+        },
+        "description": "Label indicating USE: GOVERNMENT SERVICES"
+      },
+      {
+        "bbox": [
+          241,
+          186,
+          252,
+          252
+        ],
+        "bboxAbsolute": {
+          "x0": 0.19786600000000001,
+          "y0": 0.253817,
+          "x1": 0.256012,
+          "y1": 0.264124
+        },
+        "description": "Label indicating USE: APARTMENT/CONDO"
+      },
+      {
+        "bbox": [
+          282,
+          452,
+          292,
+          502
+        ],
+        "bboxAbsolute": {
+          "x0": 0.43221200000000004,
+          "y0": 0.292234,
+          "x1": 0.47626199999999996,
+          "y1": 0.30160400000000004
+        },
+        "description": "Label indicating USE: COMMERCIAL"
+      },
+      {
+        "bbox": [
+          289,
+          679,
+          301,
+          725
+        ],
+        "bboxAbsolute": {
+          "x0": 0.6321990000000001,
+          "y0": 0.29879300000000003,
+          "x1": 0.672725,
+          "y1": 0.310037
+        },
+        "description": "Label indicating USE: COMMERCIAL"
+      },
+      {
+        "bbox": [
+          905,
+          192,
+          915,
+          263
+        ],
+        "bboxAbsolute": {
+          "x0": 0.203152,
+          "y0": 0.8759850000000001,
+          "x1": 0.265703,
+          "y1": 0.8853550000000001
+        },
+        "description": "Label indicating USE: APARTMENT/CONDO"
+      },
+      {
+        "bbox": [
+          959,
+          584,
+          968,
+          631
+        ],
+        "bboxAbsolute": {
+          "x0": 0.548504,
+          "y0": 0.926583,
+          "x1": 0.5899110000000001,
+          "y1": 0.9350160000000001
+        },
+        "description": "Label indicating USE: COMMERCIAL"
+      }
+    ],
+    "reasoning": "I scanned the text blocks that provide information about the lots surrounding the main site. I found numerous explicit 'USE:' labels detailing the land use of those properties, distinct from their zoning designations.",
+    "regionHintHonored": null,
+    "_meta": {
+      "callId": "20260506T202157908Z-gcmx",
+      "expectedAnswerType": "boolean",
+      "cropMode": "drawing",
+      "cropResolution": {
+        "bbox": {
+          "x0": 0.034,
+          "y0": 0.028,
+          "x1": 0.915,
+          "y1": 0.9650000000000001
+        },
+        "source": "drawing-block"
+      },
+      "cropBbox": {
+        "x0": 0.034,
+        "y0": 0.028,
+        "x1": 0.915,
+        "y1": 0.9650000000000001
+      },
+      "model": "google/gemini-3.1-pro-preview",
+      "promptLength": 4163,
+      "validationNotes": []
+    }
+  },
+  "timing": {
+    "startedAt": 1778098917910,
+    "finishedAt": 1778098930680
+  }
+}

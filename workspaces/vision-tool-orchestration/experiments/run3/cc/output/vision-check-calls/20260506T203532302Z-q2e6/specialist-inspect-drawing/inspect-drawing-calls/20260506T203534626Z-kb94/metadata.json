@@ -1,0 +1,86 @@
+{
+  "callId": "20260506T203534626Z-kb94",
+  "inputs": {
+    "projectId": "23301a8a-4cdb-4751-ac0c-93b97f0f5c12",
+    "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+    "sheetNum": "19",
+    "question": "Is there a 48-inch water line shown on this plan? If so, what material is it (CSC, DI, etc.)? Is it depicted as a double line or single line?",
+    "expectedAnswerType": "boolean",
+    "cropMode": "drawing",
+    "regionHint": "plan view of WW-01, looking for crossing utility",
+    "reasoning": "The agent is asking whether a specific pipe feature exists on the plan and how it is symbolically represented (double vs. single line depiction, material annotation). This is a drawing-element inspection question—checking for line symbols, annotations, and visual representation conventions—not a measurement of clearance or distance between features.",
+    "applicableChecklistItems": [
+      {
+        "checklist_id": "cc-13:AW-21",
+        "checklist_deficiency_text": "Size, pipe material, or location of W/WW/reclaimed mains not shown with respect to easements/ROW, or pipes >=24 inches not shown as double lines"
+      }
+    ],
+    "dpi": 150
+  },
+  "cropResolution": {
+    "bbox": {
+      "x0": 0.08,
+      "y0": 0.205,
+      "x1": 0.281,
+      "y1": 0.45199999999999996
+    },
+    "source": "drawing-block"
+  },
+  "renderResult": {
+    "width": 1086,
+    "height": 890
+  },
+  "result": {
+    "answerText": "Yes, an existing 48-inch water line is present on the plan. The callout indicates the material is CSC (Concrete Steel Cylinder), and the pipe itself is depicted as a double dashed line.",
+    "classification": "yes",
+    "count": null,
+    "unanswerable": false,
+    "confidence": 0.98,
+    "evidence": [
+      {
+        "bbox": [
+          725,
+          20,
+          785,
+          385
+        ],
+        "bboxAbsolute": {
+          "x0": 0.08402,
+          "y0": 0.38407499999999994,
+          "x1": 0.157385,
+          "y1": 0.398895
+        },
+        "description": "Callout for the 48-inch CSC water line and its leader pointing to the double line representation."
+      }
+    ],
+    "reasoning": "Located the text 'EXISTING 48\" CSC WATER LINE' on the left side of the drawing. Tracing the leader line from this text reveals it terminates on one side of a wide pair of parallel dashed lines, showing the large-diameter pipe is drawn as a double line.",
+    "regionHintHonored": true,
+    "_meta": {
+      "callId": "20260506T203534626Z-kb94",
+      "expectedAnswerType": "boolean",
+      "cropMode": "drawing",
+      "cropResolution": {
+        "bbox": {
+          "x0": 0.08,
+          "y0": 0.205,
+          "x1": 0.281,
+          "y1": 0.45199999999999996
+        },
+        "source": "drawing-block"
+      },
+      "cropBbox": {
+        "x0": 0.08,
+        "y0": 0.205,
+        "x1": 0.281,
+        "y1": 0.45199999999999996
+      },
+      "model": "google/gemini-3.1-pro-preview",
+      "promptLength": 4386,
+      "validationNotes": []
+    }
+  },
+  "timing": {
+    "startedAt": 1778099734628,
+    "finishedAt": 1778099759338
+  }
+}

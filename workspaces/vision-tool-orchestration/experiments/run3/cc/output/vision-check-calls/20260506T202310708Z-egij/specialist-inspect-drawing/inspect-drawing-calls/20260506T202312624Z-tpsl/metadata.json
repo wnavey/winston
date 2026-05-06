@@ -1,0 +1,70 @@
+{
+  "callId": "20260506T202312624Z-tpsl",
+  "inputs": {
+    "projectId": "23301a8a-4cdb-4751-ac0c-93b97f0f5c12",
+    "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+    "sheetNum": "15",
+    "question": "Are finished floor elevations shown on this dimensional control site plan? Look for labels indicating \"FFE\" or \"Finished Floor Elevation\" or elevation values in MSL (Mean Sea Level) associated with the proposed building.",
+    "expectedAnswerType": "boolean",
+    "cropMode": "drawing",
+    "regionHint": null,
+    "reasoning": "The agent is asking whether elevation labels/annotations (FFE or elevation values in MSL) are present and associated with proposed structures on the drawing itself—this is a drawing-element annotation check, not a measurement between features or a generic presence/document check.",
+    "applicableChecklistItems": [
+      {
+        "checklist_id": "cc-19:CC-19-02",
+        "checklist_deficiency_text": "Lowest Finished Floor Elevation not shown on all proposed structures in MSL (FLP-02)"
+      }
+    ],
+    "dpi": 150
+  },
+  "cropResolution": {
+    "bbox": {
+      "x0": 0.034,
+      "y0": 0.028,
+      "x1": 0.915,
+      "y1": 0.9650000000000001
+    },
+    "source": "drawing-block"
+  },
+  "renderResult": {
+    "width": 4758,
+    "height": 3374
+  },
+  "result": {
+    "answerText": "No, finished floor elevations are not shown on this site plan. There are no labels indicating \"FFE\" or elevation values associated with the proposed building footprint.",
+    "classification": "no",
+    "count": null,
+    "unanswerable": false,
+    "confidence": 0.95,
+    "evidence": [],
+    "reasoning": "A visual scan of the area labeled 'PROPOSED BUILDING 1' reveals text indicating square footage and references to architectural plans for a parking garage and trash room, but no labels for Finished Floor Elevation (FFE) or any numerical elevation values in MSL.",
+    "regionHintHonored": null,
+    "_meta": {
+      "callId": "20260506T202312624Z-tpsl",
+      "expectedAnswerType": "boolean",
+      "cropMode": "drawing",
+      "cropResolution": {
+        "bbox": {
+          "x0": 0.034,
+          "y0": 0.028,
+          "x1": 0.915,
+          "y1": 0.9650000000000001
+        },
+        "source": "drawing-block"
+      },
+      "cropBbox": {
+        "x0": 0.034,
+        "y0": 0.028,
+        "x1": 0.915,
+        "y1": 0.9650000000000001
+      },
+      "model": "google/gemini-3.1-pro-preview",
+      "promptLength": 4154,
+      "validationNotes": []
+    }
+  },
+  "timing": {
+    "startedAt": 1778098992626,
+    "finishedAt": 1778099001072
+  }
+}

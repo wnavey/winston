@@ -1,0 +1,116 @@
+{
+  "callId": "20260506T203232068Z-ctrp",
+  "inputs": {
+    "projectId": "23301a8a-4cdb-4751-ac0c-93b97f0f5c12",
+    "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+    "sheetNum": "15",
+    "question": "Is an accessible route of travel shown on this sheet connecting accessible elements? Look for a distinct line type labeled as \"PROPOSED ADA PATH\" or \"ACCESSIBLE ROUTE\" that connects features like accessible parking spaces, building entrances, sidewalks, and public ways.",
+    "expectedAnswerType": "boolean",
+    "cropMode": "drawing",
+    "regionHint": null,
+    "reasoning": "The agent is asking whether a distinct line type (labeled 'PROPOSED ADA PATH' or 'ACCESSIBLE ROUTE') is shown on the drawing connecting accessible elements. This is a drawing-element inspection task—checking for the presence and annotation of a specific line symbol and its connectivity relationships—not a measurement of clearance or a generic presence check.",
+    "applicableChecklistItems": [
+      {
+        "checklist_id": "cc-22:CC-22-25",
+        "checklist_deficiency_text": "Accessible route of travel not shown connecting all accessible elements (ADA-01)"
+      }
+    ],
+    "dpi": 150
+  },
+  "cropResolution": {
+    "bbox": {
+      "x0": 0.034,
+      "y0": 0.028,
+      "x1": 0.915,
+      "y1": 0.9650000000000001
+    },
+    "source": "drawing-block"
+  },
+  "renderResult": {
+    "width": 4758,
+    "height": 3374
+  },
+  "result": {
+    "answerText": "Yes, a \"PROPOSED ADA PATH\" is shown on this sheet. It is identified by a distinct line type consisting of small circles, which is defined in the legend.",
+    "classification": "yes",
+    "count": null,
+    "unanswerable": false,
+    "confidence": 0.95,
+    "evidence": [
+      {
+        "bbox": [
+          211,
+          852,
+          221,
+          955
+        ],
+        "bboxAbsolute": {
+          "x0": 0.784612,
+          "y0": 0.225707,
+          "x1": 0.875355,
+          "y1": 0.235077
+        },
+        "description": "Legend entry for 'PROPOSED ADA PATH'"
+      },
+      {
+        "bbox": [
+          395,
+          230,
+          472,
+          485
+        ],
+        "bboxAbsolute": {
+          "x0": 0.23663,
+          "y0": 0.39811500000000005,
+          "x1": 0.46128499999999995,
+          "y1": 0.470264
+        },
+        "description": "Segment of the proposed ADA path running along Collier Street"
+      },
+      {
+        "bbox": [
+          453,
+          513,
+          804,
+          571
+        ],
+        "bboxAbsolute": {
+          "x0": 0.48595299999999997,
+          "y0": 0.45246100000000006,
+          "x1": 0.537051,
+          "y1": 0.7813480000000002
+        },
+        "description": "Segment of the proposed ADA path running along South Lamar Boulevard"
+      }
+    ],
+    "reasoning": "The legend on the right side explicitly includes a line type for 'PROPOSED ADA PATH' represented by a line with small circles. This specific line type is clearly visible on the site plan, routing along both Collier Street and South Lamar Boulevard, connecting accessible features.",
+    "regionHintHonored": null,
+    "_meta": {
+      "callId": "20260506T203232068Z-ctrp",
+      "expectedAnswerType": "boolean",
+      "cropMode": "drawing",
+      "cropResolution": {
+        "bbox": {
+          "x0": 0.034,
+          "y0": 0.028,
+          "x1": 0.915,
+          "y1": 0.9650000000000001
+        },
+        "source": "drawing-block"
+      },
+      "cropBbox": {
+        "x0": 0.034,
+        "y0": 0.028,
+        "x1": 0.915,
+        "y1": 0.9650000000000001
+      },
+      "model": "google/gemini-3.1-pro-preview",
+      "promptLength": 4204,
+      "validationNotes": []
+    }
+  },
+  "timing": {
+    "startedAt": 1778099552071,
+    "finishedAt": 1778099564917
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "callId": "20260506T202600322Z-leet",
+  "startedAt": "2026-05-06T20:26:00.323Z",
+  "completedAt": "2026-05-06T20:26:25.143Z",
+  "inputs": {
+    "checklistItemId": "cc-23:CC-23-10",
+    "checklistItemText": "Location of existing and proposed dumpsters and garbage carts (interior or exterior) not shown (SVC-01)",
+    "question": "Are existing or proposed dumpster or garbage cart locations shown on this dimensional control and site plan sheet? Look for labels, symbols, or callouts indicating trash/garbage/dumpster/refuse collection locations.",
+    "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+    "sheetNum": 15,
+    "regionHint": "Look throughout the site plan, particularly around the building perimeter or service areas"
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "7a99bffdf9efcc44b8fffdfdcb1341d5e6512304f58b8778bf383e46a441e057",
+    "promptSource": "bureau",
+    "promptSourcePath": "/vercel/sandbox/workspace/bureau/jurisdictions/austin/workflows/completeness-check/prompts/vision-router.md",
+    "output": {
+      "problemType": "generic",
+      "reasoning": "The agent is asking whether dumpster/garbage cart locations are shown at all on the sheet (presence/feature detection), not asking for dimensional measurements or spatial relationships between features. This is a feature-presence check aligned with the checklist requirement.",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "vision",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": null
+  },
+  "phase": "B"
+}
