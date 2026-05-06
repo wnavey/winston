@@ -167,3 +167,104 @@ This tells us exactly which items changed behavior between prompts.
 6. **Re-run experiment with workflowPath fix** (conductor PR #145
    merged) to measure execution accuracy — does routing to the actual
    inspect-drawing specialist improve findings vs generic vision?
+
+---
+
+## Interpretation framing
+
+Things that bit us in run1 analysis and would bite anyone reading
+this cold. Read this before drawing conclusions from any run's
+metrics.
+
+### Three nested denominators — be explicit which one you mean
+
+The cc v2.5-trimmed checklist has 185 items total (across cc-1
+through cc-24). For 1700 S. Lamar v2, only 126 of those are
+applicable — the remaining 59 have conditionals that didn't trigger
+(no electric infrastructure → AE items skipped, no TIA required →
+TIA items skipped, etc.). Of the 126 applicable, 39 are graded
+inspect-drawing (4 required + 35 optional).
+
+| Denominator | Count | When to use it |
+|---|---:|---|
+| All checklist items | 185 | Audits of the checklist itself, training-pipeline reporting |
+| Applicable on this submission | 126 | Hit-rate / recall metrics for any per-submission run |
+| Inspect-drawing applicable | 39 | Recall of routing-to-inspect-drawing specifically |
+
+Most metrics in `analysis.md`-style writeups should use **126** as
+the denominator. Conditionally-skipped items are *correctly* not
+called and don't carry signal about agent or classifier behavior.
+
+### Aggregate routing rate ≠ per-item recall
+
+In run1, the classifier's aggregate `drawing_inspect` share among
+items where vision was called (14/42 = 33%) almost exactly matched
+the expected share among items needing vision (39/116 = 34%). It is
+tempting to read this as "the classifier is calibrated correctly."
+
+It isn't. The aggregate match held because misroutes went in *both*
+directions and roughly cancelled — 12 inspect-drawing items routed
+to `generic`, 2 vision-only items routed to `drawing_inspect`.
+Per-item recall was 12/39 = 31%.
+
+**Always report per-item recall, not just the share of routes.** A
+classifier with the right marginal distribution can still be wrong
+about which specific items belong in which bucket.
+
+### `cc-classification.tsv` labels expected-tool, not ground-truth findings
+
+The TSV records what tool the eval team thinks should be called for
+each item. It does *not* record whether the agent's actual finding
+(pass/fail/unclear) was correct on this submission.
+
+Concretely: if the agent skips a vision call on an item the TSV
+labels as needing vision, we know that's a tool-selection miss —
+but we don't know whether the agent's text-only answer happened to
+be right. "Recall on inspect-drawing items" in this eval means
+"did the inspect-drawing specialist get invoked," not "did the
+finding come out correct."
+
+To upgrade to correctness-grounded recall we'd need expert review
+of every finding on a known submission, which we don't have for
+1700 S. Lamar.
+
+### "Maybe we over-estimated how much vision was needed"
+
+In run1, only 49 of 126 applicable items actually got any vision
+call (39%) — but 116 of 126 are labeled as needing some vision
+(92%). Two competing hypotheses:
+
+1. **Failure Mode 1 (agent under-calls vision).** The
+   experimental `review.md` doesn't trigger `vision_check` aggressively
+   enough. Many items that need a visual answer are being answered
+   from text/OCR alone, possibly incorrectly.
+2. **Labels too aggressive.** Many items labeled `vision-only` or
+   `inspect-drawing-optional` can actually be answered correctly
+   from PDF text extraction, sheet OCR, or regulation lookup. The
+   agent's 39% is closer to the true vision necessity than the 92%
+   label rate.
+
+Per-item routing data alone can't disambiguate these. The baseline
+run (no experiment flag, production prompt with the 3-tool list)
+is the cleanest test:
+
+- If baseline calls `vision` on a similar ~40% of applicable items
+  → labels are probably too aggressive, *or* both prompts share the
+  same conservative bias. Either way, the experiment didn't cause
+  the gap.
+- If baseline calls `vision` on, say, 80% of applicable items but
+  the experiment prompt only triggers on 39% → the experiment
+  prompt is suppressing tool calls and needs work.
+
+For a correctness-grounded answer (rather than tool-call-rate),
+expert review of findings on a known submission is the only path —
+out of scope for iter 1.
+
+### Tool-rate equivalence between baseline and experiment
+
+Baseline gives the agent three tools (`vision`, `measure-distance`,
+`inspect-drawing`); experiment gives one (`vision_check`). When
+comparing call rates, the comparable metric is **"any vision tool
+called"** — not "called vision_check" specifically. The analysis
+TSV column for the baseline should be `actual_vision_tool_call`
+populated with whichever of the three was invoked.

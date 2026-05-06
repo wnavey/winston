@@ -609,10 +609,26 @@ Noetic MCP server's `inngest_trigger` action sending event
 `noetic-tools:dispatcher-run` skill in `claude-plugins` for the full
 flow.
 
-**Current blocker (2026-05-06):** Noetic MCP authentication on
-this dev machine is failing — `/mcp` reports the connector as
-unauthorized after browser sign-in attempts. Once auth lands either
-in this session or another, fire both payloads and capture:
+**MCP auth blocker resolved (2026-05-06).** Noetic MCP connector
+is back online; `inngest_trigger` and Supabase queries are both
+working from this dev machine.
+
+#### Phase D — runs status (2026-05-06)
+
+| Run | `runLabel` | Inngest event | `workflow_runs.id` | Status |
+|---|---|---|---|---|
+| CC experiment run 1 (local) | n/a | local conductor | n/a | done — see [`experiments/run1/analytics/analysis.md`](experiments/run1/analytics/analysis.md) |
+| CC baseline | `VISION_CHECK_CC_BASELINE` | `01KQYYG6G4JHPRMGK0WK9CAWYZ` | `1cea1a70-5860-4068-bd25-e67ce5529eee` | in_progress — kickoff state in [`experiments/baseline/kickoff.md`](experiments/baseline/kickoff.md) |
+| CC experiment run 2 | `VISION_CHECK_CC_RUN_2` | (pending bureau PR #301 merge) | — | not yet fired |
+| Review experiment run 1 | `VISION_CHECK_REVIEW_EL_MD_EXP_RUN_1` | — | — | not yet fired |
+
+**Open prompt change in flight:** [bureau PR #301](https://github.com/noetic-inc/bureau/pull/301)
+adds dimension/bearing anchors to the classifier router to fix
+Failure Mode 2 misroutes. Targets ~6 of 12 misroutes in run1 (Cluster
+A + B). See [`experiments/run1/analytics/failure-mode-2.md`](experiments/run1/analytics/failure-mode-2.md)
+for the full deep dive.
+
+For each fired run capture:
 
 1. The Inngest event id returned from `inngest_trigger`
 2. The `workflow_runs.id` once Substation creates the DB record
@@ -621,7 +637,7 @@ in this session or another, fire both payloads and capture:
    created_at DESC LIMIT 1`)
 3. The `outputs_path` once status flips to `done` — that's the
    storage prefix to download artifacts into
-   `experiments/run1/{cc,review}/`.
+   `experiments/{run_dir}/cc/` or `experiments/{run_dir}/review/`.
 
 #### Phase D — analysis tasks (after artifacts pulled)
 
