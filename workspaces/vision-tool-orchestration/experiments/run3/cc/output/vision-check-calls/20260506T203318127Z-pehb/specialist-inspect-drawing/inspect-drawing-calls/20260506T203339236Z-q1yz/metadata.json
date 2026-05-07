@@ -1,0 +1,70 @@
+{
+  "callId": "20260506T203339236Z-q1yz",
+  "inputs": {
+    "projectId": "23301a8a-4cdb-4751-ac0c-93b97f0f5c12",
+    "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+    "sheetNum": "9",
+    "question": "On this existing conditions sheet, are there any numerical ROW width dimensions shown for the existing streets (Collier Street, Kinney Avenue, Nash Avenue)? Look for dimension lines with measurements like \"50' ROW\" or similar.",
+    "expectedAnswerType": "boolean",
+    "cropMode": "drawing",
+    "regionHint": null,
+    "reasoning": "The agent is asking whether ROW width dimensions are annotated/labelled on the drawing itself (dimension lines with measurements), which is a drawing-element inspection task, not a measurement task. The checklist requirement aligns with this: the violation is that dimensions are 'not shown,' meaning they must be visually present as annotations on the plan.",
+    "applicableChecklistItems": [
+      {
+        "checklist_id": "cc-23:CC-23-01",
+        "checklist_deficiency_text": "Existing ROW width not shown or not dimensioned (GRD-01)"
+      }
+    ],
+    "dpi": 150
+  },
+  "cropResolution": {
+    "bbox": {
+      "x0": 0.029,
+      "y0": 0.028,
+      "x1": 0.723,
+      "y1": 0.9650000000000001
+    },
+    "source": "drawing-block"
+  },
+  "renderResult": {
+    "width": 3749,
+    "height": 3374
+  },
+  "result": {
+    "answerText": "No, there are no numerical ROW width dimensions shown for the streets. The labels for the visible streets indicate that the R.O.W. varies.",
+    "classification": "no",
+    "count": null,
+    "unanswerable": false,
+    "confidence": 0.95,
+    "evidence": [],
+    "reasoning": "I examined the street labels in the image, such as Collier Street, Evergreen Avenue, and South Lamar Boulevard. Below each street name, the text explicitly states '(R.O.W. VARIES)' rather than providing a numerical dimension like '50' ROW'. Kinney Avenue and Nash Avenue are not visible in this cropped section.",
+    "regionHintHonored": null,
+    "_meta": {
+      "callId": "20260506T203339236Z-q1yz",
+      "expectedAnswerType": "boolean",
+      "cropMode": "drawing",
+      "cropResolution": {
+        "bbox": {
+          "x0": 0.029,
+          "y0": 0.028,
+          "x1": 0.723,
+          "y1": 0.9650000000000001
+        },
+        "source": "drawing-block"
+      },
+      "cropBbox": {
+        "x0": 0.029,
+        "y0": 0.028,
+        "x1": 0.723,
+        "y1": 0.9650000000000001
+      },
+      "model": "google/gemini-3.1-pro-preview",
+      "promptLength": 4160,
+      "validationNotes": []
+    }
+  },
+  "timing": {
+    "startedAt": 1778099619238,
+    "finishedAt": 1778099632088
+  }
+}

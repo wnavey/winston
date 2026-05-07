@@ -1,0 +1,131 @@
+{
+  "callId": "20260506T202127883Z-tsn8",
+  "inputs": {
+    "projectId": "23301a8a-4cdb-4751-ac0c-93b97f0f5c12",
+    "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+    "sheetNum": "14",
+    "question": "Are the adjacent properties labeled with their land uses (e.g., residential, commercial, etc.) on this site plan sheet? I'm looking for labels that describe what the adjacent properties are used for, not just zoning designations.",
+    "expectedAnswerType": "boolean",
+    "cropMode": "drawing",
+    "regionHint": null,
+    "reasoning": "The agent is asking whether land-use labels are present and visible on the drawing itself—a question about annotation and labeling of features on the plan. This is a drawing-element inspection, not a document-presence check or generic feature detection.",
+    "applicableChecklistItems": [
+      {
+        "checklist_id": "cc-6:CMP-01",
+        "checklist_deficiency_text": "Land use map showing adjacent land uses not provided"
+      }
+    ],
+    "dpi": 150
+  },
+  "cropResolution": {
+    "bbox": {
+      "x0": 0.034,
+      "y0": 0.028,
+      "x1": 0.921,
+      "y1": 0.9650000000000001
+    },
+    "source": "drawing-block"
+  },
+  "renderResult": {
+    "width": 4791,
+    "height": 3374
+  },
+  "result": {
+    "answerText": "Yes, adjacent properties are labeled with their specific land uses. Several text blocks within neighboring lots explicitly state the property's use, such as \"APARTMENT/CONDO\", \"GOVERNMENT SERVICES\", \"SINGLE-FAMILY\", and \"OFFICE\".",
+    "classification": "yes",
+    "count": null,
+    "unanswerable": false,
+    "confidence": 0.95,
+    "evidence": [
+      {
+        "bbox": [
+          80,
+          235,
+          125,
+          297
+        ],
+        "bboxAbsolute": {
+          "x0": 0.242445,
+          "y0": 0.10296000000000001,
+          "x1": 0.297439,
+          "y1": 0.145125
+        },
+        "description": "Property label with 'USE: GOVERNMENT SERVICES'"
+      },
+      {
+        "bbox": [
+          75,
+          466,
+          124,
+          519
+        ],
+        "bboxAbsolute": {
+          "x0": 0.447342,
+          "y0": 0.098275,
+          "x1": 0.49435300000000004,
+          "y1": 0.144188
+        },
+        "description": "Property label with 'USE: APARTMENT/CONDO'"
+      },
+      {
+        "bbox": [
+          392,
+          191,
+          447,
+          254
+        ],
+        "bboxAbsolute": {
+          "x0": 0.20341700000000001,
+          "y0": 0.39530400000000004,
+          "x1": 0.25929800000000003,
+          "y1": 0.44683900000000004
+        },
+        "description": "Property label with 'USE: SINGLE-FAMILY'"
+      },
+      {
+        "bbox": [
+          682,
+          385,
+          750,
+          431
+        ],
+        "bboxAbsolute": {
+          "x0": 0.375495,
+          "y0": 0.6670340000000001,
+          "x1": 0.41629700000000003,
+          "y1": 0.73075
+        },
+        "description": "Property label with 'USE: OFFICE'"
+      }
+    ],
+    "reasoning": "Scanning the properties surrounding the main project site reveals multiple text blocks providing property details. In addition to legal descriptions and zoning (e.g., 'ZONING: P'), these blocks include a specific 'USE:' line that describes the actual land use.",
+    "regionHintHonored": null,
+    "_meta": {
+      "callId": "20260506T202127883Z-tsn8",
+      "expectedAnswerType": "boolean",
+      "cropMode": "drawing",
+      "cropResolution": {
+        "bbox": {
+          "x0": 0.034,
+          "y0": 0.028,
+          "x1": 0.921,
+          "y1": 0.9650000000000001
+        },
+        "source": "drawing-block"
+      },
+      "cropBbox": {
+        "x0": 0.034,
+        "y0": 0.028,
+        "x1": 0.921,
+        "y1": 0.9650000000000001
+      },
+      "model": "google/gemini-3.1-pro-preview",
+      "promptLength": 4163,
+      "validationNotes": []
+    }
+  },
+  "timing": {
+    "startedAt": 1778098887885,
+    "finishedAt": 1778098906988
+  }
+}

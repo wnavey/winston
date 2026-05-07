@@ -1,0 +1,131 @@
+{
+  "callId": "20260506T202542025Z-53l8",
+  "inputs": {
+    "projectId": "23301a8a-4cdb-4751-ac0c-93b97f0f5c12",
+    "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+    "sheetNum": "15",
+    "question": "Are driveway widths or curb return radii shown on this sheet? Look for width dimensions across driveway openings and radius values at curved driveway corners along South Lamar Boulevard or other street frontages.",
+    "expectedAnswerType": "boolean",
+    "cropMode": "drawing",
+    "regionHint": "along street frontages where driveways connect to streets",
+    "reasoning": "The agent is asking whether width dimensions and radius values are annotated/labelled on the drawing itself (a drawing-element inspection), not whether those features physically exist or what their measured values are.",
+    "applicableChecklistItems": [
+      {
+        "checklist_id": "cc-22:CC-22-13",
+        "checklist_deficiency_text": "Driveway widths or curb return radii not shown on plans (DRV-03)"
+      }
+    ],
+    "dpi": 150
+  },
+  "cropResolution": {
+    "bbox": {
+      "x0": 0.034,
+      "y0": 0.028,
+      "x1": 0.915,
+      "y1": 0.9650000000000001
+    },
+    "source": "drawing-block"
+  },
+  "renderResult": {
+    "width": 4758,
+    "height": 3374
+  },
+  "result": {
+    "answerText": "Yes, driveway widths and curb return radii are explicitly labeled on this sheet. For instance, a 26' width and an R15' curb radius are shown at the southern driveway connection to South Lamar Boulevard, and a 24' width with an R15' radius are labeled at the connection to Collier Street.",
+    "classification": "yes",
+    "count": null,
+    "unanswerable": false,
+    "confidence": 0.95,
+    "evidence": [
+      {
+        "bbox": [
+          771,
+          488,
+          783,
+          506
+        ],
+        "bboxAbsolute": {
+          "x0": 0.463928,
+          "y0": 0.7504270000000001,
+          "x1": 0.47978600000000005,
+          "y1": 0.7616710000000001
+        },
+        "description": "26' driveway width dimension at South Lamar Boulevard"
+      },
+      {
+        "bbox": [
+          771,
+          513,
+          782,
+          528
+        ],
+        "bboxAbsolute": {
+          "x0": 0.48595299999999997,
+          "y0": 0.7504270000000001,
+          "x1": 0.49916800000000006,
+          "y1": 0.7607340000000001
+        },
+        "description": "R15' curb return radius at South Lamar Boulevard"
+      },
+      {
+        "bbox": [
+          450,
+          363,
+          462,
+          381
+        ],
+        "bboxAbsolute": {
+          "x0": 0.353803,
+          "y0": 0.44965000000000005,
+          "x1": 0.369661,
+          "y1": 0.4608940000000001
+        },
+        "description": "24' driveway width dimension at Collier Street"
+      },
+      {
+        "bbox": [
+          429,
+          344,
+          440,
+          360
+        ],
+        "bboxAbsolute": {
+          "x0": 0.33706400000000003,
+          "y0": 0.42997300000000005,
+          "x1": 0.35116,
+          "y1": 0.44028000000000006
+        },
+        "description": "R15' curb return radius at Collier Street"
+      }
+    ],
+    "reasoning": "I inspected the areas where driveways connect to the adjacent streets (South Lamar Boulevard and Collier Street). At these connection points, I observed dimension lines crossing the driveways labeled with widths (e.g., '26'' and '24'') and callouts pointing to the curved corners labeled with radii (e.g., 'R15'').",
+    "regionHintHonored": true,
+    "_meta": {
+      "callId": "20260506T202542025Z-53l8",
+      "expectedAnswerType": "boolean",
+      "cropMode": "drawing",
+      "cropResolution": {
+        "bbox": {
+          "x0": 0.034,
+          "y0": 0.028,
+          "x1": 0.915,
+          "y1": 0.9650000000000001
+        },
+        "source": "drawing-block"
+      },
+      "cropBbox": {
+        "x0": 0.034,
+        "y0": 0.028,
+        "x1": 0.915,
+        "y1": 0.9650000000000001
+      },
+      "model": "google/gemini-3.1-pro-preview",
+      "promptLength": 4466,
+      "validationNotes": []
+    }
+  },
+  "timing": {
+    "startedAt": 1778099142027,
+    "finishedAt": 1778099160267
+  }
+}

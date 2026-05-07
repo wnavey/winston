@@ -1,0 +1,32 @@
+{
+  "callId": "20260506T202637342Z-iqgu",
+  "startedAt": "2026-05-06T20:26:37.342Z",
+  "completedAt": "2026-05-06T20:27:34.483Z",
+  "inputs": {
+    "checklistItemId": "cc-2:CC-2-16",
+    "checklistItemText": "Boundary lines with bearings and dimensions not shown on Existing Conditions or Overall Site Plan sheet(s) (BAS-07)",
+    "question": "Does this sheet show property boundary lines with bearings (angles/directions like \"N 45° 30' E\") and dimensions (distances in feet)?",
+    "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+    "sheetNum": 8,
+    "regionHint": "along the property boundaries around the perimeter"
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "7a99bffdf9efcc44b8fffdfdcb1341d5e6512304f58b8778bf383e46a441e057",
+    "promptSource": "bureau",
+    "promptSourcePath": "/vercel/sandbox/workspace/bureau/jurisdictions/austin/workflows/completeness-check/prompts/vision-router.md",
+    "output": {
+      "problemType": "drawing_inspect",
+      "reasoning": "The agent is asking whether bearings and dimensions are annotated on boundary lines shown in the drawing — this is a drawing-element inspection task (checking for the presence of specific annotations/labels on linear features), not a measurement task.",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "inspect-drawing",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": "/vercel/sandbox/workspace/output/vision-check-calls/20260506T202637342Z-iqgu/specialist-inspect-drawing"
+  },
+  "phase": "B"
+}

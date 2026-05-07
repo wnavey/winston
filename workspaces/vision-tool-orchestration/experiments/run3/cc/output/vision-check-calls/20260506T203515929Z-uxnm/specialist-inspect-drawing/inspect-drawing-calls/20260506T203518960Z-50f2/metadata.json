@@ -1,0 +1,70 @@
+{
+  "callId": "20260506T203518960Z-50f2",
+  "inputs": {
+    "projectId": "23301a8a-4cdb-4751-ac0c-93b97f0f5c12",
+    "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+    "sheetNum": "37",
+    "question": "Are parking aisle widths or internal driveway widths dimensioned on this sheet? Look for dimension lines showing the width of driving aisles between parking spaces or internal circulation routes within the parking garage.",
+    "expectedAnswerType": "boolean",
+    "cropMode": "drawing",
+    "regionHint": null,
+    "reasoning": "The agent is asking whether dimension annotations (dimension lines and labels) are present on the drawing for parking aisle widths or internal driveway widths. This is a drawing-element inspection task—checking for the presence and visibility of dimensional annotations on the plan—not a measurement task that would require calculating or verifying a specific clearance value.",
+    "applicableChecklistItems": [
+      {
+        "checklist_id": "cc-22:CC-22-20",
+        "checklist_deficiency_text": "Parking aisle widths or internal driveway widths not dimensioned (PRK-04)"
+      }
+    ],
+    "dpi": 150
+  },
+  "cropResolution": {
+    "bbox": {
+      "x0": 0.085,
+      "y0": 0.286,
+      "x1": 0.838,
+      "y1": 0.867
+    },
+    "source": "drawing-block"
+  },
+  "renderResult": {
+    "width": 4745,
+    "height": 2615
+  },
+  "result": {
+    "answerText": "No, parking aisle widths or internal driveway widths are not dimensioned on this sheet. While some individual parking spaces have width dimensions shown, the drive aisles between them do not have dimension lines.",
+    "classification": "no",
+    "count": null,
+    "unanswerable": false,
+    "confidence": 0.95,
+    "evidence": [],
+    "reasoning": "I examined the parking areas labeled 'RESIDENT PARKING' and 'RETAIL PARKING'. There are dimension lines showing the width of individual parking spaces (e.g., '9'-0\"' marks), but there are no dimension lines spanning the drive aisles to indicate their width.",
+    "regionHintHonored": null,
+    "_meta": {
+      "callId": "20260506T203518960Z-50f2",
+      "expectedAnswerType": "boolean",
+      "cropMode": "drawing",
+      "cropResolution": {
+        "bbox": {
+          "x0": 0.085,
+          "y0": 0.286,
+          "x1": 0.838,
+          "y1": 0.867
+        },
+        "source": "drawing-block"
+      },
+      "cropBbox": {
+        "x0": 0.085,
+        "y0": 0.286,
+        "x1": 0.838,
+        "y1": 0.867
+      },
+      "model": "google/gemini-3.1-pro-preview",
+      "promptLength": 4155,
+      "validationNotes": []
+    }
+  },
+  "timing": {
+    "startedAt": 1778099718962,
+    "finishedAt": 1778099728597
+  }
+}

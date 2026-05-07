@@ -1,0 +1,86 @@
+{
+  "callId": "20260506T202300718Z-nb7o",
+  "inputs": {
+    "projectId": "23301a8a-4cdb-4751-ac0c-93b97f0f5c12",
+    "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+    "sheetNum": "35",
+    "question": "Does this building elevation drawing show architectural elements such as materials, fenestration (windows/doors), balconies, roof lines, and other facade details?",
+    "expectedAnswerType": "boolean",
+    "cropMode": "drawing",
+    "regionHint": null,
+    "reasoning": "The agent is asking whether specific architectural elements (materials, fenestration, balconies, roof lines, facade details) are visually depicted on the elevation drawing itself—this requires inspection of drawing content and symbols, not document presence or measurement.",
+    "applicableChecklistItems": [
+      {
+        "checklist_id": "cc-6:CMP-02",
+        "checklist_deficiency_text": "Building elevations showing architectural elements not provided"
+      }
+    ],
+    "dpi": 150
+  },
+  "cropResolution": {
+    "bbox": {
+      "x0": 0.064,
+      "y0": 0.073,
+      "x1": 0.881,
+      "y1": 0.364
+    },
+    "source": "drawing-block"
+  },
+  "renderResult": {
+    "width": 5148,
+    "height": 1310
+  },
+  "result": {
+    "answerText": "Yes, the drawing is a detailed building elevation that clearly displays architectural elements. These include various facade materials, windows, doors, balconies with railings, and roof lines.",
+    "classification": "yes",
+    "count": null,
+    "unanswerable": false,
+    "confidence": 1,
+    "evidence": [
+      {
+        "bbox": [
+          299,
+          15,
+          771,
+          966
+        ],
+        "bboxAbsolute": {
+          "x0": 0.076255,
+          "y0": 0.16000899999999998,
+          "x1": 0.8532219999999999,
+          "y1": 0.297361
+        },
+        "description": "Building elevation showing architectural details such as materials, fenestration, and balconies"
+      }
+    ],
+    "reasoning": "The provided image is a full-color architectural elevation titled 'BLDG ELEVATION - NORTH'. It illustrates a multi-story building, explicitly detailing the exterior finishes, window and door placements, balconies, and the overall roof profile.",
+    "regionHintHonored": null,
+    "_meta": {
+      "callId": "20260506T202300718Z-nb7o",
+      "expectedAnswerType": "boolean",
+      "cropMode": "drawing",
+      "cropResolution": {
+        "bbox": {
+          "x0": 0.064,
+          "y0": 0.073,
+          "x1": 0.881,
+          "y1": 0.364
+        },
+        "source": "drawing-block"
+      },
+      "cropBbox": {
+        "x0": 0.064,
+        "y0": 0.073,
+        "x1": 0.881,
+        "y1": 0.364
+      },
+      "model": "google/gemini-3.1-pro-preview",
+      "promptLength": 4096,
+      "validationNotes": []
+    }
+  },
+  "timing": {
+    "startedAt": 1778098980720,
+    "finishedAt": 1778098990673
+  }
+}

@@ -1,0 +1,116 @@
+{
+  "callId": "20260506T202721737Z-5vro",
+  "inputs": {
+    "projectId": "23301a8a-4cdb-4751-ac0c-93b97f0f5c12",
+    "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+    "sheetNum": "8",
+    "question": "Does this sheet show property boundary lines with bearings (angles/directions like \"N 45° 30' E\") and dimensions (distances in feet)?",
+    "expectedAnswerType": "boolean",
+    "cropMode": "drawing",
+    "regionHint": "along the property boundaries around the perimeter",
+    "reasoning": "The agent is asking whether bearings and dimensions are annotated on boundary lines shown in the drawing — this is a drawing-element inspection task (checking for the presence of specific annotations/labels on linear features), not a measurement task.",
+    "applicableChecklistItems": [
+      {
+        "checklist_id": "cc-2:CC-2-16",
+        "checklist_deficiency_text": "Boundary lines with bearings and dimensions not shown on Existing Conditions or Overall Site Plan sheet(s) (BAS-07)"
+      }
+    ],
+    "dpi": 150
+  },
+  "cropResolution": {
+    "bbox": {
+      "x0": 0.021,
+      "y0": 0.028,
+      "x1": 0.6970000000000001,
+      "y1": 0.9650000000000001
+    },
+    "source": "drawing-block"
+  },
+  "renderResult": {
+    "width": 3651,
+    "height": 3374
+  },
+  "result": {
+    "answerText": "Yes, the property boundary lines are labeled with both bearings and dimensions. These annotations can be seen along the thick dashed lines that form the perimeter of the primary site.",
+    "classification": "yes",
+    "count": null,
+    "unanswerable": false,
+    "confidence": 0.99,
+    "evidence": [
+      {
+        "bbox": [
+          208,
+          580,
+          223,
+          650
+        ],
+        "bboxAbsolute": {
+          "x0": 0.41308,
+          "y0": 0.222896,
+          "x1": 0.4604000000000001,
+          "y1": 0.23695100000000002
+        },
+        "description": "Bearing and dimension label on the northern property boundary"
+      },
+      {
+        "bbox": [
+          414,
+          359,
+          485,
+          373
+        ],
+        "bboxAbsolute": {
+          "x0": 0.26368400000000003,
+          "y0": 0.415918,
+          "x1": 0.27314800000000006,
+          "y1": 0.482445
+        },
+        "description": "Bearing and dimension label on the western property boundary"
+      },
+      {
+        "bbox": [
+          635,
+          529,
+          649,
+          600
+        ],
+        "bboxAbsolute": {
+          "x0": 0.37860400000000005,
+          "y0": 0.6229950000000001,
+          "x1": 0.42660000000000003,
+          "y1": 0.636113
+        },
+        "description": "Bearing and dimension label on the southern property boundary"
+      }
+    ],
+    "reasoning": "The thick dashed lines representing the site perimeter feature textual annotations specifying directions (bearings like S62°48'30\"E) and distances in feet (like 242.54').",
+    "regionHintHonored": true,
+    "_meta": {
+      "callId": "20260506T202721737Z-5vro",
+      "expectedAnswerType": "boolean",
+      "cropMode": "drawing",
+      "cropResolution": {
+        "bbox": {
+          "x0": 0.021,
+          "y0": 0.028,
+          "x1": 0.6970000000000001,
+          "y1": 0.9650000000000001
+        },
+        "source": "drawing-block"
+      },
+      "cropBbox": {
+        "x0": 0.021,
+        "y0": 0.028,
+        "x1": 0.6970000000000001,
+        "y1": 0.9650000000000001
+      },
+      "model": "google/gemini-3.1-pro-preview",
+      "promptLength": 4380,
+      "validationNotes": []
+    }
+  },
+  "timing": {
+    "startedAt": 1778099241740,
+    "finishedAt": 1778099254452
+  }
+}

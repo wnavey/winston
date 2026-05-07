@@ -1,0 +1,86 @@
+{
+  "callId": "20260506T202452037Z-1wq4",
+  "inputs": {
+    "projectId": "23301a8a-4cdb-4751-ac0c-93b97f0f5c12",
+    "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+    "sheetNum": "35",
+    "question": "Are finished floor elevations in MSL shown on this building elevation sheet? Look for \"FFE\" labels or elevation values like \"543.00\" or similar that indicate the lowest finished floor elevation of the building in Mean Sea Level.",
+    "expectedAnswerType": "boolean",
+    "cropMode": "drawing",
+    "regionHint": null,
+    "reasoning": "The agent is asking whether FFE labels or elevation annotations are visually present and readable on the building elevation sheet—a drawing-element annotation check, not a measurement between features or a document/table presence check.",
+    "applicableChecklistItems": [
+      {
+        "checklist_id": "cc-19:CC-19-02",
+        "checklist_deficiency_text": "Lowest Finished Floor Elevation not shown on all proposed structures in MSL (FLP-02)"
+      }
+    ],
+    "dpi": 150
+  },
+  "cropResolution": {
+    "bbox": {
+      "x0": 0.064,
+      "y0": 0.073,
+      "x1": 0.881,
+      "y1": 0.364
+    },
+    "source": "drawing-block"
+  },
+  "renderResult": {
+    "width": 5148,
+    "height": 1310
+  },
+  "result": {
+    "answerText": "Yes, the drawing includes elevation markers with MSL values for each floor level on the right side. For example, \"LEVEL 1\" is labeled with an elevation of 543.00.",
+    "classification": "yes",
+    "count": null,
+    "unanswerable": false,
+    "confidence": 0.99,
+    "evidence": [
+      {
+        "bbox": [
+          752,
+          978,
+          778,
+          995
+        ],
+        "bboxAbsolute": {
+          "x0": 0.8630259999999998,
+          "y0": 0.291832,
+          "x1": 0.8769149999999999,
+          "y1": 0.299398
+        },
+        "description": "Elevation marker for LEVEL 1 at 543.00 MSL"
+      }
+    ],
+    "reasoning": "Observed elevation markers on the far right edge of the drawing denoting the levels of the building with corresponding MSL elevation values, such as 'LEVEL 1 543.00'.",
+    "regionHintHonored": null,
+    "_meta": {
+      "callId": "20260506T202452037Z-1wq4",
+      "expectedAnswerType": "boolean",
+      "cropMode": "drawing",
+      "cropResolution": {
+        "bbox": {
+          "x0": 0.064,
+          "y0": 0.073,
+          "x1": 0.881,
+          "y1": 0.364
+        },
+        "source": "drawing-block"
+      },
+      "cropBbox": {
+        "x0": 0.064,
+        "y0": 0.073,
+        "x1": 0.881,
+        "y1": 0.364
+      },
+      "model": "google/gemini-3.1-pro-preview",
+      "promptLength": 4162,
+      "validationNotes": []
+    }
+  },
+  "timing": {
+    "startedAt": 1778099092039,
+    "finishedAt": 1778099103448
+  }
+}

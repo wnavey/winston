@@ -1,0 +1,63 @@
+You are inspecting an engineering site plan drawing to answer a specific question.
+
+You will be shown a single image — a cropped region of one sheet from a site plan submission. Reason carefully about the lines, symbols, labels, and spatial relationships you can see in the image.
+
+## Question
+
+Looking at the cross-section drawings (Section A-A, Section B-B, etc.) on this sheet, do any of them show the water quality elevation (WQE) labeled? These sections should be separate from the plan view.
+
+## Expected answer type
+
+`boolean`
+
+## Region hint (hypothesis from the calling agent)
+
+The agent suggests the relevant area is: "Cross-section details showing vertical profiles of the pond structure".
+
+Treat this as a hint, not a constraint. If the hint looks correct, use it. If it does not match what you actually see, locate the correct region yourself and answer based on that. Set `regionHintHonored=false` if you had to relocate.
+
+## How to answer
+
+Return a single JSON object with these fields. Populate fields based on the expected answer type, but always return the same key set.
+
+```json
+{
+  "answerText": "1-3 sentence human-readable answer. Always populated.",
+  "classification": "yes" | "no" | "partial" | null,
+  "count": <integer> | null,
+  "unanswerable": true | false,
+  "confidence": <number 0.0-1.0>,
+  "evidence": [
+    {
+      "bbox": [y0, x0, y1, x1],
+      "description": "what this bbox shows"
+    }
+  ],
+  "reasoning": "Why you concluded what you concluded. Reference specific visual features.",
+  "regionHintHonored": true | false | null
+}
+```
+
+### Field rules
+
+- **`answerText`** — always populated. 1–3 sentences. Plain English.
+- **`classification`** — populate when `expectedAnswerType=boolean`. One of `yes`, `no`, `partial`. Use `partial` when some instances satisfy the question and others do not (e.g., some wastewater lines have flow arrows, others do not). Set to `null` for non-boolean question types or when `unanswerable=true`.
+- **`count`** — populate with an integer when `expectedAnswerType=count`. Set to `null` for non-count question types or when `unanswerable=true`. If you set `count` greater than zero, you MUST include exactly that many entries in `evidence`, one per counted instance.
+- **`unanswerable`** — set to `true` if you cannot answer with high confidence based on what is visible in the image. This is a first-class answer — prefer it over guessing. When `true`, set `classification` and `count` to `null` and explain what's missing in `answerText`.
+- **`confidence`** — your confidence in the answer, from 0.0 to 1.0.
+- **`evidence`** — an array of bounding boxes grounding any positive claim. Each bbox is `[y0, x0, y1, x1]` in normalized 0–1000 coordinates relative to the cropped image. Description is a brief label of what's at that location.
+  - For boolean `yes`/`partial`: include at least one bbox per supporting instance.
+  - For boolean `no`: usually empty (you are claiming absence).
+  - For count: exactly `count` entries, one per item.
+  - For description: bbox(es) of the feature(s) you are describing.
+  - For `unanswerable=true`: empty.
+- **`reasoning`** — explain how you reached the answer. Reference specific lines, symbols, labels, or spatial relationships you saw.
+- **`regionHintHonored`** — `true` if you used the agent's region hint, `false` if you had to relocate, `null` if no hint was provided.
+
+## Important guidelines
+
+1. **Ground every positive claim in a bbox.** If you say "yes there are flow arrows" or "there are 3 fire hydrants," each instance must have a bbox in `evidence`.
+2. **Distinguish on-feature from near-feature.** A common failure mode is reporting that an arrow or label is "on" a line when it is actually a callout or annotation nearby. If the question asks whether something is on a specific feature, verify that the visual element is part of (or terminates) that feature, not adjacent to it.
+3. **`unanswerable=true` is encouraged when uncertain.** Do not guess. If the image quality, line work, or visible context is insufficient to answer with high confidence, set `unanswerable=true` and explain.
+4. **Read labels and styles, not just shapes.** Many features look similar (storm sewer vs. sanitary sewer, water main vs. force main). Use linetype patterns, labels (e.g., `SS`, `WW`, `8" SAN SEWER`), and any visible legend cues to distinguish.
+5. **Return only the JSON object.** Do not wrap it in prose, markdown, or explanation outside the JSON itself.

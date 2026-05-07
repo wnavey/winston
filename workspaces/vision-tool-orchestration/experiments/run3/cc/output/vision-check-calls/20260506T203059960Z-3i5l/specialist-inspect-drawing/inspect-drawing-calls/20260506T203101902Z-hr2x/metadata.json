@@ -1,0 +1,101 @@
+{
+  "callId": "20260506T203101902Z-hr2x",
+  "inputs": {
+    "projectId": "23301a8a-4cdb-4751-ac0c-93b97f0f5c12",
+    "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+    "sheetNum": "14",
+    "question": "Are the retaining walls with guardrails located within the right-of-way, public easements, or City property? Or are they on private property within the development site?",
+    "expectedAnswerType": "boolean",
+    "cropMode": "drawing",
+    "regionHint": "Look at the retaining walls along the northern boundary and check their relationship to ROW lines, easements, and property lines",
+    "reasoning": "The agent is asking about the spatial relationship between retaining walls and property/easement boundaries—specifically whether they fall within ROW/easements or on private property. This requires visual inspection of how the walls are positioned relative to boundary lines and easement annotations on the plan, not a numeric measurement or document presence check.",
+    "applicableChecklistItems": [
+      {
+        "checklist_id": "cc-23:CC-23-09",
+        "checklist_deficiency_text": "Sealed structural drawings for retaining walls in ROW or easements not provided (RDW-05)"
+      }
+    ],
+    "dpi": 150
+  },
+  "cropResolution": {
+    "bbox": {
+      "x0": 0.034,
+      "y0": 0.028,
+      "x1": 0.921,
+      "y1": 0.9650000000000001
+    },
+    "source": "drawing-block"
+  },
+  "renderResult": {
+    "width": 4791,
+    "height": 3374
+  },
+  "result": {
+    "answerText": "No, the retaining walls with guardrails are not located within the right-of-way or public easements. They are situated on private property within the development site, inside the property line and adjacent to the public sidewalk easements.",
+    "classification": "no",
+    "count": null,
+    "unanswerable": false,
+    "confidence": 0.9,
+    "evidence": [
+      {
+        "bbox": [
+          210,
+          308,
+          305,
+          690
+        ],
+        "bboxAbsolute": {
+          "x0": 0.307196,
+          "y0": 0.22477,
+          "x1": 0.64603,
+          "y1": 0.31378500000000004
+        },
+        "description": "Retaining wall with guardrail along the northern boundary, inside the property line"
+      },
+      {
+        "bbox": [
+          268,
+          681,
+          418,
+          756
+        ],
+        "bboxAbsolute": {
+          "x0": 0.638047,
+          "y0": 0.27911600000000003,
+          "x1": 0.7045720000000001,
+          "y1": 0.41966600000000004
+        },
+        "description": "Retaining wall with guardrail along the eastern boundary, on private property"
+      }
+    ],
+    "reasoning": "The legend identifies 'PROPOSED RETAINING WALL WITH GUARDRAIL' as a solid line with small squares. Tracing this linetype along the northern (Collier Street) and eastern boundaries shows that these walls are located entirely inside the heavy dashed 'PROPERTY LINE', separating them from the public right-of-way and placing them on the private development site.",
+    "regionHintHonored": true,
+    "_meta": {
+      "callId": "20260506T203101902Z-hr2x",
+      "expectedAnswerType": "boolean",
+      "cropMode": "drawing",
+      "cropResolution": {
+        "bbox": {
+          "x0": 0.034,
+          "y0": 0.028,
+          "x1": 0.921,
+          "y1": 0.9650000000000001
+        },
+        "source": "drawing-block"
+      },
+      "cropBbox": {
+        "x0": 0.034,
+        "y0": 0.028,
+        "x1": 0.921,
+        "y1": 0.9650000000000001
+      },
+      "model": "google/gemini-3.1-pro-preview",
+      "promptLength": 4494,
+      "validationNotes": []
+    }
+  },
+  "timing": {
+    "startedAt": 1778099461905,
+    "finishedAt": 1778099485412
+  }
+}

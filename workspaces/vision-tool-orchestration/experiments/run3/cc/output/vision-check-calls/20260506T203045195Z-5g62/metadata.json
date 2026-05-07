@@ -1,0 +1,31 @@
+{
+  "callId": "20260506T203045195Z-5g62",
+  "startedAt": "2026-05-06T20:30:45.195Z",
+  "completedAt": "2026-05-06T20:31:46.504Z",
+  "inputs": {
+    "checklistItemId": "cc-13:AW-27",
+    "checklistItemText": "Recorded easement recordation numbers (volume/page) not shown for existing easements, or proposed easement limits not indicated",
+    "question": "Are easements shown on this utility plan? For existing easements, are volume and page recordation numbers indicated? For proposed easements, are their limits clearly marked?",
+    "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+    "sheetNum": 18
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "7a99bffdf9efcc44b8fffdfdcb1341d5e6512304f58b8778bf383e46a441e057",
+    "promptSource": "bureau",
+    "promptSourcePath": "/vercel/sandbox/workspace/bureau/jurisdictions/austin/workflows/completeness-check/prompts/vision-router.md",
+    "output": {
+      "problemType": "drawing_inspect",
+      "reasoning": "The agent is asking whether easements are depicted on the plan and whether their annotations (recordation numbers for existing easements, limit markings for proposed easements) are present as drawing elements. This is a drawing-element inspection question, not a measurement or document-presence check.",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "inspect-drawing",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": "/vercel/sandbox/workspace/output/vision-check-calls/20260506T203045195Z-5g62/specialist-inspect-drawing"
+  },
+  "phase": "B"
+}

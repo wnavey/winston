@@ -1,0 +1,70 @@
+{
+  "callId": "20260506T202250623Z-v1us",
+  "inputs": {
+    "projectId": "23301a8a-4cdb-4751-ac0c-93b97f0f5c12",
+    "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+    "sheetNum": "13",
+    "question": "Are driveway widths or curb return radii shown on this sheet? Look for width dimensions across driveway entrances and radius values for curved driveway entrances.",
+    "expectedAnswerType": "boolean",
+    "cropMode": "drawing",
+    "regionHint": null,
+    "reasoning": "The agent is asking whether width dimensions and radius annotations are present and visible on the drawing itself—this is a drawing-element annotation check, not a measurement task. The agent is inspecting for the presence of labelled dimensions/radii on the plan, which is a drawing_inspect problem.",
+    "applicableChecklistItems": [
+      {
+        "checklist_id": "cc-22:CC-22-13",
+        "checklist_deficiency_text": "Driveway widths or curb return radii not shown on plans (DRV-03)"
+      }
+    ],
+    "dpi": 150
+  },
+  "cropResolution": {
+    "bbox": {
+      "x0": 0.034,
+      "y0": 0.038,
+      "x1": 0.925,
+      "y1": 0.9650000000000001
+    },
+    "source": "drawing-block"
+  },
+  "renderResult": {
+    "width": 4812,
+    "height": 3338
+  },
+  "result": {
+    "answerText": "No, driveway widths and curb return radii are not explicitly dimensioned on this sheet. The labels for the driveways indicate to see a different sheet for details.",
+    "classification": "no",
+    "count": null,
+    "unanswerable": false,
+    "confidence": 0.95,
+    "evidence": [],
+    "reasoning": "I examined the visible driveway entrances along Collier Street. Instead of providing explicit dimensions for widths or radii at these locations, there are callouts stating 'TYPE II DRIVEWAY SEE SHEET 30 FOR DETAILS', indicating that this information is located on a separate detail sheet.",
+    "regionHintHonored": null,
+    "_meta": {
+      "callId": "20260506T202250623Z-v1us",
+      "expectedAnswerType": "boolean",
+      "cropMode": "drawing",
+      "cropResolution": {
+        "bbox": {
+          "x0": 0.034,
+          "y0": 0.038,
+          "x1": 0.925,
+          "y1": 0.9650000000000001
+        },
+        "source": "drawing-block"
+      },
+      "cropBbox": {
+        "x0": 0.034,
+        "y0": 0.038,
+        "x1": 0.925,
+        "y1": 0.9650000000000001
+      },
+      "model": "google/gemini-3.1-pro-preview",
+      "promptLength": 4096,
+      "validationNotes": []
+    }
+  },
+  "timing": {
+    "startedAt": 1778098970625,
+    "finishedAt": 1778098980058
+  }
+}

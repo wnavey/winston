@@ -1,0 +1,70 @@
+{
+  "callId": "20260506T202236182Z-aswv",
+  "inputs": {
+    "projectId": "23301a8a-4cdb-4751-ac0c-93b97f0f5c12",
+    "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+    "sheetNum": "8",
+    "question": "Are existing right-of-way (ROW) widths shown and dimensioned on this existing conditions sheet? Look for ROW width dimensions along the streets (Collier Street, Kinney Avenue, Nash Avenue, or South Lamar Blvd).",
+    "expectedAnswerType": "boolean",
+    "cropMode": "drawing",
+    "regionHint": null,
+    "reasoning": "The agent is asking whether ROW width dimensions are annotated/labelled on the drawing itself (a drawing-element inspection), not whether a measurement can be taken between two features. The checklist requirement about dimensions 'not shown or not dimensioned' is fundamentally a drawing-annotation question.",
+    "applicableChecklistItems": [
+      {
+        "checklist_id": "cc-23:CC-23-01",
+        "checklist_deficiency_text": "Existing ROW width not shown or not dimensioned (GRD-01)"
+      }
+    ],
+    "dpi": 150
+  },
+  "cropResolution": {
+    "bbox": {
+      "x0": 0.021,
+      "y0": 0.028,
+      "x1": 0.6970000000000001,
+      "y1": 0.9650000000000001
+    },
+    "source": "drawing-block"
+  },
+  "renderResult": {
+    "width": 3651,
+    "height": 3374
+  },
+  "result": {
+    "answerText": "No, specific numerical right-of-way (ROW) widths are not dimensioned. The labels for Collier Street, Kinney Avenue, and Nash Avenue all indicate that the ROW width \"VARIES\".",
+    "classification": "no",
+    "count": null,
+    "unanswerable": false,
+    "confidence": 0.95,
+    "evidence": [],
+    "reasoning": "I checked the labels for the streets mentioned. Collier Street, Kinney Avenue, and Nash Avenue are explicitly labeled with '(R.O.W. VARIES)' instead of a specific dimension, and there are no dimension lines drawn across the streets to indicate varying widths at specific points.",
+    "regionHintHonored": null,
+    "_meta": {
+      "callId": "20260506T202236182Z-aswv",
+      "expectedAnswerType": "boolean",
+      "cropMode": "drawing",
+      "cropResolution": {
+        "bbox": {
+          "x0": 0.021,
+          "y0": 0.028,
+          "x1": 0.6970000000000001,
+          "y1": 0.9650000000000001
+        },
+        "source": "drawing-block"
+      },
+      "cropBbox": {
+        "x0": 0.021,
+        "y0": 0.028,
+        "x1": 0.6970000000000001,
+        "y1": 0.9650000000000001
+      },
+      "model": "google/gemini-3.1-pro-preview",
+      "promptLength": 4144,
+      "validationNotes": []
+    }
+  },
+  "timing": {
+    "startedAt": 1778098956185,
+    "finishedAt": 1778098969881
+  }
+}

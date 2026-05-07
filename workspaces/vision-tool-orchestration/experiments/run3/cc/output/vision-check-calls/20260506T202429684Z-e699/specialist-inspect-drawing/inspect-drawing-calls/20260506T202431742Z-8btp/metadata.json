@@ -1,0 +1,88 @@
+{
+  "callId": "20260506T202431742Z-8btp",
+  "inputs": {
+    "projectId": "23301a8a-4cdb-4751-ac0c-93b97f0f5c12",
+    "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+    "sheetNum": "28",
+    "question": "Does this sheet show a detention pond cross-section with water surface elevations labeled for the 2-year, 10-year, 25-year, and 100-year storm events?",
+    "expectedAnswerType": "boolean",
+    "cropMode": "drawing",
+    "regionHint": null,
+    "reasoning": "The agent is asking whether a cross-section drawing exists on the sheet and whether specific water-surface-elevation labels are annotated on it—this is a drawing-element inspection (presence of annotations and labels), not a measurement task.",
+    "applicableChecklistItems": [
+      {
+        "checklist_id": "cc-20:CC-20-20",
+        "checklist_deficiency_text": "Detention pond cross-section not provided (2-yr/10-yr/25-yr/100-yr WSEs) (WQD-20)"
+      }
+    ],
+    "dpi": 150
+  },
+  "cropResolution": {
+    "bbox": {
+      "x0": 0,
+      "y0": 0,
+      "x1": 1,
+      "y1": 1
+    },
+    "source": "full-sheet",
+    "fallbackFromDrawing": true
+  },
+  "renderResult": {
+    "width": 5400,
+    "height": 3600
+  },
+  "result": {
+    "answerText": "Yes, the sheet shows a cross-section labeled 'SECTION E-E' that includes water surface elevation markers and labels for the 2-year, 10-year, 25-year, and 100-year storm events.",
+    "classification": "yes",
+    "count": null,
+    "unanswerable": false,
+    "confidence": 1,
+    "evidence": [
+      {
+        "bbox": [
+          547,
+          161,
+          602,
+          305
+        ],
+        "bboxAbsolute": {
+          "x0": 0.161,
+          "y0": 0.547,
+          "x1": 0.305,
+          "y1": 0.602
+        },
+        "description": "Water surface elevation markers for 2-yr, 10-yr, 25-yr, and 100-yr storm events inside SECTION E-E"
+      }
+    ],
+    "reasoning": "I found a cross-section labeled 'SECTION E-E' in the lower portion of the sheet. On the left side of this section, there are water surface elevation symbols (downward-pointing triangles) explicitly labeled for the '2 YR', '10 YR', '25 YR', and '100 YR' storm events with their corresponding elevations.",
+    "regionHintHonored": null,
+    "_meta": {
+      "callId": "20260506T202431742Z-8btp",
+      "expectedAnswerType": "boolean",
+      "cropMode": "drawing",
+      "cropResolution": {
+        "bbox": {
+          "x0": 0,
+          "y0": 0,
+          "x1": 1,
+          "y1": 1
+        },
+        "source": "full-sheet",
+        "fallbackFromDrawing": true
+      },
+      "cropBbox": {
+        "x0": 0,
+        "y0": 0,
+        "x1": 1,
+        "y1": 1
+      },
+      "model": "google/gemini-3.1-pro-preview",
+      "promptLength": 4084,
+      "validationNotes": []
+    }
+  },
+  "timing": {
+    "startedAt": 1778099071744,
+    "finishedAt": 1778099091363
+  }
+}

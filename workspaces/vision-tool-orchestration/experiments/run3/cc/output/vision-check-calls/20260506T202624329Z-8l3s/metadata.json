@@ -1,0 +1,32 @@
+{
+  "callId": "20260506T202624329Z-8l3s",
+  "startedAt": "2026-05-06T20:26:24.329Z",
+  "completedAt": "2026-05-06T20:26:33.337Z",
+  "inputs": {
+    "checklistItemId": "cc-20:CC-20-25",
+    "checklistItemText": "WQ pond cross-section not provided showing WQ surface elevation (WQD-25)",
+    "question": "Looking at the cross-section drawings (Section A-A, Section B-B, etc.) on this sheet, do any of them show the water quality elevation (WQE) labeled? These sections should be separate from the plan view.",
+    "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+    "sheetNum": 27,
+    "regionHint": "Cross-section details showing vertical profiles of the pond structure"
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "7a99bffdf9efcc44b8fffdfdcb1341d5e6512304f58b8778bf383e46a441e057",
+    "promptSource": "bureau",
+    "promptSourcePath": "/vercel/sandbox/workspace/bureau/jurisdictions/austin/workflows/completeness-check/prompts/vision-router.md",
+    "output": {
+      "problemType": "drawing_inspect",
+      "reasoning": "The agent is asking whether a specific annotation (WQE label) appears on cross-section drawings, which is a drawing-element inspection task. Although the checklist requirement is about cross-section presence/completeness, the agent question is narrowly focused on whether elevation labels are shown on existing sections—a drawing-inspection task, not a document-presence check.",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "inspect-drawing",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": "/vercel/sandbox/workspace/output/vision-check-calls/20260506T202624329Z-8l3s/specialist-inspect-drawing"
+  },
+  "phase": "B"
+}
