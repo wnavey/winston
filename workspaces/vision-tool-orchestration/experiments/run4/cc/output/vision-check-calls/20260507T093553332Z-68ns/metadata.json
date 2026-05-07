@@ -1,0 +1,32 @@
+{
+  "callId": "20260507T093553332Z-68ns",
+  "startedAt": "2026-05-07T09:35:53.332Z",
+  "completedAt": "2026-05-07T09:37:20.310Z",
+  "inputs": {
+    "checklistItemId": "cc-13:AW-19",
+    "checklistItemText": "General location map missing, or Grid number and Mapsco Page number not shown",
+    "question": "Does the location map on the cover sheet show both a Grid number and a Mapsco page number?",
+    "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+    "sheetNum": 1
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "7a99bffdf9efcc44b8fffdfdcb1341d5e6512304f58b8778bf383e46a441e057",
+    "promptSource": "bureau",
+    "promptSourcePath": "/vercel/sandbox/workspace/bureau/jurisdictions/austin/workflows/completeness-check/prompts/vision-router.md",
+    "output": {
+      "problemType": "generic",
+      "reasoning": "The agent is asking whether specific labels (Grid number and Mapsco page number) are present and readable on the location map — a title-block/document-element annotation check, not a spatial measurement or drawing-symbol inspection.",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "vision",
+    "success": false,
+    "errorMessage": "DB error fetching plan_set_version: TypeError: fetch failed",
+    "fallbackReason": null,
+    "specialistCallDir": null
+  },
+  "phase": "B"
+}

@@ -1,0 +1,32 @@
+{
+  "callId": "20260507T092641977Z-4nv0",
+  "startedAt": "2026-05-07T09:26:41.977Z",
+  "completedAt": "2026-05-07T09:27:40.917Z",
+  "inputs": {
+    "checklistItemId": "cc-15:CC-15-06",
+    "checklistItemText": "Watershed name and classification not shown on cover sheet (ENV-01)",
+    "question": "Is the watershed name and classification shown on this cover sheet? Look for watershed name (such as West Bouldin Creek) and watershed classification (such as Urban Watershed, Suburban Watershed, etc.).",
+    "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+    "sheetNum": 1
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "7a99bffdf9efcc44b8fffdfdcb1341d5e6512304f58b8778bf383e46a441e057",
+    "promptSource": "bureau",
+    "promptSourcePath": "/vercel/sandbox/workspace/bureau/jurisdictions/austin/workflows/completeness-check/prompts/vision-router.md",
+    "output": {
+      "problemType": "generic",
+      "reasoning": "The agent is asking whether specific text elements (watershed name and classification) are present and visible on the cover sheet, which is a document-content and label-readout check, not a drawing inspection or measurement task.",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "vision",
+    "success": false,
+    "errorMessage": "DB error fetching plan_set_version: TypeError: fetch failed",
+    "fallbackReason": null,
+    "specialistCallDir": null
+  },
+  "phase": "B"
+}

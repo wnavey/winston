@@ -1,0 +1,70 @@
+{
+  "callId": "20260507T093109103Z-w3s5",
+  "inputs": {
+    "projectId": "23301a8a-4cdb-4751-ac0c-93b97f0f5c12",
+    "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+    "sheetNum": "18",
+    "question": "Are curve data tables or curve callouts (radius, length, delta) shown on this utility plan sheet for roads, property lines, or water lines?",
+    "expectedAnswerType": "boolean",
+    "cropMode": "drawing",
+    "regionHint": null,
+    "reasoning": "The agent is asking whether curve data annotations (tables, callouts, radius, length, delta labels) are visually present and legible on the drawing itself — this is a drawing-element inspection task, not a measurement or document-presence check.",
+    "applicableChecklistItems": [
+      {
+        "checklist_id": "cc-13:AW-31",
+        "checklist_deficiency_text": "Curve data for roads, property lines, water, and reclaimed water lines not shown"
+      }
+    ],
+    "dpi": 150
+  },
+  "cropResolution": {
+    "bbox": {
+      "x0": 0.028,
+      "y0": 0.025,
+      "x1": 0.923,
+      "y1": 0.981
+    },
+    "source": "drawing-block"
+  },
+  "renderResult": {
+    "width": 4834,
+    "height": 3442
+  },
+  "result": {
+    "answerText": "No curve data tables or curve callouts containing radius, length, or delta information are visible on this utility plan sheet. The linework primarily consists of straight segments with discrete bends.",
+    "classification": "no",
+    "count": null,
+    "unanswerable": false,
+    "confidence": 0.95,
+    "evidence": [],
+    "reasoning": "A comprehensive scan of the drawing reveals no tabular blocks containing curve data (such as C1, C2 tables with R, L, Delta columns). Furthermore, inspecting the curved portions of property lines, right-of-ways (like S. Lamar Blvd), and utility lines yields no callouts explicitly defining radius or arc length. Utility lines are generally shown with specific angled bends (e.g., '45° PVC BENDS') rather than continuous curves with curve data.",
+    "regionHintHonored": null,
+    "_meta": {
+      "callId": "20260507T093109103Z-w3s5",
+      "expectedAnswerType": "boolean",
+      "cropMode": "drawing",
+      "cropResolution": {
+        "bbox": {
+          "x0": 0.028,
+          "y0": 0.025,
+          "x1": 0.923,
+          "y1": 0.981
+        },
+        "source": "drawing-block"
+      },
+      "cropBbox": {
+        "x0": 0.028,
+        "y0": 0.025,
+        "x1": 0.923,
+        "y1": 0.981
+      },
+      "model": "google/gemini-3.1-pro-preview",
+      "promptLength": 4073,
+      "validationNotes": []
+    }
+  },
+  "timing": {
+    "startedAt": 1778146269105,
+    "finishedAt": 1778146280288
+  }
+}

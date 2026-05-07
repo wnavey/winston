@@ -1,0 +1,31 @@
+{
+  "callId": "20260507T100831536Z-mqpn",
+  "startedAt": "2026-05-07T10:08:31.536Z",
+  "completedAt": "2026-05-07T10:08:52.264Z",
+  "inputs": {
+    "checklistItemId": "cc-13:AW-32",
+    "checklistItemText": "Typical cross sections not provided for private streets/easements with multiple utilities",
+    "question": "Are there any private streets or private easements shown on this sheet that contain multiple utilities (like water AND wastewater AND storm lines in the same corridor)? If yes, are typical cross sections shown for those private streets/easements?",
+    "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+    "sheetNum": 18
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "7a99bffdf9efcc44b8fffdfdcb1341d5e6512304f58b8778bf383e46a441e057",
+    "promptSource": "bureau",
+    "promptSourcePath": "/vercel/sandbox/workspace/bureau/jurisdictions/austin/workflows/completeness-check/prompts/vision-router.md",
+    "output": {
+      "problemType": "generic",
+      "reasoning": "The agent is asking a two-part presence/feature question: (1) whether private streets/easements with multiple utilities exist on the sheet, and (2) whether cross sections are shown for them. This is sheet discovery and document-presence verification, not a drawing annotation inspection or measurement task.",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "vision",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": null
+  },
+  "phase": "B"
+}

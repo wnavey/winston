@@ -1,0 +1,31 @@
+{
+  "callId": "20260507T095508304Z-k8ny",
+  "startedAt": "2026-05-07T09:55:08.304Z",
+  "completedAt": "2026-05-07T09:55:32.886Z",
+  "inputs": {
+    "checklistItemId": "cc-13:AW-03",
+    "checklistItemText": "Project Information section or Fire/Domestic/Irrigation Demand Data table on AW General Info Sheet not completed (missing project info fields or any of: PSI, fire flow, WSFU, domestic demand, irrigation, velocities, LUEs)",
+    "question": "Is there a \"Project Information\" or \"Fire/Domestic/Irrigation Demand Data\" table on this sheet? If yes, are all the following fields completed: PSI (pressure), fire flow GPM, WSFU (water supply fixture units), domestic demand GPM, irrigation demand GPM, velocities, and LUEs (living unit equivalents)?",
+    "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+    "sheetNum": 6
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "7a99bffdf9efcc44b8fffdfdcb1341d5e6512304f58b8778bf383e46a441e057",
+    "promptSource": "bureau",
+    "promptSourcePath": "/vercel/sandbox/workspace/bureau/jurisdictions/austin/workflows/completeness-check/prompts/vision-router.md",
+    "output": {
+      "problemType": "generic",
+      "reasoning": "The agent is asking whether a table exists on the sheet and whether its fields are populated—this is a table-read and completeness check, not a drawing annotation inspection or measurement task.",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "vision",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": null
+  },
+  "phase": "B"
+}

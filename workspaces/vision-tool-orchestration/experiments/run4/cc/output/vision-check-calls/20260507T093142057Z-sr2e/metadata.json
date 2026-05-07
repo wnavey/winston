@@ -1,0 +1,32 @@
+{
+  "callId": "20260507T093142057Z-sr2e",
+  "startedAt": "2026-05-07T09:31:42.057Z",
+  "completedAt": "2026-05-07T09:32:16.470Z",
+  "inputs": {
+    "checklistItemId": "cc-22:CC-22-14",
+    "checklistItemText": "Adjacent driveways within 300 feet not shown on plans (DRV-04)",
+    "question": "Are adjacent driveways on neighboring properties within 300 feet shown on this sheet? Look for driveways on adjacent properties along South Lamar Boulevard and Collier Street frontages. When identifying adjacent driveways, look for two wide, flat-bottomed U-shapes or J-shapes side by side with a gap between them.",
+    "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+    "sheetNum": 15,
+    "regionHint": "along South Lamar Boulevard and Collier Street frontages, on neighboring properties"
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "7a99bffdf9efcc44b8fffdfdcb1341d5e6512304f58b8778bf383e46a441e057",
+    "promptSource": "bureau",
+    "promptSourcePath": "/vercel/sandbox/workspace/bureau/jurisdictions/austin/workflows/completeness-check/prompts/vision-router.md",
+    "output": {
+      "problemType": "generic",
+      "reasoning": "The agent is asking a presence/feature-identification question ('Are adjacent driveways shown on this sheet?'), which is a sheet-discovery and feature-presence check. Although the checklist requirement is about a measurement/clearance rule (300 feet), the agent is not yet asking for distance measurement—only whether adjacent driveways exist and are visible on the plan at all. Once presence is confirmed, a measurement question would follow.",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "vision",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": null
+  },
+  "phase": "B"
+}

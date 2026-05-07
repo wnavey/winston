@@ -1,0 +1,31 @@
+{
+  "callId": "20260507T095730025Z-r0ir",
+  "startedAt": "2026-05-07T09:57:30.025Z",
+  "completedAt": "2026-05-07T09:57:51.236Z",
+  "inputs": {
+    "checklistItemId": "cc-24:CC-24-03",
+    "checklistItemText": "License Agreement for streetscape elements in ROW (awnings, canopies, benches, bike racks, trash) not submitted or referenced (LDE-03)",
+    "question": "Looking at the site plan, are proposed bike racks (marked with key note \"1\") located outside the property line in the right-of-way, or are they on private property?",
+    "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+    "sheetNum": 14
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "7a99bffdf9efcc44b8fffdfdcb1341d5e6512304f58b8778bf383e46a441e057",
+    "promptSource": "bureau",
+    "promptSourcePath": "/vercel/sandbox/workspace/bureau/jurisdictions/austin/workflows/completeness-check/prompts/vision-router.md",
+    "output": {
+      "problemType": "drawing_inspect",
+      "reasoning": "The agent is asking whether a marked feature (bike racks with key note '1') is spatially located inside or outside the property line boundary as shown on the drawing. This requires visual reasoning about the spatial relationship between the bike rack symbol and the property line annotation on the plan—a drawing_inspect task—rather than a precise measurement or a document/table lookup.",
+      "confidence": 0.92,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "inspect-drawing",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": "/vercel/sandbox/workspace/output/vision-check-calls/20260507T095730025Z-r0ir/specialist-inspect-drawing"
+  },
+  "phase": "B"
+}

@@ -1,0 +1,101 @@
+{
+  "callId": "20260507T092920025Z-bvyg",
+  "inputs": {
+    "projectId": "23301a8a-4cdb-4751-ac0c-93b97f0f5c12",
+    "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+    "sheetNum": "14",
+    "question": "Are the following elements clearly identified or labeled on this site plan: (1) driveway access points, (2) handicap/accessible parking spaces, (3) garage locations, and (4) sidewalk access routes or ADA paths?",
+    "expectedAnswerType": "boolean",
+    "cropMode": "drawing",
+    "regionHint": null,
+    "reasoning": "The agent is asking whether specific site elements are clearly identified or labeled on the plan itself—this is a drawing annotation and feature-identification question, not a measurement or document-presence check. The requirement and agent question are aligned: both concern whether these features are marked/labeled on the plans.",
+    "applicableChecklistItems": [
+      {
+        "checklist_id": "cc-5:ADR-05",
+        "checklist_deficiency_text": "Driveway access points, handicap parking, garages, and sidewalk access not identified on plans"
+      }
+    ],
+    "dpi": 150
+  },
+  "cropResolution": {
+    "bbox": {
+      "x0": 0.034,
+      "y0": 0.028,
+      "x1": 0.921,
+      "y1": 0.9650000000000001
+    },
+    "source": "drawing-block"
+  },
+  "renderResult": {
+    "width": 4791,
+    "height": 3374
+  },
+  "result": {
+    "answerText": "The site plan identifies the parking garage location and proposed ADA paths, but does not identify any handicap/accessible parking spaces. Vehicular entrances are visible but are not explicitly labeled as driveway access points.",
+    "classification": "partial",
+    "count": null,
+    "unanswerable": false,
+    "confidence": 0.95,
+    "evidence": [
+      {
+        "bbox": [
+          472,
+          638,
+          497,
+          676
+        ],
+        "bboxAbsolute": {
+          "x0": 0.599906,
+          "y0": 0.470264,
+          "x1": 0.6336120000000001,
+          "y1": 0.49368900000000004
+        },
+        "description": "Label indicating the location of the parking garage"
+      },
+      {
+        "bbox": [
+          238,
+          381,
+          273,
+          560
+        ],
+        "bboxAbsolute": {
+          "x0": 0.371947,
+          "y0": 0.251006,
+          "x1": 0.5307200000000001,
+          "y1": 0.2838010000000001
+        },
+        "description": "Proposed ADA path delineated by a dotted line with circles"
+      }
+    ],
+    "reasoning": "The drawing includes a label for the 'PARKING GARAGE' and uses a specific linetype (dotted with circles) for 'PROPOSED ADA PATH' along the street frontage. However, while 'PROPOSED HANDICAP PARKING' is listed in the legend, no such spaces are actually depicted on this sheet (likely because parking is within the garage). Driveway access points are drawn where vehicles would enter the garage or site, but they lack explicit text labels identifying them as such.",
+    "regionHintHonored": null,
+    "_meta": {
+      "callId": "20260507T092920025Z-bvyg",
+      "expectedAnswerType": "boolean",
+      "cropMode": "drawing",
+      "cropResolution": {
+        "bbox": {
+          "x0": 0.034,
+          "y0": 0.028,
+          "x1": 0.921,
+          "y1": 0.9650000000000001
+        },
+        "source": "drawing-block"
+      },
+      "cropBbox": {
+        "x0": 0.034,
+        "y0": 0.028,
+        "x1": 0.921,
+        "y1": 0.9650000000000001
+      },
+      "model": "google/gemini-3.1-pro-preview",
+      "promptLength": 4144,
+      "validationNotes": []
+    }
+  },
+  "timing": {
+    "startedAt": 1778146160027,
+    "finishedAt": 1778146178956
+  }
+}

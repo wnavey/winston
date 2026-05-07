@@ -1,0 +1,31 @@
+{
+  "callId": "20260507T100606096Z-fkkf",
+  "startedAt": "2026-05-07T10:06:06.096Z",
+  "completedAt": "2026-05-07T10:06:20.717Z",
+  "inputs": {
+    "checklistItemId": "cc-13:AW-53",
+    "checklistItemText": "Subdivision file number or required permit numbers missing from cover sheet (CVR-35)",
+    "question": "Is there a subdivision file number, plat case number, or related case numbers shown on the cover sheet (such as \"C8S-78-153\" or similar format)?",
+    "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+    "sheetNum": 1
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "7a99bffdf9efcc44b8fffdfdcb1341d5e6512304f58b8778bf383e46a441e057",
+    "promptSource": "bureau",
+    "promptSourcePath": "/vercel/sandbox/workspace/bureau/jurisdictions/austin/workflows/completeness-check/prompts/vision-router.md",
+    "output": {
+      "problemType": "generic",
+      "reasoning": "The agent is asking whether specific identifiers (subdivision file number, plat case number, or related case numbers) are present and visible on the cover sheet. This is a document-element presence and readout check, not a measurement or drawing-symbol inspection. The agent is looking for text/label presence in a title block or cover sheet area.",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "vision",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": null
+  },
+  "phase": "B"
+}

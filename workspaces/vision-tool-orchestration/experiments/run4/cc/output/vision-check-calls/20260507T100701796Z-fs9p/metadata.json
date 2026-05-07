@@ -1,0 +1,31 @@
+{
+  "callId": "20260507T100701796Z-fs9p",
+  "startedAt": "2026-05-07T10:07:01.796Z",
+  "completedAt": "2026-05-07T10:07:27.344Z",
+  "inputs": {
+    "checklistItemId": "cc-13:AW-27",
+    "checklistItemText": "Recorded easement recordation numbers (volume/page) not shown for existing easements, or proposed easement limits not indicated",
+    "question": "Are there easements shown on this utility plan (labeled as \"easement\", \"PUE\", \"utility easement\", etc.)? If yes, do the EXISTING easements show recordation numbers (like \"Vol. 76 Pg. 388\" or \"Doc No. 202300221\"), and do PROPOSED easements show their limits with labels like \"proposed\" or \"to be dedicated\"?",
+    "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+    "sheetNum": 18
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "7a99bffdf9efcc44b8fffdfdcb1341d5e6512304f58b8778bf383e46a441e057",
+    "promptSource": "bureau",
+    "promptSourcePath": "/vercel/sandbox/workspace/bureau/jurisdictions/austin/workflows/completeness-check/prompts/vision-router.md",
+    "output": {
+      "problemType": "drawing_inspect",
+      "reasoning": "The agent is asking whether easement labels, recordation numbers, and limit annotations are present and legible on the drawing itself—this is annotation and symbol inspection on the plan, not a measurement task. The presence check (\"are there easements shown\") is secondary to the core question of whether required text labels appear on the drawing.",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "inspect-drawing",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": "/vercel/sandbox/workspace/output/vision-check-calls/20260507T100701796Z-fs9p/specialist-inspect-drawing"
+  },
+  "phase": "B"
+}

@@ -1,0 +1,31 @@
+{
+  "callId": "20260507T093028685Z-ugau",
+  "startedAt": "2026-05-07T09:30:28.685Z",
+  "completedAt": "2026-05-07T09:31:07.220Z",
+  "inputs": {
+    "checklistItemId": "cc-6:CMP-02",
+    "checklistItemText": "Building elevations showing architectural elements not provided",
+    "question": "Does this elevation drawing show architectural elements such as building materials, fenestration (windows/doors), balconies, rooflines, massing, or other facade details? Is a material legend provided?",
+    "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+    "sheetNum": 35
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "7a99bffdf9efcc44b8fffdfdcb1341d5e6512304f58b8778bf383e46a441e057",
+    "promptSource": "bureau",
+    "promptSourcePath": "/vercel/sandbox/workspace/bureau/jurisdictions/austin/workflows/completeness-check/prompts/vision-router.md",
+    "output": {
+      "problemType": "drawing_inspect",
+      "reasoning": "The agent is asking whether specific architectural elements and annotations (materials, windows, doors, balconies, rooflines, massing, legend) are shown on the elevation drawing itself. This is a drawing-content inspection question, not a document-presence check—the elevation exists, and the agent is verifying what visual features and annotations it contains.",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "inspect-drawing",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": "/vercel/sandbox/workspace/output/vision-check-calls/20260507T093028685Z-ugau/specialist-inspect-drawing"
+  },
+  "phase": "B"
+}

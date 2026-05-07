@@ -1,0 +1,31 @@
+{
+  "callId": "20260507T093107230Z-qx9i",
+  "startedAt": "2026-05-07T09:31:07.230Z",
+  "completedAt": "2026-05-07T09:32:20.882Z",
+  "inputs": {
+    "checklistItemId": "cc-24:CC-24-06",
+    "checklistItemText": "License Agreement for pedestrian lighting in ROW not submitted or referenced (LDE-06)",
+    "question": "Are there any pedestrian lighting fixtures, street lights, or decorative lighting elements shown within the public right-of-way (outside the property line)?",
+    "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+    "sheetNum": 14
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "7a99bffdf9efcc44b8fffdfdcb1341d5e6512304f58b8778bf383e46a441e057",
+    "promptSource": "bureau",
+    "promptSourcePath": "/vercel/sandbox/workspace/bureau/jurisdictions/austin/workflows/completeness-check/prompts/vision-router.md",
+    "output": {
+      "problemType": "generic",
+      "reasoning": "The agent is asking a presence/feature-identification question (does lighting exist in the ROW at all?), which is a prerequisite to the document-submission requirement. This is progressive verification: the checklist requires a license agreement to be submitted/referenced, but the agent is first checking whether pedestrian lighting fixtures are even shown on the plan. This is a feature-presence check, not a drawing annotation or measurement question.",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "vision",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": null
+  },
+  "phase": "B"
+}

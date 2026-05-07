@@ -1,0 +1,32 @@
+{
+  "callId": "20260507T093943308Z-llw8",
+  "startedAt": "2026-05-07T09:39:43.308Z",
+  "completedAt": "2026-05-07T09:40:03.690Z",
+  "inputs": {
+    "checklistItemId": "cc-22:CC-22-14",
+    "checklistItemText": "Adjacent driveways within 300 feet not shown on plans (DRV-04)",
+    "question": "Looking at the entire overall site plan, are driveways on adjacent or neighboring properties shown? Look for curb cuts or driveway openings on properties adjacent to the development site along any of the street frontages.",
+    "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+    "sheetNum": 13,
+    "regionHint": "all street frontages including Collier Street, South Lamar Boulevard, Kinney Avenue"
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "7a99bffdf9efcc44b8fffdfdcb1341d5e6512304f58b8778bf383e46a441e057",
+    "promptSource": "bureau",
+    "promptSourcePath": "/vercel/sandbox/workspace/bureau/jurisdictions/austin/workflows/completeness-check/prompts/vision-router.md",
+    "output": {
+      "problemType": "generic",
+      "reasoning": "The agent is asking whether driveways on adjacent properties are shown at all on the site plan (presence/feature detection), not asking to measure the 300-foot spacing between them. This is a sheet-discovery and feature-presence check, which is a progressive verification step before any spacing measurement would occur.",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "vision",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": null
+  },
+  "phase": "B"
+}

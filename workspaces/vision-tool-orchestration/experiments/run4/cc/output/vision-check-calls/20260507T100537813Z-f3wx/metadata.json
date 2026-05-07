@@ -1,0 +1,31 @@
+{
+  "callId": "20260507T100537813Z-f3wx",
+  "startedAt": "2026-05-07T10:05:37.813Z",
+  "completedAt": "2026-05-07T10:06:06.088Z",
+  "inputs": {
+    "checklistItemId": "cc-13:AW-46",
+    "checklistItemText": "Roadways, drives, overpasses, bridges, culverts, drainage structures, or pavers not labeled on plans",
+    "question": "Are roadways, drives, and drainage structures shown on this site plan? If yes, are they labeled with names (like \"Collier Street\", \"South Lamar Blvd\", \"driveway\", \"inlet\", etc.)?",
+    "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+    "sheetNum": 14
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "7a99bffdf9efcc44b8fffdfdcb1341d5e6512304f58b8778bf383e46a441e057",
+    "promptSource": "bureau",
+    "promptSourcePath": "/vercel/sandbox/workspace/bureau/jurisdictions/austin/workflows/completeness-check/prompts/vision-router.md",
+    "output": {
+      "problemType": "drawing_inspect",
+      "reasoning": "The agent is asking whether specific features (roadways, drives, drainage structures) are labeled with text annotations on the plan itself—this is a drawing-element inspection task, not a presence-only check. Although the question includes a presence component ('are they shown'), the core compliance requirement and the agent's follow-up focus on whether labels/names are actually annotated on the drawing.",
+      "confidence": 0.92,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "inspect-drawing",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": "/vercel/sandbox/workspace/output/vision-check-calls/20260507T100537813Z-f3wx/specialist-inspect-drawing"
+  },
+  "phase": "B"
+}

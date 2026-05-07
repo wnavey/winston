@@ -1,0 +1,31 @@
+{
+  "callId": "20260507T095915639Z-ewt8",
+  "startedAt": "2026-05-07T09:59:15.639Z",
+  "completedAt": "2026-05-07T09:59:37.534Z",
+  "inputs": {
+    "checklistItemId": "cc-24:CC-24-06",
+    "checklistItemText": "License Agreement for pedestrian lighting in ROW not submitted or referenced (LDE-06)",
+    "question": "Are any pedestrian light poles or pedestrian-scale lighting fixtures shown within the right-of-way along the streets? Look for light pole symbols outside the property line.",
+    "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+    "sheetNum": 14
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "7a99bffdf9efcc44b8fffdfdcb1341d5e6512304f58b8778bf383e46a441e057",
+    "promptSource": "bureau",
+    "promptSourcePath": "/vercel/sandbox/workspace/bureau/jurisdictions/austin/workflows/completeness-check/prompts/vision-router.md",
+    "output": {
+      "problemType": "generic",
+      "reasoning": "The agent is asking a presence/feature-identification question: do pedestrian lighting fixtures appear anywhere on the plan within the ROW? This is a sheet-discovery and feature-presence check, not a measurement or drawing-annotation inspection. The checklist requirement concerns submission/reference of a license agreement, but the agent's narrower progressive question is simply whether such fixtures are visible at all—a prerequisite before checking documentation.",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "vision",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": null
+  },
+  "phase": "B"
+}

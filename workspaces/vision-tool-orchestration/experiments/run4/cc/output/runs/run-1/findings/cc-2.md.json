@@ -1,0 +1,143 @@
+{
+  "findings": [
+    {
+      "checklistItemId": "CC-2-02",
+      "observation": "Reviewed Engineer's Summary Letter section 'Utilities and Stormwater Management' (02-utilities-and-stormwater-management.md). The document explicitly states: 'The site is in the West Bouldin Creek Watershed, which is classified as an urban watershed by the City of Austin and allows a maximum 80% impervious cover.' This clearly identifies both the watershed location (West Bouldin Creek) and the watershed classification (urban watershed).",
+      "reasoning": "The checklist item asks whether the Engineer's Summary Letter identifies watershed location and classification. The ESL satisfies both requirements: it names the specific watershed (West Bouldin Creek) and provides the City of Austin classification (urban watershed). This information is essential for downstream reviewers to apply the correct impervious cover limits and stormwater management requirements. The deficiency described in the checklist item does not exist.",
+      "tools_used": [],
+      "status": "pass",
+      "explanation": "Engineer's Summary Letter identifies West Bouldin Creek Watershed and classifies it as urban watershed in the Utilities and Stormwater Management section.",
+      "evidenceLocations": [
+        {
+          "documentId": "ca527d05-4b8e-4723-9fb5-d6ad29965e35",
+          "label": "Engineer's Summary Letter"
+        }
+      ],
+      "resolution": null,
+      "resolutionDetails": null
+    },
+    {
+      "checklistItemId": "CC-2-14",
+      "observation": "Checked PE seals across multiple sheets using vision tool. Sheet 20 (Water & Wastewater): has PE seal with signature and date (Shelly Mitchell PE #103682, dated 05/04/2024). Sheet 30 (Site Details): has PE seal (Shelly Mitchell 103662). However, Sheet 35 (Building Elevations) contains explicit text 'NOT FOR REGULATORY APPROVAL, PERMITTING, OR CONSTRUCTION' and no PE seal visible. Sheet 36 (Building Elevations) similarly lacks PE seal and contains the same disclaimer. Sheet 37 (Building Plan - Level 1) also lacks PE seal. These appear to be architectural sheets rather than civil engineering sheets.",
+      "reasoning": "The checklist requirement states 'Engineer's seal, signature, or date missing from one or more plan sheets (BAS-05)' with condition 'Always' and location 'all plan sheets'. The validation methodology notes the PE seal must be consistent with the engineer identified in CC-1 (Shelly Mitchell PE #103662). While civil engineering sheets (1-34, 42-55) appear to have PE seals, the architectural/building sheets (35-41) lack PE seals and are marked as preliminary drawings not intended for permitting. In a completeness check, all submitted plan sheets should have appropriate professional seals. The absence of PE seals on building elevation and plan sheets represents a deficiency.",
+      "tools_used": [
+        "vision"
+      ],
+      "status": "fail",
+      "explanation": "Building elevation and plan sheets (35, 36, 37) lack professional engineer seals and are marked 'NOT FOR REGULATORY APPROVAL, PERMITTING, OR CONSTRUCTION.'",
+      "evidenceLocations": [
+        {
+          "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+          "sheetNumber": 35,
+          "label": "Building Elevations"
+        },
+        {
+          "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+          "sheetNumber": 36,
+          "label": "Building Elevations"
+        },
+        {
+          "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+          "sheetNumber": 37,
+          "label": "Building Plan - Level 1"
+        }
+      ],
+      "resolution": "Provide sealed and signed building elevation and plan sheets (Sheets 35-41) from a licensed professional (architect or engineer as appropriate). Remove 'NOT FOR REGULATORY APPROVAL' disclaimers and ensure all sheets intended for permitting are properly sealed.",
+      "resolutionDetails": null
+    },
+    {
+      "checklistItemId": "CC-2-16",
+      "observation": "Used vision tool to check boundary lines with bearings and dimensions on Sheet 8 (Existing Conditions & Demolition Plan) and Sheet 13 (Overall Site & Paving & Striping Plan). Sheet 8: Vision tool confirmed 'property boundary lines are shown on this sheet. The main boundary is depicted with a heavy dashed line and labeled with specific bearings (e.g., S62°48'30\"E) and distances (e.g., 242.54').' Additionally, Sheet 8 includes a Record Curve Table with geometric data (radius, length, delta, bearing, distance) for curves C1-C5. Sheet 13: Vision tool confirmed 'property boundary lines with bearings and dimensions are shown. There are labels indicating bearings and distances along the property lines, as well as a curve table providing geometric data for boundary curves.'",
+      "reasoning": "The checklist requirement specifies that boundary lines with bearings and dimensions must be shown on 'Existing Conditions or Overall Site Plan sheet(s)'. The validation methodology clarifies not to fail if boundary lines are absent from other sheet types (utility plans, landscape plans, etc.) - only the Existing Conditions and Overall Site Plan sheets are required to show them. Both Sheet 8 (Existing Conditions) and Sheet 13 (Overall Site Plan) display boundary lines with complete bearing and distance annotations, plus curve tables with geometric data. This satisfies the requirement.",
+      "tools_used": [
+        "vision"
+      ],
+      "status": "pass",
+      "explanation": "Boundary lines with bearings and dimensions are shown on Sheet 8 (Existing Conditions) and Sheet 13 (Overall Site Plan), including Record Curve Tables with geometric data.",
+      "evidenceLocations": [
+        {
+          "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+          "sheetNumber": 8,
+          "label": "Existing Conditions & Demolition Plan (1 Of 2)"
+        },
+        {
+          "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+          "sheetNumber": 13,
+          "label": "Overall Site & Paving & Striping Plan"
+        }
+      ],
+      "resolution": null,
+      "resolutionDetails": null
+    },
+    {
+      "checklistItemId": "CC-2-21",
+      "observation": "Checked easement depiction across multiple sheet types. Used vision tool on Sheet 14 (Dimensional Control & Site Plan): confirmed easements shown including '10' ELECTRIC EASEMENT', 'VARIABLE WIDTH DRAINAGE EASEMENT', and 'VARIABLE WIDTH PUBLIC SIDEWALK EASEMENT'. Sheet 21 (Grading Plan): confirmed 'PROPOSED VARIABLE WIDTH PUBLIC SIDEWALK EASEMENT' shown. Sheet 25 (Storm Drain Plan): legend defines 'PROPOSED EASEMENT LINE' but no actual easements are drawn on the sheet. Sheet 30 (Site Details): appropriately contains no easements since it shows generic construction details, not site-specific layout. Semantic search for easements found legends defining easement line types on sheets 8, 9, 10, 11, 13, 14, 15, 17, 18, 25, confirming consistent symbology throughout the plan set.",
+      "reasoning": "The checklist requirement states 'Existing or future dedicated easements not shown on one or more sheets (BAS-12)' with validation methodology noting 'on every sheet where they apply'. The key qualifier is 'where they apply' - easements must appear on site layout sheets covering areas where easements exist, but not on detail sheets or sheets covering areas without easements. Sheet 14 shows multiple easements (electric, drainage, public sidewalk). Sheet 21 shows public sidewalk easements. Sheet 25 defines the easement line type in the legend but doesn't draw any, which is acceptable if no easements exist in that specific storm drain routing area. Detail sheets like Sheet 30 appropriately don't show easements. The consistent inclusion of easement symbology in legends and the presence of labeled easements on site layout sheets demonstrates compliance.",
+      "tools_used": [
+        "vision",
+        "semantic-search-blocks"
+      ],
+      "status": "pass",
+      "explanation": "Easements are shown on applicable site layout sheets where they exist (Sheets 14, 21, etc.). Legends consistently define easement line types across the plan set.",
+      "evidenceLocations": [
+        {
+          "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+          "sheetNumber": 14,
+          "label": "Dimensional Control & Site Plan 1 Of 2"
+        },
+        {
+          "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+          "sheetNumber": 21,
+          "label": "Grading Plan (1 Of 2)"
+        }
+      ],
+      "resolution": null,
+      "resolutionDetails": null
+    },
+    {
+      "checklistItemId": "CC-2-23",
+      "observation": "Used vision tool to check Sheet 8 (Existing Conditions & Demolition Plan). Vision tool confirmed: 'overhead utility lines are indeed shown. In the Legend: line type designated -OH- labeled as EXISTING OVERHEAD ELECTRIC, symbols defined for EXISTING POWER POLE, EXISTING GUY ANCHOR, and EXISTING LIGHT POLE. On the Drawing: -OH- line type visible running along perimeter streets (Collier Street and Kinney Avenue), specific callout EXISTING OVERHEAD UTILITY LINE TO BE REMOVED, and callout EXISTING LIGHT POLE TO BE REMOVED.' The validation methodology specifies that existing overhead utilities should appear on Existing Conditions, Survey, Overall Site Plan, Utility Plan, or Erosion Control sheets. Reviewed pre-processed data for proposed overhead utilities but found limited proposed overhead infrastructure (most proposed utilities are underground).",
+      "reasoning": "The checklist requirement is 'Overhead utility lines (existing and proposed) not shown on applicable sheets (BAS-14a)'. The validation methodology clarifies these should appear on 'Existing Conditions sheet or Survey / Topographic Survey sheet' for existing, and 'Utility Plan (Proposed) / Composite Utility Plan, Electrical Site Plan, or Franchise Utility Plan' for proposed. Sheet 8 clearly shows existing overhead electric lines with proper symbology, pole locations, and removal callouts. The project appears to be converting overhead utilities to underground (consistent with urban redevelopment), so limited proposed overhead utilities is expected. The requirement to show overhead utilities 'where applicable' is met - existing overhead lines are documented on the Existing Conditions sheet.",
+      "tools_used": [
+        "vision"
+      ],
+      "status": "pass",
+      "explanation": "Existing overhead electric lines, power poles, and guy anchors are shown on Sheet 8 (Existing Conditions) with proper symbology and callouts. Project proposes underground utilities.",
+      "evidenceLocations": [
+        {
+          "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+          "sheetNumber": 8,
+          "label": "Existing Conditions & Demolition Plan (1 Of 2)"
+        }
+      ],
+      "resolution": null,
+      "resolutionDetails": null
+    },
+    {
+      "checklistItemId": "CC-2-24",
+      "observation": "Used vision tool to check Sheet 18 (Overall Utility Plan). Vision tool confirmed: 'underground utility lines (both existing and proposed) are clearly shown. Legend defines: PROPOSED WATER LINE (-W-), PROPOSED WASTEWATER LINE (-WW-), PROPOSED STORM LINE (dashed), PROPOSED UNDERGROUND ELECTRIC LINE (-UGE-). Drawing shows callouts including 12\" WATER MAIN, 8\" WATER LINE, 8\" PVC FIRE LINE, EXISTING 12\" WATER LINE, EXISTING 16\" DI WATERLINE, 12\" PVC WASTEWATER, 12\" WASTEWATER LINE, UNDERGROUND ELECTRIC LINE, and ON-SITE DRAINAGE.' Also reviewed Sheet 8 blocks.md showing existing underground utilities: 8\" water line, 12\" CI water line, 48\" CSC water line, existing wastewater lines, existing storm lines, underground telephone, underground fiberoptics per legend.",
+      "reasoning": "The checklist requirement is 'Underground utility lines (existing and proposed) not shown on applicable sheets (BAS-14b)' with fail status 'warn'. The validation methodology specifies these should appear on 'Existing Conditions sheet or Survey / Topographic Survey sheet' for existing, and 'Utility Plan (Proposed) / Composite Utility Plan' for proposed. Sheet 8 (Existing Conditions) shows all existing underground utilities with complete symbology for water, wastewater, storm, telephone, and fiberoptics. Sheet 18 (Overall Utility Plan) shows comprehensive proposed underground utilities including water, wastewater, storm drain, and underground electric with specific pipe sizes and routing. Both existing and proposed underground utilities are documented on the appropriate sheets.",
+      "tools_used": [
+        "vision"
+      ],
+      "status": "pass",
+      "explanation": "Existing underground utilities shown on Sheet 8 (water, wastewater, storm, telecom, fiberoptics). Proposed underground utilities shown on Sheet 18 (water, wastewater, storm, electric).",
+      "evidenceLocations": [
+        {
+          "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+          "sheetNumber": 8,
+          "label": "Existing Conditions & Demolition Plan (1 Of 2)"
+        },
+        {
+          "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+          "sheetNumber": 18,
+          "label": "Overall Utility Plan"
+        }
+      ],
+      "resolution": null,
+      "resolutionDetails": null
+    }
+  ],
+  "grouping": "cc-2",
+  "summary": "5 of 6 items pass, 1 item fails. Building elevation and plan sheets lack professional seals."
+}

@@ -1,0 +1,32 @@
+{
+  "callId": "20260507T093107227Z-91pp",
+  "startedAt": "2026-05-07T09:31:07.227Z",
+  "completedAt": "2026-05-07T09:31:40.635Z",
+  "inputs": {
+    "checklistItemId": "cc-6:CMP-03",
+    "checklistItemText": "Setbacks adjacent to residential uses or zoning not shown on plans",
+    "question": "Are setback lines adjacent to residential uses or residential zoning shown on this site plan? Look specifically for compatibility setback lines or building setback lines near properties zoned SF-3 or other residential zones.",
+    "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+    "sheetNum": 14,
+    "regionHint": "western property boundary adjacent to SF-3 zoned properties"
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "7a99bffdf9efcc44b8fffdfdcb1341d5e6512304f58b8778bf383e46a441e057",
+    "promptSource": "bureau",
+    "promptSourcePath": "/vercel/sandbox/workspace/bureau/jurisdictions/austin/workflows/completeness-check/prompts/vision-router.md",
+    "output": {
+      "problemType": "drawing_inspect",
+      "reasoning": "The agent is asking whether setback lines (a drawing element/annotation) are shown on the site plan adjacent to residential uses or zones. This is a visual inspection of whether specific lines and their spatial relationships to zoned areas are depicted on the drawing, not a measurement of setback distance or a generic presence/document check.",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "inspect-drawing",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": "/vercel/sandbox/workspace/output/vision-check-calls/20260507T093107227Z-91pp/specialist-inspect-drawing"
+  },
+  "phase": "B"
+}

@@ -1,0 +1,161 @@
+{
+  "callId": "20260507T092955128Z-f1rv",
+  "inputs": {
+    "projectId": "23301a8a-4cdb-4751-ac0c-93b97f0f5c12",
+    "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+    "sheetNum": "15",
+    "question": "Are driveway widths and curb return radii shown on this sheet? Look for width dimensions of driveway openings and radius measurements for curved portions where driveways meet the street.",
+    "expectedAnswerType": "boolean",
+    "cropMode": "drawing",
+    "regionHint": null,
+    "reasoning": "The agent is asking whether width dimensions and radius measurements are annotated/labelled on the drawing itself — a drawing-element inspection task, not a measurement task. The agent is checking for the presence of dimension annotations on driveway features, which is a drawing_inspect problem.",
+    "applicableChecklistItems": [
+      {
+        "checklist_id": "cc-22:CC-22-13",
+        "checklist_deficiency_text": "Driveway widths or curb return radii not shown on plans (DRV-03)"
+      }
+    ],
+    "dpi": 150
+  },
+  "cropResolution": {
+    "bbox": {
+      "x0": 0.034,
+      "y0": 0.028,
+      "x1": 0.915,
+      "y1": 0.9650000000000001
+    },
+    "source": "drawing-block"
+  },
+  "renderResult": {
+    "width": 4758,
+    "height": 3374
+  },
+  "result": {
+    "answerText": "Yes, driveway widths and curb return radii are shown on this sheet. Dimensions such as 22' and 24' denote driveway widths, while callouts like R15', R12', and R29' indicate the curb return radii where driveways meet the street.",
+    "classification": "yes",
+    "count": null,
+    "unanswerable": false,
+    "confidence": 0.95,
+    "evidence": [
+      {
+        "bbox": [
+          461,
+          495,
+          470,
+          507
+        ],
+        "bboxAbsolute": {
+          "x0": 0.47009500000000004,
+          "y0": 0.45995700000000006,
+          "x1": 0.48066699999999996,
+          "y1": 0.46839000000000003
+        },
+        "description": "Driveway width dimension of 22' on Collier Street"
+      },
+      {
+        "bbox": [
+          438,
+          477,
+          447,
+          488
+        ],
+        "bboxAbsolute": {
+          "x0": 0.454237,
+          "y0": 0.4384060000000001,
+          "x1": 0.463928,
+          "y1": 0.44683900000000004
+        },
+        "description": "Curb return radius of R15' on Collier Street driveway"
+      },
+      {
+        "bbox": [
+          433,
+          497,
+          444,
+          512
+        ],
+        "bboxAbsolute": {
+          "x0": 0.47185699999999997,
+          "y0": 0.433721,
+          "x1": 0.48507200000000006,
+          "y1": 0.44402800000000003
+        },
+        "description": "Curb return radius of R12' on Collier Street driveway"
+      },
+      {
+        "bbox": [
+          808,
+          519,
+          823,
+          532
+        ],
+        "bboxAbsolute": {
+          "x0": 0.491239,
+          "y0": 0.7850960000000001,
+          "x1": 0.502692,
+          "y1": 0.7991510000000001
+        },
+        "description": "Driveway width dimension of 24' on South Lamar Boulevard"
+      },
+      {
+        "bbox": [
+          764,
+          511,
+          775,
+          525
+        ],
+        "bboxAbsolute": {
+          "x0": 0.48419100000000004,
+          "y0": 0.7438680000000001,
+          "x1": 0.496525,
+          "y1": 0.754175
+        },
+        "description": "Curb return radius of R29' on South Lamar Boulevard driveway"
+      },
+      {
+        "bbox": [
+          775,
+          523,
+          785,
+          538
+        ],
+        "bboxAbsolute": {
+          "x0": 0.49476300000000006,
+          "y0": 0.754175,
+          "x1": 0.507978,
+          "y1": 0.7635450000000001
+        },
+        "description": "Curb return radius of R15' on South Lamar Boulevard driveway"
+      }
+    ],
+    "reasoning": "I examined the driveway openings along Collier Street and South Lamar Boulevard. At these locations, there are clear dimensional lines across the driveway width (e.g., 22', 24') and 'R' callouts with radius measurements (e.g., R12', R15', R29') pointing to the curved portions of the curbs meeting the street.",
+    "regionHintHonored": null,
+    "_meta": {
+      "callId": "20260507T092955128Z-f1rv",
+      "expectedAnswerType": "boolean",
+      "cropMode": "drawing",
+      "cropResolution": {
+        "bbox": {
+          "x0": 0.034,
+          "y0": 0.028,
+          "x1": 0.915,
+          "y1": 0.9650000000000001
+        },
+        "source": "drawing-block"
+      },
+      "cropBbox": {
+        "x0": 0.034,
+        "y0": 0.028,
+        "x1": 0.915,
+        "y1": 0.9650000000000001
+      },
+      "model": "google/gemini-3.1-pro-preview",
+      "promptLength": 4120,
+      "validationNotes": []
+    }
+  },
+  "timing": {
+    "startedAt": 1778146195130,
+    "finishedAt": 1778146209521
+  }
+}

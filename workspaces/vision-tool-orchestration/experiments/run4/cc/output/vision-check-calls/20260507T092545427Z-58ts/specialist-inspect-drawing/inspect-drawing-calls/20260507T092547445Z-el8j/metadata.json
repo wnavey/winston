@@ -1,0 +1,70 @@
+{
+  "callId": "20260507T092547445Z-el8j",
+  "inputs": {
+    "projectId": "23301a8a-4cdb-4751-ac0c-93b97f0f5c12",
+    "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+    "sheetNum": "13",
+    "question": "Are driveway spacing dimensions shown on this sheet? Look for dimensional annotations showing distances between driveways or from driveways to property lines, intersections, or other reference points.",
+    "expectedAnswerType": "boolean",
+    "cropMode": "drawing",
+    "regionHint": null,
+    "reasoning": "The agent is asking whether dimensional annotations (labels showing distances between driveways) are present and visible on the drawing itself. This is a drawing-element inspection task, not a measurement task—the agent is checking for the presence and visibility of dimension callouts, which is a drawing_inspect responsibility.",
+    "applicableChecklistItems": [
+      {
+        "checklist_id": "cc-22:CC-22-12",
+        "checklist_deficiency_text": "Driveway spacing dimensions not shown on plans (DRV-02)"
+      }
+    ],
+    "dpi": 150
+  },
+  "cropResolution": {
+    "bbox": {
+      "x0": 0.034,
+      "y0": 0.038,
+      "x1": 0.925,
+      "y1": 0.9650000000000001
+    },
+    "source": "drawing-block"
+  },
+  "renderResult": {
+    "width": 4812,
+    "height": 3338
+  },
+  "result": {
+    "answerText": "Driveway spacing dimensions are not shown on this sheet. While there are driveways identified (e.g., 'TYPE II DRIVEWAY'), there are no dimensional annotations indicating the distances between them or to other reference points.",
+    "classification": "no",
+    "count": null,
+    "unanswerable": false,
+    "confidence": 0.95,
+    "evidence": [],
+    "reasoning": "I reviewed the locations where driveways connect to the streets (e.g., along Collier Street). While the driveways are labeled, there are no dimension lines with distance values indicating the spacing between multiple driveways or from a driveway to a property line or intersection.",
+    "regionHintHonored": null,
+    "_meta": {
+      "callId": "20260507T092547445Z-el8j",
+      "expectedAnswerType": "boolean",
+      "cropMode": "drawing",
+      "cropResolution": {
+        "bbox": {
+          "x0": 0.034,
+          "y0": 0.038,
+          "x1": 0.925,
+          "y1": 0.9650000000000001
+        },
+        "source": "drawing-block"
+      },
+      "cropBbox": {
+        "x0": 0.034,
+        "y0": 0.038,
+        "x1": 0.925,
+        "y1": 0.9650000000000001
+      },
+      "model": "google/gemini-3.1-pro-preview",
+      "promptLength": 4134,
+      "validationNotes": []
+    }
+  },
+  "timing": {
+    "startedAt": 1778145947447,
+    "finishedAt": 1778145960529
+  }
+}

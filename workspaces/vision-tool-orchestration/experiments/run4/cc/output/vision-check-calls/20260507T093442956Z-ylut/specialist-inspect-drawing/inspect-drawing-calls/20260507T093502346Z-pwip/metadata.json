@@ -1,0 +1,70 @@
+{
+  "callId": "20260507T093502346Z-pwip",
+  "inputs": {
+    "projectId": "23301a8a-4cdb-4751-ac0c-93b97f0f5c12",
+    "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+    "sheetNum": "37",
+    "question": "Are parking aisle widths and internal driveway widths dimensioned on this sheet? Look for dimension annotations showing the width of the driving aisles between rows of parking and the width of internal circulation driveways within the parking garage.",
+    "expectedAnswerType": "boolean",
+    "cropMode": "drawing",
+    "regionHint": null,
+    "reasoning": "The agent is asking whether dimension annotations are present and visible on the drawing for parking aisle widths and internal driveway widths—this is a drawing-element inspection (checking for labeled dimensions), not a measurement task.",
+    "applicableChecklistItems": [
+      {
+        "checklist_id": "cc-22:CC-22-20",
+        "checklist_deficiency_text": "Parking aisle widths or internal driveway widths not dimensioned (PRK-04)"
+      }
+    ],
+    "dpi": 150
+  },
+  "cropResolution": {
+    "bbox": {
+      "x0": 0.085,
+      "y0": 0.286,
+      "x1": 0.838,
+      "y1": 0.867
+    },
+    "source": "drawing-block"
+  },
+  "renderResult": {
+    "width": 4745,
+    "height": 2615
+  },
+  "result": {
+    "answerText": "No, parking aisle widths and internal driveway widths are not dimensioned on this sheet. While some individual parking stall widths are dimensioned, the widths of the driving aisles between rows of parking are not shown.",
+    "classification": "no",
+    "count": null,
+    "unanswerable": false,
+    "confidence": 0.95,
+    "evidence": [],
+    "reasoning": "A review of the 'RESIDENT PARKING' and 'RETAIL PARKING' areas reveals no dimension lines or annotations indicating the widths of the driving aisles or internal circulation paths. Although some individual parking stalls have width dimensions (e.g., 9'-0\"), the spaces between the rows do not.",
+    "regionHintHonored": null,
+    "_meta": {
+      "callId": "20260507T093502346Z-pwip",
+      "expectedAnswerType": "boolean",
+      "cropMode": "drawing",
+      "cropResolution": {
+        "bbox": {
+          "x0": 0.085,
+          "y0": 0.286,
+          "x1": 0.838,
+          "y1": 0.867
+        },
+        "source": "drawing-block"
+      },
+      "cropBbox": {
+        "x0": 0.085,
+        "y0": 0.286,
+        "x1": 0.838,
+        "y1": 0.867
+      },
+      "model": "google/gemini-3.1-pro-preview",
+      "promptLength": 4184,
+      "validationNotes": []
+    }
+  },
+  "timing": {
+    "startedAt": 1778146502348,
+    "finishedAt": 1778146512201
+  }
+}

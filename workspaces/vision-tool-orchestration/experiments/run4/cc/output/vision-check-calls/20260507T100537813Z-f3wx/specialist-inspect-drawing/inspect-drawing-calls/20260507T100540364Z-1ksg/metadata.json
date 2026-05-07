@@ -1,0 +1,161 @@
+{
+  "callId": "20260507T100540364Z-1ksg",
+  "inputs": {
+    "projectId": "23301a8a-4cdb-4751-ac0c-93b97f0f5c12",
+    "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+    "sheetNum": "14",
+    "question": "Are roadways, drives, and drainage structures shown on this site plan? If yes, are they labeled with names (like \"Collier Street\", \"South Lamar Blvd\", \"driveway\", \"inlet\", etc.)?",
+    "expectedAnswerType": "boolean",
+    "cropMode": "drawing",
+    "regionHint": null,
+    "reasoning": "The agent is asking whether specific features (roadways, drives, drainage structures) are labeled with text annotations on the plan itself—this is a drawing-element inspection task, not a presence-only check. Although the question includes a presence component ('are they shown'), the core compliance requirement and the agent's follow-up focus on whether labels/names are actually annotated on the drawing.",
+    "applicableChecklistItems": [
+      {
+        "checklist_id": "cc-13:AW-46",
+        "checklist_deficiency_text": "Roadways, drives, overpasses, bridges, culverts, drainage structures, or pavers not labeled on plans"
+      }
+    ],
+    "dpi": 150
+  },
+  "cropResolution": {
+    "bbox": {
+      "x0": 0.034,
+      "y0": 0.028,
+      "x1": 0.921,
+      "y1": 0.9650000000000001
+    },
+    "source": "drawing-block"
+  },
+  "renderResult": {
+    "width": 4791,
+    "height": 3374
+  },
+  "result": {
+    "answerText": "Roadways and drainage structures are shown and labeled on the site plan. Roadways are directly labeled with names such as 'Collier Street' and 'Kinney Avenue', while drainage structures like curb and grate inlets are identified via key notes.",
+    "classification": "yes",
+    "count": null,
+    "unanswerable": false,
+    "confidence": 0.95,
+    "evidence": [
+      {
+        "bbox": [
+          168,
+          280,
+          182,
+          381
+        ],
+        "bboxAbsolute": {
+          "x0": 0.28236000000000006,
+          "y0": 0.18541600000000003,
+          "x1": 0.371947,
+          "y1": 0.19853400000000002
+        },
+        "description": "Label for 'Collier Street'"
+      },
+      {
+        "bbox": [
+          344,
+          98,
+          426,
+          112
+        ],
+        "bboxAbsolute": {
+          "x0": 0.120926,
+          "y0": 0.35032800000000003,
+          "x1": 0.13334400000000002,
+          "y1": 0.42716200000000004
+        },
+        "description": "Label for 'Kinney Avenue'"
+      },
+      {
+        "bbox": [
+          730,
+          19,
+          744,
+          82
+        ],
+        "bboxAbsolute": {
+          "x0": 0.050853,
+          "y0": 0.71201,
+          "x1": 0.10673400000000001,
+          "y1": 0.7251280000000001
+        },
+        "description": "Label for 'Nash Avenue'"
+      },
+      {
+        "bbox": [
+          563,
+          744,
+          593,
+          853
+        ],
+        "bboxAbsolute": {
+          "x0": 0.693928,
+          "y0": 0.555531,
+          "x1": 0.7906110000000001,
+          "y1": 0.5836410000000001
+        },
+        "description": "Key notes 2 and 3 labeling 'Proposed Grate Inlet' and 'Proposed Curb Inlet'"
+      },
+      {
+        "bbox": [
+          216,
+          556,
+          234,
+          571
+        ],
+        "bboxAbsolute": {
+          "x0": 0.5271720000000001,
+          "y0": 0.230392,
+          "x1": 0.540477,
+          "y1": 0.24725800000000003
+        },
+        "description": "Key note 3 callout pointing to a proposed curb inlet"
+      },
+      {
+        "bbox": [
+          810,
+          602,
+          825,
+          617
+        ],
+        "bboxAbsolute": {
+          "x0": 0.567974,
+          "y0": 0.7869700000000002,
+          "x1": 0.581279,
+          "y1": 0.801025
+        },
+        "description": "Key note 2 callout pointing to a proposed grate inlet"
+      }
+    ],
+    "reasoning": "The site plan clearly shows major roadways with direct text labels indicating their names. Drainage structures are present and labeled using hexagonal callouts that correspond to the 'Key Notes' table, which lists them by type (e.g., 'Proposed Grate Inlet'). Vehicular paths/drives are visible but rely on context rather than explicit 'driveway' labels.",
+    "regionHintHonored": null,
+    "_meta": {
+      "callId": "20260507T100540364Z-1ksg",
+      "expectedAnswerType": "boolean",
+      "cropMode": "drawing",
+      "cropResolution": {
+        "bbox": {
+          "x0": 0.034,
+          "y0": 0.028,
+          "x1": 0.921,
+          "y1": 0.9650000000000001
+        },
+        "source": "drawing-block"
+      },
+      "cropBbox": {
+        "x0": 0.034,
+        "y0": 0.028,
+        "x1": 0.921,
+        "y1": 0.9650000000000001
+      },
+      "model": "google/gemini-3.1-pro-preview",
+      "promptLength": 4112,
+      "validationNotes": []
+    }
+  },
+  "timing": {
+    "startedAt": 1778148340366,
+    "finishedAt": 1778148366058
+  }
+}

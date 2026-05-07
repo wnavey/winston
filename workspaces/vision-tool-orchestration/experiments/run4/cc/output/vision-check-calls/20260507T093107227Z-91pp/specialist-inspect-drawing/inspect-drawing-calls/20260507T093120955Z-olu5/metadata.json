@@ -1,0 +1,146 @@
+{
+  "callId": "20260507T093120955Z-olu5",
+  "inputs": {
+    "projectId": "23301a8a-4cdb-4751-ac0c-93b97f0f5c12",
+    "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+    "sheetNum": "14",
+    "question": "Are setback lines adjacent to residential uses or residential zoning shown on this site plan? Look specifically for compatibility setback lines or building setback lines near properties zoned SF-3 or other residential zones.",
+    "expectedAnswerType": "boolean",
+    "cropMode": "drawing",
+    "regionHint": "western property boundary adjacent to SF-3 zoned properties",
+    "reasoning": "The agent is asking whether setback lines (a drawing element/annotation) are shown on the site plan adjacent to residential uses or zones. This is a visual inspection of whether specific lines and their spatial relationships to zoned areas are depicted on the drawing, not a measurement of setback distance or a generic presence/document check.",
+    "applicableChecklistItems": [
+      {
+        "checklist_id": "cc-6:CMP-03",
+        "checklist_deficiency_text": "Setbacks adjacent to residential uses or zoning not shown on plans"
+      }
+    ],
+    "dpi": 150
+  },
+  "cropResolution": {
+    "bbox": {
+      "x0": 0.034,
+      "y0": 0.028,
+      "x1": 0.921,
+      "y1": 0.9650000000000001
+    },
+    "source": "drawing-block"
+  },
+  "renderResult": {
+    "width": 4791,
+    "height": 3374
+  },
+  "result": {
+    "answerText": "Yes, there are setback lines shown adjacent to residential zoning on this site plan. A 75' building setback line is noted along the western boundary next to properties zoned SF-3, and multiple compatibility setback lines (10', 25', 50', 75') are shown near the southern boundary adjacent to another SF-3 zoned property.",
+    "classification": "yes",
+    "count": null,
+    "unanswerable": false,
+    "confidence": 0.95,
+    "evidence": [
+      {
+        "bbox": [
+          366,
+          202,
+          389,
+          253
+        ],
+        "bboxAbsolute": {
+          "x0": 0.213174,
+          "y0": 0.37094200000000005,
+          "x1": 0.258411,
+          "y1": 0.39249300000000004
+        },
+        "description": "75' BUILDING SETBACK PER REZONE label adjacent to western SF-3 property"
+      },
+      {
+        "bbox": [
+          695,
+          506,
+          711,
+          560
+        ],
+        "bboxAbsolute": {
+          "x0": 0.482822,
+          "y0": 0.679215,
+          "x1": 0.5307200000000001,
+          "y1": 0.694207
+        },
+        "description": "10' COMPATIBILITY SETBACK LINE label adjacent to southern SF-3 property"
+      },
+      {
+        "bbox": [
+          717,
+          506,
+          730,
+          560
+        ],
+        "bboxAbsolute": {
+          "x0": 0.482822,
+          "y0": 0.699829,
+          "x1": 0.5307200000000001,
+          "y1": 0.71201
+        },
+        "description": "25' COMPATIBILITY SETBACK LINE label adjacent to southern SF-3 property"
+      },
+      {
+        "bbox": [
+          734,
+          505,
+          751,
+          559
+        ],
+        "bboxAbsolute": {
+          "x0": 0.481935,
+          "y0": 0.715758,
+          "x1": 0.5298330000000001,
+          "y1": 0.7316870000000001
+        },
+        "description": "50' COMPATIBILITY SETBACK LINE label adjacent to southern SF-3 property"
+      },
+      {
+        "bbox": [
+          797,
+          495,
+          811,
+          550
+        ],
+        "bboxAbsolute": {
+          "x0": 0.47306499999999996,
+          "y0": 0.7747890000000001,
+          "x1": 0.52185,
+          "y1": 0.7879070000000001
+        },
+        "description": "75' COMPATIBILITY SETBACK LINE label adjacent to southern SF-3 property"
+      }
+    ],
+    "reasoning": "Located properties zoned 'SF-3' on the west and south sides of the project site. Adjacent to the western property boundary, there is a label for a '75' BUILDING SETBACK PER REZONE'. Near the southern boundary adjacent to another SF-3 zoned property, there are labels for 10', 25', 50', and 75' compatibility setback lines.",
+    "regionHintHonored": true,
+    "_meta": {
+      "callId": "20260507T093120955Z-olu5",
+      "expectedAnswerType": "boolean",
+      "cropMode": "drawing",
+      "cropResolution": {
+        "bbox": {
+          "x0": 0.034,
+          "y0": 0.028,
+          "x1": 0.921,
+          "y1": 0.9650000000000001
+        },
+        "source": "drawing-block"
+      },
+      "cropBbox": {
+        "x0": 0.034,
+        "y0": 0.028,
+        "x1": 0.921,
+        "y1": 0.9650000000000001
+      },
+      "model": "google/gemini-3.1-pro-preview",
+      "promptLength": 4480,
+      "validationNotes": []
+    }
+  },
+  "timing": {
+    "startedAt": 1778146280957,
+    "finishedAt": 1778146300603
+  }
+}

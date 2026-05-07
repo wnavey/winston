@@ -1,0 +1,131 @@
+{
+  "callId": "20260507T100336519Z-zrq7",
+  "inputs": {
+    "projectId": "23301a8a-4cdb-4751-ac0c-93b97f0f5c12",
+    "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+    "sheetNum": "18",
+    "question": "On this utility plan sheet, are water and wastewater pipes shown with their sizes (like \"12\\\" or \"8\\\"\"), materials (like \"PVC\" or \"DI\"), and locations relative to property lines or easements? Are any pipes 24 inches or larger shown, and if so, are they depicted as double lines?",
+    "expectedAnswerType": "boolean",
+    "cropMode": "drawing",
+    "regionHint": null,
+    "reasoning": "The agent is asking whether pipe annotations (sizes, materials, locations) and line representations (double lines for ≥24\" pipes) are shown on the drawing itself. This is a drawing-element inspection question, not a measurement or document-presence check.",
+    "applicableChecklistItems": [
+      {
+        "checklist_id": "cc-13:AW-21",
+        "checklist_deficiency_text": "Size, pipe material, or location of W/WW/reclaimed mains not shown with respect to easements/ROW, or pipes >=24 inches not shown as double lines"
+      }
+    ],
+    "dpi": 150
+  },
+  "cropResolution": {
+    "bbox": {
+      "x0": 0.028,
+      "y0": 0.025,
+      "x1": 0.923,
+      "y1": 0.981
+    },
+    "source": "drawing-block"
+  },
+  "renderResult": {
+    "width": 4834,
+    "height": 3442
+  },
+  "result": {
+    "answerText": "Water and wastewater pipes are annotated with their sizes, materials, and locations relative to property lines and easements (e.g., \"12\\\" DI WATER MAIN\" and \"12\\\" PVC WASTEWATER CONNECTION\"). Several existing pipes 24 inches or larger are shown, but they are not all depicted as double lines; an existing 54\" storm drain is shown with double lines, whereas an existing 48\" water line and 24\" storm drain are shown as single lines.",
+    "classification": "partial",
+    "count": null,
+    "unanswerable": false,
+    "confidence": 0.95,
+    "evidence": [
+      {
+        "bbox": [
+          360,
+          245,
+          380,
+          315
+        ],
+        "bboxAbsolute": {
+          "x0": 0.247275,
+          "y0": 0.36916,
+          "x1": 0.309925,
+          "y1": 0.38828
+        },
+        "description": "Label for 12\" DI WATER MAIN showing size and material"
+      },
+      {
+        "bbox": [
+          518,
+          606,
+          545,
+          665
+        ],
+        "bboxAbsolute": {
+          "x0": 0.57037,
+          "y0": 0.520208,
+          "x1": 0.623175,
+          "y1": 0.5460200000000001
+        },
+        "description": "Label for 12\" PVC WASTEWATER CONNECTION showing size and material"
+      },
+      {
+        "bbox": [
+          200,
+          15,
+          230,
+          90
+        ],
+        "bboxAbsolute": {
+          "x0": 0.041425000000000003,
+          "y0": 0.2162,
+          "x1": 0.10855,
+          "y1": 0.24488
+        },
+        "description": "Label and single line for EXISTING 48\" CSC WATER LINE"
+      },
+      {
+        "bbox": [
+          240,
+          805,
+          265,
+          905
+        ],
+        "bboxAbsolute": {
+          "x0": 0.7484750000000001,
+          "y0": 0.25444,
+          "x1": 0.837975,
+          "y1": 0.27834000000000003
+        },
+        "description": "Label and double lines for EXISTING 54\" STORM DRAIN LINE"
+      }
+    ],
+    "reasoning": "The plan includes labels that explicitly state pipe sizes and materials (like DI and PVC) for water and wastewater lines, and they are drawn spatially relative to the site's boundaries and easements. However, large pipes (24 inches or greater) use a mix of linestyles: a 54\" storm drain is represented by double lines, but a 48\" water line is shown as a single line with utility indicators.",
+    "regionHintHonored": null,
+    "_meta": {
+      "callId": "20260507T100336519Z-zrq7",
+      "expectedAnswerType": "boolean",
+      "cropMode": "drawing",
+      "cropResolution": {
+        "bbox": {
+          "x0": 0.028,
+          "y0": 0.025,
+          "x1": 0.923,
+          "y1": 0.981
+        },
+        "source": "drawing-block"
+      },
+      "cropBbox": {
+        "x0": 0.028,
+        "y0": 0.025,
+        "x1": 0.923,
+        "y1": 0.981
+      },
+      "model": "google/gemini-3.1-pro-preview",
+      "promptLength": 4212,
+      "validationNotes": []
+    }
+  },
+  "timing": {
+    "startedAt": 1778148216522,
+    "finishedAt": 1778148244858
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "callId": "20260507T093329942Z-zo39",
+  "startedAt": "2026-05-07T09:33:29.942Z",
+  "completedAt": "2026-05-07T09:34:42.959Z",
+  "inputs": {
+    "checklistItemId": "cc-24:CC-24-15",
+    "checklistItemText": "Plans not submitted or referenced for AULCC when excavations exceed 25 LF in DAPCZ or 300 LF outside DAPCZ (ROW-02)",
+    "question": "On this water and wastewater plan, identify where the property line intersects the utility lines. How much of the proposed water and wastewater piping (WT-01, WT-02, WW-01) is located within the public right-of-way (outside the property line) versus on private property?",
+    "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+    "sheetNum": 19,
+    "regionHint": "Look for where the property line (solid line) crosses the utility alignment drawings in the plan views"
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "7a99bffdf9efcc44b8fffdfdcb1341d5e6512304f58b8778bf383e46a441e057",
+    "promptSource": "bureau",
+    "promptSourcePath": "/vercel/sandbox/workspace/bureau/jurisdictions/austin/workflows/completeness-check/prompts/vision-router.md",
+    "output": {
+      "problemType": "measurement",
+      "reasoning": "The agent is asking for a quantitative determination of how much piping length falls within vs. outside the property line (ROW boundary), which requires plan-view distance/length measurement between the property line and utility features to establish excavation footage in the DAPCZ or outside it—the core compliance trigger for the AULCC requirement.",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "vision",
+    "success": true,
+    "fallbackReason": "measurement_arg_construction_not_implemented",
+    "specialistCallDir": null
+  },
+  "phase": "B"
+}

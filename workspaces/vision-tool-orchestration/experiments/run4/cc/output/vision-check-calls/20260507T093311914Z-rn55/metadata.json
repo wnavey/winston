@@ -1,0 +1,32 @@
+{
+  "callId": "20260507T093311914Z-rn55",
+  "startedAt": "2026-05-07T09:33:11.914Z",
+  "completedAt": "2026-05-07T09:33:29.940Z",
+  "inputs": {
+    "checklistItemId": "cc-22:CC-22-15",
+    "checklistItemText": "Offsets from opposing driveways not dimensioned on undivided street frontage (DRV-05)",
+    "question": "This site fronts South Lamar Boulevard, which is currently a 5-lane undivided street. Are offsets from opposing driveways (driveways on the opposite side of South Lamar) dimensioned on this sheet? Look for dimension lines showing the distance between the site's driveways and driveways on the east side of South Lamar.",
+    "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+    "sheetNum": 15,
+    "regionHint": "South Lamar Boulevard frontage"
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "7a99bffdf9efcc44b8fffdfdcb1341d5e6512304f58b8778bf383e46a441e057",
+    "promptSource": "bureau",
+    "promptSourcePath": "/vercel/sandbox/workspace/bureau/jurisdictions/austin/workflows/completeness-check/prompts/vision-router.md",
+    "output": {
+      "problemType": "drawing_inspect",
+      "reasoning": "The agent is asking whether dimension annotations (offset measurements between opposing driveways) are shown on the drawing itself—a drawing-element inspection task, not a measurement task. The agent is checking for the presence and labeling of dimensions on the plan, not asking the agent to measure the distance.",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "inspect-drawing",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": "/vercel/sandbox/workspace/output/vision-check-calls/20260507T093311914Z-rn55/specialist-inspect-drawing"
+  },
+  "phase": "B"
+}

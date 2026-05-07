@@ -1,0 +1,31 @@
+{
+  "callId": "20260507T093928975Z-nles",
+  "startedAt": "2026-05-07T09:39:28.975Z",
+  "completedAt": "2026-05-07T09:39:43.305Z",
+  "inputs": {
+    "checklistItemId": "cc-22:CC-22-18",
+    "checklistItemText": "Total number of provided parking spaces (vehicle and bicycle) not shown (PRK-02)",
+    "question": "What is the total number of vehicle parking spaces shown in the parking table on this sheet? Look for the total count of all parking spaces provided, including any breakdown by location (garage, surface, public parallel, etc.).",
+    "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+    "sheetNum": 16
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "7a99bffdf9efcc44b8fffdfdcb1341d5e6512304f58b8778bf383e46a441e057",
+    "promptSource": "bureau",
+    "promptSourcePath": "/vercel/sandbox/workspace/bureau/jurisdictions/austin/workflows/completeness-check/prompts/vision-router.md",
+    "output": {
+      "problemType": "generic",
+      "reasoning": "The agent is asking for a table read/data lookup (total count from a parking table), not a drawing inspection or measurement. This is a document-element presence and value check, aligned with the generic category for table reads and label readouts.",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "vision",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": null
+  },
+  "phase": "B"
+}

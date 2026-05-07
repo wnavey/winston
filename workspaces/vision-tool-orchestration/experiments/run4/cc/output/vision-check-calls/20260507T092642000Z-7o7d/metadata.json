@@ -1,0 +1,32 @@
+{
+  "callId": "20260507T092642000Z-7o7d",
+  "startedAt": "2026-05-07T09:26:42.000Z",
+  "completedAt": "2026-05-07T09:28:30.888Z",
+  "inputs": {
+    "checklistItemId": "cc-24:CC-24-04",
+    "checklistItemText": "License Agreement for street trees, landscaping, or irrigation in ROW not submitted or referenced (LDE-04)",
+    "question": "Are there any street trees, landscaping elements, or irrigation systems shown within the public right-of-way (outside the property line) on this planting plan sheet?",
+    "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+    "sheetNum": 51
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "7a99bffdf9efcc44b8fffdfdcb1341d5e6512304f58b8778bf383e46a441e057",
+    "promptSource": "bureau",
+    "promptSourcePath": "/vercel/sandbox/workspace/bureau/jurisdictions/austin/workflows/completeness-check/prompts/vision-router.md",
+    "output": {
+      "problemType": "generic",
+      "reasoning": "The agent is asking a presence/feature-discovery question: does X appear on this sheet at all? This is a preliminary check to identify whether street trees, landscaping, or irrigation exist in the ROW before any license-agreement documentation would be required. This is not a measurement or drawing-annotation task, but rather a feature-presence verification.",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "vision",
+    "success": false,
+    "errorMessage": "DB error fetching plan_set_version: TypeError: fetch failed",
+    "fallbackReason": null,
+    "specialistCallDir": null
+  },
+  "phase": "B"
+}

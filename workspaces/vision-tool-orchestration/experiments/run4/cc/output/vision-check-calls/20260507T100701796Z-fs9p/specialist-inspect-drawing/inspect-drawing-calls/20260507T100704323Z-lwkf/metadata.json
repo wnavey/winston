@@ -1,0 +1,101 @@
+{
+  "callId": "20260507T100704323Z-lwkf",
+  "inputs": {
+    "projectId": "23301a8a-4cdb-4751-ac0c-93b97f0f5c12",
+    "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+    "sheetNum": "18",
+    "question": "Are there easements shown on this utility plan (labeled as \"easement\", \"PUE\", \"utility easement\", etc.)? If yes, do the EXISTING easements show recordation numbers (like \"Vol. 76 Pg. 388\" or \"Doc No. 202300221\"), and do PROPOSED easements show their limits with labels like \"proposed\" or \"to be dedicated\"?",
+    "expectedAnswerType": "boolean",
+    "cropMode": "drawing",
+    "regionHint": null,
+    "reasoning": "The agent is asking whether easement labels, recordation numbers, and limit annotations are present and legible on the drawing itself—this is annotation and symbol inspection on the plan, not a measurement task. The presence check (\"are there easements shown\") is secondary to the core question of whether required text labels appear on the drawing.",
+    "applicableChecklistItems": [
+      {
+        "checklist_id": "cc-13:AW-27",
+        "checklist_deficiency_text": "Recorded easement recordation numbers (volume/page) not shown for existing easements, or proposed easement limits not indicated"
+      }
+    ],
+    "dpi": 150
+  },
+  "cropResolution": {
+    "bbox": {
+      "x0": 0.028,
+      "y0": 0.025,
+      "x1": 0.923,
+      "y1": 0.981
+    },
+    "source": "drawing-block"
+  },
+  "renderResult": {
+    "width": 4834,
+    "height": 3442
+  },
+  "result": {
+    "answerText": "Easements are shown on the plan, but they do not follow the specified labeling conventions. The labeled easements have blank document numbers and are not explicitly labeled as 'proposed' or 'to be dedicated'.",
+    "classification": "no",
+    "count": null,
+    "unanswerable": false,
+    "confidence": 0.95,
+    "evidence": [
+      {
+        "bbox": [
+          537,
+          334,
+          558,
+          411
+        ],
+        "bboxAbsolute": {
+          "x0": 0.32693000000000005,
+          "y0": 0.5383720000000001,
+          "x1": 0.395845,
+          "y1": 0.558448
+        },
+        "description": "Label for 'VARIABLE WIDTH WATER LINE VAULT EASEMENT' with a blank document number and no 'proposed' text."
+      },
+      {
+        "bbox": [
+          498,
+          563,
+          517,
+          608
+        ],
+        "bboxAbsolute": {
+          "x0": 0.5318849999999999,
+          "y0": 0.501088,
+          "x1": 0.57216,
+          "y1": 0.5192519999999999
+        },
+        "description": "Label for 'WASTEWATER EASEMENT' with a blank document number and no 'proposed' text."
+      }
+    ],
+    "reasoning": "The plan includes labels for easements, such as a water line vault easement and a wastewater easement. However, these labels feature blank document numbers (e.g., 'DOC NO. _______') which suggests they are to be recorded, yet they lack explicit text identifying them as 'proposed' or 'to be dedicated'. I could not locate any existing easements labeled with completed recordation numbers.",
+    "regionHintHonored": null,
+    "_meta": {
+      "callId": "20260507T100704323Z-lwkf",
+      "expectedAnswerType": "boolean",
+      "cropMode": "drawing",
+      "cropResolution": {
+        "bbox": {
+          "x0": 0.028,
+          "y0": 0.025,
+          "x1": 0.923,
+          "y1": 0.981
+        },
+        "source": "drawing-block"
+      },
+      "cropBbox": {
+        "x0": 0.028,
+        "y0": 0.025,
+        "x1": 0.923,
+        "y1": 0.981
+      },
+      "model": "google/gemini-3.1-pro-preview",
+      "promptLength": 4240,
+      "validationNotes": []
+    }
+  },
+  "timing": {
+    "startedAt": 1778148424325,
+    "finishedAt": 1778148447315
+  }
+}

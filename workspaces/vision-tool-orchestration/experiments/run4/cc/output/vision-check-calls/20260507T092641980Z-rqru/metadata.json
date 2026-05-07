@@ -1,0 +1,31 @@
+{
+  "callId": "20260507T092641980Z-rqru",
+  "startedAt": "2026-05-07T09:26:41.980Z",
+  "completedAt": "2026-05-07T09:27:00.051Z",
+  "inputs": {
+    "checklistItemId": "cc-22:CC-22-12",
+    "checklistItemText": "Driveway spacing dimensions not shown on plans (DRV-02)",
+    "question": "Are driveway spacing dimensions shown on this sheet? Look for dimensional annotations showing distances between driveways or from driveways to intersections, property lines, or other reference points.",
+    "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+    "sheetNum": 14
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "7a99bffdf9efcc44b8fffdfdcb1341d5e6512304f58b8778bf383e46a441e057",
+    "promptSource": "bureau",
+    "promptSourcePath": "/vercel/sandbox/workspace/bureau/jurisdictions/austin/workflows/completeness-check/prompts/vision-router.md",
+    "output": {
+      "problemType": "drawing_inspect",
+      "reasoning": "The agent is asking whether dimensional annotations (labels showing distances between driveways) are present and visible on the drawing itself. This is a drawing-element inspection task, not a measurement task—the agent is checking for the presence and visibility of dimension callouts, which is a drawing_inspect responsibility.",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "inspect-drawing",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": "/vercel/sandbox/workspace/output/vision-check-calls/20260507T092641980Z-rqru/specialist-inspect-drawing"
+  },
+  "phase": "B"
+}

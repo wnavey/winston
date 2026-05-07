@@ -1,0 +1,146 @@
+{
+  "callId": "20260507T092804784Z-dsjl",
+  "inputs": {
+    "projectId": "23301a8a-4cdb-4751-ac0c-93b97f0f5c12",
+    "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+    "sheetNum": "14",
+    "question": "Are building entrances, doors, entry points, or access points labeled on this site plan sheet? Look for labels like \"building entrance\", \"main entrance\", \"entry\", or numbered callouts pointing to entrance locations.",
+    "expectedAnswerType": "boolean",
+    "cropMode": "drawing",
+    "regionHint": null,
+    "reasoning": "The agent is asking whether labels or callouts identifying building entrances and access points are present and visible on the site plan drawing itself—this is a drawing-element annotation check, not a document-presence or feature-discovery question.",
+    "applicableChecklistItems": [
+      {
+        "checklist_id": "cc-5:ADR-04",
+        "checklist_deficiency_text": "Main front entrance, building doors, entries, and access points not labeled on site plan"
+      }
+    ],
+    "dpi": 150
+  },
+  "cropResolution": {
+    "bbox": {
+      "x0": 0.034,
+      "y0": 0.028,
+      "x1": 0.921,
+      "y1": 0.9650000000000001
+    },
+    "source": "drawing-block"
+  },
+  "renderResult": {
+    "width": 4791,
+    "height": 3374
+  },
+  "result": {
+    "answerText": "Yes, building entrances are labeled on the site plan. They are identified by numbered callouts (Key Note 7) and a specific triangle symbol defined in the legend as \"PROPOSED BUILDING ENTRANCE\".",
+    "classification": "yes",
+    "count": null,
+    "unanswerable": false,
+    "confidence": 0.95,
+    "evidence": [
+      {
+        "bbox": [
+          634,
+          749,
+          645,
+          853
+        ],
+        "bboxAbsolute": {
+          "x0": 0.6983630000000001,
+          "y0": 0.6220580000000001,
+          "x1": 0.7906110000000001,
+          "y1": 0.6323650000000001
+        },
+        "description": "Key Note 7 defining 'PROPOSED BUILDING ENTRANCE'"
+      },
+      {
+        "bbox": [
+          239,
+          410,
+          253,
+          421
+        ],
+        "bboxAbsolute": {
+          "x0": 0.39766999999999997,
+          "y0": 0.25194300000000003,
+          "x1": 0.407427,
+          "y1": 0.26506100000000005
+        },
+        "description": "Numbered callout (Hexagon 7) indicating an entrance"
+      },
+      {
+        "bbox": [
+          239,
+          446,
+          252,
+          457
+        ],
+        "bboxAbsolute": {
+          "x0": 0.42960200000000004,
+          "y0": 0.25194300000000003,
+          "x1": 0.43935900000000006,
+          "y1": 0.264124
+        },
+        "description": "Numbered callout (Hexagon 7) indicating an entrance"
+      },
+      {
+        "bbox": [
+          427,
+          471,
+          441,
+          484
+        ],
+        "bboxAbsolute": {
+          "x0": 0.451777,
+          "y0": 0.42809900000000006,
+          "x1": 0.46330799999999994,
+          "y1": 0.441217
+        },
+        "description": "Numbered callout (Hexagon 7) indicating an entrance in the courtyard"
+      },
+      {
+        "bbox": [
+          735,
+          846,
+          748,
+          965
+        ],
+        "bboxAbsolute": {
+          "x0": 0.784402,
+          "y0": 0.7166950000000001,
+          "x1": 0.889955,
+          "y1": 0.7288760000000001
+        },
+        "description": "Legend entry for 'PROPOSED BUILDING ENTRANCE'"
+      }
+    ],
+    "reasoning": "The Key Notes table explicitly defines hexagon callout 7 as 'PROPOSED BUILDING ENTRANCE'. These numbered callouts are placed at multiple locations along the building perimeter, pointing to entrance points. Additionally, the Legend provides a specific symbol (a small triangle pointing to a line) for 'PROPOSED BUILDING ENTRANCE', which is also used at these locations.",
+    "regionHintHonored": null,
+    "_meta": {
+      "callId": "20260507T092804784Z-dsjl",
+      "expectedAnswerType": "boolean",
+      "cropMode": "drawing",
+      "cropResolution": {
+        "bbox": {
+          "x0": 0.034,
+          "y0": 0.028,
+          "x1": 0.921,
+          "y1": 0.9650000000000001
+        },
+        "source": "drawing-block"
+      },
+      "cropBbox": {
+        "x0": 0.034,
+        "y0": 0.028,
+        "x1": 0.921,
+        "y1": 0.9650000000000001
+      },
+      "model": "google/gemini-3.1-pro-preview",
+      "promptLength": 4149,
+      "validationNotes": []
+    }
+  },
+  "timing": {
+    "startedAt": 1778146084786,
+    "finishedAt": 1778146110816
+  }
+}

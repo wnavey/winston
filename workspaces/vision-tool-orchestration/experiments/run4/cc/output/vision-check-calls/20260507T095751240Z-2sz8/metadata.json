@@ -1,0 +1,31 @@
+{
+  "callId": "20260507T095751240Z-2sz8",
+  "startedAt": "2026-05-07T09:57:51.240Z",
+  "completedAt": "2026-05-07T09:58:12.122Z",
+  "inputs": {
+    "checklistItemId": "cc-24:CC-24-13",
+    "checklistItemText": "Required License or Encroachment Agreement application not submitted or referenced on plans (LDE-13)",
+    "question": "Does this site plan show any building overhangs, balconies, or other building elements that extend beyond the property line into the public right-of-way?",
+    "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+    "sheetNum": 13
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "7a99bffdf9efcc44b8fffdfdcb1341d5e6512304f58b8778bf383e46a441e057",
+    "promptSource": "bureau",
+    "promptSourcePath": "/vercel/sandbox/workspace/bureau/jurisdictions/austin/workflows/completeness-check/prompts/vision-router.md",
+    "output": {
+      "problemType": "generic",
+      "reasoning": "The agent is asking a presence/feature-identification question: do building elements extending into the ROW exist on this plan at all? This is a preliminary visual scan for the existence of encroaching features, not a measurement of clearance or an annotation inspection. The checklist requirement concerns whether a License/Encroachment Agreement is referenced, but the agent's narrower question is simply feature presence—a prerequisite check before any measurement or document-reference verification would occur.",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "vision",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": null
+  },
+  "phase": "B"
+}
