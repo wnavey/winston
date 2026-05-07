@@ -8,6 +8,23 @@
 **Wall-clock duration:** 14 min 17 sec
 **Smoke test, runs=1 originally, bumped to runs=3** for parity with `VISION_CHECK_REVIEW_EL_MD_EXP_BASELINE_V2`.
 
+> **Resolutions since this run** *(2026-05-07)*
+>
+> - **Finding #1 below** (review workflow missing the inspect-drawing
+>   script) closed by [bureau#310](https://github.com/noetic-inc/bureau/pull/310).
+>   The script + impl + prompt template were duplicated into
+>   `review/scripts/` and `review/prompts/inspect-drawing/`. Future
+>   review-side experiment runs will actually dispatch drawing_inspect
+>   instead of falling back via `specialist_script_not_found_in_bureau`.
+> - **Companion change** in [conductor#147](https://github.com/noetic-inc/conductor/pull/147)
+>   adds an `enabledVisionSpecialists` allow-list input that gates
+>   dispatch. Lets future review-side runs do ablations like "vision_check
+>   with inspect-drawing disabled" cleanly via a new
+>   `fallbackReason: specialist_disabled` (distinguishable from the
+>   missing-script and deferred-impl reasons).
+> - Run 1's findings still characterize the *pre-fix* state. Re-fire
+>   to measure the post-fix state when ready.
+
 ---
 
 ## TL;DR

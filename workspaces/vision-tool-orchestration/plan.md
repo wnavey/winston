@@ -622,21 +622,43 @@ flow.
 is back online; `inngest_trigger` and Supabase queries are both
 working from this dev machine.
 
-#### Phase D — runs status (2026-05-06)
+#### Phase D — runs status (updated 2026-05-07)
 
-| Run | `runLabel` | Inngest event | `workflow_runs.id` | Status |
-|---|---|---|---|---|
-| CC experiment run 1 (local) | n/a | local conductor | n/a | done — see [`experiments/run1/analytics/analysis.md`](experiments/run1/analytics/analysis.md) |
-| CC baseline | `VISION_CHECK_CC_BASELINE` | `01KQYYG6G4JHPRMGK0WK9CAWYZ` | `1cea1a70-5860-4068-bd25-e67ce5529eee` | in_progress — kickoff state in [`experiments/baseline/cc-kickoff.md`](experiments/baseline/cc-kickoff.md) |
-| Review baseline (el-md-exp) | `VISION_CHECK_REVIEW_EL_MD_EXP_BASELINE` | `01KQZ1X0NMDDZ6E4SA3P1S3Q1E` | `300eb8a1-9bb1-4257-a88a-745bf696b805` | in_progress — kickoff state in [`experiments/baseline/review-kickoff.md`](experiments/baseline/review-kickoff.md) |
-| CC experiment run 2 | `VISION_CHECK_CC_RUN_2` | (pending bureau PR #301 merge) | — | not yet fired |
-| Review experiment run 1 | `VISION_CHECK_REVIEW_EL_MD_EXP_RUN_1` | (pending bureau PR #301 merge) | — | not yet fired |
+| Run | `runLabel` | Status | Notes |
+|---|---|---|---|
+| CC experiment run 1 (local) | n/a | done | [`experiments/run1/analytics/analysis.md`](experiments/run1/analytics/analysis.md) — workflowPath bug, all dispatches fell back to generic |
+| CC baseline | `VISION_CHECK_CC_BASELINE` | done | runs=3, vision-only tool list. [`experiments/baseline/cc/analytics/analysis.md`](experiments/baseline/cc/analytics/analysis.md) |
+| Review baseline (el-md-exp) | `VISION_CHECK_REVIEW_EL_MD_EXP_BASELINE` | done | runs=3 |
+| Review baseline v2 (el-md-exp, agent trace) | `VISION_CHECK_REVIEW_EL_MD_EXP_BASELINE_V2` | done | runs=3, `logAllAgentTrace=true` (silently failed — see TODO in memory) |
+| CC experiment run 2 | `VISION_CHECK_CC_RUN_2` | timed out | runs=3 hit the 3-hour Inngest cap; no artifacts |
+| CC experiment run 3 | `VISION_CHECK_CC_RUN_3` | done | runs=1, post-bureau#301 + new schema. [`experiments/run3/analytics/analysis.md`](experiments/run3/analytics/analysis.md) — Cluster A+B routing fix verified 6/6 |
+| CC experiment run 4 | `VISION_CHECK_CC_RUN_4` | done | runs=1, post-prompt-trim (bureau#306). [`experiments/run4/analytics/analysis.md`](experiments/run4/analytics/analysis.md) — items called doubled 31→63 vs run 3 |
+| Review experiment run 1 (el-md-exp) | `VISION_CHECK_REVIEW_EL_MD_EXP_RUN_1` | done | runs=3, smoke test on review side. [`experiments/run1-review/el-md-exp/analytics/analysis.md`](experiments/run1-review/el-md-exp/analytics/analysis.md) — surfaced missing inspect-drawing script (now resolved by bureau#310) |
 
-**Open prompt change in flight:** [bureau PR #301](https://github.com/noetic-inc/bureau/pull/301)
-adds dimension/bearing anchors to the classifier router to fix
-Failure Mode 2 misroutes. Targets ~6 of 12 misroutes in run1 (Cluster
-A + B). See [`experiments/run1/analytics/failure-mode-2.md`](experiments/run1/analytics/failure-mode-2.md)
-for the full deep dive.
+**Bureau / conductor changes that landed during this thread:**
+
+| PR | Repo | Effect |
+|---|---|---|
+| [bureau#301](https://github.com/noetic-inc/bureau/pull/301) | bureau | Dimension/bearing anchors in vision-router.md (Cluster A+B fix) |
+| [bureau#303](https://github.com/noetic-inc/bureau/pull/303) | bureau | inspect-drawing logs full drawing-block distribution per call |
+| [bureau#305](https://github.com/noetic-inc/bureau/pull/305) | bureau | Rewrite vision-router for canonical+question; agent guidance |
+| [bureau#306](https://github.com/noetic-inc/bureau/pull/306) | bureau | Trim experiment review.md (drop "Tips for phrasing", simplify question field) |
+| [bureau#307](https://github.com/noetic-inc/bureau/pull/307) | bureau | cc workflow `maxWorkers` is now an input (default 13) |
+| [bureau#310](https://github.com/noetic-inc/bureau/pull/310) | bureau | Duplicate inspect-drawing into review/scripts; add `enabledVisionSpecialists` input on cc + review |
+| [conductor#145](https://github.com/noetic-inc/conductor/pull/145) | conductor | workflowPath bug fix (drawing_inspect actually dispatches) |
+| [conductor#146](https://github.com/noetic-inc/conductor/pull/146) | conductor | vision_check schema: separate canonical text, agent question, item id |
+| [conductor#147](https://github.com/noetic-inc/conductor/pull/147) | conductor | dispatch.ts gates by `enabledVisionSpecialists` allow-list |
+
+**Pending PRs (not blocking experiment progression):**
+
+- [bureau#308](https://github.com/noetic-inc/bureau/pull/308) — checklistVersion default v1 → v2.5-trimmed (cosmetic)
+
+**Outstanding TODOs** (saved to project memory for next-session pickup):
+
+- **HIGHEST PRIORITY:** baseline `vision` tool prompt-traceability gap. Standalone `vision` tool writes only `{event, documentId, sheetNum, success, timestamp}` per call — no agent prompt, no checklist item attribution. Blocks any clean baseline-vs-experiment analysis on the review side.
+- `logAllAgentTrace=true` silently fails on the production review.md path (works on the experiment overlay path). Schema/template-renderer interaction bug. Closing it would unblock part of the prompt-traceability gap.
+- Measure-distance dispatch is still deferred (Phase B follow-up). Every measurement-routed call falls back to generic. Wiring this up unlocks specialist execution measurement on review-side runs.
+- 4 stubborn CC inspect-drawing-required misses (AW-28, AW-39, CC-19-05, CC-19-19) — agent leaves these on the table even after the prompt trim; likely needs review-guide-level help, not prompt-level.
 
 For each fired run capture:
 
