@@ -1,0 +1,31 @@
+{
+  "callId": "20260507T120800768Z-2bb9",
+  "startedAt": "2026-05-07T12:08:00.768Z",
+  "completedAt": "2026-05-07T12:08:37.320Z",
+  "inputs": {
+    "checklistItemId": "el-md-exp:EL-1.7",
+    "checklistItemText": "Surveyed elevations and locations of overhead conductors not included on building elevation sheets to demonstrate required clearances are met",
+    "question": "Are there any building elevation sheets shown in this site plan set that display surveyed overhead conductor locations and elevations with clearance dimensions?",
+    "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+    "sheetNum": 1
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "bbe3e2c3853a0e27678a44756a99ab9273ab9d6e35434514264491fdcdf65164",
+    "promptSource": "bureau",
+    "promptSourcePath": "/vercel/sandbox/workspace/bureau/jurisdictions/austin/workflows/review/prompts/vision-router.md",
+    "output": {
+      "problemType": "generic",
+      "reasoning": "The agent is asking whether building elevation sheets exist in the plan set and whether they display overhead conductor information — this is a sheet-discovery and document-presence check, not a measurement or drawing-inspection task. The actual clearance verification (measurement) would come only after confirming these sheets are present.",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "vision",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": null
+  },
+  "phase": "B"
+}

@@ -1,0 +1,31 @@
+{
+  "callId": "20260507T120431142Z-6pfx",
+  "startedAt": "2026-05-07T12:04:31.142Z",
+  "completedAt": "2026-05-07T12:04:49.058Z",
+  "inputs": {
+    "checklistItemId": "el-md-exp:EL-13.1",
+    "checklistItemText": "Transformer pads lack minimum 5-foot clearance from buildings, structures, and building foundations",
+    "question": "Are transformer pads shown on the electrical plan? If so, what are their locations and what horizontal clearances (in feet) are shown from transformer pads to buildings, structures, or building foundations?",
+    "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+    "sheetNum": 21
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "bbe3e2c3853a0e27678a44756a99ab9273ab9d6e35434514264491fdcdf65164",
+    "promptSource": "bureau",
+    "promptSourcePath": "/vercel/sandbox/workspace/bureau/jurisdictions/austin/workflows/review/prompts/vision-router.md",
+    "output": {
+      "problemType": "measurement",
+      "reasoning": "The agent question explicitly asks for 'horizontal clearances (in feet)' from transformer pads to buildings/structures, which is a direct measurement task. While the question begins with a presence check ('Are transformer pads shown'), the primary and substantive request is quantitative clearance measurement, which aligns with the checklist requirement's 5-foot minimum clearance compliance check.",
+      "confidence": 0.92,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "vision",
+    "success": true,
+    "fallbackReason": "measurement_arg_construction_not_implemented",
+    "specialistCallDir": null
+  },
+  "phase": "B"
+}

@@ -1,0 +1,31 @@
+{
+  "callId": "20260507T120628782Z-j5a7",
+  "startedAt": "2026-05-07T12:06:28.782Z",
+  "completedAt": "2026-05-07T12:07:00.000Z",
+  "inputs": {
+    "checklistItemId": "el-md-exp:EL-13.10",
+    "checklistItemText": "Transformer pad hot-stick use area (access door side) lacks minimum 10-foot clearance to open area or adjacent building/structure",
+    "question": "Looking at the transformer pad locations on the electrical plan, which side of each pad appears to be the access door side (typically the side facing open area for maintenance), and is there visible evidence of at least 10 feet of clearance from buildings or structures?",
+    "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+    "sheetNum": 21
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "bbe3e2c3853a0e27678a44756a99ab9273ab9d6e35434514264491fdcdf65164",
+    "promptSource": "bureau",
+    "promptSourcePath": "/vercel/sandbox/workspace/bureau/jurisdictions/austin/workflows/review/prompts/vision-router.md",
+    "output": {
+      "problemType": "measurement",
+      "reasoning": "Although the agent question begins with a sub-feature identification (which side is the access door), the core compliance question and the agent's actual intent is to verify the 10-foot clearance distance from buildings/structures. The agent is asking for both identification AND clearance verification in a single question, making the measurement task the primary routing target.",
+      "confidence": 0.85,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "vision",
+    "success": true,
+    "fallbackReason": "measurement_arg_construction_not_implemented",
+    "specialistCallDir": null
+  },
+  "phase": "B"
+}

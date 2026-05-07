@@ -1,0 +1,32 @@
+{
+  "callId": "20260507T120441868Z-5vwo",
+  "startedAt": "2026-05-07T12:04:41.868Z",
+  "completedAt": "2026-05-07T12:05:02.166Z",
+  "inputs": {
+    "checklistItemId": "el-md-exp:EL-1.1",
+    "checklistItemText": "Buildings and permanent structures do not maintain minimum 7 feet 6 inches horizontal sky-to-ground clearance from overhead electric conductors",
+    "question": "Are overhead electric utility lines, poles, or conductors shown on this sheet? If yes, describe their locations and any clearance dimensions shown.",
+    "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+    "sheetNum": 4,
+    "regionHint": "entire property, along utility easements marked on survey"
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "bbe3e2c3853a0e27678a44756a99ab9273ab9d6e35434514264491fdcdf65164",
+    "promptSource": "bureau",
+    "promptSourcePath": "/vercel/sandbox/workspace/bureau/jurisdictions/austin/workflows/review/prompts/vision-router.md",
+    "output": {
+      "problemType": "generic",
+      "reasoning": "The agent is performing a presence and sheet-discovery check (does OHE appear on this sheet, and where?), not yet measuring clearance distances. The checklist requirement is about clearance compliance, but the agent question is narrower—it's asking whether OHE features exist and are labeled on the plan, which is a prerequisite step before any clearance measurement can occur.",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "vision",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": null
+  },
+  "phase": "B"
+}
