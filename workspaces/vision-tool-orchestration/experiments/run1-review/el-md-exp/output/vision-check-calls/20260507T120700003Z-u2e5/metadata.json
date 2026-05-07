@@ -1,0 +1,31 @@
+{
+  "callId": "20260507T120700003Z-u2e5",
+  "startedAt": "2026-05-07T12:07:00.003Z",
+  "completedAt": "2026-05-07T12:07:29.277Z",
+  "inputs": {
+    "checklistItemId": "el-md-exp:EL-13.25",
+    "checklistItemText": "Transformer pads lack minimum 12-inch horizontal and vertical clearance from other underground utilities (except gas, fuel, steam)",
+    "question": "Are utility lines (water, wastewater, storm drain) shown relative to the transformer pad locations on the electrical plan? If so, what clearances appear to be provided between the transformer pads and these utilities?",
+    "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+    "sheetNum": 21
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "bbe3e2c3853a0e27678a44756a99ab9273ab9d6e35434514264491fdcdf65164",
+    "promptSource": "bureau",
+    "promptSourcePath": "/vercel/sandbox/workspace/bureau/jurisdictions/austin/workflows/review/prompts/vision-router.md",
+    "output": {
+      "problemType": "measurement",
+      "reasoning": "The agent question is asking for both presence/identification of utilities AND the actual clearance distances between transformer pads and those utilities. The second part—'what clearances appear to be provided'—is a direct measurement question that maps to the checklist requirement's 12-inch clearance threshold. While the question begins with a presence check, the primary intent is to measure clearances.",
+      "confidence": 0.92,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "vision",
+    "success": true,
+    "fallbackReason": "measurement_arg_construction_not_implemented",
+    "specialistCallDir": null
+  },
+  "phase": "B"
+}

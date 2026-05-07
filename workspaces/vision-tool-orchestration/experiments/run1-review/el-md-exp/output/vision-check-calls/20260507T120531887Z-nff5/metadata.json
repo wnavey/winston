@@ -1,0 +1,32 @@
+{
+  "callId": "20260507T120531887Z-nff5",
+  "startedAt": "2026-05-07T12:05:31.887Z",
+  "completedAt": "2026-05-07T12:05:56.337Z",
+  "inputs": {
+    "checklistItemId": "el-md-exp:EL-2.1",
+    "checklistItemText": "Non-utility-compatible trees proposed within 15 lateral feet of overhead electric distribution conductor or equipment",
+    "question": "Looking at the landscape plan, the trees marked with \"M\" (mitigation trees) near the overhead electric line on the south edge - what are their specific species, and how close are they to the overhead electric conductor line?",
+    "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+    "sheetNum": 31,
+    "regionHint": "south edge of property where OHE line is marked"
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "bbe3e2c3853a0e27678a44756a99ab9273ab9d6e35434514264491fdcdf65164",
+    "promptSource": "bureau",
+    "promptSourcePath": "/vercel/sandbox/workspace/bureau/jurisdictions/austin/workflows/review/prompts/vision-router.md",
+    "output": {
+      "problemType": "measurement",
+      "reasoning": "Although the agent asks for species identification (a generic/drawing_inspect element), the primary and compliance-critical question is 'how close are they to the overhead electric conductor line?' — a direct distance measurement against the 15-foot lateral clearance requirement. The species question is secondary context; the routing must prioritize the clearance measurement.",
+      "confidence": 0.92,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "vision",
+    "success": true,
+    "fallbackReason": "measurement_arg_construction_not_implemented",
+    "specialistCallDir": null
+  },
+  "phase": "B"
+}
