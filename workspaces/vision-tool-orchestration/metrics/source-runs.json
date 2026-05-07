@@ -1,0 +1,226 @@
+{
+  "schemaVersion": "1.0",
+  "lastUpdated": "2026-05-07",
+  "purpose": "Source-of-truth tracker for the 6 runs (3 variants × 2 sets) feeding the vision-check phase-1 metrics. Each entry pins the run identifiers, submission, tooling, artifacts, and known issues so the per-variant TSV builds and analysis.md stay traceable.",
+  "successCriteria": {
+    "A": "var2 overall vision invocation hit rate >= var1's, on items where TSV 1 expects vision",
+    "B": "var2 specialist selection rate >= var1's, on items expected to use a specialist"
+  },
+  "variants": {
+    "ctrl-baseline": "Generic vision tool only (production prompt, no experiment overlay).",
+    "var1-bifurcated-vision-tools": "Generic vision + direct specialist (inspect-drawing for cc, measure-distance for review). Agent picks.",
+    "var2-vision-specialist-routing": "vision_check only (semantic-search-blocks also exposed). Internal classifier dispatches to generic / specialist."
+  },
+  "statusValues": {
+    "current": "Run is done, TSV is built, data is canonical for this cell.",
+    "needs-rerun": "Run is done but has a known confounder (e.g. runs=1 vs runs=3) that should be retired before the headline number is final. Current TSV is usable as a placeholder.",
+    "needs-tsv-build": "Run is done; TSV not yet built into the metrics/ tree.",
+    "missing-ids": "Run was fired but the canonical IDs (workflow_runs.id, etc.) aren't recorded in this tracker yet — Supabase lookup pending.",
+    "pending": "Run hasn't been fired."
+  },
+  "buckets": [
+    {
+      "set": "cc",
+      "setLabel": "Completeness Check + Inspect Drawing",
+      "variant": "ctrl-baseline",
+      "status": "current",
+      "runLabel": "VISION_CHECK_CC_BASELINE",
+      "workflowRunsId": "1cea1a70-5860-4068-bd25-e67ce5529eee",
+      "reviewId": null,
+      "inngestEventId": "01KQYYG6G4JHPRMGK0WK9CAWYZ",
+      "inngestFunctionRun": "01KQYYG6VSE0Z648NXXWXS8PM3",
+      "startedAt": "2026-05-06T15:29:23Z",
+      "wallClockMinutes": null,
+      "workflow": "completeness-check",
+      "experimentOverlay": null,
+      "submission": {
+        "name": "1700 S. Lamar v2",
+        "projectId": "23301a8a-4cdb-4751-ac0c-93b97f0f5c12",
+        "submissionVersionId": "eb67ee21-76b1-4065-b20d-c32f674add12"
+      },
+      "checklistOrGuide": "v2.5-trimmed",
+      "runs": 3,
+      "agentTools": ["vision"],
+      "model": null,
+      "bureauCommit": null,
+      "artifactsPath": "winston/workspaces/vision-tool-orchestration/experiments/baseline/cc/output/",
+      "metricsTsvPath": "metrics/cc/ctrl-baseline-vision-invocation/per-item.tsv",
+      "kickoffDoc": "winston/workspaces/vision-tool-orchestration/experiments/baseline/cc-kickoff.md",
+      "notes": [
+        "Production prompt (no experiment overlay).",
+        "Vision tool prompt-traceability gap: vision-log.jsonl only records {event, documentId, sheetNum, success, timestamp} — no prompt or item attribution. Item attribution comes via per-finding tools_used."
+      ]
+    },
+    {
+      "set": "cc",
+      "setLabel": "Completeness Check + Inspect Drawing",
+      "variant": "var1-bifurcated-vision-tools",
+      "status": "current",
+      "runLabel": "VISION_EXP_INSPECT_DRAWING_RUN_1",
+      "workflowRunsId": "386b040b-3f75-47ab-af5c-26e8f6b74e9b",
+      "reviewId": "51586bce-e7d8-4fce-834d-4437abe0df1a",
+      "inngestEventId": null,
+      "startedAt": "2026-05-04T19:08:00Z",
+      "wallClockMinutes": null,
+      "workflow": "completeness-check",
+      "experimentOverlay": "inspect-drawing",
+      "submission": {
+        "name": "1700 S. Lamar v2",
+        "projectId": "23301a8a-4cdb-4751-ac0c-93b97f0f5c12",
+        "submissionVersionId": "eb67ee21-76b1-4065-b20d-c32f674add12"
+      },
+      "checklistOrGuide": "v2.5-trimmed",
+      "runs": 3,
+      "agentTools": ["vision", "inspect-drawing"],
+      "model": "claude-sonnet-4-5-20250929",
+      "bureauCommit": "c98bcc995 (wrapped-structured-output fix)",
+      "artifactsPath": "winston/workspaces/inspect-drawing-tool/experiments/run1/output/",
+      "metricsTsvPath": "metrics/cc/var1-bifurcated-vision-tools/per-item.tsv",
+      "kickoffDoc": "winston/workspaces/inspect-drawing-tool/experiments/run1/README.md",
+      "notes": [
+        "tools_used does NOT track inspect-drawing entries (known agent SDK / build-review-comments bug). Workaround: read inspect-drawing-calls/<callId>/metadata.json directly for inspect-drawing attribution.",
+        "Sparse specialist usage: 3 inspect-drawing calls total, all in run-1, on AW-21 + AW-23.",
+        "On AW-23/run-1, inspect-drawing returned classification=yes (flow arrows present) but the agent's finding contradicted it using vision and finalized status=fail. Tool-integration fragility flagged."
+      ]
+    },
+    {
+      "set": "cc",
+      "setLabel": "Completeness Check + Inspect Drawing",
+      "variant": "var2-vision-specialist-routing",
+      "status": "needs-rerun",
+      "rerunReason": "runs=1 vs ctrl/var1 runs=3. Strict-majority threshold is more demanding at runs=3 — re-fire at runs=3 to retire the confounder before the headline Goal A comparison is final.",
+      "runLabel": "VISION_CHECK_CC_RUN_4",
+      "workflowRunsId": "5d804242-861c-43ab-adfd-00e9af3757e2",
+      "reviewId": null,
+      "inngestEventId": null,
+      "startedAt": "2026-05-07T09:24:00Z",
+      "wallClockMinutes": 56,
+      "workflow": "completeness-check",
+      "experimentOverlay": "vision-check",
+      "submission": {
+        "name": "1700 S. Lamar v2",
+        "projectId": "23301a8a-4cdb-4751-ac0c-93b97f0f5c12",
+        "submissionVersionId": "eb67ee21-76b1-4065-b20d-c32f674add12"
+      },
+      "checklistOrGuide": "v2.5-trimmed",
+      "runs": 1,
+      "agentTools": ["vision_check", "semantic-search-blocks"],
+      "model": null,
+      "bureauCommit": "post bureau#306 (prompt-trim merged 2026-05-07)",
+      "artifactsPath": "winston/workspaces/vision-tool-orchestration/experiments/run4/cc/output/",
+      "metricsTsvPath": "metrics/cc/var2-vision-specialist-routing/per-item.tsv",
+      "kickoffDoc": null,
+      "analysisDoc": "winston/workspaces/vision-tool-orchestration/experiments/run4/analytics/analysis.md",
+      "notes": [
+        "Source of truth for var2 attribution is vision-check-calls/<callId>/metadata.json (precise per-call dispatch detail).",
+        "115 total vision_check calls across the run; 63 unique items invoked; 35 items routed to generic, 28 to inspect-drawing.",
+        "1 measurement-routed call fell back to generic via measurement_arg_construction_not_implemented (measurement dispatch deferred at conductor level).",
+        "No misuse: 0 calls on no-tool items."
+      ]
+    },
+    {
+      "set": "el-md-exp",
+      "setLabel": "Review + Measure Distance",
+      "variant": "ctrl-baseline",
+      "status": "needs-tsv-build",
+      "runLabel": "VISION_CHECK_REVIEW_EL_MD_EXP_BASELINE_V2",
+      "workflowRunsId": null,
+      "reviewId": "224279d8-4827-44cd-a15b-1f034496dac2",
+      "inngestEventId": null,
+      "startedAt": null,
+      "wallClockMinutes": null,
+      "workflow": "review",
+      "experimentOverlay": null,
+      "submission": {
+        "name": "Valley View Townhomes v2",
+        "projectId": null,
+        "submissionVersionId": "48f705aa-39cc-44a5-8128-2898c4a2cb7f"
+      },
+      "checklistOrGuide": "el-md-exp",
+      "runs": 3,
+      "agentTools": ["vision"],
+      "model": null,
+      "bureauCommit": null,
+      "artifactsPath": "winston/workspaces/vision-tool-orchestration/experiments/baseline/review/output/",
+      "metricsTsvPath": null,
+      "kickoffDoc": "winston/workspaces/vision-tool-orchestration/experiments/baseline/review-kickoff.md",
+      "notes": [
+        "BASELINE_V2 was a re-fire of the original BASELINE (workflow_runs.id 300eb8a1-9bb1-4257-a88a-745bf696b805, runLabel VISION_CHECK_REVIEW_EL_MD_EXP_BASELINE) with logAllAgentTrace=true added. The trace flag silently failed on the production review.md path — see project memory log_all_agent_trace_baseline_path_bug.md. The hit-rate data is still usable.",
+        "V2 IDs (workflow_runs.id, inngest event) need Supabase lookup — fill in when convenient.",
+        "Vision tool prompt-traceability gap applies here too (same as cc ctrl-baseline)."
+      ]
+    },
+    {
+      "set": "el-md-exp",
+      "setLabel": "Review + Measure Distance",
+      "variant": "var1-bifurcated-vision-tools",
+      "status": "needs-tsv-build",
+      "runLabel": "experiment-run7.2",
+      "alternateRunLabel": "experiment-run7",
+      "workflowRunsId": null,
+      "reviewId": null,
+      "inngestEventId": null,
+      "startedAt": "2026-04-15T~",
+      "wallClockMinutes": null,
+      "workflow": "review",
+      "experimentOverlay": "measure-distance",
+      "submission": {
+        "name": "Valley View Townhomes v1",
+        "projectId": null,
+        "submissionVersionId": "55fb6548-814f-4287-bc4a-6018b756d730"
+      },
+      "checklistOrGuide": "el-md-exp",
+      "runs": 3,
+      "agentTools": ["vision", "measure-distance"],
+      "model": null,
+      "bureauCommit": null,
+      "artifactsPath": "winston/workspaces/measure-distance-tool/runs/v5.0/el-md-exp/experiment-run7.2/",
+      "alternateArtifactsPath": "winston/workspaces/measure-distance-tool/runs/v5.0/el-md-exp/experiment-run7/",
+      "metricsTsvPath": null,
+      "kickoffDoc": null,
+      "analysisDoc": "winston/workspaces/measure-distance-tool/analysis/rigorous-metrics/experiment-run7.2.md",
+      "notes": [
+        "**Submission-version mismatch with ctrl-baseline:** experiment-run7 / 7.2 ran on Valley View Townhomes v1 (`55fb6548-...`) while ctrl-baseline ran on Valley View v2 (`48f705aa-...`). Apples-to-apples comparison requires either re-firing var1 on v2 or re-firing ctrl on v1.",
+        "Two near-identical runs available (run7 and run7.2). Pick run7.2 by default — slightly higher recall (13.1% vs 12.4%) and the canonical reference for plan.md's 'aspirational ceiling' quote.",
+        "Existing rigorous-metrics analysis at the analysisDoc path computes per-(item × run) recall against the el-md-exp/item-classification.json ground truth — use the same join when building the var1 TSV.",
+        "Workflow_runs.id, review_id, inngest event IDs need Supabase lookup."
+      ]
+    },
+    {
+      "set": "el-md-exp",
+      "setLabel": "Review + Measure Distance",
+      "variant": "var2-vision-specialist-routing",
+      "status": "needs-rerun",
+      "rerunReason": "Pre-bureau#310 (review/scripts/inspect-drawing.ts wasn't present); 24/24 drawing_inspect-routed calls fell back to generic via specialist_script_not_found_in_bureau. Re-fire post-bureau#310 + post conductor measurement-dispatch wiring for usable specialist execution data.",
+      "runLabel": "VISION_CHECK_REVIEW_EL_MD_EXP_RUN_1",
+      "workflowRunsId": "b7015e80-c771-4f9e-a149-2adffc5723df",
+      "reviewId": "cab91833-f951-45cb-b9a1-ee59591faede",
+      "inngestEventId": null,
+      "startedAt": "2026-05-07T~",
+      "wallClockMinutes": 14,
+      "workflow": "review",
+      "experimentOverlay": "vision-check",
+      "submission": {
+        "name": "Valley View Townhomes v2",
+        "projectId": null,
+        "submissionVersionId": "48f705aa-39cc-44a5-8128-2898c4a2cb7f"
+      },
+      "checklistOrGuide": "el-md-exp",
+      "runs": 3,
+      "agentTools": ["vision_check", "semantic-search-blocks"],
+      "model": null,
+      "bureauCommit": "pre bureau#310",
+      "artifactsPath": "winston/workspaces/vision-tool-orchestration/experiments/run1-review/el-md-exp/output/",
+      "metricsTsvPath": null,
+      "kickoffDoc": null,
+      "analysisDoc": "winston/workspaces/vision-tool-orchestration/experiments/run1-review/el-md-exp/analytics/analysis.md",
+      "notes": [
+        "Originally fired runs=1 as a smoke test, then bumped to runs=3 for parity with BASELINE_V2.",
+        "59 total vision_check calls; routing: 24 drawing_inspect + 20 generic + 15 measurement.",
+        "Every drawing_inspect call fell back to generic (specialist_script_not_found_in_bureau) — review/scripts/inspect-drawing.ts didn't exist yet; bureau#310 fixed it.",
+        "Every measurement call fell back to generic (measurement_arg_construction_not_implemented) — conductor dispatch chain still pending.",
+        "Hit-rate data is usable for invocation analysis; specialist execution data is unusable until post-bureau#310 re-fire."
+      ]
+    }
+  ]
+}
