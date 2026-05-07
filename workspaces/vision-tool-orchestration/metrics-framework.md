@@ -69,9 +69,21 @@ Built by lifting + normalizing existing classifications:
 
 Updated only when the checklist content itself changes.
 
-### TSVs 2–4 — invocation hit rate per variant (long format)
+### TSVs 2–4 — invocation hit rate per variant
 
-One row per (item × run). Schema:
+Each variant produces **two TSVs** in its directory:
+
+- **`per-item-run.tsv` (raw, long format).** One row per (item × run).
+  Source-of-truth for the variant's measurements.
+- **`per-item.tsv` (aggregated).** One row per item. Derived from
+  `per-item-run.tsv` by applying the majority-vote rule below.
+
+**All headline metrics (Goal A, Goal B) are computed against the
+aggregated TSV.** The raw per-(item × run) TSV is preserved so we can
+re-aggregate, debug variance, or change the aggregation rule without
+re-pulling artifacts.
+
+#### `per-item-run.tsv` schema (raw)
 
 | Column | Type | Notes |
 |---|---|---|
@@ -90,6 +102,17 @@ The `tool_called` enum collapses 3 cases:
 This keeps a single column shape across all 3 variants, with the
 `vision-check-*` prefix marking that the call went through the router.
 
+#### `per-item.tsv` schema (aggregated)
+
+| Column | Type | Notes |
+|---|---|---|
+| `item_id` | string | Joins to TSV 1. |
+| `runs_total` | int | How many runs of this variant produced data for this item. |
+| `runs_called` | int | How many of those runs had `tool_called != "none"`. |
+| `total_calls` | int | Sum of `call_count` across runs. |
+| `vision_invoked` | yes \| no | **Strict majority vote:** `2 × runs_called > runs_total`. Ties fail. |
+| `tool_called` | none \| generic-vision \| inspect-drawing \| measure-distance \| vision-check-* | If `vision_invoked = yes`, the most-voted tool among calling runs. Otherwise `none`. |
+
 > **TSV 2 prompt-capture deferred.** The baseline `vision` tool currently
 > logs only `{event, documentId, sheetNum, success, timestamp}` — no
 > prompt, no per-call checklist item attribution. We can still derive
@@ -97,15 +120,38 @@ This keeps a single column shape across all 3 variants, with the
 > `applicableChecklistItems`. Prompt-level analysis stays a TODO; iter-1
 > hit-rate proof doesn't need it.
 
+## Aggregation rule (locked-in 2026-05-07)
+
+**Strict majority vote across runs.** An item is "vision invoked" when
+`2 × runs_called > runs_total`. Ties (e.g. 1 of 2 runs) fail.
+
+| `runs_total` | Threshold for "invoked" |
+|---|---|
+| 1 | ≥1 of 1 |
+| 2 | ≥2 of 2 (1/2 fails the tie) |
+| 3 | ≥2 of 3 |
+
+This rule lets TSVs with different run counts (e.g. var2 cc run-4 was
+`runs=1`) plug into the same metrics pipeline without changing the
+math. We aspire to `runs=3` everywhere for variance reasons but won't
+block headline numbers on it.
+
 ## How the TSVs answer A and B
 
-- **A** (overall hit rate, per variant) = `(# (item × run) cells where tool_called != "none") / (# (item × run) cells where TSV 1 says expected_vision = yes)`.
-  Computed for ctrl, var1, var2 independently. Need var2 ≥ var1.
-- **B** (specialist selection rate, per variant) = `(# (item × run) cells where tool_called matches TSV 1's expected_specialist) / (# (item × run) cells where TSV 1 says expected_specialist != none and != generic)`.
-  Computed for var1 and var2. Need var2 ≥ var1.
+All formulas operate on the **aggregated** `per-item.tsv` (post majority
+vote), joined against the static TSV 1 (`expected.tsv`). One row per
+item.
+
+- **A** (overall hit rate, per variant) = `(# items where vision_invoked=yes) / (# items where TSV 1 says expected_vision=yes)`.
+  Computed for ctrl, var1, var2 independently. Need **var2 ≥ var1**.
+- **B** (specialist selection rate, per variant) = `(# items where tool_called matches TSV 1's expected_specialist) / (# items where TSV 1 says expected_specialist is a named specialist — i.e. inspect-drawing or measure-distance)`.
+  Computed for var1 and var2. Need **var2 ≥ var1**.
 
 For B, the `vision-check-<specialist>` cases count as matching the
 specialist (the routing path is irrelevant to the selection question).
+The `expected_specialist=generic` items are excluded from B's
+denominator — they need vision but not a specialist, so they aren't a
+specialist-selection test.
 
 ## Storage layout
 
@@ -117,15 +163,21 @@ metrics/
       source.md            # which classification got lifted, normalization notes
     ctrl-baseline-vision-invocation/
       runs.md              # source runs (run IDs, labels, dates) feeding this variant
-      per-item-run.tsv     # the long-format TSV described above
-      scripts/             # analysis scripts that produced per-item-run.tsv
+      per-item-run.tsv     # raw long-format TSV (per item × run)
+      per-item.tsv         # aggregated TSV (post majority-vote)
+      goal-a.md            # variant's headline goal-A breakdown
+      scripts/             # build.py (raw) + aggregate.py (post-vote)
     var1-bifurcated-vision-tools/
       runs.md
       per-item-run.tsv
+      per-item.tsv
+      goal-a.md
       scripts/
     var2-vision-specialist-routing/
       runs.md
       per-item-run.tsv
+      per-item.tsv
+      goal-a.md
       scripts/
   el-md-exp/
     ...same structure...
@@ -156,11 +208,11 @@ those raw paths and emit the per-item-run.tsv summaries above.
 ## Locked-in decisions (2026-05-07)
 
 - 3 variants named `ctrl-baseline` / `var1-bifurcated-vision-tools` / `var2-vision-specialist-routing`.
-- 4 TSVs per set: `expected-vision-selection` (static, 1 per set) + per-(item × run) hit rate TSV per variant (3 per set). 8 TSVs total.
-- Long format for variant TSVs (item × run rows, single file per variant).
+- 4 TSVs per set (8 total): `expected-vision-selection` (static, 1 per set) + per-variant hit-rate data (3 per set). Each variant ships **two** TSVs: raw `per-item-run.tsv` (long format, per item × run) + aggregated `per-item.tsv` (post majority-vote).
 - TSV 1 lifted + normalized from existing classifications, not re-LLM-built.
-- TSV 2 ships without per-call prompts; prompt capture stays an open TODO.
-- Goals A (overall hit rate) and B (specialist selection rate). var2 ≥ var1.
+- Per-call prompt capture deferred (open TODO; not blocking hit-rate proof).
+- **Aggregation rule: strict majority vote across runs** (`2 × runs_called > runs_total`; ties fail). Applies uniformly across variants regardless of `runs_total`. All headline metrics (A, B) are reported post-aggregation, against `per-item.tsv`.
+- Goals A (overall hit rate) and B (specialist selection rate). **var2 ≥ var1**.
 - Specialist execution accuracy explicitly out of scope for iter 1.
 
 ## Related
