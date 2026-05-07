@@ -1,0 +1,146 @@
+{
+  "callId": "20260507T093615638Z-tp5u",
+  "inputs": {
+    "projectId": "23301a8a-4cdb-4751-ac0c-93b97f0f5c12",
+    "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+    "sheetNum": "14",
+    "question": "In the planting zone along Collier Street (shown in the ROW area), are the tree symbols labeled as \"proposed\" or \"existing\"? Look at the symbols and any nearby labels or legend references to determine if these are new trees to be planted or existing trees to remain.",
+    "expectedAnswerType": "boolean",
+    "cropMode": "drawing",
+    "regionHint": "Along Collier Street in the 5' planting zone between street and sidewalk",
+    "reasoning": "The agent is asking whether tree symbols in a specific drawing area are labeled or annotated with status designations ('proposed' vs 'existing'). This is a drawing-element inspection task (symbol interpretation and label reading on the plan), not a document-presence check or measurement. The checklist requirement concerns submission/reference of a license agreement, but the agent's narrower question is about visual annotation on the planting plan itself.",
+    "applicableChecklistItems": [
+      {
+        "checklist_id": "cc-24:CC-24-04",
+        "checklist_deficiency_text": "License Agreement for street trees, landscaping, or irrigation in ROW not submitted or referenced (LDE-04)"
+      }
+    ],
+    "dpi": 150
+  },
+  "cropResolution": {
+    "bbox": {
+      "x0": 0.034,
+      "y0": 0.028,
+      "x1": 0.921,
+      "y1": 0.9650000000000001
+    },
+    "source": "drawing-block"
+  },
+  "renderResult": {
+    "width": 4791,
+    "height": 3374
+  },
+  "result": {
+    "answerText": "The tree symbols along Collier Street are not individually labeled as 'proposed' or 'existing'. However, because they are located within the designated '5' PLANTING ZONE' and use a plain circle symbol—distinct from the scalloped 'EXISTING TREE TO REMAIN' symbol in the legend—they represent new trees to be planted.",
+    "classification": null,
+    "count": null,
+    "unanswerable": false,
+    "confidence": 0.95,
+    "evidence": [
+      {
+        "bbox": [
+          228,
+          417,
+          242,
+          432
+        ],
+        "bboxAbsolute": {
+          "x0": 0.403879,
+          "y0": 0.24163600000000002,
+          "x1": 0.417184,
+          "y1": 0.25475400000000004
+        },
+        "description": "Proposed tree symbol in planting zone"
+      },
+      {
+        "bbox": [
+          225,
+          455,
+          239,
+          470
+        ],
+        "bboxAbsolute": {
+          "x0": 0.437585,
+          "y0": 0.238825,
+          "x1": 0.45089,
+          "y1": 0.25194300000000003
+        },
+        "description": "Proposed tree symbol in planting zone"
+      },
+      {
+        "bbox": [
+          225,
+          499,
+          239,
+          514
+        ],
+        "bboxAbsolute": {
+          "x0": 0.47661299999999995,
+          "y0": 0.238825,
+          "x1": 0.48991799999999996,
+          "y1": 0.25194300000000003
+        },
+        "description": "Proposed tree symbol in planting zone"
+      },
+      {
+        "bbox": [
+          221,
+          538,
+          235,
+          553
+        ],
+        "bboxAbsolute": {
+          "x0": 0.511206,
+          "y0": 0.235077,
+          "x1": 0.5245110000000001,
+          "y1": 0.248195
+        },
+        "description": "Proposed tree symbol in planting zone"
+      },
+      {
+        "bbox": [
+          230,
+          578,
+          244,
+          593
+        ],
+        "bboxAbsolute": {
+          "x0": 0.546686,
+          "y0": 0.24351000000000003,
+          "x1": 0.559991,
+          "y1": 0.256628
+        },
+        "description": "Proposed tree symbol in planting zone"
+      }
+    ],
+    "reasoning": "The question is phrased as an A/B question rather than a true yes/no question, so the classification is left null. Examining the '5' PLANTING ZONE' along Collier Street, there are plain circular symbols representing trees. While they lack explicit text labels, their placement in a planting zone and their visual difference from the 'EXISTING TREE TO REMAIN' legend symbol (which has a scalloped edge) indicate they are proposed trees.",
+    "regionHintHonored": true,
+    "_meta": {
+      "callId": "20260507T093615638Z-tp5u",
+      "expectedAnswerType": "boolean",
+      "cropMode": "drawing",
+      "cropResolution": {
+        "bbox": {
+          "x0": 0.034,
+          "y0": 0.028,
+          "x1": 0.921,
+          "y1": 0.9650000000000001
+        },
+        "source": "drawing-block"
+      },
+      "cropBbox": {
+        "x0": 0.034,
+        "y0": 0.028,
+        "x1": 0.921,
+        "y1": 0.9650000000000001
+      },
+      "model": "google/gemini-3.1-pro-preview",
+      "promptLength": 4535,
+      "validationNotes": []
+    }
+  },
+  "timing": {
+    "startedAt": 1778146575641,
+    "finishedAt": 1778146622618
+  }
+}

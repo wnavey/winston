@@ -1,0 +1,86 @@
+{
+  "findings": [
+    {
+      "checklistItemId": "AE-01",
+      "observation": "Semantic search found Austin Energy standard notes on Sheet 5 with high relevance (0.706803). Read Sheet 5, Block 7 which contains a notes block titled 'AUSTIN ENERGY STANDARD NOTES' with 5 numbered notes covering: (1) tree pruning rights and LDC Chapter 25-8 compliance, (2) easement and access provisions for electric facilities and Chapter 25-8 compliance, (3) owner responsibility for temporary erosion control, revegetation, tree protection, and tree work within 10 feet of overhead electrical facilities, (4) owner responsibility for maintaining NESC, OSHA, City of Austin, and Texas state law clearances near overhead power lines with service contingent on compliance, and (5) relocation costs. The first 4 notes semantically match the required template notes from the Notes and Templates DOCX with approximately 95% fidelity. Note 5 regarding relocation costs is an additional note not part of the required 4.",
+      "reasoning": "The checklist requires 4 specific Austin Energy notes covering tree pruning/easement rights, easement/access obligations, erosion control responsibilities, and NESC/OSHA clearance maintenance. The validation methodology specifies ~90% semantic threshold—notes do not need to be character-for-character identical but must preserve substantive meaning and regulatory references. The notes on Sheet 5 Block 7 contain all 4 required topics with all key regulatory citations intact (Chapter 25-8, NESC, OSHA, City rules, Texas laws). Minor wording variations (e.g., 'THE OWNER/DEVELOPER OF THIS SUBDIVISION/LOT' vs. template's similar phrasing) do not alter regulatory substance. The presence of a 5th note about relocation costs does not constitute a deficiency—it's an addition, not a modification of required content. All 4 required notes are present with substantive meaning preserved.",
+      "tools_used": [
+        "semantic-search-blocks"
+      ],
+      "status": "pass",
+      "explanation": "All 4 required Austin Energy standard notes present on Sheet 5 with ~95% semantic match to template; substantive meaning and regulatory citations preserved.",
+      "evidenceLocations": [
+        {
+          "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+          "label": "General Notes Sheet",
+          "sheetNumber": 5
+        }
+      ],
+      "resolution": null,
+      "resolutionDetails": null
+    },
+    {
+      "checklistItemId": "AE-02",
+      "observation": "Semantic search identified Sheet 8 and Sheet 9 (Existing Conditions & Demolition Plan) legends containing 'EXISTING OVERHEAD ELECTRIC', 'EXISTING ELECTRIC MANHOLE', 'EXISTING ELECTRIC METER', 'EXISTING POWER POLE' symbols. Vision check on Sheet 9 confirmed: (1) Legend explicitly defines existing electric infrastructure symbols including overhead electric (line type -OH-), electric manholes, electric meters, power poles, guy anchors, and light poles; (2) Plan shows overhead electric lines running along S Lamar Blvd and Collier St; (3) Text annotations identify 'ABANDONED UNDERGROUND ELECTRIC LINE TO BE REMOVED', 'EXISTING ELECTRIC METERS TO BE REMOVED' (multiple locations), and 'EXISTING ELECTRIC AND TELEPHONE EASEMENT VOL. 9594, PG. 696 TO BE RELEASED'. Existing electric facilities (both overhead and underground) are depicted on the demolition/existing conditions plan sheets.",
+      "reasoning": "The checklist item requires existing electric utility facilities (overhead and underground) to be shown on plan sheets. The vision model confirmed with high confidence that Sheet 9 depicts existing electric infrastructure through legend symbols, line types, and explicit text annotations identifying existing overhead lines, underground lines, meters, and manholes. The requirement does not specify a particular sheet—only that facilities must be shown 'on plan sheets'. Sheet 9 is the appropriate sheet for existing conditions and shows both overhead (via -OH- line type along streets) and underground (via annotations about abandoned underground electric) facilities. This satisfies the completeness check requirement that existing electric utilities be depicted for downstream review.",
+      "tools_used": [
+        "semantic-search-blocks",
+        "vision"
+      ],
+      "status": "pass",
+      "explanation": "Existing electric facilities (overhead and underground) shown on Sheet 9 with legend symbols, overhead line routing along streets, and annotations identifying existing meters and underground lines.",
+      "evidenceLocations": [
+        {
+          "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+          "label": "Existing Conditions & Demolition Plan (2 of 2)",
+          "sheetNumber": 9
+        },
+        {
+          "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+          "label": "Existing Conditions & Demolition Plan (1 Of 2)",
+          "sheetNumber": 8
+        }
+      ],
+      "resolution": null,
+      "resolutionDetails": null
+    },
+    {
+      "checklistItemId": "AE-03",
+      "observation": "Semantic search identified multiple sheets with proposed electric infrastructure symbols in legends. Vision check on Sheet 14 (Dimensional Control & Site Plan 1 Of 2) confirmed: Key Note 6 'PROPOSED TRANSFORMER' with hexagonal callout pointing to transformer pad inside 'VARIABLE WIDTH ELECTRIC CLEARANCE' area on north side near Collier Street; Key Note 9 'PROPOSED ELECTRICAL PULL BOX' at three locations (two near transformer, one south side of building); Legend contains 'PROPOSED OVERHEAD ELECTRIC LINE', 'PROPOSED ELECTRIC POLE', 'PROPOSED ELECTRIC MANHOLE', 'PROPOSED TRANSFORMER' symbols. Vision check on Sheet 18 (Overall Utility Plan) confirmed: Proposed transformer (square with 'T') near NW corner of building labeled 'PROPOSED TRANSFORMER'; Underground electric lines (dashed -UGE-) running along southern and western boundaries labeled 'UNDERGROUND ELECTRIC LINE (SEE PLANS BY OTHERS)'; Electric manholes (square with 'E') along UGE routes; Electric pull boxes (square with nested square) including '48\" ELECTRIC PULL BOX'; Legend confirms all symbols.",
+      "reasoning": "The checklist requires proposed electric utility facilities to be shown on plan sheets. Vision checks on Sheets 14 and 18 confirmed comprehensive depiction of proposed electric infrastructure including transformers, underground electric lines (UGE), electric manholes, pull boxes, and overhead electric line symbols in legends. Sheet 14 shows site plan with transformer location and electrical pull boxes via keynotes. Sheet 18 shows overall utility routing with underground electric lines, manholes, and pull boxes with explicit labels and leader lines. The note 'SEE PLANS BY OTHERS' on Sheet 18 indicates coordination with separate electrical plans but does not constitute absence—the routing and major components are shown on the civil site plan as required for completeness review. Multiple sheets depicting proposed electric facilities ensures downstream reviewers can verify service routing, conflicts, and clearances.",
+      "tools_used": [
+        "semantic-search-blocks",
+        "vision"
+      ],
+      "status": "pass",
+      "explanation": "Proposed electric facilities shown on Sheets 14 and 18 including transformers, underground electric lines, electric manholes, and pull boxes with legend symbols and explicit labels.",
+      "evidenceLocations": [
+        {
+          "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+          "label": "Dimensional Control & Site Plan 1 Of 2",
+          "sheetNumber": 14
+        },
+        {
+          "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+          "label": "Overall Utility Plan",
+          "sheetNumber": 18
+        }
+      ],
+      "resolution": null,
+      "resolutionDetails": null
+    },
+    {
+      "checklistItemId": "AEGB-02",
+      "observation": "Reviewed facts.md which shows site zoning: Tract 1 (3.44 ac) = CS-V-DB90 (Commercial Services, Vertical Mixed Use, Density Bonus 90); Tract 2 (0.16 ac) = CS-V-CO (Commercial Services, Vertical Mixed Use, Conditional Overlay); Tract 3 (1.61 ac) = CS-V-CO (Commercial Services, Vertical Mixed Use, Conditional Overlay). Facts.md explicitly states 'Downtown Austin: Not in downtown district' (line 71). None of the three parcels are zoned CBD (Central Business District) or DMU (Downtown Mixed Use). The grouping file states AEGB-02 condition is 'If zoned CBD or DMU' and that the LOI is required 'for sites zoned CBD (Central Business District) or DMU (Downtown Mixed Use)' per LDC § 25-2-593(B).",
+      "reasoning": "The checklist item condition is explicitly 'If zoned CBD or DMU'. The site is zoned CS-V-DB90 and CS-V-CO across its three tracts—neither CBD nor DMU base zoning is present. The grouping overview confirms the LOI requirement applies to 'sites zoned CBD or DMU under Downtown Design' and cites LDC § 25-2-593(B). The facts confirm the site is 'Not in downtown district'. The CS-V-DB90 zoning indicates the site is participating in the Density Bonus 90 program (which has its own AEGB star rating requirements as a gatekeeper per the overview), but that program trigger does not convert the base zoning to CBD/DMU nor does it invoke the specific LOI requirement tied to CBD/DMU Downtown Design zoning. The condition is not met; therefore the item is not applicable to this site plan.",
+      "tools_used": [],
+      "status": "not-applicable",
+      "explanation": "Site is zoned CS-V-DB90 and CS-V-CO; not zoned CBD or DMU. Condition 'If zoned CBD or DMU' is not met.",
+      "evidenceLocations": [],
+      "resolution": null,
+      "resolutionDetails": null
+    }
+  ],
+  "grouping": "cc-10",
+  "summary": "3 of 4 items pass, 0 items fail, 1 item not-applicable."
+}

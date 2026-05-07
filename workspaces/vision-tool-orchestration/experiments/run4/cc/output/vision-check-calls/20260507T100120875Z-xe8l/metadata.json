@@ -1,0 +1,31 @@
+{
+  "callId": "20260507T100120875Z-xe8l",
+  "startedAt": "2026-05-07T10:01:20.875Z",
+  "completedAt": "2026-05-07T10:01:32.696Z",
+  "inputs": {
+    "checklistItemId": "cc-24:CC-24-04",
+    "checklistItemText": "License Agreement for street trees, landscaping, or irrigation in ROW not submitted or referenced (LDE-04)",
+    "question": "Looking at the Plant Legend, what types of trees are proposed? Are any specifically labeled as 'street trees' or 'proposed street trees'?",
+    "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+    "sheetNum": 51
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "7a99bffdf9efcc44b8fffdfdcb1341d5e6512304f58b8778bf383e46a441e057",
+    "promptSource": "bureau",
+    "promptSourcePath": "/vercel/sandbox/workspace/bureau/jurisdictions/austin/workflows/completeness-check/prompts/vision-router.md",
+    "output": {
+      "problemType": "drawing_inspect",
+      "reasoning": "The agent is asking whether specific label annotations ('street trees' or 'proposed street trees') appear on the Plant Legend in the drawing. This is a drawing-element inspection task (checking for presence of text labels and their associations with plant symbols), not a document-presence check or generic feature identification.",
+      "confidence": 0.92,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "inspect-drawing",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": "/vercel/sandbox/workspace/output/vision-check-calls/20260507T100120875Z-xe8l/specialist-inspect-drawing"
+  },
+  "phase": "B"
+}

@@ -1,0 +1,101 @@
+{
+  "callId": "20260507T095732235Z-450b",
+  "inputs": {
+    "projectId": "23301a8a-4cdb-4751-ac0c-93b97f0f5c12",
+    "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+    "sheetNum": "14",
+    "question": "Looking at the site plan, are proposed bike racks (marked with key note \"1\") located outside the property line in the right-of-way, or are they on private property?",
+    "expectedAnswerType": "boolean",
+    "cropMode": "drawing",
+    "regionHint": null,
+    "reasoning": "The agent is asking whether a marked feature (bike racks with key note '1') is spatially located inside or outside the property line boundary as shown on the drawing. This requires visual reasoning about the spatial relationship between the bike rack symbol and the property line annotation on the plan—a drawing_inspect task—rather than a precise measurement or a document/table lookup.",
+    "applicableChecklistItems": [
+      {
+        "checklist_id": "cc-24:CC-24-03",
+        "checklist_deficiency_text": "License Agreement for streetscape elements in ROW (awnings, canopies, benches, bike racks, trash) not submitted or referenced (LDE-03)"
+      }
+    ],
+    "dpi": 150
+  },
+  "cropResolution": {
+    "bbox": {
+      "x0": 0.034,
+      "y0": 0.028,
+      "x1": 0.921,
+      "y1": 0.9650000000000001
+    },
+    "source": "drawing-block"
+  },
+  "renderResult": {
+    "width": 4791,
+    "height": 3374
+  },
+  "result": {
+    "answerText": "Yes, the proposed bike racks marked with key note \"1\" are located outside the property line within the street right-of-way.",
+    "classification": "yes",
+    "count": null,
+    "unanswerable": false,
+    "confidence": 0.95,
+    "evidence": [
+      {
+        "bbox": [
+          195,
+          382,
+          215,
+          410
+        ],
+        "bboxAbsolute": {
+          "x0": 0.372834,
+          "y0": 0.210715,
+          "x1": 0.39766999999999997,
+          "y1": 0.229455
+        },
+        "description": "Key note 1 and bike rack symbol outside property line near Collier Street"
+      },
+      {
+        "bbox": [
+          256,
+          682,
+          276,
+          715
+        ],
+        "bboxAbsolute": {
+          "x0": 0.6389340000000001,
+          "y0": 0.26787200000000005,
+          "x1": 0.668205,
+          "y1": 0.2866120000000001
+        },
+        "description": "Key note 1 and bike rack symbol outside property line near eastern street curve"
+      }
+    ],
+    "reasoning": "The legend identifies key note '1' (in a hexagon) as 'PROPOSED BIKE RACK'. Scanning the plan reveals at least two instances of this key note. In both cases, the leader line points to a symbol that is situated outside the thick, solid boundary line representing the property line, placing them in the right-of-way area along the adjacent streets.",
+    "regionHintHonored": null,
+    "_meta": {
+      "callId": "20260507T095732235Z-450b",
+      "expectedAnswerType": "boolean",
+      "cropMode": "drawing",
+      "cropResolution": {
+        "bbox": {
+          "x0": 0.034,
+          "y0": 0.028,
+          "x1": 0.921,
+          "y1": 0.9650000000000001
+        },
+        "source": "drawing-block"
+      },
+      "cropBbox": {
+        "x0": 0.034,
+        "y0": 0.028,
+        "x1": 0.921,
+        "y1": 0.9650000000000001
+      },
+      "model": "google/gemini-3.1-pro-preview",
+      "promptLength": 4098,
+      "validationNotes": []
+    }
+  },
+  "timing": {
+    "startedAt": 1778147852239,
+    "finishedAt": 1778147871207
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "callId": "20260507T093553328Z-ect6",
+  "startedAt": "2026-05-07T09:35:53.328Z",
+  "completedAt": "2026-05-07T09:37:02.650Z",
+  "inputs": {
+    "checklistItemId": "cc-24:CC-24-04",
+    "checklistItemText": "License Agreement for street trees, landscaping, or irrigation in ROW not submitted or referenced (LDE-04)",
+    "question": "In the planting zone along Collier Street (shown in the ROW area), are the tree symbols labeled as \"proposed\" or \"existing\"? Look at the symbols and any nearby labels or legend references to determine if these are new trees to be planted or existing trees to remain.",
+    "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+    "sheetNum": 14,
+    "regionHint": "Along Collier Street in the 5' planting zone between street and sidewalk"
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "7a99bffdf9efcc44b8fffdfdcb1341d5e6512304f58b8778bf383e46a441e057",
+    "promptSource": "bureau",
+    "promptSourcePath": "/vercel/sandbox/workspace/bureau/jurisdictions/austin/workflows/completeness-check/prompts/vision-router.md",
+    "output": {
+      "problemType": "drawing_inspect",
+      "reasoning": "The agent is asking whether tree symbols in a specific drawing area are labeled or annotated with status designations ('proposed' vs 'existing'). This is a drawing-element inspection task (symbol interpretation and label reading on the plan), not a document-presence check or measurement. The checklist requirement concerns submission/reference of a license agreement, but the agent's narrower question is about visual annotation on the planting plan itself.",
+      "confidence": 0.92,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "inspect-drawing",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": "/vercel/sandbox/workspace/output/vision-check-calls/20260507T093553328Z-ect6/specialist-inspect-drawing"
+  },
+  "phase": "B"
+}

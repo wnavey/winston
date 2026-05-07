@@ -1,0 +1,31 @@
+{
+  "callId": "20260507T100106286Z-pplm",
+  "startedAt": "2026-05-07T10:01:06.286Z",
+  "completedAt": "2026-05-07T10:01:20.871Z",
+  "inputs": {
+    "checklistItemId": "cc-24:CC-24-15",
+    "checklistItemText": "Plans not submitted or referenced for AULCC when excavations exceed 25 LF in DAPCZ or 300 LF outside DAPCZ (ROW-02)",
+    "question": "Looking at the AW Infrastructure Information table on this sheet, what are the total linear feet of water main, wastewater main, water service, and wastewater service pipes shown? Add up all the lengths listed in the LENGTH OF PIPE (L.F.) column.",
+    "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+    "sheetNum": 6
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "7a99bffdf9efcc44b8fffdfdcb1341d5e6512304f58b8778bf383e46a441e057",
+    "promptSource": "bureau",
+    "promptSourcePath": "/vercel/sandbox/workspace/bureau/jurisdictions/austin/workflows/completeness-check/prompts/vision-router.md",
+    "output": {
+      "problemType": "generic",
+      "reasoning": "The agent is asking for a table read (summing values from the LENGTH OF PIPE column in the AW Infrastructure Information table), which is a data extraction task, not a drawing inspection or measurement between features. This is a prerequisite presence/quantity check before determining whether AULCC plans are required based on excavation thresholds.",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "vision",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": null
+  },
+  "phase": "B"
+}

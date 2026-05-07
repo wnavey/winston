@@ -1,0 +1,86 @@
+{
+  "callId": "20260507T093359831Z-f7ug",
+  "inputs": {
+    "projectId": "23301a8a-4cdb-4751-ac0c-93b97f0f5c12",
+    "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+    "sheetNum": "37",
+    "question": "Are parking stall widths, depths, and angles dimensioned on this sheet? Look for dimension annotations showing the width of parking spaces, the depth of parking spaces, and the angle at which they are positioned (e.g., 90°, 60°, parallel).",
+    "expectedAnswerType": "boolean",
+    "cropMode": "drawing",
+    "regionHint": null,
+    "reasoning": "The agent is asking whether dimension annotations (width, depth, angle labels) are present and visible on the drawing itself—a classic drawing-element inspection task, not a measurement between two features or a generic presence check.",
+    "applicableChecklistItems": [
+      {
+        "checklist_id": "cc-22:CC-22-19",
+        "checklist_deficiency_text": "Parking stall width, depth, or angle not dimensioned (PRK-03)"
+      }
+    ],
+    "dpi": 150
+  },
+  "cropResolution": {
+    "bbox": {
+      "x0": 0.085,
+      "y0": 0.286,
+      "x1": 0.838,
+      "y1": 0.867
+    },
+    "source": "drawing-block"
+  },
+  "renderResult": {
+    "width": 4745,
+    "height": 2615
+  },
+  "result": {
+    "answerText": "Parking stall widths (e.g., 9'-0\") and angles (90°) are dimensioned in one section of the resident parking area. However, stall depths are not dimensioned anywhere on the sheet.",
+    "classification": "partial",
+    "count": null,
+    "unanswerable": false,
+    "confidence": 0.95,
+    "evidence": [
+      {
+        "bbox": [
+          298,
+          386,
+          335,
+          425
+        ],
+        "bboxAbsolute": {
+          "x0": 0.37565800000000005,
+          "y0": 0.45913799999999994,
+          "x1": 0.405025,
+          "y1": 0.480635
+        },
+        "description": "Dimensions showing 9'-0\" stall widths and a 90° angle"
+      }
+    ],
+    "reasoning": "I scanned the parking areas for dimension annotations. I found a string of dimensions in the resident parking area indicating stall widths of 9'-0\" and an angle of 90°. I did not find any dimensions indicating the depth (length) of the parking stalls.",
+    "regionHintHonored": null,
+    "_meta": {
+      "callId": "20260507T093359831Z-f7ug",
+      "expectedAnswerType": "boolean",
+      "cropMode": "drawing",
+      "cropResolution": {
+        "bbox": {
+          "x0": 0.085,
+          "y0": 0.286,
+          "x1": 0.838,
+          "y1": 0.867
+        },
+        "source": "drawing-block"
+      },
+      "cropBbox": {
+        "x0": 0.085,
+        "y0": 0.286,
+        "x1": 0.838,
+        "y1": 0.867
+      },
+      "model": "google/gemini-3.1-pro-preview",
+      "promptLength": 4173,
+      "validationNotes": []
+    }
+  },
+  "timing": {
+    "startedAt": 1778146439833,
+    "finishedAt": 1778146482920
+  }
+}

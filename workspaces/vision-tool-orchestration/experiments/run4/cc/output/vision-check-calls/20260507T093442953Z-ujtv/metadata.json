@@ -1,0 +1,31 @@
+{
+  "callId": "20260507T093442953Z-ujtv",
+  "startedAt": "2026-05-07T09:34:42.953Z",
+  "completedAt": "2026-05-07T09:35:30.491Z",
+  "inputs": {
+    "checklistItemId": "cc-2:CC-2-24",
+    "checklistItemText": "Underground utility lines (existing and proposed) not shown on applicable sheets (BAS-14b)",
+    "question": "Are underground utility lines (existing or proposed) shown on this sheet? Look for water lines, wastewater lines, storm drain lines, underground electric, or other buried utilities indicated in the legend and on the drawing.",
+    "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+    "sheetNum": 18
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "7a99bffdf9efcc44b8fffdfdcb1341d5e6512304f58b8778bf383e46a441e057",
+    "promptSource": "bureau",
+    "promptSourcePath": "/vercel/sandbox/workspace/bureau/jurisdictions/austin/workflows/completeness-check/prompts/vision-router.md",
+    "output": {
+      "problemType": "generic",
+      "reasoning": "The agent is asking a presence/feature-discovery question: do underground utility lines appear on this sheet at all? This is a sheet-discovery and feature-presence check, not a drawing-inspection of line symbols/annotations or a measurement between features. The checklist requirement about lines 'not shown' is being verified through a basic presence question rather than detailed symbol or spatial reasoning.",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "vision",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": null
+  },
+  "phase": "B"
+}

@@ -1,0 +1,31 @@
+{
+  "callId": "20260507T093157143Z-rt1d",
+  "startedAt": "2026-05-07T09:31:57.143Z",
+  "completedAt": "2026-05-07T09:32:25.143Z",
+  "inputs": {
+    "checklistItemId": "cc-6:CMP-02",
+    "checklistItemText": "Building elevations showing architectural elements not provided",
+    "question": "Is there a material legend box on this sheet that identifies the different building materials and finishes used in the elevations? Look for a box labeled \"MATERIAL LEGEND\" that shows color swatches or patterns with material names.",
+    "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+    "sheetNum": 35
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "7a99bffdf9efcc44b8fffdfdcb1341d5e6512304f58b8778bf383e46a441e057",
+    "promptSource": "bureau",
+    "promptSourcePath": "/vercel/sandbox/workspace/bureau/jurisdictions/austin/workflows/completeness-check/prompts/vision-router.md",
+    "output": {
+      "problemType": "generic",
+      "reasoning": "The agent is asking whether a specific legend box (a document element/annotation) exists on the sheet, which is a presence and label-readout check. Although the checklist requirement concerns building elevations, the agent question is narrower and focused on discovering whether a particular legend exists and is labeled—this is sheet-element discovery, not architectural-feature inspection or measurement.",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "vision",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": null
+  },
+  "phase": "B"
+}

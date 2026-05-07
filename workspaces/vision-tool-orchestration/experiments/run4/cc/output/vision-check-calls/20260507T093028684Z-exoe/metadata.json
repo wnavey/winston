@@ -1,0 +1,31 @@
+{
+  "callId": "20260507T093028684Z-exoe",
+  "startedAt": "2026-05-07T09:30:28.684Z",
+  "completedAt": "2026-05-07T09:30:47.614Z",
+  "inputs": {
+    "checklistItemId": "cc-5:ADR-05",
+    "checklistItemText": "Driveway access points, handicap parking, garages, and sidewalk access not identified on plans",
+    "question": "Are handicap/accessible parking spaces labeled or identified on this parking garage plan? Look for symbols, legends, or labels indicating \"HC\", \"VAN\", \"accessible\", or handicap parking spaces.",
+    "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+    "sheetNum": 37
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "7a99bffdf9efcc44b8fffdfdcb1341d5e6512304f58b8778bf383e46a441e057",
+    "promptSource": "bureau",
+    "promptSourcePath": "/vercel/sandbox/workspace/bureau/jurisdictions/austin/workflows/completeness-check/prompts/vision-router.md",
+    "output": {
+      "problemType": "drawing_inspect",
+      "reasoning": "The agent is asking whether handicap parking spaces are labeled or identified through symbols, legends, or text annotations on the plan — this is a drawing-element inspection task (looking for symbols and labels), not a presence check or measurement.",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "inspect-drawing",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": "/vercel/sandbox/workspace/output/vision-check-calls/20260507T093028684Z-exoe/specialist-inspect-drawing"
+  },
+  "phase": "B"
+}

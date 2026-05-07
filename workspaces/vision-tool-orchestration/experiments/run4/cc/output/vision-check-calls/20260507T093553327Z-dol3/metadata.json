@@ -1,0 +1,31 @@
+{
+  "callId": "20260507T093553327Z-dol3",
+  "startedAt": "2026-05-07T09:35:53.327Z",
+  "completedAt": "2026-05-07T09:36:12.533Z",
+  "inputs": {
+    "checklistItemId": "cc-22:CC-22-21",
+    "checklistItemText": "Parking spaces not identified by type (standard, compact, handicapped, bicycle) (PRK-05)",
+    "question": "Are parking spaces identified by type on this sheet? Look for labels or symbols indicating standard parking, compact parking, handicapped/ADA parking, EV parking, and bicycle parking spaces. Check if the plan shows which spaces are which type.",
+    "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+    "sheetNum": 37
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "7a99bffdf9efcc44b8fffdfdcb1341d5e6512304f58b8778bf383e46a441e057",
+    "promptSource": "bureau",
+    "promptSourcePath": "/vercel/sandbox/workspace/bureau/jurisdictions/austin/workflows/completeness-check/prompts/vision-router.md",
+    "output": {
+      "problemType": "drawing_inspect",
+      "reasoning": "The agent is asking whether parking space types are identified by labels or symbols on the plan drawing itself — this is a drawing annotation and symbol recognition task, not a measurement or document-presence check.",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "inspect-drawing",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": "/vercel/sandbox/workspace/output/vision-check-calls/20260507T093553327Z-dol3/specialist-inspect-drawing"
+  },
+  "phase": "B"
+}

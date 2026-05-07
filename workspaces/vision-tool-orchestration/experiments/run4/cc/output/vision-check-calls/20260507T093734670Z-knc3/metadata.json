@@ -1,0 +1,31 @@
+{
+  "callId": "20260507T093734670Z-knc3",
+  "startedAt": "2026-05-07T09:37:34.670Z",
+  "completedAt": "2026-05-07T09:38:11.739Z",
+  "inputs": {
+    "checklistItemId": "cc-2:CC-2-21",
+    "checklistItemText": "Existing or future dedicated easements not shown on one or more sheets (BAS-12)",
+    "question": "Are easements (such as utility easements, public easements, or drainage easements) shown on this sheet? Look for easement lines, labels, or hatching indicating easement areas.",
+    "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+    "sheetNum": 21
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "7a99bffdf9efcc44b8fffdfdcb1341d5e6512304f58b8778bf383e46a441e057",
+    "promptSource": "bureau",
+    "promptSourcePath": "/vercel/sandbox/workspace/bureau/jurisdictions/austin/workflows/completeness-check/prompts/vision-router.md",
+    "output": {
+      "problemType": "generic",
+      "reasoning": "The agent is asking whether easements are present/shown on the sheet at all (a feature presence and sheet-discovery check), not asking to measure dimensions, verify clearances, or inspect drawing annotations like bearings or symbols. This is a straightforward visual presence question.",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "vision",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": null
+  },
+  "phase": "B"
+}

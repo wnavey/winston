@@ -1,0 +1,31 @@
+{
+  "callId": "20260507T100728415Z-sa2d",
+  "startedAt": "2026-05-07T10:07:28.415Z",
+  "completedAt": "2026-05-07T10:07:50.538Z",
+  "inputs": {
+    "checklistItemId": "cc-13:AW-31",
+    "checklistItemText": "Curve data for roads, property lines, water, and reclaimed water lines not shown",
+    "question": "Are there curved roads, property lines, or water lines shown on this sheet? If yes, is curve data shown (such as radius \"R=\", length \"L=\", delta angle, or chord bearing/distance)?",
+    "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+    "sheetNum": 18
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "7a99bffdf9efcc44b8fffdfdcb1341d5e6512304f58b8778bf383e46a441e057",
+    "promptSource": "bureau",
+    "promptSourcePath": "/vercel/sandbox/workspace/bureau/jurisdictions/austin/workflows/completeness-check/prompts/vision-router.md",
+    "output": {
+      "problemType": "drawing_inspect",
+      "reasoning": "The agent is asking whether curve data annotations (R=, L=, delta angle, chord bearing/distance) are present and labelled on curved features in the drawing. This is a drawing-element inspection question, not a presence check or measurement. The agent's two-part question (presence then annotation) is progressive, but the core verification task is inspecting whether specific dimensional annotations appear on the drawing itself.",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "inspect-drawing",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": "/vercel/sandbox/workspace/output/vision-check-calls/20260507T100728415Z-sa2d/specialist-inspect-drawing"
+  },
+  "phase": "B"
+}

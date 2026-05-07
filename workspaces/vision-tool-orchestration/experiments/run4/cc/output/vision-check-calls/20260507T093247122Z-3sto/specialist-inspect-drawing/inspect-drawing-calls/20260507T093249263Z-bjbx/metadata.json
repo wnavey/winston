@@ -1,0 +1,70 @@
+{
+  "callId": "20260507T093249263Z-bjbx",
+  "inputs": {
+    "projectId": "23301a8a-4cdb-4751-ac0c-93b97f0f5c12",
+    "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+    "sheetNum": "18",
+    "question": "Are existing easements labeled with recordation numbers (such as Volume/Page format like \"Vol 76 Pg 388\" or document numbers) on this utility plan?",
+    "expectedAnswerType": "boolean",
+    "cropMode": "drawing",
+    "regionHint": null,
+    "reasoning": "The agent is asking whether recordation number annotations (text labels in Volume/Page format) are present and visible on the utility plan drawing itself. This is a drawing-element annotation check, not a document-presence or table-read question.",
+    "applicableChecklistItems": [
+      {
+        "checklist_id": "cc-13:AW-27",
+        "checklist_deficiency_text": "Recorded easement recordation numbers (volume/page) not shown for existing easements, or proposed easement limits not indicated"
+      }
+    ],
+    "dpi": 150
+  },
+  "cropResolution": {
+    "bbox": {
+      "x0": 0.028,
+      "y0": 0.025,
+      "x1": 0.923,
+      "y1": 0.981
+    },
+    "source": "drawing-block"
+  },
+  "renderResult": {
+    "width": 4834,
+    "height": 3442
+  },
+  "result": {
+    "answerText": "No, existing easements are not labeled with recordation numbers on this plan. The visible easement callouts, such as the wastewater easement and water line vault easement, have blank document number fields (e.g., 'DOC NO. _____'), indicating they are likely proposed or pending recordation.",
+    "classification": "no",
+    "count": null,
+    "unanswerable": false,
+    "confidence": 0.95,
+    "evidence": [],
+    "reasoning": "I scanned the plan for labels containing the word 'EASEMENT'. I found callouts for a 'WASTEWATER EASEMENT' and a 'VARIABLE WIDTH WATER LINE VAULT EASEMENT', but both have blank lines where the document number would go. While there are subdivisions and lots labeled with Volume/Page and Document numbers, there are no existing easements labeled with populated recordation numbers.",
+    "regionHintHonored": null,
+    "_meta": {
+      "callId": "20260507T093249263Z-bjbx",
+      "expectedAnswerType": "boolean",
+      "cropMode": "drawing",
+      "cropResolution": {
+        "bbox": {
+          "x0": 0.028,
+          "y0": 0.025,
+          "x1": 0.923,
+          "y1": 0.981
+        },
+        "source": "drawing-block"
+      },
+      "cropBbox": {
+        "x0": 0.028,
+        "y0": 0.025,
+        "x1": 0.923,
+        "y1": 0.981
+      },
+      "model": "google/gemini-3.1-pro-preview",
+      "promptLength": 4081,
+      "validationNotes": []
+    }
+  },
+  "timing": {
+    "startedAt": 1778146369265,
+    "finishedAt": 1778146390841
+  }
+}

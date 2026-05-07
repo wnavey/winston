@@ -1,0 +1,31 @@
+{
+  "callId": "20260507T094052445Z-y0jy",
+  "startedAt": "2026-05-07T09:40:52.445Z",
+  "completedAt": "2026-05-07T09:41:03.372Z",
+  "inputs": {
+    "checklistItemId": "cc-22:CC-22-18",
+    "checklistItemText": "Total number of provided parking spaces (vehicle and bicycle) not shown (PRK-02)",
+    "question": "What is the total number of bicycle parking spaces shown in the parking table? Look for long-term and short-term bicycle parking counts in the \"BICYCLE PARKING\" section of the table.",
+    "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+    "sheetNum": 16
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "7a99bffdf9efcc44b8fffdfdcb1341d5e6512304f58b8778bf383e46a441e057",
+    "promptSource": "bureau",
+    "promptSourcePath": "/vercel/sandbox/workspace/bureau/jurisdictions/austin/workflows/completeness-check/prompts/vision-router.md",
+    "output": {
+      "problemType": "generic",
+      "reasoning": "The agent is asking for a table read (extracting bicycle parking counts from a labeled section), not a drawing measurement or spatial inspection. This is a data lookup task within a parking table, which falls under generic visual inspection (table read/label readout).",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "vision",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": null
+  },
+  "phase": "B"
+}

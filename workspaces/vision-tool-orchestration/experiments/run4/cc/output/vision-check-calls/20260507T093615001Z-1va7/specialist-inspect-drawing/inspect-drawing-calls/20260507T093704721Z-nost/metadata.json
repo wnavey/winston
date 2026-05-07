@@ -1,0 +1,146 @@
+{
+  "callId": "20260507T093704721Z-nost",
+  "inputs": {
+    "projectId": "23301a8a-4cdb-4751-ac0c-93b97f0f5c12",
+    "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+    "sheetNum": "14",
+    "question": "Is an accessible route of travel shown on this sheet that connects accessible parking spaces, building entrances, and other accessible elements? Look for a continuous pathway marked as an ADA path or accessible route connecting all accessible features.",
+    "expectedAnswerType": "boolean",
+    "cropMode": "drawing",
+    "regionHint": null,
+    "reasoning": "The agent is asking whether a continuous accessible route pathway is visually shown and marked on the drawing connecting specific accessible features. This requires inspecting lines, symbols, and spatial relationships on the plan to verify the presence and continuity of an ADA-marked route—a drawing element inspection, not a measurement or document-presence check.",
+    "applicableChecklistItems": [
+      {
+        "checklist_id": "cc-22:CC-22-25",
+        "checklist_deficiency_text": "Accessible route of travel not shown connecting all accessible elements (ADA-01)"
+      }
+    ],
+    "dpi": 150
+  },
+  "cropResolution": {
+    "bbox": {
+      "x0": 0.034,
+      "y0": 0.028,
+      "x1": 0.921,
+      "y1": 0.9650000000000001
+    },
+    "source": "drawing-block"
+  },
+  "renderResult": {
+    "width": 4791,
+    "height": 3374
+  },
+  "result": {
+    "answerText": "Yes, an accessible route is shown on the plan. A specific linetype defined in the legend as \"PROPOSED ADA PATH\" is visible tracing a continuous route along the north and west sides of the building, connecting to public sidewalks, crossing driveways with ADA ramps, and leading to building entrances.",
+    "classification": "yes",
+    "count": null,
+    "unanswerable": false,
+    "confidence": 0.95,
+    "evidence": [
+      {
+        "bbox": [
+          215,
+          846,
+          228,
+          939
+        ],
+        "bboxAbsolute": {
+          "x0": 0.784402,
+          "y0": 0.229455,
+          "x1": 0.866893,
+          "y1": 0.24163600000000002
+        },
+        "description": "Legend entry for 'PROPOSED ADA PATH'"
+      },
+      {
+        "bbox": [
+          376,
+          375,
+          416,
+          521
+        ],
+        "bboxAbsolute": {
+          "x0": 0.366625,
+          "y0": 0.38031200000000004,
+          "x1": 0.496127,
+          "y1": 0.41779200000000005
+        },
+        "description": "Section of the proposed ADA path running along the north side of the building."
+      },
+      {
+        "bbox": [
+          606,
+          292,
+          664,
+          312
+        ],
+        "bboxAbsolute": {
+          "x0": 0.29300400000000004,
+          "y0": 0.5958220000000001,
+          "x1": 0.310744,
+          "y1": 0.6501680000000001
+        },
+        "description": "Section of the proposed ADA path running along the west side of the building, crossing a driveway."
+      },
+      {
+        "bbox": [
+          632,
+          292,
+          645,
+          303
+        ],
+        "bboxAbsolute": {
+          "x0": 0.29300400000000004,
+          "y0": 0.6201840000000001,
+          "x1": 0.30276099999999995,
+          "y1": 0.6323650000000001
+        },
+        "description": "Key note 12, indicating a 'PROPOSED ADA RAMP' along the path."
+      },
+      {
+        "bbox": [
+          446,
+          358,
+          459,
+          371
+        ],
+        "bboxAbsolute": {
+          "x0": 0.351546,
+          "y0": 0.4459020000000001,
+          "x1": 0.363077,
+          "y1": 0.4580830000000001
+        },
+        "description": "Key note 7, indicating a 'PROPOSED BUILDING ENTRANCE' connected to the path."
+      }
+    ],
+    "reasoning": "The legend explicitly defines a linetype for 'PROPOSED ADA PATH'. This distinctive linetype (a line with small circles) can be seen forming a continuous route connecting public rights-of-way to the building. Features like ADA ramps (key note 12) and building entrances (key note 7) are shown along this route.",
+    "regionHintHonored": null,
+    "_meta": {
+      "callId": "20260507T093704721Z-nost",
+      "expectedAnswerType": "boolean",
+      "cropMode": "drawing",
+      "cropResolution": {
+        "bbox": {
+          "x0": 0.034,
+          "y0": 0.028,
+          "x1": 0.921,
+          "y1": 0.9650000000000001
+        },
+        "source": "drawing-block"
+      },
+      "cropBbox": {
+        "x0": 0.034,
+        "y0": 0.028,
+        "x1": 0.921,
+        "y1": 0.9650000000000001
+      },
+      "model": "google/gemini-3.1-pro-preview",
+      "promptLength": 4186,
+      "validationNotes": []
+    }
+  },
+  "timing": {
+    "startedAt": 1778146624724,
+    "finishedAt": 1778146640263
+  }
+}

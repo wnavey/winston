@@ -1,0 +1,70 @@
+{
+  "callId": "20260507T092903851Z-p71q",
+  "inputs": {
+    "projectId": "23301a8a-4cdb-4751-ac0c-93b97f0f5c12",
+    "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+    "sheetNum": "14",
+    "question": "Are the existing right-of-way widths shown with specific dimensional measurements on this dimensional control sheet? Look for dimension lines with measurements indicating existing ROW widths along the property frontages (Collier St, Kinney Ave, Nash Ave, S Lamar Blvd).",
+    "expectedAnswerType": "boolean",
+    "cropMode": "drawing",
+    "regionHint": null,
+    "reasoning": "The agent is asking whether dimension annotations (dimension lines with measurements) are present and labelled on the drawing for existing ROW widths. This is a drawing-element inspection task (checking for the presence of dimensional annotations), not a measurement task. The requirement and agent question are aligned: both concern whether ROW widths are dimensioned on the plan.",
+    "applicableChecklistItems": [
+      {
+        "checklist_id": "cc-23:CC-23-01",
+        "checklist_deficiency_text": "Existing ROW width not shown or not dimensioned (GRD-01)"
+      }
+    ],
+    "dpi": 150
+  },
+  "cropResolution": {
+    "bbox": {
+      "x0": 0.034,
+      "y0": 0.028,
+      "x1": 0.921,
+      "y1": 0.9650000000000001
+    },
+    "source": "drawing-block"
+  },
+  "renderResult": {
+    "width": 4791,
+    "height": 3374
+  },
+  "result": {
+    "answerText": "No, the existing right-of-way widths are not shown with specific dimensional measurements. The street names for Collier Street, Kinney Avenue, and Nash Avenue are instead annotated with '(R.O.W. VARIES)'.",
+    "classification": "no",
+    "count": null,
+    "unanswerable": false,
+    "confidence": 0.95,
+    "evidence": [],
+    "reasoning": "Scanned the property frontages along Collier Street, Kinney Avenue, and Nash Avenue. There are no dimension lines spanning the right-of-way to indicate a specific width. The text below each street name explicitly states '(R.O.W. VARIES)'.",
+    "regionHintHonored": null,
+    "_meta": {
+      "callId": "20260507T092903851Z-p71q",
+      "expectedAnswerType": "boolean",
+      "cropMode": "drawing",
+      "cropResolution": {
+        "bbox": {
+          "x0": 0.034,
+          "y0": 0.028,
+          "x1": 0.921,
+          "y1": 0.9650000000000001
+        },
+        "source": "drawing-block"
+      },
+      "cropBbox": {
+        "x0": 0.034,
+        "y0": 0.028,
+        "x1": 0.921,
+        "y1": 0.9650000000000001
+      },
+      "model": "google/gemini-3.1-pro-preview",
+      "promptLength": 4203,
+      "validationNotes": []
+    }
+  },
+  "timing": {
+    "startedAt": 1778146143853,
+    "finishedAt": 1778146159353
+  }
+}

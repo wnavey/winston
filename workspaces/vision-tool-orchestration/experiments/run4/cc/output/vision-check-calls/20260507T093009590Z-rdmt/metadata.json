@@ -1,0 +1,31 @@
+{
+  "callId": "20260507T093009590Z-rdmt",
+  "startedAt": "2026-05-07T09:30:09.590Z",
+  "completedAt": "2026-05-07T09:31:07.226Z",
+  "inputs": {
+    "checklistItemId": "cc-10:AE-03",
+    "checklistItemText": "Proposed electric utility facilities not shown on plan sheets",
+    "question": "Are proposed electric utility facilities shown on this sheet? Look for proposed underground electric lines (UGE), proposed overhead electric lines (OHE), proposed electric poles, proposed transformers (T symbol), proposed electric manholes (E symbol), or any other proposed electric infrastructure.",
+    "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+    "sheetNum": 18
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "7a99bffdf9efcc44b8fffdfdcb1341d5e6512304f58b8778bf383e46a441e057",
+    "promptSource": "bureau",
+    "promptSourcePath": "/vercel/sandbox/workspace/bureau/jurisdictions/austin/workflows/completeness-check/prompts/vision-router.md",
+    "output": {
+      "problemType": "generic",
+      "reasoning": "The agent is asking whether proposed electric utility facilities appear anywhere on the sheet (a presence/feature-discovery question), not asking to measure clearances, inspect drawing annotations, or verify dimensional labels. This is a straightforward feature-presence check.",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "vision",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": null
+  },
+  "phase": "B"
+}

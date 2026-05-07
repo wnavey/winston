@@ -1,0 +1,31 @@
+{
+  "callId": "20260507T093357717Z-z5j2",
+  "startedAt": "2026-05-07T09:33:57.717Z",
+  "completedAt": "2026-05-07T09:37:33.321Z",
+  "inputs": {
+    "checklistItemId": "cc-3:AF-01",
+    "checklistItemText": "Standard Austin Fire notes missing, incomplete, or not matching Notes and Templates (~90% semantic threshold) from plan set; 7 required notes covering all-weather driving surfaces, hydrant installation specs, fire protection during construction, pervious paving load ratings, dumpster placement, fire lane registration, and vertical clearance",
+    "question": "Read and transcribe all the Fire Department notes visible on this sheet. Look for a section titled \"FIRE DEPARTMENT\" and transcribe each numbered note exactly as written.",
+    "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+    "sheetNum": 5
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "7a99bffdf9efcc44b8fffdfdcb1341d5e6512304f58b8778bf383e46a441e057",
+    "promptSource": "bureau",
+    "promptSourcePath": "/vercel/sandbox/workspace/bureau/jurisdictions/austin/workflows/completeness-check/prompts/vision-router.md",
+    "output": {
+      "problemType": "generic",
+      "reasoning": "The agent is asking for a text readout and transcription of Fire Department notes from the sheet, which is a label/note presence and content extraction task, not a drawing inspection or measurement. This is progressive verification (identifying what notes exist before comparing them to the checklist template), but the immediate task is document/note discovery and transcription, not spatial reasoning or dimensional analysis.",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "vision",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": null
+  },
+  "phase": "B"
+}

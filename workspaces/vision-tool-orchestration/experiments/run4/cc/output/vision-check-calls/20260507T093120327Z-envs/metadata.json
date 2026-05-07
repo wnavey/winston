@@ -1,0 +1,31 @@
+{
+  "callId": "20260507T093120327Z-envs",
+  "startedAt": "2026-05-07T09:31:20.327Z",
+  "completedAt": "2026-05-07T09:32:14.912Z",
+  "inputs": {
+    "checklistItemId": "cc-10:AE-02",
+    "checklistItemText": "Existing electric utility facilities (overhead and underground) not shown on plan sheets",
+    "question": "Are existing electric utility facilities shown on this sheet? Look for existing overhead electric lines (OHU), existing electric manholes, existing electric meters, existing power poles, or any other existing electric infrastructure symbols, lines, or annotations on the plan.",
+    "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+    "sheetNum": 9
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "7a99bffdf9efcc44b8fffdfdcb1341d5e6512304f58b8778bf383e46a441e057",
+    "promptSource": "bureau",
+    "promptSourcePath": "/vercel/sandbox/workspace/bureau/jurisdictions/austin/workflows/completeness-check/prompts/vision-router.md",
+    "output": {
+      "problemType": "generic",
+      "reasoning": "The agent is asking a presence/feature-discovery question: do existing electric utility facilities appear anywhere on this sheet? This is a sheet-level feature presence check, not a drawing-element annotation inspection (which would require identifying specific symbols or line styles) or a measurement. The agent is conducting initial discovery before any detailed spatial analysis.",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "vision",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": null
+  },
+  "phase": "B"
+}

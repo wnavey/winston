@@ -1,0 +1,101 @@
+{
+  "callId": "20260507T092616990Z-65v2",
+  "inputs": {
+    "projectId": "23301a8a-4cdb-4751-ac0c-93b97f0f5c12",
+    "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+    "sheetNum": "21",
+    "question": "Are the existing right-of-way widths shown and dimensioned on this sheet? Look for labels indicating existing ROW along streets like S Lamar Blvd, Collier Street, and Kinney Avenue, with dimension measurements.",
+    "expectedAnswerType": "boolean",
+    "cropMode": "drawing",
+    "regionHint": null,
+    "reasoning": "The agent is asking whether ROW width dimensions and labels are present and annotated on the drawing itself—a drawing-element inspection task, not a measurement task. The checklist requirement concerns annotation presence, and the agent question directly asks to verify those annotations are shown with dimension measurements on the sheet.",
+    "applicableChecklistItems": [
+      {
+        "checklist_id": "cc-23:CC-23-01",
+        "checklist_deficiency_text": "Existing ROW width not shown or not dimensioned (GRD-01)"
+      }
+    ],
+    "dpi": 150
+  },
+  "cropResolution": {
+    "bbox": {
+      "x0": 0.034,
+      "y0": 0.028,
+      "x1": 0.921,
+      "y1": 0.9650000000000001
+    },
+    "source": "drawing-block"
+  },
+  "renderResult": {
+    "width": 4791,
+    "height": 3374
+  },
+  "result": {
+    "answerText": "No, the existing right-of-way widths are not dimensioned with numerical measurements on this sheet. The labels for the visible streets, including Collier Street and Kinney Avenue, state that the right-of-way \"VARIES\".",
+    "classification": "no",
+    "count": null,
+    "unanswerable": false,
+    "confidence": 0.95,
+    "evidence": [
+      {
+        "bbox": [
+          172,
+          345,
+          191,
+          439
+        ],
+        "bboxAbsolute": {
+          "x0": 0.34001499999999996,
+          "y0": 0.189164,
+          "x1": 0.423393,
+          "y1": 0.206967
+        },
+        "description": "Collier Street label indicating R.O.W. VARIES"
+      },
+      {
+        "bbox": [
+          343,
+          97,
+          411,
+          114
+        ],
+        "bboxAbsolute": {
+          "x0": 0.120039,
+          "y0": 0.34939100000000006,
+          "x1": 0.13511800000000002,
+          "y1": 0.413107
+        },
+        "description": "Kinney Avenue label indicating R.O.W. VARIES"
+      }
+    ],
+    "reasoning": "I located the street labels for Collier Street and Kinney Avenue. Both labels explicitly state '(R.O.W. VARIES)' instead of providing specific numerical dimensions for the right-of-way widths. S Lamar Blvd is not present on this sheet.",
+    "regionHintHonored": null,
+    "_meta": {
+      "callId": "20260507T092616990Z-65v2",
+      "expectedAnswerType": "boolean",
+      "cropMode": "drawing",
+      "cropResolution": {
+        "bbox": {
+          "x0": 0.034,
+          "y0": 0.028,
+          "x1": 0.921,
+          "y1": 0.9650000000000001
+        },
+        "source": "drawing-block"
+      },
+      "cropBbox": {
+        "x0": 0.034,
+        "y0": 0.028,
+        "x1": 0.921,
+        "y1": 0.9650000000000001
+      },
+      "model": "google/gemini-3.1-pro-preview",
+      "promptLength": 4144,
+      "validationNotes": []
+    }
+  },
+  "timing": {
+    "startedAt": 1778145976993,
+    "finishedAt": 1778146001938
+  }
+}

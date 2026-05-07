@@ -1,0 +1,31 @@
+{
+  "callId": "20260507T100042795Z-kahz",
+  "startedAt": "2026-05-07T10:00:42.795Z",
+  "completedAt": "2026-05-07T10:00:55.982Z",
+  "inputs": {
+    "checklistItemId": "cc-13:AW-20",
+    "checklistItemText": "Standard AW construction notes missing from plan sheets or substantive content not matching Notes and Templates / current AW General Info Sheet (~90% semantic threshold)",
+    "question": "Are there standard Austin Water construction notes on this sheet with a heading like \"STANDARD CONSTRUCTION NOTES\" or similar? If yes, approximately how many numbered notes are there, and what is the date/version shown (if any)?",
+    "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+    "sheetNum": 6
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "7a99bffdf9efcc44b8fffdfdcb1341d5e6512304f58b8778bf383e46a441e057",
+    "promptSource": "bureau",
+    "promptSourcePath": "/vercel/sandbox/workspace/bureau/jurisdictions/austin/workflows/completeness-check/prompts/vision-router.md",
+    "output": {
+      "problemType": "generic",
+      "reasoning": "The agent is performing a presence check for a specific text element (standard construction notes section with a particular heading style) and then reading label/metadata from it (count of notes, date/version). This is document-content inspection and label readout, not drawing-element annotation or measurement.",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "vision",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": null
+  },
+  "phase": "B"
+}

@@ -1,0 +1,86 @@
+{
+  "callId": "20260507T100753180Z-9vwo",
+  "inputs": {
+    "projectId": "23301a8a-4cdb-4751-ac0c-93b97f0f5c12",
+    "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+    "sheetNum": "14",
+    "question": "Are there any bike racks shown on this sheet, and if so, are any of them located within the public right-of-way (ROW) of the adjacent streets (South Lamar Blvd, Collier Street, Kinney Avenue)?",
+    "expectedAnswerType": "boolean",
+    "cropMode": "drawing",
+    "regionHint": null,
+    "reasoning": "The agent is asking whether bike racks are shown on the sheet and whether they are spatially located within the ROW boundary—this requires visual inspection of drawing symbols, features, and their spatial relationships to the ROW lines, not a numeric measurement or document/table lookup.",
+    "applicableChecklistItems": [
+      {
+        "checklist_id": "cc-24:CC-24-03",
+        "checklist_deficiency_text": "License Agreement for streetscape elements in ROW (awnings, canopies, benches, bike racks, trash) not submitted or referenced (LDE-03)"
+      }
+    ],
+    "dpi": 150
+  },
+  "cropResolution": {
+    "bbox": {
+      "x0": 0.034,
+      "y0": 0.028,
+      "x1": 0.921,
+      "y1": 0.9650000000000001
+    },
+    "source": "drawing-block"
+  },
+  "renderResult": {
+    "width": 4791,
+    "height": 3374
+  },
+  "result": {
+    "answerText": "There is one proposed bike rack shown on this sheet (identified by Key Note 1) near Kinney Avenue, but it is located within the property boundary. No bike racks are shown within the public right-of-way (ROW) of any adjacent streets.",
+    "classification": "no",
+    "count": null,
+    "unanswerable": false,
+    "confidence": 0.95,
+    "evidence": [
+      {
+        "bbox": [
+          536,
+          290,
+          550,
+          306
+        ],
+        "bboxAbsolute": {
+          "x0": 0.29123,
+          "y0": 0.530232,
+          "x1": 0.30542199999999997,
+          "y1": 0.5433500000000001
+        },
+        "description": "Proposed bike rack (Key Note 1) located inside the property line, not in the public ROW."
+      }
+    ],
+    "reasoning": "The Key Notes table identifies Key Note 1 as a 'PROPOSED BIKE RACK'. Scanning the site plan, there is only one instance of Key Note 1, located along the western side of the site near Kinney Avenue. The thick dash-dot line representing the property line separates the site from the Kinney Avenue public right-of-way (ROW). The bike rack is clearly located on the property side (east) of this line. No other bike racks are shown on the sheet, meaning none are within the ROW.",
+    "regionHintHonored": null,
+    "_meta": {
+      "callId": "20260507T100753180Z-9vwo",
+      "expectedAnswerType": "boolean",
+      "cropMode": "drawing",
+      "cropResolution": {
+        "bbox": {
+          "x0": 0.034,
+          "y0": 0.028,
+          "x1": 0.921,
+          "y1": 0.9650000000000001
+        },
+        "source": "drawing-block"
+      },
+      "cropBbox": {
+        "x0": 0.034,
+        "y0": 0.028,
+        "x1": 0.921,
+        "y1": 0.9650000000000001
+      },
+      "model": "google/gemini-3.1-pro-preview",
+      "promptLength": 4126,
+      "validationNotes": []
+    }
+  },
+  "timing": {
+    "startedAt": 1778148473183,
+    "finishedAt": 1778148511504
+  }
+}

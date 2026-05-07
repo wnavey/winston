@@ -1,0 +1,116 @@
+{
+  "callId": "20260507T093011612Z-wkxl",
+  "inputs": {
+    "projectId": "23301a8a-4cdb-4751-ac0c-93b97f0f5c12",
+    "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+    "sheetNum": "8",
+    "question": "Are property boundary lines with bearings and dimensions shown on this sheet? Look for boundary lines labeled with bearings (e.g., N45°30'15\"E) and distances, or a curve table with geometric data.",
+    "expectedAnswerType": "boolean",
+    "cropMode": "drawing",
+    "regionHint": null,
+    "reasoning": "The agent is asking whether bearing and dimension annotations are present on boundary lines in the drawing itself—a direct inspection of drawing elements and labels, not a measurement task or document-presence check.",
+    "applicableChecklistItems": [
+      {
+        "checklist_id": "cc-2:CC-2-16",
+        "checklist_deficiency_text": "Boundary lines with bearings and dimensions not shown on Existing Conditions or Overall Site Plan sheet(s) (BAS-07)"
+      }
+    ],
+    "dpi": 150
+  },
+  "cropResolution": {
+    "bbox": {
+      "x0": 0.021,
+      "y0": 0.028,
+      "x1": 0.6970000000000001,
+      "y1": 0.9650000000000001
+    },
+    "source": "drawing-block"
+  },
+  "renderResult": {
+    "width": 3651,
+    "height": 3374
+  },
+  "result": {
+    "answerText": "Yes, property boundary lines are shown on this sheet. The main boundary is depicted with a heavy dashed line and labeled with specific bearings (e.g., S62°48'30\"E) and distances (e.g., 242.54').",
+    "classification": "yes",
+    "count": null,
+    "unanswerable": false,
+    "confidence": 0.95,
+    "evidence": [
+      {
+        "bbox": [
+          224,
+          565,
+          238,
+          628
+        ],
+        "bboxAbsolute": {
+          "x0": 0.40294,
+          "y0": 0.23788800000000002,
+          "x1": 0.44552800000000004,
+          "y1": 0.251006
+        },
+        "description": "Bearing and distance label on the top property boundary line"
+      },
+      {
+        "bbox": [
+          832,
+          527,
+          843,
+          588
+        ],
+        "bboxAbsolute": {
+          "x0": 0.37725200000000003,
+          "y0": 0.8075840000000001,
+          "x1": 0.418488,
+          "y1": 0.817891
+        },
+        "description": "Bearing and distance label on the bottom property boundary line"
+      },
+      {
+        "bbox": [
+          411,
+          348,
+          485,
+          361
+        ],
+        "bboxAbsolute": {
+          "x0": 0.25624800000000003,
+          "y0": 0.413107,
+          "x1": 0.265036,
+          "y1": 0.482445
+        },
+        "description": "Bearing and distance label on a left property boundary line segment"
+      }
+    ],
+    "reasoning": "The drawing features a distinct, heavy dashed line outlining a specific area, which typically denotes a property boundary. Along several segments of this line, there are explicit textual labels providing both a bearing angle (e.g., 'S62°48'30\"E') and a length in feet (e.g., '242.54'').",
+    "regionHintHonored": null,
+    "_meta": {
+      "callId": "20260507T093011612Z-wkxl",
+      "expectedAnswerType": "boolean",
+      "cropMode": "drawing",
+      "cropResolution": {
+        "bbox": {
+          "x0": 0.021,
+          "y0": 0.028,
+          "x1": 0.6970000000000001,
+          "y1": 0.9650000000000001
+        },
+        "source": "drawing-block"
+      },
+      "cropBbox": {
+        "x0": 0.021,
+        "y0": 0.028,
+        "x1": 0.6970000000000001,
+        "y1": 0.9650000000000001
+      },
+      "model": "google/gemini-3.1-pro-preview",
+      "promptLength": 4130,
+      "validationNotes": []
+    }
+  },
+  "timing": {
+    "startedAt": 1778146211614,
+    "finishedAt": 1778146228650
+  }
+}

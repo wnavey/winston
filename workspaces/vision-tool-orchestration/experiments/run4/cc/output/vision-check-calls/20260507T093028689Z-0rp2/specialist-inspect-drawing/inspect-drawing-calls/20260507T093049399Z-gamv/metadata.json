@@ -1,0 +1,131 @@
+{
+  "callId": "20260507T093049399Z-gamv",
+  "inputs": {
+    "projectId": "23301a8a-4cdb-4751-ac0c-93b97f0f5c12",
+    "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+    "sheetNum": "13",
+    "question": "Are property boundary lines with bearings and dimensions shown on this sheet? Look for boundary lines labeled with bearings (e.g., N45°30'15\"E) and distances, or a curve table with geometric data.",
+    "expectedAnswerType": "boolean",
+    "cropMode": "drawing",
+    "regionHint": null,
+    "reasoning": "The agent is asking whether bearing and dimension annotations are present on boundary lines in the drawing itself — this is a drawing-element inspection task (checking for labeled annotations), not a measurement or document-presence check.",
+    "applicableChecklistItems": [
+      {
+        "checklist_id": "cc-2:CC-2-16",
+        "checklist_deficiency_text": "Boundary lines with bearings and dimensions not shown on Existing Conditions or Overall Site Plan sheet(s) (BAS-07)"
+      }
+    ],
+    "dpi": 150
+  },
+  "cropResolution": {
+    "bbox": {
+      "x0": 0.034,
+      "y0": 0.038,
+      "x1": 0.925,
+      "y1": 0.9650000000000001
+    },
+    "source": "drawing-block"
+  },
+  "renderResult": {
+    "width": 4812,
+    "height": 3338
+  },
+  "result": {
+    "answerText": "Yes, property boundary lines with bearings and dimensions are shown. There are labels indicating bearings and distances along the property lines, as well as a curve table providing geometric data for boundary curves.",
+    "classification": "yes",
+    "count": null,
+    "unanswerable": false,
+    "confidence": 0.95,
+    "evidence": [
+      {
+        "bbox": [
+          265,
+          70,
+          335,
+          90
+        ],
+        "bboxAbsolute": {
+          "x0": 0.09637000000000001,
+          "y0": 0.283655,
+          "x1": 0.11419,
+          "y1": 0.348545
+        },
+        "description": "Bearing and distance label on the left property line"
+      },
+      {
+        "bbox": [
+          570,
+          140,
+          585,
+          195
+        ],
+        "bboxAbsolute": {
+          "x0": 0.15874000000000002,
+          "y0": 0.5663900000000001,
+          "x1": 0.207745,
+          "y1": 0.580295
+        },
+        "description": "Bearing and distance label on the bottom property line"
+      },
+      {
+        "bbox": [
+          695,
+          420,
+          715,
+          490
+        ],
+        "bboxAbsolute": {
+          "x0": 0.40822,
+          "y0": 0.682265,
+          "x1": 0.47058999999999995,
+          "y1": 0.700805
+        },
+        "description": "Bearing and distance label on the bottom property line"
+      },
+      {
+        "bbox": [
+          545,
+          855,
+          630,
+          990
+        ],
+        "bboxAbsolute": {
+          "x0": 0.795805,
+          "y0": 0.5432150000000001,
+          "x1": 0.9160900000000001,
+          "y1": 0.6220100000000001
+        },
+        "description": "Record Curve Table providing geometric data for curves"
+      }
+    ],
+    "reasoning": "The heavy solid line, identified as the PROPERTY LINE in the legend, is annotated with bearings and distances along several segments (e.g., N12°47'08\"E 73.28' on the left, S62°42'39\"E 278.02' on the bottom). Additionally, a 'RECORD CURVE TABLE' is provided on the right side of the sheet, detailing the geometry for curved boundary segments.",
+    "regionHintHonored": null,
+    "_meta": {
+      "callId": "20260507T093049399Z-gamv",
+      "expectedAnswerType": "boolean",
+      "cropMode": "drawing",
+      "cropResolution": {
+        "bbox": {
+          "x0": 0.034,
+          "y0": 0.038,
+          "x1": 0.925,
+          "y1": 0.9650000000000001
+        },
+        "source": "drawing-block"
+      },
+      "cropBbox": {
+        "x0": 0.034,
+        "y0": 0.038,
+        "x1": 0.925,
+        "y1": 0.9650000000000001
+      },
+      "model": "google/gemini-3.1-pro-preview",
+      "promptLength": 4130,
+      "validationNotes": []
+    }
+  },
+  "timing": {
+    "startedAt": 1778146249401,
+    "finishedAt": 1778146260691
+  }
+}

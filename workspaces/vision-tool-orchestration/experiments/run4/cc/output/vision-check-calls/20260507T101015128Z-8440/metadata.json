@@ -1,0 +1,31 @@
+{
+  "callId": "20260507T101015128Z-8440",
+  "startedAt": "2026-05-07T10:10:15.128Z",
+  "completedAt": "2026-05-07T10:10:38.245Z",
+  "inputs": {
+    "checklistItemId": "cc-24:CC-24-04",
+    "checklistItemText": "License Agreement for street trees, landscaping, or irrigation in ROW not submitted or referenced (LDE-04)",
+    "question": "Please clarify: are there any street trees or planting zones shown within the South Lamar Boulevard right-of-way? If so, where specifically are they located (e.g., in the sidewalk area, parkway strip, etc.)? Please describe any tree symbols or planting zones that are shown between the property line and the edge of the right-of-way.",
+    "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+    "sheetNum": 15
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "7a99bffdf9efcc44b8fffdfdcb1341d5e6512304f58b8778bf383e46a441e057",
+    "promptSource": "bureau",
+    "promptSourcePath": "/vercel/sandbox/workspace/bureau/jurisdictions/austin/workflows/completeness-check/prompts/vision-router.md",
+    "output": {
+      "problemType": "generic",
+      "reasoning": "The agent is asking a presence and location question about whether street trees or planting zones appear on the plan at all, and if so, where they are situated. This is feature discovery and spatial description, not a measurement between two features or an annotation/symbol inspection on a drawing. The checklist requirement concerns document submission (License Agreement), but the agent is first doing a progressive presence check to determine if trees/plantings exist in the ROW before evaluating compliance.",
+      "confidence": 0.92,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "vision",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": null
+  },
+  "phase": "B"
+}

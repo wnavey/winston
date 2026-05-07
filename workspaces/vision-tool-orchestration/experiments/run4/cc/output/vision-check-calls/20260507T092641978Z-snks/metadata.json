@@ -1,0 +1,32 @@
+{
+  "callId": "20260507T092641978Z-snks",
+  "startedAt": "2026-05-07T09:26:41.978Z",
+  "completedAt": "2026-05-07T09:28:30.889Z",
+  "inputs": {
+    "checklistItemId": "cc-10:AE-02",
+    "checklistItemText": "Existing electric utility facilities (overhead and underground) not shown on plan sheets",
+    "question": "Are existing electric utility facilities (both overhead and underground) shown on this sheet? Look for existing overhead electric lines, existing electric manholes, existing electric meters, existing power poles, or any other existing electric infrastructure symbols or annotations.",
+    "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+    "sheetNum": 8
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "7a99bffdf9efcc44b8fffdfdcb1341d5e6512304f58b8778bf383e46a441e057",
+    "promptSource": "bureau",
+    "promptSourcePath": "/vercel/sandbox/workspace/bureau/jurisdictions/austin/workflows/completeness-check/prompts/vision-router.md",
+    "output": {
+      "problemType": "generic",
+      "reasoning": "The agent is asking a presence/feature-discovery question: do existing electric utility facilities appear anywhere on this sheet at all? This is a sheet-content check, not a drawing-element annotation inspection (which would be drawing_inspect) or a spatial measurement (which would be measurement). The agent is verifying whether the infrastructure category exists on the plan, not inspecting how it is symbolized or dimensioned.",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "vision",
+    "success": false,
+    "errorMessage": "DB error fetching plan_set_version: TypeError: fetch failed",
+    "fallbackReason": null,
+    "specialistCallDir": null
+  },
+  "phase": "B"
+}

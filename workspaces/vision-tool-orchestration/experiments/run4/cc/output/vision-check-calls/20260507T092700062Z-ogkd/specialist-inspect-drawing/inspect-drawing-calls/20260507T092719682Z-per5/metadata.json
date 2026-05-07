@@ -1,0 +1,116 @@
+{
+  "callId": "20260507T092719682Z-per5",
+  "inputs": {
+    "projectId": "23301a8a-4cdb-4751-ac0c-93b97f0f5c12",
+    "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+    "sheetNum": "15",
+    "question": "Are driveway spacing dimensions shown on this sheet? Look for dimensional annotations showing distances between driveways or from driveways to intersections, property lines, or other reference points.",
+    "expectedAnswerType": "boolean",
+    "cropMode": "drawing",
+    "regionHint": null,
+    "reasoning": "The agent is asking whether dimensional annotations (labels showing distances between driveways) are present and visible on the drawing itself. This is a drawing-element inspection task, not a measurement task—the agent is checking for the presence and visibility of dimension callouts, which is a drawing_inspect responsibility.",
+    "applicableChecklistItems": [
+      {
+        "checklist_id": "cc-22:CC-22-12",
+        "checklist_deficiency_text": "Driveway spacing dimensions not shown on plans (DRV-02)"
+      }
+    ],
+    "dpi": 150
+  },
+  "cropResolution": {
+    "bbox": {
+      "x0": 0.034,
+      "y0": 0.028,
+      "x1": 0.915,
+      "y1": 0.9650000000000001
+    },
+    "source": "drawing-block"
+  },
+  "renderResult": {
+    "width": 4758,
+    "height": 3374
+  },
+  "result": {
+    "answerText": "Yes, driveway spacing dimensions are shown on this sheet. There are several dimensional annotations along the curb line of Collier Street indicating distances between driveways and from the intersection.",
+    "classification": "yes",
+    "count": null,
+    "unanswerable": false,
+    "confidence": 0.95,
+    "evidence": [
+      {
+        "bbox": [
+          440,
+          470,
+          455,
+          525
+        ],
+        "bboxAbsolute": {
+          "x0": 0.44806999999999997,
+          "y0": 0.44028000000000006,
+          "x1": 0.496525,
+          "y1": 0.45433500000000004
+        },
+        "description": "Dimension of 22' indicating the distance from the intersection to the first driveway curb cut."
+      },
+      {
+        "bbox": [
+          425,
+          410,
+          445,
+          455
+        ],
+        "bboxAbsolute": {
+          "x0": 0.39520999999999995,
+          "y0": 0.426225,
+          "x1": 0.434855,
+          "y1": 0.44496500000000005
+        },
+        "description": "Dimension of 14' indicating the spacing distance between two driveway curb cuts."
+      },
+      {
+        "bbox": [
+          385,
+          300,
+          405,
+          360
+        ],
+        "bboxAbsolute": {
+          "x0": 0.2983,
+          "y0": 0.38874500000000006,
+          "x1": 0.35116,
+          "y1": 0.4074850000000001
+        },
+        "description": "Dimension of 106' indicating a distance along the curb from a driveway."
+      }
+    ],
+    "reasoning": "I located linear dimension lines with numeric values (e.g., 22', 14', 106') running parallel to the curb of Collier Street. These dimensions measure the distances between the proposed driveway curb returns and the adjacent street intersection, effectively providing driveway spacing information.",
+    "regionHintHonored": null,
+    "_meta": {
+      "callId": "20260507T092719682Z-per5",
+      "expectedAnswerType": "boolean",
+      "cropMode": "drawing",
+      "cropResolution": {
+        "bbox": {
+          "x0": 0.034,
+          "y0": 0.028,
+          "x1": 0.915,
+          "y1": 0.9650000000000001
+        },
+        "source": "drawing-block"
+      },
+      "cropBbox": {
+        "x0": 0.034,
+        "y0": 0.028,
+        "x1": 0.915,
+        "y1": 0.9650000000000001
+      },
+      "model": "google/gemini-3.1-pro-preview",
+      "promptLength": 4134,
+      "validationNotes": []
+    }
+  },
+  "timing": {
+    "startedAt": 1778146039684,
+    "finishedAt": 1778146060872
+  }
+}
