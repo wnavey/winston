@@ -70,6 +70,7 @@ That's everything you need to know what to build and why.
 | [`problem-statement.md`](./problem-statement.md) | Current hit rates with citations to rigorous metrics |
 | [`architecture.md`](./architecture.md) | Tool scaffolding/dispatching architecture; how conductor + bureau cooperate; where `vision_check` sits. Diagrams + glossary. |
 | [`plan.md`](./plan.md) | Full design — decisions log, iter 1 spec, phased execution plan, follow-ups |
+| [`metrics-framework.md`](./metrics-framework.md) | **2026-05-07 reorientation.** Iter 1 metrics: 3 variants (V1 baseline / V2 bifurcated / V3 specialist routing) × 4 TSVs × 2 experiment sets. Read this before doing any iter-1 analysis. |
 
 ## How to continue from here
 
