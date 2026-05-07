@@ -20,7 +20,7 @@ and known issues so the per-variant TSV builds and
 | **cc** | var1-bifurcated | ✅ current | `VISION_EXP_INSPECT_DRAWING_RUN_1` | 3 | 1700 S. Lamar v2 |
 | **cc** | var2-routing | 🔁 needs-rerun | `VISION_CHECK_CC_RUN_4` | **1** | 1700 S. Lamar v2 |
 | **el-md-exp** | ctrl-baseline | 🟡 in-progress | `VISION_CHECK_REVIEW_EL_MD_EXP_BASELINE_V3` | 3 | Valley View v1 |
-| **el-md-exp** | var1-bifurcated | 🛠 needs-tsv-build | `experiment-run7.2` | 3 | Valley View v1 |
+| **el-md-exp** | var1-bifurcated | 🟡 in-progress | `VISION_CHECK_REVIEW_EL_MD_EXP_VAR1_RUN_1` | 3 | Valley View v1 |
 | **el-md-exp** | var2-routing | 🟡 in-progress | `VISION_CHECK_REVIEW_EL_MD_EXP_RUN_2` | 3 | Valley View v1 |
 
 | Status | Meaning |
@@ -148,28 +148,40 @@ and known issues so the per-variant TSV builds and
   - `BASELINE` (`workflow_runs.id 300eb8a1-9bb1-4257-a88a-745bf696b805`, Inngest `01KQZ1X0NMDDZ6E4SA3P1S3Q1E`, fired 2026-05-06 16:28, on Valley View v2)
   - `BASELINE_V2` (review id `224279d8-4827-44cd-a15b-1f034496dac2`, on Valley View v2 — `logAllAgentTrace` silently failed)
 
-#### el-md-exp / var1-bifurcated-vision-tools 🛠 needs-tsv-build
+#### el-md-exp / var1-bifurcated-vision-tools 🟡 in-progress
+
+| Field | Value |
+|---|---|
+| `runLabel` | `VISION_CHECK_REVIEW_EL_MD_EXP_VAR1_RUN_1` |
+| Inngest event id | `01KR24PMGWH1RM1FXJ5G2Q4EF6` |
+| `workflow_runs.id` | _(awaiting Substation pickup)_ |
+| Review id | _(awaiting run completion)_ |
+| Started | 2026-05-07 21:09 UTC |
+| Workflow / overlay | `review` + `--experiment=measure-distance` |
+| Submission | Valley View Townhomes v1 (`submissionVersionId=55fb6548-…`) — matches `BASELINE_V3` and `RUN_2` |
+| Guide | `el-md-exp` |
+| `runs` | 3 |
+| Agent tools | `vision`, `measure-distance` |
+| Flags | `logAllAgentTrace=true` |
+| Bureau commit | post bureau#314 (review-extended.md) |
+| Conductor PR | post conductor#149 (templated agent.prompt + reviewPromptName seeding) |
+| Metrics TSV | _(not built yet)_ |
+
+**Notes**
+- Re-fire of var1 today, post bureau#314 + conductor#149. **All three el-md-exp variants now share the same agent / dispatcher / prompt era** — apples-to-apples for Goal A and Goal B.
+- First var1 run with the new `review-extended.md` prompt path. `tools_used` should now capture `measure-distance` directly per finding (vs the historical `experiment-run7.2` which had the SDK tools_used tracking gap, requiring per-call metadata fallback for measure-distance attribution).
+- Workflow_runs.id and review id need Supabase lookup once Substation creates the DB record.
+- **Supersedes the historical `experiment-run7.2`** (~April 15 era) as the phase-1 canonical var1 source. The April run remains useful as a historical reference / aspirational ceiling per plan.md, but `VAR1_RUN_1` is the apples-to-apples comparator for the var2 vs var1 phase-1 metric.
+
+**Historical reference (superseded)**
 
 | Field | Value |
 |---|---|
 | `runLabel` | `experiment-run7.2` (alternate: `experiment-run7`) |
-| `workflow_runs.id` | _(needs Supabase lookup)_ |
 | Started | ~2026-04-15 |
-| Workflow / overlay | `review` + `--experiment=measure-distance` |
-| Submission | Valley View Townhomes v1 (`submissionVersionId=55fb6548-…`) — matches `BASELINE_V3` |
-| Guide | `el-md-exp` |
-| `runs` | 3 |
-| Agent tools | `vision`, `measure-distance` |
 | Artifacts | [`measure-distance-tool/runs/v5.0/el-md-exp/experiment-run7.2/`](../../measure-distance-tool/runs/v5.0/el-md-exp/experiment-run7.2/) (alternate: [`experiment-run7/`](../../measure-distance-tool/runs/v5.0/el-md-exp/experiment-run7/)) |
-| Metrics TSV | _(not built yet)_ |
 | Analysis doc | [`measure-distance-tool/analysis/rigorous-metrics/experiment-run7.2.md`](../../measure-distance-tool/analysis/rigorous-metrics/experiment-run7.2.md) |
-
-**Notes**
-- Submission-version mismatch retired 2026-05-07 by firing `BASELINE_V3` on Valley View v1 (matches this var1's submission). Var2 still on v2 — needs re-fire on v1 to complete the alignment.
-- Two near-identical runs available (`run7` and `run7.2`). Pick `run7.2` by default — slightly higher recall (13.1% vs 12.4% per-(item × run)) and the canonical reference for plan.md's "aspirational ceiling" quote.
-- Existing rigorous-metrics analysis (linked above) computes per-(item × run) recall against `el-md-exp/item-classification.json`. Use the same join when building the var1 TSV.
-- ~3 weeks old (April 15) so prompt-drift caveat remains. If var2 RUN_2 shows a wide gap, consider re-firing var1 today on v1 with `experiment=measure-distance` for clean comparison.
-- Workflow_runs.id, review_id, inngest event IDs need Supabase lookup.
+| Recall (per (item × run)) | 13.1% (run7.2) / 12.4% (run7) |
 
 #### el-md-exp / var2-vision-specialist-routing 🟡 in-progress
 
@@ -206,7 +218,7 @@ For phase 1 to declare done, all 6 cells should be ✅ **current** with no outst
 
 - [ ] cc / var2: re-fire at `runs=3`
 - [ ] el-md-exp / ctrl-baseline: await `BASELINE_V3` completion (Inngest `01KR23RHGJB4S6WB3ZK72TFVQW`); pull artifacts; build TSV
-- [ ] el-md-exp / var1: build TSV from existing `experiment-run7.2` artifacts; decide whether prompt-drift caveat warrants a fresh re-fire on v1
+- [ ] el-md-exp / var1: await `VAR1_RUN_1` completion (Inngest `01KR24PMGWH1RM1FXJ5G2Q4EF6`); pull artifacts; build TSV. (Historical `experiment-run7.2` available as a sanity-check reference but not the canonical source.)
 - [ ] el-md-exp / var2: await `RUN_2` completion (Inngest `01KR24EFQJY10YKC1RYG3TVD6E`); pull artifacts; build TSV (use `classifier.output.problemType` for routing-intent, not `dispatch.specialistCalled`)
 - [ ] el-md-exp / var2: re-fire post-bureau#310 + measurement-dispatch wiring; build TSV from new run
 
