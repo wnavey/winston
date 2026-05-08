@@ -1,0 +1,45 @@
+{
+  "callId": "20260508T201541810Z-pty1",
+  "startedAt": "2026-05-08T20:15:41.810Z",
+  "completedAt": "2026-05-08T20:16:28.047Z",
+  "inputs": {
+    "checklistItemId": "el-md-exp:EL-1.9",
+    "checklistItemText": "Fences do not maintain minimum 7.5-foot horizontal sky-to-ground clearance from outside conductor of overhead electric facilities",
+    "question": "Where are fences shown on the site plan, particularly near the OHE line on the southern and western boundaries? What is the distance from fences to the overhead electric conductors?",
+    "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+    "sheetNum": 9
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "bacd962b8af80b9bc2eb7133c303f7a9e490aa2dcac89404b55e42f72b7ebe6d",
+    "promptSource": "bureau",
+    "promptSourcePath": "/Users/wnavey/code/controlroom/conductor/workspace/bureau/jurisdictions/austin/workflows/review/prompts/vision-router.md",
+    "output": {
+      "problemType": "measurement",
+      "reasoning": "The agent question explicitly asks for distance measurement ('What is the distance from fences to the overhead electric conductors?'), which is the core compliance check for the 7.5-foot clearance requirement. The locational context (southern and western boundaries) is secondary framing for where to perform the measurement.",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "measure-distance",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": "/Users/wnavey/code/controlroom/conductor/workspace/output/vision-check-calls/20260508T201541810Z-pty1/specialist-measure-distance",
+    "argConstruction": {
+      "pairs": [
+        {
+          "objectA": "Sidewalk Easement Fence near the northwest corner",
+          "objectB": "OHE line on the western boundary"
+        },
+        {
+          "objectA": "Crete Fence on the southern boundary",
+          "objectB": "OHE line on the southern boundary"
+        }
+      ],
+      "explanation": "Identified the specifically labeled fences near the western and southern boundaries to measure their clearances to the adjacent overhead electric (OHE) lines.",
+      "callDir": "/Users/wnavey/code/controlroom/conductor/workspace/output/vision-check-calls/20260508T201541810Z-pty1/specialist-extract-measurement-pairs"
+    }
+  },
+  "phase": "B"
+}

@@ -1,0 +1,45 @@
+{
+  "callId": "20260508T201233127Z-h6bz",
+  "startedAt": "2026-05-08T20:12:33.127Z",
+  "completedAt": "2026-05-08T20:13:12.985Z",
+  "inputs": {
+    "checklistItemId": "el-md-exp:EL-1.1",
+    "checklistItemText": "Buildings and permanent structures do not maintain minimum 7 feet 6 inches horizontal sky-to-ground clearance from overhead electric conductors",
+    "question": "Which buildings are closest to the OHE line on the southern boundary? What is the minimum horizontal distance from any building to the OHE line shown on the plan?",
+    "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+    "sheetNum": 9
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "bacd962b8af80b9bc2eb7133c303f7a9e490aa2dcac89404b55e42f72b7ebe6d",
+    "promptSource": "bureau",
+    "promptSourcePath": "/Users/wnavey/code/controlroom/conductor/workspace/bureau/jurisdictions/austin/workflows/review/prompts/vision-router.md",
+    "output": {
+      "problemType": "measurement",
+      "reasoning": "The agent is asking for the minimum horizontal distance from buildings to the OHE line, which is a direct clearance measurement question required to verify the 7'6\" horizontal sky-to-ground clearance requirement.",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "measure-distance",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": "/Users/wnavey/code/controlroom/conductor/workspace/output/vision-check-calls/20260508T201233127Z-h6bz/specialist-measure-distance",
+    "argConstruction": {
+      "pairs": [
+        {
+          "objectA": "South wall of Bldg. 8",
+          "objectB": "OHE line running along the southern boundary"
+        },
+        {
+          "objectA": "South wall of Bldg. 7",
+          "objectB": "OHE line running along the southern boundary"
+        }
+      ],
+      "explanation": "Measures the minimum horizontal clearance from the southern OHE line to the two closest buildings (Bldg. 8 and Bldg. 7) to verify the 7'6\" requirement.",
+      "callDir": "/Users/wnavey/code/controlroom/conductor/workspace/output/vision-check-calls/20260508T201233127Z-h6bz/specialist-extract-measurement-pairs"
+    }
+  },
+  "phase": "B"
+}

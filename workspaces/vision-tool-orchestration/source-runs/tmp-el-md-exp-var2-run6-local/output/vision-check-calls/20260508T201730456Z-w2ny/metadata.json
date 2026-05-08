@@ -1,0 +1,45 @@
+{
+  "callId": "20260508T201730456Z-w2ny",
+  "startedAt": "2026-05-08T20:17:30.456Z",
+  "completedAt": "2026-05-08T20:18:44.346Z",
+  "inputs": {
+    "checklistItemId": "el-md-exp:EL-13.13",
+    "checklistItemText": "Trees within 10 lateral feet of pad-mounted equipment are not identified as utility-compatible species per ECM Appendix F, or trees within 15 lateral feet of overhead electric distribution conductors are not utility-compatible",
+    "question": "Are there any trees or vegetation shown within 10 feet of the transformer pad locations on the landscape plan? If yes, what are the tree/shrub species and distances from the transformer pads?",
+    "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+    "sheetNum": 31
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "bacd962b8af80b9bc2eb7133c303f7a9e490aa2dcac89404b55e42f72b7ebe6d",
+    "promptSource": "bureau",
+    "promptSourcePath": "/Users/wnavey/code/controlroom/conductor/workspace/bureau/jurisdictions/austin/workflows/review/prompts/vision-router.md",
+    "output": {
+      "problemType": "measurement",
+      "reasoning": "The agent is asking for both presence and distance measurements of trees relative to transformer pads; the distance component ('distances from the transformer pads') is the operative part of the compliance check and requires plan-view measurement between features.",
+      "confidence": 0.92,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "measure-distance",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": "/Users/wnavey/code/controlroom/conductor/workspace/output/vision-check-calls/20260508T201730456Z-w2ny/specialist-measure-distance",
+    "argConstruction": {
+      "pairs": [
+        {
+          "objectA": "equipment pad (transformer) in the shaded area in the southwest corner of the site",
+          "objectB": "tree immediately north of the southwest equipment pad"
+        },
+        {
+          "objectA": "equipment pad (transformer) in the shaded area in the southwest corner of the site",
+          "objectB": "tree immediately south of the southwest equipment pad"
+        }
+      ],
+      "explanation": "Identified the equipment pad in the southwest corner and the two closest trees immediately north and south of it for clearance measurements.",
+      "callDir": "/Users/wnavey/code/controlroom/conductor/workspace/output/vision-check-calls/20260508T201730456Z-w2ny/specialist-extract-measurement-pairs"
+    }
+  },
+  "phase": "B"
+}
