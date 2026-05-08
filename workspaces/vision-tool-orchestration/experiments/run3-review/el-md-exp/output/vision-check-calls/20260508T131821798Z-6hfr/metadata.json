@@ -1,0 +1,32 @@
+{
+  "callId": "20260508T131821798Z-6hfr",
+  "startedAt": "2026-05-08T13:18:21.798Z",
+  "completedAt": "2026-05-08T13:18:40.527Z",
+  "inputs": {
+    "checklistItemId": "el-md-exp:EL-1.7",
+    "checklistItemText": "Surveyed elevations and locations of overhead conductors not included on building elevation sheets to demonstrate required clearances are met",
+    "question": "Are there any building elevation sheets showing the height of overhead electric conductors and the vertical clearances from building roof lines or projections? If so, what clearance dimensions are shown?",
+    "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+    "sheetNum": 1,
+    "regionHint": "check the sheet index for elevation or section sheets that might show vertical clearances from buildings to overhead lines"
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "bacd962b8af80b9bc2eb7133c303f7a9e490aa2dcac89404b55e42f72b7ebe6d",
+    "promptSource": "bureau",
+    "promptSourcePath": "/vercel/sandbox/workspace/bureau/jurisdictions/austin/workflows/review/prompts/vision-router.md",
+    "output": {
+      "problemType": "generic",
+      "reasoning": "The agent is asking a presence/discovery question first ('Are there any building elevation sheets...') before attempting to read clearance dimensions. This is progressive verification — identifying whether the required sheets exist and what information they contain, rather than measuring a specific clearance distance.",
+      "confidence": 0.92,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "vision",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": null
+  },
+  "phase": "B"
+}

@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """Build metrics/el-md-exp/var1-bifurcated-vision-tools/per-item-run.tsv (TSV 3, raw).
 
-Long format: one row per (item × run). Source is VAR1_RUN_1
+Long format: one row per (item × run). Source is VAR1_RUN_2
 (`experiment=measure-distance` overlay — agent has `vision` + direct
 `measure-distance` script-tool exposed).
 
 Sources:
-- ../../../../experiments/var1-run1-review/el-md-exp/output/runs/run-{1,2,3}/findings/*.md.json
-- ../../../../experiments/var1-run1-review/el-md-exp/output/measure-distance-calls/*/metadata.json
+- ../../../../experiments/var1-run2-review/el-md-exp/output/runs/run-{1,2,3}/findings/*.md.json
+- ../../../../experiments/var1-run2-review/el-md-exp/output/measure-distance-calls/*/metadata.json
   (MAY NOT EXIST — if the agent never called measure-distance, no calls dir)
 - ../../expected-vision-selection/expected.tsv
 
@@ -16,14 +16,12 @@ Output:
 
 tool_called precedence per item-run: measure-distance > generic-vision > none.
 
-Known coverage caveat: VAR1_RUN_1 emitted findings for fail / not-verifiable
-/ n/a statuses but NOT for `pass` items, because the measure-distance
-overlay's review.md hardcodes `prompt: review.md` AND its own review.md
-(a) still says "only emit fail/not-verifiable" and (b) lacks the
-{{ agentTraceGuidance }} placeholder. So `logAllAgentTrace=true` couldn't
-override the omit-pass instruction. Items with no finding for a given
-(item, run) get tool_called=none with notes='no_finding' — that's a known
-under-count for var1, separate followup to update the overlay's review.md.
+Coverage: VAR1_RUN_2 emits findings for all four statuses (pass / fail /
+not-verifiable / n/a) — bureau#317 added the {{ agentTraceGuidance }}
+placeholder to the measure-distance overlay's review.md, so
+`logAllAgentTrace=true` now properly appends the emit-all-statuses
+override. Supersedes VAR1_RUN_1 which only had 201/303 cells with
+findings.
 """
 
 import csv
@@ -34,8 +32,8 @@ from pathlib import Path
 
 HERE = Path(__file__).parent.resolve()
 WORKSPACE = HERE.parent.parent.parent.parent
-RUN_LABEL = "VISION_CHECK_REVIEW_EL_MD_EXP_VAR1_RUN_1"
-RUN_DIR = WORKSPACE / "experiments" / "var1-run1-review" / "el-md-exp" / "output"
+RUN_LABEL = "VISION_CHECK_REVIEW_EL_MD_EXP_VAR1_RUN_2"
+RUN_DIR = WORKSPACE / "experiments" / "var1-run2-review" / "el-md-exp" / "output"
 RUNS_DIR = RUN_DIR / "runs"
 MD_CALLS_DIR = RUN_DIR / "measure-distance-calls"
 EXPECTED_TSV = HERE.parent.parent / "expected-vision-selection" / "expected.tsv"

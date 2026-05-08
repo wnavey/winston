@@ -1,0 +1,31 @@
+{
+  "callId": "20260508T131942293Z-1t4c",
+  "startedAt": "2026-05-08T13:19:42.293Z",
+  "completedAt": "2026-05-08T13:19:56.451Z",
+  "inputs": {
+    "checklistItemId": "el-md-exp:EL-13.37",
+    "checklistItemText": "Transformer pad dimensions do not match Austin Energy Design-approved transformer pad detail sheets for specified service type (single-phase or three-phase)",
+    "question": "Are there transformer pad detail sheets included in this plan set that show specific dimensions for the pad foundation and match Austin Energy Design standards? List the pad dimensions for each transformer if shown.",
+    "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+    "sheetNum": 21
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "bacd962b8af80b9bc2eb7133c303f7a9e490aa2dcac89404b55e42f72b7ebe6d",
+    "promptSource": "bureau",
+    "promptSourcePath": "/vercel/sandbox/workspace/bureau/jurisdictions/austin/workflows/review/prompts/vision-router.md",
+    "output": {
+      "problemType": "generic",
+      "reasoning": "The agent is asking whether transformer pad detail sheets exist in the plan set and requesting a readout of dimensions shown on those sheets. This is a document-presence check and label/dimension readout task, not a measurement between physical features on the plan. The actual compliance verification (whether dimensions match Austin Energy standards) comes after this discovery step.",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "vision",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": null
+  },
+  "phase": "B"
+}
