@@ -158,15 +158,14 @@
       "set": "el-md-exp",
       "setLabel": "Review + Measure Distance",
       "variant": "var1-bifurcated-vision-tools",
-      "status": "current",
-      "rerunReason": "Partial-coverage caveat known: measure-distance overlay's review.md hardcodes prompt: review.md and lacks the {{ agentTraceGuidance }} placeholder, so logAllAgentTrace=true couldn't override the omit-pass-items instruction. Result: 201/303 (item × run) cells have findings; 102 missing cells are mostly silently-passed items. Goal A var1 is a lower bound. Fixing the overlay (small bureau PR) and re-firing would tighten the number — separate followup.",
-      "runLabel": "VISION_CHECK_REVIEW_EL_MD_EXP_VAR1_RUN_1",
-      "workflowRunsId": "b877dead-f786-4bf6-9ac4-3cde3f2ec546",
-      "reviewId": "9e6f78e4-7cab-44b1-b23c-d564059c6e81",
-      "inngestEventId": "01KR24PMGWH1RM1FXJ5G2Q4EF6",
-      "startedAt": "2026-05-07T21:15:30Z",
-      "completedAt": "2026-05-07T21:32:13Z",
-      "wallClockMinutes": 17,
+      "status": "in-progress",
+      "runLabel": "VISION_CHECK_REVIEW_EL_MD_EXP_VAR1_RUN_2",
+      "workflowRunsId": null,
+      "reviewId": null,
+      "inngestEventId": "01KR3VNN3FPRQ6C3DVB4Y74RA8",
+      "startedAt": "2026-05-08T~",
+      "completedAt": null,
+      "wallClockMinutes": null,
       "workflow": "review",
       "experimentOverlay": "measure-distance",
       "submission": {
@@ -179,39 +178,37 @@
       "agentTools": ["vision", "measure-distance"],
       "flags": ["logAllAgentTrace=true"],
       "model": null,
-      "bureauCommit": "post bureau#314 (review-extended.md prompt + reviewPromptName input)",
+      "bureauCommit": "post bureau#317 (measure-distance overlay agent-trace placeholder)",
       "conductorPr": "post conductor#149 (templated agent.prompt + reviewPromptName seeding)",
       "artifactsPath": null,
       "metricsTsvPath": null,
       "kickoffDoc": null,
       "notes": [
-        "Re-fire of var1 on Valley View v1 today, post bureau#314 + conductor#149. All three el-md-exp variants now share the same agent / dispatcher / prompt era — apples-to-apples for Goal A and Goal B.",
-        "First var1 run that uses the new review-extended.md prompt path (logAllAgentTrace=true → reviewPromptName=review-extended). Findings should carry agentTrace.{observation, reasoning, tools_used} for ALL statuses, with tools_used capturing both `vision` and `measure-distance` invocations directly (vs the historical experiment-run7.2 which had the tools_used tracking gap).",
+        "Re-fire of var1 to retire the partial-coverage caveat. RUN_1 emitted findings for only 201/303 (item × run) cells because the measure-distance overlay's review.md lacked the {{ agentTraceGuidance }} placeholder, so logAllAgentTrace=true couldn't override the omit-pass-items instruction. bureau#317 added the placeholder; this re-fire should produce 303/303 cells with findings, all four statuses.",
+        "Same submission, runs, and flags as RUN_1 — only the bureau commit context changes.",
         "Workflow_runs.id and review id need Supabase lookup once Substation creates the DB record.",
-        "Supersedes the historical experiment-run7.2 (April 15 era) as the phase-1 canonical var1 source. The April-15 run remains useful as a historical reference and aspirational ceiling per plan.md, but VAR1_RUN_1 is the apples-to-apples comparator for the var2 vs var1 phase-1 metric."
+        "Supersedes VAR1_RUN_1 (workflow_runs.id b877dead-f786-4bf6-9ac4-3cde3f2ec546, review id 9e6f78e4-7cab-44b1-b23c-d564059c6e81). RUN_1 in turn superseded the historical experiment-run7.2."
       ],
       "supersedes": {
-        "runLabel": "experiment-run7.2",
-        "alternateRunLabel": "experiment-run7",
-        "artifactsPath": "winston/workspaces/measure-distance-tool/runs/v5.0/el-md-exp/experiment-run7.2/",
-        "alternateArtifactsPath": "winston/workspaces/measure-distance-tool/runs/v5.0/el-md-exp/experiment-run7/",
-        "analysisDoc": "winston/workspaces/measure-distance-tool/analysis/rigorous-metrics/experiment-run7.2.md",
-        "startedAt": "2026-04-15T~",
-        "reason": "~3 weeks old at time of phase-1 metrics; prompt / dispatcher / model drift confounded apples-to-apples with same-day ctrl + var2."
+        "runLabel": "VISION_CHECK_REVIEW_EL_MD_EXP_VAR1_RUN_1",
+        "workflowRunsId": "b877dead-f786-4bf6-9ac4-3cde3f2ec546",
+        "reviewId": "9e6f78e4-7cab-44b1-b23c-d564059c6e81",
+        "startedAt": "2026-05-07T21:15:30Z",
+        "reason": "Partial coverage (201/303 cells) — measure-distance overlay's review.md was missing the {{ agentTraceGuidance }} placeholder. bureau#317 fixed it; this re-fire closes the gap."
       }
     },
     {
       "set": "el-md-exp",
       "setLabel": "Review + Measure Distance",
       "variant": "var2-vision-specialist-routing",
-      "status": "current",
-      "runLabel": "VISION_CHECK_REVIEW_EL_MD_EXP_RUN_2",
-      "workflowRunsId": "465fe4e5-9ce6-4554-9cbc-65cd75755b2b",
-      "reviewId": "694e2e1c-f160-407a-94c6-b5fd8aa5a919",
-      "inngestEventId": "01KR24EFQJY10YKC1RYG3TVD6E",
-      "startedAt": "2026-05-07T21:11:03Z",
-      "completedAt": "2026-05-07T21:27:49Z",
-      "wallClockMinutes": 17,
+      "status": "in-progress",
+      "runLabel": "VISION_CHECK_REVIEW_EL_MD_EXP_RUN_3",
+      "workflowRunsId": null,
+      "reviewId": null,
+      "inngestEventId": "01KR3VNSV2V2PVAKCQ8DGMX39D",
+      "startedAt": "2026-05-08T~",
+      "completedAt": null,
+      "wallClockMinutes": null,
       "workflow": "review",
       "experimentOverlay": "vision-check",
       "submission": {
@@ -225,19 +222,26 @@
       "flags": ["logAllAgentTrace=true"],
       "enabledVisionSpecialists": "generic-vision,measure-distance",
       "model": null,
-      "bureauCommit": "post bureau#314 (review-extended.md) + bureau#316 (enabledVisionSpecialists CSV)",
-      "conductorPr": "post conductor#149 (templated agent.prompt + reviewPromptName seeding)",
+      "bureauCommit": "post bureau#318 (vision-router.md conditional sections)",
+      "conductorPr": "post conductor#151 (template-engine sections + allow-list-aware router prompt)",
       "artifactsPath": null,
       "metricsTsvPath": null,
       "kickoffDoc": null,
       "notes": [
-        "Re-fire of var2 on Valley View v1 — matches BASELINE_V3 and var1 (experiment-run7.2). Retires the v1/v2 mismatch confounder for the var2 cell.",
-        "**enabledVisionSpecialists ablation:** inspect-drawing dropped from the allow-list. Apples-to-apples with var1 (which had only vision + measure-distance exposed). Goal B becomes a clean 'measure-distance vs not' question instead of a three-way race that includes drawing_inspect.",
-        "First var2 run that uses the new review-extended.md prompt path — every finding should carry agentTrace.{observation, reasoning, tools_used} for ALL statuses, closing the per-item attribution gap.",
-        "Caveat: measurement dispatch still falls back to generic via measurement_arg_construction_not_implemented (conductor-side gap, separate work). The vision-check-calls metadata.json files will record `classifier.output.problemType: 'measurement'` even when `dispatch.specialistCalled: 'vision'` (post-fallback). When building the var2 TSV, **read classifier.output.problemType for routing intent**, not dispatch.specialistCalled.",
+        "Re-fire of var2 to retire the classifier-misroute caveat. RUN_2's classifier picked drawing_inspect for 27 of 57 calls on el-md-exp items — all of which then fell back to generic via specialist_disabled (because inspect-drawing isn't in the allow-list). Wasted classifier capacity.",
+        "**Allow-list-aware classifier prompt:** post conductor#151 + bureau#318, the vision-router.md is now rendered with {{#enabledFoo}}…{{/enabledFoo}} blocks keyed on the enabledVisionSpecialists CSV. With inspect-drawing dropped from the allow-list, the classifier never sees drawing_inspect listed in problem types or few-shot examples. Expected: the 27 prior misroutes redirect to measurement (the right answer for most) or generic (acceptable fallback).",
+        "Goal B should lift materially. The phase-1 RUN_2 number was 5.9% (3/51) post strict-majority-vote; with the misroutes redistributed, target is meaningfully higher.",
+        "Caveat: measurement dispatch still falls back to generic via measurement_arg_construction_not_implemented (conductor-side gap, separate work). When building the var2 TSV, continue to **read classifier.output.problemType for routing intent**, not dispatch.specialistCalled.",
         "Workflow_runs.id and review id need Supabase lookup once Substation creates the DB record.",
-        "Supersedes RUN_1 (workflow_runs.id b7015e80-c771-4f9e-a149-2adffc5723df, review id cab91833-f951-45cb-b9a1-ee59591faede) — pre-bureau#310 smoke run on Valley View v2."
-      ]
+        "Supersedes RUN_2 (workflow_runs.id 465fe4e5-9ce6-4554-9cbc-65cd75755b2b, review id 694e2e1c-f160-407a-94c6-b5fd8aa5a919). RUN_2 in turn superseded the pre-bureau#310 RUN_1."
+      ],
+      "supersedes": {
+        "runLabel": "VISION_CHECK_REVIEW_EL_MD_EXP_RUN_2",
+        "workflowRunsId": "465fe4e5-9ce6-4554-9cbc-65cd75755b2b",
+        "reviewId": "694e2e1c-f160-407a-94c6-b5fd8aa5a919",
+        "startedAt": "2026-05-07T21:11:03Z",
+        "reason": "Classifier still saw drawing_inspect listed in vision-router.md (allow-list only gated dispatch, not classification). 27 of 57 calls misrouted. conductor#151 + bureau#318 made the router prompt allow-list-aware via Mustache sections; this re-fire validates the fix."
+      }
     }
   ]
 }
