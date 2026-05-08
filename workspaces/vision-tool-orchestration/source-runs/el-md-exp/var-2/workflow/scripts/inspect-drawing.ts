@@ -36,6 +36,10 @@ import { parseArgs } from 'node:util';
 import { generateText } from 'ai';
 import { gateway } from '@ai-sdk/gateway';
 import { createClient } from '@supabase/supabase-js';
+import {
+  getPlanSetVersionId as libGetPlanSetVersionId,
+  resolveSubmissionVersionId,
+} from './lib/sheet-resolution.js';
 
 // ESM-safe equivalent of CommonJS SCRIPT_DIR (this script runs under tsx as ESM).
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
@@ -68,6 +72,7 @@ const { values } = parseArgs({
     projectId: { type: 'string' },
     documentId: { type: 'string' },
     sheetNum: { type: 'string' },
+    submissionVersionId: { type: 'string' },
     question: { type: 'string' },
     expectedAnswerType: { type: 'string', default: 'boolean' },
     cropMode: { type: 'string', default: 'drawing' },
@@ -92,6 +97,12 @@ let {
   dpi,
 } = values as Record<string, string>;
 
+// Resolve submissionVersionId: explicit CLI arg first, fall back to
+// WORKSPACE_PATH/workflow/status.json (conductor-managed flow). Fail
+// loudly if neither is available — see lib/sheet-resolution.ts for why
+// the previous "latest by created_at" fallback was a footgun.
+const submissionVersionId = resolveSubmissionVersionId(values.submissionVersionId as string);
+
 // Infer projectId from workspace if not provided — same pattern as
 // measure-distance and semantic-search-blocks.
 if (!projectId) {
@@ -112,12 +123,18 @@ if (!projectId) {
 
 if (!documentId || !sheetNum || !question || !outputPath) {
   console.error(
-    'Missing required arguments. Required: documentId, sheetNum, question, outputPath. Optional: projectId (inferred from workspace), expectedAnswerType, cropMode, regionHint, dpi.',
+    'Missing required arguments. Required: documentId, sheetNum, question, outputPath. Optional: projectId (inferred from workspace), submissionVersionId (resolved from CLI or workflow/status.json), expectedAnswerType, cropMode, regionHint, dpi.',
   );
   process.exit(1);
 }
 if (!projectId) {
   console.error('projectId not provided and could not be inferred from workspace.');
+  process.exit(1);
+}
+if (!submissionVersionId) {
+  console.error(
+    'Could not resolve submissionVersionId — neither --submissionVersionId CLI arg nor WORKSPACE_PATH/workflow/status.json provided one. Bureau scripts cannot safely guess which submission to scope plan_set_version lookups to.',
+  );
   process.exit(1);
 }
 
@@ -170,93 +187,6 @@ function getSupabase() {
   return createClient(url, key);
 }
 
-/**
- * Read the workflow's submissionVersionId from workflow/status.json.
- *
- * Conductor writes status.json before any step runs (see
- * conductor/src/orchestrator/checklist-manager.ts:setWorkflowParams), with
- * the validated workflow inputs under `inputs`. We pull `submissionVersionId`
- * out of there so the script can scope plan_set_version lookups to *this*
- * workflow's submission rather than guessing from "latest by created_at."
- *
- * Returns null when:
- *   - WORKSPACE_PATH is not set (e.g., ad-hoc CLI invocation)
- *   - status.json is missing (test-script context — fixture replays don't
- *     have a workflow input)
- *   - the file is unparseable or the field is absent
- *
- * The caller falls back to the unscoped lookup in those cases so we don't
- * regress test-script replays.
- */
-function loadSubmissionVersionId(): string | null {
-  const workspacePath = process.env.WORKSPACE_PATH;
-  if (!workspacePath) return null;
-  const statusPath = path.join(workspacePath, 'workflow', 'status.json');
-  if (!fs.existsSync(statusPath)) return null;
-  try {
-    const state = JSON.parse(fs.readFileSync(statusPath, 'utf-8')) as {
-      inputs?: Record<string, unknown>;
-    };
-    const id = state?.inputs?.submissionVersionId;
-    return typeof id === 'string' && id.length > 0 ? id : null;
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Resolve the plan_set_version that *this workflow run* should use for a
- * given plan_set.
- *
- * Strategy:
- *   1. If we can resolve the workflow's submissionVersionId, look up the
- *      plan_set_version with (plan_set_id, submission_version_id). This is
- *      the correct answer — plan_sets can have multiple versions across
- *      submissions and we want the one tied to *this* submission.
- *   2. Otherwise (test-script / ad-hoc CLI), fall back to "latest by
- *      created_at" so existing replay flows keep working.
- *
- * Note: plan_set_version has no `version_number` column (legacy assumption
- * carried over from measure-distance.ts:200). We order by created_at and
- * use maybeSingle() to keep the contract null-on-no-row.
- */
-async function getPlanSetVersionId(planSetId: string): Promise<string | null> {
-  const supabase = getSupabase();
-  const submissionVersionId = loadSubmissionVersionId();
-
-  if (submissionVersionId) {
-    const { data } = await supabase
-      .from('plan_set_version')
-      .select('id')
-      .eq('plan_set_id', planSetId)
-      .eq('submission_version_id', submissionVersionId)
-      .maybeSingle();
-    if (data?.id) return data.id;
-    // Fall through to the unscoped fallback. We log so the caller's fatal
-    // message points at the real situation: the agent passed a plan_set ID
-    // that doesn't belong to this submission.
-    logEvent('inspect-drawing:plan-set-version-scope-miss', {
-      planSetId,
-      submissionVersionId,
-      reason: 'no plan_set_version found for (plan_set_id, submission_version_id)',
-    });
-    return null;
-  }
-
-  // No submissionVersionId available — test-script / ad-hoc context.
-  const { data } = await supabase
-    .from('plan_set_version')
-    .select('id')
-    .eq('plan_set_id', planSetId)
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  return data?.id ?? null;
-}
-
-// Backward-compatible alias — main() still calls getLatestPlanSetVersionId.
-const getLatestPlanSetVersionId = getPlanSetVersionId;
-
 async function getSheetVersionId(
   planSetVersionId: string,
   sheetNumber: number,
@@ -273,7 +203,7 @@ async function getSheetVersionId(
 
 /**
  * Fetch the PDF storage path for a sheet, given its already-resolved
- * sheet_version_id. Caller is expected to have run getLatestPlanSetVersionId
+ * sheet_version_id. Caller is expected to have run libGetPlanSetVersionId
  * + getSheetVersionId once and to pass the result here.
  */
 async function getSheetPdfStoragePath(sheetVersionId: string): Promise<string | null> {
@@ -753,6 +683,7 @@ async function main() {
   logEvent('inspect-drawing:start', {
     projectId,
     documentId,
+    submissionVersionId,
     sheetNum,
     question,
     expectedAnswerType,
@@ -763,8 +694,15 @@ async function main() {
     dpi: dpiNum,
   });
 
-  // Resolve plan_set + sheet_version once.
-  const planSetVersionId = await getLatestPlanSetVersionId(documentId);
+  // Resolve plan_set + sheet_version once. Scoped by submissionVersionId
+  // (resolved at module load from the CLI arg or workflow/status.json) so
+  // we always look up the plan_set_version tied to *this* workflow's
+  // submission rather than guessing.
+  const planSetVersionId = await libGetPlanSetVersionId(
+    documentId,
+    submissionVersionId,
+    logEvent,
+  );
   if (!planSetVersionId) {
     logEvent('inspect-drawing:fatal', {
       reason: `Could not resolve plan_set_version for documentId=${documentId}`,
@@ -790,7 +728,7 @@ async function main() {
   }
 
   // Resolve the PDF storage path. We re-use sheetVersionId here instead of
-  // re-running getLatestPlanSetVersionId + getSheetVersionId inside a
+  // re-running libGetPlanSetVersionId + getSheetVersionId inside a
   // dedicated lookup helper (saves two Supabase round-trips per call).
   const pdfStoragePath = await getSheetPdfStoragePath(sheetVersionId);
   if (!pdfStoragePath) {

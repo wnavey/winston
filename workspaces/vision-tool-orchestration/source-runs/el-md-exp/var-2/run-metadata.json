@@ -1,47 +1,71 @@
 {
   "set": "el-md-exp",
   "variant": "var-2",
-  "variantLabel": "var2-routing (vision_check only; classifier dispatches; allow-list-aware)",
-  "runLabel": "VISION_CHECK_REVIEW_EL_MD_EXP_RUN_3",
-  "workflowRunsId": "f66d1589-616f-4830-ae0d-c02d450a3265",
-  "reviewId": "bb326fd5-6b1d-4fb7-988a-754656dc768c",
-  "inngestEventId": "01KR3VNSV2V2PVAKCQ8DGMX39D",
-  "startedAt": "2026-05-08T13:16:10Z",
-  "completedAt": "2026-05-08T13:31:03Z",
-  "wallClockMinutes": 15,
+  "variantLabel": "var2-routing (vision_check; classifier dispatches; allow-list-aware; full extract→measure-distance chain wired)",
+  "runLabel": "VISION_CHECK_REVIEW_EL_MD_EXP_RUN_6_BACKUP_LOCAL",
+  "workflowRunsId": "f9e578b3-94f5-4fa6-8fca-6f49c1f029f4",
+  "reviewId": "0f477f13-6ee9-4eab-a2b5-17b07c4195f5",
+  "inngestEventId": null,
+  "startedAt": "2026-05-08T20:06:00Z",
+  "completedAt": "2026-05-08T20:29:00Z",
+  "wallClockMinutes": 23,
   "workflow": "review",
   "experimentOverlay": "vision-check",
   "submission": {
     "name": "Valley View Townhomes v1",
-    "projectId": null,
+    "projectId": "63cead15-41f8-418c-b0ef-bd5c2b44719a",
     "submissionVersionId": "55fb6548-814f-4287-bc4a-6018b756d730"
   },
   "checklistOrGuide": "el-md-exp",
-  "runs": 3,
+  "runs": 1,
   "agentTools": ["vision_check", "semantic-search-blocks"],
-  "flags": ["logAllAgentTrace=true"],
+  "flags": ["logAllAgentTrace=true", "step=review-runs"],
   "enabledVisionSpecialists": "generic-vision,measure-distance",
-  "model": null,
-  "bureauCommit": "post bureau#318 (vision-router.md conditional sections)",
-  "conductorPr": "post conductor#151 (template-engine sections + allow-list-aware router prompt)",
+  "model": "claude-haiku-4-5-20251001",
+  "bureauCommit": "post bureau#324 (require submissionVersionId in lib/sheet-resolution.ts; migrate measure-distance + inspect-drawing)",
+  "conductorPr": "post conductor#153 (extract-measurement-pairs → measure-distance arg-construction) + conductor#154 (submissionVersionId plumbing)",
   "metricsTsvPath": "metrics/el-md-exp/var2-vision-specialist-routing/per-item.tsv",
   "notes": [
-    "Re-fire post conductor#151 + bureau#318. The vision-router.md classifier prompt is now allow-list-aware via Mustache sections — with enabledVisionSpecialists='generic-vision,measure-distance', the classifier never sees drawing_inspect listed.",
-    "Classifier intent distribution: {drawing_inspect: 0, measurement: 16, generic: 40} (was {27, 10, 20} in RUN_2). The 27 prior misroutes redistributed cleanly.",
-    "promptSha256 is bacd962b8af80b9bc2eb7133c303f7a9e490aa2dcac89404b55e42f72b7ebe6d (different from RUN_2's bbe3e2c3..., confirming the new conditional-section prompt was loaded).",
-    "Goal A: 47.1% (was 37.3% in RUN_2). Goal B: 15.7% / 8 items (was 5.9% / 3 items in RUN_2 — ~2.6× lift).",
-    "Caveat persists: measurement dispatch falls back to generic via measurement_arg_construction_not_implemented (conductor-side gap, separate work). Goal B is computed against classifier.output.problemType (intent), not dispatch.specialistCalled (post-fallback).",
-    "Supersedes RUN_2 (workflow_runs.id 465fe4e5-9ce6-4554-9cbc-65cd75755b2b, review id 694e2e1c-f160-407a-94c6-b5fd8aa5a919) which in turn superseded the pre-bureau#310 RUN_1."
+    "Local conductor execution (npm run conduct --step=review-runs --runs=1). Substation/Inngest cloud path was hanging — the local re-run validated the fixed measure-distance chain end-to-end without paying for that debug.",
+    "First run on the var-2 source-runs slot where measure-distance actually executes. RUN_3 and RUN_5 had measure-distance dispatch crashing on a missing `version_number` column (latent pre-existing bug in measure-distance.ts). Bureau#324 + conductor#154 fixed both the column and the silent-wrong-submission fallback footgun.",
+    "29 vision_check calls. Classifier intent: generic=20, measurement=9. 8 measurement-routed calls produced ≥1 pair → measure-distance ran 8 times → 24/24 per-pair distance measurements computed (100% subprocess success).",
+    "Goal A (any vision invoked on expected_vision=yes): 19/51 = 37.3% (lower than RUN_3's 47.1% because runs=1 vs runs=3 — single attempt has weaker majority-vote coverage).",
+    "Goal B (classifier intent = measurement on expected_specialist=measure-distance): 7/51 = 13.7% (RUN_3 was 15.7%/8 — within single-run noise).",
+    "Goal B' (full chain succeeded — classifier picked measurement AND measure-distance produced ≥1 distance): 7/51 = 13.7%. **Identical to Goal B** — every measure-distance subprocess succeeded. Pre-fix runs all had B' = 0% because measure-distance crashed on every call.",
+    "Verdict-conversion lift: of the 8 items with successful measure-distance, 6 escaped ctrl's `not-verifiable` majority verdict to a real determination (4 pass, 2 fail). 3 of those 6 escaped ctrl's *unanimous* not-verifiable. The 2 fail items (EL-1.14, EL-1.37) are real compliance deficiencies the ctrl baseline would have left for human follow-up. See compare-vs-ctrl.md for the per-item table.",
+    "Caveats: scaleInchesPerFoot is hardcoded to 0.05 (1\"=20'); per-sheet scale extraction is a follow-up. Distance range was 0.9–387 ft (median 24.6); the 387 ft outlier is suspect and worth spot-checking. EL-13.13 stayed not-verifiable despite measure-distance succeeding — worth investigating whether the agent rejected the measurement output.",
+    "Supersedes RUN_3 (workflow_runs.id f66d1589-616f-4830-ae0d-c02d450a3265, review id bb326fd5-6b1d-4fb7-988a-754656dc768c, runs=3 with measurement dispatch falling back to generic via measurement_arg_construction_not_implemented). RUN_3 in turn superseded RUN_2 (465fe4e5-9ce6-4554-9cbc-65cd75755b2b) and RUN_1."
   ],
   "specialistCallStatus": {
-    "vision_check_calls_total": 56,
-    "dispatched_to_vision": 56,
-    "dispatched_to_measure_distance": 0,
-    "dispatched_to_inspect_drawing": 0,
+    "vision_check_calls_total": 29,
+    "classifier_intent": {
+      "generic": 20,
+      "measurement": 9,
+      "drawing_inspect": 0
+    },
+    "extractMeasurementPairs": {
+      "invocations": 9,
+      "pairsExtractedTotal": 24,
+      "callsWithZeroPairs": 1
+    },
+    "measureDistance": {
+      "subprocessRuns": 8,
+      "subprocessRunsAllPairsSucceeded": 8,
+      "perPairAttempts": 24,
+      "perPairSuccesses": 24,
+      "distanceRangeFt": [0.9, 387.0],
+      "distanceMedianFt": 24.6
+    },
     "fallbackReasonCounts": {
-      "measurement_arg_construction_not_implemented": 16,
+      "measurement_arg_construction_not_implemented": 0,
       "specialist_disabled": 0
     },
-    "note": "All 56 calls dispatched to generic vision. The 16 measurement-routed-by-classifier calls fell back to generic because the conductor's measurement-dispatch arg-construction isn't implemented yet. No measure-distance-calls/ directory exists in output/ (the specialist never actually ran), so the measure-distance debug viewer has nothing to render for this run."
+    "note": "First var-2 source run where measure-distance actually executes end-to-end. measure-distance-calls/ directories now exist with real Gemini measurement output."
+  },
+  "supersedes": {
+    "runLabel": "VISION_CHECK_REVIEW_EL_MD_EXP_RUN_3",
+    "workflowRunsId": "f66d1589-616f-4830-ae0d-c02d450a3265",
+    "reviewId": "bb326fd5-6b1d-4fb7-988a-754656dc768c",
+    "reason": "RUN_3 had runs=3 but measurement dispatch fell back to generic on every call (measure-distance.ts version_number bug + conductor measurement-dispatch not yet wired). RUN_6_BACKUP_LOCAL has runs=1 but the full chain executes — far better signal on Goal B' (actual specialist execution) at the cost of single-run variance on Goal A."
   }
 }
