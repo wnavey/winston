@@ -1,0 +1,32 @@
+{
+  "callId": "20260507T211339559Z-aiek",
+  "startedAt": "2026-05-07T21:13:39.559Z",
+  "completedAt": "2026-05-07T21:14:01.968Z",
+  "inputs": {
+    "checklistItemId": "el-md-exp:EL-13.21",
+    "checklistItemText": "Transformer pads lack minimum 5-foot horizontal clearance from water lines",
+    "question": "Identify where water, wastewater, and storm drain lines are shown on the plan. For each transformer pad location, measure the clearances from these utility lines to the transformer pad edges. Are any clearance dimensions or annotations provided?",
+    "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+    "sheetNum": 21,
+    "regionHint": "utility lines near transformer pads"
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "bbe3e2c3853a0e27678a44756a99ab9273ab9d6e35434514264491fdcdf65164",
+    "promptSource": "bureau",
+    "promptSourcePath": "/vercel/sandbox/workspace/bureau/jurisdictions/austin/workflows/review/prompts/vision-router.md",
+    "output": {
+      "problemType": "measurement",
+      "reasoning": "The agent question explicitly asks to 'measure the clearances' from utility lines to transformer pad edges, which is a direct clearance measurement task. The preliminary identification of line locations is a sub-step within the measurement workflow, not a separate presence check.",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "vision",
+    "success": true,
+    "fallbackReason": "measurement_arg_construction_not_implemented",
+    "specialistCallDir": null
+  },
+  "phase": "B"
+}

@@ -19,9 +19,9 @@ and known issues so the per-variant TSV builds and
 | **cc** | ctrl-baseline | ✅ current | `VISION_CHECK_CC_BASELINE` | 3 | 1700 S. Lamar v2 |
 | **cc** | var1-bifurcated | ✅ current | `VISION_EXP_INSPECT_DRAWING_RUN_1` | 3 | 1700 S. Lamar v2 |
 | **cc** | var2-routing | 🔁 needs-rerun | `VISION_CHECK_CC_RUN_4` | **1** | 1700 S. Lamar v2 |
-| **el-md-exp** | ctrl-baseline | 🟡 in-progress | `VISION_CHECK_REVIEW_EL_MD_EXP_BASELINE_V3` | 3 | Valley View v1 |
-| **el-md-exp** | var1-bifurcated | 🟡 in-progress | `VISION_CHECK_REVIEW_EL_MD_EXP_VAR1_RUN_1` | 3 | Valley View v1 |
-| **el-md-exp** | var2-routing | 🟡 in-progress | `VISION_CHECK_REVIEW_EL_MD_EXP_RUN_2` | 3 | Valley View v1 |
+| **el-md-exp** | ctrl-baseline | ✅ current | `VISION_CHECK_REVIEW_EL_MD_EXP_BASELINE_V3` | 3 | Valley View v1 |
+| **el-md-exp** | var1-bifurcated | ✅ current ⚠️ partial-coverage | `VISION_CHECK_REVIEW_EL_MD_EXP_VAR1_RUN_1` | 3 | Valley View v1 |
+| **el-md-exp** | var2-routing | ✅ current | `VISION_CHECK_REVIEW_EL_MD_EXP_RUN_2` | 3 | Valley View v1 |
 
 | Status | Meaning |
 |---|---|
@@ -121,15 +121,16 @@ and known issues so the per-variant TSV builds and
 
 ### el-md-exp (Review + Measure Distance)
 
-#### el-md-exp / ctrl-baseline 🟡 in-progress
+#### el-md-exp / ctrl-baseline ✅ current
 
 | Field | Value |
 |---|---|
 | `runLabel` | `VISION_CHECK_REVIEW_EL_MD_EXP_BASELINE_V3` |
 | Inngest event id | `01KR23RHGJB4S6WB3ZK72TFVQW` |
-| `workflow_runs.id` | _(awaiting Substation pickup; lookup once started)_ |
-| Review id | _(awaiting run completion)_ |
-| Started | 2026-05-07 20:58:47 UTC |
+| `workflow_runs.id` | `790d4c46-cd86-49b4-a255-a4397ca7ac09` |
+| Review id | `ddcb5d56-c382-4062-a3c4-044a9be64a6e` |
+| Started | 2026-05-07 20:58:59 UTC |
+| Completed | 2026-05-07 21:15:37 UTC (~17 min) |
 | Workflow / overlay | `review` (production workflow, no `experiment` overlay) |
 | Submission | Valley View Townhomes **v1** (`submissionVersionId=55fb6548-…`) — matches var1's experiment-run7.2 |
 | Guide | `el-md-exp` |
@@ -148,15 +149,16 @@ and known issues so the per-variant TSV builds and
   - `BASELINE` (`workflow_runs.id 300eb8a1-9bb1-4257-a88a-745bf696b805`, Inngest `01KQZ1X0NMDDZ6E4SA3P1S3Q1E`, fired 2026-05-06 16:28, on Valley View v2)
   - `BASELINE_V2` (review id `224279d8-4827-44cd-a15b-1f034496dac2`, on Valley View v2 — `logAllAgentTrace` silently failed)
 
-#### el-md-exp / var1-bifurcated-vision-tools 🟡 in-progress
+#### el-md-exp / var1-bifurcated-vision-tools ✅ current ⚠️ partial-coverage
 
 | Field | Value |
 |---|---|
 | `runLabel` | `VISION_CHECK_REVIEW_EL_MD_EXP_VAR1_RUN_1` |
 | Inngest event id | `01KR24PMGWH1RM1FXJ5G2Q4EF6` |
-| `workflow_runs.id` | _(awaiting Substation pickup)_ |
-| Review id | _(awaiting run completion)_ |
-| Started | 2026-05-07 21:09 UTC |
+| `workflow_runs.id` | `b877dead-f786-4bf6-9ac4-3cde3f2ec546` |
+| Review id | `9e6f78e4-7cab-44b1-b23c-d564059c6e81` |
+| Started | 2026-05-07 21:15:30 UTC |
+| Completed | 2026-05-07 21:32:13 UTC (~17 min) |
 | Workflow / overlay | `review` + `--experiment=measure-distance` |
 | Submission | Valley View Townhomes v1 (`submissionVersionId=55fb6548-…`) — matches `BASELINE_V3` and `RUN_2` |
 | Guide | `el-md-exp` |
@@ -169,8 +171,8 @@ and known issues so the per-variant TSV builds and
 
 **Notes**
 - Re-fire of var1 today, post bureau#314 + conductor#149. **All three el-md-exp variants now share the same agent / dispatcher / prompt era** — apples-to-apples for Goal A and Goal B.
-- First var1 run with the new `review-extended.md` prompt path. `tools_used` should now capture `measure-distance` directly per finding (vs the historical `experiment-run7.2` which had the SDK tools_used tracking gap, requiring per-call metadata fallback for measure-distance attribution).
-- Workflow_runs.id and review id need Supabase lookup once Substation creates the DB record.
+- ⚠️ **Partial-coverage caveat (201/303 cells with findings):** The `experiments/measure-distance/` overlay's `experiment.yaml` hardcodes `prompt: review.md` AND its own `review.md` (a) still says "Important: You only output fail and not-verifiable findings" and (b) lacks the `{{ agentTraceGuidance }}` template placeholder. So `logAllAgentTrace=true` couldn't append the emit-all-statuses override on this prompt path. Items the agent silently passed have no finding emitted, defaulting to `tool_called=none`. Goal A var1 number is therefore a **lower bound**. Fix: small bureau PR to update the overlay's review.md to match the production `review-extended.md` pattern, then re-fire.
+- The agent had `script:measure-distance` exposed but **invoked it zero times** across all 51 measure-distance candidates × 3 runs (= 153 cells). Same sparse-adoption pattern as cc var1 (inspect-drawing, 2/162 cells).
 - **Supersedes the historical `experiment-run7.2`** (~April 15 era) as the phase-1 canonical var1 source. The April run remains useful as a historical reference / aspirational ceiling per plan.md, but `VAR1_RUN_1` is the apples-to-apples comparator for the var2 vs var1 phase-1 metric.
 
 **Historical reference (superseded)**
@@ -183,15 +185,16 @@ and known issues so the per-variant TSV builds and
 | Analysis doc | [`measure-distance-tool/analysis/rigorous-metrics/experiment-run7.2.md`](../../measure-distance-tool/analysis/rigorous-metrics/experiment-run7.2.md) |
 | Recall (per (item × run)) | 13.1% (run7.2) / 12.4% (run7) |
 
-#### el-md-exp / var2-vision-specialist-routing 🟡 in-progress
+#### el-md-exp / var2-vision-specialist-routing ✅ current
 
 | Field | Value |
 |---|---|
 | `runLabel` | `VISION_CHECK_REVIEW_EL_MD_EXP_RUN_2` |
 | Inngest event id | `01KR24EFQJY10YKC1RYG3TVD6E` |
-| `workflow_runs.id` | _(awaiting Substation pickup)_ |
-| Review id | _(awaiting run completion)_ |
-| Started | 2026-05-07 21:08 UTC |
+| `workflow_runs.id` | `465fe4e5-9ce6-4554-9cbc-65cd75755b2b` |
+| Review id | `694e2e1c-f160-407a-94c6-b5fd8aa5a919` |
+| Started | 2026-05-07 21:11:03 UTC |
+| Completed | 2026-05-07 21:27:49 UTC (~17 min) |
 | Workflow / overlay | `review` + `--experiment=vision-check` |
 | Submission | Valley View Townhomes v1 (`submissionVersionId=55fb6548-…`) — matches `BASELINE_V3` and var1 |
 | Guide | `el-md-exp` |
@@ -216,10 +219,12 @@ and known issues so the per-variant TSV builds and
 
 For phase 1 to declare done, all 6 cells should be ✅ **current** with no outstanding rerun reasons. Today's gap list:
 
-- [ ] cc / var2: re-fire at `runs=3`
-- [ ] el-md-exp / ctrl-baseline: await `BASELINE_V3` completion (Inngest `01KR23RHGJB4S6WB3ZK72TFVQW`); pull artifacts; build TSV
-- [ ] el-md-exp / var1: await `VAR1_RUN_1` completion (Inngest `01KR24PMGWH1RM1FXJ5G2Q4EF6`); pull artifacts; build TSV. (Historical `experiment-run7.2` available as a sanity-check reference but not the canonical source.)
-- [ ] el-md-exp / var2: await `RUN_2` completion (Inngest `01KR24EFQJY10YKC1RYG3TVD6E`); pull artifacts; build TSV (use `classifier.output.problemType` for routing-intent, not `dispatch.specialistCalled`)
-- [ ] el-md-exp / var2: re-fire post-bureau#310 + measurement-dispatch wiring; build TSV from new run
+- [ ] cc / var2: re-fire at `runs=3` to retire runs-disparity confounder on cc Goal A
+- [x] el-md-exp / ctrl-baseline: pulled, TSV built, headline computed (Goal A 41.2%, Goal B n/a)
+- [x] el-md-exp / var1: pulled, TSV built (lower-bound 60.8% Goal A; 0% Goal B — agent never invoked measure-distance)
+- [x] el-md-exp / var2: pulled, TSV built using `classifier.output.problemType` for routing intent (Goal A 37.3%; Goal B 5.9%)
+- [ ] **Open follow-up: fix measure-distance overlay's `review.md`** to match the new `review-extended.md` pattern (template the prompt path + add agentTrace placeholder). Then re-fire var1 to retire the partial-coverage caveat.
+- [ ] **Open follow-up: bureau-side classifier prompt iteration for el-md-exp.** 17 measure-distance items got misrouted to drawing_inspect; this is the dominant Goal B failure mode for review.
+- [ ] **Open follow-up: conductor measurement-dispatch wiring** (`measurement_arg_construction_not_implemented` fallback). Unblocks specialist execution measurement on review.
 
-Once those clear, the [Phase 1 Metric Summary in `analysis.md`](./analysis.md) gets the el-md-exp half filled in and cross-set synthesis opens up.
+The Phase 1 Metric Summary in [`analysis.md`](./analysis.md) is now populated for both sets. Cross-set synthesis section flags the architectural conclusion (Goal B confirmed in both sets) and the open phase-2 priorities.

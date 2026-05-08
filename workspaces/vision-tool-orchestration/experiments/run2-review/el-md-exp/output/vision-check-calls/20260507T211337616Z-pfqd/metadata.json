@@ -1,0 +1,31 @@
+{
+  "callId": "20260507T211337616Z-pfqd",
+  "startedAt": "2026-05-07T21:13:37.616Z",
+  "completedAt": "2026-05-07T21:14:04.462Z",
+  "inputs": {
+    "checklistItemId": "el-md-exp:OVERHEAD-LOCATION",
+    "checklistItemText": "Test - locate overhead electric facilities",
+    "question": "Where are the overhead electric transmission or distribution lines located on this site plan? Are they shown on the site plan itself (Sheet 9)? If so, what is their location relative to the buildings and site features (north, south, east, west, or adjacent ROW)? Are overhead lines depicted with poles, conductors, and guy wires?",
+    "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+    "sheetNum": 9
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "bbe3e2c3853a0e27678a44756a99ab9273ab9d6e35434514264491fdcdf65164",
+    "promptSource": "bureau",
+    "promptSourcePath": "/vercel/sandbox/workspace/bureau/jurisdictions/austin/workflows/review/prompts/vision-router.md",
+    "output": {
+      "problemType": "drawing_inspect",
+      "reasoning": "The agent is asking about the presence, location, and depiction of overhead electric lines on the site plan—specifically whether they are shown, their spatial relationship to buildings/features, and whether standard components (poles, conductors, guy wires) are depicted. This is a drawing-inspection task requiring reasoning about lines, symbols, and spatial relationships in the plan view, not a measurement of clearance or distance.",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "vision",
+    "success": true,
+    "fallbackReason": "specialist_disabled",
+    "specialistCallDir": null
+  },
+  "phase": "B"
+}

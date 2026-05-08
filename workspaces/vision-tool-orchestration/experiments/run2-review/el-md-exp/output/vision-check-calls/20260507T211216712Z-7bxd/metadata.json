@@ -1,0 +1,31 @@
+{
+  "callId": "20260507T211216712Z-7bxd",
+  "startedAt": "2026-05-07T21:12:16.712Z",
+  "completedAt": "2026-05-07T21:12:30.965Z",
+  "inputs": {
+    "checklistItemId": "el-md-exp:EL-2.1",
+    "checklistItemText": "Non-utility-compatible trees proposed within 15 lateral feet of overhead electric distribution conductor or equipment",
+    "question": "Are there any overhead electric distribution lines shown on the landscape plan (Sheet 31)? If yes, describe their location and extent on the site.",
+    "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+    "sheetNum": 31
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "bbe3e2c3853a0e27678a44756a99ab9273ab9d6e35434514264491fdcdf65164",
+    "promptSource": "bureau",
+    "promptSourcePath": "/vercel/sandbox/workspace/bureau/jurisdictions/austin/workflows/review/prompts/vision-router.md",
+    "output": {
+      "problemType": "generic",
+      "reasoning": "The agent is performing a sheet-discovery and feature-presence check (does OHE appear on this landscape plan at all, and where?), which is a prerequisite to the actual 15-foot lateral clearance measurement. The checklist requirement is about clearance compliance, but the agent question is narrower and asks only whether OHE lines are visible and their general location—not yet a distance measurement.",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "vision",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": null
+  },
+  "phase": "B"
+}

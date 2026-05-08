@@ -1,0 +1,31 @@
+{
+  "callId": "20260507T211230971Z-v9vj",
+  "startedAt": "2026-05-07T21:12:30.971Z",
+  "completedAt": "2026-05-07T21:13:52.882Z",
+  "inputs": {
+    "checklistItemId": "el-md-exp:EL-2.14",
+    "checklistItemText": "Trees not shown on landscape plan in relation to overhead electric facilities, preventing clearance verification",
+    "question": "On Sheet 9 (Site Plan), are overhead electric distribution or transmission lines shown? If yes, describe their location, configuration (poles, conductors), and whether they cross the site or run along property boundaries.",
+    "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+    "sheetNum": 9
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "bbe3e2c3853a0e27678a44756a99ab9273ab9d6e35434514264491fdcdf65164",
+    "promptSource": "bureau",
+    "promptSourcePath": "/vercel/sandbox/workspace/bureau/jurisdictions/austin/workflows/review/prompts/vision-router.md",
+    "output": {
+      "problemType": "drawing_inspect",
+      "reasoning": "The agent is asking about the presence and spatial configuration of overhead electric lines on the site plan (location, poles, conductors, crossing/boundary relationship), which requires reasoning about lines, symbols, and spatial relationships in the drawing—not a measurement or simple presence check. This is sub-feature identification and drawing-element reasoning that precedes any clearance measurement.",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "vision",
+    "success": true,
+    "fallbackReason": "specialist_disabled",
+    "specialistCallDir": null
+  },
+  "phase": "B"
+}
