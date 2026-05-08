@@ -1,0 +1,54 @@
+{
+  "callId": "20260508T183146188Z-qct7",
+  "startedAt": "2026-05-08T18:31:46.188Z",
+  "completedAt": "2026-05-08T18:32:05.067Z",
+  "inputs": {
+    "checklistItemId": "el-md-exp:EL-2.1",
+    "checklistItemText": "Non-utility-compatible trees proposed within 15 lateral feet of overhead electric distribution conductor or equipment",
+    "question": "What is the spatial relationship between the proposed mitigation trees (marked 'M') and the overhead electric line (-OHE-) on the landscape plan? Are the trees directly adjacent, some distance away, or clearly separated from the overhead electric line?",
+    "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+    "sheetNum": 31
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "bacd962b8af80b9bc2eb7133c303f7a9e490aa2dcac89404b55e42f72b7ebe6d",
+    "promptSource": "bureau",
+    "promptSourcePath": "/Users/wnavey/code/controlroom/conductor/workspace/bureau/jurisdictions/austin/workflows/review/prompts/vision-router.md",
+    "output": {
+      "problemType": "measurement",
+      "reasoning": "The agent is asking for the spatial relationship and distance between proposed trees and the OHE conductor, which directly addresses the 15-foot lateral clearance requirement. Although phrased descriptively ('directly adjacent', 'some distance away', 'clearly separated'), the question is fundamentally requesting a distance assessment to verify compliance with the lateral clearance threshold.",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "measure-distance",
+    "success": false,
+    "errorMessage": "Command failed: npx tsx /Users/wnavey/code/controlroom/conductor/workspace/bureau/jurisdictions/austin/workflows/review/scripts/measure-distance.ts --outputPath='/Users/wnavey/code/controlroom/conductor/workspace/output/vision-check-calls/20260508T183146188Z-qct7/specialist-measure-distance/output.json' --documentId='1144b126-1216-4dee-a89c-178950fa7777' --sheetNum='31' --objectPairs='[{\"objectA\":\"mitigation tree marked '\\''M'\\'' in the southwest corner\",\"objectB\":\"overhead electric line (-OHE-) running along the south boundary\"},{\"objectA\":\"westernmost mitigation tree marked '\\''M'\\'' in the southeast corner cluster\",\"objectB\":\"overhead electric line (-OHE-) running along the south boundary\"},{\"objectA\":\"middle mitigation tree marked '\\''M'\\'' in the southeast corner cluster\",\"objectB\":\"overhead electric line (-OHE-) running along the south boundary\"},{\"objectA\":\"easternmost mitigation tree marked '\\''M'\\'' in the southeast corner cluster\",\"objectB\":\"overhead electric line (-OHE-) running along the south boundary\"}]' --scaleInchesPerFoot='0.05' --localizationStrategy='b-only' --reasoning='The agent is asking for the spatial relationship and distance between proposed trees and the OHE conductor, which directly addresses the 15-foot lateral clearance requirement. Although phrased descriptively ('\\''directly adjacent'\\'', '\\''some distance away'\\'', '\\''clearly separated'\\''), the question is fundamentally requesting a distance assessment to verify compliance with the lateral clearance threshold.' --applicable_checklist_items='[{\"checklist_id\":\"el-md-exp:EL-2.1\",\"checklist_deficiency_text\":\"Non-utility-compatible trees proposed within 15 lateral feet of overhead electric distribution conductor or equipment\"}]'\nInferred projectId from workspace: 63cead15-41f8-418c-b0ef-bd5c2b44719a\n{\"event\":\"measure-distance:start\",\"timestamp\":1778265124868,\"callId\":\"20260508T183204868Z-xu5m\",\"projectId\":\"63cead15-41f8-418c-b0ef-bd5c2b44719a\",\"documentId\":\"1144b126-1216-4dee-a89c-178950fa7777\",\"sheetNum\":\"31\",\"strategy\":\"b-only\",\"scaleInchesPerFoot\":\"0.05\",\"reasoning\":\"The agent is asking for the spatial relationship and distance between proposed trees and the OHE conductor, which directly addresses the 15-foot lateral clearance requirement. Although phrased descriptively ('directly adjacent', 'some distance away', 'clearly separated'), the question is fundamentally requesting a distance assessment to verify compliance with the lateral clearance threshold.\",\"pairCount\":4,\"pairs\":[{\"pairIndex\":0,\"objectA\":\"mitigation tree marked 'M' in the southwest corner\",\"objectB\":\"overhead electric line (-OHE-) running along the south boundary\"},{\"pairIndex\":1,\"objectA\":\"westernmost mitigation tree marked 'M' in the southeast corner cluster\",\"objectB\":\"overhead electric line (-OHE-) running along the south boundary\"},{\"pairIndex\":2,\"objectA\":\"middle mitigation tree marked 'M' in the southeast corner cluster\",\"objectB\":\"overhead electric line (-OHE-) running along the south boundary\"},{\"pairIndex\":3,\"objectA\":\"easternmost mitigation tree marked 'M' in the southeast corner cluster\",\"objectB\":\"overhead electric line (-OHE-) running along the south boundary\"}],\"sessionDir\":\"/Users/wnavey/code/controlroom/conductor/workspace/output/vision-check-calls/20260508T183146188Z-qct7/specialist-measure-distance/measure-distance-calls/20260508T183204868Z-xu5m\"}\nCould not resolve plan_set_version for documentId 1144b126-1216-4dee-a89c-178950fa7777\n",
+    "fallbackReason": null,
+    "specialistCallDir": null,
+    "argConstruction": {
+      "pairs": [
+        {
+          "objectA": "mitigation tree marked 'M' in the southwest corner",
+          "objectB": "overhead electric line (-OHE-) running along the south boundary"
+        },
+        {
+          "objectA": "westernmost mitigation tree marked 'M' in the southeast corner cluster",
+          "objectB": "overhead electric line (-OHE-) running along the south boundary"
+        },
+        {
+          "objectA": "middle mitigation tree marked 'M' in the southeast corner cluster",
+          "objectB": "overhead electric line (-OHE-) running along the south boundary"
+        },
+        {
+          "objectA": "easternmost mitigation tree marked 'M' in the southeast corner cluster",
+          "objectB": "overhead electric line (-OHE-) running along the south boundary"
+        }
+      ],
+      "explanation": "Measurements between the four mitigation trees marked 'M' located near the south boundary and the adjacent overhead electric line (-OHE-).",
+      "callDir": "/Users/wnavey/code/controlroom/conductor/workspace/output/vision-check-calls/20260508T183146188Z-qct7/specialist-extract-measurement-pairs"
+    }
+  },
+  "phase": "B"
+}

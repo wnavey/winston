@@ -1,0 +1,55 @@
+{
+  "callId": "20260508T183049607Z-rkoa",
+  "startedAt": "2026-05-08T18:30:49.607Z",
+  "completedAt": "2026-05-08T18:31:14.364Z",
+  "inputs": {
+    "checklistItemId": "el-md-exp:EL-2.1",
+    "checklistItemText": "Non-utility-compatible trees proposed within 15 lateral feet of overhead electric distribution conductor or equipment",
+    "question": "Measuring from the overhead electric conductor line along the southern boundary to the centers of the proposed trees (M - Mitigation Trees) positioned near or adjacent to this line, what are the estimated lateral (horizontal) distances? Are any proposed trees closer than 15 feet from the conductor?",
+    "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+    "sheetNum": 31,
+    "regionHint": "southern boundary of the site where the overhead electric line is shown and proposed mitigation trees are located adjacent to or near this line"
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "bacd962b8af80b9bc2eb7133c303f7a9e490aa2dcac89404b55e42f72b7ebe6d",
+    "promptSource": "bureau",
+    "promptSourcePath": "/Users/wnavey/code/controlroom/conductor/workspace/bureau/jurisdictions/austin/workflows/review/prompts/vision-router.md",
+    "output": {
+      "problemType": "measurement",
+      "reasoning": "The agent is directly asking for lateral distance measurements from the OHE conductor to tree centers and whether any trees fall within the 15-foot compliance threshold. This is the core measurement task required by the checklist requirement.",
+      "confidence": 0.99,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "measure-distance",
+    "success": false,
+    "errorMessage": "Command failed: npx tsx /Users/wnavey/code/controlroom/conductor/workspace/bureau/jurisdictions/austin/workflows/review/scripts/measure-distance.ts --outputPath='/Users/wnavey/code/controlroom/conductor/workspace/output/vision-check-calls/20260508T183049607Z-rkoa/specialist-measure-distance/output.json' --documentId='1144b126-1216-4dee-a89c-178950fa7777' --sheetNum='31' --objectPairs='[{\"objectA\":\"overhead electric line (OHE) along the southern boundary\",\"objectB\":\"center of the proposed mitigation tree labeled '\\''B-M'\\'' in the bottom left corner\"},{\"objectA\":\"overhead electric line (OHE) along the southern boundary\",\"objectB\":\"center of the westernmost proposed mitigation tree labeled '\\''M'\\'' in the landscape island near the bottom right corner\"},{\"objectA\":\"overhead electric line (OHE) along the southern boundary\",\"objectB\":\"center of the middle proposed mitigation tree labeled '\\''M'\\'' in the landscape island near the bottom right corner\"},{\"objectA\":\"overhead electric line (OHE) along the southern boundary\",\"objectB\":\"center of the easternmost proposed mitigation tree labeled '\\''M'\\'' in the landscape island near the bottom right corner\"}]' --scaleInchesPerFoot='0.05' --localizationStrategy='b-only' --reasoning='The agent is directly asking for lateral distance measurements from the OHE conductor to tree centers and whether any trees fall within the 15-foot compliance threshold. This is the core measurement task required by the checklist requirement.' --applicable_checklist_items='[{\"checklist_id\":\"el-md-exp:EL-2.1\",\"checklist_deficiency_text\":\"Non-utility-compatible trees proposed within 15 lateral feet of overhead electric distribution conductor or equipment\"}]'\nInferred projectId from workspace: 63cead15-41f8-418c-b0ef-bd5c2b44719a\n{\"event\":\"measure-distance:start\",\"timestamp\":1778265074125,\"callId\":\"20260508T183114125Z-7heb\",\"projectId\":\"63cead15-41f8-418c-b0ef-bd5c2b44719a\",\"documentId\":\"1144b126-1216-4dee-a89c-178950fa7777\",\"sheetNum\":\"31\",\"strategy\":\"b-only\",\"scaleInchesPerFoot\":\"0.05\",\"reasoning\":\"The agent is directly asking for lateral distance measurements from the OHE conductor to tree centers and whether any trees fall within the 15-foot compliance threshold. This is the core measurement task required by the checklist requirement.\",\"pairCount\":4,\"pairs\":[{\"pairIndex\":0,\"objectA\":\"overhead electric line (OHE) along the southern boundary\",\"objectB\":\"center of the proposed mitigation tree labeled 'B-M' in the bottom left corner\"},{\"pairIndex\":1,\"objectA\":\"overhead electric line (OHE) along the southern boundary\",\"objectB\":\"center of the westernmost proposed mitigation tree labeled 'M' in the landscape island near the bottom right corner\"},{\"pairIndex\":2,\"objectA\":\"overhead electric line (OHE) along the southern boundary\",\"objectB\":\"center of the middle proposed mitigation tree labeled 'M' in the landscape island near the bottom right corner\"},{\"pairIndex\":3,\"objectA\":\"overhead electric line (OHE) along the southern boundary\",\"objectB\":\"center of the easternmost proposed mitigation tree labeled 'M' in the landscape island near the bottom right corner\"}],\"sessionDir\":\"/Users/wnavey/code/controlroom/conductor/workspace/output/vision-check-calls/20260508T183049607Z-rkoa/specialist-measure-distance/measure-distance-calls/20260508T183114125Z-7heb\"}\nCould not resolve plan_set_version for documentId 1144b126-1216-4dee-a89c-178950fa7777\n",
+    "fallbackReason": null,
+    "specialistCallDir": null,
+    "argConstruction": {
+      "pairs": [
+        {
+          "objectA": "overhead electric line (OHE) along the southern boundary",
+          "objectB": "center of the proposed mitigation tree labeled 'B-M' in the bottom left corner"
+        },
+        {
+          "objectA": "overhead electric line (OHE) along the southern boundary",
+          "objectB": "center of the westernmost proposed mitigation tree labeled 'M' in the landscape island near the bottom right corner"
+        },
+        {
+          "objectA": "overhead electric line (OHE) along the southern boundary",
+          "objectB": "center of the middle proposed mitigation tree labeled 'M' in the landscape island near the bottom right corner"
+        },
+        {
+          "objectA": "overhead electric line (OHE) along the southern boundary",
+          "objectB": "center of the easternmost proposed mitigation tree labeled 'M' in the landscape island near the bottom right corner"
+        }
+      ],
+      "explanation": "Four pairs to measure the lateral clearance from the southern overhead electric line to the centers of the four proposed mitigation trees located near that boundary.",
+      "callDir": "/Users/wnavey/code/controlroom/conductor/workspace/output/vision-check-calls/20260508T183049607Z-rkoa/specialist-extract-measurement-pairs"
+    }
+  },
+  "phase": "B"
+}
