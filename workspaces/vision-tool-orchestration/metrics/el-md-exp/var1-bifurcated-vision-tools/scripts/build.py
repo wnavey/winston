@@ -6,8 +6,8 @@ Long format: one row per (item × run). Source is VAR1_RUN_2
 `measure-distance` script-tool exposed).
 
 Sources:
-- ../../../../experiments/var1-run2-review/el-md-exp/output/runs/run-{1,2,3}/findings/*.md.json
-- ../../../../experiments/var1-run2-review/el-md-exp/output/measure-distance-calls/*/metadata.json
+- ../../../../source-runs/el-md-exp/var-1/output/runs/run-{1,2,3}/findings/*.md.json
+- ../../../../source-runs/el-md-exp/var-1/output/measure-distance-calls/*/metadata.json
   (MAY NOT EXIST — if the agent never called measure-distance, no calls dir)
 - ../../expected-vision-selection/expected.tsv
 
@@ -33,7 +33,7 @@ from pathlib import Path
 HERE = Path(__file__).parent.resolve()
 WORKSPACE = HERE.parent.parent.parent.parent
 RUN_LABEL = "VISION_CHECK_REVIEW_EL_MD_EXP_VAR1_RUN_2"
-RUN_DIR = WORKSPACE / "experiments" / "var1-run2-review" / "el-md-exp" / "output"
+RUN_DIR = WORKSPACE / "source-runs" / "el-md-exp" / "var-1" / "output"
 RUNS_DIR = RUN_DIR / "runs"
 MD_CALLS_DIR = RUN_DIR / "measure-distance-calls"
 EXPECTED_TSV = HERE.parent.parent / "expected-vision-selection" / "expected.tsv"

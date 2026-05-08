@@ -1,0 +1,33 @@
+{
+  "set": "cc",
+  "variant": "var-1",
+  "variantLabel": "var1-bifurcated (vision + inspect-drawing exposed directly)",
+  "runLabel": "VISION_EXP_INSPECT_DRAWING_RUN_1",
+  "workflowRunsId": "386b040b-3f75-47ab-af5c-26e8f6b74e9b",
+  "reviewId": "51586bce-e7d8-4fce-834d-4437abe0df1a",
+  "inngestEventId": null,
+  "startedAt": "2026-05-04T19:08:00Z",
+  "completedAt": null,
+  "wallClockMinutes": null,
+  "workflow": "completeness-check",
+  "experimentOverlay": "inspect-drawing",
+  "submission": {
+    "name": "1700 S. Lamar v2",
+    "projectId": "23301a8a-4cdb-4751-ac0c-93b97f0f5c12",
+    "submissionVersionId": "eb67ee21-76b1-4065-b20d-c32f674add12"
+  },
+  "checklistOrGuide": "v2.5-trimmed",
+  "runs": 3,
+  "agentTools": ["vision", "inspect-drawing"],
+  "flags": [],
+  "model": "claude-sonnet-4-5-20250929",
+  "bureauCommit": "c98bcc995 (wrapped-structured-output fix)",
+  "conductorPr": null,
+  "metricsTsvPath": "metrics/cc/var1-bifurcated-vision-tools/per-item.tsv",
+  "notes": [
+    "tools_used does NOT track inspect-drawing entries (known agent SDK / build-review-comments bug). Workaround: read inspect-drawing-calls/<callId>/metadata.json directly for inspect-drawing attribution.",
+    "Sparse specialist usage: 3 inspect-drawing calls total, all in run-1, on AW-21 + AW-23.",
+    "On AW-23/run-1, inspect-drawing returned classification=yes (flow arrows present) but the agent's finding contradicted it using vision and finalized status=fail. Tool-integration fragility flagged.",
+    "Source artifacts also live at winston/workspaces/inspect-drawing-tool/experiments/run1/output/ (kept there to preserve that workspace's analytics/README; this is a copy, not a move)."
+  ]
+}

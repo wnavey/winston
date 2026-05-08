@@ -1,0 +1,32 @@
+{
+  "set": "el-md-exp",
+  "variant": "ctrl",
+  "variantLabel": "ctrl-baseline (generic vision only)",
+  "runLabel": "VISION_CHECK_REVIEW_EL_MD_EXP_BASELINE_V3",
+  "workflowRunsId": "790d4c46-cd86-49b4-a255-a4397ca7ac09",
+  "reviewId": "ddcb5d56-c382-4062-a3c4-044a9be64a6e",
+  "inngestEventId": "01KR23RHGJB4S6WB3ZK72TFVQW",
+  "startedAt": "2026-05-07T20:58:59Z",
+  "completedAt": "2026-05-07T21:15:37Z",
+  "wallClockMinutes": 17,
+  "workflow": "review",
+  "experimentOverlay": null,
+  "submission": {
+    "name": "Valley View Townhomes v1",
+    "projectId": null,
+    "submissionVersionId": "55fb6548-814f-4287-bc4a-6018b756d730"
+  },
+  "checklistOrGuide": "el-md-exp",
+  "runs": 3,
+  "agentTools": ["vision"],
+  "flags": ["logAllAgentTrace=true"],
+  "model": null,
+  "bureauCommit": "post bureau#314 (review-extended.md prompt + reviewPromptName input)",
+  "conductorPr": "post conductor#149 (templated agent.prompt + reviewPromptName seeding)",
+  "metricsTsvPath": "metrics/el-md-exp/ctrl-baseline-vision-invocation/per-item.tsv",
+  "notes": [
+    "First baseline run that uses the new review-extended.md prompt path (reviewPromptName='review-extended', reviewSchemaName='reviewExtended' from logAllAgentTrace=true). Each finding carries agentTrace.{observation, reasoning, tools_used} for ALL statuses (pass / fail / not-verifiable / n/a).",
+    "Submission switched to Valley View v1 to match var-1 (experiment-run7.2) and var-2 (RUN_3) — same-era apples-to-apples.",
+    "Supersedes BASELINE (workflow_runs.id 300eb8a1-9bb1-4257-a88a-745bf696b805, on Valley View v2) and BASELINE_V2 (review id 224279d8-4827-44cd-a15b-1f034496dac2, on Valley View v2 — silently failed agentTrace)."
+  ]
+}

@@ -1,0 +1,47 @@
+{
+  "set": "el-md-exp",
+  "variant": "var-2",
+  "variantLabel": "var2-routing (vision_check only; classifier dispatches; allow-list-aware)",
+  "runLabel": "VISION_CHECK_REVIEW_EL_MD_EXP_RUN_3",
+  "workflowRunsId": "f66d1589-616f-4830-ae0d-c02d450a3265",
+  "reviewId": "bb326fd5-6b1d-4fb7-988a-754656dc768c",
+  "inngestEventId": "01KR3VNSV2V2PVAKCQ8DGMX39D",
+  "startedAt": "2026-05-08T13:16:10Z",
+  "completedAt": "2026-05-08T13:31:03Z",
+  "wallClockMinutes": 15,
+  "workflow": "review",
+  "experimentOverlay": "vision-check",
+  "submission": {
+    "name": "Valley View Townhomes v1",
+    "projectId": null,
+    "submissionVersionId": "55fb6548-814f-4287-bc4a-6018b756d730"
+  },
+  "checklistOrGuide": "el-md-exp",
+  "runs": 3,
+  "agentTools": ["vision_check", "semantic-search-blocks"],
+  "flags": ["logAllAgentTrace=true"],
+  "enabledVisionSpecialists": "generic-vision,measure-distance",
+  "model": null,
+  "bureauCommit": "post bureau#318 (vision-router.md conditional sections)",
+  "conductorPr": "post conductor#151 (template-engine sections + allow-list-aware router prompt)",
+  "metricsTsvPath": "metrics/el-md-exp/var2-vision-specialist-routing/per-item.tsv",
+  "notes": [
+    "Re-fire post conductor#151 + bureau#318. The vision-router.md classifier prompt is now allow-list-aware via Mustache sections — with enabledVisionSpecialists='generic-vision,measure-distance', the classifier never sees drawing_inspect listed.",
+    "Classifier intent distribution: {drawing_inspect: 0, measurement: 16, generic: 40} (was {27, 10, 20} in RUN_2). The 27 prior misroutes redistributed cleanly.",
+    "promptSha256 is bacd962b8af80b9bc2eb7133c303f7a9e490aa2dcac89404b55e42f72b7ebe6d (different from RUN_2's bbe3e2c3..., confirming the new conditional-section prompt was loaded).",
+    "Goal A: 47.1% (was 37.3% in RUN_2). Goal B: 15.7% / 8 items (was 5.9% / 3 items in RUN_2 — ~2.6× lift).",
+    "Caveat persists: measurement dispatch falls back to generic via measurement_arg_construction_not_implemented (conductor-side gap, separate work). Goal B is computed against classifier.output.problemType (intent), not dispatch.specialistCalled (post-fallback).",
+    "Supersedes RUN_2 (workflow_runs.id 465fe4e5-9ce6-4554-9cbc-65cd75755b2b, review id 694e2e1c-f160-407a-94c6-b5fd8aa5a919) which in turn superseded the pre-bureau#310 RUN_1."
+  ],
+  "specialistCallStatus": {
+    "vision_check_calls_total": 56,
+    "dispatched_to_vision": 56,
+    "dispatched_to_measure_distance": 0,
+    "dispatched_to_inspect_drawing": 0,
+    "fallbackReasonCounts": {
+      "measurement_arg_construction_not_implemented": 16,
+      "specialist_disabled": 0
+    },
+    "note": "All 56 calls dispatched to generic vision. The 16 measurement-routed-by-classifier calls fell back to generic because the conductor's measurement-dispatch arg-construction isn't implemented yet. No measure-distance-calls/ directory exists in output/ (the specialist never actually ran), so the measure-distance debug viewer has nothing to render for this run."
+  }
+}

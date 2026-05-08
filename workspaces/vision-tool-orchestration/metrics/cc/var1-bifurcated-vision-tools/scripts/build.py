@@ -39,9 +39,10 @@ from collections import defaultdict
 from pathlib import Path
 
 HERE = Path(__file__).parent.resolve()
-WORKSPACES_ROOT = HERE.parent.parent.parent.parent.parent
+# scripts/ → var1-bifurcated-vision-tools/ → cc/ → metrics/ → vision-tool-orchestration/
+WORKSPACE = HERE.parent.parent.parent.parent
 RUN_LABEL = "VISION_EXP_INSPECT_DRAWING_RUN_1"
-RUN_DIR = WORKSPACES_ROOT / "inspect-drawing-tool" / "experiments" / "run1" / "output"
+RUN_DIR = WORKSPACE / "source-runs" / "cc" / "var-1" / "output"
 RUNS_DIR = RUN_DIR / "runs"
 ID_CALLS_DIR = RUN_DIR / "inspect-drawing-calls"
 EXPECTED_TSV = HERE.parent.parent / "expected-vision-selection" / "expected.tsv"
@@ -178,7 +179,7 @@ def main():
         w.writeheader()
         w.writerows(rows)
 
-    print(f"Wrote {OUT_TSV.relative_to(WORKSPACES_ROOT.parent)} ({len(rows)} rows)")
+    print(f"Wrote {OUT_TSV.relative_to(WORKSPACE.parent.parent)} ({len(rows)} rows)")
     by_tool = defaultdict(int)
     for r in rows:
         by_tool[r["tool_called"]] += 1

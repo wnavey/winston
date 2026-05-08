@@ -31,9 +31,9 @@ classifier's intent is essentially per-item (consistent across runs),
 so we pick the strongest intent per item.
 
 Sources:
-- ../../../../experiments/run3-review/el-md-exp/output/runs/run-{1,2,3}/findings/*.md.json
+- ../../../../source-runs/el-md-exp/var-2/output/runs/run-{1,2,3}/findings/*.md.json
   (per-run findings with agentTrace.tools_used)
-- ../../../../experiments/run3-review/el-md-exp/output/vision-check-calls/<callId>/metadata.json
+- ../../../../source-runs/el-md-exp/var-2/output/vision-check-calls/<callId>/metadata.json
   (per-call classifier intent)
 - ../../expected-vision-selection/expected.tsv
 
@@ -54,7 +54,7 @@ from pathlib import Path
 HERE = Path(__file__).parent.resolve()
 WORKSPACE = HERE.parent.parent.parent.parent
 RUN_LABEL = "VISION_CHECK_REVIEW_EL_MD_EXP_RUN_3"
-RUN_DIR = WORKSPACE / "experiments" / "run3-review" / "el-md-exp" / "output"
+RUN_DIR = WORKSPACE / "source-runs" / "el-md-exp" / "var-2" / "output"
 RUNS_DIR = RUN_DIR / "runs"
 CALLS_DIR = RUN_DIR / "vision-check-calls"
 EXPECTED_TSV = HERE.parent.parent / "expected-vision-selection" / "expected.tsv"

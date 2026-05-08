@@ -1,0 +1,34 @@
+{
+  "set": "cc",
+  "variant": "var-2",
+  "variantLabel": "var2-routing (vision_check only; classifier dispatches)",
+  "runLabel": "VISION_CHECK_CC_RUN_4",
+  "workflowRunsId": "5d804242-861c-43ab-adfd-00e9af3757e2",
+  "reviewId": null,
+  "inngestEventId": null,
+  "startedAt": "2026-05-07T09:24:00Z",
+  "completedAt": null,
+  "wallClockMinutes": 56,
+  "workflow": "completeness-check",
+  "experimentOverlay": "vision-check",
+  "submission": {
+    "name": "1700 S. Lamar v2",
+    "projectId": "23301a8a-4cdb-4751-ac0c-93b97f0f5c12",
+    "submissionVersionId": "eb67ee21-76b1-4065-b20d-c32f674add12"
+  },
+  "checklistOrGuide": "v2.5-trimmed",
+  "runs": 1,
+  "agentTools": ["vision_check", "semantic-search-blocks"],
+  "flags": [],
+  "model": null,
+  "bureauCommit": "post bureau#306 (prompt-trim merged 2026-05-07)",
+  "conductorPr": null,
+  "metricsTsvPath": "metrics/cc/var2-vision-specialist-routing/per-item.tsv",
+  "rerunReason": "runs=1 vs ctrl/var-1 runs=3. Strict-majority threshold is more demanding at runs=3 — re-fire at runs=3 to retire the cc-side runs-disparity confounder before the headline Goal A comparison is final.",
+  "notes": [
+    "Source of truth for var-2 attribution is vision-check-calls/<callId>/metadata.json (precise per-call dispatch detail).",
+    "115 total vision_check calls across the run; 63 unique items invoked; 35 items routed to generic, 28 to inspect-drawing.",
+    "1 measurement-routed call fell back to generic via measurement_arg_construction_not_implemented (measurement dispatch deferred at conductor level).",
+    "No misuse: 0 calls on no-tool items."
+  ]
+}

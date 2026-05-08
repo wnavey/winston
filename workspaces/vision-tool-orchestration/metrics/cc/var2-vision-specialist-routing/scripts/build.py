@@ -6,7 +6,7 @@ Long format: one row per (item × run). Source is the var2 run's
 exact item attribution + classifier + dispatch detail.
 
 Sources:
-- ../../../experiments/run4/cc/output/vision-check-calls/<callId>/metadata.json
+- ../../../source-runs/cc/var-2/output/vision-check-calls/<callId>/metadata.json
 - ../../expected-vision-selection/expected.tsv (canonical item list)
 
 Output:
@@ -35,7 +35,7 @@ from pathlib import Path
 HERE = Path(__file__).parent.resolve()
 WORKSPACE = HERE.parent.parent.parent.parent
 RUN_LABEL = "VISION_CHECK_CC_RUN_4"
-RUN_DIR = WORKSPACE / "experiments" / "run4" / "cc" / "output"
+RUN_DIR = WORKSPACE / "source-runs" / "cc" / "var-2" / "output"
 CALLS_DIR = RUN_DIR / "vision-check-calls"
 EXPECTED_TSV = HERE.parent.parent / "expected-vision-selection" / "expected.tsv"
 OUT_TSV = HERE.parent / "per-item-run.tsv"

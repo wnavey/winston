@@ -9,6 +9,12 @@ and known issues so the per-variant TSV builds and
 > **Convention:** when a run gets re-fired or replaced, update both
 > `source-runs.json` and this file in lockstep. The JSON is the
 > structured source of truth; this MD is the readable mirror.
+>
+> **Canonical artifacts** for each active run live at
+> `../source-runs/<set>/<variant>/` (post 2026-05-08 reorg). When a
+> run is replaced, the prior artifacts are wiped and replaced — only
+> the supersedes block here records what came before. See
+> [`../source-runs/README.md`](../source-runs/README.md).
 
 ---
 
@@ -60,7 +66,7 @@ and known issues so the per-variant TSV builds and
 | Checklist | `v2.5-trimmed` |
 | `runs` | 3 |
 | Agent tools | `vision` |
-| Artifacts | [`experiments/baseline/cc/output/`](../experiments/baseline/cc/output/) |
+| Artifacts | [`source-runs/cc/ctrl/output/`](../source-runs/cc/ctrl/output/) (canonical) |
 | Metrics TSV | [`metrics/cc/ctrl-baseline-vision-invocation/per-item.tsv`](cc/ctrl-baseline-vision-invocation/per-item.tsv) |
 | Kickoff doc | [`experiments/baseline/cc-kickoff.md`](../experiments/baseline/cc-kickoff.md) |
 
@@ -83,7 +89,7 @@ and known issues so the per-variant TSV builds and
 | Model | `claude-sonnet-4-5-20250929` |
 | Agent tools | `vision`, `inspect-drawing` |
 | Bureau commit | `c98bcc995` (wrapped-structured-output fix) |
-| Artifacts | [`inspect-drawing-tool/experiments/run1/output/`](../../inspect-drawing-tool/experiments/run1/output/) |
+| Artifacts | [`source-runs/cc/var-1/output/`](../source-runs/cc/var-1/output/) (canonical; original at `inspect-drawing-tool/experiments/run1/output/`) |
 | Metrics TSV | [`metrics/cc/var1-bifurcated-vision-tools/per-item.tsv`](cc/var1-bifurcated-vision-tools/per-item.tsv) |
 | Kickoff / README | [`inspect-drawing-tool/experiments/run1/README.md`](../../inspect-drawing-tool/experiments/run1/README.md) |
 
@@ -105,7 +111,7 @@ and known issues so the per-variant TSV builds and
 | `runs` | **1** ⚠️ |
 | Agent tools | `vision_check`, `semantic-search-blocks` |
 | Bureau commit | post bureau#306 (prompt-trim merged 2026-05-07) |
-| Artifacts | [`experiments/run4/cc/output/`](../experiments/run4/cc/output/) |
+| Artifacts | [`source-runs/cc/var-2/output/`](../source-runs/cc/var-2/output/) (canonical) |
 | Metrics TSV | [`metrics/cc/var2-vision-specialist-routing/per-item.tsv`](cc/var2-vision-specialist-routing/per-item.tsv) |
 | Analysis doc | [`experiments/run4/analytics/analysis.md`](../experiments/run4/analytics/analysis.md) |
 
@@ -169,7 +175,7 @@ and known issues so the per-variant TSV builds and
 | Flags | `logAllAgentTrace=true` |
 | Bureau commit | post bureau#317 (measure-distance overlay agent-trace placeholder) |
 | Conductor PR | post conductor#149 (templated agent.prompt + reviewPromptName seeding) |
-| Artifacts | [`experiments/var1-run2-review/el-md-exp/output/`](../experiments/var1-run2-review/el-md-exp/output/) |
+| Artifacts | [`source-runs/el-md-exp/var-1/output/`](../source-runs/el-md-exp/var-1/output/) (canonical) |
 | Metrics TSV | [`metrics/el-md-exp/var1-bifurcated-vision-tools/per-item.tsv`](el-md-exp/var1-bifurcated-vision-tools/per-item.tsv) |
 
 **Notes**
@@ -211,7 +217,7 @@ and known issues so the per-variant TSV builds and
 | `enabledVisionSpecialists` | `"generic-vision,measure-distance"` (inspect-drawing dropped) |
 | Bureau commit | post bureau#318 (vision-router.md conditional sections) |
 | Conductor PR | post conductor#151 (template-engine sections + allow-list-aware router prompt) |
-| Artifacts | [`experiments/run3-review/el-md-exp/output/`](../experiments/run3-review/el-md-exp/output/) |
+| Artifacts | [`source-runs/el-md-exp/var-2/output/`](../source-runs/el-md-exp/var-2/output/) (canonical) |
 | Metrics TSV | [`metrics/el-md-exp/var2-vision-specialist-routing/per-item.tsv`](el-md-exp/var2-vision-specialist-routing/per-item.tsv) |
 
 **Notes**
