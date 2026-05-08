@@ -24,7 +24,9 @@
   html, body { height: 100%; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: var(--text); background: var(--bg); }
   body { display: flex; height: 100vh; overflow: hidden; }
 
-  #run-tree { width: 240px; flex: 0 0 240px; background: var(--panel); border-right: 1px solid var(--border); overflow-y: auto; padding: 10px 0; font-size: 12px; }
+  #run-tree { width: 240px; min-width: 120px; max-width: 50vw; background: var(--panel); border-right: none; overflow-y: auto; padding: 10px 0; font-size: 12px; }
+  #nav-resize { width: 4px; flex: 0 0 4px; cursor: col-resize; background: var(--border); transition: background 0.15s; }
+  #nav-resize:hover, #nav-resize.dragging { background: var(--accent); }
   #run-tree h1 { font-size: 11px; font-weight: 600; color: var(--muted); margin: 0 12px 8px; text-transform: uppercase; letter-spacing: 0.05em; }
   .run-group { margin-bottom: 4px; }
   .run-head { padding: 6px 12px; cursor: pointer; font-weight: 600; display: flex; gap: 4px; user-select: none; }
@@ -57,8 +59,14 @@
   .field-val.mono { font-family: var(--mono); font-size: 12px; }
   .question { font-size: 15px; line-height: 1.5; padding: 10px 14px; background: var(--blue-bg); border-left: 3px solid var(--blue); border-radius: 4px; margin-bottom: 14px; }
 
-  .img-container { position: relative; display: inline-block; max-width: 100%; }
-  .img-container img { display: block; max-width: 100%; height: auto; border: 1px solid var(--border); }
+  .img-controls { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .img-controls button { background: var(--panel); border: 1px solid var(--border); border-radius: 4px; padding: 3px 10px; cursor: pointer; font-size: 13px; font-weight: 600; line-height: 1.4; }
+  .img-controls button:hover { background: #f3f4f6; }
+  .img-controls .zoom-level { font-size: 11px; color: var(--muted); font-family: var(--mono); min-width: 40px; text-align: center; }
+  .img-controls label { font-size: 11px; color: var(--muted); display: flex; align-items: center; gap: 4px; margin-left: auto; cursor: pointer; user-select: none; }
+  .img-scroll { overflow: auto; max-height: calc(100vh - 160px); }
+  .img-container { position: relative; display: inline-block; transform-origin: top left; }
+  .img-container img { display: block; border: 1px solid var(--border); }
   .bbox-overlay { position: absolute; pointer-events: none; }
   .bbox-rect { position: absolute; border: 2px solid var(--accent); background: rgba(46, 125, 50, 0.14); }
   .bbox-label { position: absolute; top: 0; left: 0; transform: translateY(-100%); background: var(--accent); color: white; font-family: var(--mono); font-size: 10px; padding: 1px 4px; white-space: nowrap; }
@@ -93,6 +101,7 @@
   <div id="run-list"></div>
 </aside>
 
+<div id="nav-resize"></div>
 <main id="main">
   <div id="toolbar">
     <span id="case-id">—</span>
@@ -277,6 +286,8 @@ function bindTabs() {
   }
 }
 
+let imgZoom = 1;
+
 function renderImage(c) {
   const right = document.getElementById('image-content');
   if (!c.croppedJpegPath) {
@@ -285,9 +296,49 @@ function renderImage(c) {
     return;
   }
   right.classList.remove('placeholder');
+  imgZoom = 1;
   const evidence = c.result?.evidence ?? [];
-  // Each bbox is [y0, x0, y1, x1] in 0–1000.
-  const overlays = evidence.map((e, i) => {
+  const overlays = buildBboxOverlays(evidence);
+  right.innerHTML = `
+    <div class="field-label">Cropped image (Gemini saw exactly this)</div>
+    <div class="img-controls">
+      <button id="zoom-out" title="Zoom out">−</button>
+      <span class="zoom-level" id="zoom-level">100%</span>
+      <button id="zoom-in" title="Zoom in">+</button>
+      <button id="zoom-reset" title="Reset zoom">Reset</button>
+      <label><input type="checkbox" id="bbox-toggle" checked /> Bounding boxes</label>
+    </div>
+    <div class="img-scroll" id="img-scroll">
+      <div class="img-container" id="img-container">
+        <img src="../${c.croppedJpegPath}" alt="cropped" />
+        <div class="bbox-overlay" id="bbox-overlay" style="position:absolute; top:0; left:0; right:0; bottom:0;">
+          ${overlays}
+        </div>
+      </div>
+    </div>
+    <details>
+      <summary>Crop resolution</summary>
+      <pre class="text-block compact">${escapeHtml(JSON.stringify(c.metadata?.cropResolution ?? {}, null, 2))}</pre>
+    </details>
+  `;
+  document.getElementById('zoom-in').onclick = () => setZoom(imgZoom * 1.25);
+  document.getElementById('zoom-out').onclick = () => setZoom(imgZoom / 1.25);
+  document.getElementById('zoom-reset').onclick = () => setZoom(1);
+  document.getElementById('bbox-toggle').onchange = (e) => {
+    document.getElementById('bbox-overlay').style.display = e.target.checked ? '' : 'none';
+  };
+}
+
+function setZoom(z) {
+  imgZoom = Math.max(0.1, Math.min(10, z));
+  const container = document.getElementById('img-container');
+  if (container) container.style.transform = `scale(${imgZoom})`;
+  const label = document.getElementById('zoom-level');
+  if (label) label.textContent = Math.round(imgZoom * 100) + '%';
+}
+
+function buildBboxOverlays(evidence) {
+  return evidence.map((e, i) => {
     const bb = e.bbox ?? [];
     if (bb.length !== 4) return '';
     const [y0, x0, y1, x1] = bb;
@@ -297,25 +348,38 @@ function renderImage(c) {
     const h = ((y1 - y0) / 10).toFixed(2) + '%';
     return `<div class="bbox-rect" style="top:${top};left:${left};width:${w};height:${h};"><div class="bbox-label">#${i + 1}</div></div>`;
   }).join('');
-  right.innerHTML = `
-    <div class="field-label">Cropped image (Gemini saw exactly this)</div>
-    <div class="img-container">
-      <img src="../${c.croppedJpegPath}" alt="cropped" />
-      <div class="bbox-overlay" style="position:absolute; top:0; left:0; right:0; bottom:0;">
-        ${overlays}
-      </div>
-    </div>
-    <details>
-      <summary>Crop resolution</summary>
-      <pre class="text-block compact">${escapeHtml(JSON.stringify(c.metadata?.cropResolution ?? {}, null, 2))}</pre>
-    </details>
-  `;
 }
 
 function escapeHtml(s) {
   if (s == null) return '';
   return String(s).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 }
+
+// Resizable left nav
+(function() {
+  const handle = document.getElementById('nav-resize');
+  const nav = document.getElementById('run-tree');
+  let dragging = false;
+  handle.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    dragging = true;
+    handle.classList.add('dragging');
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  });
+  document.addEventListener('mousemove', (e) => {
+    if (!dragging) return;
+    const w = Math.max(120, Math.min(window.innerWidth * 0.5, e.clientX));
+    nav.style.width = w + 'px';
+  });
+  document.addEventListener('mouseup', () => {
+    if (!dragging) return;
+    dragging = false;
+    handle.classList.remove('dragging');
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+  });
+})();
 
 init().catch(err => {
   document.getElementById('case-content').textContent = 'Failed to load manifest: ' + err.message;
