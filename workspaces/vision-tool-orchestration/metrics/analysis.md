@@ -1,6 +1,6 @@
 # Vision-check metrics analysis
 
-**Status:** 2026-05-08. **cc set: populated (var2 runs=1 disparity open). el-md-exp set: populated post 2026-05-08 re-fires (var1 partial-coverage retired; var2 classifier-misroute retired).**
+**Status:** 2026-05-08 (evening). **cc set: populated (var2 runs=1 disparity open). el-md-exp set: populated post 2026-05-08 re-fires (var1 partial-coverage retired; var2 classifier-misroute retired). RUN_6_BACKUP_LOCAL replaces RUN_3 as the canonical var2 source — first run where measure-distance actually executes end-to-end (post bureau#324 + conductor#153/#154 fixes). Goal B numbers are within single-run noise of RUN_3; the new headline is the verdict-conversion lift — see [`var2-uplift.md`](./var2-uplift.md).**
 
 This is the cross-variant writeup that joins the per-variant goal-a /
 goal-b docs into a single readout against the iter-1 success criteria.
@@ -15,22 +15,27 @@ this file just synthesizes the numbers.
 
 | | cc set | el-md-exp set |
 |---|---|---|
-| **Goal A** (var2 ≥ var1 overall) | NOT met (40.9% vs 44.8%, runs disparity confound open) | NOT met (47.1% vs 74.5%) — but var2 is *much* more selective: 22% misuse vs var1's 70% |
+| **Goal A** (var2 ≥ var1 overall) | NOT met (40.9% vs 44.8%, runs disparity confound open) | NOT met (37.3% vs 74.5%, var2 runs=1 disparity open) — but var2 is *much* more selective: 20% misuse vs var1's 70% |
 | **Goal A** (var2 ≥ var1, must-call bucket) | ✓ MET (50.0% vs 37.5%, +12.5pp) | n/a (no must-call/optional split for el-md-exp) |
-| **Goal B** (var2 ≥ var1) | ✓ MET (25.0% vs 0.0%, +25.0pp) | ✓ MET (15.7% vs 0.0%, +15.7pp) |
+| **Goal B** (var2 ≥ var1) | ✓ MET (25.0% vs 0.0%, +25.0pp) | ✓ MET (13.7% vs 0.0%, +13.7pp) |
+| **Goal B'** (intent + specialist actually executed) | ✓ MET (specialist execution worked since cc var2's first fire) | ✓ MET — **first run where it works** (13.7% vs 0.0%, +13.7pp). Pre-fix runs all had B' = 0%. |
+| **Verdict-conversion lift** (ctrl `not-verifiable` → real verdict) | n/a (cc has different verdict shape) | **6 of 8 items moved** (75%) — 4 pass, 2 fail. See [`var2-uplift.md`](./var2-uplift.md). |
 
 **Architectural conclusion holds on both sets:** the bifurcated tool
 list (var1) reaches for the specialist ~0 times even though it's
 exposed; the routing architecture (var2) lifts specialist invocation
-to a non-zero rate (25–33% on cc, 15.7% on el-md-exp). The Goal A
+to a non-zero rate (25–33% on cc, 13.7% on el-md-exp). The Goal A
 trade-off is real — var2 trades broad coverage for selective coverage
-— and is governed by classifier accuracy. Two corrective actions on
-el-md-exp (var1 partial-coverage fix bureau#317, var2 allow-list-aware
-classifier conductor#151 + bureau#318) tightened both numbers and
-retired the prior caveats. The remaining open lever for el-md-exp is
-**specialist execution accuracy** (currently bottlenecked on conductor's
-`measurement_arg_construction_not_implemented` fallback) — not a
-phase-1 question.
+— and is governed by classifier accuracy.
+
+**The new headline (RUN_6_BACKUP_LOCAL, post bureau#324 + conductor#153/#154):**
+the el-md-exp measure-distance chain now executes end-to-end. Goal B'
+matches Goal B (every measure-distance subprocess succeeded), and 6 of
+the 8 expected-measure-distance items the chain ran on **moved from
+ctrl's `not-verifiable` verdict to a real pass/fail determination**.
+Two of those were `fail` — concrete compliance deficiencies the ctrl
+baseline would have left for human follow-up. See [`var2-uplift.md`](./var2-uplift.md)
+for the dedicated story.
 
 ### Completeness Check + Inspect Drawing
 
@@ -71,11 +76,13 @@ cc Goal B.
 ### Review + Measure Distance Tool
 
 Source: Valley View Townhomes v1, `el-md-exp` guide (101 items, 51
-expected-vision = 51 measure-distance candidates). All three variants
-fired same-day-era on the same submission, runs=3,
-`logAllAgentTrace=true`. **Var1 + var2 re-fired 2026-05-08** post
-bureau#317 (var1 partial-coverage fix) and conductor#151 + bureau#318
-(allow-list-aware classifier prompt).
+expected-vision = 51 measure-distance candidates). ctrl + var1 are
+runs=3; **var2 is now `RUN_6_BACKUP_LOCAL` at runs=1** (post bureau#324
++ conductor#153 + conductor#154 — first var2 run where measure-distance
+actually executes end-to-end, see [`var2-uplift.md`](./var2-uplift.md)
+for the dedicated story). The runs=1 disparity is acknowledged below
+and on the cloud runs=3 re-fire follow-up; the headline numbers move
+within single-run noise vs RUN_3.
 
 #### Goal A: "Overall Vision Invocation Hit Rate"
 
@@ -84,61 +91,55 @@ bureau#317 (var1 partial-coverage fix) and conductor#151 + bureau#318
 
 | Metric | ctrl-baseline | var1-bifurcated | var2-routing | var2 vs var1 |
 |---|---:|---:|---:|---:|
-| Overall hit rate (51 measure-distance candidates) | 41.2% (21/51) | **74.5% (38/51)** | 47.1% (24/51) | **-27.4pp** |
-| Misuse (50 `shouldCall=no` items invoked) | 40.0% | 70.0% | **22.0%** | -48.0pp |
+| Overall hit rate (51 measure-distance candidates) | 41.2% (21/51) | **74.5% (38/51)** | 37.3% (19/51) | **-37.2pp** |
+| Misuse (50 `shouldCall=no` items invoked) | 40.0% | 70.0% | **20.0%** | -50.0pp |
 
-**Read.** Var1 wins overall Goal A by a wide margin — but the two
-variants are doing different things. Var1's bifurcated agent calls
-vision on **70% of items the labels say don't need it** (vs var2's
-22%). Var2's classifier is much more disciplined about when invoking
-vision is warranted. The gap is real — both runs now have full
-coverage (var1's partial-coverage caveat is retired) — but the trade-
-off is selectivity, not raw capability.
-
-The new `RUN_3` raised var2's overall hit rate by **+9.8pp** vs RUN_2
-(37.3% → 47.1%) because the 27 prior drawing_inspect-misroutes (which
-all fell back to generic) are gone — the classifier now picks
-measurement or generic, both of which dispatch through and count as
-invocations.
+**Read.** Var1 still wins overall Goal A by a wide margin, but with
+the same selectivity trade-off as before — var1 invokes vision on 70%
+of items where the labels say it isn't needed. Var2 is more
+disciplined (20% misuse). The runs=1 ceiling lowers var2's coverage
+vs RUN_3's 47.1% (47/51 → 19/51); a runs=3 cloud re-fire is on the
+follow-up list. The selectivity story is unchanged — var2 trades
+broad coverage for selective coverage, not raw capability.
 
 #### Goal B: "Correct Tool Selection Rate"
 
 > Of items where TSV 1 expects a specialist (`measure-distance`), what
-> fraction had `measure-distance` invoked (post-aggregation)?
+> fraction had `measure-distance` invoked?
 
 | Metric | ctrl-baseline | var1-bifurcated | var2-routing | var2 vs var1 |
 |---|---:|---:|---:|---:|
-| measure-distance items (51) | n/a (no specialist exposed) | 0.0% (0/51) | **15.7% (8/51)** | **+15.7pp** ✓ |
+| Goal B (classifier intent = measurement) | n/a | 0.0% (0/51) | **13.7% (7/51)** | **+13.7pp** ✓ |
+| **Goal B' (intent + measure-distance subprocess actually succeeded)** | n/a | **0.0%** (specialist never invoked) | **13.7% (7/51)** | **+13.7pp** ✓ |
 
-**Read.** Goal B confirmed and **lifted ~3x** vs RUN_2 (5.9% → 15.7%).
-Eight measure-distance items now route to the specialist on a strict
-majority of runs:
-
-  EL-1.1, EL-1.9, EL-13.1, EL-13.10, EL-13.13, EL-13.14, EL-2.1, EL-2.3
+**Read.** Goal B confirmed; the new framing is **Goal B'**, which adds
+the requirement that the measure-distance subprocess actually ran and
+returned ≥1 distance. Pre-fix, every var2 run had Goal B' = 0% because
+the dispatch chain crashed before the specialist ever produced output.
+RUN_6_BACKUP_LOCAL is the first run where Goal B = Goal B' — every
+classifier-intent-measurement that produced extracted pairs ran
+measure-distance to completion (8 subprocess invocations, 24/24 pair
+measurements computed).
 
 Var1 still invokes `measure-distance` **zero times** across all 51
 candidates × 3 runs (153 cells). The bifurcated tool list exposed
 `measure-distance` to the agent, but the agent never reached for it —
 same sparse-adoption pattern as cc var1's `inspect-drawing` (2/162).
 
-Mechanism behind the lift: `RUN_3` was fired post conductor#151 +
-bureau#318, which made the bureau-side `vision-router.md` allow-list-
-aware via Mustache `{{#enabledFoo}}…{{/enabledFoo}}` blocks. With
-`enabledVisionSpecialists="generic-vision,measure-distance"`, the
-classifier never sees `drawing_inspect` listed in the prompt — the
-27 prior misroutes from RUN_2 redistributed cleanly:
+#### Verdict-conversion lift (new in RUN_6_BACKUP_LOCAL)
 
-| Classifier intent | RUN_2 (before) | RUN_3 (after) |
-|---|---:|---:|
-| `drawing_inspect` | 27 | **0** |
-| `measurement` | 10 | 16 |
-| `generic` | 20 | 40 |
-| Total calls | 57 | 56 |
+The phase-1 framework only asked "is the right specialist invoked." With
+the chain now executing end-to-end, we can also report what the
+specialist did to the *finding verdict* on items where it ran. The
+question is: did measure-distance convert ctrl's `not-verifiable`
+verdicts into actionable pass/fail?
 
-The 16 measurement classifications converted to 12 unique items with
-measurement-as-canonical-intent post-aggregation; 8 of those cleared
-the strict-majority threshold. The remaining 4 (12 − 8) had only 1 of
-3 runs route to measurement.
+**6 of 8 items (75%) escaped ctrl's `not-verifiable` majority verdict
+in RUN_6_BACKUP_LOCAL** — 4 to `pass`, 2 to `fail`. The 2 `fail` items
+(EL-1.14, EL-1.37) are real compliance deficiencies the ctrl baseline
+would have left for a human reviewer to follow up on. Full per-item
+table and sample distances in [`var2-uplift.md`](./var2-uplift.md) and
+[`../source-runs/el-md-exp/var-2/compare-vs-ctrl.md`](../source-runs/el-md-exp/var-2/compare-vs-ctrl.md).
 
 ---
 

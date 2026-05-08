@@ -27,7 +27,7 @@ and known issues so the per-variant TSV builds and
 | **cc** | var2-routing | 🔁 needs-rerun | `VISION_CHECK_CC_RUN_4` | **1** | 1700 S. Lamar v2 |
 | **el-md-exp** | ctrl-baseline | ✅ current | `VISION_CHECK_REVIEW_EL_MD_EXP_BASELINE_V3` | 3 | Valley View v1 |
 | **el-md-exp** | var1-bifurcated | ✅ current | `VISION_CHECK_REVIEW_EL_MD_EXP_VAR1_RUN_2` | 3 | Valley View v1 |
-| **el-md-exp** | var2-routing | ✅ current | `VISION_CHECK_REVIEW_EL_MD_EXP_RUN_3` | 3 | Valley View v1 |
+| **el-md-exp** | var2-routing | ⚠️ needs runs=3 re-fire (current run is local runs=1; chain executes end-to-end) | `VISION_CHECK_REVIEW_EL_MD_EXP_RUN_6_BACKUP_LOCAL` | 1 | Valley View v1 |
 
 | Status | Meaning |
 |---|---|
@@ -198,40 +198,47 @@ and known issues so the per-variant TSV builds and
 | Analysis doc | [`measure-distance-tool/analysis/rigorous-metrics/experiment-run7.2.md`](../../measure-distance-tool/analysis/rigorous-metrics/experiment-run7.2.md) |
 | Recall (per (item × run)) | 13.1% (run7.2) / 12.4% (run7) |
 
-#### el-md-exp / var2-vision-specialist-routing ✅ current
+#### el-md-exp / var2-vision-specialist-routing ⚠️ needs runs=3 re-fire
 
 | Field | Value |
 |---|---|
-| `runLabel` | `VISION_CHECK_REVIEW_EL_MD_EXP_RUN_3` |
-| Inngest event id | `01KR3VNSV2V2PVAKCQ8DGMX39D` |
-| `workflow_runs.id` | `f66d1589-616f-4830-ae0d-c02d450a3265` |
-| Review id | `bb326fd5-6b1d-4fb7-988a-754656dc768c` |
-| Started | 2026-05-08 13:16:10 UTC |
-| Completed | 2026-05-08 13:31:03 UTC (~15 min) |
+| `runLabel` | `VISION_CHECK_REVIEW_EL_MD_EXP_RUN_6_BACKUP_LOCAL` |
+| Inngest event id | _n/a — local conductor execution_ |
+| `workflow_runs.id` | `f9e578b3-94f5-4fa6-8fca-6f49c1f029f4` |
+| Review id | `0f477f13-6ee9-4eab-a2b5-17b07c4195f5` |
+| Started | 2026-05-08 20:06 UTC |
+| Completed | 2026-05-08 20:29 UTC (~23 min) |
 | Workflow / overlay | `review` + `--experiment=vision-check` |
 | Submission | Valley View Townhomes v1 (`submissionVersionId=55fb6548-…`) |
 | Guide | `el-md-exp` |
-| `runs` | 3 |
+| `runs` | **1** (local backup; cloud runs=3 re-fire pending) |
 | Agent tools | `vision_check`, `semantic-search-blocks` |
-| Flags | `logAllAgentTrace=true` |
-| `enabledVisionSpecialists` | `"generic-vision,measure-distance"` (inspect-drawing dropped) |
-| Bureau commit | post bureau#318 (vision-router.md conditional sections) |
-| Conductor PR | post conductor#151 (template-engine sections + allow-list-aware router prompt) |
+| Flags | `logAllAgentTrace=true`, `step=review-runs` |
+| `enabledVisionSpecialists` | `"generic-vision,measure-distance"` |
+| Bureau commit | post bureau#324 (require submissionVersionId in `lib/sheet-resolution.ts`; migrate measure-distance + inspect-drawing) |
+| Conductor PR | post conductor#153 (extract-measurement-pairs → measure-distance) + conductor#154 (submissionVersionId plumbing) |
 | Artifacts | [`source-runs/el-md-exp/var-2/output/`](../source-runs/el-md-exp/var-2/output/) (canonical) |
 | Metrics TSV | [`metrics/el-md-exp/var2-vision-specialist-routing/per-item.tsv`](el-md-exp/var2-vision-specialist-routing/per-item.tsv) |
+| Run analysis | [`source-runs/el-md-exp/var-2/analysis.md`](../source-runs/el-md-exp/var-2/analysis.md) |
+| Verdict comparison vs ctrl | [`source-runs/el-md-exp/var-2/compare-vs-ctrl.md`](../source-runs/el-md-exp/var-2/compare-vs-ctrl.md) |
 
 **Notes**
-- Re-fire post conductor#151 + bureau#318. The `vision-router.md` is now rendered with Mustache `{{#enabledFoo}}…{{/enabledFoo}}` blocks keyed on the allow-list. With `inspect-drawing` excluded, the classifier never sees that route listed.
-- **Classifier reclamation worked:** RUN_2 had `{drawing_inspect: 27, measurement: 10, generic: 20}`. RUN_3 has `{drawing_inspect: 0, measurement: 16, generic: 40}`. The 27 prior misroutes redistributed cleanly into the two enabled routes.
-- **promptSha256 changed** across runs (RUN_2 `bbe3e2c3...`; RUN_3 `bacd962b...`) — confirms the new conditional-section prompt was actually loaded.
-- **Headline lifts:**
-  - Goal A: 47.1% (vs RUN_2 37.3%, **+9.8pp**)
-  - Goal B: 15.7% (vs RUN_2 5.9%, **+9.8pp** / ~2.6× lift). 8 items now route to measure-distance on a strict majority of runs (was 3 in RUN_2). 12 unique items had measurement-as-canonical-intent; 8 cleared majority.
-- **Caveat persists:** measurement dispatch still falls back to generic via `measurement_arg_construction_not_implemented` (conductor-side gap, separate work). Goal B is computed against `classifier.output.problemType` (intent), not `dispatch.specialistCalled` (post-fallback).
+- **First var-2 run on this set where measure-distance actually executes end-to-end.** RUN_3 (and the cloud RUN_4/RUN_5 attempts) had measurement dispatch crashing on a missing `version_number` column in `measure-distance.ts` (latent pre-existing bug, surfaced when conductor#153 wired up the dispatch chain). bureau#324 + conductor#154 fixed both the column and the silent-wrong-submission fallback footgun.
+- 29 vision_check calls. Classifier intent: `generic=20, measurement=9, drawing_inspect=0`. 8 measurement-routed calls produced ≥1 pair → measure-distance ran 8 times → **24/24 per-pair distance measurements computed (100% subprocess success).**
+- **Headline numbers (runs=1; cloud runs=3 re-fire pending):**
+  - Goal A (any vision invoked): 19/51 = **37.3%** (lower than RUN_3's 47.1% only because runs=1 vs runs=3)
+  - Goal B (classifier intent = measurement): 7/51 = **13.7%** (RUN_3 was 15.7%/8 — within single-run noise)
+  - **Goal B' (classifier picked measurement AND measure-distance produced ≥1 distance): 7/51 = 13.7%.** Identical to Goal B — every measure-distance subprocess succeeded. Pre-fix runs all had B' = 0%.
+- **Verdict-conversion lift:** of the 8 items with successful measure-distance, **6 escaped ctrl's `not-verifiable` majority verdict** (4 pass, 2 fail). 3 of those escaped ctrl's *unanimous* not-verifiable. The 2 fail items (EL-1.14, EL-1.37) are real compliance deficiencies the ctrl baseline would have left for human follow-up. See `compare-vs-ctrl.md` for the per-item table.
+- **Caveats:**
+  - `scaleInchesPerFoot` is hardcoded to `0.05` (1"=20'); per-sheet scale extraction is a follow-up.
+  - Distance range was 0.9–387 ft (median 24.6); the 387 ft outlier is suspect and worth spot-checking.
+  - EL-13.13 stayed `not-verifiable` despite measure-distance succeeding — worth investigating whether the agent rejected the measurement output.
+  - **Substation/Inngest cloud path hanging** — cloud RUN_4 and RUN_5 attempts both hung in Substation's Inngest function with no LLM activity. Root cause not yet identified; this run was executed locally via `npm run conduct --step=review-runs` to bypass the cloud path.
 
 **Supersedes**
 
-`VISION_CHECK_REVIEW_EL_MD_EXP_RUN_2` (workflow_runs.id `465fe4e5-9ce6-4554-9cbc-65cd75755b2b`, review id `694e2e1c-f160-407a-94c6-b5fd8aa5a919`, fired 2026-05-07 21:11 UTC). RUN_2 in turn superseded the pre-bureau#310 RUN_1.
+`VISION_CHECK_REVIEW_EL_MD_EXP_RUN_3` (workflow_runs.id `f66d1589-616f-4830-ae0d-c02d450a3265`, review id `bb326fd5-6b1d-4fb7-988a-754656dc768c`, fired 2026-05-08 13:16 UTC, runs=3). RUN_3's measurement dispatch fell back to generic on every call due to the `version_number` bug + the not-yet-wired conductor measurement-dispatch. RUN_3 in turn superseded RUN_2 (`465fe4e5-9ce6-4554-9cbc-65cd75755b2b`, classifier-allow-list confounder) and RUN_1.
 
 ---
 
@@ -242,10 +249,12 @@ For phase 1 to declare done, all 6 cells should be ✅ **current** with no outst
 - [ ] cc / var2: re-fire at `runs=3` to retire runs-disparity confounder on cc Goal A
 - [x] el-md-exp / ctrl-baseline: phase-1 numbers populated (Goal A 41.2%; Goal B n/a)
 - [x] el-md-exp / var1: re-fired as `VAR1_RUN_2` post bureau#317. Coverage closed (303/303 cells). **Goal A 74.5% (was lower-bound 60.8%)**, Goal B 0/51 (specialist still never invoked).
-- [x] el-md-exp / var2: re-fired as `RUN_3` post conductor#151 + bureau#318. Allow-list-aware classifier prompt working — zero drawing_inspect classifications. **Goal A 47.1% (was 37.3%), Goal B 15.7% (was 5.9% — ~2.6× lift)**.
+- [ ] el-md-exp / var2: re-fired as `RUN_6_BACKUP_LOCAL` post bureau#324 + conductor#153 + conductor#154. **Full chain executes end-to-end.** Goal A 37.3%, Goal B 13.7%, **Goal B' 13.7% (every measure-distance subprocess succeeded)**, **6 of 8 ctrl-not-verifiable items moved to a real verdict** (4 pass, 2 fail). runs=1 (local backup) — cloud runs=3 re-fire still pending to retire the runs-disparity confounder on Goal A.
 - [x] **fix measure-distance overlay's `review.md`** ✅ landed via bureau#317 + validated by VAR1_RUN_2.
 - [x] **bureau-side classifier prompt iteration for el-md-exp** ✅ delivered as conductor#151 + bureau#318 + validated by RUN_3.
-- [ ] **Open follow-up: conductor measurement-dispatch wiring** (`measurement_arg_construction_not_implemented` fallback). Unblocks specialist execution-accuracy measurement on review (phase-2 territory; doesn't block phase-1 selection metrics).
+- [x] **conductor measurement-dispatch wiring** ✅ delivered as conductor#153 (extract-measurement-pairs → measure-distance) + conductor#154 (submissionVersionId plumbing) + bureau#324 (require submissionVersionId, fix `version_number` ordering bug). Validated by RUN_6_BACKUP_LOCAL.
+- [ ] **Open follow-up: Substation/Inngest cloud-path hang** — cloud RUN_4 and RUN_5 both hung in Substation's `Substation-workflow-run` Inngest function with no LLM activity. Local execution works fine; root cause unidentified.
+- [ ] **Open follow-up: per-sheet scale extraction** — current chain hardcodes `scaleInchesPerFoot=0.05`. Sheets at other scales (1"=10', 1"=40') will mismeasure proportionally. Unblocks measurement *accuracy*; doesn't affect Goal A/B/B' (which measure routing + execution success, not numerical correctness).
 
 The Phase 1 Metric Summary in [`analysis.md`](./analysis.md) reflects the new numbers. Phase-1 status:
 - Goal A: NOT met overall on either set — but selectivity (var2's 22% misuse vs var1's 70% on el-md-exp) is the real differentiator.

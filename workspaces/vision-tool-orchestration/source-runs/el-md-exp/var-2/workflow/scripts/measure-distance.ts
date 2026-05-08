@@ -17,6 +17,10 @@ import { parseArgs } from 'node:util';
 import { generateText } from 'ai';
 import { gateway } from '@ai-sdk/gateway';
 import { createClient } from '@supabase/supabase-js';
+import {
+  getPlanSetVersionId as libGetPlanSetVersionId,
+  resolveSubmissionVersionId,
+} from './lib/sheet-resolution.js';
 
 /**
  * Build Vercel AI Gateway providerOptions from WORKFLOW_RUN_ID / RUN_LABEL
@@ -49,6 +53,7 @@ const { values } = parseArgs({
     projectId: { type: 'string' },
     documentId: { type: 'string' },
     sheetNum: { type: 'string' },
+    submissionVersionId: { type: 'string' },
     objectA: { type: 'string' },
     objectB: { type: 'string' },
     objectPairs: { type: 'string' },
@@ -65,6 +70,14 @@ let {
   projectId, documentId, sheetNum,
   scaleInchesPerFoot, outputPath, localizationStrategy,
 } = values as Record<string, string>;
+
+// Resolve submissionVersionId: explicit CLI arg first, fall back to
+// WORKSPACE_PATH/workflow/status.json (conductor-managed flow), fail
+// loudly if neither produces a value. The previous fallback to "latest
+// plan_set_version by created_at" was a footgun — it could silently
+// pick a different submission's plan_set_version when the same
+// plan_set_id had versions across multiple submissions.
+const submissionVersionId = resolveSubmissionVersionId(values.submissionVersionId as string);
 
 const objectA = values.objectA as string | undefined;
 const objectB = values.objectB as string | undefined;
@@ -102,12 +115,19 @@ if (!pairs.length) {
 }
 
 if (!documentId || !sheetNum || !scaleInchesPerFoot || !outputPath) {
-  console.error('Missing required arguments. Required: documentId, sheetNum, scaleInchesPerFoot, outputPath, and objectPairs (or objectA+objectB). Optional: projectId (inferred from workspace if omitted).');
+  console.error('Missing required arguments. Required: documentId, sheetNum, scaleInchesPerFoot, outputPath, and objectPairs (or objectA+objectB). Optional: projectId (inferred from workspace if omitted), submissionVersionId (resolved from CLI or workflow/status.json).');
   process.exit(1);
 }
 
 if (!projectId) {
   console.error('projectId not provided and could not be inferred from workspace.');
+  process.exit(1);
+}
+
+if (!submissionVersionId) {
+  console.error(
+    'Could not resolve submissionVersionId — neither --submissionVersionId CLI arg nor WORKSPACE_PATH/workflow/status.json provided one. Bureau scripts cannot safely guess which submission to scope plan_set_version lookups to.',
+  );
   process.exit(1);
 }
 
@@ -189,18 +209,18 @@ function writeSidecarLog() {
 // ============================================================================
 
 /**
- * Get the latest plan_set_version id for a given plan set (documentId = plan_set.id).
+ * Resolve the plan_set_version for a given plan set, scoped to *this
+ * workflow's submission*. Delegates to the shared sheet-resolution lib
+ * so the scoping logic stays in one place.
+ *
+ * The previous inline implementation ordered `plan_set_version` by a
+ * non-existent `version_number` column and silently fell back to "any
+ * latest by created_at" — which could (and did) pick a different
+ * submission's plan_set_version when the same plan_set_id had versions
+ * across multiple submissions.
  */
 async function getLatestPlanSetVersionId(planSetId: string): Promise<string | null> {
-  const supabase = getSupabase();
-  const { data } = await supabase
-    .from('plan_set_version')
-    .select('id')
-    .eq('plan_set_id', planSetId)
-    .order('version_number', { ascending: false })
-    .limit(1)
-    .single();
-  return data?.id ?? null;
+  return libGetPlanSetVersionId(planSetId, submissionVersionId, logEvent);
 }
 
 /**
@@ -1056,7 +1076,7 @@ async function main() {
   callDir = sessionDir;
 
   logEvent('measure-distance:start', {
-    projectId, documentId, sheetNum, strategy,
+    projectId, documentId, submissionVersionId, sheetNum, strategy,
     scaleInchesPerFoot,
     reasoning: (values.reasoning as string) || undefined,
     pairCount: pairs.length,

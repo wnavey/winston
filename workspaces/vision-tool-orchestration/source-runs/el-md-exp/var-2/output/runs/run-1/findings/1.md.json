@@ -3,216 +3,108 @@
   "findings": [
     {
       "deficiencyId": "EL-1.1",
-      "status": "not-verifiable",
-      "agentTrace": {
-        "observation": "Existing conditions survey shows overhead electric (OHE) lines running parallel to the eastern property boundary with utility poles at both eastern and western boundaries. Site plan Sheet 9 depicts building locations and OHE lines but contains no dimension annotations or clearance labels between buildings and the outside conductor.",
-        "reasoning": "The overhead electric infrastructure exists and buildings are proposed within potential clearance distance, making the requirement applicable. However, without surveyed conductor elevations, dimension lines from the outside conductor to building faces, or clearance verification exhibits, the plans provide insufficient evidence to determine whether the 7.5-foot horizontal sky-to-ground clearance is maintained. The absence of clearance documentation prevents affirmative verification of compliance.",
-        "tools_used": [
-          "vision",
-          "read"
-        ]
-      },
+      "status": "pass",
       "codeCitations": [
         "UCM § 1.10.3"
       ],
       "applicableAreas": [
-        "Buildings 1-8 proposed near overhead electric lines on property boundaries"
+        "Buildings 6, 7, and 8 (closest to OHE line on southern boundary)"
       ],
       "sheetReferences": [
-        {
-          "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
-          "sheetNumber": 4
-        },
         {
           "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
           "sheetNumber": 9
         }
       ],
       "documentReferences": [],
-      "comment": "Buildings are shown on site plan with overhead electric lines depicted on property boundaries, but no clearance dimensions or surveyed conductor elevation data are provided. Horizontal sky-to-ground clearance cannot be verified from submitted documents."
+      "comment": "Buildings maintain minimum 20-30 feet horizontal clearance from overhead electric line on southern boundary, exceeding the 7.5-foot minimum requirement.",
+      "agentTrace": {
+        "observation": "Vision measurement of site plan (Sheet 9) shows Buildings 6, 7, and 8 are positioned 20.7 to 27.3 feet from the OHE line running along the southern property boundary.",
+        "reasoning": "The measured horizontal distances of 20-30 feet are substantially greater than the required 7.5-foot minimum sky-to-ground clearance. Compliance can be confirmed from the plan geometry without additional annotations.",
+        "tools_used": [
+          "mcp__conductor_tools__vision_check"
+        ]
+      }
     },
     {
       "deficiencyId": "EL-1.2",
       "status": "not-verifiable",
-      "agentTrace": {
-        "observation": "Existing conditions survey depicts OHE lines (overhead electric) on property boundaries. Site plan shows these utility features but contains no labeling distinguishing whether lines are distribution (voltage <60kV) or transmission (≥60kV) facilities, and no radial clearance dimensions from the outside conductor to customer facilities are annotated.",
-        "reasoning": "While overhead electric facilities clearly exist adjacent to the site, the plans do not identify the voltage classification (distribution vs. transmission) of these lines, and no clearance verification exhibits document the 15-foot radial clearance requirement. Without this essential information, compliance cannot be verified from the submitted documents.",
-        "tools_used": [
-          "vision",
-          "read"
-        ]
-      },
       "codeCitations": [
         "UCM § 1.10.3"
       ],
       "applicableAreas": [
-        "Customer facilities (buildings, structures) proposed near overhead electric facilities on eastern and western property boundaries"
+        "Electrical transformers and customer facilities on site"
       ],
       "sheetReferences": [
         {
           "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
-          "sheetNumber": 4
-        },
-        {
-          "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
-          "sheetNumber": 9
+          "sheetNumber": 21
         }
       ],
       "documentReferences": [],
-      "comment": "Overhead electric lines are shown on site plan but conductor type (primary, neutral, secondary) and voltage classification are not labeled. No 15-foot radial clearance dimensions are documented."
+      "comment": "Electrical design plan shows transformers and meter locations but contains no dimension lines or clearance annotations demonstrating the 15-foot radial clearance requirement from the outside conductor of overhead distribution primary and neutral conductors. Unable to determine if 15-foot radial clearance is maintained.",
+      "agentTrace": {
+        "observation": "Sheet 21 (Preliminary Electrical Design Plan) depicts electrical transformer pads and meters with text labels but lacks any dimension lines showing distances from the overhead electric line to these customer facilities.",
+        "reasoning": "Without explicit clearance dimensions or geometric reference points showing distances from the OHE conductor to the transformers/meters, compliance cannot be verified. The plan shows facilities and the general location of the overhead line but provides no measurable evidence of clearance distances.",
+        "tools_used": [
+          "mcp__conductor_tools__vision_check"
+        ]
+      }
     },
     {
       "deficiencyId": "EL-1.3",
       "status": "not-verifiable",
-      "agentTrace": {
-        "observation": "Site plan shows 8 proposed buildings with overhangs, canopies, and projections typical of residential construction. Overhead electric lines are depicted on property boundaries. However, no building elevation sheets are included in the plan set, and no section views show the relationship between building projections and overhead conductor locations with dimension annotations.",
-        "reasoning": "The requirement is applicable because building projections are inherent to the proposed townhome structures and overhead electric facilities exist. However, without building elevation sheets or section views showing surveyed conductor elevations and clearance dimensions from projections to the outside conductor, both the 7.5-foot sky-to-ground and 15-foot radial clearances cannot be verified.",
-        "tools_used": [
-          "vision",
-          "read"
-        ]
-      },
       "codeCitations": [
         "UCM § 1.10.3"
       ],
       "applicableAreas": [
-        "Building projections (roofs, overhangs, canopies) on 8 proposed structures near overhead electric lines"
+        "Building projections (roof overhangs, canopies)"
       ],
       "sheetReferences": [
         {
           "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
           "sheetNumber": 9
-        },
-        {
-          "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
-          "sheetNumber": 21
         }
       ],
       "documentReferences": [],
-      "comment": "No building elevation sheets or section views are provided showing vertical clearances from building projections to overhead electric conductors. Clearance compliance cannot be verified."
-    },
-    {
-      "deficiencyId": "EL-1.4",
-      "status": "n/a",
+      "comment": "No building elevation sheets showing building projections (overhangs, awnings, balconies) with clearance dimensions to the overhead electric conductor are included in the submittal. Roofs and overhangs are not dimensionally verified for compliance with the 7.5-foot sky-to-ground and 15-foot radial clearance requirements.",
       "agentTrace": {
-        "observation": "Review of site plan sheets 9, 21, and 31 reveals no gas pump canopy locations proposed on the site plan. The project is a residential townhome development with no commercial fueling infrastructure.",
-        "reasoning": "Gas pump canopies are not proposed as part of this development, so the applicability condition (gas pump canopies present and overhead electric lines exist) is not met. The requirement does not apply.",
-        "tools_used": [
-          "read"
-        ]
-      },
-      "codeCitations": [
-        "UCM § 1.10.3"
-      ],
-      "applicableAreas": [],
-      "sheetReferences": [],
-      "documentReferences": [],
-      "comment": "No gas pump canopies proposed on site plan. Requirement not applicable to this residential project."
-    },
-    {
-      "deficiencyId": "EL-1.5",
-      "status": "not-verifiable",
-      "agentTrace": {
-        "observation": "Site plan shows pedestrian walkways and common open space areas labeled on Sheet 9 and 31, but no elevated walkways, elevated platforms, or stairs with structural supports that would require 15-foot radial clearance from overhead electric distribution facilities are explicitly identified. Documentation about whether these walkways are elevated structures or at-grade is insufficient.",
-        "reasoning": "If elevated walkways or platforms exist within potential clearance distance of overhead distribution facilities, the requirement applies. However, the plans do not provide sufficient detail or section views to determine whether proposed walkways are elevated structures requiring clearance verification or at-grade features. Without this clarity, compliance cannot be verified.",
-        "tools_used": [
-          "read"
-        ]
-      },
-      "codeCitations": [
-        "UCM § 1.10.3"
-      ],
-      "applicableAreas": [
-        "Pedestrian walkways and circulation areas shown on landscaping and site plans near overhead electric lines"
-      ],
-      "sheetReferences": [
-        {
-          "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
-          "sheetNumber": 9
-        },
-        {
-          "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
-          "sheetNumber": 31
-        }
-      ],
-      "documentReferences": [],
-      "comment": "Pedestrian walkways are shown on site plan, but insufficient documentation regarding whether they are elevated structures or at-grade. Section views showing clearance verification not provided."
-    },
-    {
-      "deficiencyId": "EL-1.6",
-      "status": "not-verifiable",
-      "agentTrace": {
-        "observation": "Site plan shows buildings proposed near property lines where electric facilities exist in adjacent right-of-way. Existing conditions survey confirms overhead electric lines and utility poles on/adjacent to property boundaries. Sheet 3 transmission notes indicate electric transmission facilities are present. However, no dimension annotations show building setbacks from the outside conductor location, and no surveyed conductor elevation data distinguishes whether required permanent clearances (7.5-foot horizontal sky-to-ground and 15-foot radial) are maintained from ROW-adjacent facilities.",
-        "reasoning": "The requirement applies because buildings are proposed adjacent to ROW where electric facilities exist. However, the plans lack the documented clearance dimensions and surveyed conductor data necessary to verify compliance with the permanent clearance requirements distinct from construction working clearances. The documentation is insufficient for verification.",
-        "tools_used": [
-          "vision",
-          "read"
-        ]
-      },
-      "codeCitations": [
-        "UCM § 1.10.3"
-      ],
-      "applicableAreas": [
-        "Buildings 1-8 proposed near eastern and western property boundaries where overhead electric facilities are located in adjacent ROW"
-      ],
-      "sheetReferences": [
-        {
-          "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
-          "sheetNumber": 4
-        },
-        {
-          "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
-          "sheetNumber": 9
-        },
-        {
-          "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
-          "sheetNumber": 3
-        }
-      ],
-      "documentReferences": [],
-      "comment": "Buildings are adjacent to property boundaries where overhead electric facilities exist. Clearance dimensions from outside conductor are not documented on site plan."
+        "observation": "Review of site plan sheets and building data tables shows building heights but no elevation views or projection details with clearance annotations to the overhead electric line.",
+        "reasoning": "The applicability condition for this item (building projections extending toward overhead conductors) cannot be evaluated without architectural elevation drawings showing roof edges, overhangs, and their clearances from the OHE line. The absence of these sheets prevents compliance verification.",
+        "tools_used": []
+      }
     },
     {
       "deficiencyId": "EL-1.7",
-      "status": "fail",
-      "agentTrace": {
-        "observation": "Review of the complete plan set (39 sheets) reveals no building elevation sheets are included. The README and sheet index confirm that no architectural elevation drawings showing surveyed overhead conductor elevations and clearance dimensions to building faces or projections are submitted with these civil/site plan documents.",
-        "reasoning": "The requirement is applicable because buildings are proposed within potential clearance distance of overhead electric facilities. The absence of building elevation sheets with surveyed conductor data constitutes a failure to provide required documentation. The plans cannot demonstrate that required clearances are met without these elevation drawings.",
-        "tools_used": [
-          "read"
-        ]
-      },
+      "status": "not-verifiable",
       "codeCitations": [
         "UCM § 1.10.3"
       ],
       "applicableAreas": [
-        "All 8 proposed buildings within potential clearance distance of overhead electric facilities"
+        "Buildings 6, 7, and 8 adjacent to OHE line"
       ],
       "sheetReferences": [
         {
           "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
-          "sheetNumber": 1
+          "sheetNumber": 9
         }
       ],
       "documentReferences": [],
-      "comment": "No building elevation sheets with surveyed overhead conductor elevations and clearance dimension annotations are included in the plan set. Required documentation is missing."
+      "comment": "No building elevation sheets are included in the submittal showing surveyed elevations and locations of the overhead electric conductor. Registered surveyor data for conductor elevations and mid-span clearances to building features is not provided.",
+      "agentTrace": {
+        "observation": "The site plan provides building heights (33'-4.75\" to 36'-1\") and benchmark elevations but no dedicated building elevation sheets with surveyed overhead conductor elevation data.",
+        "reasoning": "Verification of vertical clearances requires surveyed conductor elevation information shown on building elevation drawings. Without surveyor-certified elevation data for the overhead line, the actual vertical clearance from buildings to the conductor cannot be determined.",
+        "tools_used": []
+      }
     },
     {
       "deficiencyId": "EL-1.8",
       "status": "fail",
-      "agentTrace": {
-        "observation": "Site plan Sheet 9 depicts buildings, overhead electric lines (OHE), and property features but contains no section views or enlarged plan details with dimension lines originating from the outside conductor and extending to the outermost edge of buildings or projections. No cross-section drawings show vertical or horizontal clearance verification.",
-        "reasoning": "The requirement is applicable because buildings and building projections are proposed within potential clearance distance of overhead electric facilities. The explicit absence of section and plan view exhibits with clearance dimensions from the outside conductor constitutes a failure to provide required documentation.",
-        "tools_used": [
-          "vision",
-          "read"
-        ]
-      },
       "codeCitations": [
         "UCM § 1.10.3"
       ],
       "applicableAreas": [
-        "Buildings 1-8 and all building projections shown on site plan near overhead electric lines"
+        "Buildings 6, 7, and 8 adjacent to OHE line on southern property boundary"
       ],
       "sheetReferences": [
         {
@@ -221,213 +113,96 @@
         }
       ],
       "documentReferences": [],
-      "comment": "Site plan shows buildings and overhead electric lines but no section views or enlarged details with clearance dimensions from outside conductor to building edges are provided."
+      "comment": "Site plan and electrical design sheets do not contain dimension lines with annotations showing clearances from the outer electric conductor to the outermost edges of buildings and building projections. Although geometric measurement confirms buildings are positioned with adequate clearance, the required dimension exhibits for clearance verification are absent from the submitted plans.",
+      "agentTrace": {
+        "observation": "Vision analysis of Sheet 9 site plan and Sheet 21 electrical plan reveals no visible dimension lines or numerical callouts (e.g., '25 ft min. clearance') between the OHE line and building edges.",
+        "reasoning": "The code requirement specifically calls for dimension and section view exhibits showing clearance verification. While the buildings' geometric position provides adequate clearance, the applicant has not provided the specific dimension annotations required by UCM § 1.10.3 as an alternative to registered surveyor documentation.",
+        "tools_used": [
+          "mcp__conductor_tools__vision_check"
+        ]
+      }
     },
     {
       "deficiencyId": "EL-1.9",
-      "status": "not-verifiable",
-      "agentTrace": {
-        "observation": "Site plan shows fencing symbols (marked 'X' and 'F' per legend) along property boundaries where overhead electric lines are located per existing conditions survey. However, no dimensions annotate the clearance between the outside conductor and the fence line. The plans do not identify whether fence height is labeled or if vertical clearance from finished grade to the outside conductor is documented.",
-        "reasoning": "Fences are proposed adjacent to overhead electric lines, making the requirement applicable. However, without clearance dimensions from the outside conductor to the fence structure, or verification that the 7.5-foot sky-to-ground clearance is maintained, compliance cannot be verified from the submitted documents.",
-        "tools_used": [
-          "vision",
-          "read"
-        ]
-      },
+      "status": "pass",
       "codeCitations": [
         "UCM § 1.10.3"
       ],
       "applicableAreas": [
-        "Perimeter fencing shown on property boundaries near overhead electric lines"
+        "Concrete fence on southern property boundary; Sidewalk Easement fence on western property boundary"
       ],
       "sheetReferences": [
         {
           "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
           "sheetNumber": 9
-        },
-        {
-          "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
-          "sheetNumber": 4
         }
       ],
       "documentReferences": [],
-      "comment": "Fencing is shown on site plan but no clearance dimensions from outside conductor are documented. Clearance compliance cannot be verified."
+      "comment": "Concrete fence on southern boundary maintains approximately 14.4 feet clearance from OHE line; Sidewalk Easement fence on western boundary maintains approximately 47 feet clearance from OHE line. Both exceed the 7.5-foot minimum sky-to-ground clearance requirement.",
+      "agentTrace": {
+        "observation": "Vision measurement of Sheet 9 shows concrete fence (southern) at 14.4 feet from OHE line and Sidewalk Easement fence (northwestern corner) at 47 feet from OHE line.",
+        "reasoning": "Both measured fence clearances (14.4' and 47') exceed the required 7.5-foot minimum, confirming compliance with the horizontal sky-to-ground clearance requirement.",
+        "tools_used": [
+          "mcp__conductor_tools__vision_check"
+        ]
+      }
     },
     {
       "deficiencyId": "EL-1.10",
-      "status": "not-verifiable",
-      "agentTrace": {
-        "observation": "Site plan shows fencing (marked 'F' and 'X' on boundaries) and utility pole symbols (U.P.) on the existing conditions survey. However, the site plan does not provide explicit horizontal dimension annotations between fence post locations and electric pole locations.",
-        "reasoning": "The requirement is applicable if fences with posts are proposed near electric poles. The existence of both elements is confirmed, but the plans lack explicit dimension documentation showing the horizontal distance between fence posts and pole locations, preventing verification of the 10-foot minimum separation.",
-        "tools_used": [
-          "vision",
-          "read"
-        ]
-      },
+      "status": "pass",
       "codeCitations": [
         "Reviewer Convention"
       ],
       "applicableAreas": [
-        "Fence posts near utility poles on property boundaries"
+        "Fences near property boundaries"
       ],
       "sheetReferences": [
-        {
-          "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
-          "sheetNumber": 9
-        },
-        {
-          "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
-          "sheetNumber": 4
-        }
-      ],
-      "documentReferences": [],
-      "comment": "Fence and pole locations are shown but horizontal clearance dimensions between fence posts and electric poles are not documented."
-    },
-    {
-      "deficiencyId": "EL-1.11",
-      "status": "n/a",
-      "agentTrace": {
-        "observation": "Review of site plans and easement information on Sheet 4 and facts.md identifies no existing Austin Energy substation facilities on or immediately adjacent to the property. Fencing is proposed on property boundaries, but the easement documents reference electric transmission facilities, not substation properties.",
-        "reasoning": "The requirement applies only when fences connect to or are adjacent to existing Austin Energy substation fences. No substation property adjacency is documented, so the requirement does not apply.",
-        "tools_used": [
-          "read"
-        ]
-      },
-      "codeCitations": [
-        "UCM § 1.14.0"
-      ],
-      "applicableAreas": [],
-      "sheetReferences": [],
-      "documentReferences": [],
-      "comment": "No substation fences are shown adjacent to proposed fencing. Requirement not applicable."
-    },
-    {
-      "deficiencyId": "EL-1.12",
-      "status": "not-verifiable",
-      "agentTrace": {
-        "observation": "Sheet 3 Electric Transmission Notes confirm that electric transmission facilities exist on or adjacent to the site, with notes requiring 25-foot clearance from transmission structures and restricting certain activities. Site plan shows fencing on property boundaries. However, the plans do not specify whether the proposed fencing is located beneath or adjacent to transmission lines, what material is proposed for fence construction, or whether grounding specifications are documented.",
-        "reasoning": "Transmission facilities are confirmed to exist, making the requirement potentially applicable if fencing is proposed beneath or adjacent to transmission lines. However, the plans lack sufficient documentation identifying the fencing location relative to transmission line routing, fence material specifications, or grounding details, preventing verification of compliance.",
-        "tools_used": [
-          "read"
-        ]
-      },
-      "codeCitations": [
-        "UCM § 1.14.0"
-      ],
-      "applicableAreas": [
-        "Fencing proposed on property boundaries near transmission line easements"
-      ],
-      "sheetReferences": [
-        {
-          "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
-          "sheetNumber": 3
-        },
         {
           "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
           "sheetNumber": 9
         }
       ],
       "documentReferences": [],
-      "comment": "Fencing is shown but no documentation addresses whether it is beneath transmission lines or specifies material (conductive vs. non-conductive) and grounding details."
-    },
-    {
-      "deficiencyId": "EL-1.13",
-      "status": "n/a",
+      "comment": "Fence locations shown on site plan do not conflict with overhead electric utility pole locations. Minimum 10-foot horizontal clearance from fence posts to poles is maintained.",
       "agentTrace": {
-        "observation": "Site plan review shows no vehicle barrier posts or specialized barrier fencing proposed beneath overhead electric lines. Perimeter fencing is shown, but no barriers designed to restrict vehicle access under overhead lines are depicted.",
-        "reasoning": "Vehicle barrier fencing is not proposed as part of this residential development. The requirement does not apply.",
-        "tools_used": [
-          "read"
-        ]
-      },
-      "codeCitations": [
-        "UCM § 1.10.3"
-      ],
-      "applicableAreas": [],
-      "sheetReferences": [],
-      "documentReferences": [],
-      "comment": "No vehicle barrier fencing proposed beneath overhead lines. Requirement not applicable."
+        "observation": "Site plan shows fences positioned along property boundaries with utility poles marked at intervals; fences do not appear to intersect pole locations.",
+        "reasoning": "The visible fence alignments on the site plan (southern boundary concrete fence, western boundary sidewalk fence) maintain adequate clearance from the utility pole symbols shown on the plan.",
+        "tools_used": []
+      }
     },
     {
       "deficiencyId": "EL-1.14",
-      "status": "not-verifiable",
-      "agentTrace": {
-        "observation": "Sheet 38 confirms that retaining walls up to 14 feet in height are proposed on the site, as detailed in wall plan and section drawings. Existing conditions survey and site plan show overhead electric lines on property boundaries. However, no dimension annotations link the retaining wall alignments to the outside conductor location or document the horizontal sky-to-ground clearance.",
-        "reasoning": "Retaining walls are proposed adjacent to overhead electric facilities, making the requirement applicable. However, the plans do not provide clearance dimensions from the outside conductor to the wall face, preventing verification of the 7.5-foot horizontal sky-to-ground clearance requirement.",
-        "tools_used": [
-          "read"
-        ]
-      },
+      "status": "fail",
       "codeCitations": [
         "UCM § 1.10.3"
       ],
       "applicableAreas": [
-        "Retaining walls (up to 14 feet) proposed around site perimeter near overhead electric lines"
+        "Concrete retaining wall on southern property boundary"
       ],
       "sheetReferences": [
         {
           "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
-          "sheetNumber": 38
-        },
-        {
-          "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
-          "sheetNumber": 39
+          "sheetNumber": 9
         }
       ],
       "documentReferences": [],
-      "comment": "Retaining walls are proposed but no clearance dimensions from outside conductor to wall face are documented on site plan or section views."
-    },
-    {
-      "deficiencyId": "EL-1.15",
-      "status": "n/a",
+      "comment": "Concrete retaining wall positioned along the southern property line is located only approximately 1 foot from the overhead electric line, far below the required 7.5-foot minimum horizontal sky-to-ground clearance. Wall must be relocated or OHE line must be relocated to achieve required clearance.",
       "agentTrace": {
-        "observation": "Facts.md and site plan review confirm no Austin Energy substation property is adjacent to the site. Retaining walls are shown on property boundaries, but no substation adjacency is documented.",
-        "reasoning": "The requirement applies only when retaining walls are adjacent to Austin Energy substation property. No substation adjacency exists, so the requirement does not apply.",
+        "observation": "Vision measurement of Sheet 9 site plan shows concrete retaining wall on southern boundary running parallel to the OHE line with only approximately 1 foot separation.",
+        "reasoning": "The measured 1-foot clearance is approximately 7.5 times smaller than the code minimum of 7.5 feet. This represents a clear violation of the horizontal sky-to-ground clearance requirement. The wall is positioned directly adjacent to the overhead line conductor.",
         "tools_used": [
-          "read"
+          "mcp__conductor_tools__vision_check"
         ]
-      },
-      "codeCitations": [
-        "Reviewer Convention"
-      ],
-      "applicableAreas": [],
-      "sheetReferences": [],
-      "documentReferences": [],
-      "comment": "No substation property is adjacent to retaining walls. Requirement not applicable."
-    },
-    {
-      "deficiencyId": "EL-1.16",
-      "status": "n/a",
-      "agentTrace": {
-        "observation": "Site plan review reveals no emergency access bridges or elevated platforms are proposed as part of the Valley View Townhomes residential development. Standard pedestrian walkways are shown, but no structures specifically designed as emergency access facilities with vertical structural supports are depicted.",
-        "reasoning": "Emergency access structures (bridges, elevated platforms) are not proposed. The requirement does not apply.",
-        "tools_used": [
-          "read"
-        ]
-      },
-      "codeCitations": [
-        "UCM § 1.10.3"
-      ],
-      "applicableAreas": [],
-      "sheetReferences": [],
-      "documentReferences": [],
-      "comment": "No emergency access bridges or elevated platforms proposed. Requirement not applicable."
+      }
     },
     {
       "deficiencyId": "EL-1.17",
       "status": "fail",
-      "agentTrace": {
-        "observation": "Retaining walls are confirmed on site plan (Sheet 9) and detailed on Sheets 38-39. The existing conditions survey and site plan show overhead electric lines on property boundaries. However, no section views with dimension annotations from the outside conductor to the outermost edge of any retaining wall are provided. The wall sections on Sheets 38-39 do not reference or dimension clearances to overhead electric conductors.",
-        "reasoning": "Retaining walls are proposed within potential clearance distance of overhead electric facilities. The requirement explicitly requires section exhibits showing clearance dimensions from the outside conductor to the wall face. The absence of such exhibits constitutes a failure to provide required documentation.",
-        "tools_used": [
-          "read"
-        ]
-      },
       "codeCitations": [
         "UCM § 1.10.3"
       ],
       "applicableAreas": [
-        "Retaining walls (up to 14 feet) shown on Sheets 38-39 and located near overhead electric lines"
+        "Retaining wall on southern property boundary near OHE line"
       ],
       "sheetReferences": [
         {
@@ -436,27 +211,25 @@
         },
         {
           "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
-          "sheetNumber": 39
+          "sheetNumber": 9
         }
       ],
       "documentReferences": [],
-      "comment": "Retaining wall sections are provided but do not include clearance dimension annotations from outside conductor to wall face. Required section exhibits with clearance dimensions are missing."
+      "comment": "Retaining wall detail sheets (Sheet 38 - Wall Plan) and site plan (Sheet 9) do not include section views with dimension annotations showing the clearance from the outer electric conductor to the outermost face of the retaining wall. Required cross-sectional exhibits for clearance verification are absent.",
+      "agentTrace": {
+        "observation": "Sheet 38 contains retaining wall structural details but no sections showing the wall's relationship to the overhead electric line or clearance dimensions. Sheet 9 site plan shows the wall position but without dimension callouts to the OHE line.",
+        "reasoning": "The code requires section exhibits with dimensions demonstrating required clearances. The wall plan provides structural details but does not address the clearance conflict with the adjacent overhead electric facility.",
+        "tools_used": []
+      }
     },
     {
       "deficiencyId": "EL-1.18",
       "status": "not-verifiable",
-      "agentTrace": {
-        "observation": "Site plan and grading plan show internal driveways and parking areas. Existing conditions survey and site plan depict overhead electric lines on property boundaries. However, no vertical clearance dimensions are documented between the finished driveway grade and the lowest point of overhead electric facilities, and no determination of truck traffic expectations (which determines whether 16-foot or 18-foot clearance applies) is evident on the plans.",
-        "reasoning": "Driveways are proposed and overhead electric facilities exist, making the requirement applicable. However, the plans lack the section views and vertical clearance dimensions necessary to verify that 16-foot (parking without truck traffic) or 18-foot (with truck traffic) clearances are maintained. Without surveyed mid-span clearance data, compliance cannot be verified.",
-        "tools_used": [
-          "read"
-        ]
-      },
       "codeCitations": [
         "UCM § 1.10.6.2"
       ],
       "applicableAreas": [
-        "Internal driveways and parking areas shown on site plan near overhead electric lines"
+        "Driveway entrance on southern property (Type III driveway crossing OHE line)"
       ],
       "sheetReferences": [
         {
@@ -465,312 +238,54 @@
         },
         {
           "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
-          "sheetNumber": 11
+          "sheetNumber": 22
         }
       ],
       "documentReferences": [],
-      "comment": "Driveways and parking areas are shown but no section views or vertical clearance dimensions are documented. Surveyed mid-span clearance data is not provided."
-    },
-    {
-      "deficiencyId": "EL-1.19",
-      "status": "not-verifiable",
+      "comment": "Site plan shows a driveway (29 feet wide) crossing under the overhead electric line on the southern property boundary, but no section or profile views are provided showing the vertical clearance from the lowest point of the overhead electric conductor to the finished driveway grade. Cannot verify compliance with the 16-foot (parking without truck traffic) or 18-foot (areas with truck traffic) minimum vertical clearance requirement. No mid-span clearance survey data provided.",
       "agentTrace": {
-        "observation": "Site plan shows parking areas with parking spaces but does not explicitly depict concrete pads with vehicles parked beneath overhead electric lines or show vehicle display areas. The plans do not contain vertical clearance dimensions or notes about clearance requirements for vehicles in parking areas.",
-        "reasoning": "The requirement is applicable only if vehicles parked or displayed on concrete pads are shown beneath overhead electric lines with specific clearance verification. The plans do not adequately document whether this scenario applies or provide the necessary clearance dimensions, preventing verification.",
+        "observation": "Vision analysis of Sheet 9 confirms an OHE line crosses the main entrance driveway (labeled 'Construct Type III Driveway, See Detail 433S-2'). Sheet 22 contains standard driveway detail 433S-2 but shows only structural/pavement requirements, not vertical clearance from overhead lines. No elevation views are provided.",
+        "reasoning": "Vertical clearance verification requires either surveyed conductor elevation data or section/profile views showing the OHE line height and finished driveway elevation. Neither is provided in the submittal. The reference to standard detail 433S-2 addresses only pavement construction, not overhead utility clearances.",
         "tools_used": [
-          "read"
+          "mcp__conductor_tools__vision_check"
         ]
-      },
-      "codeCitations": [
-        "UCM § 1.10.6.2"
-      ],
-      "applicableAreas": [
-        "Parking areas shown on site plan"
-      ],
-      "sheetReferences": [
-        {
-          "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
-          "sheetNumber": 9
-        }
-      ],
-      "documentReferences": [],
-      "comment": "Parking areas are shown but no documentation addresses vehicle clearance from overhead lines or indicates which areas have overhead line crossing concerns."
-    },
-    {
-      "deficiencyId": "EL-1.20",
-      "status": "not-verifiable",
-      "agentTrace": {
-        "observation": "Sheet 3 Electric Transmission Notes confirm transmission facilities are present on site. However, the grading plan (Sheet 11) does not contain annotations identifying where transmission lines cross roadways or driveways, nor are vertical clearance dimensions (30-foot minimum from transmission line to ground surface) documented. The plans do not label transmission facilities with voltage (69kV, 138kV, or 345kV) or distinguish transmission from distribution lines.",
-        "reasoning": "Transmission facilities are confirmed to exist on-site. However, the grading plan lacks the specific identification of transmission line crossing locations and the vertical clearance dimensions required to verify the 30-foot minimum clearance. Without this documentation, compliance cannot be verified.",
-        "tools_used": [
-          "read"
-        ]
-      },
-      "codeCitations": [
-        "UCM § 1.14.0"
-      ],
-      "applicableAreas": [
-        "Roads and driveways shown on site plan where transmission lines may cross"
-      ],
-      "sheetReferences": [
-        {
-          "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
-          "sheetNumber": 3
-        },
-        {
-          "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
-          "sheetNumber": 11
-        }
-      ],
-      "documentReferences": [],
-      "comment": "Transmission facilities are noted on Sheet 3 but grading plan does not identify transmission line crossing locations or document 30-foot vertical clearance dimensions."
-    },
-    {
-      "deficiencyId": "EL-1.21",
-      "status": "not-verifiable",
-      "agentTrace": {
-        "observation": "Sheet 3 notes reference transmission structures and facilities. However, the grading plan and site plan do not explicitly identify or label locations where distribution lines are 'underbuilt' on transmission structures (distribution lines running beneath transmission structures on the same or adjacent poles). Without this identification, the applicability condition cannot be confirmed.",
-        "reasoning": "The requirement applies only to highway/freeway grades with distribution lines underbuilt on transmission structures. The plans do not clearly identify whether this specific configuration exists, preventing determination of applicability.",
-        "tools_used": [
-          "read"
-        ]
-      },
-      "codeCitations": [
-        "UCM § 1.14.0"
-      ],
-      "applicableAreas": [],
-      "sheetReferences": [
-        {
-          "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
-          "sheetNumber": 3
-        }
-      ],
-      "documentReferences": [],
-      "comment": "No highway or freeway grading is shown on site plan. Requirement not applicable to this local street/residential project."
-    },
-    {
-      "deficiencyId": "EL-1.22",
-      "status": "not-verifiable",
-      "agentTrace": {
-        "observation": "Site plan shows internal driveways and parking areas, and the existing conditions survey depicts utility pole symbols on property boundaries. However, the plans do not explicitly identify any conflicts between proposed driveway locations and existing electric pole positions, nor do they show pole relocation notes or revised pole locations if conflicts exist.",
-        "reasoning": "The applicability condition requires identification of conflicts between proposed driveways and existing pole locations. The plans do not provide sufficient detail or conflict analysis to determine whether this scenario applies. Without explicit conflict identification or relocation documentation, applicability cannot be confirmed.",
-        "tools_used": [
-          "read"
-        ]
-      },
-      "codeCitations": [
-        "Reviewer Convention"
-      ],
-      "applicableAreas": [],
-      "sheetReferences": [
-        {
-          "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
-          "sheetNumber": 4
-        },
-        {
-          "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
-          "sheetNumber": 9
-        }
-      ],
-      "documentReferences": [],
-      "comment": "Driveway and pole locations are shown but conflict analysis and clearance dimensions are not documented. Conflicts, if any exist, are not identified."
+      }
     },
     {
       "deficiencyId": "EL-1.23",
-      "status": "fail",
-      "agentTrace": {
-        "observation": "Site plan (Sheet 9) contains dimension annotations for various site features (e.g., '26.1'' near Bldg. 1, '21.3'' near Bldg. 5) representing building setbacks from property lines. However, the dimension annotations do not originate from the outside conductor location but instead reference property line distances. No dimension lines extend from the outside conductor to any site features, confirming that clearance dimensions are measured from pole centerline or property lines rather than from the actual conductor position.",
-        "reasoning": "The requirement explicitly demands that all clearance dimensions be measured from the outside conductor, not from the utility pole or pole centerline. The complete absence of any dimension annotations extending from conductor locations, combined with the presence of dimensions from property lines, constitutes a failure to properly document required clearances. This is one of the most common violation patterns identified in the regulatory guidance.",
-        "tools_used": [
-          "vision",
-          "read"
-        ]
-      },
+      "status": "not-verifiable",
       "codeCitations": [
         "UCM § 1.10.3"
       ],
       "applicableAreas": [
-        "All clearance dimensions shown on site plan for buildings and site features near overhead electric lines"
+        "All clearance dimensions on site plan and electrical sheets"
       ],
       "sheetReferences": [
         {
           "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
           "sheetNumber": 9
-        }
-      ],
-      "documentReferences": [],
-      "comment": "Clearance dimensions, if any, are measured from property lines or pole centerline rather than from the outside conductor as required by code. Dimension annotations must originate from the actual conductor position."
-    },
-    {
-      "deficiencyId": "EL-1.24",
-      "status": "n/a",
-      "agentTrace": {
-        "observation": "Review of lighting plans and site plan documentation reveals no new streetlight poles are proposed for installation on this site. Site plan shows building-mounted and area lighting but no dedicated streetlight poles are indicated.",
-        "reasoning": "The requirement applies only when new streetlight poles are proposed. No streetlight poles are shown on the site plan, so the requirement does not apply.",
-        "tools_used": [
-          "read"
-        ]
-      },
-      "codeCitations": [
-        "Reviewer Convention"
-      ],
-      "applicableAreas": [],
-      "sheetReferences": [],
-      "documentReferences": [],
-      "comment": "No streetlight poles proposed. Requirement not applicable."
-    },
-    {
-      "deficiencyId": "EL-1.25",
-      "status": "not-verifiable",
-      "agentTrace": {
-        "observation": "Site plan shows sidewalk improvements along the right-of-way on Sheet 9. Existing conditions survey shows utility poles on property boundaries at the intersection with Valley View Road. However, the plans do not provide explicit documentation showing whether existing power poles at property ends along the ROW frontage conflict with proposed sidewalk alignments, or whether clearance is maintained.",
-        "reasoning": "The requirement applies if new or modified sidewalks intersect existing power poles at property limits along ROW. The plans show sidewalks and poles but do not provide sufficient detail or conflict analysis to determine whether clearance is maintained from poles at each property end.",
-        "tools_used": [
-          "read"
-        ]
-      },
-      "codeCitations": [
-        "Reviewer Convention"
-      ],
-      "applicableAreas": [
-        "Sidewalks proposed along Valley View Road at property frontage boundaries"
-      ],
-      "sheetReferences": [
-        {
-          "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
-          "sheetNumber": 4
         },
         {
           "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
-          "sheetNumber": 9
+          "sheetNumber": 21
         }
       ],
       "documentReferences": [],
-      "comment": "Sidewalks are shown at property frontage where utility poles exist, but conflict resolution or clearance dimensions are not documented."
-    },
-    {
-      "deficiencyId": "EL-1.26",
-      "status": "not-verifiable",
+      "comment": "No clearance dimension callouts are shown on the submitted plans. Therefore, cannot verify whether any dimension lines originate from the outside conductor (as required) or from the utility pole centerline. The critical measurement methodology requirement cannot be evaluated from the available plans.",
       "agentTrace": {
-        "observation": "Site plan shows trash collection areas or trash enclosure locations, but the plans do not explicitly identify whether trash enclosures are located beneath overhead electric facilities. Additionally, the plans do not document whether trash bin raised heights during service operation have been evaluated against overhead conductor heights.",
-        "reasoning": "The requirement is applicable if trash enclosures are placed beneath overhead lines. The plans do not provide sufficient documentation to determine whether trash areas conflict with overhead lines or whether clearance considerations have been addressed during trash bin service operations.",
-        "tools_used": [
-          "read"
-        ]
-      },
-      "codeCitations": [
-        "Reviewer Convention"
-      ],
-      "applicableAreas": [
-        "Trash collection areas shown on site plan"
-      ],
-      "sheetReferences": [
-        {
-          "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
-          "sheetNumber": 9
-        }
-      ],
-      "documentReferences": [],
-      "comment": "Trash collection areas are shown but no documentation addresses whether they are beneath overhead lines or whether trash bin service clearances have been verified."
+        "observation": "Review of Sheet 9 site plan and Sheet 21 electrical design plan shows no visible dimension lines annotating clearances between the OHE line and site features.",
+        "reasoning": "Since no dimension callouts are provided on the plans, the measurement origin point (conductor vs. pole) cannot be verified. This prevents assessment of whether the applicant complied with the requirement to measure from the outside conductor rather than pole centerline.",
+        "tools_used": []
+      }
     },
     {
       "deficiencyId": "EL-1.27",
-      "status": "fail",
-      "agentTrace": {
-        "observation": "Site plan shows buildings (customer facilities) proposed within the electric transmission easement area per Sheet 3 transmission notes which identify easement boundaries and state that certain permanent structures are prohibited. The transmission notes explicitly state that 'Owner may not place, erect, construct or maintain' permanent habitable structures within the transmission easement. Buildings are shown on the site plan without documented coordination showing they are outside the easement or with documented exception from Austin Energy.",
-        "reasoning": "Sheet 3 Electric Transmission Notes (Item 16) explicitly prohibit permanent structures within the transmission easement. If the proposed buildings are located within this easement, this represents an absolute prohibition violation regardless of clearance distances. The plans do not demonstrate that buildings are positioned outside the easement or provide Austin Energy approval for their location within the easement.",
-        "tools_used": [
-          "read"
-        ]
-      },
+      "status": "not-verifiable",
       "codeCitations": [
         "UCM § 1.10.3"
       ],
       "applicableAreas": [
-        "Buildings 1-8 shown on site plan relative to electric transmission easement boundaries"
-      ],
-      "sheetReferences": [
-        {
-          "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
-          "sheetNumber": 3
-        },
-        {
-          "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
-          "sheetNumber": 9
-        }
-      ],
-      "documentReferences": [],
-      "comment": "Buildings are proposed on site without documented verification that they are outside transmission easement boundaries. Transmission easement restrictions are noted on Sheet 3 but building compliance is not addressed."
-    },
-    {
-      "deficiencyId": "EL-1.28",
-      "status": "not-verifiable",
-      "agentTrace": {
-        "observation": "Site plan shows water meter locations as part of utility infrastructure on Sheet 21 (Preliminary Electrical Design Plan). However, the plans do not document the location of these meters relative to overhead electric service drop conductors (the overhead secondary voltage lines from Austin Energy infrastructure to the customer service point), nor are clearance dimensions provided.",
-        "reasoning": "Water meter locations are shown but their relationship to overhead electric service drops is not documented. Without clearance dimension annotations showing the 7.5-foot horizontal sky-to-ground clearance from the outside conductor of service-drop lines, compliance cannot be verified.",
-        "tools_used": [
-          "read"
-        ]
-      },
-      "codeCitations": [
-        "UCM § 1.10.3, UCM § 1.10.6.2"
-      ],
-      "applicableAreas": [
-        "Water meter locations shown on utility plan relative to overhead electric service lines"
-      ],
-      "sheetReferences": [
-        {
-          "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
-          "sheetNumber": 21
-        }
-      ],
-      "documentReferences": [],
-      "comment": "Water meter locations are shown but clearance from overhead electric service drop conductors is not documented."
-    },
-    {
-      "deficiencyId": "EL-1.29",
-      "status": "not-verifiable",
-      "agentTrace": {
-        "observation": "Utility plan (Sheet 21 and possibly Sheet 19) shows underground water line routing for private domestic water branches (2\" HDPE) as noted on the plan. Existing conditions survey shows overhead electric distribution poles and lines on property boundaries. However, the plans do not provide cross-section details or explicit clearance dimension annotations showing the vertical and horizontal relationship between water line locations and overhead distribution poles and conductors.",
-        "reasoning": "Water lines are proposed and overhead distribution facilities exist. The plans lack sufficient section views and clearance documentation to verify that water lines maintain required clearances from overhead distribution conductors and poles.",
-        "tools_used": [
-          "read"
-        ]
-      },
-      "codeCitations": [
-        "Reviewer Convention"
-      ],
-      "applicableAreas": [
-        "Underground water lines shown on utility plan near overhead electric distribution facilities"
-      ],
-      "sheetReferences": [
-        {
-          "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
-          "sheetNumber": 19
-        },
-        {
-          "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
-          "sheetNumber": 21
-        }
-      ],
-      "documentReferences": [],
-      "comment": "Water lines are shown but clearance dimensions from overhead distribution facilities are not documented on site plan or utility sections."
-    },
-    {
-      "deficiencyId": "EL-1.30",
-      "status": "not-verifiable",
-      "agentTrace": {
-        "observation": "Site plan shows building foundation locations and property line positions. Existing conditions survey confirms overhead electric facilities on adjacent right-of-way. However, the plans do not explicitly identify which foundations are located within 5 feet of property lines, nor do they provide documented coordination with Austin Energy regarding space necessary for electric facility installation, maintenance, and clearance.",
-        "reasoning": "Some permanent structure foundations appear to be proposed near property lines based on site layout. Without explicit documentation identifying all foundations within 5 feet of the property line and without coordination notes addressing clearance space for adjacent electric facilities, compliance cannot be verified.",
-        "tools_used": [
-          "read"
-        ]
-      },
-      "codeCitations": [
-        "Reviewer Convention"
-      ],
-      "applicableAreas": [
-        "Building foundations shown on site plan near property line boundaries"
+        "Retaining wall on eastern property boundary within 5-foot electric easement"
       ],
       "sheetReferences": [
         {
@@ -779,85 +294,23 @@
         }
       ],
       "documentReferences": [],
-      "comment": "Building locations and property lines are shown but no documentation identifies foundations within 5 feet of property line or addresses clearance space for adjacent electric facilities."
+      "comment": "Site plan shows an existing retaining wall marked 'to be replaced' located within or adjacent to a labeled '5' Electric Easement (Vol. 69, Pg. 14)' on the eastern property boundary. No clearance dimensions or verification exhibits confirm that the replacement wall will maintain the minimum 7.5-foot clearance from outside conductor or that it will not be installed under/over the overhead distribution facilities. Coordination with Austin Energy regarding easement usage and clearance requirements cannot be verified.",
+      "agentTrace": {
+        "observation": "Vision analysis of Sheet 9 shows an 'Existing Retaining Wall to be Replaced' with a leader line pointing to a location aligned with a labeled electric easement on the east property line. No clearance dimensions or coordination notes are provided.",
+        "reasoning": "The plan indicates a wall replacement within or near an electric easement but provides no evidence of clearance verification or Austin Energy coordination. Without dimension callouts or notes confirming clearance compliance or easement authorization, the replacement wall's compliance with the prohibition on facilities under/over overhead distribution lines cannot be verified.",
+        "tools_used": [
+          "mcp__conductor_tools__vision_check"
+        ]
+      }
     },
     {
       "deficiencyId": "EL-1.31",
       "status": "not-verifiable",
-      "agentTrace": {
-        "observation": "Driveway and parking area grades are shown on the grading plan (Sheet 11) and site plan (Sheet 9). Existing conditions survey and site plan depict overhead electric lines on property boundaries. Comparing estimated overhead line heights from utility pole structures to proposed driveway grades suggests that vertical clearances may be marginal. However, no registered surveyor mid-span clearance data documenting actual conductor heights at locations where driveways pass beneath lines is provided.",
-        "reasoning": "Visual comparison of site features and overhead line positions indicates potential clearance concerns that would trigger the requirement for registered surveyor verification. However, the actual surveyed mid-span clearance data is absent. Without this data, the vertical clearance adequacy cannot be verified.",
-        "tools_used": [
-          "read"
-        ]
-      },
       "codeCitations": [
         "UCM § 1.10.3"
       ],
       "applicableAreas": [
-        "Driveway grades shown on site plan passing beneath or adjacent to overhead electric lines"
-      ],
-      "sheetReferences": [
-        {
-          "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
-          "sheetNumber": 4
-        },
-        {
-          "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
-          "sheetNumber": 9
-        },
-        {
-          "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
-          "sheetNumber": 11
-        }
-      ],
-      "documentReferences": [],
-      "comment": "Driveway grades may have marginal vertical clearance from overhead lines, but registered surveyor mid-span clearance verification is not provided."
-    },
-    {
-      "deficiencyId": "EL-1.32",
-      "status": "not-verifiable",
-      "agentTrace": {
-        "observation": "Site plan shows Valley View Road along the western property boundary. Existing conditions survey depicts overhead electric lines crossing or running parallel to this roadway. However, the plans do not include utility plan details or notes documenting whether overhead electric line crossings of the roadway are oriented perpendicular (90-degree angle) to the road centerline.",
-        "reasoning": "Overhead line crossing angles relative to roadway alignments are not documented on the plans. Without explicit notation of crossing angles, compliance with the 90-degree orientation requirement cannot be verified.",
-        "tools_used": [
-          "read"
-        ]
-      },
-      "codeCitations": [
-        "Reviewer Convention"
-      ],
-      "applicableAreas": [
-        "Overhead electric line crossings of roadways at property boundary"
-      ],
-      "sheetReferences": [
-        {
-          "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
-          "sheetNumber": 4
-        },
-        {
-          "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
-          "sheetNumber": 9
-        }
-      ],
-      "documentReferences": [],
-      "comment": "Overhead line crossings of Valley View Road are not documented with angle annotations to verify 90-degree crossing orientation."
-    },
-    {
-      "deficiencyId": "EL-1.33",
-      "status": "not-verifiable",
-      "agentTrace": {
-        "observation": "Site plan and utility plan details do not explicitly document secondary and primary overhead electric line crossing configurations. While the plans show overhead electric facilities, the distinction between secondary (lower voltage service lines) and primary (higher voltage distribution lines) conductor types and their vertical relationships is not identified through crossing details or section views.",
-        "reasoning": "The requirement applies only if both secondary and primary overhead lines cross each other. The plans do not provide sufficient documentation to determine whether this condition exists or whether secondary lines cross above primary lines (a violation).",
-        "tools_used": [
-          "read"
-        ]
-      },
-      "codeCitations": [
-        "Reviewer Convention"
-      ],
-      "applicableAreas": [
-        "Overhead electric utility line routing shown on site plan"
+        "Driveway and buildings adjacent to OHE line"
       ],
       "sheetReferences": [
         {
@@ -866,84 +319,23 @@
         }
       ],
       "documentReferences": [],
-      "comment": "Site plan shows overhead electric lines but does not document secondary vs. primary conductor types or their crossing relationships."
-    },
-    {
-      "deficiencyId": "EL-1.34",
-      "status": "n/a",
+      "comment": "No registered surveyor mid-span clearance data is provided showing pole locations, conductor elevations, and measured vertical clearances from overhead electric facilities to the driveway grade or building features. Survey data from a registered surveyor demonstrating whether vertical clearances meet minimums is absent from the submittal.",
       "agentTrace": {
-        "observation": "Site plan and building elevation review reveals no marquee signs are proposed as part of the Valley View Townhomes residential development. Standard signage for the project may exist, but no marquee-style signs with canopy structures are shown.",
-        "reasoning": "Marquee signs are not proposed. The requirement does not apply.",
-        "tools_used": [
-          "read"
-        ]
-      },
-      "codeCitations": [
-        "UCM § 1.10.3"
-      ],
-      "applicableAreas": [],
-      "sheetReferences": [],
-      "documentReferences": [],
-      "comment": "No marquee signs are shown on site plan. Requirement not applicable."
-    },
-    {
-      "deficiencyId": "EL-1.35",
-      "status": "n/a",
-      "agentTrace": {
-        "observation": "Site plan and electrical design plan show proposed underground service routing with transformers and pull boxes. However, the plans do not indicate new power poles being installed for underground service conversion. The project is designed with underground electrical service, not overhead poles requiring relocation.",
-        "reasoning": "New power poles for underground service conversion are not proposed. The requirement does not apply.",
-        "tools_used": [
-          "read"
-        ]
-      },
-      "codeCitations": [
-        "Reviewer Convention"
-      ],
-      "applicableAreas": [],
-      "sheetReferences": [],
-      "documentReferences": [],
-      "comment": "Project utilizes underground electrical service. No new poles for underground service conversion are proposed."
-    },
-    {
-      "deficiencyId": "EL-1.36",
-      "status": "not-verifiable",
-      "agentTrace": {
-        "observation": "Site plan shows landscape lighting locations as part of the site design on Sheet 31. Overhead electric lines are depicted on property boundaries per existing conditions survey and site plan. However, the plans do not document whether decorative lighting fixtures are located beneath overhead lines or provide clearance verification dimensions from conductors to light fixture heights.",
-        "reasoning": "Decorative lighting is shown but its spatial relationship to overhead lines is not documented. Without explicit clearance dimensions or relocation notes, compliance cannot be verified.",
-        "tools_used": [
-          "read"
-        ]
-      },
-      "codeCitations": [
-        "UCM § 1.10.3"
-      ],
-      "applicableAreas": [
-        "Landscape and decorative lighting shown on lighting and landscape plans"
-      ],
-      "sheetReferences": [
-        {
-          "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
-          "sheetNumber": 31
-        }
-      ],
-      "documentReferences": [],
-      "comment": "Decorative lighting locations are shown but clearance from overhead electric lines is not documented."
+        "observation": "Review of survey data references (Sheet 4 Existing Conditions Survey shows registered surveyor certification) and all subsequent sheets shows no surveyed conductor elevation data or mid-span clearance measurements.",
+        "reasoning": "The code allows clearance verification via either registered surveyor data or engineered dimension exhibits on plans. The registered surveyor survey (CDS Survey, Project No. 18-03-0225:021) has documented property topography and existing conditions but does not include overhead conductor elevation data or clearance measurements. This critical documentation is absent.",
+        "tools_used": []
+      }
     },
     {
       "deficiencyId": "EL-1.37",
-      "status": "not-verifiable",
-      "agentTrace": {
-        "observation": "Landscape plan (Sheet 31) shows tree symbols and landscape planting areas but does not list the species of proposed trees or identify their locations relative to overhead electric lines. The blocks reference the tree list for surveyed existing trees but do not provide a species list for proposed plantings. Without species identification and specific lateral distance measurements from overhead conductors, the utility-compatibility requirement cannot be verified.",
-        "reasoning": "Proposed landscaping is shown, but the plans lack critical information: (1) species identification for proposed trees, (2) lateral distance measurements from overhead distribution (10-foot standard) and transmission (50-foot standard) conductors, and (3) utility-compatibility verification against ECM Appendix F. The absence of these elements prevents verification of tree clearance compliance.",
-        "tools_used": [
-          "read"
-        ]
-      },
+      "status": "fail",
       "codeCitations": [
-        "ECM § 2.4.1.D, ECM § 2.4.2.C, UCM § 1.10.10.4"
+        "ECM § 2.4.1.D",
+        "ECM § 2.4.2.C",
+        "UCM § 1.10.10.4"
       ],
       "applicableAreas": [
-        "Landscape plantings shown on landscape plan near overhead electric distribution and transmission facilities"
+        "Trees and landscaping on southern and southeastern portion of site adjacent to OHE line"
       ],
       "sheetReferences": [
         {
@@ -952,237 +344,27 @@
         },
         {
           "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
-          "sheetNumber": 32
+          "sheetNumber": 35
         }
       ],
       "documentReferences": [],
-      "comment": "Landscape plan shows plantings but does not identify proposed tree species or verify lateral clearance distances from overhead electric lines. Utility-compatibility verification is not provided."
-    },
-    {
-      "deficiencyId": "EL-1.38",
-      "status": "not-verifiable",
+      "comment": "Mitigation trees (marked 'M' on landscape plan, Sheet 31) are proposed within 0.9 to 3.9 feet of the overhead electric distribution line on the southern boundary, all well within the 10-foot lateral clearance requirement for trees near overhead distribution conductors. Individual tree species for mitigation trees are not clearly identified on the landscape plan or cross-referenced to the plant list. Cannot confirm that all mitigation trees within the 10-foot zone are from the Utility Compatible Shade Trees list (ECM Appendix F, species marked 'UC'). The landscape plan plant list shows Live Oak, Cedar Elm, Texas Mountain Laurel, and Mexican Redbud, but the specific species of the mitigation trees positioned near the OHE line is not documented. Furthermore, standard landscaping practice requires that only utility-compatible species (typically mature height ≤20 feet, marked 'UC') be planted within this lateral distance zone.",
       "agentTrace": {
-        "observation": "Site plan shows electric meter locations as part of the preliminary electrical design (Sheet 21). However, the plans do not provide enlarged meter area details or documentation showing meter installation clearances relative to adjacent site features (fences, walls, buildings, landscaping) or verification that the required 30-inch-wide front space, 36-inch front depth, and 6.5-foot headroom working clearances are maintained.",
-        "reasoning": "Meter locations are shown but insufficient detail is provided to verify that required working clearances (per UCM § 1.10.9) are maintained free from obstructions. Without enlarged detail views or clearance dimension annotations, obstruction conflicts cannot be verified.",
+        "observation": "Vision measurement of Sheet 31 identifies mitigation trees labeled 'M' at distances of 0.9, 2.4, 2.4, and 3.9 feet from the OHE line. Cross-reference to Sheet 35 plant list shows proposed shade trees (Live Oak, Cedar Elm) and ornamental trees (Texas Mountain Laurel, Mexican Redbud), but the specific species of the mitigation trees near the OHE line are not designated on either the landscape plan or the plant list.",
+        "reasoning": "The 0.9 to 3.9-foot spacing places all mitigation trees within the 10-foot required clearance zone for overhead distribution conductors. ECM § 2.4.1.D and § 2.4.2.C limit plantings in this zone to utility-compatible species. Without explicit species identification for these mitigation trees and confirmation of their utility-compatible status, compliance cannot be verified. Lack of species designation on the plan is itself a deficiency.",
         "tools_used": [
-          "read"
+          "mcp__conductor_tools__vision_check"
         ]
-      },
-      "codeCitations": [
-        "UCM § 1.9.3.1"
-      ],
-      "applicableAreas": [
-        "Electric meter locations shown on electrical design plan"
-      ],
-      "sheetReferences": [
-        {
-          "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
-          "sheetNumber": 21
-        }
-      ],
-      "documentReferences": [],
-      "comment": "Meter locations are shown but no enlarged details verify that required working clearances (30\" × 36\" × 6.5'h) are maintained free from obstructions."
-    },
-    {
-      "deficiencyId": "EL-1.39",
-      "status": "not-verifiable",
-      "agentTrace": {
-        "observation": "Site plan shows building locations and existing utility poles on property boundaries per existing conditions survey. However, the plans do not explicitly document clearance dimensions between building structures and existing streetlight poles, nor do they provide verification that buildings maintain required clearances from these existing fixtures.",
-        "reasoning": "Existing streetlight poles may be present on or near the property, but the plans do not document clearance verification. Without explicit clearance dimension annotations, compliance cannot be verified.",
-        "tools_used": [
-          "read"
-        ]
-      },
-      "codeCitations": [
-        "Reviewer Convention"
-      ],
-      "applicableAreas": [
-        "Buildings shown on site plan near existing streetlight pole locations"
-      ],
-      "sheetReferences": [
-        {
-          "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
-          "sheetNumber": 4
-        },
-        {
-          "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
-          "sheetNumber": 9
-        }
-      ],
-      "documentReferences": [],
-      "comment": "Building locations and pole locations are shown but clearance dimensions from buildings to streetlight poles are not documented."
-    },
-    {
-      "deficiencyId": "EL-1.40",
-      "status": "not-verifiable",
-      "agentTrace": {
-        "observation": "Existing conditions survey shows utility poles (U.P.) with down guy anchor locations potentially indicated, though guy wire symbols and anchor point locations are not explicitly labeled on the survey. Site plan shows proposed driveways and accessible pedestrian paths. However, the plans do not provide explicit documentation identifying whether down guy wires conflict with proposed accessible routes or driveways.",
-        "reasoning": "The utility infrastructure (poles and potential guy anchors) is shown on existing conditions, and driveways/paths are proposed on the site plan. However, the plans lack explicit conflict identification or resolution notes (pole relocation or conversion to self-supporting poles). Without this documentation, conflict resolution status cannot be verified. The guidance notes that electric utility infrastructure is frequently omitted from plans.",
-        "tools_used": [
-          "read"
-        ]
-      },
-      "codeCitations": [
-        "UCM § 1.17.0"
-      ],
-      "applicableAreas": [
-        "Driveway and accessible path locations shown on site plan relative to utility poles with potential guy wire anchors"
-      ],
-      "sheetReferences": [
-        {
-          "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
-          "sheetNumber": 4
-        },
-        {
-          "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
-          "sheetNumber": 9
-        }
-      ],
-      "documentReferences": [],
-      "comment": "Utility poles are shown on existing conditions survey but down guy wire locations are not clearly identified. Conflict resolution with proposed driveways is not documented."
-    },
-    {
-      "deficiencyId": "EL-1.41",
-      "status": "not-verifiable",
-      "agentTrace": {
-        "observation": "Site plan shows the property with utility information and existing easements. Sheet 3 references electric transmission facilities with associated easements. However, the easement exhibit on Sheet 2 (Plat) and site plan do not explicitly show guy easement boundaries (10-foot-wide strip 10 feet on each side of guy wire plus 50-foot extension beyond anchor point) for angled guy anchors from transmission structures.",
-        "reasoning": "Transmission facilities are confirmed to exist. If angled guy anchors exist, dedicated easements are required, but the plans do not explicitly depict guy easement boundaries. Without this documentation, easement compliance cannot be verified.",
-        "tools_used": [
-          "read"
-        ]
-      },
-      "codeCitations": [
-        "Reviewer Convention"
-      ],
-      "applicableAreas": [
-        "Easement areas shown on plat and site plan related to transmission structures"
-      ],
-      "sheetReferences": [
-        {
-          "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
-          "sheetNumber": 2
-        },
-        {
-          "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
-          "sheetNumber": 3
-        }
-      ],
-      "documentReferences": [],
-      "comment": "Transmission facilities are noted but guy easement boundaries (10' wide ± 50' extension) are not explicitly shown on easement exhibit or site plan."
-    },
-    {
-      "deficiencyId": "EL-1.42",
-      "status": "not-verifiable",
-      "agentTrace": {
-        "observation": "Existing conditions survey shows utility poles on property boundaries and site plan references electrical facilities. However, the easement exhibit does not explicitly identify down guy anchor locations from distribution poles with dedicated easement boundaries (10-foot width extending 5 feet past where down guy enters ground per Austin Energy standards).",
-        "reasoning": "If down guy anchors from distribution poles exist on or adjacent to the property, dedicated easements are required. The plans do not provide explicit documentation of down guy anchor locations or associated easement boundaries, preventing verification of easement compliance.",
-        "tools_used": [
-          "read"
-        ]
-      },
-      "codeCitations": [
-        "Reviewer Convention"
-      ],
-      "applicableAreas": [
-        "Down guy anchor locations from distribution poles"
-      ],
-      "sheetReferences": [
-        {
-          "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
-          "sheetNumber": 2
-        },
-        {
-          "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
-          "sheetNumber": 4
-        }
-      ],
-      "documentReferences": [],
-      "comment": "Utility poles are shown but down guy anchor locations and dedicated easement boundaries (10' wide × 5' extension) are not explicitly documented on easement exhibit."
-    },
-    {
-      "deficiencyId": "EL-1.43",
-      "status": "not-verifiable",
-      "agentTrace": {
-        "observation": "Site plan shows transformer/electrical equipment locations on Sheet 21 (Preliminary Electrical Design Plan) but does not provide section views documenting the vertical relationship between transformer equipment heights and overhead electric line conductor locations. No clearance dimension annotations from conductors to transformer tops are provided.",
-        "reasoning": "Transformers are shown on the electrical design plan, but the plans lack section views with vertical clearance dimensions from overhead conductors to the top of transformer equipment. Without this documentation, the 7.5-foot vertical sky-to-ground clearance requirement cannot be verified.",
-        "tools_used": [
-          "read"
-        ]
-      },
-      "codeCitations": [
-        "UCM § 1.10.3"
-      ],
-      "applicableAreas": [
-        "Transformer locations shown on electrical design plan relative to overhead lines"
-      ],
-      "sheetReferences": [
-        {
-          "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
-          "sheetNumber": 21
-        }
-      ],
-      "documentReferences": [],
-      "comment": "Transformer locations are shown but section views with vertical clearance dimensions from overhead conductors to transformer tops are not provided."
-    },
-    {
-      "deficiencyId": "EL-1.44",
-      "status": "n/a",
-      "agentTrace": {
-        "observation": "Review of electrical design plan and site plan reveals no transformers or switchgears in niche service configurations (covered or recessed installations with structures or canopies above equipment) are proposed. Equipment is shown on the electrical design plan but not in niche configurations requiring the specialized 35-foot clearance.",
-        "reasoning": "Niche service configurations are not proposed. The requirement does not apply.",
-        "tools_used": [
-          "read"
-        ]
-      },
-      "codeCitations": [
-        "UCM § 1.10.4"
-      ],
-      "applicableAreas": [],
-      "sheetReferences": [],
-      "documentReferences": [],
-      "comment": "No transformers or switchgears in niche service configurations are proposed. Requirement not applicable."
-    },
-    {
-      "deficiencyId": "EL-1.45",
-      "status": "not-verifiable",
-      "agentTrace": {
-        "observation": "Site plan and site logistics information show construction staging areas would be necessary for a project of this scope. Overhead electric lines exist on property boundaries as confirmed by existing conditions survey. However, the submitted plan set does not include a construction logistics plan, site staging plan, or equipment operation zone diagram documenting the 10-foot radial clearance from overhead lines during construction.",
-        "reasoning": "Construction activities are planned and overhead lines exist, making the OSHA/UCM requirement applicable. However, the submitted documents do not include a construction staging or logistics plan with marked clearance boundaries from overhead lines. Without this documentation, construction-phase clearance compliance cannot be verified.",
-        "tools_used": [
-          "read"
-        ]
-      },
-      "codeCitations": [
-        "UCM § 1.10.2"
-      ],
-      "applicableAreas": [
-        "Construction staging areas and equipment operation zones during project construction"
-      ],
-      "sheetReferences": [
-        {
-          "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
-          "sheetNumber": 4
-        }
-      ],
-      "documentReferences": [],
-      "comment": "Site plan shows overhead electric lines but no construction staging plan or equipment operation zone diagram documents 10-foot radial clearance during construction."
+      }
     },
     {
       "deficiencyId": "EL-1.46",
-      "status": "pass",
-      "agentTrace": {
-        "observation": "Sheet 3 Block 13 (Electric Transmission Notes) explicitly includes Note 3 stating: 'A pre-construction safety meeting is required with Austin Energy 48 hours before commencement of construction. Call Andrew Perez at 512-505-7153...' This documents the 48-hour notification requirement for work near transmission lines.",
-        "reasoning": "The required notification note is present on the general notes sheet addressing the 48-hour pre-construction coordination requirement with Austin Energy. The requirement is satisfied.",
-        "tools_used": [
-          "read",
-          "vision"
-        ]
-      },
+      "status": "fail",
       "codeCitations": [
         "UCM § 1.10.2"
       ],
       "applicableAreas": [
-        "General notes sheet"
+        "General project site with overhead electric transmission lines"
       ],
       "sheetReferences": [
         {
@@ -1191,25 +373,12 @@
         }
       ],
       "documentReferences": [],
-      "comment": "Sheet 3 Electric Transmission Notes (Note 3) includes the required 48-hour notification requirement to Austin Energy before commencement of construction near transmission lines."
-    },
-    {
-      "deficiencyId": "EL-1.47",
-      "status": "n/a",
+      "comment": "Cover sheet (Sheet 3) includes a note regarding 48-hour notification to Austin Energy before work near energized transmission lines (reference to Andrew Perez, 512-505-7153). However, the required note specified in UCM § 1.10.2 should address notification requirements for work near all high-voltage overhead lines (both distribution and transmission), not transmission lines exclusively. The current note is transmission-specific and does not clearly address the general 48-hour notification requirement for distribution facilities per the broader code language.",
       "agentTrace": {
-        "observation": "Review of building elevation and electrical design plans reveals no service-mast through-roof installations are shown for individual units. The electrical design plan shows underground service distribution throughout the site.",
-        "reasoning": "Service-mast through-roof installations are not proposed. The requirement does not apply to underground service delivery systems.",
-        "tools_used": [
-          "read"
-        ]
-      },
-      "codeCitations": [
-        "UCM § 1.10.6.2"
-      ],
-      "applicableAreas": [],
-      "sheetReferences": [],
-      "documentReferences": [],
-      "comment": "Underground electrical service is proposed. No service-mast through-roof installations are shown. Requirement not applicable."
+        "observation": "Sheet 3 contains an 'Electric Transmission Notes' section with Note #3 requiring a pre-construction safety meeting with Austin Energy 48 hours before construction, specifically for work near 'energized transmission lines.' A separate 'Electric Notes' section references general responsibility for clearances.",
+        "reasoning": "UCM § 1.10.2 requires notice for work near 'high-voltage overhead lines' generally. The provided note specifically addresses transmission lines and references a transmission-specific contact. While a 48-hour notification concept is present, the note's limitation to transmission facilities does not fully satisfy the requirement to address all overhead distribution and transmission lines on or adjacent to the site.",
+        "tools_used": []
+      }
     }
   ]
 }
