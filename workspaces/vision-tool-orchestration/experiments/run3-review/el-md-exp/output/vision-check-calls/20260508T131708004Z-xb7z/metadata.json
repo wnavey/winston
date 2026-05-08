@@ -1,0 +1,32 @@
+{
+  "callId": "20260508T131708004Z-xb7z",
+  "startedAt": "2026-05-08T13:17:08.004Z",
+  "completedAt": "2026-05-08T13:17:31.977Z",
+  "inputs": {
+    "checklistItemId": "el-md-exp:EL-13.1",
+    "checklistItemText": "Transformer pads lack minimum 5-foot clearance from buildings, structures, and building foundations",
+    "question": "Where are the transformer pads shown on this electrical plan, and what are the distances from transformer pads to the nearest building structures?",
+    "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+    "sheetNum": 21,
+    "regionHint": "Look for transformer pad symbols and labels throughout the site plan"
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "bacd962b8af80b9bc2eb7133c303f7a9e490aa2dcac89404b55e42f72b7ebe6d",
+    "promptSource": "bureau",
+    "promptSourcePath": "/vercel/sandbox/workspace/bureau/jurisdictions/austin/workflows/review/prompts/vision-router.md",
+    "output": {
+      "problemType": "measurement",
+      "reasoning": "Although the agent question begins with a presence/location inquiry ('where are the transformer pads'), the primary and substantive part of the question asks for 'distances from transformer pads to the nearest building structures,' which is a direct clearance measurement request aligned with the 5-foot minimum clearance requirement.",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "vision",
+    "success": true,
+    "fallbackReason": "measurement_arg_construction_not_implemented",
+    "specialistCallDir": null
+  },
+  "phase": "B"
+}

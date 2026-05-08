@@ -1,0 +1,32 @@
+{
+  "callId": "20260508T131852687Z-8bpi",
+  "startedAt": "2026-05-08T13:18:52.687Z",
+  "completedAt": "2026-05-08T13:19:21.497Z",
+  "inputs": {
+    "checklistItemId": "el-md-exp:EL-1.9",
+    "checklistItemText": "Fences do not maintain minimum 7.5-foot horizontal sky-to-ground clearance from outside conductor of overhead electric facilities",
+    "question": "Are there any fences shown on the site plan? If so, what is their location and distance from the overhead electric lines (OHE) shown on the western and northern boundaries?",
+    "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+    "sheetNum": 9,
+    "regionHint": "property lines, especially western and northern boundaries where OHE lines are located"
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "bacd962b8af80b9bc2eb7133c303f7a9e490aa2dcac89404b55e42f72b7ebe6d",
+    "promptSource": "bureau",
+    "promptSourcePath": "/vercel/sandbox/workspace/bureau/jurisdictions/austin/workflows/review/prompts/vision-router.md",
+    "output": {
+      "problemType": "measurement",
+      "reasoning": "The agent question explicitly asks for distance measurement from fences to overhead electric lines, which directly addresses the 7.5-foot clearance requirement. Although the question begins with a presence check, the primary ask is quantitative (distance/clearance), making measurement the appropriate routing.",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "vision",
+    "success": true,
+    "fallbackReason": "measurement_arg_construction_not_implemented",
+    "specialistCallDir": null
+  },
+  "phase": "B"
+}

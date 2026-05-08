@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """Build metrics/el-md-exp/var2-vision-specialist-routing/per-item-run.tsv (TSV 4, raw).
 
-Long format: one row per (item × run). Source is RUN_2 — vision-check
+Long format: one row per (item × run). Source is RUN_3 — vision-check
 overlay with `enabledVisionSpecialists="generic-vision,measure-distance"`
-and `logAllAgentTrace=true`.
+and `logAllAgentTrace=true`. Re-fire of RUN_2 post conductor#151 +
+bureau#318 made the classifier prompt allow-list-aware; classifier no
+longer sees `drawing_inspect` listed in its options.
 
 Two attribution paths combined:
 
@@ -29,9 +31,9 @@ classifier's intent is essentially per-item (consistent across runs),
 so we pick the strongest intent per item.
 
 Sources:
-- ../../../../experiments/run2-review/el-md-exp/output/runs/run-{1,2,3}/findings/*.md.json
+- ../../../../experiments/run3-review/el-md-exp/output/runs/run-{1,2,3}/findings/*.md.json
   (per-run findings with agentTrace.tools_used)
-- ../../../../experiments/run2-review/el-md-exp/output/vision-check-calls/<callId>/metadata.json
+- ../../../../experiments/run3-review/el-md-exp/output/vision-check-calls/<callId>/metadata.json
   (per-call classifier intent)
 - ../../expected-vision-selection/expected.tsv
 
@@ -51,8 +53,8 @@ from pathlib import Path
 
 HERE = Path(__file__).parent.resolve()
 WORKSPACE = HERE.parent.parent.parent.parent
-RUN_LABEL = "VISION_CHECK_REVIEW_EL_MD_EXP_RUN_2"
-RUN_DIR = WORKSPACE / "experiments" / "run2-review" / "el-md-exp" / "output"
+RUN_LABEL = "VISION_CHECK_REVIEW_EL_MD_EXP_RUN_3"
+RUN_DIR = WORKSPACE / "experiments" / "run3-review" / "el-md-exp" / "output"
 RUNS_DIR = RUN_DIR / "runs"
 CALLS_DIR = RUN_DIR / "vision-check-calls"
 EXPECTED_TSV = HERE.parent.parent / "expected-vision-selection" / "expected.tsv"

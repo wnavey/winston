@@ -1,0 +1,32 @@
+{
+  "callId": "20260508T131836630Z-8ntt",
+  "startedAt": "2026-05-08T13:18:36.630Z",
+  "completedAt": "2026-05-08T13:19:04.151Z",
+  "inputs": {
+    "checklistItemId": "el-md-exp:EL-13.38",
+    "checklistItemText": "Equipment pad installed within 4 feet of parking areas or vehicle routes lacks required 4-inch minimum diameter galvanized rigid metal posts (bollards) per AE Design equipment pad details, or bollards not spaced to allow equipment door opening",
+    "question": "On the site plan, what is the proximity of each transformer pad to parking areas, drive aisles, or vehicle circulation routes? Are any bollards shown around the transformer pads?",
+    "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+    "sheetNum": 9,
+    "regionHint": "Look at the parking layout and internal drive aisles relative to where transformer pads are located"
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "bacd962b8af80b9bc2eb7133c303f7a9e490aa2dcac89404b55e42f72b7ebe6d",
+    "promptSource": "bureau",
+    "promptSourcePath": "/vercel/sandbox/workspace/bureau/jurisdictions/austin/workflows/review/prompts/vision-router.md",
+    "output": {
+      "problemType": "generic",
+      "reasoning": "The agent is asking a two-part presence and proximity question: (1) identifying transformer pad locations relative to parking/vehicle areas, and (2) checking whether bollards are shown at all. This is progressive verification before any specific clearance measurement—the agent needs to establish which pads are within the 4-foot threshold and whether bollards exist, not measure the exact distance yet.",
+      "confidence": 0.92,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "vision",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": null
+  },
+  "phase": "B"
+}
