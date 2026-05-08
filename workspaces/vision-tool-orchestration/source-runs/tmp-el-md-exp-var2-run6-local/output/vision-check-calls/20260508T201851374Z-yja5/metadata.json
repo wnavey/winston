@@ -1,0 +1,31 @@
+{
+  "callId": "20260508T201851374Z-yja5",
+  "startedAt": "2026-05-08T20:18:51.374Z",
+  "completedAt": "2026-05-08T20:19:30.618Z",
+  "inputs": {
+    "checklistItemId": "el-md-exp:EL-2.9",
+    "checklistItemText": "Trees proposed within 20 lateral feet of underground electric equipment lack required root barriers (minimum 4 feet deep, positioned 5 feet from equipment)",
+    "question": "Does the landscape plan show underground electric infrastructure (pull boxes, vaults, transformers)? If yes, are any proposed trees shown within 20 feet of this equipment? Are root barriers specified in any notes or details?",
+    "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+    "sheetNum": 31
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "bacd962b8af80b9bc2eb7133c303f7a9e490aa2dcac89404b55e42f72b7ebe6d",
+    "promptSource": "bureau",
+    "promptSourcePath": "/Users/wnavey/code/controlroom/conductor/workspace/bureau/jurisdictions/austin/workflows/review/prompts/vision-router.md",
+    "output": {
+      "problemType": "generic",
+      "reasoning": "The agent is performing progressive verification: first identifying presence of underground electric infrastructure and trees within 20 feet (feature/presence checks), then checking for root barrier specifications in notes/details (label/specification readout). The actual measurement of root barrier depth and positioning (5 feet from equipment, 4 feet deep) would come later; this question is about presence and specification notation, not clearance measurement.",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "vision",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": null
+  },
+  "phase": "B"
+}

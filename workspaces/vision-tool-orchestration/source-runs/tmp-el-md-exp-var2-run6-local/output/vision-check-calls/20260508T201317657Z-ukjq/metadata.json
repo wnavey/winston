@@ -1,0 +1,61 @@
+{
+  "callId": "20260508T201317657Z-ukjq",
+  "startedAt": "2026-05-08T20:13:17.657Z",
+  "completedAt": "2026-05-08T20:15:36.593Z",
+  "inputs": {
+    "checklistItemId": "el-md-exp:EL-1.8",
+    "checklistItemText": "Section and plan view exhibits do not show dimensions from outer electric conductor to outermost edge of buildings and building projections for clearance verification",
+    "question": "Are there dimension lines and clearance measurements shown on the plan between the OHE line and the nearest buildings? Are these dimensions explicitly labeled?",
+    "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+    "sheetNum": 9
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "bacd962b8af80b9bc2eb7133c303f7a9e490aa2dcac89404b55e42f72b7ebe6d",
+    "promptSource": "bureau",
+    "promptSourcePath": "/Users/wnavey/code/controlroom/conductor/workspace/bureau/jurisdictions/austin/workflows/review/prompts/vision-router.md",
+    "output": {
+      "problemType": "measurement",
+      "reasoning": "The agent is asking whether dimension lines and clearance measurements are shown and labeled between the OHE conductor and buildings. This is a direct measurement verification question aligned with the checklist requirement to show dimensions for clearance verification. While the agent's phrasing includes a presence element ('are there'), the core question is about the actual clearance measurements and their labels on the plan.",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "measure-distance",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": "/Users/wnavey/code/controlroom/conductor/workspace/output/vision-check-calls/20260508T201317657Z-ukjq/specialist-measure-distance",
+    "argConstruction": {
+      "pairs": [
+        {
+          "objectA": "OHE (overhead electric) line along the western boundary",
+          "objectB": "westernmost edge of Building 1"
+        },
+        {
+          "objectA": "OHE (overhead electric) line along the western boundary",
+          "objectB": "westernmost edge of Building 2"
+        },
+        {
+          "objectA": "OHE (overhead electric) line along the western boundary",
+          "objectB": "westernmost edge of Building 8"
+        },
+        {
+          "objectA": "OHE (overhead electric) line along the southern boundary",
+          "objectB": "southernmost edge of Building 8"
+        },
+        {
+          "objectA": "OHE (overhead electric) line along the southern boundary",
+          "objectB": "southernmost edge of Building 7"
+        },
+        {
+          "objectA": "OHE (overhead electric) line along the southern boundary",
+          "objectB": "southernmost edge of Building 6"
+        }
+      ],
+      "explanation": "Six clearances between the western and southern OHE lines and their nearest adjacent buildings (Buildings 1, 2, 6, 7, and 8).",
+      "callDir": "/Users/wnavey/code/controlroom/conductor/workspace/output/vision-check-calls/20260508T201317657Z-ukjq/specialist-extract-measurement-pairs"
+    }
+  },
+  "phase": "B"
+}

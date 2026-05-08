@@ -1,0 +1,36 @@
+{
+  "callId": "20260508T201904994Z-wu0f",
+  "startedAt": "2026-05-08T20:19:04.994Z",
+  "completedAt": "2026-05-08T20:19:30.616Z",
+  "inputs": {
+    "checklistItemId": "el-md-exp:EL-13.12",
+    "checklistItemText": "Transformer pads lack minimum 5-foot clearance from fire hydrants",
+    "question": "What is the location of the private fire hydrant shown on the fire protection plan? Are there any transformer pads shown on this plan, and if so, what is the distance from the fire hydrant to the nearest transformer pad?",
+    "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+    "sheetNum": 10
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "bacd962b8af80b9bc2eb7133c303f7a9e490aa2dcac89404b55e42f72b7ebe6d",
+    "promptSource": "bureau",
+    "promptSourcePath": "/Users/wnavey/code/controlroom/conductor/workspace/bureau/jurisdictions/austin/workflows/review/prompts/vision-router.md",
+    "output": {
+      "problemType": "measurement",
+      "reasoning": "The agent question explicitly asks for 'the distance from the fire hydrant to the nearest transformer pad,' which is a direct clearance measurement between two physical features. While the question includes a locational component, the core compliance verification requires measuring the separation distance against the 5-foot minimum threshold.",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "extract-measurement-pairs",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": "/Users/wnavey/code/controlroom/conductor/workspace/output/vision-check-calls/20260508T201904994Z-wu0f/specialist-extract-measurement-pairs",
+    "argConstruction": {
+      "pairs": [],
+      "explanation": "Two proposed fire hydrants and one existing fire hydrant are located on the plan, but no transformer pads are explicitly labeled or clearly identifiable to measure against.",
+      "callDir": "/Users/wnavey/code/controlroom/conductor/workspace/output/vision-check-calls/20260508T201904994Z-wu0f/specialist-extract-measurement-pairs"
+    }
+  },
+  "phase": "B"
+}
