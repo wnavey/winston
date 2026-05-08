@@ -1,0 +1,33 @@
+{
+  "set": "el-md-exp",
+  "variant": "var-1",
+  "variantLabel": "var1-bifurcated (vision + measure-distance exposed directly)",
+  "runLabel": "VISION_CHECK_REVIEW_EL_MD_EXP_VAR1_RUN_2",
+  "workflowRunsId": "c7797eb0-13f7-4dae-8876-b00bcec9ca61",
+  "reviewId": "e87691b1-9df2-46b2-8bbb-6a776b5c0a82",
+  "inngestEventId": "01KR3VNN3FPRQ6C3DVB4Y74RA8",
+  "startedAt": "2026-05-08T13:16:13Z",
+  "completedAt": "2026-05-08T13:34:35Z",
+  "wallClockMinutes": 18,
+  "workflow": "review",
+  "experimentOverlay": "measure-distance",
+  "submission": {
+    "name": "Valley View Townhomes v1",
+    "projectId": null,
+    "submissionVersionId": "55fb6548-814f-4287-bc4a-6018b756d730"
+  },
+  "checklistOrGuide": "el-md-exp",
+  "runs": 3,
+  "agentTools": ["vision", "measure-distance"],
+  "flags": ["logAllAgentTrace=true"],
+  "model": null,
+  "bureauCommit": "post bureau#317 (measure-distance overlay agent-trace placeholder)",
+  "conductorPr": "post conductor#149 (templated agent.prompt + reviewPromptName seeding)",
+  "metricsTsvPath": "metrics/el-md-exp/var1-bifurcated-vision-tools/per-item.tsv",
+  "notes": [
+    "Re-fire post bureau#317. The measure-distance overlay's review.md now has the {{ agentTraceGuidance }} placeholder, so logAllAgentTrace=true properly appends the emit-all-statuses override. Coverage: 303/303 (item × run) cells with findings, all four statuses present.",
+    "Goal A: 74.5% (was lower-bound 60.8% in superseded VAR1_RUN_1). Goal B: 0/51 — agent never invokes measure-distance directly (sparse-adoption pattern, same as cc var-1 with inspect-drawing).",
+    "Tools_used distribution: vision (208 occurrences), Read (12), mcp__conductor_tools__vision (4). Zero measure-distance entries.",
+    "Supersedes VAR1_RUN_1 (workflow_runs.id b877dead-f786-4bf6-9ac4-3cde3f2ec546, review id 9e6f78e4-7cab-44b1-b23c-d564059c6e81) and the historical experiment-run7.2."
+  ]
+}

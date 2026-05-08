@@ -22,8 +22,9 @@ running `scripts/build.py`.
 Tools available to the agent: generic `vision` only (no `inspect-drawing`,
 no `vision_check`). This is the **ctrl-baseline** variant by definition.
 
-Artifacts: [`../../../experiments/baseline/cc/output/`](../../../experiments/baseline/cc/output/).
-Kickoff doc: [`../../../experiments/baseline/cc-kickoff.md`](../../../experiments/baseline/cc-kickoff.md).
+Artifacts: [`../../../source-runs/cc/ctrl/output/`](../../../source-runs/cc/ctrl/output/) (canonical home post 2026-05-08 reorg).
+Run metadata: [`../../../source-runs/cc/ctrl/run-metadata.json`](../../../source-runs/cc/ctrl/run-metadata.json).
+Kickoff doc (legacy): [`../../../experiments/baseline/cc-kickoff.md`](../../../experiments/baseline/cc-kickoff.md).
 
 ## Schema
 

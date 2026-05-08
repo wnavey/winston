@@ -7,7 +7,7 @@ findings emitted for every item / every status, with agentTrace.tools_used
 populated).
 
 Sources:
-- ../../../../experiments/baseline-v3-review/el-md-exp/output/runs/run-{1,2,3}/findings/*.md.json
+- ../../../../source-runs/el-md-exp/ctrl/output/runs/run-{1,2,3}/findings/*.md.json
 - ../../expected-vision-selection/expected.tsv
 
 Output:
@@ -25,7 +25,7 @@ from pathlib import Path
 HERE = Path(__file__).parent.resolve()
 WORKSPACE = HERE.parent.parent.parent.parent
 RUN_LABEL = "VISION_CHECK_REVIEW_EL_MD_EXP_BASELINE_V3"
-RUNS_DIR = WORKSPACE / "experiments" / "baseline-v3-review" / "el-md-exp" / "output" / "runs"
+RUNS_DIR = WORKSPACE / "source-runs" / "el-md-exp" / "ctrl" / "output" / "runs"
 EXPECTED_TSV = HERE.parent.parent / "expected-vision-selection" / "expected.tsv"
 OUT_TSV = HERE.parent / "per-item-run.tsv"
 

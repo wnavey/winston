@@ -5,7 +5,7 @@ Long format: one row per (item × run). Source is the VISION_CHECK_CC_BASELINE
 run's per-finding ``tools_used`` field; we collapse to ``none`` / ``generic-vision``.
 
 Sources:
-- ../../../experiments/baseline/cc/output/runs/run-{1,2,3}/findings/cc-*.md.json
+- ../../../source-runs/cc/ctrl/output/runs/run-{1,2,3}/findings/cc-*.md.json
   (per-run findings with tools_used)
 - ../expected.tsv  ← actually ../../expected-vision-selection/expected.tsv
   (canonical item list — we emit one row per (TSV-1 item × run))
@@ -27,7 +27,7 @@ from pathlib import Path
 HERE = Path(__file__).parent.resolve()
 WORKSPACE = HERE.parent.parent.parent.parent
 RUN_LABEL = "VISION_CHECK_CC_BASELINE"
-RUNS_DIR = WORKSPACE / "experiments" / "baseline" / "cc" / "output" / "runs"
+RUNS_DIR = WORKSPACE / "source-runs" / "cc" / "ctrl" / "output" / "runs"
 EXPECTED_TSV = HERE.parent.parent / "expected-vision-selection" / "expected.tsv"
 OUT_TSV = HERE.parent / "per-item-run.tsv"
 

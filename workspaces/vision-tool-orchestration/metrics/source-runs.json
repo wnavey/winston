@@ -1,7 +1,8 @@
 {
   "schemaVersion": "1.0",
   "lastUpdated": "2026-05-08",
-  "purpose": "Source-of-truth tracker for the 6 runs (3 variants × 2 sets) feeding the vision-check phase-1 metrics. Each entry pins the run identifiers, submission, tooling, artifacts, and known issues so the per-variant TSV builds and analysis.md stay traceable.",
+  "purpose": "Source-of-truth tracker for the 6 runs (3 variants \u00d7 2 sets) feeding the vision-check phase-1 metrics. Each entry pins the run identifiers, submission, tooling, artifacts, and known issues so the per-variant TSV builds and analysis.md stay traceable.",
+  "canonicalStorage": "Artifacts for each active source run live at source-runs/<set>/<variant>/. When a run is replaced, the prior artifacts are wiped and replaced \u2014 only the supersedes block here records what came before. See source-runs/README.md.",
   "successCriteria": {
     "A": "var2 overall vision invocation hit rate >= var1's, on items where TSV 1 expects vision",
     "B": "var2 specialist selection rate >= var1's, on items expected to use a specialist"
@@ -15,7 +16,7 @@
     "current": "Run is done, TSV is built, data is canonical for this cell.",
     "needs-rerun": "Run is done but has a known confounder (e.g. runs=1 vs runs=3) that should be retired before the headline number is final. Current TSV is usable as a placeholder.",
     "needs-tsv-build": "Run is done; TSV not yet built into the metrics/ tree.",
-    "missing-ids": "Run was fired but the canonical IDs (workflow_runs.id, etc.) aren't recorded in this tracker yet — Supabase lookup pending.",
+    "missing-ids": "Run was fired but the canonical IDs (workflow_runs.id, etc.) aren't recorded in this tracker yet \u2014 Supabase lookup pending.",
     "pending": "Run hasn't been fired."
   },
   "buckets": [
@@ -40,15 +41,17 @@
       },
       "checklistOrGuide": "v2.5-trimmed",
       "runs": 3,
-      "agentTools": ["vision"],
+      "agentTools": [
+        "vision"
+      ],
       "model": null,
       "bureauCommit": null,
-      "artifactsPath": "winston/workspaces/vision-tool-orchestration/experiments/baseline/cc/output/",
+      "artifactsPath": "winston/workspaces/vision-tool-orchestration/source-runs/cc/ctrl/output/",
       "metricsTsvPath": "metrics/cc/ctrl-baseline-vision-invocation/per-item.tsv",
       "kickoffDoc": "winston/workspaces/vision-tool-orchestration/experiments/baseline/cc-kickoff.md",
       "notes": [
         "Production prompt (no experiment overlay).",
-        "Vision tool prompt-traceability gap: vision-log.jsonl only records {event, documentId, sheetNum, success, timestamp} — no prompt or item attribution. Item attribution comes via per-finding tools_used."
+        "Vision tool prompt-traceability gap: vision-log.jsonl only records {event, documentId, sheetNum, success, timestamp} \u2014 no prompt or item attribution. Item attribution comes via per-finding tools_used."
       ]
     },
     {
@@ -71,10 +74,13 @@
       },
       "checklistOrGuide": "v2.5-trimmed",
       "runs": 3,
-      "agentTools": ["vision", "inspect-drawing"],
+      "agentTools": [
+        "vision",
+        "inspect-drawing"
+      ],
       "model": "claude-sonnet-4-5-20250929",
       "bureauCommit": "c98bcc995 (wrapped-structured-output fix)",
-      "artifactsPath": "winston/workspaces/inspect-drawing-tool/experiments/run1/output/",
+      "artifactsPath": "winston/workspaces/vision-tool-orchestration/source-runs/cc/var-1/output/",
       "metricsTsvPath": "metrics/cc/var1-bifurcated-vision-tools/per-item.tsv",
       "kickoffDoc": "winston/workspaces/inspect-drawing-tool/experiments/run1/README.md",
       "notes": [
@@ -88,7 +94,7 @@
       "setLabel": "Completeness Check + Inspect Drawing",
       "variant": "var2-vision-specialist-routing",
       "status": "needs-rerun",
-      "rerunReason": "runs=1 vs ctrl/var1 runs=3. Strict-majority threshold is more demanding at runs=3 — re-fire at runs=3 to retire the confounder before the headline Goal A comparison is final.",
+      "rerunReason": "runs=1 vs ctrl/var1 runs=3. Strict-majority threshold is more demanding at runs=3 \u2014 re-fire at runs=3 to retire the confounder before the headline Goal A comparison is final.",
       "runLabel": "VISION_CHECK_CC_RUN_4",
       "workflowRunsId": "5d804242-861c-43ab-adfd-00e9af3757e2",
       "reviewId": null,
@@ -104,10 +110,13 @@
       },
       "checklistOrGuide": "v2.5-trimmed",
       "runs": 1,
-      "agentTools": ["vision_check", "semantic-search-blocks"],
+      "agentTools": [
+        "vision_check",
+        "semantic-search-blocks"
+      ],
       "model": null,
       "bureauCommit": "post bureau#306 (prompt-trim merged 2026-05-07)",
-      "artifactsPath": "winston/workspaces/vision-tool-orchestration/experiments/run4/cc/output/",
+      "artifactsPath": "winston/workspaces/vision-tool-orchestration/source-runs/cc/var-2/output/",
       "metricsTsvPath": "metrics/cc/var2-vision-specialist-routing/per-item.tsv",
       "kickoffDoc": null,
       "analysisDoc": "winston/workspaces/vision-tool-orchestration/experiments/run4/analytics/analysis.md",
@@ -139,19 +148,23 @@
       },
       "checklistOrGuide": "el-md-exp",
       "runs": 3,
-      "agentTools": ["vision"],
-      "flags": ["logAllAgentTrace=true"],
+      "agentTools": [
+        "vision"
+      ],
+      "flags": [
+        "logAllAgentTrace=true"
+      ],
       "model": null,
       "bureauCommit": "post bureau#314 (review-extended.md prompt + reviewPromptName input)",
       "conductorPr": "post conductor#149 (templated agent.prompt + reviewPromptName seeding)",
-      "artifactsPath": null,
+      "artifactsPath": "winston/workspaces/vision-tool-orchestration/source-runs/el-md-exp/ctrl/output/",
       "metricsTsvPath": null,
       "kickoffDoc": null,
       "notes": [
-        "Re-fire of the el-md-exp ctrl baseline on Valley View v1 (was on v2 in V2/V1) — chosen to match var1's experiment-run7.2 submission.",
-        "First baseline run that uses the new review-extended.md prompt path (reviewPromptName='review-extended', reviewSchemaName='reviewExtended'). Each finding should now carry agentTrace.{observation, reasoning, tools_used} for ALL statuses (pass / fail / not-verifiable / n/a) — closes the per-item tool-attribution gap that blocked Goal A on review.",
+        "Re-fire of the el-md-exp ctrl baseline on Valley View v1 (was on v2 in V2/V1) \u2014 chosen to match var1's experiment-run7.2 submission.",
+        "First baseline run that uses the new review-extended.md prompt path (reviewPromptName='review-extended', reviewSchemaName='reviewExtended'). Each finding should now carry agentTrace.{observation, reasoning, tools_used} for ALL statuses (pass / fail / not-verifiable / n/a) \u2014 closes the per-item tool-attribution gap that blocked Goal A on review.",
         "Workflow_runs.id and review id need Supabase lookup once Substation creates the DB record.",
-        "Supersedes BASELINE (workflow_runs.id 300eb8a1-9bb1-4257-a88a-745bf696b805, on Valley View v2) and BASELINE_V2 (review id 224279d8-4827-44cd-a15b-1f034496dac2, on Valley View v2 — silently failed agentTrace)."
+        "Supersedes BASELINE (workflow_runs.id 300eb8a1-9bb1-4257-a88a-745bf696b805, on Valley View v2) and BASELINE_V2 (review id 224279d8-4827-44cd-a15b-1f034496dac2, on Valley View v2 \u2014 silently failed agentTrace)."
       ]
     },
     {
@@ -175,26 +188,31 @@
       },
       "checklistOrGuide": "el-md-exp",
       "runs": 3,
-      "agentTools": ["vision", "measure-distance"],
-      "flags": ["logAllAgentTrace=true"],
+      "agentTools": [
+        "vision",
+        "measure-distance"
+      ],
+      "flags": [
+        "logAllAgentTrace=true"
+      ],
       "model": null,
       "bureauCommit": "post bureau#317 (measure-distance overlay agent-trace placeholder)",
       "conductorPr": "post conductor#149 (templated agent.prompt + reviewPromptName seeding)",
-      "artifactsPath": "winston/workspaces/vision-tool-orchestration/experiments/var1-run2-review/el-md-exp/output/",
+      "artifactsPath": "winston/workspaces/vision-tool-orchestration/source-runs/el-md-exp/var-1/output/",
       "metricsTsvPath": "metrics/el-md-exp/var1-bifurcated-vision-tools/per-item.tsv",
       "kickoffDoc": null,
       "notes": [
-        "Re-fire of var1 post bureau#317. The measure-distance overlay's review.md now has the {{ agentTraceGuidance }} placeholder, so logAllAgentTrace=true properly appends the emit-all-statuses override. Coverage closed: 303/303 (item × run) cells now have findings (was 201/303 in VAR1_RUN_1).",
+        "Re-fire of var1 post bureau#317. The measure-distance overlay's review.md now has the {{ agentTraceGuidance }} placeholder, so logAllAgentTrace=true properly appends the emit-all-statuses override. Coverage closed: 303/303 (item \u00d7 run) cells now have findings (was 201/303 in VAR1_RUN_1).",
         "Goal A jumped from lower-bound 60.8% to definitive 74.5% (+13.7pp). Var1's bifurcated agent invokes vision freely on most items.",
-        "Goal B unchanged at 0/51 — agent still never invokes measure-distance directly. Same sparse-adoption pattern as cc var1's inspect-drawing (2/162). The signal isn't going to change without architectural intervention.",
-        "Tools_used distribution: vision (208 occurrences), Read (12), mcp__conductor_tools__vision (4). Zero measure-distance entries — the agent's Read/Glob/Bash use is normal but it ignores the specialist tool entirely."
+        "Goal B unchanged at 0/51 \u2014 agent still never invokes measure-distance directly. Same sparse-adoption pattern as cc var1's inspect-drawing (2/162). The signal isn't going to change without architectural intervention.",
+        "Tools_used distribution: vision (208 occurrences), Read (12), mcp__conductor_tools__vision (4). Zero measure-distance entries \u2014 the agent's Read/Glob/Bash use is normal but it ignores the specialist tool entirely."
       ],
       "supersedes": {
         "runLabel": "VISION_CHECK_REVIEW_EL_MD_EXP_VAR1_RUN_1",
         "workflowRunsId": "b877dead-f786-4bf6-9ac4-3cde3f2ec546",
         "reviewId": "9e6f78e4-7cab-44b1-b23c-d564059c6e81",
         "startedAt": "2026-05-07T21:15:30Z",
-        "reason": "Partial coverage (201/303 cells) — measure-distance overlay's review.md was missing the {{ agentTraceGuidance }} placeholder."
+        "reason": "Partial coverage (201/303 cells) \u2014 measure-distance overlay's review.md was missing the {{ agentTraceGuidance }} placeholder."
       }
     },
     {
@@ -218,20 +236,25 @@
       },
       "checklistOrGuide": "el-md-exp",
       "runs": 3,
-      "agentTools": ["vision_check", "semantic-search-blocks"],
-      "flags": ["logAllAgentTrace=true"],
+      "agentTools": [
+        "vision_check",
+        "semantic-search-blocks"
+      ],
+      "flags": [
+        "logAllAgentTrace=true"
+      ],
       "enabledVisionSpecialists": "generic-vision,measure-distance",
       "model": null,
       "bureauCommit": "post bureau#318 (vision-router.md conditional sections)",
       "conductorPr": "post conductor#151 (template-engine sections + allow-list-aware router prompt)",
-      "artifactsPath": "winston/workspaces/vision-tool-orchestration/experiments/run3-review/el-md-exp/output/",
+      "artifactsPath": "winston/workspaces/vision-tool-orchestration/source-runs/el-md-exp/var-2/output/",
       "metricsTsvPath": "metrics/el-md-exp/var2-vision-specialist-routing/per-item.tsv",
       "kickoffDoc": null,
       "notes": [
-        "Re-fire of var2 post conductor#151 + bureau#318. The vision-router.md classifier prompt is now allow-list-aware via Mustache sections — with enabledVisionSpecialists='generic-vision,measure-distance', the classifier never sees drawing_inspect listed.",
+        "Re-fire of var2 post conductor#151 + bureau#318. The vision-router.md classifier prompt is now allow-list-aware via Mustache sections \u2014 with enabledVisionSpecialists='generic-vision,measure-distance', the classifier never sees drawing_inspect listed.",
         "**Classifier reclamation worked:** RUN_2 had {drawing_inspect: 27, measurement: 10, generic: 20}. RUN_3 has {drawing_inspect: 0, measurement: 16, generic: 40}. The 27 prior misroutes redistributed cleanly.",
-        "promptSha256 changed across runs (RUN_2 bbe3e2c3...; RUN_3 bacd962b...) — confirms the new conditional-section prompt was actually loaded.",
-        "Goal A: 47.1% (vs RUN_2 37.3%, +9.8pp). Goal B: 15.7% (vs RUN_2 5.9%, +9.8pp / ~2.6× lift). 8 items now route to measure-distance on a strict majority of runs (vs 3 in RUN_2).",
+        "promptSha256 changed across runs (RUN_2 bbe3e2c3...; RUN_3 bacd962b...) \u2014 confirms the new conditional-section prompt was actually loaded.",
+        "Goal A: 47.1% (vs RUN_2 37.3%, +9.8pp). Goal B: 15.7% (vs RUN_2 5.9%, +9.8pp / ~2.6\u00d7 lift). 8 items now route to measure-distance on a strict majority of runs (vs 3 in RUN_2).",
         "Caveat persists: measurement dispatch still falls back to generic via measurement_arg_construction_not_implemented (conductor-side gap, separate work). Goal B is computed against classifier.output.problemType (intent), not dispatch.specialistCalled (post-fallback)."
       ],
       "supersedes": {

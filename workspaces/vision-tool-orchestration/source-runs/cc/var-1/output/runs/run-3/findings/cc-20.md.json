@@ -1,0 +1,134 @@
+{
+  "findings": [
+    {
+      "checklistItemId": "CC-20-01",
+      "observation": "Used vision tool to examine the Engineering and Drainage Report (documentId 777f2782-6933-4af3-8010-e26c52311541). The front page (actually second page serving as sealed title page) contains Shelly Mitchell's signature, a State of Texas PE seal with number 103662, and is dated 04/23/2026. No qualifying language such as 'preliminary' or 'draft' was found on or near the seal.",
+      "reasoning": "The checklist item requires an engineer's signature, seal, and date on the front page of bound WQ/drainage documents without qualifying language like 'preliminary' or 'draft'. The vision tool confirmed all three elements are present (signature, PE seal #103662, date 04/23/2026) with no disqualifying terms. This satisfies the requirement.",
+      "tools_used": [
+        "vision"
+      ],
+      "status": "pass",
+      "explanation": "Engineering and Drainage Report has engineer's signature (Shelly Mitchell), PE seal #103662, dated 04/23/2026, with no qualifying language.",
+      "evidenceLocations": [
+        {
+          "documentId": "777f2782-6933-4af3-8010-e26c52311541",
+          "label": "Engineering And Drainage Report"
+        }
+      ],
+      "resolution": null,
+      "resolutionDetails": null
+    },
+    {
+      "checklistItemId": "CC-20-02",
+      "observation": "Reviewed the Engineer's Summary Letter (documentId ca527d05-4b8e-4723-9fb5-d6ad29965e35). Section 03-access-erosion-control-and-signatures.md confirms the letter is signed by Shelly Mitchell with PE stamp #103662 and dated 04/23/2026. Section 02-utilities-and-stormwater-management.md states: 'Underground water quality and detention ponds are proposed on-site to... collect, treat, and detain the stormwater runoff on site for the 2-, 10-, 25-, and 100-year storm events per the City of Austin ECM and DCM requirements.' This explicitly addresses both 2-year peak flow control (part of the 2-, 10-, 25-, and 100-year storm list) and water quality treatment.",
+      "reasoning": "The checklist requires the engineer's project summary letter to be present, signed/sealed/dated, AND discuss both 2-yr peak flow control and WQ compliance. The letter satisfies all requirements: it has signature/seal/date (04/23/2026), and the stormwater management section explicitly mentions both water quality treatment ('collect, treat') and detention for the 2-year storm event (listed among the storm events). While the phrasing could be more explicit, the mention of treating and detaining stormwater for 2-yr storms clearly addresses both topics required by the checklist.",
+      "tools_used": [],
+      "status": "pass",
+      "explanation": "Engineer's Summary Letter is signed/sealed/dated (04/23/2026) and discusses water quality treatment and detention for 2-, 10-, 25-, and 100-year storms.",
+      "evidenceLocations": [
+        {
+          "documentId": "ca527d05-4b8e-4723-9fb5-d6ad29965e35",
+          "label": "Engineer's Summary Letter"
+        }
+      ],
+      "resolution": null,
+      "resolutionDetails": null
+    },
+    {
+      "checklistItemId": "CC-20-03",
+      "observation": "Reviewed the Engineering and Drainage Report sections. Section 04-water-quality-and-environmental.md documents floodplain status: 'According to the Travis County, Texas FEMA Flood map number 48453C0445K, effective January 22, 2020, the subject property does not lie within a FEMA floodplain.' Section 03-drainage-and-detention.md provides extensive detention analysis with HEC-HMS modeling showing how the site controls peak flows for 2-, 10-, 25-, and 100-year storm events. Table 1 shows existing vs. proposed flow rates at three analysis points, demonstrating flood control compliance through detention. Facts.md confirms the site is not in RSMP participation.",
+      "reasoning": "The checklist requires either flood control compliance documentation OR an RSMP application. Since the site is not in RSMP (per facts.md), it must provide flood control compliance documentation. The drainage report satisfies this by: (1) documenting that the site is outside the FEMA floodplain, and (2) providing detailed detention analysis showing how on-site detention controls peak flows for all required storm events. This demonstrates flood control compliance is achieved through detention rather than RSMP.",
+      "tools_used": [],
+      "status": "pass",
+      "explanation": "Engineering and Drainage Report documents flood control compliance: site is outside FEMA floodplain and provides detention analysis for 2-, 10-, 25-, and 100-year storms.",
+      "evidenceLocations": [
+        {
+          "documentId": "777f2782-6933-4af3-8010-e26c52311541",
+          "label": "Engineering And Drainage Report"
+        }
+      ],
+      "resolution": null,
+      "resolutionDetails": null
+    },
+    {
+      "checklistItemId": "CC-20-20",
+      "observation": "A detention pond is proposed (confirmed in facts.md, drainage report, and sheets 27-28). Reviewed Sheet 28 blocks.md. Block 2 (SECTION E-E) shows a cross-section with water surface elevation annotations for all four required storm events: '2 YR = 534.81', '10 YR = 536.45', '25 YR = 537.66', '100 YR = 539.55'. Block 9 contains a 'DETENTION POND WSEL (FT)' table confirming these same elevations. Sheet 28 guide.md confirms this is the pond calculations sheet with cross-sections.",
+      "reasoning": "The checklist requires a detention pond cross-section showing Water Surface Elevations (WSEs) for the 2-, 10-, 25-, and 100-year recurrence intervals, applicable only if a detention pond is proposed. A detention pond is clearly proposed based on the drainage report and plan sheets. Sheet 28's SECTION E-E cross-section displays all four required WSE values directly on the drawing, and a supporting table (Block 9) provides the same values in tabular format. This satisfies the requirement for a cross-section with all required WSEs.",
+      "tools_used": [],
+      "status": "pass",
+      "explanation": "Sheet 28 SECTION E-E shows detention pond cross-section with all required WSEs: 2-yr (534.81 ft), 10-yr (536.45 ft), 25-yr (537.66 ft), 100-yr (539.55 ft).",
+      "evidenceLocations": [
+        {
+          "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+          "sheetNumber": 28,
+          "label": "Sheet 28 - Pond Calcs"
+        }
+      ],
+      "resolution": null,
+      "resolutionDetails": null
+    },
+    {
+      "checklistItemId": "CC-20-21",
+      "observation": "A detention pond is proposed. Reviewed Sheet 27 and Sheet 28 blocks.md. Sheet 27 Block 3 (SECTION C-C) shows outlet structure detail with seventeen 2' x 1' orifice openings at flow line 534.40. Sheet 28 Block 1 (SECTION D-D) shows a cross-section with a 2' x 2.5' weir at elevation 539.50 and a 2' x 1\" orifice at 532.50. Sheet 28 Block 10 provides orifice equation calculations including width, height, area, center elevation, head, and discharge (Q in cfs). Sheet 28 Block 7 provides weir parameters. Sheet 28 Block 8 (PROPOSED DETENTION table) includes orifice and weir discharge rates (cfs) at various stages.",
+      "reasoning": "The checklist requires detention outlet structure detail with calculations if a detention pond is proposed. The plan set provides multiple outlet structure details (orifice walls and weir structures shown in cross-sections on sheets 27 and 28) along with supporting hydraulic calculations (orifice equation, weir parameters, and discharge tables on sheet 28). The presence of both detailed drawings showing the outlet structures and calculation tables demonstrating their hydraulic performance satisfies the requirement. Note that the validation methodology specifies this is a presence check only, not a design adequacy review.",
+      "tools_used": [],
+      "status": "pass",
+      "explanation": "Sheets 27-28 provide detention outlet structure details (orifice wall and weir cross-sections) with calculations (orifice equation, weir parameters, discharge tables).",
+      "evidenceLocations": [
+        {
+          "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+          "sheetNumber": 27,
+          "label": "Sheet 27 - Pond Plan"
+        },
+        {
+          "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+          "sheetNumber": 28,
+          "label": "Sheet 28 - Pond Calcs"
+        }
+      ],
+      "resolution": null,
+      "resolutionDetails": null
+    },
+    {
+      "checklistItemId": "CC-20-22",
+      "observation": "A detention pond is proposed. Reviewed Sheet 28 blocks.md. Block 8 contains a comprehensive 'PROPOSED DETENTION' table showing stage (elevation in ft), depth, area, incremental volume, cumulative volume, orifice discharge (cfs), and weir discharge (cfs) for stages ranging from 532.50 ft (detention outfall elevation) to 542.00 ft (top of pond). Block 5 provides a 'Sedimentation Pond' stage-storage table. Block 6 provides a 'Filtration Pond' stage-storage table with combined pond volumes. All tables show the relationship between water surface elevation, storage volume, and discharge rates.",
+      "reasoning": "The checklist requires a stage-storage discharge table if a detention pond is proposed. Sheet 28 provides three related stage-storage tables: (1) the primary PROPOSED DETENTION table (Block 8) with stage, storage volumes, and discharge rates through both orifice and weir structures; (2) the Sedimentation Pond table; and (3) the Filtration Pond table. These tables collectively demonstrate the stage-storage-discharge relationship required for detention pond design. The presence of cumulative volumes and discharge rates at each stage satisfies the requirement. The validation methodology notes this is a presence check only.",
+      "tools_used": [],
+      "status": "pass",
+      "explanation": "Sheet 28 provides stage-storage discharge tables for the detention pond system, including elevations, cumulative volumes, and discharge rates (orifice and weir).",
+      "evidenceLocations": [
+        {
+          "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+          "sheetNumber": 28,
+          "label": "Sheet 28 - Pond Calcs"
+        }
+      ],
+      "resolution": null,
+      "resolutionDetails": null
+    },
+    {
+      "checklistItemId": "CC-20-25",
+      "observation": "An on-site WQ pond is proposed (confirmed in drainage report sections 04-water-quality-and-environmental.md and engineer's summary letter). Reviewed Sheet 27 and Sheet 28 blocks.md. Sheet 27 Block 1 (SECTION A-A) shows a cross-section of sedimentation and filtration basins with WQE labeled at 540.77. Sheet 27 Block 4 (SECTION B-B) shows another cross-section with water quality elevation (WQE) at 540.77. Sheet 28 Block 2 (SECTION E-E) cross-section and Block 3 (Water Quality Pond calculations) both confirm the Water Quality Elevation is 540.77 ft. msl. Multiple cross-sections clearly show this elevation.",
+      "reasoning": "The checklist requires a WQ pond cross-section showing the WQ surface elevation if an on-site WQ pond is proposed. The drainage report and plan sheets confirm an underground partial sedimentation/filtration pond is proposed for water quality treatment. Sheets 27 and 28 provide multiple cross-sections (SECTION A-A, SECTION B-B, SECTION E-E) that clearly annotate the Water Quality Elevation at 540.77 ft. msl. The presence of multiple cross-sections with the WQ surface elevation labeled satisfies the requirement. The validation methodology notes this is a presence check only.",
+      "tools_used": [],
+      "status": "pass",
+      "explanation": "Sheets 27-28 provide WQ pond cross-sections (SECTION A-A, B-B, E-E) showing Water Quality Elevation at 540.77 ft. msl.",
+      "evidenceLocations": [
+        {
+          "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+          "sheetNumber": 27,
+          "label": "Sheet 27 - Pond Plan"
+        },
+        {
+          "documentId": "908ffab5-9bf8-4155-b9f7-b3c3be0663ff",
+          "sheetNumber": 28,
+          "label": "Sheet 28 - Pond Calcs"
+        }
+      ],
+      "resolution": null,
+      "resolutionDetails": null
+    }
+  ],
+  "grouping": "cc-20",
+  "summary": "All 7 items pass: engineering documentation is complete with sealed drainage report and summary letter, flood control compliance documented, and detention/WQ pond details provided with cross-sections, calculations, and tables."
+}

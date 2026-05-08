@@ -24,10 +24,11 @@ Tools available to the agent: generic `vision` AND direct
 `inspect-drawing` script-tool (no `vision_check`). This is the **var1**
 variant by definition — bifurcated tool list, agent picks.
 
-Source artifacts:
-[`../../../../inspect-drawing-tool/experiments/run1/output/`](../../../../inspect-drawing-tool/experiments/run1/output/).
-Original analysis:
-[`../../../../inspect-drawing-tool/experiments/run1/analytics/analysis.md`](../../../../inspect-drawing-tool/experiments/run1/analytics/analysis.md).
+Source artifacts: [`../../../source-runs/cc/var-1/output/`](../../../source-runs/cc/var-1/output/) (canonical home post 2026-05-08 reorg). Run metadata: [`../../../source-runs/cc/var-1/run-metadata.json`](../../../source-runs/cc/var-1/run-metadata.json).
+
+Original location remains at [`../../../../inspect-drawing-tool/experiments/run1/output/`](../../../../inspect-drawing-tool/experiments/run1/output/) — kept in place to preserve that workspace's analytics + README. The source-runs/ copy is the canonical reference for this metrics-framework variant.
+
+Original analysis: [`../../../../inspect-drawing-tool/experiments/run1/analytics/analysis.md`](../../../../inspect-drawing-tool/experiments/run1/analytics/analysis.md).
 
 ## Schema
 

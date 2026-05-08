@@ -25,7 +25,7 @@ Tools available to the agent: `vision_check` only (plus
 no direct `measure-distance`. This is the **var2** variant by
 definition.
 
-Artifacts: [`../../../experiments/run4/cc/output/`](../../../experiments/run4/cc/output/).
+Artifacts: [`../../../source-runs/cc/var-2/output/`](../../../source-runs/cc/var-2/output/) (canonical home post 2026-05-08 reorg). Run metadata: [`../../../source-runs/cc/var-2/run-metadata.json`](../../../source-runs/cc/var-2/run-metadata.json). The legacy `experiments/run4/cc/analytics/` analysis doc remains in place for historical reference.
 
 ## Schema
 
