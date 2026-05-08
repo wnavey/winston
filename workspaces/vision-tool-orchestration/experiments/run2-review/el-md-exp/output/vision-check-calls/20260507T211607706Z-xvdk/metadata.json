@@ -1,0 +1,31 @@
+{
+  "callId": "20260507T211607706Z-xvdk",
+  "startedAt": "2026-05-07T21:16:07.707Z",
+  "completedAt": "2026-05-07T21:16:22.963Z",
+  "inputs": {
+    "checklistItemId": "el-md-exp:EL-2.12",
+    "checklistItemText": "Tree clearances measured from utility pole centerline or structure instead of from outer electric conductor",
+    "question": "On either the landscape plan (Sheet 31) or site plan (Sheet 9), are the trees dimensioned with measurements showing their distance from the OHE line? If measurements are shown, what are they measuring from - the pole, the conductor line, the easement boundary, or something else?",
+    "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+    "sheetNum": 31
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "bbe3e2c3853a0e27678a44756a99ab9273ab9d6e35434514264491fdcdf65164",
+    "promptSource": "bureau",
+    "promptSourcePath": "/vercel/sandbox/workspace/bureau/jurisdictions/austin/workflows/review/prompts/vision-router.md",
+    "output": {
+      "problemType": "drawing_inspect",
+      "reasoning": "The agent is asking about what physical features tree measurements are dimensioned from on the plan drawings (pole vs. conductor vs. easement boundary), which requires visual inspection of dimension lines, labels, and spatial relationships in the drawing itself—not a direct measurement between features. This is a sub-feature identification step (what are the dimensions measuring from?) that precedes the actual clearance measurement compliance check.",
+      "confidence": 0.92,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "vision",
+    "success": true,
+    "fallbackReason": "specialist_disabled",
+    "specialistCallDir": null
+  },
+  "phase": "B"
+}

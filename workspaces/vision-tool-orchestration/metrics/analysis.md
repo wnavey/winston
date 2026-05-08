@@ -1,6 +1,6 @@
 # Vision-check metrics analysis
 
-**Status:** 2026-05-07. **cc set: populated (partial — see runs disparity below). el-md-exp set: pending.**
+**Status:** 2026-05-07. **cc set: populated (var2 runs=1 disparity open). el-md-exp set: populated (var1 partial-coverage caveat noted below).**
 
 This is the cross-variant writeup that joins the per-variant goal-a /
 goal-b docs into a single readout against the iter-1 success criteria.
@@ -49,22 +49,54 @@ cc Goal B.
 
 ### Review + Measure Distance Tool
 
+Source: Valley View Townhomes v1, `el-md-exp` guide (101 items, 51
+expected-vision = 51 measure-distance candidates). All three variants
+fired same-day on the same submission, runs=3,
+`logAllAgentTrace=true`, post bureau#314 + conductor#149.
+
 #### Goal A: "Overall Vision Invocation Hit Rate"
 
-> 🚧 **TODO — pending el-md-exp metrics build.** Source-run candidates:
-> ctrl `VISION_CHECK_REVIEW_EL_MD_EXP_BASELINE_V2`, var1 historical
-> `experiment-run7` / `7.2` in `winston/workspaces/measure-distance-tool/`,
-> var2 `VISION_CHECK_REVIEW_EL_MD_EXP_RUN_1` (likely needs re-fire
-> post-bureau#310).
+> Of items where TSV 1 expects vision, what fraction actually had
+> vision invoked (any tool)?
+
+| Metric | ctrl-baseline | var1-bifurcated | var2-routing | var2 vs var1 |
+|---|---:|---:|---:|---:|
+| Overall hit rate (51 measure-distance candidates) | 41.2% (21/51) | **60.8% (31/51)** | 37.3% (19/51) | **-23.5pp** ⚠️ |
+
+**Read.** Var2 lags var1 on overall Goal A by a wide margin. Three
+caveats stack on this number — see "Caveats" subsection below.
+Headline-only takeaway: var2's classifier is selective about invoking
+vision_check, and that selectivity reduces overall invocation count
+relative to the bifurcated agent's free-hand vision usage.
 
 #### Goal B: "Correct Tool Selection Rate"
 
-> 🚧 **TODO — pending el-md-exp metrics build.** For review, "correct
-> specialist" = `measure-distance` for distance/clearance items per
-> `el-md-exp/item-classification.json`. Note that the conductor
-> dispatch path for measurement currently falls back to generic via
-> `measurement_arg_construction_not_implemented` — Goal B may be
-> bottlenecked by the dispatch chain, not classifier accuracy.
+> Of items where TSV 1 expects a specialist (`measure-distance`), what
+> fraction had `measure-distance` invoked (post-aggregation)?
+
+| Metric | ctrl-baseline | var1-bifurcated | var2-routing | var2 vs var1 |
+|---|---:|---:|---:|---:|
+| measure-distance items (51) | n/a (no specialist exposed) | 0.0% (0/51) | **5.9% (3/51)** | **+5.9pp** ✓ |
+
+**Read.** Var1 invoked the `measure-distance` specialist **zero times**
+across all 3 runs and 51 measure-distance-eligible items. The
+bifurcated tool list exposed `measure-distance` to the agent, but the
+agent never reached for it — same sparse-adoption pattern observed on
+the cc side with `inspect-drawing` (2 cells out of 162).
+
+Var2's classifier identified 8 unique items as measurement-routed (by
+classifier intent — actual dispatch falls back to generic via
+`measurement_arg_construction_not_implemented`). Of those 8, only 3
+cleared the strict-majority threshold (≥2 of 3 runs). The classifier
+selected drawing_inspect for 17 items (mostly wrong — el-md-exp has
+zero drawing_inspect ground-truth items) and generic for 5.
+
+Iter-1 hypothesis confirmed in direction (var2 > var1 on B), but the
+absolute number is small. **Goal B for el-md-exp is bottlenecked by
+classifier accuracy, not architectural choice** — the same `vision_check`
+plumbing that gave 25%/33% on cc gives only 5.9% on el-md-exp because
+the bureau-side classifier prompt isn't tuned for measure-distance
+recognition yet.
 
 ---
 
@@ -176,26 +208,113 @@ Two distinct failure modes for var2 that var1/ctrl can't have:
   filters to required-only (8 items); the "required + optional"
   reading is a permissive ceiling.
 
-### el-md-exp — pending
+### el-md-exp — Goal A by bucket
 
-No metrics TSVs built yet for the el-md-exp set (measure-distance
-specialist on review workflow). Existing data:
+Source TSVs:
+- [`el-md-exp/ctrl-baseline-vision-invocation/per-item.tsv`](el-md-exp/ctrl-baseline-vision-invocation/per-item.tsv) (`VISION_CHECK_REVIEW_EL_MD_EXP_BASELINE_V3`, runs=3)
+- [`el-md-exp/var1-bifurcated-vision-tools/per-item.tsv`](el-md-exp/var1-bifurcated-vision-tools/per-item.tsv) (`VISION_CHECK_REVIEW_EL_MD_EXP_VAR1_RUN_1`, runs=3)
+- [`el-md-exp/var2-vision-specialist-routing/per-item.tsv`](el-md-exp/var2-vision-specialist-routing/per-item.tsv) (`VISION_CHECK_REVIEW_EL_MD_EXP_RUN_2`, runs=3)
 
-- **ctrl-baseline el-md-exp:** `VISION_CHECK_REVIEW_EL_MD_EXP_BASELINE_V2`
-  (runs=3, agent-trace silently failed — caveats in original kickoff)
-- **var1 el-md-exp:** historical `experiment-run7` / `experiment-run7.2`
-  in `winston/workspaces/measure-distance-tool/...` — needs locating +
-  schema audit
-- **var2 el-md-exp:** `VISION_CHECK_REVIEW_EL_MD_EXP_RUN_1` is a smoke
-  test from before bureau#310 fix landed; likely needs re-fire
+| Bucket | ctrl-baseline | var1 | var2 |
+|---|---:|---:|---:|
+| `measure-distance` candidates (51 items, `shouldCall=yes` per `el-md-exp/item-classification.json`) | 41.2% (21/51) | **60.8% (31/51)** | 37.3% (19/51) |
+| **Goal A total (51 expected-vision items)** | 41.2% | **60.8%** | 37.3% |
+| "Misuse" (50 `shouldCall=no` items invoked) | 40.0% | 56.0% | 38.0% |
 
-Once those three are populated, the Phase 1 Metric Summary section
-above gets the el-md-exp numbers filled in and the cross-set synthesis
-below opens up.
+**Read.** Var1's 60.8% is partly inflated by the agent calling vision
+freely on every item it touched (162 / 303 item-runs called vision).
+Var2's classifier was more conservative — only items where the
+classifier judged a vision call was warranted got vision_check fired.
+
+**The "misuse" column is NOT comparable to the cc misuse number** and
+shouldn't be read as failure. The el-md-exp ground-truth `shouldCall`
+field labels items by whether `measure-distance` is applicable, not by
+whether *any* vision tool is needed. Many `shouldCall=no` items still
+reasonably need vision (to read a label, check a note, etc.). The cc
+ground truth had a separate `no-tool` category; el-md-exp doesn't.
+Until el-md-exp is re-classified with a vision-needed-or-not field,
+this column is informational only.
+
+### el-md-exp — Goal B detail
+
+| Denominator | var1 | var2 |
+|---|---:|---:|
+| `measure-distance` items (51) | **0/51 = 0.0%** | **3/51 = 5.9%** |
+| Specialist invocations (raw item-run cells) | 0 | 14 |
+| Classifier intent = measurement (unique items) | n/a | 8 |
+
+**Read.** Var1 invoked the `measure-distance` specialist **zero times**
+across 51 measure-distance-eligible items × 3 runs (153 cells). The
+agent had `script:measure-distance` available but never reached for it
+— same sparse-adoption pattern as the cc-side var1 with
+`inspect-drawing` (2/162 cells).
+
+Var2's classifier identified 8 unique items as measurement-routed by
+intent. Of those, 3 cleared the strict-majority threshold (≥2 of 3
+runs). The other 5 had only 1 of 3 runs route to measurement.
+
+The classifier also routed 17 unique items to `drawing_inspect` — all
+incorrect, since el-md-exp's ground truth has zero drawing_inspect
+items. This is the dominant classifier-error mode and the main lever
+for improving Goal B on this guide.
+
+### el-md-exp — caveats
+
+- **Var1 partial coverage (~33% gap).** VAR1_RUN_1 emitted findings
+  for 201 / 303 (item × run) cells. The 102 missing cells are mostly
+  items the agent silently passed. Root cause: the
+  `experiments/measure-distance/` overlay's `experiment.yaml`
+  hardcodes `prompt: review.md` AND its own `review.md` (a) still has
+  "Important: You only output fail and not-verifiable findings"
+  language and (b) lacks the `{{ agentTraceGuidance }}` template
+  placeholder. So `logAllAgentTrace=true` couldn't append the
+  emit-all-statuses override on this prompt path. The vision-check
+  overlay has the placeholder so var2 picked up the override
+  correctly. **Var1's 60.8% Goal A is a lower bound — items the agent
+  silently passed (no finding emitted) can't be checked for
+  vision-invocation, so they default to `tool_called=none`.** Fixing
+  the overlay (small bureau PR) and re-firing var1 would tighten the
+  number.
+- **Conductor measurement dispatch still falls back to generic** via
+  `measurement_arg_construction_not_implemented`. Goal B is computed
+  against `classifier.output.problemType` (intent) rather than
+  `dispatch.specialistCalled` (post-fallback). This isolates the
+  classifier-accuracy signal from the dispatch-chain wiring gap.
+- **Var2 per-(item × run) attribution is a hybrid.** Per-run invocation
+  ("did vision_check get called for this item in this run?") comes
+  from per-finding `agentTrace.tools_used`. Per-item routing intent
+  ("which specialist did the classifier pick?") comes from
+  `vision-check-calls/<callId>/metadata.json` aggregated per item
+  (the metadata doesn't carry runIndex). The classifier is
+  approximately deterministic across runs, so the per-item canonical
+  intent is a reasonable proxy.
+- **"Misuse" denominator includes vision-needed items.** As noted in
+  the Goal A read above, el-md-exp's `shouldCall=no` items aren't
+  necessarily vision-free.
+
+### el-md-exp — Per-measure-distance-item routing detail (var2)
+
+The 8 items where var2's classifier identified measurement intent on
+≥1 run, with their post-aggregation `tool_called`:
+
+| Item | Post-vote `tool_called` |
+|---|---|
+| `EL-13.10` | **vision-check-measure-distance ✓** |
+| `EL-2.1` | **vision-check-measure-distance ✓** |
+| `EL-2.6` | **vision-check-measure-distance ✓** |
+| Other 5 items | failed majority — only 1 of 3 runs routed to measurement |
+
+The classifier's *unique-item* recall on measurement items is 8/51 =
+15.7%. Strict-majority confirmed recall is 3/51 = 5.9%. Items where
+the classifier consistently misroutes (drawing_inspect for 17 items)
+are the prime target for the bureau-side classifier prompt iteration
+that follows phase-1.
 
 ---
 
-## Iter-1 success criteria evaluation (cc only)
+## Iter-1 success criteria evaluation
+
+### cc
 
 > A. var2's overall vision invocation hit rate ≥ var1's on items where
 > TSV 1 expects vision.
@@ -213,10 +332,66 @@ runs=3 to retire the confounder before declaring.
 33.3% (var2) vs 0% (var1) on req + optional. Var2's strict-majority
 matches var1's most-permissive aggregation. Direction is unambiguous.
 
+### el-md-exp
+
+> A. var2's overall vision invocation hit rate ≥ var1's on items where
+> TSV 1 expects vision.
+
+**Status: NOT met at the headline.** 37.3% (var2) vs 60.8% (var1) →
+−23.5pp. Two strong caveats: (1) var1's number is inflated by the
+overlay-path coverage gap (no_finding rows for items the agent
+silently passed, defaulting to `tool_called=none` — UNDERSTATING
+var1's true rate, but still showing var1 invokes vision more
+freely overall); (2) var2's lower invocation count partially reflects
+the classifier's selectivity, which is a feature when the classifier
+is accurate and a problem when it isn't. On el-md-exp where 17 items
+get misrouted to drawing_inspect, the classifier's selectivity hurts.
+
+> B. var2's specialist selection rate ≥ var1's on items where TSV 1
+> expects a specialist.
+
+**Status: ✓ MET in direction, small absolute gap.** 5.9% (var2) vs
+0.0% (var1) on measure-distance items. Same architectural lift seen
+on cc: var1's bifurcated tool list never reached for the specialist
+(0 calls), var2's routing did invoke measurement (3 items at strict
+majority, 8 at lenient). Absolute number small because the bureau-
+side classifier prompt isn't tuned for measure-distance recognition.
+
 ---
 
 ## Cross-set synthesis
 
-**Pending.** Will live here after el-md-exp populates and we can compare
-the routing architecture's effect on specialist invocation across both
-sets.
+**Goal B confirms the iter-1 hypothesis on both sets.** The
+bifurcated-tools approach (var1) failed to invoke the workflow's
+specialist meaningfully on either side (0 / 162 cells on cc, 0 / 153
+cells on el-md-exp). The vision_check routing approach (var2) lifted
+specialist invocation from ~0% to a non-zero rate on both sides:
+25-33% on cc (where the inspect-drawing classifier is well-tuned and
+the dispatch chain works end-to-end), 5.9% on el-md-exp (where the
+classifier is the bottleneck). The architectural conclusion holds:
+**routing strictly outperforms hoping the agent picks the right
+direct tool.**
+
+**Goal A is mixed.** Var2 trades coverage for selectivity — better on
+cc must-call items (+12.5pp), worse on overall coverage (-3.9pp on cc,
+-23.5pp on el-md-exp before caveats). Whether the trade is worth it
+depends on what the workflow prioritizes:
+- If sparse-but-precise specialist invocations are the goal (the
+  iter-1 hypothesis): var2 is the right architecture, and the open
+  questions are about classifier tuning + specialist execution.
+- If broad invocation coverage is the priority: var1's looser tool
+  exposure invokes vision more freely. But it also wastes that
+  coverage on items where the specialist would be much more accurate
+  than generic vision.
+
+**Recommended phase-2 priorities** (informed by these numbers, not
+in this PR):
+1. **Bureau classifier prompt iteration for el-md-exp.** The 17-item
+   drawing_inspect misroute on el-md-exp is the single biggest lever.
+2. **Conductor measurement dispatch wiring** so Goal B execution-
+   accuracy is measurable on review.
+3. **Re-fire cc var2 at runs=3** to retire the runs-disparity
+   confounder on cc Goal A.
+4. **Update measure-distance overlay's review.md** so future var1
+   review fires emit findings for all statuses (close the partial-
+   coverage caveat).

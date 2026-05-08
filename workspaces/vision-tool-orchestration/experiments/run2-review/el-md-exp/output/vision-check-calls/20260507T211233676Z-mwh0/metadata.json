@@ -1,0 +1,32 @@
+{
+  "callId": "20260507T211233676Z-mwh0",
+  "startedAt": "2026-05-07T21:12:33.676Z",
+  "completedAt": "2026-05-07T21:12:51.649Z",
+  "inputs": {
+    "checklistItemId": "el-md-exp:EL-1.1",
+    "checklistItemText": "Buildings and permanent structures do not maintain minimum 7 feet 6 inches horizontal sky-to-ground clearance from overhead electric conductors",
+    "question": "Are overhead electric lines shown on the proposed site plan? If so, are the proposed buildings (Buildings 1-8), parking areas, driveways, or other site features shown in relation to the overhead electric lines with clearance dimensions labeled?",
+    "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+    "sheetNum": 9,
+    "regionHint": "western and southern edges of the property near Valley View Road frontage"
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "bbe3e2c3853a0e27678a44756a99ab9273ab9d6e35434514264491fdcdf65164",
+    "promptSource": "bureau",
+    "promptSourcePath": "/vercel/sandbox/workspace/bureau/jurisdictions/austin/workflows/review/prompts/vision-router.md",
+    "output": {
+      "problemType": "drawing_inspect",
+      "reasoning": "The agent is asking whether overhead electric lines are depicted on the plan and whether site features are shown in spatial relationship to those lines with labeled clearance dimensions—this is a drawing-inspection task (presence of lines, symbols, spatial relationships, and dimension annotations), not a measurement task. The actual clearance verification would come later if dimensions are found.",
+      "confidence": 0.92,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "vision",
+    "success": true,
+    "fallbackReason": "specialist_disabled",
+    "specialistCallDir": null
+  },
+  "phase": "B"
+}

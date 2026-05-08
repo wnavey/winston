@@ -1,0 +1,31 @@
+{
+  "callId": "20260507T211450138Z-c4hk",
+  "startedAt": "2026-05-07T21:14:50.138Z",
+  "completedAt": "2026-05-07T21:15:13.699Z",
+  "inputs": {
+    "checklistItemId": "el-md-exp:BUILDING-ELEV",
+    "checklistItemText": "Test - check for building elevation data",
+    "question": "Are there any building elevation sections or profiles showing the vertical distance from overhead electric conductors to building roofs or structures? Are surveyed conductor elevation data provided? Look for elevation profiles showing OHE lines and building heights together.",
+    "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+    "sheetNum": 21
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "bbe3e2c3853a0e27678a44756a99ab9273ab9d6e35434514264491fdcdf65164",
+    "promptSource": "bureau",
+    "promptSourcePath": "/vercel/sandbox/workspace/bureau/jurisdictions/austin/workflows/review/prompts/vision-router.md",
+    "output": {
+      "problemType": "drawing_inspect",
+      "reasoning": "The agent is asking whether specific drawing elements (elevation sections, profiles, conductor elevation data) are present and shown together on the plan. This is a drawing-inspection task requiring reasoning about what symbols, sections, and spatial relationships are depicted, not a measurement task. The agent is not asking to measure a distance; they are asking to identify and reason about the presence and content of elevation drawing components.",
+      "confidence": 0.92,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "vision",
+    "success": true,
+    "fallbackReason": "specialist_disabled",
+    "specialistCallDir": null
+  },
+  "phase": "B"
+}

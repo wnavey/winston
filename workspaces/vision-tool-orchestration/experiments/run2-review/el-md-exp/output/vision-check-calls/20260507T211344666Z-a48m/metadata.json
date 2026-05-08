@@ -1,0 +1,32 @@
+{
+  "callId": "20260507T211344666Z-a48m",
+  "startedAt": "2026-05-07T21:13:44.666Z",
+  "completedAt": "2026-05-07T21:14:02.837Z",
+  "inputs": {
+    "checklistItemId": "el-md-exp:EL-1.6",
+    "checklistItemText": "Buildings do not maintain minimum 7.5-foot horizontal sky-to-ground clearance and 15-foot radial clearance from overhead electric facilities in right-of-way adjacent to site",
+    "question": "Are there surveyed conductor elevation data and clearance dimension annotations shown for any overhead electric lines that may be present, particularly relative to building locations?",
+    "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+    "sheetNum": 21,
+    "regionHint": "Check if building elevations or profile information is provided"
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "bbe3e2c3853a0e27678a44756a99ab9273ab9d6e35434514264491fdcdf65164",
+    "promptSource": "bureau",
+    "promptSourcePath": "/vercel/sandbox/workspace/bureau/jurisdictions/austin/workflows/review/prompts/vision-router.md",
+    "output": {
+      "problemType": "drawing_inspect",
+      "reasoning": "The agent is asking whether specific annotations and dimensional data are present and shown on the drawing (conductor elevation data, clearance dimension annotations), which is a drawing-content and symbol-identification question, not a measurement task. This is a progressive verification step to identify whether the necessary drawing elements exist before attempting to verify actual clearance compliance.",
+      "confidence": 0.92,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "vision",
+    "success": true,
+    "fallbackReason": "specialist_disabled",
+    "specialistCallDir": null
+  },
+  "phase": "B"
+}

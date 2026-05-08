@@ -1,0 +1,31 @@
+{
+  "callId": "20260507T211433355Z-1ygr",
+  "startedAt": "2026-05-07T21:14:33.355Z",
+  "completedAt": "2026-05-07T21:14:50.134Z",
+  "inputs": {
+    "checklistItemId": "el-md-exp:CLEARANCE-DIMS",
+    "checklistItemText": "Test - check for clearance dimensions",
+    "question": "On the site plan and grading plan sheets, are there any dimension callouts or annotations showing the horizontal or vertical clearance distances from overhead electric lines (OHE) to buildings, driveways, parking areas, or other site features? Look for dimensions in feet showing clearances from the outer conductor to site features.",
+    "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+    "sheetNum": 11
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "bbe3e2c3853a0e27678a44756a99ab9273ab9d6e35434514264491fdcdf65164",
+    "promptSource": "bureau",
+    "promptSourcePath": "/vercel/sandbox/workspace/bureau/jurisdictions/austin/workflows/review/prompts/vision-router.md",
+    "output": {
+      "problemType": "drawing_inspect",
+      "reasoning": "The agent is asking whether dimension callouts and annotations exist on the plans—a visual inspection of drawing elements (lines, text, symbols) and their spatial relationships—rather than asking the agent to measure a clearance distance directly. This is a presence and identification check for dimensional annotations, not a measurement task.",
+      "confidence": 0.92,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "vision",
+    "success": true,
+    "fallbackReason": "specialist_disabled",
+    "specialistCallDir": null
+  },
+  "phase": "B"
+}

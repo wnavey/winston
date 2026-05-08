@@ -1,0 +1,31 @@
+{
+  "callId": "20260507T211312093Z-nqwg",
+  "startedAt": "2026-05-07T21:13:12.093Z",
+  "completedAt": "2026-05-07T21:13:36.240Z",
+  "inputs": {
+    "checklistItemId": "el-md-exp:EL-13.13",
+    "checklistItemText": "Trees within 10 lateral feet of pad-mounted equipment are not identified as utility-compatible species per ECM Appendix F, or trees within 15 lateral feet of overhead electric distribution conductors are not utility-compatible",
+    "question": "On the landscape plan (Sheet 31), are there any trees shown within 10 feet of the transformer pads shown on the electrical plan? If trees are present near transformer pads, what species are they identified as, and are they noted as utility-compatible?",
+    "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+    "sheetNum": 31
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "bbe3e2c3853a0e27678a44756a99ab9273ab9d6e35434514264491fdcdf65164",
+    "promptSource": "bureau",
+    "promptSourcePath": "/vercel/sandbox/workspace/bureau/jurisdictions/austin/workflows/review/prompts/vision-router.md",
+    "output": {
+      "problemType": "measurement",
+      "reasoning": "The agent is asking for a distance-based assessment ('within 10 feet of transformer pads'), which requires plan-view measurement between two physical features (trees and transformer pads). Although species identification is also requested, the primary visual task is measuring lateral clearance, making this a measurement problem.",
+      "confidence": 0.92,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "vision",
+    "success": true,
+    "fallbackReason": "measurement_arg_construction_not_implemented",
+    "specialistCallDir": null
+  },
+  "phase": "B"
+}

@@ -1,0 +1,239 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "comment-structuring.schema.json",
+  "title": "Comment-Structuring Output",
+  "description": "Structured output schema for the comment-structuring agent. Matches the cityhall review data contract with ensemble-specific additions (confidence, runCount, per-run findings).",
+  "type": "object",
+  "required": ["reviewData"],
+  "additionalProperties": false,
+  "properties": {
+    "reviewData": {
+      "type": "object",
+      "required": ["metadata", "sections"],
+      "additionalProperties": false,
+      "properties": {
+        "metadata": {
+          "type": "object",
+          "required": [
+            "discipline",
+            "projectName",
+            "address",
+            "applicableAreas",
+            "reviewStatus",
+            "reviewDate",
+            "reviewMethod",
+            "programs",
+            "totalIssues",
+            "requiredCount",
+            "recommendationCount",
+            "crossDepartmentCount",
+            "reviewerAttentionCount",
+            "confidenceBreakdown",
+            "summaryByCategory",
+            "summaryByArea"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "discipline": { "type": "string" },
+            "projectName": { "type": "string" },
+            "address": { "type": "string" },
+            "applicableAreas": { "type": "string" },
+            "reviewStatus": { "type": "string" },
+            "reviewDate": { "type": "string" },
+            "reviewMethod": { "type": "string" },
+            "programs": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["name", "status", "governs"],
+                "additionalProperties": false,
+                "properties": {
+                  "name": { "type": "string" },
+                  "status": { "type": "string" },
+                  "governs": { "type": "string" }
+                }
+              }
+            },
+            "totalIssues": { "type": "integer" },
+            "requiredCount": { "type": "integer" },
+            "recommendationCount": { "type": "integer" },
+            "crossDepartmentCount": { "type": "integer" },
+            "reviewerAttentionCount": { "type": "integer" },
+            "confidenceBreakdown": {
+              "type": "object",
+              "required": ["high", "medium", "low"],
+              "additionalProperties": false,
+              "properties": {
+                "high": { "type": "integer" },
+                "medium": { "type": "integer" },
+                "low": { "type": "integer" }
+              }
+            },
+            "summaryByCategory": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["category", "issues", "keyActions"],
+                "additionalProperties": false,
+                "properties": {
+                  "category": { "type": "string" },
+                  "issues": { "type": "integer" },
+                  "keyActions": { "type": "string" }
+                }
+              }
+            },
+            "summaryByArea": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["area", "issues", "primaryConcerns"],
+                "additionalProperties": false,
+                "properties": {
+                  "area": { "type": "string" },
+                  "issues": { "type": "integer" },
+                  "primaryConcerns": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "sections": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["sectionNumber", "sectionName", "comments"],
+            "additionalProperties": false,
+            "properties": {
+              "sectionNumber": { "type": "integer" },
+              "sectionName": { "type": "string" },
+              "comments": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "commentNumber",
+                    "title",
+                    "status",
+                    "comment",
+                    "issue",
+                    "citation",
+                    "sheets",
+                    "applicableArea",
+                    "resolution",
+                    "confidence",
+                    "runCount",
+                    "totalRuns",
+                    "isCrossDepartment",
+                    "crossDepartmentNote",
+                    "isReviewerAttention",
+                    "reviewerAttentionNote",
+                    "sheetReferences",
+                    "documentReferences",
+                    "sourceFindings"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "commentNumber": { "type": "integer" },
+                    "title": { "type": "string" },
+                    "status": { "type": "string", "enum": ["fail", "not-verifiable"] },
+                    "comment": { "type": "string" },
+                    "issue": { "type": "string" },
+                    "citation": { "type": "string" },
+                    "sheets": { "type": "string" },
+                    "applicableArea": { "type": "string" },
+                    "resolution": { "type": "string" },
+                    "confidence": { "type": "string", "enum": ["high", "medium", "low"] },
+                    "runCount": { "type": "integer" },
+                    "totalRuns": { "type": "integer" },
+                    "isCrossDepartment": { "type": "boolean" },
+                    "crossDepartmentNote": { "type": ["string", "null"] },
+                    "isReviewerAttention": { "type": "boolean" },
+                    "reviewerAttentionNote": { "type": ["string", "null"] },
+                    "sheetReferences": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": ["documentId", "sheetNumber", "label"],
+                        "additionalProperties": false,
+                        "properties": {
+                          "documentId": { "type": "string" },
+                          "sheetNumber": { "type": "integer" },
+                          "label": { "type": "string" }
+                        }
+                      }
+                    },
+                    "documentReferences": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": ["documentId", "label"],
+                        "additionalProperties": false,
+                        "properties": {
+                          "documentId": { "type": "string" },
+                          "label": { "type": "string" }
+                        }
+                      }
+                    },
+                    "sourceFindings": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": ["ref", "confidence", "runCount", "totalRuns", "perRunFindings"],
+                        "additionalProperties": false,
+                        "properties": {
+                          "ref": { "type": "string" },
+                          "confidence": { "type": "string", "enum": ["high", "medium", "low"] },
+                          "runCount": { "type": "integer" },
+                          "totalRuns": { "type": "integer" },
+                          "perRunFindings": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "required": ["run", "status", "comment", "codeCitations", "applicableAreas", "sheetReferences", "documentReferences"],
+                              "additionalProperties": false,
+                              "properties": {
+                                "run": { "type": "string" },
+                                "status": { "type": "string", "enum": ["fail", "not-verifiable"] },
+                                "comment": { "type": "string" },
+                                "codeCitations": { "type": "array", "items": { "type": "string" } },
+                                "applicableAreas": { "type": "array", "items": { "type": "string" } },
+                                "sheetReferences": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "required": ["documentId", "sheetNumber"],
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "documentId": { "type": "string" },
+                                      "sheetNumber": { "type": "integer" }
+                                    }
+                                  }
+                                },
+                                "documentReferences": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "required": ["documentId", "label"],
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "documentId": { "type": "string" },
+                                      "label": { "type": "string" }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

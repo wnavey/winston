@@ -1,0 +1,32 @@
+{
+  "callId": "20260507T211313906Z-44x6",
+  "startedAt": "2026-05-07T21:13:13.906Z",
+  "completedAt": "2026-05-07T21:13:35.712Z",
+  "inputs": {
+    "checklistItemId": "el-md-exp:EL-13.27",
+    "checklistItemText": "Transformer locations lack minimum 7.5-foot horizontal sky-to-ground clearance from overhead distribution line conductors (primary, neutral, and secondary), extending from ground to sky",
+    "question": "Are any overhead distribution lines shown on the electrical plan? If yes, identify their locations and measure any clearances from the transformer pads to those overhead lines.",
+    "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+    "sheetNum": 21,
+    "regionHint": "overhead distribution lines or pole locations near transformer pads"
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "bbe3e2c3853a0e27678a44756a99ab9273ab9d6e35434514264491fdcdf65164",
+    "promptSource": "bureau",
+    "promptSourcePath": "/vercel/sandbox/workspace/bureau/jurisdictions/austin/workflows/review/prompts/vision-router.md",
+    "output": {
+      "problemType": "measurement",
+      "reasoning": "The agent question explicitly asks to 'measure any clearances from the transformer pads to those overhead lines,' which is a direct clearance measurement task. Although the question begins with a presence check (are OHE lines shown), the primary directive is measurement-based and aligns with the checklist requirement's 7.5-foot clearance compliance check.",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "vision",
+    "success": true,
+    "fallbackReason": "measurement_arg_construction_not_implemented",
+    "specialistCallDir": null
+  },
+  "phase": "B"
+}
