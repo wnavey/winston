@@ -37,11 +37,11 @@ agent defaults to the cheapest-to-reason-about one (generic vision).
 Result: var-1 produces the same `not-verifiable` verdicts as ctrl on
 the items where measurement actually matters.
 
-| Variant | measure-distance invocations | Goal B (correct specialist invoked) |
-|---|---:|---:|
-| ctrl | n/a (no specialist exposed) | n/a |
-| **var-1** | **0 / 153 (item × run) cells** | **0.0%** (0/51 items) |
-| var-2 (RUN_6_BACKUP_LOCAL) | 8 invocations, 24/24 pair measurements computed | **13.7%** (7/51 items) |
+| Variant | measure-distance invocations | Goal B (correct specialist invoked) | Goal C (specialist returned data \| B) |
+|---|---:|---:|---:|
+| ctrl | n/a (no specialist exposed) | n/a | n/a |
+| **var-1** | **0 / 153 (item × run) cells** | **0.0%** (0/51 items) | n/a |
+| var-2 (RUN_7_BACKUP_LOCAL_3_RUNS) | 22 invocations, 99/99 pair measurements computed | **27.5%** (14/51 items) | **100%** (11/14 — 3 had 0-pair extractor output) |
 
 The architectural lift is decisive: var-2 takes specialist invocation
 from *literally never* to a non-zero rate. The classifier-routing
@@ -50,47 +50,56 @@ shape — any well-formed distance question reaches `measure-distance`.
 
 ## What var-2 actually did to the verdicts
 
-For the items where `measure-distance` ran in RUN_6_BACKUP_LOCAL, did
-the verdict change vs ctrl? Did `not-verifiable` become an actionable
-pass/fail?
+For the items where `measure-distance` ran in `RUN_7_BACKUP_LOCAL_3_RUNS`,
+did the verdict change vs ctrl? Did `not-verifiable` become an
+actionable pass/fail? Both runs are runs=3 with strict-majority
+aggregation — apples-to-apples comparison.
 
-| Item | ctrl (runs=3 majority) | var-2 (RUN_6 runs=1) | Pairs measured |
-|---|---|---|---:|
-| EL-1.1 | not-verifiable | **pass** | 2 |
-| EL-1.14 | not-verifiable | **fail** ⚠ | 1 |
-| EL-1.37 | not-verifiable | **fail** ⚠ | 4 |
-| EL-1.8 | fail | fail | 6 |
-| EL-1.9 | not-verifiable | **pass** | 2 |
-| EL-13.10 | not-verifiable | **pass** | 5 |
-| EL-13.12 | not-verifiable | **pass** | 2 |
-| EL-13.13 | not-verifiable | not-verifiable | 2 |
+**Headline:** 15 items had successful measure-distance on RUN_7. **4
+items (27%)** moved from ctrl's `not-verifiable` majority verdict to
+a real determination (3 pass, 0 fail). **1 of those 4** escaped ctrl's
+*unanimous* `not-verifiable` (EL-13.33: `not-verifiable:3` → `pass:3`).
 
-**6 of 8 items (75%)** escaped ctrl's `not-verifiable` majority
-verdict — 4 to `pass`, 2 to `fail`. **3 of those 6** escaped ctrl's
-*unanimous* `not-verifiable` (3/3 ctrl runs all said unverifiable).
+| Item | ctrl (runs=3 majority) | RUN_7 (runs=3 majority) | RUN_7 distribution | Pairs |
+|---|---|---|---|---:|
+| **EL-13.33** | not-verifiable (unanimous) | **pass** (unanimous) | pass:3 | 5 |
+| EL-13.7 | not-verifiable | **pass** | pass:3 | 6 |
+| EL-13.1 | not-verifiable | **pass** | pass:2, fail:1 | 15 |
+| EL-13.19 | not-verifiable | **n/a** | n/a:2, fail:1 | 1 |
+| EL-2.1 | **fail** | not-verifiable | nv:3 | 9 |
+| EL-1.37 | not-verifiable | not-verifiable | nv:2, fail:1 | 13 |
+| EL-13.10 | not-verifiable | not-verifiable | nv:2, pass:1 | 16 |
+| EL-13.12 | not-verifiable | not-verifiable | nv:1, n/a:1, fail:1 | 1 |
+| EL-13.14 | not-verifiable | not-verifiable | nv:2, fail:1 | 2 |
+| EL-13.21 | not-verifiable (unanimous) | not-verifiable | nv:2, pass:1 | 5 |
+| EL-13.22 | not-verifiable (unanimous) | not-verifiable | nv:2, pass:1 | 5 |
+| EL-13.23 | not-verifiable (unanimous) | not-verifiable | nv:2, pass:1 | 5 |
+| EL-13.27 | n/a | not-verifiable | nv:2, pass:1 | 6 |
+| EL-13.2 | n/a | pass | pass:2, n/a:1 | 5 |
+| EL-2.7 | n/a | fail | fail:1, n/a:1, nv:1 | 5 |
 
-The two `fail` items (EL-1.14, EL-1.37) are real compliance
-deficiencies the ctrl baseline would have left for a human reviewer to
-catch. These are the use case for `measure-distance`: the agent now
-says *"the actual measured horizontal distance is X ft, threshold is Y
-ft, here's why it fails"* instead of *"I'd need elevation drawings to
-tell you."*
+The lower per-item move rate vs RUN_6 (4/15 vs 6/8 = 75%) reflects
+RUN_7's broader coverage — runs=3 catches more items where ctrl
+already had varied verdicts.
 
-### Sample measurements (EL-13.10 — transformer-pad-to-building clearance, 10 ft minimum)
+**EL-13.33** is the clean win. Ctrl unanimous `not-verifiable` (vision
+alone couldn't measure), RUN_7 unanimous `pass` (the measurement
+chain disambiguated it).
 
-| objectA | objectB | Distance (ft) | Confidence |
-|---|---|---:|---|
-| Transformer Pad west of Bldg. 1 | West exterior wall of Bldg. 1 | 34.6 | medium |
-| Transformer Pad west of Bldg. 2 | West exterior wall of Bldg. 2 | 14.3 | medium |
-| Transformer Pad west of Bldg. 8 | West exterior wall of Bldg. 8 | 13.3 | medium |
-| Transformer Pad between Bldg. 4 & 5 | West exterior wall of Bldg. 5 | **5.1** | medium |
-| Transformer Pad east of Bldg. 7 | East exterior wall of Bldg. 7 | 46.0 | medium |
+**EL-2.1 is the new Goal D candidate.** Ctrl was unanimous `fail` —
+vision-only saw enough to flag it. RUN_7 ran 9 measurements but came
+back unanimous `not-verifiable`. The chain produced data; the agent's
+verdict logic didn't connect the dots to escalate to `fail`. This is
+exactly the kind of regression Goal D is meant to surface.
 
-Three pass cleanly, one is borderline (13.3 ft above the 10-ft min),
-and **one flags as deficient at 5.1 ft** — exactly the kind of finding
-this chain is meant to surface.
+### Sample measurements (EL-13.33, RUN_7, where verdict flipped clean to pass)
 
-## The chain end-to-end (what makes RUN_6 different from RUN_3)
+The measurements are in [`../source-runs/el-md-exp/var-2/compare-vs-ctrl.md`](../source-runs/el-md-exp/var-2/compare-vs-ctrl.md).
+Pattern is consistent with measure-distance's design: each pair gets
+two Gemini Vision passes (coarse + refined), distances in feet with
+medium confidence.
+
+## The chain end-to-end (what runs=3 + the fix did)
 
 ```
 Agent question
@@ -131,42 +140,54 @@ surfaced when conductor#153 wired up the dispatch:
    fallback) + conductor#154 (thread submissionVersionId from workflow
    input through every layer to the bureau script subprocess).
 
-After both PRs landed, the chain runs cleanly. RUN_6_BACKUP_LOCAL had
-**8 measure-distance subprocess invocations** producing **24/24
-per-pair distance measurements** (100% subprocess success rate).
+After both PRs landed, the chain runs cleanly. RUN_7_BACKUP_LOCAL_3_RUNS
+had **22 measure-distance subprocess invocations** producing **99/99
+per-pair distance measurements** (100% subprocess success rate; Goal C
+= 100% on the B-eligible denominator).
 
-## Caveats + follow-ups
+## Caveats + the iter-2 Goal D follow-up
 
-- **runs=1.** RUN_6_BACKUP_LOCAL is a single-shot local backup
-  because the Substation/Inngest cloud path was hanging on this
-  experiment. The runs=3 cloud re-fire is on the open-follow-ups list
-  below; it'll retire the runs-disparity confounder on Goal A. Goal B,
-  Goal B', and the verdict-conversion numbers are not expected to
-  shift much (the lift is architectural, not statistical).
+- **Goal D (iter-2): correct post-result verdict.** Goal C runs at
+  100% but the agent's *interpretation* of the measurement results
+  into a final verdict is the next bottleneck. Examples from RUN_7:
+  - **EL-2.1**: ctrl unanimous `fail`, RUN_7 unanimous `not-verifiable`
+    despite 9 measure-distance pairs returned. The agent didn't
+    escalate.
+  - **EL-1.37**: 13 measurements, RUN_7 verdict distribution
+    (`nv:2, fail:1`) identical to ctrl. No aggregation lift from the
+    new data.
+  - **EL-13.10, EL-13.21, EL-13.22, EL-13.23, EL-13.27**: pattern of
+    `not-verifiable:2 + 1 dissent` despite the chain running. The
+    agent keeps erring on the side of "needs human review" in 2 of 3
+    runs.
+
+  Goal D is formally defined in [`../metrics-framework.md`](../metrics-framework.md).
+  Requires ground-truth verdict labels for the expected-measure-distance
+  items; not yet built.
 
 - **Hardcoded scale (`scaleInchesPerFoot=0.05`, i.e. 1"=20').** Sheets
   at other scales (1"=10', 1"=40', floor plans at 1/8"=1') will
-  mismeasure proportionally. The 387 ft outlier in the RUN_6 distance
-  range is suspect for this reason. Doesn't affect Goal A/B/B'
-  (routing + execution success) but does affect *measurement accuracy*.
+  mismeasure proportionally. The 395 ft max and 0.0 ft min in RUN_7's
+  distance range are suspect for this reason. Doesn't affect
+  Goal A/B/B'/C (routing + execution success) but does affect
+  *measurement accuracy*.
 
-- **EL-13.13 stayed `not-verifiable` despite measure-distance returning
-  distances.** Worth investigating whether the agent rejected the
-  measurement output or whether the question shape doesn't quite map
-  to a clean pass/fail threshold.
+- **EL-13.13 stayed `not-verifiable`** despite measure-distance
+  succeeding on RUN_6 and again on RUN_7. Specific Goal-D candidate
+  worth single-item triage.
 
-- **Goal B remains at ~14% — the classifier still picks `generic`
-  instead of `measurement` for ~85% of the expected-measure-distance
-  items.** The classifier prompt is the next lever; this is the
-  iter-2 question, not phase-1. The chain mechanism is sound; what
-  remains is teaching the classifier to recognize more of the
-  measurement question shapes.
+- **Goal B remains at ~27% — the classifier still picks `generic`
+  instead of `measurement` for ~73% of the expected-measure-distance
+  items.** Better than RUN_3's 15.7% but still the major lever.
+  Classifier prompt tuning is the iter-2 routing question; the chain
+  mechanism is sound.
 
 ## Open follow-ups (in rough priority order)
 
-1. **Cloud runs=3 re-fire of var-2** — retires the runs-disparity
-   confounder on Goal A. Blocked on the Substation/Inngest hang
-   investigation (item 2).
+1. **Goal D — correct post-result verdict (iter-2).** Define ground-
+   truth verdicts for the 51 expected-measure-distance items and
+   measure how often var-2's verdict matches them. Examples above are
+   the seed cases.
 2. **Substation/Inngest cloud-path hang** — cloud RUN_4 and RUN_5
    both hung in Substation's `Substation-workflow-run` Inngest function
    with no LLM activity. Local execution works fine; root cause
@@ -175,18 +196,17 @@ per-pair distance measurements** (100% subprocess success rate).
 3. **Per-sheet scale extraction** — replace the hardcoded
    `scaleInchesPerFoot=0.05` with a real lookup (title block extraction
    via small LLM call, or sheet metadata). Unblocks measurement
-   *accuracy*; doesn't affect Goal A/B/B'.
+   *accuracy*; doesn't affect Goal A/B/B'/C.
 4. **EL-13.13 not-verifiable despite measurement** — single-item
-   triage. Either the agent rejected a valid measurement, or the
-   question shape doesn't map to a clean threshold; either way it's a
-   diagnostic case for tightening the post-measurement verdict path.
-5. **387 ft distance outlier** — spot-check against the actual sheet
-   to confirm the measurement (or expose a scale issue, or expose a
-   pair-extraction issue where the model picked the wrong objectA/B).
+   triage. Goal D candidate.
+5. **395 ft / 0.0 ft distance outliers** — spot-check against actual
+   sheets to confirm the measurements (or expose scale issues, or
+   pair-extraction misidentifications).
 6. **Classifier prompt tuning to lift Goal B** — currently
-   `generic` is chosen for ~85% of expected-measure-distance items.
-   This is the lever for the next phase-2 iteration once the chain is
-   end-to-end stable.
+   `generic` is chosen for ~73% of expected-measure-distance items
+   (down from RUN_3's ~85%, but still the major lever). The chain
+   mechanism is sound; what remains is teaching the classifier to
+   recognize more of the measurement question shapes.
 7. **Migrate `measure-distance.ts` and `inspect-drawing.ts` fully
    to `lib/sheet-resolution.ts`** — currently the lib only owns the
    plan_set_version lookup; the inline `findDrawingBlockBbox`,

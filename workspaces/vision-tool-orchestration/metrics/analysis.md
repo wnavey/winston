@@ -1,6 +1,6 @@
 # Vision-check metrics analysis
 
-**Status:** 2026-05-08 (evening). **cc set: populated (var2 runs=1 disparity open). el-md-exp set: populated post 2026-05-08 re-fires (var1 partial-coverage retired; var2 classifier-misroute retired). RUN_6_BACKUP_LOCAL replaces RUN_3 as the canonical var2 source — first run where measure-distance actually executes end-to-end (post bureau#324 + conductor#153/#154 fixes). Goal B numbers are within single-run noise of RUN_3; the new headline is the verdict-conversion lift — see [`var2-uplift.md`](./var2-uplift.md).**
+**Status:** 2026-05-11. **cc set: populated (var2 runs=1 disparity open). el-md-exp set: populated post 2026-05-08 re-fires (var1 partial-coverage retired; var2 classifier-misroute retired) + the chain-execution validation. `RUN_7_BACKUP_LOCAL_3_RUNS` (runs=3) replaces `RUN_6_BACKUP_LOCAL` (runs=1) as the canonical var2 source — retires the runs-disparity confounder. Goal B nearly doubled vs RUN_3 (15.7% → 27.5%). Goals C (correct tool execution) and D (correct post-result verdict) added explicitly to the framework — C runs at 100% on the B-eligible denominator, D is the iter-2 follow-up. See [`var2-uplift.md`](./var2-uplift.md).**
 
 This is the cross-variant writeup that joins the per-variant goal-a /
 goal-b docs into a single readout against the iter-1 success criteria.
@@ -15,27 +15,37 @@ this file just synthesizes the numbers.
 
 | | cc set | el-md-exp set |
 |---|---|---|
-| **Goal A** (var2 ≥ var1 overall) | NOT met (40.9% vs 44.8%, runs disparity confound open) | NOT met (37.3% vs 74.5%, var2 runs=1 disparity open) — but var2 is *much* more selective: 20% misuse vs var1's 70% |
+| **Goal A** (var2 ≥ var1 overall) | NOT met (40.9% vs 44.8%, runs disparity confound open) | NOT met (49.0% vs 74.5%) — but var2 is *much* more selective: 32% misuse vs var1's 70% |
 | **Goal A** (var2 ≥ var1, must-call bucket) | ✓ MET (50.0% vs 37.5%, +12.5pp) | n/a (no must-call/optional split for el-md-exp) |
-| **Goal B** (var2 ≥ var1) | ✓ MET (25.0% vs 0.0%, +25.0pp) | ✓ MET (13.7% vs 0.0%, +13.7pp) |
-| **Goal B'** (intent + specialist actually executed) | ✓ MET (specialist execution worked since cc var2's first fire) | ✓ MET — **first run where it works** (13.7% vs 0.0%, +13.7pp). Pre-fix runs all had B' = 0%. |
-| **Verdict-conversion lift** (ctrl `not-verifiable` → real verdict) | n/a (cc has different verdict shape) | **6 of 8 items moved** (75%) — 4 pass, 2 fail. See [`var2-uplift.md`](./var2-uplift.md). |
+| **Goal B** (var2 ≥ var1) | ✓ MET (25.0% vs 0.0%, +25.0pp) | ✓ MET (27.5% vs 0.0%, +27.5pp) |
+| **Goal B'** (intent + specialist actually executed) | ✓ MET (cc var2's specialist worked since first fire) | ✓ MET (21.6% vs 0.0%, +21.6pp). Pre-fix var2 runs had B' = 0%. |
+| **Goal C** (conditional on B — specialist returned data) | n/a (need data) | ✅ **100%** on B-eligible denominator (every md subprocess returned ≥1 distance) |
+| **Verdict-conversion lift** (ctrl `not-verifiable` → real verdict) | n/a (cc has different verdict shape) | **4 of 15 items moved** (27%) on RUN_7 — 3 pass, 0 fail; 1 was ctrl-unanimous. See [`var2-uplift.md`](./var2-uplift.md). |
 
 **Architectural conclusion holds on both sets:** the bifurcated tool
 list (var1) reaches for the specialist ~0 times even though it's
 exposed; the routing architecture (var2) lifts specialist invocation
-to a non-zero rate (25–33% on cc, 13.7% on el-md-exp). The Goal A
+to a non-zero rate (25–33% on cc, 27.5% on el-md-exp). The Goal A
 trade-off is real — var2 trades broad coverage for selective coverage
 — and is governed by classifier accuracy.
 
-**The new headline (RUN_6_BACKUP_LOCAL, post bureau#324 + conductor#153/#154):**
-the el-md-exp measure-distance chain now executes end-to-end. Goal B'
-matches Goal B (every measure-distance subprocess succeeded), and 6 of
-the 8 expected-measure-distance items the chain ran on **moved from
-ctrl's `not-verifiable` verdict to a real pass/fail determination**.
-Two of those were `fail` — concrete compliance deficiencies the ctrl
-baseline would have left for human follow-up. See [`var2-uplift.md`](./var2-uplift.md)
+**The headline (post RUN_7_BACKUP_LOCAL_3_RUNS):** the el-md-exp
+measure-distance chain executes end-to-end with runs=3 majority-vote
+aggregation. Goal B nearly doubled vs RUN_3's 15.7% (15.7% → 27.5%).
+Goal C runs at 100% on the B-eligible denominator. The chain ran 22
+times across 89 vision_check calls, computing 99/99 per-pair distance
+measurements. 4 of the 15 expected-measure-distance items the chain
+ran on **moved from ctrl's `not-verifiable` majority verdict to a
+real determination** (3 pass, 0 fail). See [`var2-uplift.md`](./var2-uplift.md)
 for the dedicated story.
+
+**Goal D (iter-2 follow-up).** Multiple items where the chain ran
+cleanly but the agent's final verdict didn't escalate (EL-2.1: 9
+measurements + still not-verifiable across all 3 runs, despite ctrl
+being unanimous `fail`; EL-1.37: 13 measurements + verdict
+distribution identical to ctrl). The agent's post-measurement verdict
+reasoning is the next bottleneck — see Goal D definition in
+[`../metrics-framework.md`](../metrics-framework.md).
 
 ### Completeness Check + Inspect Drawing
 
@@ -76,13 +86,10 @@ cc Goal B.
 ### Review + Measure Distance Tool
 
 Source: Valley View Townhomes v1, `el-md-exp` guide (101 items, 51
-expected-vision = 51 measure-distance candidates). ctrl + var1 are
-runs=3; **var2 is now `RUN_6_BACKUP_LOCAL` at runs=1** (post bureau#324
-+ conductor#153 + conductor#154 — first var2 run where measure-distance
-actually executes end-to-end, see [`var2-uplift.md`](./var2-uplift.md)
-for the dedicated story). The runs=1 disparity is acknowledged below
-and on the cloud runs=3 re-fire follow-up; the headline numbers move
-within single-run noise vs RUN_3.
+expected-vision = 51 measure-distance candidates). All three variants
+runs=3 (var2 = `RUN_7_BACKUP_LOCAL_3_RUNS`, local conductor execution
+post bureau#324 + conductor#153 + conductor#154). See
+[`var2-uplift.md`](./var2-uplift.md) for the dedicated story.
 
 #### Goal A: "Overall Vision Invocation Hit Rate"
 
@@ -91,16 +98,17 @@ within single-run noise vs RUN_3.
 
 | Metric | ctrl-baseline | var1-bifurcated | var2-routing | var2 vs var1 |
 |---|---:|---:|---:|---:|
-| Overall hit rate (51 measure-distance candidates) | 41.2% (21/51) | **74.5% (38/51)** | 37.3% (19/51) | **-37.2pp** |
-| Misuse (50 `shouldCall=no` items invoked) | 40.0% | 70.0% | **20.0%** | -50.0pp |
+| Overall hit rate (51 measure-distance candidates) | 41.2% (21/51) | **74.5% (38/51)** | 49.0% (25/51) | **-25.5pp** |
+| Misuse (50 `shouldCall=no` items invoked) | 40.0% | 70.0% | **32.0%** | -38.0pp |
 
 **Read.** Var1 still wins overall Goal A by a wide margin, but with
-the same selectivity trade-off as before — var1 invokes vision on 70%
-of items where the labels say it isn't needed. Var2 is more
-disciplined (20% misuse). The runs=1 ceiling lowers var2's coverage
-vs RUN_3's 47.1% (47/51 → 19/51); a runs=3 cloud re-fire is on the
-follow-up list. The selectivity story is unchanged — var2 trades
-broad coverage for selective coverage, not raw capability.
+the same selectivity trade-off — var1 invokes vision on 70% of items
+where the labels say it isn't needed; var2 is at 32%. The selectivity
+story is unchanged: var2 trades broad coverage for selective coverage.
+RUN_7 (runs=3) lifted var2's Goal A from RUN_3's 47.1% to 49.0% — the
+chain executing end-to-end means measurement-route calls now count as
+specialist invocations (they used to fall back to generic and still
+count, so the lift is modest but real).
 
 #### Goal B: "Correct Tool Selection Rate"
 
@@ -109,24 +117,27 @@ broad coverage for selective coverage, not raw capability.
 
 | Metric | ctrl-baseline | var1-bifurcated | var2-routing | var2 vs var1 |
 |---|---:|---:|---:|---:|
-| Goal B (classifier intent = measurement) | n/a | 0.0% (0/51) | **13.7% (7/51)** | **+13.7pp** ✓ |
-| **Goal B' (intent + measure-distance subprocess actually succeeded)** | n/a | **0.0%** (specialist never invoked) | **13.7% (7/51)** | **+13.7pp** ✓ |
+| Goal B (canonical intent = measurement) | n/a | 0.0% (0/51) | **27.5% (14/51)** | **+27.5pp** ✓ |
+| **Goal B' (intent + measure-distance actually executed)** | n/a | **0.0%** (specialist never invoked) | **21.6% (11/51)** | **+21.6pp** ✓ |
+| **Goal C (conditional on B — specialist returned data)** | n/a | n/a | **78.6% (11/14)** | n/a |
 
-**Read.** Goal B confirmed; the new framing is **Goal B'**, which adds
-the requirement that the measure-distance subprocess actually ran and
-returned ≥1 distance. Pre-fix, every var2 run had Goal B' = 0% because
-the dispatch chain crashed before the specialist ever produced output.
-RUN_6_BACKUP_LOCAL is the first run where Goal B = Goal B' — every
-classifier-intent-measurement that produced extracted pairs ran
-measure-distance to completion (8 subprocess invocations, 24/24 pair
-measurements computed).
+**Read.** Goal B nearly doubled vs RUN_3's 15.7% — the runs=3 setup
+gives the classifier 3 chances per item to pick measurement, and the
+canonical-intent rule (strongest intent across all calls) means a
+single measurement classification in any run counts. Goal B' = 21.6%
+adds the requirement that the measure-distance subprocess actually
+returned ≥1 distance; pre-fix this was 0%. Goal C, conditional on B
+being met, is 78.6% — every measure-distance subprocess invoked
+returned data, but 3 of the 14 Goal-B-eligible items had the extractor
+return 0 pairs (so md never invoked at all). Those are misroute
+candidates for classifier prompt tuning.
 
 Var1 still invokes `measure-distance` **zero times** across all 51
 candidates × 3 runs (153 cells). The bifurcated tool list exposed
 `measure-distance` to the agent, but the agent never reached for it —
 same sparse-adoption pattern as cc var1's `inspect-drawing` (2/162).
 
-#### Verdict-conversion lift (new in RUN_6_BACKUP_LOCAL)
+#### Verdict-conversion lift
 
 The phase-1 framework only asked "is the right specialist invoked." With
 the chain now executing end-to-end, we can also report what the
@@ -134,12 +145,26 @@ specialist did to the *finding verdict* on items where it ran. The
 question is: did measure-distance convert ctrl's `not-verifiable`
 verdicts into actionable pass/fail?
 
-**6 of 8 items (75%) escaped ctrl's `not-verifiable` majority verdict
-in RUN_6_BACKUP_LOCAL** — 4 to `pass`, 2 to `fail`. The 2 `fail` items
-(EL-1.14, EL-1.37) are real compliance deficiencies the ctrl baseline
-would have left for a human reviewer to follow up on. Full per-item
-table and sample distances in [`var2-uplift.md`](./var2-uplift.md) and
-[`../source-runs/el-md-exp/var-2/compare-vs-ctrl.md`](../source-runs/el-md-exp/var-2/compare-vs-ctrl.md).
+**RUN_7 (runs=3, both ctrl and var-2):** 15 items had successful
+measure-distance. **4 moved from ctrl `not-verifiable` majority** to
+a real RUN_7 verdict (3 pass, 0 fail); **1 of those was ctrl-unanimous**
+(EL-13.33: `not-verifiable:3` → `pass:3`). The per-item moves rate
+lower than RUN_6 (4/15 vs 6/8 = 75%) because RUN_7's broader md
+coverage hit more items where ctrl already had varied or non-unverifiable
+verdicts.
+
+**Goal D candidates** (chain ran cleanly but verdict didn't move):
+- EL-2.1: ctrl unanimous `fail`, RUN_7 unanimous `not-verifiable`
+  despite 9 measure-distance pairs returned. The agent didn't escalate
+  the measurements to a fail verdict.
+- EL-1.37: ctrl `not-verifiable:2, fail:1`; RUN_7 `not-verifiable:2,
+  fail:1` — identical distribution despite 13 measurements.
+- EL-13.10, EL-13.21, EL-13.22, EL-13.23, EL-13.27: pattern of
+  `not-verifiable:2 + 1 dissent` despite the chain running.
+
+These are the seed for iter-2's Goal D work — the agent's
+post-measurement reasoning is the next lever. See full per-item table
+in [`../source-runs/el-md-exp/var-2/compare-vs-ctrl.md`](../source-runs/el-md-exp/var-2/compare-vs-ctrl.md).
 
 ---
 
