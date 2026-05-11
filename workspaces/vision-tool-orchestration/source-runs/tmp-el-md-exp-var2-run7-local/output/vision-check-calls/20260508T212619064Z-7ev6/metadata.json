@@ -1,0 +1,57 @@
+{
+  "callId": "20260508T212619064Z-7ev6",
+  "startedAt": "2026-05-08T21:26:19.064Z",
+  "completedAt": "2026-05-08T21:32:18.519Z",
+  "inputs": {
+    "checklistItemId": "el-md-exp:EL-13.23",
+    "checklistItemText": "Transformer pads lack minimum 5-foot horizontal clearance from storm drain lines",
+    "question": "On the utility or storm drain plan, what is the distance from each transformer pad to the nearest storm drain line (marked SD or showing storm sewer pipes)?",
+    "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+    "sheetNum": 21
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "bacd962b8af80b9bc2eb7133c303f7a9e490aa2dcac89404b55e42f72b7ebe6d",
+    "promptSource": "bureau",
+    "promptSourcePath": "/Users/wnavey/code/controlroom/conductor/workspace/bureau/jurisdictions/austin/workflows/review/prompts/vision-router.md",
+    "output": {
+      "problemType": "measurement",
+      "reasoning": "The agent is directly asking for distance measurement between transformer pads and storm drain lines to verify the 5-foot clearance requirement. This is a clearance measurement question, not a presence or discovery check.",
+      "confidence": 0.99,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "measure-distance",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": "/Users/wnavey/code/controlroom/conductor/workspace/output/vision-check-calls/20260508T212619064Z-7ev6/specialist-measure-distance",
+    "argConstruction": {
+      "pairs": [
+        {
+          "objectA": "Electrical Transformer Pad west of Bldg. 1",
+          "objectB": "nearest storm drain line (marked SD)"
+        },
+        {
+          "objectA": "Electrical Transformer Pad west of Bldg. 2",
+          "objectB": "nearest storm drain line (marked SD)"
+        },
+        {
+          "objectA": "Electrical Transformer Pad west of Bldg. 8",
+          "objectB": "nearest storm drain line (marked SD)"
+        },
+        {
+          "objectA": "Electrical Transformer Pad east of Bldg. 4 (between Bldg. 4 and Bldg. 5)",
+          "objectB": "nearest storm drain line (marked SD)"
+        },
+        {
+          "objectA": "Electrical Transformer Pad east of Bldg. 7 (between Bldg. 7 and Bldg. 6)",
+          "objectB": "nearest storm drain line (marked SD)"
+        }
+      ],
+      "explanation": "Identified five electrical transformer pads on the utility plan and paired each with the nearest storm drain line for clearance measurement.",
+      "callDir": "/Users/wnavey/code/controlroom/conductor/workspace/output/vision-check-calls/20260508T212619064Z-7ev6/specialist-extract-measurement-pairs"
+    }
+  },
+  "phase": "B"
+}

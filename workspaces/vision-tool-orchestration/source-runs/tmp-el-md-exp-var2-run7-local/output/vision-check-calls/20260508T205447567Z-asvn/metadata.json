@@ -1,0 +1,31 @@
+{
+  "callId": "20260508T205447567Z-asvn",
+  "startedAt": "2026-05-08T20:54:47.567Z",
+  "completedAt": "2026-05-08T20:55:04.129Z",
+  "inputs": {
+    "checklistItemId": "el-md-exp:EL-13.13",
+    "checklistItemText": "Trees within 10 lateral feet of pad-mounted equipment are not identified as utility-compatible species per ECM Appendix F, or trees within 15 lateral feet of overhead electric distribution conductors are not utility-compatible",
+    "question": "Are there any trees shown on or near the electrical plan within 10 feet of any transformer pads? If yes, are tree species identified and marked as utility-compatible?",
+    "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+    "sheetNum": 21
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "bacd962b8af80b9bc2eb7133c303f7a9e490aa2dcac89404b55e42f72b7ebe6d",
+    "promptSource": "bureau",
+    "promptSourcePath": "/Users/wnavey/code/controlroom/conductor/workspace/bureau/jurisdictions/austin/workflows/review/prompts/vision-router.md",
+    "output": {
+      "problemType": "generic",
+      "reasoning": "The agent is asking a two-part presence and identification question: (1) whether trees exist within 10 feet of transformer pads, and (2) whether species are identified and marked as compatible. This is a feature-presence and label-readout check, not a measurement task. The actual distance measurement between trees and pads would come later if trees are found; the current question is about presence and species labeling.",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "vision",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": null
+  },
+  "phase": "B"
+}

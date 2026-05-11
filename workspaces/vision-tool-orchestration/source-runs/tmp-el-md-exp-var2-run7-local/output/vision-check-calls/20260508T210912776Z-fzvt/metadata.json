@@ -1,0 +1,36 @@
+{
+  "callId": "20260508T210912776Z-fzvt",
+  "startedAt": "2026-05-08T21:09:12.776Z",
+  "completedAt": "2026-05-08T21:12:35.636Z",
+  "inputs": {
+    "checklistItemId": "el-md-exp:EL-13.19",
+    "checklistItemText": "Transformer pads lack minimum 15-foot clearance from fire lanes",
+    "question": "Are there fire lanes designated on this fire protection plan? If yes, where are the transformer pads (if shown on this sheet) located relative to the fire lanes, and what is the minimum distance from any transformer pad to any fire lane marking?",
+    "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+    "sheetNum": 10
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "bacd962b8af80b9bc2eb7133c303f7a9e490aa2dcac89404b55e42f72b7ebe6d",
+    "promptSource": "bureau",
+    "promptSourcePath": "/Users/wnavey/code/controlroom/conductor/workspace/bureau/jurisdictions/austin/workflows/review/prompts/vision-router.md",
+    "output": {
+      "problemType": "measurement",
+      "reasoning": "Although the agent question begins with a presence check (fire lanes designated?), the primary and substantive request is for the minimum distance measurement between transformer pads and fire lane markings, which directly addresses the 15-foot clearance requirement. The presence question is preliminary; the core task is a clearance measurement.",
+      "confidence": 0.92,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "extract-measurement-pairs",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": "/Users/wnavey/code/controlroom/conductor/workspace/output/vision-check-calls/20260508T210912776Z-fzvt/specialist-extract-measurement-pairs",
+    "argConstruction": {
+      "pairs": [],
+      "explanation": "No objects explicitly labeled as transformer pads could be identified on this sheet, so distance measurements to the fire lanes cannot be established.",
+      "callDir": "/Users/wnavey/code/controlroom/conductor/workspace/output/vision-check-calls/20260508T210912776Z-fzvt/specialist-extract-measurement-pairs"
+    }
+  },
+  "phase": "B"
+}

@@ -1,0 +1,31 @@
+{
+  "callId": "20260508T210829223Z-fq1x",
+  "startedAt": "2026-05-08T21:08:29.223Z",
+  "completedAt": "2026-05-08T21:08:47.380Z",
+  "inputs": {
+    "checklistItemId": "el-md-exp:EL-13.9",
+    "checklistItemText": "Transformer pads lack minimum 20-foot horizontal/radial clearance from fire escapes or stairs serving as fire escapes (oil-filled equipment)",
+    "question": "Are there any fire escapes or exterior stairs serving as fire exits shown on this electrical plan or adjacent to the transformer pads?",
+    "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+    "sheetNum": 21
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "bacd962b8af80b9bc2eb7133c303f7a9e490aa2dcac89404b55e42f72b7ebe6d",
+    "promptSource": "bureau",
+    "promptSourcePath": "/Users/wnavey/code/controlroom/conductor/workspace/bureau/jurisdictions/austin/workflows/review/prompts/vision-router.md",
+    "output": {
+      "problemType": "generic",
+      "reasoning": "The agent is performing a presence check to identify whether fire escapes or exterior stairs exist on or near the plan, which is a prerequisite step before any clearance measurement can be attempted. This is progressive verification: the 20-foot clearance measurement requirement will follow only if fire escapes are confirmed to be present.",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "vision",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": null
+  },
+  "phase": "B"
+}

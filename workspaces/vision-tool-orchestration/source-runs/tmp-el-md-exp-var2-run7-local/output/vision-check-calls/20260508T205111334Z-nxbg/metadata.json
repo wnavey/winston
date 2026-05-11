@@ -1,0 +1,57 @@
+{
+  "callId": "20260508T205111334Z-nxbg",
+  "startedAt": "2026-05-08T20:51:11.334Z",
+  "completedAt": "2026-05-08T20:54:22.686Z",
+  "inputs": {
+    "checklistItemId": "el-md-exp:EL-2.1",
+    "checklistItemText": "Non-utility-compatible trees proposed within 15 lateral feet of overhead electric distribution conductor or equipment",
+    "question": "Where are the overhead electric lines (OHE) shown on the landscape plan, and which trees (by species and location notation if any) are positioned near them? What is the approximate lateral distance from tree locations to the overhead electric conductors?",
+    "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+    "sheetNum": 31
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "bacd962b8af80b9bc2eb7133c303f7a9e490aa2dcac89404b55e42f72b7ebe6d",
+    "promptSource": "bureau",
+    "promptSourcePath": "/Users/wnavey/code/controlroom/conductor/workspace/bureau/jurisdictions/austin/workflows/review/prompts/vision-router.md",
+    "output": {
+      "problemType": "measurement",
+      "reasoning": "Although the agent question begins with sheet-discovery and feature-identification sub-questions (where OHE lines are shown, which trees are nearby), the core question explicitly asks for 'approximate lateral distance from tree locations to overhead electric conductors,' which is a clearance measurement directly tied to the 15-foot compliance threshold. The agent is performing progressive verification but the primary ask is a distance measurement.",
+      "confidence": 0.92,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "measure-distance",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": "/Users/wnavey/code/controlroom/conductor/workspace/output/vision-check-calls/20260508T205111334Z-nxbg/specialist-measure-distance",
+    "argConstruction": {
+      "pairs": [
+        {
+          "objectA": "Tree labeled 'B M' in southwest corner",
+          "objectB": "OHE line along south property line"
+        },
+        {
+          "objectA": "Tree with circular symbol labeled 'M' near H.7 bubble in southeast area",
+          "objectB": "OHE line along south property line"
+        },
+        {
+          "objectA": "Westernmost cloud-symbol tree labeled 'M' in southeast area",
+          "objectB": "OHE line along south property line"
+        },
+        {
+          "objectA": "Middle cloud-symbol tree labeled 'M' in southeast area",
+          "objectB": "OHE line along south property line"
+        },
+        {
+          "objectA": "Easternmost cloud-symbol tree labeled 'M' near H.6 bubble in southeast area",
+          "objectB": "OHE line along south property line"
+        }
+      ],
+      "explanation": "Five tree-to-OHE clearances measured along the southern property line where overhead electric is indicated.",
+      "callDir": "/Users/wnavey/code/controlroom/conductor/workspace/output/vision-check-calls/20260508T205111334Z-nxbg/specialist-extract-measurement-pairs"
+    }
+  },
+  "phase": "B"
+}

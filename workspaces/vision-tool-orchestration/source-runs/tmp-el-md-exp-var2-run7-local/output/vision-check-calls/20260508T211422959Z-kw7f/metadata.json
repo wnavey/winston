@@ -1,0 +1,57 @@
+{
+  "callId": "20260508T211422959Z-kw7f",
+  "startedAt": "2026-05-08T21:14:22.959Z",
+  "completedAt": "2026-05-08T21:19:04.518Z",
+  "inputs": {
+    "checklistItemId": "el-md-exp:EL-13.21",
+    "checklistItemText": "Transformer pads lack minimum 5-foot horizontal clearance from water lines",
+    "question": "On the utility plan or electrical plan, are water lines shown near the transformer pads? What is the distance from each transformer pad to the nearest water line shown?",
+    "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+    "sheetNum": 21
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "bacd962b8af80b9bc2eb7133c303f7a9e490aa2dcac89404b55e42f72b7ebe6d",
+    "promptSource": "bureau",
+    "promptSourcePath": "/Users/wnavey/code/controlroom/conductor/workspace/bureau/jurisdictions/austin/workflows/review/prompts/vision-router.md",
+    "output": {
+      "problemType": "measurement",
+      "reasoning": "The agent question explicitly asks for distance measurement ('What is the distance from each transformer pad to the nearest water line'), which is the core compliance check for the 5-foot clearance requirement. The initial presence question is subordinate to the measurement task being requested.",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "measure-distance",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": "/Users/wnavey/code/controlroom/conductor/workspace/output/vision-check-calls/20260508T211422959Z-kw7f/specialist-measure-distance",
+    "argConstruction": {
+      "pairs": [
+        {
+          "objectA": "Electrical Transformer Pad in the northwest corner near Bldg. 1",
+          "objectB": "nearest water line (marked 'W')"
+        },
+        {
+          "objectA": "Electrical Transformer Pad on the west side near Bldg. 2",
+          "objectB": "nearest water line (marked 'W')"
+        },
+        {
+          "objectA": "Electrical Transformer Pad in the southwest corner near Bldg. 8",
+          "objectB": "nearest water line (marked 'W')"
+        },
+        {
+          "objectA": "Electrical Transformer Pad in the east-central area near Bldg. 5",
+          "objectB": "nearest water line (marked 'W')"
+        },
+        {
+          "objectA": "Electrical Transformer Pad in the southeast area near Bldg. 7",
+          "objectB": "nearest water line (marked 'W')"
+        }
+      ],
+      "explanation": "Five pairs identified to measure the clearance from each of the five labeled Electrical Transformer Pads to the nearest water line marked 'W'.",
+      "callDir": "/Users/wnavey/code/controlroom/conductor/workspace/output/vision-check-calls/20260508T211422959Z-kw7f/specialist-extract-measurement-pairs"
+    }
+  },
+  "phase": "B"
+}
