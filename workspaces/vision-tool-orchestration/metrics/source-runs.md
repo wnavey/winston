@@ -27,7 +27,7 @@ and known issues so the per-variant TSV builds and
 | **cc** | var2-routing | 🔁 needs-rerun | `VISION_CHECK_CC_RUN_4` | **1** | 1700 S. Lamar v2 |
 | **el-md-exp** | ctrl-baseline | ✅ current | `VISION_CHECK_REVIEW_EL_MD_EXP_BASELINE_V3` | 3 | Valley View v1 |
 | **el-md-exp** | var1-bifurcated | ✅ current | `VISION_CHECK_REVIEW_EL_MD_EXP_VAR1_RUN_2` | 3 | Valley View v1 |
-| **el-md-exp** | var2-routing | ✅ current (runs=3 local, chain executes end-to-end) | `VISION_CHECK_REVIEW_EL_MD_EXP_RUN_7_BACKUP_LOCAL_3_RUNS` | 3 | Valley View v1 |
+| **el-md-exp** | var2-routing | ✅ current (runs=3 local, per-run output layout) | `VISION_CHECK_REVIEW_EL_MD_EXP_RUN_9_LOCAL` | 3 | Valley View v1 |
 
 | Status | Meaning |
 |---|---|
@@ -202,41 +202,39 @@ and known issues so the per-variant TSV builds and
 
 | Field | Value |
 |---|---|
-| `runLabel` | `VISION_CHECK_REVIEW_EL_MD_EXP_RUN_7_BACKUP_LOCAL_3_RUNS` |
+| `runLabel` | `VISION_CHECK_REVIEW_EL_MD_EXP_RUN_9_LOCAL` |
 | Inngest event id | _n/a — local conductor execution_ |
 | `workflow_runs.id` | _n/a — local, no DB row_ |
 | Review id | _n/a — local, no DB row_ |
-| Started | 2026-05-09 (local) |
+| Started | 2026-05-11 17:18 UTC (local) |
+| Completed | 2026-05-11 18:52 UTC (local; ~94 min wall clock) |
 | Workflow / overlay | `review` + `--experiment=vision-check` |
 | Submission | Valley View Townhomes v1 (`submissionVersionId=55fb6548-…`) |
 | Guide | `el-md-exp` |
-| `runs` | **3** (local; retires the runs-disparity confounder from RUN_6) |
+| `runs` | **3** |
 | Agent tools | `vision_check`, `semantic-search-blocks` |
 | Flags | `logAllAgentTrace=true`, `step=review-runs` |
 | `enabledVisionSpecialists` | `"generic-vision,measure-distance"` |
 | Bureau commit | post bureau#324 |
-| Conductor PR | post conductor#153 + conductor#154 |
-| Artifacts | [`source-runs/el-md-exp/var-2/output/`](../source-runs/el-md-exp/var-2/output/) (canonical) |
+| Conductor PR | post conductor#155 (per-run vision-check-calls layout) + conductor#156 (`site_plan_number` drop) |
+| Artifacts | [`source-runs/el-md-exp/var-2/output/`](../source-runs/el-md-exp/var-2/output/) (canonical, **per-run layout**) |
 | Metrics TSV | [`metrics/el-md-exp/var2-vision-specialist-routing/per-item.tsv`](el-md-exp/var2-vision-specialist-routing/per-item.tsv) |
-| Run analysis | [`source-runs/el-md-exp/var-2/analysis.md`](../source-runs/el-md-exp/var-2/analysis.md) |
-| Verdict comparison vs ctrl | [`source-runs/el-md-exp/var-2/compare-vs-ctrl.md`](../source-runs/el-md-exp/var-2/compare-vs-ctrl.md) |
+| Inspection TSV (per-run intent vs expected) | [`metrics/el-md-exp/tmp/el-md-exp-var2-run-9/`](el-md-exp/tmp/el-md-exp-var2-run-9/) |
 
 **Notes**
-- **Headline run for var-2 on el-md-exp.** Local conductor execution (bypasses Substation/Inngest cloud hang). Retires the runs-disparity confounder from RUN_6.
-- 89 vision_check calls. Classifier intent: `generic=61, measurement=28, drawing_inspect=0`. 22 measure-distance subprocesses, all 22 succeeded → **99/99 per-pair distance measurements computed (Goal C = 100% on the B-eligible denominator).**
-- **Goals:**
-  - **Goal A** (any vision invoked, strict-majority): **49.0%** (25/51) — beats RUN_3's 47.1%.
-  - **Goal A misuse** (vision invoked on expected_vision=no): 32.0% (16/50).
-  - **Goal B** (canonical intent = measurement on expected_specialist=measure-distance): **27.5%** (14/51) — nearly doubled vs RUN_3's 15.7%.
-  - **Goal B' / Goal C absolute** (chain executed): **21.6%** (11/51). Gap = 3 items where classifier picked measurement but the extractor returned 0 pairs.
-  - **Goal C conditional on B** (specialist returned data | correctly selected): **78.6%** (11/14).
-  - **Goal D** (correct post-result verdict): **not measured — iter-2 follow-up**. Multiple items where the chain ran cleanly but the agent didn't escalate (EL-2.1, EL-1.37, EL-13.10).
-- **Verdict comparison vs ctrl** (both runs=3): 15 items had successful measure-distance. 4 moved from ctrl `not-verifiable` majority → real verdict (3 pass, 0 fail); 1 of those was ctrl-unanimous (EL-13.33: nv:3 → pass:3).
-- **Caveats**: `scaleInchesPerFoot=0.05` hardcoded; max distance 395.2 ft and min 0.0 ft worth spot-checking; EL-13.13 stayed not-verifiable across all 3 runs despite md succeeding (Goal D candidate); Substation/Inngest cloud path still hangs (separate platform issue).
+- **First var-2 run on the per-run output layout** (conductor#155). `vision-check-calls` metadata sits under `output/runs/run-N/` with `runIndex` stamped on each `metadata.json`, so per-(item × run) attribution comes from real tool invocations instead of agentTrace.tools_used.
+- 67 vision_check calls total: **run-1=19, run-2=27, run-3=21**. Classifier intent: `generic=42, measurement=25, drawing_inspect=0`. 23 measure-distance subprocesses, all 23 succeeded; 2 additional measurement-classified calls short-circuited at extract-measurement-pairs (returned 0 pairs).
+- **Goals (strict-majority across 3 runs):**
+  - **Goal A** (any vision invoked, strict-majority): **15.7%** (8/51) on expected=yes, **92.0%** (46/50) on expected=no. Net overall 53.5% (54/101).
+  - **Goal B** (majority `measurement` on expected_specialist=measure-distance): **9.8%** (5/51). One 3-way-tie (EL-13.13). 43 of 51 expected-md items had majority `none`.
+  - **Goal C** (subprocess success on dispatched measure-distance): **100%** (23/23).
+  - **Goal D** (correct post-result verdict): **not measured — iter-2 follow-up**.
+- **Regression vs RUN_7**: Goal A on expected=yes dropped from 49.0% → 15.7%; Goal B from 27.5% → 9.8%. The drop is real-attribution honest — RUN_7 numbers were partly inflated by agentTrace.tools_used over-reporting (the agent self-reports vision use in 41 (item × run) pairs that have no corresponding `vision-check-calls/metadata.json`). On expected=no, RUN_9 *improved* (68.0% → 92.0%) — the agent is more conservative across the board.
+- **Driver to investigate:** the 43 expected-md items where majority of runs invoked nothing at all. See [`metrics/el-md-exp/tmp/el-md-exp-var2-run-9/run-9-no-vision-check-analysis.md`](el-md-exp/tmp/el-md-exp-var2-run-9/run-9-no-vision-check-analysis.md) for per-item hypothesis (valid skip vs invalid skip).
 
 **Supersedes**
 
-`VISION_CHECK_REVIEW_EL_MD_EXP_RUN_6_BACKUP_LOCAL` (workflow_runs.id `f9e578b3-94f5-4fa6-8fca-6f49c1f029f4`, review id `0f477f13-6ee9-4eab-a2b5-17b07c4195f5`, started 2026-05-08 20:06 UTC, runs=1). RUN_6 was the first run where the chain executed end-to-end but was runs=1; RUN_7 is the runs=3 version on the same fixed chain. RUN_6 in turn superseded RUN_3 (chain broken pre-fix).
+`VISION_CHECK_REVIEW_EL_MD_EXP_RUN_7_BACKUP_LOCAL_3_RUNS` (started 2026-05-09 13:00 UTC, runs=3 local). RUN_7 used the flat `output/vision-check-calls/` layout and the canonical-intent precedence trick for per-run attribution. RUN_9 is the first run on the per-run layout (conductor#155), so per-call attribution is no longer derived. Headline numbers regress under honest attribution; this is a measurement-honesty correction, not a model regression on the dispatch side (Goal C still at 100%).
 ---
 
 ## What "complete" looks like
@@ -246,7 +244,7 @@ For phase 1 to declare done, all 6 cells should be ✅ **current** with no outst
 - [ ] cc / var2: re-fire at `runs=3` to retire runs-disparity confounder on cc Goal A
 - [x] el-md-exp / ctrl-baseline: phase-1 numbers populated (Goal A 41.2%; Goal B n/a)
 - [x] el-md-exp / var1: re-fired as `VAR1_RUN_2` post bureau#317. Coverage closed (303/303 cells). **Goal A 74.5%**, Goal B 0/51 (specialist still never invoked).
-- [x] el-md-exp / var2: re-fired as `RUN_7_BACKUP_LOCAL_3_RUNS` post bureau#324 + conductor#153 + conductor#154 (runs=3, retires RUN_6 disparity). **Goal A 49.0%, Goal B 27.5%, Goal B' 21.6%, Goal C (conditional on B) 78.6%.** Verdict-conversion: 4 of 15 md-succeeded items moved from ctrl `not-verifiable` to real verdict.
+- [x] el-md-exp / var2: re-fired as `RUN_9_LOCAL` post conductor#155 (per-run output layout) + conductor#156 (3 runs, real per-call attribution). **Goal A 15.7% (expected=yes) / 92.0% (expected=no), Goal B 9.8%, Goal C 100%.** Numbers regress vs RUN_7 because attribution is no longer inflated by agentTrace.tools_used. Driver to investigate: 43/51 expected-md items had majority `none` — see [`run-9-no-vision-check-analysis.md`](el-md-exp/tmp/el-md-exp-var2-run-9/run-9-no-vision-check-analysis.md).
 - [x] **fix measure-distance overlay's `review.md`** ✅ landed via bureau#317 + validated by VAR1_RUN_2.
 - [x] **bureau-side classifier prompt iteration for el-md-exp** ✅ delivered as conductor#151 + bureau#318 + validated by RUN_3.
 - [x] **conductor measurement-dispatch wiring** ✅ delivered as conductor#153 + conductor#154 + bureau#324. Validated by RUN_6_BACKUP_LOCAL + RUN_7_BACKUP_LOCAL_3_RUNS.

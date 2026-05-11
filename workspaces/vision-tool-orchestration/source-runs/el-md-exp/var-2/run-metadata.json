@@ -1,14 +1,14 @@
 {
   "set": "el-md-exp",
   "variant": "var-2",
-  "variantLabel": "var2-routing (vision_check; classifier dispatches; allow-list-aware; full extract→measure-distance chain executing end-to-end; runs=3)",
-  "runLabel": "VISION_CHECK_REVIEW_EL_MD_EXP_RUN_7_BACKUP_LOCAL_3_RUNS",
+  "variantLabel": "var2-routing (vision_check; classifier dispatches; per-run output layout — output/runs/run-N/vision-check-calls/...)",
+  "runLabel": "VISION_CHECK_REVIEW_EL_MD_EXP_RUN_9_LOCAL",
   "workflowRunsId": null,
   "reviewId": null,
   "inngestEventId": null,
-  "startedAt": "2026-05-09T13:00:00Z",
-  "completedAt": "2026-05-09T14:00:00Z",
-  "wallClockMinutes": null,
+  "startedAt": "2026-05-11T17:18:00Z",
+  "completedAt": "2026-05-11T18:52:00Z",
+  "wallClockMinutes": 94,
   "workflow": "review",
   "experimentOverlay": "vision-check",
   "submission": {
@@ -18,94 +18,26 @@
   },
   "checklistOrGuide": "el-md-exp",
   "runs": 3,
-  "agentTools": [
-    "vision_check",
-    "semantic-search-blocks"
-  ],
-  "flags": [
-    "logAllAgentTrace=true",
-    "step=review-runs"
-  ],
+  "agentTools": ["vision_check", "semantic-search-blocks"],
+  "flags": ["logAllAgentTrace=true", "step=review-runs"],
   "enabledVisionSpecialists": "generic-vision,measure-distance",
   "model": "claude-haiku-4-5-20251001",
   "bureauCommit": "post bureau#324",
-  "conductorPr": "post conductor#153 + conductor#154",
-  "metricsTsvPath": "metrics/el-md-exp/var2-vision-specialist-routing/per-item.tsv",
+  "conductorPr": "post conductor#155 (per-run vision-check-calls layout) + conductor#156 (site_plan_number drop)",
   "notes": [
-    "**Headline run for var-2 on el-md-exp.** Local conductor execution (npm run conduct --step=review-runs --runs=3) — bypasses Substation/Inngest cloud path which was hanging on RUN_4/RUN_5 attempts. Retires the runs-disparity confounder from RUN_6_BACKUP_LOCAL.",
-    "89 vision_check calls. Classifier intent: generic=61, measurement=28, drawing_inspect=0. 22 measurement-routed calls produced ≥1 pair → measure-distance ran 22 times → 99/99 per-pair distance measurements computed (100% subprocess success, Goal C=100% on the Goal-B-eligible denominator).",
-    "**Goal A** (strict majority, any vision invoked on expected_vision=yes): 25/51 = 49.0% (best yet — beats RUN_3's 47.1%).",
-    "**Goal A misuse** (vision invoked on expected_vision=no): 16/50 = 32.0%.",
-    "**Goal B** (canonical intent = measurement on expected_specialist=measure-distance): 14/51 = 27.5% (nearly doubled vs RUN_3's 15.7% — runs=3 gives the classifier more chances).",
-    "**Goal B' / Goal C absolute** (chain actually executed): 11/51 = 21.6%. Gap between B and B' is 3 items where the classifier picked measurement but the extractor returned 0 pairs (so md never ran).",
-    "**Goal C conditional on B** (specialist returned data | specialist correctly selected): 11/14 = 78.6%.",
-    "**Verdict comparison vs ctrl** (both runs=3): 15 items had successful measure-distance. 4 items moved from ctrl `not-verifiable` majority → RUN_7 real verdict (3 pass, 0 fail). 1 of those was unanimous (EL-13.33: `not-verifiable:3` → `pass:3`).",
-    "**Goal D emerged as the iter-2 follow-up**: on multiple items where the chain ran cleanly, the agent's post-measurement verdict didn't escalate. Notably EL-2.1 (ctrl unanimous fail → RUN_7 unanimous not-verifiable despite 9 distance measurements) and EL-1.37 (13 measurements, same verdict distribution as ctrl). See `compare-vs-ctrl.md` + `analysis.md`.",
-    "**Caveats persist:** scaleInchesPerFoot=0.05 hardcoded (RUN_7 max distance 395.2 ft, min 0.0 ft — both worth spot-checking); EL-13.13 stayed not-verifiable across all 3 runs despite measure-distance succeeding.",
-    "Supersedes RUN_6_BACKUP_LOCAL (workflow_runs.id f9e578b3-94f5-4fa6-8fca-6f49c1f029f4; runs=1; same fixed chain but single-run variance). RUN_6 in turn superseded RUN_3 (chain broken pre-fix)."
+    "Local conductor execution (--step=review-runs --runs=3). First var-2 run on the new per-run output layout (conductor#155) — vision-check-calls metadata sits under output/runs/run-N/ with runIndex stamped on metadata.json, enabling real per-run attribution.",
+    "67 vision_check calls total (run-1: 19, run-2: 27, run-3: 21). Classifier intent: generic=42, measurement=25.",
+    "23 measure-distance subprocesses dispatched, all 23 succeeded. 2 calls short-circuited at extract-measurement-pairs (returned 0 pairs).",
+    "**Goal A**: 8/51 (15.7%) on expected=yes, 46/50 (92.0%) on expected=no — agent invokes vision LESS often than RUN_7. Net 53.5% overall.",
+    "**Goal B** (majority `measurement` after strict-majority vote): 5/51 (9.8%). Regressed vs RUN_7's 23.5% — primary driver is the 43 expected-md items where majority of runs called nothing at all.",
+    "**Goal C** (subprocess success rate): 23/23 = 100% on the calls that reached measure-distance.",
+    "Inspection TSV: ../../../metrics/el-md-exp/tmp/el-md-exp-var2-run-9/el-md-exp-var2-run9-vision-check-calls-compared-to-expected.tsv"
   ],
-  "specialistCallStatus": {
-    "vision_check_calls_total": 89,
-    "classifier_intent": {
-      "generic": 61,
-      "measurement": 28,
-      "drawing_inspect": 0
-    },
-    "extractMeasurementPairs": {
-      "invocations": 28,
-      "pairsExtractedTotal": 99,
-      "callsWithZeroPairs": 6
-    },
-    "measureDistance": {
-      "subprocessRuns": 22,
-      "subprocessRunsAllPairsSucceeded": 22,
-      "perPairAttempts": 99,
-      "perPairSuccesses": 99,
-      "distanceRangeFt": [
-        0.0,
-        395.2
-      ],
-      "distanceMedianFt": 27.9
-    },
-    "fallbackReasonCounts": {
-      "measurement_arg_construction_not_implemented": 0,
-      "specialist_disabled": 0
-    },
-    "note": "Goal C (correct tool execution) = 100% of measure-distance subprocesses returned ≥1 distance. The 6 cases where extract-measurement-pairs returned 0 pairs (so md never invoked) are misroute candidates for classifier prompt tuning."
-  },
-  "goals": {
-    "A": {
-      "hits": 25,
-      "total": 51,
-      "rate": "49.0%"
-    },
-    "A_misuse": {
-      "hits": 16,
-      "total": 50,
-      "rate": "32.0%"
-    },
-    "B_canonical_intent": {
-      "hits": 14,
-      "total": 51,
-      "rate": "27.5%"
-    },
-    "B_prime_chain_executed": {
-      "hits": 11,
-      "total": 51,
-      "rate": "21.6%"
-    },
-    "C_conditional_on_B": {
-      "hits": 11,
-      "total": 14,
-      "rate": "78.6%"
-    },
-    "D_post_result_verdict": "not measured — iter-2 follow-up"
-  },
   "supersedes": {
-    "runLabel": "VISION_CHECK_REVIEW_EL_MD_EXP_RUN_6_BACKUP_LOCAL",
-    "workflowRunsId": "f9e578b3-94f5-4fa6-8fca-6f49c1f029f4",
-    "reviewId": "0f477f13-6ee9-4eab-a2b5-17b07c4195f5",
-    "startedAt": "2026-05-08T20:06:00Z",
-    "reason": "RUN_6 was runs=1 (local backup because Substation cloud path was hanging). RUN_7 is runs=3 — same fixed chain, retires the variance confounder on Goal A. Headline numbers shift upward across A/B/B'."
+    "runLabel": "VISION_CHECK_REVIEW_EL_MD_EXP_RUN_7_BACKUP_LOCAL_3_RUNS",
+    "workflowRunsId": null,
+    "reviewId": null,
+    "startedAt": "2026-05-09T13:00:00Z",
+    "reason": "RUN_9 is the first run on the per-run output layout (conductor#155), so attribution is no longer dependent on the canonical-intent precedence trick. Headline numbers shift downward — under honest per-call attribution, Goal A drops to 15.7% (expected=yes) and Goal B to 9.8%, indicating RUN_7's higher numbers were partly inflated by agentTrace.tools_used over-reporting."
   }
 }
