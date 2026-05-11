@@ -1,0 +1,57 @@
+{
+  "callId": "20260508T204615145Z-gky4",
+  "startedAt": "2026-05-08T20:46:15.145Z",
+  "completedAt": "2026-05-08T20:51:11.330Z",
+  "inputs": {
+    "checklistItemId": "el-md-exp:EL-13.1",
+    "checklistItemText": "Transformer pads lack minimum 5-foot clearance from buildings, structures, and building foundations",
+    "question": "Where are the transformer pads located on this electrical plan, and what are their minimum clearances to the nearest buildings or structures? Are transformers shown with dimension callouts indicating distances to building edges?",
+    "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+    "sheetNum": 21
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "bacd962b8af80b9bc2eb7133c303f7a9e490aa2dcac89404b55e42f72b7ebe6d",
+    "promptSource": "bureau",
+    "promptSourcePath": "/Users/wnavey/code/controlroom/conductor/workspace/bureau/jurisdictions/austin/workflows/review/prompts/vision-router.md",
+    "output": {
+      "problemType": "measurement",
+      "reasoning": "The agent question explicitly asks for 'minimum clearances to the nearest buildings or structures' and whether 'dimension callouts indicating distances' are present. This is a direct clearance measurement question aligned with the checklist requirement, not a preliminary presence check.",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "measure-distance",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": "/Users/wnavey/code/controlroom/conductor/workspace/output/vision-check-calls/20260508T204615145Z-gky4/specialist-measure-distance",
+    "argConstruction": {
+      "pairs": [
+        {
+          "objectA": "Electrical Transformer Pad west of Bldg. 1 (near Unit 101)",
+          "objectB": "West exterior wall of Bldg. 1"
+        },
+        {
+          "objectA": "Electrical Transformer Pad west of Bldg. 2 (near Unit 201)",
+          "objectB": "West exterior wall of Bldg. 2"
+        },
+        {
+          "objectA": "Electrical Transformer Pad west of Bldg. 8 (near Unit 801)",
+          "objectB": "West exterior wall of Bldg. 8"
+        },
+        {
+          "objectA": "Electrical Transformer Pad west of Bldg. 5 (near Unit 503)",
+          "objectB": "West exterior wall of Bldg. 5"
+        },
+        {
+          "objectA": "Electrical Transformer Pad east of Bldg. 7 (near Unit 704)",
+          "objectB": "East exterior wall of Bldg. 7"
+        }
+      ],
+      "explanation": "Identified five transformer pad locations on the electrical plan, each paired with its nearest adjacent building exterior wall to check for the required 5-foot minimum clearance.",
+      "callDir": "/Users/wnavey/code/controlroom/conductor/workspace/output/vision-check-calls/20260508T204615145Z-gky4/specialist-extract-measurement-pairs"
+    }
+  },
+  "phase": "B"
+}

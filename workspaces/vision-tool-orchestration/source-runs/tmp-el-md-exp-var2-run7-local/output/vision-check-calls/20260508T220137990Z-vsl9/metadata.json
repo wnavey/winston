@@ -1,0 +1,31 @@
+{
+  "callId": "20260508T220137990Z-vsl9",
+  "startedAt": "2026-05-08T22:01:37.990Z",
+  "completedAt": "2026-05-08T22:01:57.816Z",
+  "inputs": {
+    "checklistItemId": "el-md-exp:EL-13.5",
+    "checklistItemText": "Transformer pads lack minimum 5-foot lateral clearance from balconies and building overhangs, or have coverings/structures directly above pad or minimum equipment area",
+    "question": "Looking at the site plan and building elevations, are there any building balconies, overhangs, or roof structures directly above or adjacent to any transformer pads?",
+    "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+    "sheetNum": 21
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "bacd962b8af80b9bc2eb7133c303f7a9e490aa2dcac89404b55e42f72b7ebe6d",
+    "promptSource": "bureau",
+    "promptSourcePath": "/Users/wnavey/code/controlroom/conductor/workspace/bureau/jurisdictions/austin/workflows/review/prompts/vision-router.md",
+    "output": {
+      "problemType": "generic",
+      "reasoning": "The agent is asking a presence/identification question—whether balconies, overhangs, or roof structures exist near transformer pads—which is a prerequisite step before measuring clearance distances. This is progressive verification; the actual 5-foot clearance measurement would come after confirming such features are present.",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "vision",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": null
+  },
+  "phase": "B"
+}

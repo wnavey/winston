@@ -1,0 +1,31 @@
+{
+  "callId": "20260508T215348060Z-88v5",
+  "startedAt": "2026-05-08T21:53:48.060Z",
+  "completedAt": "2026-05-08T22:00:28.546Z",
+  "inputs": {
+    "checklistItemId": "el-md-exp:EL-13.28",
+    "checklistItemText": "Transformer locations or proposed facilities lack minimum 15-foot radius clearance from overhead distribution primary and neutral conductors (measured from conductors, not pole centerline)",
+    "question": "On the utility plan or electrical plan, are overhead distribution lines labeled or shown? If yes, are any overhead poles or conductors within 15 feet of any transformer pads?",
+    "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+    "sheetNum": 21
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "bacd962b8af80b9bc2eb7133c303f7a9e490aa2dcac89404b55e42f72b7ebe6d",
+    "promptSource": "bureau",
+    "promptSourcePath": "/Users/wnavey/code/controlroom/conductor/workspace/bureau/jurisdictions/austin/workflows/review/prompts/vision-router.md",
+    "output": {
+      "problemType": "generic",
+      "reasoning": "The agent is performing a progressive presence/identification check (asking whether overhead lines are labeled/shown and whether poles/conductors exist within the vicinity), not yet requesting a precise distance measurement between specific features. Once overhead conductors and transformer pads are confirmed present, a subsequent measurement question would follow.",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "vision",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": null
+  },
+  "phase": "B"
+}

@@ -1,0 +1,32 @@
+{
+  "callId": "20260508T205452306Z-iuoe",
+  "startedAt": "2026-05-08T20:54:52.306Z",
+  "completedAt": "2026-05-08T20:58:22.830Z",
+  "inputs": {
+    "checklistItemId": "el-md-exp:EL-1.1",
+    "checklistItemText": "Buildings and permanent structures do not maintain minimum 7 feet 6 inches horizontal sky-to-ground clearance from overhead electric conductors",
+    "question": "On the proposed site plan, are the existing overhead electric lines from Valley View Road and the southern boundary shown? If so, are clearance dimensions labeled between the buildings and these overhead lines? Specifically, look for dimensions showing horizontal distances from the outer conductor to building faces.",
+    "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+    "sheetNum": 9,
+    "regionHint": "western boundary along Valley View Road and southern boundary where overhead lines exist"
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "bacd962b8af80b9bc2eb7133c303f7a9e490aa2dcac89404b55e42f72b7ebe6d",
+    "promptSource": "bureau",
+    "promptSourcePath": "/Users/wnavey/code/controlroom/conductor/workspace/bureau/jurisdictions/austin/workflows/review/prompts/vision-router.md",
+    "output": {
+      "problemType": "generic",
+      "reasoning": "The agent is asking a two-part presence and labeling question: (1) whether overhead electric lines are shown on the plan, and (2) whether clearance dimensions are labeled. This is a sheet-discovery and label-readout question, not a measurement task. The actual clearance measurement/verification would come after confirming these elements exist and are labeled.",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "vision",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": null
+  },
+  "phase": "B"
+}

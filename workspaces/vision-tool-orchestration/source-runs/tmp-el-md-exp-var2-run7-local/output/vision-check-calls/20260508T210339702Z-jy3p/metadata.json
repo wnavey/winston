@@ -1,0 +1,31 @@
+{
+  "callId": "20260508T210339702Z-jy3p",
+  "startedAt": "2026-05-08T21:03:39.702Z",
+  "completedAt": "2026-05-08T21:07:58.328Z",
+  "inputs": {
+    "checklistItemId": "el-md-exp:EL-13.2",
+    "checklistItemText": "Transformer pads lack minimum 5-foot clearance from retaining walls",
+    "question": "Are there any retaining walls near the transformer pads on this sheet? If yes, measure the distance from each transformer pad to any adjacent retaining walls.",
+    "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+    "sheetNum": 21
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "bacd962b8af80b9bc2eb7133c303f7a9e490aa2dcac89404b55e42f72b7ebe6d",
+    "promptSource": "bureau",
+    "promptSourcePath": "/Users/wnavey/code/controlroom/conductor/workspace/bureau/jurisdictions/austin/workflows/review/prompts/vision-router.md",
+    "output": {
+      "problemType": "generic",
+      "reasoning": "The agent is performing a progressive verification: first asking whether retaining walls are present near transformer pads (a presence/feature-discovery question), with measurement to follow conditionally. The immediate question is presence-based, not a direct clearance measurement.",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "vision",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": null
+  },
+  "phase": "B"
+}

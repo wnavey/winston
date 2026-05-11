@@ -1,0 +1,74 @@
+{
+  "callId": "20260508T210852943Z-f3w9",
+  "startedAt": "2026-05-08T21:08:52.943Z",
+  "completedAt": "2026-05-08T21:12:19.418Z",
+  "inputs": {
+    "checklistItemId": "el-md-exp:EL-1.37",
+    "checklistItemText": "Trees proposed within 10 lateral feet of overhead distribution conductors or 50 lateral feet of overhead transmission conductors are not from Utility Compatible Shade Trees list",
+    "question": "What trees are shown on the landscape plan near the overhead electric lines? Are they species listed, and what are the lateral distances from the tree locations to the overhead electric conductors?",
+    "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+    "sheetNum": 31,
+    "regionHint": "along southern and western property boundaries where OHE is shown"
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "bacd962b8af80b9bc2eb7133c303f7a9e490aa2dcac89404b55e42f72b7ebe6d",
+    "promptSource": "bureau",
+    "promptSourcePath": "/Users/wnavey/code/controlroom/conductor/workspace/bureau/jurisdictions/austin/workflows/review/prompts/vision-router.md",
+    "output": {
+      "problemType": "measurement",
+      "reasoning": "The agent is asking for both tree identification (generic) and lateral distance measurements from trees to overhead conductors (measurement). Since the checklist requirement fundamentally hinges on whether clearance distances meet the 10-foot or 50-foot thresholds, and the agent is explicitly requesting distance measurements as part of the verification, the measurement component is the primary routing need.",
+      "confidence": 0.92,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "measure-distance",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": "/Users/wnavey/code/controlroom/conductor/workspace/output/vision-check-calls/20260508T210852943Z-f3w9/specialist-measure-distance",
+    "argConstruction": {
+      "pairs": [
+        {
+          "objectA": "Northernmost tree (labeled SY M) in the top-left shaded area",
+          "objectB": "Overhead electric line along the western boundary"
+        },
+        {
+          "objectA": "Middle tree (labeled SY M) in the top-left shaded area",
+          "objectB": "Overhead electric line along the western boundary"
+        },
+        {
+          "objectA": "Southernmost tree (labeled SY M) in the top-left shaded area",
+          "objectB": "Overhead electric line along the western boundary"
+        },
+        {
+          "objectA": "Northern tree (labeled SY M) in the middle-left shaded area",
+          "objectB": "Overhead electric line along the western boundary"
+        },
+        {
+          "objectA": "Southern tree (labeled SY M) in the middle-left shaded area",
+          "objectB": "Overhead electric line along the western boundary"
+        },
+        {
+          "objectA": "Tree in the bottom-left (southwest) corner of the property",
+          "objectB": "Overhead electric line at the southwest corner"
+        },
+        {
+          "objectA": "Westernmost tree in the bottom-right (southeast) corner planting area",
+          "objectB": "Overhead electric line along the southern boundary"
+        },
+        {
+          "objectA": "Middle tree in the bottom-right (southeast) corner planting area",
+          "objectB": "Overhead electric line along the southern boundary"
+        },
+        {
+          "objectA": "Easternmost tree in the bottom-right (southeast) corner planting area",
+          "objectB": "Overhead electric line along the southern boundary"
+        }
+      ],
+      "explanation": "Nine tree-to-OHE clearance measurements have been generated to verify the lateral distances of proposed trees planted near the overhead electric lines along the western and southern property boundaries.",
+      "callDir": "/Users/wnavey/code/controlroom/conductor/workspace/output/vision-check-calls/20260508T210852943Z-f3w9/specialist-extract-measurement-pairs"
+    }
+  },
+  "phase": "B"
+}
