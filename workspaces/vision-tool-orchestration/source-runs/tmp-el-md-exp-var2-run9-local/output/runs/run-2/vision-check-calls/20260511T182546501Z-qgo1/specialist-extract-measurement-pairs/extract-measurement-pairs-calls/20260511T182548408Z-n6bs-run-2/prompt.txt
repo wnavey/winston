@@ -1,0 +1,57 @@
+You are reading an engineering site plan drawing to identify which pairs of objects need to be measured for a compliance check.
+
+You will be shown a single image — a cropped region of one sheet from a site plan submission — and a question from a reviewing agent that implies one or more distance/clearance measurements. Your job is to convert the agent's free-form question into a concrete list of `(objectA, objectB)` pairs that a downstream measurement tool can locate and measure.
+
+## Reviewing agent's question
+
+What is the horizontal distance from the southernmost edge of Building 8 to the OHE line shown along the southern property boundary? What is the horizontal distance from the easternmost edge of Buildings 5 and 6 to the OHE line along the eastern property boundary?
+
+## Compliance context (the deficiency text the agent is verifying)
+
+Buildings and permanent structures do not maintain minimum 7 feet 6 inches horizontal sky-to-ground clearance from overhead electric conductors
+
+## Region hint (from the calling agent)
+
+The agent suggests focusing on: "Buildings 5, 6, and 8 relative to OHE property boundary lines". Use it if it aligns with what you see; otherwise rely on the full cropped drawing.
+
+## How to answer
+
+Return a single JSON object:
+
+```json
+{
+  "objectPairs": [
+    { "objectA": "...", "objectB": "..." }
+  ],
+  "explanation": "..."
+}
+```
+
+### Field rules
+
+- **`objectPairs`** — an array of object pairs to be measured. Each pair has two free-form descriptive strings: `objectA` is the first object, `objectB` is the second. **Both must be specific enough that a separate vision call, given just the cropped drawing, can locate them.** Include the object's type and its location/identifier on the drawing — e.g. `"transformer pad in NE area near Building A"`, `"north wall of Building A"`, `"FH-3 fire hydrant near south property line"`. Bare type names like `"transformer pad"` or `"building"` are not specific enough when there are multiple instances.
+
+- **`explanation`** — a short human-readable note. Set this when you cannot produce concrete pairs (see *No-pair cases* below). When you DO produce pairs, set this to a brief one-sentence summary of what the pairs cover (e.g., "Three transformer-to-building clearances on this electrical plan."). Always populate this field.
+
+### Enumerate every instance pair the question implies
+
+If the agent asks "where are the transformer pads and what are their distances to the nearest building," and you can see three transformer pads on the drawing, emit **three pairs** — one per transformer-to-its-nearest-building measurement. Do not collapse to a single type-pair. The downstream tool measures one pair at a time; under-enumerating means missed measurements.
+
+If the agent asks for "the closest distance" between two object classes (e.g., "closest distance between any drive aisle and any building"), you may emit a single pair if the closest pair is unambiguous from the drawing. If multiple candidate closest pairs exist, emit each one and let the downstream tool pick the smallest.
+
+### No-pair cases
+
+If you cannot produce concrete pairs, return `objectPairs: []` and explain in `explanation`. Common cases:
+
+1. **The question isn't actually a distance/clearance check.** E.g., "Are there transformer pads on this sheet?" alone — no measurement is implied.
+2. **The objects aren't visible.** E.g., the question asks about transformer pads but no transformer-pad symbols are present in the drawing.
+3. **The drawing is too unclear to identify objects.** E.g., illegible labels, overlapping symbols, drawing region is mostly blank.
+
+In all three cases, write a short `explanation` the agent can read directly — it will be returned to the agent as the answer for this measurement question.
+
+## Important guidelines
+
+1. **Be specific in object descriptions.** The downstream tool will re-locate each object on the same drawing using only the strings you provide. "Transformer pad" is not enough if there are multiple — include positional context ("in NE corner", "near Building A", "south of the loading dock") or a label visible on the drawing ("TX-2", "FH-3").
+2. **Match the units of measurement to the agent's intent.** If the question asks for clearance from a building's *foundation* vs. its *exterior wall*, use the more specific one in `objectB` (e.g., "north exterior wall of Building A" or "foundation perimeter of Building A"). Default to the visible feature on a site plan, which is usually the wall.
+3. **Don't invent pairs.** If the agent's question doesn't imply a measurement (or you can't see the objects), return `objectPairs: []` with an explanation. A wrong pair wastes a downstream call and confuses the agent.
+4. **Return only the JSON object.** Do not wrap it in prose, markdown, or explanation outside the JSON itself.

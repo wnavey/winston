@@ -1,0 +1,58 @@
+{
+  "callId": "20260511T182209463Z-f93l",
+  "runIndex": "run-1",
+  "startedAt": "2026-05-11T18:22:09.463Z",
+  "completedAt": "2026-05-11T18:25:06.744Z",
+  "inputs": {
+    "checklistItemId": "el-md-exp:EL-13.13",
+    "checklistItemText": "Trees within 10 lateral feet of pad-mounted equipment are not identified as utility-compatible species per ECM Appendix F, or trees within 15 lateral feet of overhead electric distribution conductors are not utility-compatible",
+    "question": "On the landscape plan, identify all trees (both existing to remain and newly planted). For each tree within 10 lateral feet of any transformer pad location, identify the tree species using the plant list/legend. Check whether each species is marked or identified as utility-compatible in the landscape notes or specifications. Also identify any trees within 15 feet of overhead electric distribution lines shown on the utility plan.",
+    "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+    "sheetNum": 31
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "bacd962b8af80b9bc2eb7133c303f7a9e490aa2dcac89404b55e42f72b7ebe6d",
+    "promptSource": "bureau",
+    "promptSourcePath": "/Users/wnavey/code/controlroom/conductor/workspace/bureau/jurisdictions/austin/workflows/review/prompts/vision-router.md",
+    "output": {
+      "problemType": "measurement",
+      "reasoning": "The agent question explicitly asks to identify trees within specific lateral distances (10 feet from transformer pads, 15 feet from OHE lines) and then verify species compatibility. The distance-based identification and clearance verification are the core tasks, making this fundamentally a measurement problem despite the secondary species-lookup component.",
+      "confidence": 0.92,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "measure-distance",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": "/Users/wnavey/code/controlroom/conductor/workspace/output/runs/run-1/vision-check-calls/20260511T182209463Z-f93l/specialist-measure-distance",
+    "argConstruction": {
+      "pairs": [
+        {
+          "objectA": "tree labeled 'M' in the bottom left corner",
+          "objectB": "overhead electric line (OHE) running along the southern boundary"
+        },
+        {
+          "objectA": "tree labeled 'M' in the bottom left corner",
+          "objectB": "rectangular equipment pad located just north of the bottom left tree"
+        },
+        {
+          "objectA": "tree labeled '+' in the bottom right corner cluster",
+          "objectB": "overhead electric line (OHE) running along the southern boundary"
+        },
+        {
+          "objectA": "westernmost tree labeled 'M' in the bottom right corner cluster",
+          "objectB": "overhead electric line (OHE) running along the southern boundary"
+        },
+        {
+          "objectA": "easternmost tree labeled 'M' in the bottom right corner cluster",
+          "objectB": "overhead electric line (OHE) running along the southern boundary"
+        }
+      ],
+      "explanation": "Identified pairs for measuring clearance between trees and the overhead electric line (OHE) along the southern boundary, as well as one potential pad-mounted equipment location near a tree in the bottom left.",
+      "callDir": "/Users/wnavey/code/controlroom/conductor/workspace/output/runs/run-1/vision-check-calls/20260511T182209463Z-f93l/specialist-extract-measurement-pairs"
+    }
+  },
+  "phase": "B"
+}

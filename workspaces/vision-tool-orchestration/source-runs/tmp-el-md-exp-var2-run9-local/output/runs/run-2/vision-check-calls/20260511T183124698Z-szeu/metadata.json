@@ -1,0 +1,33 @@
+{
+  "callId": "20260511T183124698Z-szeu",
+  "runIndex": "run-2",
+  "startedAt": "2026-05-11T18:31:24.698Z",
+  "completedAt": "2026-05-11T18:31:52.352Z",
+  "inputs": {
+    "checklistItemId": "el-md-exp:EL-1.27",
+    "checklistItemText": "Customer facilities proposed to be installed under or over Austin Energy overhead distribution facilities in violation of prohibition, or items within electric easements do not maintain minimum 7.5-foot clearance from outside conductor",
+    "question": "Are there any electric easements shown on the site plan (such as \"Elec. Easement\" labels)? If so, do the proposed buildings, driveways, sidewalks, or other improvements fall within or encroach on these electric easement areas?",
+    "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+    "sheetNum": 9,
+    "regionHint": "property boundaries and easement labels showing electric easement areas"
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "bacd962b8af80b9bc2eb7133c303f7a9e490aa2dcac89404b55e42f72b7ebe6d",
+    "promptSource": "bureau",
+    "promptSourcePath": "/Users/wnavey/code/controlroom/conductor/workspace/bureau/jurisdictions/austin/workflows/review/prompts/vision-router.md",
+    "output": {
+      "problemType": "generic",
+      "reasoning": "The agent is asking a presence and location question (do easements exist, and do features fall within them), not a precise distance measurement. While the requirement ultimately concerns a 7.5-foot clearance, this is a progressive verification step to identify whether easements are present and whether encroachment occurs at all—measurement of the specific clearance distance would come next if encroachment is confirmed.",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "vision",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": null
+  },
+  "phase": "B"
+}

@@ -1,0 +1,33 @@
+{
+  "callId": "20260511T181606783Z-kbm7",
+  "runIndex": "run-2",
+  "startedAt": "2026-05-11T18:16:06.783Z",
+  "completedAt": "2026-05-11T18:19:45.148Z",
+  "inputs": {
+    "checklistItemId": "el-md-exp:EL-1.37",
+    "checklistItemText": "Trees proposed within 10 lateral feet of overhead distribution conductors or 50 lateral feet of overhead transmission conductors are not from Utility Compatible Shade Trees list",
+    "question": "Are the overhead electric lines labeled with voltage information (such as 12.47kV, 34.5kV, 69kV, 138kV, etc.) on the site plans? This will determine if they are distribution (under 60kV) or transmission (60kV and above) lines.",
+    "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+    "sheetNum": 9,
+    "regionHint": "utility lines showing overhead electric with possible voltage labels"
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "bacd962b8af80b9bc2eb7133c303f7a9e490aa2dcac89404b55e42f72b7ebe6d",
+    "promptSource": "bureau",
+    "promptSourcePath": "/Users/wnavey/code/controlroom/conductor/workspace/bureau/jurisdictions/austin/workflows/review/prompts/vision-router.md",
+    "output": {
+      "problemType": "generic",
+      "reasoning": "The agent is performing a prerequisite label-readout check to classify line voltage before applying the correct lateral-distance threshold; this is sheet discovery and label inspection, not yet a measurement task.",
+      "confidence": 0.98,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "vision",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": null
+  },
+  "phase": "B"
+}

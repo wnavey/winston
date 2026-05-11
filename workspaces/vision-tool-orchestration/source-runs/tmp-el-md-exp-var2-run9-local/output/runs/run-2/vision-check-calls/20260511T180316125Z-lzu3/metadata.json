@@ -1,0 +1,42 @@
+{
+  "callId": "20260511T180316125Z-lzu3",
+  "runIndex": "run-2",
+  "startedAt": "2026-05-11T18:03:16.125Z",
+  "completedAt": "2026-05-11T18:03:45.531Z",
+  "inputs": {
+    "checklistItemId": "el-md-exp:EL-13.22",
+    "checklistItemText": "Transformer pads lack minimum 5-foot horizontal clearance from wastewater lines",
+    "question": "For all transformer pads shown on the utility plan (Sheet 19), what is the distance from each pad to the nearest wastewater line? Please measure distances for each transformer pad to verify 5-foot clearance compliance.",
+    "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+    "sheetNum": 19
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "bacd962b8af80b9bc2eb7133c303f7a9e490aa2dcac89404b55e42f72b7ebe6d",
+    "promptSource": "bureau",
+    "promptSourcePath": "/Users/wnavey/code/controlroom/conductor/workspace/bureau/jurisdictions/austin/workflows/review/prompts/vision-router.md",
+    "output": {
+      "problemType": "measurement",
+      "reasoning": "The agent is directly asking for distance measurements between transformer pads and wastewater lines to verify the 5-foot clearance requirement, which is a plan-view clearance measurement task.",
+      "confidence": 0.99,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "measure-distance",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": "/Users/wnavey/code/controlroom/conductor/workspace/output/runs/run-2/vision-check-calls/20260511T180316125Z-lzu3/specialist-measure-distance",
+    "argConstruction": {
+      "pairs": [
+        {
+          "objectA": "Transformer pad (solid green square) in the southwest corner of the site, west of Building 8",
+          "objectB": "Nearest wastewater line (magenta line) running east-west just north of the transformer pad"
+        }
+      ],
+      "explanation": "One transformer pad to wastewater line clearance measurement was identified.",
+      "callDir": "/Users/wnavey/code/controlroom/conductor/workspace/output/runs/run-2/vision-check-calls/20260511T180316125Z-lzu3/specialist-extract-measurement-pairs"
+    }
+  },
+  "phase": "B"
+}

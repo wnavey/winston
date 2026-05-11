@@ -1,0 +1,37 @@
+{
+  "callId": "20260511T182128503Z-q4tq",
+  "runIndex": "run-2",
+  "startedAt": "2026-05-11T18:21:28.503Z",
+  "completedAt": "2026-05-11T18:22:09.461Z",
+  "inputs": {
+    "checklistItemId": "el-md-exp:EL-13.12",
+    "checklistItemText": "Transformer pads lack minimum 5-foot clearance from fire hydrants",
+    "question": "On the Fire Protection Plan (Sheet 10), where is the private fire hydrant located, and what is the distance from this hydrant to each transformer pad? Are any transformer pads within 5 feet of the fire hydrant?",
+    "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+    "sheetNum": 10
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "bacd962b8af80b9bc2eb7133c303f7a9e490aa2dcac89404b55e42f72b7ebe6d",
+    "promptSource": "bureau",
+    "promptSourcePath": "/Users/wnavey/code/controlroom/conductor/workspace/bureau/jurisdictions/austin/workflows/review/prompts/vision-router.md",
+    "output": {
+      "problemType": "measurement",
+      "reasoning": "The agent question explicitly asks for distance measurements between the fire hydrant and transformer pads, and whether any pads fall within the 5-foot clearance threshold—this is a direct clearance measurement task, not a presence or location discovery question.",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "extract-measurement-pairs",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": "/Users/wnavey/code/controlroom/conductor/workspace/output/runs/run-2/vision-check-calls/20260511T182128503Z-q4tq/specialist-extract-measurement-pairs",
+    "argConstruction": {
+      "pairs": [],
+      "explanation": "No transformer pads are explicitly labeled or clearly identifiable on this site plan drawing, so the requested distances from the proposed fire hydrants cannot be measured.",
+      "callDir": "/Users/wnavey/code/controlroom/conductor/workspace/output/runs/run-2/vision-check-calls/20260511T182128503Z-q4tq/specialist-extract-measurement-pairs"
+    }
+  },
+  "phase": "B"
+}
