@@ -37,7 +37,19 @@ Total items analyzed: **46**
 - **23 valid skips** — `measure-distance` wouldn't have helped: feature not on plan (2), requirement doesn't apply (14), real verdict reached without measurement (4), or non-spatial data gap (3).
 - **13 mixed.** Runs disagreed; needs manual review.
 
-If we restrict Goal B's denominator to the 28 items where vision/measurement *could* have helped (i.e. drop the 23 valid-skip items from the 51), RUN_9's adjusted Goal B becomes **5 / 28 = 17.9%**. The remaining 23 items in this denominator are where the agent skipped vision but probably shouldn't have, and represent the real Goal B headroom.
+### Adjusted Goal B
+
+Restricting Goal B's denominator to the items where vision/measurement could plausibly have helped:
+
+| variant | denominator | calc | rate |
+|---|---|---|---|
+| Goal B raw | 51 expected-md items | 5/51 | **9.8%** |
+| Goal B adjusted (TSV-based) | drop the 21 `valid_*` rows tagged by the TSV's `no_call_verdict` column | 5/30 | **16.7%** |
+| Goal B strict-clear | also drop the 13 `mixed` rows where the 3 runs disagreed materially | 5/17 | **29.4%** |
+
+The TSV-based view (5/30) is the headline cited in `metrics/source-runs.md`. The standalone classifier in this analysis flags 23 valid skips rather than 21 — the extra 2 are items where the agent invoked generic vision but the underlying skip-of-measure-distance is still valid (`expected_specialist=measure-distance` but `majority_vision_check=generic`), which the TSV's `no_call_verdict` column tags as `n/a` rather than valid. Using the standalone-analysis numerator/denominator gives **5/28 = 17.9%** — within noise of the TSV-based 16.7%.
+
+Reproducible: `python3 scripts/goal-b-adjusted.py`.
 
 ## Per-item detail
 

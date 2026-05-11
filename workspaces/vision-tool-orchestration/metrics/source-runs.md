@@ -226,7 +226,9 @@ and known issues so the per-variant TSV builds and
 - 67 vision_check calls total: **run-1=19, run-2=27, run-3=21**. Classifier intent: `generic=42, measurement=25, drawing_inspect=0`. 23 measure-distance subprocesses, all 23 succeeded; 2 additional measurement-classified calls short-circuited at extract-measurement-pairs (returned 0 pairs).
 - **Goals (strict-majority across 3 runs):**
   - **Goal A** (any vision invoked, strict-majority): **15.7%** (8/51) on expected=yes, **92.0%** (46/50) on expected=no. Net overall 53.5% (54/101).
-  - **Goal B** (majority `measurement` on expected_specialist=measure-distance): **9.8%** (5/51). One 3-way-tie (EL-13.13). 43 of 51 expected-md items had majority `none`.
+  - **Goal B raw** (majority `measurement` on expected_specialist=measure-distance): **9.8%** (5/51). One 3-way-tie (EL-13.13). 43 of 51 expected-md items had majority `none`.
+  - **Goal B adjusted** (drop the 21 valid-skip rows from the denominator — items the TSV's `no_call_verdict` tags as `valid_not_applicable`, `valid_no_feature`, `valid_other`, or `valid_other_data_gap`): **16.7%** (5/30). Remaining denominator = 5 hits + 9 invalid skips + 13 mixed + 3 vision-invoked-but-wrong-specialist.
+  - **Goal B strict-clear** (also drop the 13 `mixed` rows where the 3 runs disagreed materially): **29.4%** (5/17).
   - **Goal C** (subprocess success on dispatched measure-distance): **100%** (23/23).
   - **Goal D** (correct post-result verdict): **not measured — iter-2 follow-up**.
 - **Regression vs RUN_7**: Goal A on expected=yes dropped from 49.0% → 15.7%; Goal B from 27.5% → 9.8%. The drop is real-attribution honest — RUN_7 numbers were partly inflated by agentTrace.tools_used over-reporting (the agent self-reports vision use in 41 (item × run) pairs that have no corresponding `vision-check-calls/metadata.json`). On expected=no, RUN_9 *improved* (68.0% → 92.0%) — the agent is more conservative across the board.
@@ -244,7 +246,7 @@ For phase 1 to declare done, all 6 cells should be ✅ **current** with no outst
 - [ ] cc / var2: re-fire at `runs=3` to retire runs-disparity confounder on cc Goal A
 - [x] el-md-exp / ctrl-baseline: phase-1 numbers populated (Goal A 41.2%; Goal B n/a)
 - [x] el-md-exp / var1: re-fired as `VAR1_RUN_2` post bureau#317. Coverage closed (303/303 cells). **Goal A 74.5%**, Goal B 0/51 (specialist still never invoked).
-- [x] el-md-exp / var2: re-fired as `RUN_9_LOCAL` post conductor#155 (per-run output layout) + conductor#156 (3 runs, real per-call attribution). **Goal A 15.7% (expected=yes) / 92.0% (expected=no), Goal B 9.8%, Goal C 100%.** Numbers regress vs RUN_7 because attribution is no longer inflated by agentTrace.tools_used. Driver to investigate: 43/51 expected-md items had majority `none` — see [`run-9-no-vision-check-analysis.md`](el-md-exp/tmp/el-md-exp-var2-run-9/run-9-no-vision-check-analysis.md).
+- [x] el-md-exp / var2: re-fired as `RUN_9_LOCAL` post conductor#155 (per-run output layout) + conductor#156 (3 runs, real per-call attribution). **Goal A 15.7% (expected=yes) / 92.0% (expected=no), Goal B raw 9.8% / adjusted 16.7% (drop 21 valid skips) / strict-clear 29.4%, Goal C 100%.** Numbers regress vs RUN_7 because attribution is no longer inflated by agentTrace.tools_used. Driver to investigate: 43/51 expected-md items had majority `none` — see [`run-9-no-vision-check-analysis.md`](el-md-exp/tmp/el-md-exp-var2-run-9/run-9-no-vision-check-analysis.md).
 - [x] **fix measure-distance overlay's `review.md`** ✅ landed via bureau#317 + validated by VAR1_RUN_2.
 - [x] **bureau-side classifier prompt iteration for el-md-exp** ✅ delivered as conductor#151 + bureau#318 + validated by RUN_3.
 - [x] **conductor measurement-dispatch wiring** ✅ delivered as conductor#153 + conductor#154 + bureau#324. Validated by RUN_6_BACKUP_LOCAL + RUN_7_BACKUP_LOCAL_3_RUNS.
