@@ -186,7 +186,53 @@ Real numbers from public benchmarks (Q4_K_M unless noted):
 
 ---
 
-## 7. Honest takeaway
+## 7. Licensing implications for for-profit use
+
+**Short answer:** Yes, several of these models are usable in a for-profit commercial product — but "open-source" is a loose term in the LLM world, and the per-license details matter. Of the families surveyed, only Qwen 3 and Phi-4 are unambiguously safe for commercial use; the others carry obligations ranging from minor (an attribution badge) to risky (Google's unilateral right to disable Gemma in your product).
+
+### Per-license commercial-use summary
+
+| Model family | License | Commercial use? | Key catches |
+|---|---|---|---|
+| **Qwen 3 / 3.5 / 3.6** | Apache 2.0 | ✅ Yes, unrestricted | None of note. No MAU cap, no attribution badge, no flow-down. (Older **Qwen2.5-72B** uses a custom Qwen License with a 100M-MAU cap — applies only to that specific model.) |
+| **Phi-4** | MIT | ✅ Yes, unrestricted | None of note. |
+| **DeepSeek V3 / R1** | MIT (code) + custom **DeepSeek Model License** (weights) | ✅ Yes | Model license is OpenRAIL-based with **use-based restrictions** (no illegal/harmful uses) that you must flow down to your users. Not strictly OSI-compliant. |
+| **Llama 3.3, Llama 4 Scout/Maverick** | **Llama Community License** | ✅ Yes, with strings | (1) Terminates if your service exceeds **700M MAU** — must get a special license from Meta. (2) Must display **"Built with Llama"** attribution on your site/app. (3) **EU-domiciled** companies cannot use the **multimodal/vision** features of Llama 4 (text is fine). (4) Has an Acceptable Use Policy. |
+| **Gemma 3** | **Gemma Terms of Use** (custom Google) | ⚠️ Yes but risky | (1) Google retains a **unilateral right** to remotely restrict your usage if it decides you violated its Prohibited Use Policy. (2) PUP must **flow down** to every downstream user. (3) Google can **modify terms or terminate** access. (4) PUP restricts content generation for financial/legal/medical/health professional contexts. |
+
+### What "open-weight" doesn't get you
+
+- **No vendor indemnification.** If a Qwen model produces output that infringes someone's copyright, you absorb the risk — Alibaba isn't going to defend you. Compare to Anthropic/OpenAI/Google paid APIs, which now include IP indemnification for enterprise tiers.
+- **No warranty of any kind.** All licenses disclaim warranties — no SLA, no quality guarantee.
+- **Training data provenance is opaque.** None of these labs publish their full training data. If the EU AI Act's documentation requirements (effective August 2026) apply to your use case, you may not be able to satisfy them with these weights.
+- **Custom-license fragmentation is rising.** 34% of open-weight LLMs on Hugging Face now use custom licenses (up from 12% in 2023). Forrester estimates "license fragmentation could increase compliance costs by 300% without industry standardization."
+
+### Practical recommendation for a for-profit company
+
+Ranked by legal safety, descending:
+
+1. **Safest:** Qwen 3 family at any size you can run (Apache 2.0). For pure-text local inference in a commercial product, this is the cleanest path. No badge, no MAU cap, no flow-down obligations.
+2. **Also safe:** Phi-4 (MIT).
+3. **Safe with operational obligations:** DeepSeek V3 / R1. Add a use-based restrictions clause to your terms; otherwise unrestricted.
+4. **Safe with branding + scale obligations:** Llama 3.3 / Llama 4 Scout. If your service is below 700M MAU, you're not selling vision features into the EU, and you can live with a "Built with Llama" badge — fine. (Most for-profit companies are below 700M MAU.)
+5. **Avoid for production unless you've talked to a lawyer:** Gemma 3. The combination of (a) Google's unilateral remote-disable right, (b) flow-down PUP obligations, and (c) PUP carve-outs for legal/medical/financial advice makes it the riskiest of the bunch. Fine for internal R&D, hard to recommend for customer-facing products.
+
+### Worth knowing
+
+- A **2025 startup settled a $375,000 lawsuit** after using a "research-only" licensed model in production. "Open source" ≠ "use however you want."
+- Potential infringement penalty ranges from **$500K to $5M** per legal-industry estimates.
+- The **EU AI Act** (high-risk system documentation requirements effective Aug 2026) requires documentation of training data sources and licensing. None of the open-weight labs currently provide this in a form that would satisfy a regulator.
+- The **OSI does not classify Llama or Gemma as "open source"** — they call these "source-available." Apache 2.0 (Qwen, Phi-4) and MIT (DeepSeek code) are the only truly OSI-conformant licenses in this list.
+
+### What I'd actually do at Noetic
+
+If we wanted to ship a local-LLM-backed feature in a customer-facing product, I'd start with **Qwen 3.6-27B (Apache 2.0)**. It's the strongest model in the category by a comfortable margin, the license has no meaningful operational burden, and we wouldn't owe Alibaba a badge or a usage report. For an internal tool only, the calculus loosens and Llama 4 Scout becomes attractive for its 10M-token context window despite the badge requirement.
+
+For anything safety-sensitive or in a regulated domain (healthcare/legal/financial output), I'd stick with Claude API and pay for indemnification rather than self-host on any of these licenses.
+
+---
+
+## 8. Honest takeaway
 
 For day-to-day coding and knowledge work, a 64 GB M4 Pro Mac mini running **Qwen 3.6-27B** via Ollama is genuinely competitive with Claude Haiku 4.5 / Sonnet 4.6 on most tasks — with the caveats that:
 
