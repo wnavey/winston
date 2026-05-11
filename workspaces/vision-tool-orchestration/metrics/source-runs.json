@@ -256,7 +256,7 @@
         "67 vision_check calls total (run-1: 19, run-2: 27, run-3: 21). Classifier intent: generic=42, measurement=25.",
         "23 measure-distance subprocesses, all 23 succeeded. 2 calls short-circuited at extract-measurement-pairs (returned 0 pairs).",
         "**Goal A** (strict-majority invocation on expected=yes): 8/51 = 15.7%. On expected=no: 46/50 = 92.0%. Net 54/101 = 53.5%.",
-        "**Goal B** (strict-majority `measurement` on expected=measure-distance items): 5/51 = 9.8%. Regressed vs RUN_7's 23.5% \u2014 driver is the 43 expected-md items where majority of runs called nothing at all.",
+        "**Goal B (raw)**: 5/51 = 9.8%. **Adjusted** (drop 21 valid skips per TSV `no_call_verdict`): 5/30 = 16.7%. **Strict-clear** (also drop 13 `mixed`): 5/17 = 29.4%. Driver of the raw rate is the 43 expected-md items where majority of runs called nothing \u2014 about half of which (21) are skipped for valid reasons (item n/a, feature absent, etc.); see [`run-9-no-vision-check-analysis.md`](el-md-exp/tmp/el-md-exp-var2-run-9/run-9-no-vision-check-analysis.md).",
         "**Goal C** (subprocess success on dispatched measure-distance): 23/23 = 100%.",
         "Inspection TSV at metrics/el-md-exp/tmp/el-md-exp-var2-run-9/el-md-exp-var2-run9-vision-check-calls-compared-to-expected.tsv."
       ],
@@ -281,7 +281,20 @@
           "total": 23,
           "rate": "100%"
         },
-        "D_post_result_verdict": "not measured \u2014 iter-2 follow-up"
+        "D_post_result_verdict": "not measured \u2014 iter-2 follow-up",
+        "B_adjusted_drop_valid_skips": {
+          "hits": 5,
+          "total": 30,
+          "rate": "16.7%",
+          "valid_skips_dropped": 21,
+          "method": "Denominator = 51 expected-md items minus 21 items where TSV no_call_verdict \u2208 {valid_not_applicable (14), valid_other (4), valid_other_data_gap (2), valid_no_feature (1)}. Remaining 30 items: 5 measurement-majority (hits) + 9 invalid skips + 13 mixed + 3 vision-invoked-but-wrong-specialist."
+        },
+        "B_strict_clear_misses_only": {
+          "hits": 5,
+          "total": 17,
+          "rate": "29.4%",
+          "method": "Further restricts the adjusted denominator by also dropping 13 'mixed' items where the 3 runs disagreed materially. Remaining 17 items: 5 hits + 9 clear invalid skips + 3 vision-but-wrong-specialist."
+        }
       },
       "supersedes": {
         "runLabel": "VISION_CHECK_REVIEW_EL_MD_EXP_RUN_7_BACKUP_LOCAL_3_RUNS",
