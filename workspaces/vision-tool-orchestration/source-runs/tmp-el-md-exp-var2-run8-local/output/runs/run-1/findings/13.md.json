@@ -1,0 +1,769 @@
+{
+  "grouping": "13",
+  "findings": [
+    {
+      "deficiencyId": "EL-13.1",
+      "status": "fail",
+      "agentTrace": {
+        "observation": "Vision check measured transformer pad clearances to building walls on Sheet 21 Electrical Plan. Two transformer pads show 0 feet clearance to nearest building walls: pad west of Bldg 2 (0 feet to west exterior wall) and pad between Bldg 6-7 (0 feet to nearest wall). These pads are drawn adjacent to or touching building structures.",
+        "reasoning": "The plan shows two transformer pads with zero clearance from buildings, which violates the minimum 5-foot clearance requirement. The pads appear to be positioned directly against building walls or at the building edge without separation.",
+        "tools_used": [
+          "vision_check"
+        ]
+      },
+      "codeCitations": [
+        "UCM § 1.10.4 Table 1.10.4",
+        "UCM § 1.10.5.B"
+      ],
+      "applicableAreas": [
+        "Transformer pad west of Building 2",
+        "Transformer pad between Building 6 and Building 7"
+      ],
+      "sheetReferences": [
+        {
+          "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+          "sheetNumber": 21
+        }
+      ],
+      "documentReferences": [],
+      "comment": "Two of four transformer pads lack minimum 5-foot clearance from building structures. Pads show 0 feet separation from adjacent building walls and must be relocated or clearances documented with architectural specifications."
+    },
+    {
+      "deficiencyId": "EL-13.10",
+      "status": "fail",
+      "agentTrace": {
+        "observation": "Vision check measured clearance from transformer pad access door sides to nearest buildings/structures on Sheet 21. Pad between Bldg 4-5 shows 7.2 feet to nearest adjacent wall, and pad between Bldg 6-7 shows 0 feet (completely adjacent to or within building configuration). The 10-foot minimum hot-stick use area clearance is not satisfied for these locations.",
+        "reasoning": "The plans show two transformer pads with insufficient access door clearance: one at 7.2 feet (less than required 10 feet) and one at 0 feet (no clearance). Both violate the hot-stick use area clearance requirement for equipment maintenance and operation.",
+        "tools_used": [
+          "vision_check"
+        ]
+      },
+      "codeCitations": [
+        "UCM § 1.10.4 Table 1.10.4"
+      ],
+      "applicableAreas": [
+        "Transformer pad between Building 4 and Building 5 - access door side",
+        "Transformer pad between Building 6 and Building 7 - access door side"
+      ],
+      "sheetReferences": [
+        {
+          "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+          "sheetNumber": 21
+        }
+      ],
+      "documentReferences": [],
+      "comment": "Hot-stick use area (access door side) of transformer pads lacks minimum 10-foot clearance to buildings/structures. Pad between Bldgs 4-5 provides only 7.2 feet; pad between Bldgs 6-7 provides 0 feet. Access door clearance must be increased to 10 feet minimum."
+    },
+    {
+      "deficiencyId": "EL-13.23",
+      "status": "fail",
+      "agentTrace": {
+        "observation": "Vision check measured horizontal clearance from transformer pads to nearest storm drain (SD) utility lines on Sheet 21 Electrical Plan. Pad between Bldg 4-5 shows only 1 foot clearance to nearest storm drain line. All other pads exceed 5-foot clearance (35.3, 36.7, 60.6, and 90.2 feet).",
+        "reasoning": "Plan shows transformer pad between Buildings 4-5 positioned with only 1 foot horizontal clearance from storm drain infrastructure, which violates the 5-foot minimum separation requirement. This creates a utility conflict that must be resolved.",
+        "tools_used": [
+          "vision_check"
+        ]
+      },
+      "codeCitations": [
+        "UCM § 2.9.1.B.2"
+      ],
+      "applicableAreas": [
+        "Transformer pad between Building 4 and Building 5"
+      ],
+      "sheetReferences": [
+        {
+          "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+          "sheetNumber": 21
+        }
+      ],
+      "documentReferences": [],
+      "comment": "Transformer pad between Buildings 4-5 lacks minimum 5-foot horizontal clearance from storm drain lines. Vision measurement shows only 1 foot separation. Pad must be relocated to provide minimum 5-foot clearance from storm sewer infrastructure."
+    },
+    {
+      "deficiencyId": "EL-13.36",
+      "status": "fail",
+      "agentTrace": {
+        "observation": "Vision analysis of Sheet 21 Electrical Plan revealed that electrical routing from transformer pads to meters does not remain entirely on private property. Specifically, the primary electrical feed line originates from the Underground Electric Line within Valley View Road 60-foot right-of-way, crosses the property boundary through a Sidewalk Easement to reach the first transformer pad, and other electrical lines traverse designated 5-foot Public Utility Easements (P.U.E.) on the property.",
+        "reasoning": "UCM § 1.10.4 footnote 4 requires that electrical routing from transformer to meter be 100% on private property. The documented utility routing utilizes public right-of-way, public utility easements, and sidewalk easements, which violates this requirement. Electrical connection must be replanned to avoid easements.",
+        "tools_used": [
+          "vision_check"
+        ]
+      },
+      "codeCitations": [
+        "UCM § 1.10.4 Table 1.10.4 footnote 4"
+      ],
+      "applicableAreas": [
+        "Electrical routing from Valley View Road to transformer pads",
+        "Electrical routing from transformers to meters"
+      ],
+      "sheetReferences": [
+        {
+          "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+          "sheetNumber": 21
+        }
+      ],
+      "documentReferences": [],
+      "comment": "Electrical routing from transformers to meters does not remain 100% on private property. Primary feed originates in public right-of-way (Valley View Road) and traverses public utility easement (5' P.U.E.) and sidewalk easement. All electrical lines must be rerouted entirely on private property."
+    },
+    {
+      "deficiencyId": "EL-13.37",
+      "status": "fail",
+      "agentTrace": {
+        "observation": "Vision analysis of Sheet 21 Preliminary Electrical Design Plan examined all four transformer pad callouts and surrounding documentation. No text labels provide pad dimensions (length, width, depth), no detail sheet callouts reference Austin Energy Design standard details, no equipment specifications are listed, and no service type (single-phase or three-phase) is identified anywhere on the sheet or in block notes.",
+        "reasoning": "UCM § 1.5.2.6 requires that transformer pad dimensions match Austin Energy Design-approved specifications for the specified service type. The plan completely lacks transformer pad dimensions, service type designation, detail sheet references, and any reference to AE Design standards, making compliance verification impossible.",
+        "tools_used": [
+          "vision_check"
+        ]
+      },
+      "codeCitations": [
+        "UCM § 1.5.2.6",
+        "UCM § 1.18.0"
+      ],
+      "applicableAreas": [
+        "All four transformer pad locations"
+      ],
+      "sheetReferences": [
+        {
+          "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+          "sheetNumber": 21
+        }
+      ],
+      "documentReferences": [],
+      "comment": "Transformer pad dimensions do not match Austin Energy Design-approved detail sheets. Plan provides no dimensions for any pads, no service type designation (single-phase or three-phase), and no references to AE Design transformer pad detail standards. Applicant must obtain AE Design-approved pad details and verify pad sizing on plan."
+    },
+    {
+      "deficiencyId": "EL-13.38",
+      "status": "fail",
+      "agentTrace": {
+        "observation": "Vision analysis of Sheet 21 Electrical Plan confirms that all four transformer pads are positioned immediately adjacent to (within 4 feet of) driveways, parking spaces, or vehicle circulation areas. Vision check specifically noted all four pads drawn immediately touching or within 4 feet of pavement edges. No graphic symbols (circles or dots typically representing bollards) appear on the plan, and no text notes indicate bollard placement at any of the four locations.",
+        "reasoning": "All four transformer pads are within 4 feet of parking/vehicle areas, which requires 4-inch minimum diameter galvanized rigid metal bollards per AE Design equipment pad details. The complete absence of bollard symbols or specifications for all four pads indicates non-compliance with UCM § 1.10.4 Table 1.10.4 equipment protection requirements.",
+        "tools_used": [
+          "vision_check"
+        ]
+      },
+      "codeCitations": [
+        "UCM § 1.10.4 Table 1.10.4"
+      ],
+      "applicableAreas": [
+        "All four transformer pads (northwest near Bldg 1-2, southwest near Bldg 8, east-central between Bldg 4-5, southeast between Bldg 6-7)"
+      ],
+      "sheetReferences": [
+        {
+          "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+          "sheetNumber": 21
+        }
+      ],
+      "documentReferences": [],
+      "comment": "Equipment pads installed within 4 feet of parking areas lack required bollards. All four transformer pads are positioned immediately adjacent to driveways and parking spaces (within 4 feet) but no 4-inch diameter galvanized rigid metal bollards are shown. Bollard protection must be added per AE Design equipment pad details, spaced to permit equipment door opening."
+    },
+    {
+      "deficiencyId": "EL-13.2",
+      "status": "n/a",
+      "agentTrace": {
+        "observation": "Sheet 9 (Site Plan) and Sheet 38-39 (Wall Plan Details) were reviewed to identify retaining walls on the property. While the project includes retaining walls around the site perimeter per the site plan drawing and wall detail sheets, no transformer pads are shown positioned within 5 feet of these retaining wall structures based on Sheet 21 electrical layout.",
+        "reasoning": "EL-13.2 applies only when retaining walls are present and transformer pads are adjacent. While retaining walls exist on the site, the transformer pads shown on Sheet 21 are not positioned in proximity to retaining walls where clearance measurement would be required. This item is not applicable to the current transformer pad locations.",
+        "tools_used": []
+      },
+      "codeCitations": [
+        "Reviewer Convention"
+      ],
+      "applicableAreas": [],
+      "sheetReferences": [],
+      "documentReferences": [],
+      "comment": "Applicability condition not met. Retaining walls are present on the site but transformer pads are not positioned adjacent to them such that 5-foot clearance requirements would apply."
+    },
+    {
+      "deficiencyId": "EL-13.3",
+      "status": "n/a",
+      "agentTrace": {
+        "observation": "Sheet 21 Electrical Plan and Sheet 9 Site Plan reviewed for fences and gates adjacent to transformer pad locations. While site plan shows fence notation in some locations (property perimeter fencing), no fences are shown directly adjacent to the four transformer pads on the electrical plan.",
+        "reasoning": "EL-13.3 applies only when fences or gates are adjacent to transformer pads such that operator/non-operator clearances would need to be verified. The transformer pads shown do not have adjacent fence/gate infrastructure requiring clearance documentation.",
+        "tools_used": []
+      },
+      "codeCitations": [
+        "UCM § 1.10.4 Table 1.10.4"
+      ],
+      "applicableAreas": [],
+      "sheetReferences": [],
+      "documentReferences": [],
+      "comment": "Applicability condition not met. No fences or gates are shown adjacent to transformer pad locations on the electrical plan."
+    },
+    {
+      "deficiencyId": "EL-13.4",
+      "status": "n/a",
+      "agentTrace": {
+        "observation": "Sheet 21 Electrical Plan was reviewed for any transformer pad clearances less than 5 feet to buildings, which would trigger the reduced 3-foot clearance exception documented in architectural specifications. Vision checks confirmed minimum clearances to buildings (ranging from 0 to 54.9 feet), but no documentation was found indicating applicant's request for reduced clearance exception or architectural specifications verifying 3-hour fire ratings.",
+        "reasoning": "EL-13.4 applies only when clearances less than 5 feet to buildings are shown with documentation. Since no reduced clearances are documented with required supporting materials (AE Design approval, fire rating specifications, confined space verification), this exception item is not applicable to the current plan.",
+        "tools_used": [
+          "vision_check"
+        ]
+      },
+      "codeCitations": [
+        "UCM § 1.10.4 Table 1.10.4 footnote 2"
+      ],
+      "applicableAreas": [],
+      "sheetReferences": [],
+      "documentReferences": [],
+      "comment": "Applicability condition not met. No reduced clearance exceptions are documented. While some pads have insufficient clearance (EL-13.1), no exception request with required documentation is shown."
+    },
+    {
+      "deficiencyId": "EL-13.5",
+      "status": "n/a",
+      "agentTrace": {
+        "observation": "Sheet 21 Electrical Plan and building elevation information reviewed to identify balconies, overhangs, or covering structures directly above or adjacent to transformer pads. No balconies or overhanging structures are indicated in proximity to the four transformer pad locations shown on Sheet 21.",
+        "reasoning": "EL-13.5 applies only when balconies, overhangs, or coverings exist above or immediately adjacent to transformer pads. The electrical plan and site configuration show no such features in proximity to the identified transformer locations.",
+        "tools_used": []
+      },
+      "codeCitations": [
+        "UCM § 1.10.4 Table 1.10.4"
+      ],
+      "applicableAreas": [],
+      "sheetReferences": [],
+      "documentReferences": [],
+      "comment": "Applicability condition not met. No balconies, overhangs, or covering structures are shown above or adjacent to transformer pad locations."
+    },
+    {
+      "deficiencyId": "EL-13.6",
+      "status": "n/a",
+      "agentTrace": {
+        "observation": "Sheet 21 Electrical Plan was reviewed for proximity of windows, doors, or ventilating ducts on buildings adjacent to transformer pads. Building facade details and transformer pad locations do not indicate any windows, doors, or ventilating ducts in the immediate proximity of the four transformer pads.",
+        "reasoning": "EL-13.6 applies only when windows, doors, or ventilating ducts on adjacent buildings are positioned with inadequate lateral separation or low grade elevation. No such features appear to be positioned adjacent to the transformer pads on the submitted electrical plan.",
+        "tools_used": []
+      },
+      "codeCitations": [
+        "UCM § 1.10.4 Table 1.10.4"
+      ],
+      "applicableAreas": [],
+      "sheetReferences": [],
+      "documentReferences": [],
+      "comment": "Applicability condition not met. No windows, doors, or ventilating ducts requiring clearance documentation are shown adjacent to transformer pad locations."
+    },
+    {
+      "deficiencyId": "EL-13.7",
+      "status": "n/a",
+      "agentTrace": {
+        "observation": "Sheet 21 Electrical Plan and site plan sheets reviewed for sidewalk locations immediately adjacent to transformer pads. While Valley View Road (a local street) abuts the property, transformer pads shown on Sheet 21 are not positioned at the property boundary or sidewalk edge.",
+        "reasoning": "EL-13.7 applies only when sidewalks are adjacent to transformer pads such that 2-foot back-of-sidewalk clearance would need verification. The transformer pads shown are positioned interior to the property, not at the street/sidewalk boundary.",
+        "tools_used": []
+      },
+      "codeCitations": [
+        "UCM § 1.10.4 Table 1.10.4"
+      ],
+      "applicableAreas": [],
+      "sheetReferences": [],
+      "documentReferences": [],
+      "comment": "Applicability condition not met. No transformer pads are positioned adjacent to sidewalks on the submitted electrical plan."
+    },
+    {
+      "deficiencyId": "EL-13.8",
+      "status": "n/a",
+      "agentTrace": {
+        "observation": "Sheet 21 Electrical Plan and building floor plans reviewed for stairwells serving as fire exits in proximity to transformer pads. No stairwells or fire exit structures are indicated adjacent to the four transformer pad locations on the electrical plan.",
+        "reasoning": "EL-13.8 applies only when stairwells serving as fire escapes/exits are adjacent to transformer pads. The electrical plan and site configuration show no such stairwell features in proximity to the identified transformer locations.",
+        "tools_used": []
+      },
+      "codeCitations": [
+        "Reviewer Convention"
+      ],
+      "applicableAreas": [],
+      "sheetReferences": [],
+      "documentReferences": [],
+      "comment": "Applicability condition not met. No stairwells serving as fire exits are shown adjacent to transformer pad locations."
+    },
+    {
+      "deficiencyId": "EL-13.9",
+      "status": "n/a",
+      "agentTrace": {
+        "observation": "Sheet 10 (Fire Protection Plan) and Sheet 21 (Electrical Plan) reviewed for fire escapes or stairs serving as fire escapes in proximity to transformer pads. Sheet 10 identifies 1 private fire hydrant location but does not show fire escapes as required access features for these residential townhome buildings.",
+        "reasoning": "EL-13.9 applies only when fire escapes or stairs serving as fire escapes are present on the property adjacent to transformer pads. The fire protection plan shows the project utilizes a sprinkler system without fire escapes as required exiting; no fire escape structures are shown proximate to transformer locations.",
+        "tools_used": []
+      },
+      "codeCitations": [
+        "UCM § 1.10.4 Table 1.10.4"
+      ],
+      "applicableAreas": [],
+      "sheetReferences": [],
+      "documentReferences": [],
+      "comment": "Applicability condition not met. No fire escapes or stairs serving as fire escapes are shown adjacent to transformer pad locations."
+    },
+    {
+      "deficiencyId": "EL-13.11",
+      "status": "n/a",
+      "agentTrace": {
+        "observation": "Sheet 21 Electrical Plan reviewed for transformer pad locations within niches, vaults, or notched-out building areas (enclosed on 3+ sides). All four transformer pads shown on the electrical plan are positioned in open areas between or adjacent to buildings without being enclosed within building footprints or niche configurations.",
+        "reasoning": "EL-13.11 applies only when transformer is located in a niche, enclosed area, or notched-out building configuration facing confined space. The submitted plan shows all transformer pads in open site configurations, not in enclosed or niche arrangements.",
+        "tools_used": []
+      },
+      "codeCitations": [
+        "UCM § 1.10.4 Table 1.10.4"
+      ],
+      "applicableAreas": [],
+      "sheetReferences": [],
+      "documentReferences": [],
+      "comment": "Applicability condition not met. No transformer pads are located in niches, vaults, or enclosed areas on the submitted electrical plan."
+    },
+    {
+      "deficiencyId": "EL-13.12",
+      "status": "n/a",
+      "agentTrace": {
+        "observation": "Sheet 10 (Fire Protection Plan) identifies 1 private fire hydrant location on the property. Sheet 21 (Electrical Plan) shows 4 transformer pads. The fire hydrant location and transformer pad locations do not appear to be adjacent or in immediate proximity requiring 5-foot clearance documentation.",
+        "reasoning": "EL-13.12 applies only when fire hydrants are located adjacent to transformer pads requiring clearance verification. While a private hydrant exists on the property, it is not shown in proximity to the transformer pad locations on the electrical plan.",
+        "tools_used": []
+      },
+      "codeCitations": [
+        "Reviewer Convention"
+      ],
+      "applicableAreas": [],
+      "sheetReferences": [],
+      "documentReferences": [],
+      "comment": "Applicability condition not met. Private fire hydrant is not adjacent to transformer pad locations on the submitted plans."
+    },
+    {
+      "deficiencyId": "EL-13.13",
+      "status": "pass",
+      "agentTrace": {
+        "observation": "Landscape Plan (Sheet 31) reviewed and vision check measured distances from transformer pads to nearby trees. Measurements show nearest trees at 22.7 feet and 33.7 feet from transformer pads, both well outside the 10-foot lateral clearance requirement. No trees are shown within 10 lateral feet of pad-mounted equipment on the landscape plan.",
+        "reasoning": "EL-13.13 requires trees within 10 lateral feet of pad-mounted equipment to be identified as utility-compatible per ECM Appendix F. Since no trees are within the 10-foot requirement zone, this specification is satisfied. Trees are positioned with sufficient clearance.",
+        "tools_used": [
+          "vision_check"
+        ]
+      },
+      "codeCitations": [
+        "UCM § 1.10.10.4",
+        "ECM Appendix F"
+      ],
+      "applicableAreas": [],
+      "sheetReferences": [
+        {
+          "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+          "sheetNumber": 31
+        }
+      ],
+      "documentReferences": [],
+      "comment": "Trees are adequately separated from transformer pads. No trees are located within 10 lateral feet of pad-mounted equipment."
+    },
+    {
+      "deficiencyId": "EL-13.14",
+      "status": "n/a",
+      "agentTrace": {
+        "observation": "Landscape Plan (Sheet 31) reviewed for shrubs or low-lying vegetation adjacent to transformer pads. Plan shows landscape features distributed throughout the site, but no shrubs or vegetation plantings are specifically indicated in direct proximity to the four transformer pad locations.",
+        "reasoning": "EL-13.14 applies only when shrubs or vegetation are planted adjacent to transformer pads requiring clearance documentation. The landscape plan does not show vegetation plantings immediately adjacent to the identified transformer pad locations.",
+        "tools_used": []
+      },
+      "codeCitations": [
+        "UCM § 1.10.10.4"
+      ],
+      "applicableAreas": [],
+      "sheetReferences": [],
+      "documentReferences": [],
+      "comment": "Applicability condition not met. No shrubs or low-lying vegetation are shown adjacent to transformer pad locations on the landscape plan."
+    },
+    {
+      "deficiencyId": "EL-13.15",
+      "status": "n/a",
+      "agentTrace": {
+        "observation": "Landscape Plan (Sheet 31) and Tree List (Sheet 32) reviewed to identify trees within 20 lateral feet of underground electric equipment (transformer pads). Vision measurements and tree locations shown on landscape plan indicate nearest trees are at 22.7 feet and 33.7 feet from transformer pads, outside the 20-foot root barrier requirement zone.",
+        "reasoning": "EL-13.15 applies only when trees are proposed within 20 lateral feet of underground electric equipment. Since all trees are positioned beyond 20 feet from transformer pads, root barrier requirements do not apply to this project.",
+        "tools_used": [
+          "vision_check"
+        ]
+      },
+      "codeCitations": [
+        "UCM § 1.10.10.4"
+      ],
+      "applicableAreas": [],
+      "sheetReferences": [],
+      "documentReferences": [],
+      "comment": "Applicability condition not met. No trees are within 20 lateral feet of transformer pad locations."
+    },
+    {
+      "deficiencyId": "EL-13.16",
+      "status": "n/a",
+      "agentTrace": {
+        "observation": "Sheet 9 (Site Plan) reviewed for dumpster or trash collection area locations. Site plan shows 'Trash Collection Notes' in Block 9 addressing curbside restrictions and enforcement signage, but no dumpster or trash enclosure is indicated adjacent to the transformer pad locations on Sheet 21.",
+        "reasoning": "EL-13.16 applies only when dumpsters or trash containers are positioned adjacent to transformer pads requiring clearance. The site plan and electrical plan do not indicate dumpster locations in proximity to transformer pads.",
+        "tools_used": []
+      },
+      "codeCitations": [
+        "Reviewer Convention"
+      ],
+      "applicableAreas": [],
+      "sheetReferences": [],
+      "documentReferences": [],
+      "comment": "Applicability condition not met. No dumpsters or trash collection enclosures are shown adjacent to transformer pad locations."
+    },
+    {
+      "deficiencyId": "EL-13.17",
+      "status": "n/a",
+      "agentTrace": {
+        "observation": "Sheet 9 (Site Plan) reviewed for bicycle parking locations and Sheet 21 (Electrical Plan) examined for proximity to transformer pads. Site plan documents 41 total bike parking spaces (39 long-term, 2 short-term) but these are not shown in direct proximity to the transformer pad locations on the electrical plan.",
+        "reasoning": "EL-13.17 applies only when bike racks are positioned adjacent to transformer pads requiring clearance documentation. The submitted plans do not indicate bike racks in close proximity to transformer pads.",
+        "tools_used": []
+      },
+      "codeCitations": [
+        "Reviewer Convention"
+      ],
+      "applicableAreas": [],
+      "sheetReferences": [],
+      "documentReferences": [],
+      "comment": "Applicability condition not met. Bike racks are not shown adjacent to transformer pad locations on the submitted plans."
+    },
+    {
+      "deficiencyId": "EL-13.18",
+      "status": "n/a",
+      "agentTrace": {
+        "observation": "Site plan (Sheet 9) and lighting/photometric details reviewed for light pole locations adjacent to transformer pads. Exterior lighting requirements are specified in Block 2 of Sheet 9, but specific light pole positions relative to transformer pads are not indicated on Sheet 21.",
+        "reasoning": "EL-13.18 applies only when light poles are positioned adjacent to transformer pads requiring clearance verification. The submitted electrical plan does not show light poles in direct proximity to the identified transformer locations.",
+        "tools_used": []
+      },
+      "codeCitations": [
+        "Reviewer Convention"
+      ],
+      "applicableAreas": [],
+      "sheetReferences": [],
+      "documentReferences": [],
+      "comment": "Applicability condition not met. Light poles are not shown adjacent to transformer pad locations on the submitted electrical plan."
+    },
+    {
+      "deficiencyId": "EL-13.19",
+      "status": "n/a",
+      "agentTrace": {
+        "observation": "Sheet 10 (Fire Protection Plan) reviewed for designated fire lanes and their proximity to transformer pads shown on Sheet 21. Fire lanes are indicated on the site plan with specific routing requirements, but no fire lanes are shown in direct proximity to the four transformer pad locations.",
+        "reasoning": "EL-13.19 applies only when fire lanes are designated and transformer pads are located within the fire lane clearance zone. The fire protection plan does not indicate fire lanes proximate to the identified transformer pad locations.",
+        "tools_used": []
+      },
+      "codeCitations": [
+        "Reviewer Convention"
+      ],
+      "applicableAreas": [],
+      "sheetReferences": [],
+      "documentReferences": [],
+      "comment": "Applicability condition not met. Transformer pads are not located in designated fire lanes on the submitted fire protection plan."
+    },
+    {
+      "deficiencyId": "EL-13.20",
+      "status": "pass",
+      "agentTrace": {
+        "observation": "Sheet 21 (Electrical Plan) shows exactly 4 transformer pads distributed across the site. Vision checks and electrical plan review confirm minimum separation between pads (measured between nearest pads): distances range from approximately 60+ feet between non-adjacent pads.",
+        "reasoning": "EL-13.20 applies when multiple transformer pads are proposed and requires 5-foot clearance between pads. Four pads are shown with substantial separation (60+ feet minimum), well exceeding the 5-foot requirement.",
+        "tools_used": [
+          "vision_check"
+        ]
+      },
+      "codeCitations": [
+        "Reviewer Convention"
+      ],
+      "applicableAreas": [],
+      "sheetReferences": [
+        {
+          "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+          "sheetNumber": 21
+        }
+      ],
+      "documentReferences": [],
+      "comment": "Multiple transformer pads have adequate clearance from each other, exceeding the 5-foot minimum separation requirement."
+    },
+    {
+      "deficiencyId": "EL-13.21",
+      "status": "pass",
+      "agentTrace": {
+        "observation": "Vision check measured horizontal clearance from transformer pads to nearest water (W) utility lines on Sheet 21 Electrical Plan. Measurements for all four pads: 63.2 feet (Bldg 2), 52.4 feet (Bldg 8), 41 feet (Bldg 4-5), and 10.2 feet (Bldg 7). All clearances exceed the 5-foot minimum requirement.",
+        "reasoning": "All measured clearances from transformer pads to water utility lines are 10.2 feet or greater, satisfying the minimum 5-foot horizontal clearance requirement. No water line conflicts exist.",
+        "tools_used": [
+          "vision_check"
+        ]
+      },
+      "codeCitations": [
+        "UCM § 2.9.1.B.2"
+      ],
+      "applicableAreas": [],
+      "sheetReferences": [
+        {
+          "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+          "sheetNumber": 21
+        }
+      ],
+      "documentReferences": [],
+      "comment": "Transformer pads maintain adequate clearance from water lines. Minimum measured clearance is 10.2 feet, exceeding the 5-foot requirement."
+    },
+    {
+      "deficiencyId": "EL-13.22",
+      "status": "pass",
+      "agentTrace": {
+        "observation": "Vision check measured horizontal clearance from transformer pads to nearest wastewater (WW) utility lines on Sheet 21 Electrical Plan. Measurements for all four pads: 65.9 feet (Bldg 1), 34.6 feet (Bldg 2), 6.1 feet (Bldg 5), and 25.1 feet (Bldg 7). All clearances equal or exceed the 5-foot minimum.",
+        "reasoning": "All measured clearances from transformer pads to wastewater utility lines are 6.1 feet or greater, meeting or exceeding the 5-foot horizontal clearance requirement. No wastewater line conflicts exist.",
+        "tools_used": [
+          "vision_check"
+        ]
+      },
+      "codeCitations": [
+        "UCM § 2.9.1.B.2"
+      ],
+      "applicableAreas": [],
+      "sheetReferences": [
+        {
+          "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+          "sheetNumber": 21
+        }
+      ],
+      "documentReferences": [],
+      "comment": "Transformer pads maintain adequate clearance from wastewater lines. Minimum measured clearance is 6.1 feet, exceeding the 5-foot requirement."
+    },
+    {
+      "deficiencyId": "EL-13.24",
+      "status": "n/a",
+      "agentTrace": {
+        "observation": "Sheet 19 (Utility Tap Plan) reviewed for gas service infrastructure on the property. The utility tap plan details water and wastewater connections but does not identify any gas service or gas infrastructure on the site.",
+        "reasoning": "EL-13.24 applies only when gas service is present on the property. The submitted utility plans do not indicate gas service infrastructure, therefore gas line clearance requirements do not apply.",
+        "tools_used": []
+      },
+      "codeCitations": [
+        "UCM § 1.10.5.A"
+      ],
+      "applicableAreas": [],
+      "sheetReferences": [],
+      "documentReferences": [],
+      "comment": "Applicability condition not met. No gas service is shown on the submitted utility plans."
+    },
+    {
+      "deficiencyId": "EL-13.25",
+      "status": "not-verifiable",
+      "agentTrace": {
+        "observation": "Sheet 21 (Electrical Plan) shows transformer pad locations and indicates water (W), wastewater (WW), and storm drain (SD) utility lines, but the plan does not provide vertical clearance information or depth relationships between transformer pads and underground utilities. No profile views or cross-sections are provided showing the buried depth of utilities or showing 12-inch vertical separation distances.",
+        "reasoning": "EL-13.25 requires minimum 12-inch horizontal and vertical clearance from other underground utilities (except gas/fuel/steam). While horizontal clearances can be measured from the plan, vertical clearance between transformer pads and utilities cannot be verified without cross-section drawings or depth specifications not provided on the electrical plan.",
+        "tools_used": []
+      },
+      "codeCitations": [
+        "UCM § 1.10.5.A"
+      ],
+      "applicableAreas": [
+        "All transformer pad locations"
+      ],
+      "sheetReferences": [
+        {
+          "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+          "sheetNumber": 21
+        }
+      ],
+      "documentReferences": [],
+      "comment": "Vertical clearance from transformer pads to underground utilities cannot be verified. Cross-section drawings or utility depth specifications are not provided on the electrical plan. Applicant must provide profile views showing 12-inch minimum vertical separation from all underground utilities."
+    },
+    {
+      "deficiencyId": "EL-13.26",
+      "status": "not-verifiable",
+      "agentTrace": {
+        "observation": "Sheet 21 (Electrical Plan) shows transformer pad locations and utility line routings but does not provide cross-section views or profile details showing the vertical relationship between transformer pads and utilities (whether pads are over/under utilities) or between utilities and building foundations. No vertical clearance documentation is provided.",
+        "reasoning": "EL-13.26 requires verification that transformer pads are not installed over/under utility lines and that utilities/structures are not installed over AE underground facilities. This determination requires cross-section/profile analysis not provided on the submitted electrical plan.",
+        "tools_used": []
+      },
+      "codeCitations": [
+        "UCM § 1.10.5.B"
+      ],
+      "applicableAreas": [
+        "All transformer pad locations"
+      ],
+      "sheetReferences": [
+        {
+          "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+          "sheetNumber": 21
+        }
+      ],
+      "documentReferences": [],
+      "comment": "Vertical relationship between transformer pads and utility lines cannot be verified. Cross-section drawings showing vertical stacking/clearance relationships between utilities and transformer equipment are not provided. Applicant must provide profile views documenting no conflicts between vertical utility alignments."
+    },
+    {
+      "deficiencyId": "EL-13.27",
+      "status": "n/a",
+      "agentTrace": {
+        "observation": "Sheet 21 (Electrical Plan) and adjacent property information reviewed for overhead distribution lines. No overhead electric lines are shown directly above or in proximity to the four transformer pad locations on the electrical plan. The electrical system appears to be underground.",
+        "reasoning": "EL-13.27 applies only when overhead distribution lines (primary, neutral, or secondary conductors) are present above or near transformer locations. The electrical design shown on Sheet 21 uses underground infrastructure; no overhead lines are indicated proximate to transformer pads.",
+        "tools_used": []
+      },
+      "codeCitations": [
+        "UCM § 1.10.3"
+      ],
+      "applicableAreas": [],
+      "sheetReferences": [],
+      "documentReferences": [],
+      "comment": "Applicability condition not met. No overhead distribution lines are shown above or adjacent to transformer pad locations on the electrical plan."
+    },
+    {
+      "deficiencyId": "EL-13.28",
+      "status": "n/a",
+      "agentTrace": {
+        "observation": "Sheet 21 (Electrical Plan) reviewed for overhead distribution primary and neutral conductors in proximity to transformer pads. No overhead electric infrastructure is indicated on the electrical plan; the design uses underground electric service.",
+        "reasoning": "EL-13.28 applies only when overhead distribution primary or neutral conductors are present near transformer locations requiring 15-foot radius clearance. No overhead conductors are indicated on the submitted electrical plan.",
+        "tools_used": []
+      },
+      "codeCitations": [
+        "UCM § 1.10.3"
+      ],
+      "applicableAreas": [],
+      "sheetReferences": [],
+      "documentReferences": [],
+      "comment": "Applicability condition not met. No overhead distribution primary or neutral conductors are shown on the electrical plan."
+    },
+    {
+      "deficiencyId": "EL-13.29",
+      "status": "n/a",
+      "agentTrace": {
+        "observation": "Sheet 21 (Electrical Plan) reviewed for transformer locations in niches (accessible from outside but within building footprint). All four transformer pads are shown as exterior pad-mounted equipment in open areas between buildings, not located within building footprints or niche configurations.",
+        "reasoning": "EL-13.29 applies only when transformer is located in a niche or enclosed area configuration. The submitted electrical plan shows standard pad-mounted equipment in exterior locations, not niche service installations.",
+        "tools_used": []
+      },
+      "codeCitations": [
+        "UCM § 1.10.4 Table 1.10.4 footnote 3"
+      ],
+      "applicableAreas": [],
+      "sheetReferences": [],
+      "documentReferences": [],
+      "comment": "Applicability condition not met. Transformers are pad-mounted exterior equipment, not niche service installations."
+    },
+    {
+      "deficiencyId": "EL-13.30",
+      "status": "n/a",
+      "agentTrace": {
+        "observation": "Sheet 21 (Electrical Plan) confirms all transformer pads are standard exterior pad-mounted equipment, not niche service installations. No notched-out or enclosed building areas house transformer equipment.",
+        "reasoning": "EL-13.30 applies only when niche service is proposed (equipment within building footprint accessible from outside). The submitted design uses standard exterior pad-mounted transformers.",
+        "tools_used": []
+      },
+      "codeCitations": [
+        "UCM § 1.10.4 Table 1.10.4 footnote 3"
+      ],
+      "applicableAreas": [],
+      "sheetReferences": [],
+      "documentReferences": [],
+      "comment": "Applicability condition not met. Niche service installations are not proposed."
+    },
+    {
+      "deficiencyId": "EL-13.31",
+      "status": "not-verifiable",
+      "agentTrace": {
+        "observation": "Sheet 21 (Electrical Plan) and available sheets reviewed for cross-section drawings showing vertical clearances in access paths or overhead areas. No cross-section drawings showing vertical clearance dimensions above transformer pads are provided in the submitted plan set.",
+        "reasoning": "EL-13.31 requires cross-section drawings demonstrating vertical clearances when overhead structures, parking garages, or enclosed areas exist above transformer locations. While no such structures are indicated above the pads shown, the absence of cross-section documentation means clearance compliance cannot be verified if such conditions exist.",
+        "tools_used": []
+      },
+      "codeCitations": [
+        "UCM § 1.10.3"
+      ],
+      "applicableAreas": [
+        "All transformer pad locations"
+      ],
+      "sheetReferences": [
+        {
+          "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+          "sheetNumber": 21
+        }
+      ],
+      "documentReferences": [],
+      "comment": "Cross-section drawings demonstrating vertical clearances above transformer pads are not provided. If any overhead structures, parking levels, or enclosed areas are present above transformer locations, cross-section documentation is required to verify compliance."
+    },
+    {
+      "deficiencyId": "EL-13.32",
+      "status": "not-verifiable",
+      "agentTrace": {
+        "observation": "Sheet 21 (Electrical Plan) and electrical specifications reviewed to determine whether transformer equipment is oil-filled or dry-type. No equipment specifications, manufacturer details, or fluid type documentation is provided on the electrical plan or in available supplementary documents. Transformer type cannot be determined from the submitted materials.",
+        "reasoning": "EL-13.32 applies only to oil-filled transformer equipment, requiring grading plan verification that drainage slopes away from buildings. Since transformer type (oil-filled vs. dry-type) is not specified in the submitted plan, applicability cannot be determined.",
+        "tools_used": []
+      },
+      "codeCitations": [
+        "UCM § 1.10.4 Table 1.10.4 footnote 1"
+      ],
+      "applicableAreas": [
+        "All transformer pad locations"
+      ],
+      "sheetReferences": [],
+      "documentReferences": [],
+      "comment": "Transformer fluid type not documented. Plan does not specify whether equipment is oil-filled or dry-type. If oil-filled equipment is proposed, grading plan must document that drainage slopes away from buildings (liquid flow direction requirement)."
+    },
+    {
+      "deficiencyId": "EL-13.33",
+      "status": "pass",
+      "agentTrace": {
+        "observation": "Vision check measured horizontal distance from each transformer pad to nearest property boundary lines on Sheet 21 Electrical Plan. All four pads are measured at 35.5 feet, 36.4 feet, 57.2 feet, and 149.6 feet from property boundaries. No pads straddle or cross the property line boundaries shown on the plan.",
+        "reasoning": "All transformer pads are located entirely on private property (Lot 1) with adequate clearance from property boundaries. None of the pads are located in public right-of-way or positioned to straddle property lines.",
+        "tools_used": [
+          "vision_check"
+        ]
+      },
+      "codeCitations": [
+        "UCM § 1.10.4 Table 1.10.4 footnote 4"
+      ],
+      "applicableAreas": [],
+      "sheetReferences": [
+        {
+          "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+          "sheetNumber": 21
+        }
+      ],
+      "documentReferences": [],
+      "comment": "All transformer pads are properly located 100% on private property with adequate clearance from property boundaries."
+    },
+    {
+      "deficiencyId": "EL-13.34",
+      "status": "not-verifiable",
+      "agentTrace": {
+        "observation": "Sheet 2 (Plat) and facts.md document multiple utility easements across the property including City of Austin drainage easement (0.130 acres, NE corner), Greenbelt Access & Use Easement (0.31 acres, NE interior), and various plat-dedicated easements (10' wastewater, 25' drainage, 7.5' PUE, 10' drainage, 5' electric). Sheet 21 (Electrical Plan) indicates easement locations but does not explicitly document whether transformer pads or underground electrical facilities are located within these restricted easements.",
+        "reasoning": "Facts.md confirms critical easements exist on the property. Sheet 21 shows some easement notation but does not explicitly verify that transformer pads are positioned outside prohibited easements (drainage, water, sewer, overhead electrical). Without explicit documentation or measurements confirming pad locations relative to easement boundaries, compliance cannot be fully verified.",
+        "tools_used": []
+      },
+      "codeCitations": [
+        "UCM § 1.10.4 Table 1.10.4 footnote 4"
+      ],
+      "applicableAreas": [
+        "Transformer pad locations relative to documented easements"
+      ],
+      "sheetReferences": [
+        {
+          "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+          "sheetNumber": 21
+        },
+        {
+          "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+          "sheetNumber": 2
+        }
+      ],
+      "documentReferences": [],
+      "comment": "Transformer pad location compliance with easement restrictions cannot be fully verified. Property is encumbered by multiple easements (drainage, water, greenbelt, and utility easements). Plan must explicitly document that no transformer pads are located within drainage, water, sewer, or overhead electrical easements without documented AE Design approval."
+    },
+    {
+      "deficiencyId": "EL-13.35",
+      "status": "not-verifiable",
+      "agentTrace": {
+        "observation": "Sheet 21 (Electrical Plan) examined for transformer easement delineation around the four transformer pad locations. No hatching, boundary lines, or text notes indicating transformer easement areas and their dimensions are shown on the electrical plan.",
+        "reasoning": "EL-13.35 requires transformer easements to be shown around pads with width determined by AE Design for accessibility. Sheet 21 does not depict easement boundaries, dimensions, or documentation of AE Design easement width specifications.",
+        "tools_used": []
+      },
+      "codeCitations": [
+        "UCM § 1.10.3"
+      ],
+      "applicableAreas": [
+        "All four transformer pad locations"
+      ],
+      "sheetReferences": [
+        {
+          "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+          "sheetNumber": 21
+        }
+      ],
+      "documentReferences": [],
+      "comment": "Transformer easements are not shown on the electrical plan. Easement areas with dimensions determined by Austin Energy Design accessibility requirements must be depicted around all transformer pads. Easement width and location must be submitted for AE Design approval."
+    },
+    {
+      "deficiencyId": "EL-13.39",
+      "status": "n/a",
+      "agentTrace": {
+        "observation": "Sheet 21 (Electrical Plan) shows underground electrical distribution system only. No overhead distribution facilities are indicated on the electrical plan. Overhead lines are not present on the site requiring evaluation of customer facility placement restrictions.",
+        "reasoning": "EL-13.39 applies only when overhead distribution facilities are present on the property. The electrical design submitted uses underground service exclusively; no overhead lines are indicated.",
+        "tools_used": []
+      },
+      "codeCitations": [
+        "UCM § 1.10.3"
+      ],
+      "applicableAreas": [],
+      "sheetReferences": [],
+      "documentReferences": [],
+      "comment": "Applicability condition not met. No overhead distribution facilities are shown on the submitted electrical plan."
+    }
+  ]
+}

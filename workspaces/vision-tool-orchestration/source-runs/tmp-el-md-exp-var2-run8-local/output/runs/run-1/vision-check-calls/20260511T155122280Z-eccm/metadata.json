@@ -1,0 +1,58 @@
+{
+  "callId": "20260511T155122280Z-eccm",
+  "runIndex": "run-1",
+  "startedAt": "2026-05-11T15:51:22.280Z",
+  "completedAt": "2026-05-11T15:55:47.548Z",
+  "inputs": {
+    "checklistItemId": "el-md-exp:EL-13.10",
+    "checklistItemText": "Transformer pad hot-stick use area (access door side) lacks minimum 10-foot clearance to open area or adjacent building/structure",
+    "question": "On the electrical plan, which direction does each transformer pad's access door face, and does it have at least 10 feet clearance to buildings or enclosed areas?",
+    "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+    "sheetNum": 21
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "bacd962b8af80b9bc2eb7133c303f7a9e490aa2dcac89404b55e42f72b7ebe6d",
+    "promptSource": "bureau",
+    "promptSourcePath": "/Users/wnavey/code/controlroom/conductor/workspace/bureau/jurisdictions/austin/workflows/review/prompts/vision-router.md",
+    "output": {
+      "problemType": "measurement",
+      "reasoning": "The agent is asking for both directional identification (which direction the access door faces) and clearance distance verification (at least 10 feet to buildings/enclosed areas). The clearance component is the primary compliance question and requires plan-view distance measurement between the transformer pad access door and nearby structures.",
+      "confidence": 0.92,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "measure-distance",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": "/Users/wnavey/code/controlroom/conductor/workspace/output/runs/run-1/vision-check-calls/20260511T155122280Z-eccm/specialist-measure-distance",
+    "argConstruction": {
+      "pairs": [
+        {
+          "objectA": "Electrical Transformer Pad west of Building 1",
+          "objectB": "West exterior wall of Building 1"
+        },
+        {
+          "objectA": "Electrical Transformer Pad west of Building 2",
+          "objectB": "West exterior wall of Building 2"
+        },
+        {
+          "objectA": "Electrical Transformer Pad west of Building 8",
+          "objectB": "West exterior wall of Building 8"
+        },
+        {
+          "objectA": "Electrical Transformer Pad between Building 4 and Building 5",
+          "objectB": "Nearest adjacent exterior wall of Building 4 or Building 5"
+        },
+        {
+          "objectA": "Electrical Transformer Pad between Building 7 and Building 6",
+          "objectB": "Nearest adjacent exterior wall of Building 7 or Building 6"
+        }
+      ],
+      "explanation": "Five transformer-to-building clearance measurements corresponding to the five labeled Electrical Transformer Pads on the site plan.",
+      "callDir": "/Users/wnavey/code/controlroom/conductor/workspace/output/runs/run-1/vision-check-calls/20260511T155122280Z-eccm/specialist-extract-measurement-pairs"
+    }
+  },
+  "phase": "B"
+}

@@ -1,0 +1,47 @@
+{
+  "callId": "20260511T155555578Z-u7dt",
+  "runIndex": "run-2",
+  "startedAt": "2026-05-11T15:55:55.578Z",
+  "completedAt": "2026-05-11T15:56:53.526Z",
+  "inputs": {
+    "checklistItemId": "el-md-exp:EL-2.1",
+    "checklistItemText": "Non-utility-compatible trees proposed within 15 lateral feet of overhead electric distribution conductor or equipment",
+    "question": "Does the landscape plan show any proposed trees (marked as SY, PL, P, or M symbols) positioned within 15 lateral feet of the overhead electric (OHE) lines shown on the drawing? Are there any trees shown in close proximity to the OHE infrastructure?",
+    "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+    "sheetNum": 31,
+    "regionHint": "Areas where OHE lines cross the landscape plan, particularly near proposed tree planting areas"
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "bacd962b8af80b9bc2eb7133c303f7a9e490aa2dcac89404b55e42f72b7ebe6d",
+    "promptSource": "bureau",
+    "promptSourcePath": "/Users/wnavey/code/controlroom/conductor/workspace/bureau/jurisdictions/austin/workflows/review/prompts/vision-router.md",
+    "output": {
+      "problemType": "measurement",
+      "reasoning": "The agent is asking whether proposed trees are positioned within a specific lateral distance (15 feet) of OHE lines, which requires measuring the distance between tree locations and the conductor to verify compliance with the clearance requirement.",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "measure-distance",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": "/Users/wnavey/code/controlroom/conductor/workspace/output/runs/run-2/vision-check-calls/20260511T155555578Z-u7dt/specialist-measure-distance",
+    "argConstruction": {
+      "pairs": [
+        {
+          "objectA": "proposed tree labeled 'B M' in the southwest corner",
+          "objectB": "overhead electric (OHE) line running along the southern boundary"
+        },
+        {
+          "objectA": "cluster of proposed trees marked 'M' in the southeast corner",
+          "objectB": "overhead electric (OHE) line running along the southern boundary"
+        }
+      ],
+      "explanation": "Identified the OHE line along the southern boundary and paired it with the nearby proposed trees marked with 'M' symbols in the southwest and southeast corners to measure lateral clearance.",
+      "callDir": "/Users/wnavey/code/controlroom/conductor/workspace/output/runs/run-2/vision-check-calls/20260511T155555578Z-u7dt/specialist-extract-measurement-pairs"
+    }
+  },
+  "phase": "B"
+}
