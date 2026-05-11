@@ -1,0 +1,46 @@
+{
+  "callId": "20260511T160222803Z-d0iu",
+  "runIndex": "run-1",
+  "startedAt": "2026-05-11T16:02:22.803Z",
+  "completedAt": "2026-05-11T16:03:25.216Z",
+  "inputs": {
+    "checklistItemId": "el-md-exp:EL-13.13",
+    "checklistItemText": "Trees within 10 lateral feet of pad-mounted equipment are not identified as utility-compatible species per ECM Appendix F, or trees within 15 lateral feet of overhead electric distribution conductors are not utility-compatible",
+    "question": "Are there any trees shown within 10 feet of the transformer pads on the landscape plan? If so, what species are they and are they identified as utility-compatible?",
+    "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+    "sheetNum": 31
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "bacd962b8af80b9bc2eb7133c303f7a9e490aa2dcac89404b55e42f72b7ebe6d",
+    "promptSource": "bureau",
+    "promptSourcePath": "/Users/wnavey/code/controlroom/conductor/workspace/bureau/jurisdictions/austin/workflows/review/prompts/vision-router.md",
+    "output": {
+      "problemType": "measurement",
+      "reasoning": "The agent is asking for a distance measurement (trees within 10 feet of transformer pads) combined with species identification and compatibility verification; the distance component is the primary visual task requiring plan-view measurement between tree locations and pad-mounted equipment.",
+      "confidence": 0.85,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "measure-distance",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": "/Users/wnavey/code/controlroom/conductor/workspace/output/runs/run-1/vision-check-calls/20260511T160222803Z-d0iu/specialist-measure-distance",
+    "argConstruction": {
+      "pairs": [
+        {
+          "objectA": "transformer pads in the southwest corner of the site",
+          "objectB": "tree labeled 'SY M' directly north of the southwest transformer pads"
+        },
+        {
+          "objectA": "transformer pads in the southwest corner of the site",
+          "objectB": "tree directly south of the southwest transformer pads"
+        }
+      ],
+      "explanation": "Checking clearances between the transformer pads in the southwest corner and the immediately adjacent trees to the north and south.",
+      "callDir": "/Users/wnavey/code/controlroom/conductor/workspace/output/runs/run-1/vision-check-calls/20260511T160222803Z-d0iu/specialist-extract-measurement-pairs"
+    }
+  },
+  "phase": "B"
+}

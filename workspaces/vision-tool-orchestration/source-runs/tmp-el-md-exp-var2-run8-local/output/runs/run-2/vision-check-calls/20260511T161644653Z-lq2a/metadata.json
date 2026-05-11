@@ -1,0 +1,32 @@
+{
+  "callId": "20260511T161644653Z-lq2a",
+  "runIndex": "run-2",
+  "startedAt": "2026-05-11T16:16:44.653Z",
+  "completedAt": "2026-05-11T16:20:04.310Z",
+  "inputs": {
+    "checklistItemId": "el-md-exp:EL-2.6",
+    "checklistItemText": "Trees proposed within 10 lateral feet of overhead electric utility pole",
+    "question": "Are electric utility poles shown on the landscape plan (Sheet 31)? If so, are there any proposed trees (SY, PL, P, M symbols) positioned within 10 feet of any pole locations?",
+    "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+    "sheetNum": 31
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "bacd962b8af80b9bc2eb7133c303f7a9e490aa2dcac89404b55e42f72b7ebe6d",
+    "promptSource": "bureau",
+    "promptSourcePath": "/Users/wnavey/code/controlroom/conductor/workspace/bureau/jurisdictions/austin/workflows/review/prompts/vision-router.md",
+    "output": {
+      "problemType": "generic",
+      "reasoning": "The agent is performing a progressive verification: first checking for the presence of utility poles and proposed trees on the sheet, then asking whether trees fall within the 10-foot zone. The initial presence and identification questions are generic (feature detection); the actual 10-foot clearance measurement would come as a follow-up if trees are found near poles.",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "vision",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": null
+  },
+  "phase": "B"
+}
