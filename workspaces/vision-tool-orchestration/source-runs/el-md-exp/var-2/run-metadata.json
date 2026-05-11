@@ -1,14 +1,14 @@
 {
   "set": "el-md-exp",
   "variant": "var-2",
-  "variantLabel": "var2-routing (vision_check; classifier dispatches; allow-list-aware; full extract→measure-distance chain wired)",
-  "runLabel": "VISION_CHECK_REVIEW_EL_MD_EXP_RUN_6_BACKUP_LOCAL",
-  "workflowRunsId": "f9e578b3-94f5-4fa6-8fca-6f49c1f029f4",
-  "reviewId": "0f477f13-6ee9-4eab-a2b5-17b07c4195f5",
+  "variantLabel": "var2-routing (vision_check; classifier dispatches; allow-list-aware; full extract→measure-distance chain executing end-to-end; runs=3)",
+  "runLabel": "VISION_CHECK_REVIEW_EL_MD_EXP_RUN_7_BACKUP_LOCAL_3_RUNS",
+  "workflowRunsId": null,
+  "reviewId": null,
   "inngestEventId": null,
-  "startedAt": "2026-05-08T20:06:00Z",
-  "completedAt": "2026-05-08T20:29:00Z",
-  "wallClockMinutes": 23,
+  "startedAt": "2026-05-09T13:00:00Z",
+  "completedAt": "2026-05-09T14:00:00Z",
+  "wallClockMinutes": null,
   "workflow": "review",
   "experimentOverlay": "vision-check",
   "submission": {
@@ -17,55 +17,95 @@
     "submissionVersionId": "55fb6548-814f-4287-bc4a-6018b756d730"
   },
   "checklistOrGuide": "el-md-exp",
-  "runs": 1,
-  "agentTools": ["vision_check", "semantic-search-blocks"],
-  "flags": ["logAllAgentTrace=true", "step=review-runs"],
+  "runs": 3,
+  "agentTools": [
+    "vision_check",
+    "semantic-search-blocks"
+  ],
+  "flags": [
+    "logAllAgentTrace=true",
+    "step=review-runs"
+  ],
   "enabledVisionSpecialists": "generic-vision,measure-distance",
   "model": "claude-haiku-4-5-20251001",
-  "bureauCommit": "post bureau#324 (require submissionVersionId in lib/sheet-resolution.ts; migrate measure-distance + inspect-drawing)",
-  "conductorPr": "post conductor#153 (extract-measurement-pairs → measure-distance arg-construction) + conductor#154 (submissionVersionId plumbing)",
+  "bureauCommit": "post bureau#324",
+  "conductorPr": "post conductor#153 + conductor#154",
   "metricsTsvPath": "metrics/el-md-exp/var2-vision-specialist-routing/per-item.tsv",
   "notes": [
-    "Local conductor execution (npm run conduct --step=review-runs --runs=1). Substation/Inngest cloud path was hanging — the local re-run validated the fixed measure-distance chain end-to-end without paying for that debug.",
-    "First run on the var-2 source-runs slot where measure-distance actually executes. RUN_3 and RUN_5 had measure-distance dispatch crashing on a missing `version_number` column (latent pre-existing bug in measure-distance.ts). Bureau#324 + conductor#154 fixed both the column and the silent-wrong-submission fallback footgun.",
-    "29 vision_check calls. Classifier intent: generic=20, measurement=9. 8 measurement-routed calls produced ≥1 pair → measure-distance ran 8 times → 24/24 per-pair distance measurements computed (100% subprocess success).",
-    "Goal A (any vision invoked on expected_vision=yes): 19/51 = 37.3% (lower than RUN_3's 47.1% because runs=1 vs runs=3 — single attempt has weaker majority-vote coverage).",
-    "Goal B (classifier intent = measurement on expected_specialist=measure-distance): 7/51 = 13.7% (RUN_3 was 15.7%/8 — within single-run noise).",
-    "Goal B' (full chain succeeded — classifier picked measurement AND measure-distance produced ≥1 distance): 7/51 = 13.7%. **Identical to Goal B** — every measure-distance subprocess succeeded. Pre-fix runs all had B' = 0% because measure-distance crashed on every call.",
-    "Verdict-conversion lift: of the 8 items with successful measure-distance, 6 escaped ctrl's `not-verifiable` majority verdict to a real determination (4 pass, 2 fail). 3 of those 6 escaped ctrl's *unanimous* not-verifiable. The 2 fail items (EL-1.14, EL-1.37) are real compliance deficiencies the ctrl baseline would have left for human follow-up. See compare-vs-ctrl.md for the per-item table.",
-    "Caveats: scaleInchesPerFoot is hardcoded to 0.05 (1\"=20'); per-sheet scale extraction is a follow-up. Distance range was 0.9–387 ft (median 24.6); the 387 ft outlier is suspect and worth spot-checking. EL-13.13 stayed not-verifiable despite measure-distance succeeding — worth investigating whether the agent rejected the measurement output.",
-    "Supersedes RUN_3 (workflow_runs.id f66d1589-616f-4830-ae0d-c02d450a3265, review id bb326fd5-6b1d-4fb7-988a-754656dc768c, runs=3 with measurement dispatch falling back to generic via measurement_arg_construction_not_implemented). RUN_3 in turn superseded RUN_2 (465fe4e5-9ce6-4554-9cbc-65cd75755b2b) and RUN_1."
+    "**Headline run for var-2 on el-md-exp.** Local conductor execution (npm run conduct --step=review-runs --runs=3) — bypasses Substation/Inngest cloud path which was hanging on RUN_4/RUN_5 attempts. Retires the runs-disparity confounder from RUN_6_BACKUP_LOCAL.",
+    "89 vision_check calls. Classifier intent: generic=61, measurement=28, drawing_inspect=0. 22 measurement-routed calls produced ≥1 pair → measure-distance ran 22 times → 99/99 per-pair distance measurements computed (100% subprocess success, Goal C=100% on the Goal-B-eligible denominator).",
+    "**Goal A** (strict majority, any vision invoked on expected_vision=yes): 25/51 = 49.0% (best yet — beats RUN_3's 47.1%).",
+    "**Goal A misuse** (vision invoked on expected_vision=no): 16/50 = 32.0%.",
+    "**Goal B** (canonical intent = measurement on expected_specialist=measure-distance): 14/51 = 27.5% (nearly doubled vs RUN_3's 15.7% — runs=3 gives the classifier more chances).",
+    "**Goal B' / Goal C absolute** (chain actually executed): 11/51 = 21.6%. Gap between B and B' is 3 items where the classifier picked measurement but the extractor returned 0 pairs (so md never ran).",
+    "**Goal C conditional on B** (specialist returned data | specialist correctly selected): 11/14 = 78.6%.",
+    "**Verdict comparison vs ctrl** (both runs=3): 15 items had successful measure-distance. 4 items moved from ctrl `not-verifiable` majority → RUN_7 real verdict (3 pass, 0 fail). 1 of those was unanimous (EL-13.33: `not-verifiable:3` → `pass:3`).",
+    "**Goal D emerged as the iter-2 follow-up**: on multiple items where the chain ran cleanly, the agent's post-measurement verdict didn't escalate. Notably EL-2.1 (ctrl unanimous fail → RUN_7 unanimous not-verifiable despite 9 distance measurements) and EL-1.37 (13 measurements, same verdict distribution as ctrl). See `compare-vs-ctrl.md` + `analysis.md`.",
+    "**Caveats persist:** scaleInchesPerFoot=0.05 hardcoded (RUN_7 max distance 395.2 ft, min 0.0 ft — both worth spot-checking); EL-13.13 stayed not-verifiable across all 3 runs despite measure-distance succeeding.",
+    "Supersedes RUN_6_BACKUP_LOCAL (workflow_runs.id f9e578b3-94f5-4fa6-8fca-6f49c1f029f4; runs=1; same fixed chain but single-run variance). RUN_6 in turn superseded RUN_3 (chain broken pre-fix)."
   ],
   "specialistCallStatus": {
-    "vision_check_calls_total": 29,
+    "vision_check_calls_total": 89,
     "classifier_intent": {
-      "generic": 20,
-      "measurement": 9,
+      "generic": 61,
+      "measurement": 28,
       "drawing_inspect": 0
     },
     "extractMeasurementPairs": {
-      "invocations": 9,
-      "pairsExtractedTotal": 24,
-      "callsWithZeroPairs": 1
+      "invocations": 28,
+      "pairsExtractedTotal": 99,
+      "callsWithZeroPairs": 6
     },
     "measureDistance": {
-      "subprocessRuns": 8,
-      "subprocessRunsAllPairsSucceeded": 8,
-      "perPairAttempts": 24,
-      "perPairSuccesses": 24,
-      "distanceRangeFt": [0.9, 387.0],
-      "distanceMedianFt": 24.6
+      "subprocessRuns": 22,
+      "subprocessRunsAllPairsSucceeded": 22,
+      "perPairAttempts": 99,
+      "perPairSuccesses": 99,
+      "distanceRangeFt": [
+        0.0,
+        395.2
+      ],
+      "distanceMedianFt": 27.9
     },
     "fallbackReasonCounts": {
       "measurement_arg_construction_not_implemented": 0,
       "specialist_disabled": 0
     },
-    "note": "First var-2 source run where measure-distance actually executes end-to-end. measure-distance-calls/ directories now exist with real Gemini measurement output."
+    "note": "Goal C (correct tool execution) = 100% of measure-distance subprocesses returned ≥1 distance. The 6 cases where extract-measurement-pairs returned 0 pairs (so md never invoked) are misroute candidates for classifier prompt tuning."
+  },
+  "goals": {
+    "A": {
+      "hits": 25,
+      "total": 51,
+      "rate": "49.0%"
+    },
+    "A_misuse": {
+      "hits": 16,
+      "total": 50,
+      "rate": "32.0%"
+    },
+    "B_canonical_intent": {
+      "hits": 14,
+      "total": 51,
+      "rate": "27.5%"
+    },
+    "B_prime_chain_executed": {
+      "hits": 11,
+      "total": 51,
+      "rate": "21.6%"
+    },
+    "C_conditional_on_B": {
+      "hits": 11,
+      "total": 14,
+      "rate": "78.6%"
+    },
+    "D_post_result_verdict": "not measured — iter-2 follow-up"
   },
   "supersedes": {
-    "runLabel": "VISION_CHECK_REVIEW_EL_MD_EXP_RUN_3",
-    "workflowRunsId": "f66d1589-616f-4830-ae0d-c02d450a3265",
-    "reviewId": "bb326fd5-6b1d-4fb7-988a-754656dc768c",
-    "reason": "RUN_3 had runs=3 but measurement dispatch fell back to generic on every call (measure-distance.ts version_number bug + conductor measurement-dispatch not yet wired). RUN_6_BACKUP_LOCAL has runs=1 but the full chain executes — far better signal on Goal B' (actual specialist execution) at the cost of single-run variance on Goal A."
+    "runLabel": "VISION_CHECK_REVIEW_EL_MD_EXP_RUN_6_BACKUP_LOCAL",
+    "workflowRunsId": "f9e578b3-94f5-4fa6-8fca-6f49c1f029f4",
+    "reviewId": "0f477f13-6ee9-4eab-a2b5-17b07c4195f5",
+    "startedAt": "2026-05-08T20:06:00Z",
+    "reason": "RUN_6 was runs=1 (local backup because Substation cloud path was hanging). RUN_7 is runs=3 — same fixed chain, retires the variance confounder on Goal A. Headline numbers shift upward across A/B/B'."
   }
 }

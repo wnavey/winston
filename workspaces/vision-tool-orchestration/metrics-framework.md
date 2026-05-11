@@ -1,23 +1,43 @@
-# Metrics framework — iter 1
+# Metrics framework — iter 1 (extended 2026-05-11 with Goals C + D)
 
 **Status:** 2026-05-07 reorientation. Supersedes the looser "headline recall +
 routing accuracy" framing in [`plan.md`](./plan.md). Folds the eval
 strategy into a clean 3-variant × 4-TSV × 2-set table so future runs +
 analyses align without ambiguity.
 
+**Update 2026-05-11:** Goal C (correct tool execution) and Goal D
+(correct post-result verdict) added below. Goal C was implicit in iter-1
+(specialist execution was assumed to work); RUN_6/RUN_7 made it concrete
+by exposing the pre-existing `measure-distance.ts` `version_number` bug
+that crashed every subprocess. After bureau#324 + conductor#153/#154,
+Goal C runs at 100% on both runs (every measure-distance subprocess
+that was invoked returned distances). Goal D — does the agent's final
+verdict reflect the measurement evidence — is **phase-2 / iter-2
+territory**; called out explicitly here so future runs surface it
+rather than rediscovering.
+
 ## What we're proving
 
-Iter 1's only job is to prove the **vision_check routing architecture
-(var2) matches or beats the bifurcated-tools architecture (var1) on
-invocation hit rate**. Specialist execution accuracy (does the call
-return a correct answer) is downstream and explicitly out of scope here.
+Iter 1's job is to prove the **vision_check routing architecture (var2)
+matches or beats the bifurcated-tools architecture (var1) on the
+selection + execution chain** (Goals A, B, C). Whether the agent then
+correctly *interprets* the specialist's output into a pass/fail/n-v
+verdict (Goal D) is a separate, downstream question — split out for
+iter-2 so iter-1 success is well-scoped.
 
-Two success criteria, both var2 ≥ var1:
+Goals A and B remain the original iter-1 criteria. Goal C joined as
+an explicit metric once we saw it crash. Goal D is the named follow-up.
 
 - **A — Overall invocation hit rate.** Of checklist items expected to
   need vision, what fraction got at least one vision call?
 - **B — Specialist selection rate.** Of items expected to route to a
   specialist, what fraction got the right specialist invocation?
+- **C — Correct tool execution.** Of items where the right specialist
+  was invoked (Goal B met), what fraction had the specialist subprocess
+  complete successfully and return useful data?
+- **D — Correct post-result verdict.** *(Phase-2.)* Of items where
+  Goals A, B, and C are all met, what fraction had the agent's final
+  verdict (pass/fail/not-verifiable/n/a) match ground truth?
 
 ## The three variants
 
@@ -153,6 +173,81 @@ The `expected_specialist=generic` items are excluded from B's
 denominator — they need vision but not a specialist, so they aren't a
 specialist-selection test.
 
+## How Goal C is computed
+
+Goal C uses data outside the `per-item.tsv` aggregation — specifically
+the per-call specialist sidecars under
+`output/vision-check-calls/<id>/specialist-<name>/<name>-calls/<inner>/metadata.json`.
+
+For each call where the classifier intent matched the expected
+specialist (i.e. the per-call contribution to Goal B), check whether
+the specialist subprocess actually produced a usable result:
+
+- **measure-distance:** ≥1 pair returned a `result.distanceFeet` value
+  (per-pair metadata.json carries this).
+- **inspect-drawing:** returned a non-`unanswerable` classification (or
+  `count` ≥ 0 when expectedAnswerType=count), with `evidence` populated
+  per the schema's validation rules.
+
+**Goal C (per variant)** =
+`(# items where Goal B is met AND the specialist subprocess returned a usable result on ≥1 call) / (# items where Goal B is met)`.
+
+In other words, Goal C is conditional on Goal B. The denominator
+shrinks to "the specialist was correctly selected" items only; the
+numerator counts those that also executed cleanly. **Goal B' as used
+in the RUN_6/RUN_7 analyses is equivalent to "Goal C measured against
+the Goal-B-eligible denominator", just reported as a fraction of all
+expected-specialist items** (a sometimes-clearer absolute view).
+
+For RUN_7 (runs=3 var-2, el-md-exp):
+- Goal B = 14/51 items routed correctly to measurement
+- Goal C = 11/14 of those had measure-distance return ≥1 distance (= 78.6%)
+- Reported in absolute terms: 11/51 = 21.6% (= Goal B').
+
+The 3 items where Goal B was met but Goal C wasn't are misroutes-of-a-different-kind:
+the classifier picked measurement but the extractor returned 0 pairs,
+so measure-distance never ran. Those are the next-iteration prompt-tuning
+targets.
+
+## Goal D — phase-2 follow-up (not measured today)
+
+Goal D asks: **once we've selected the right specialist (B) and
+executed it correctly (C), did the agent take the result and reach
+the correct final verdict?**
+
+The agent's per-finding `status` field (`pass | fail | not-verifiable | n/a`)
+is what reviewers see. Today we don't have ground-truth labels for
+"correct verdict per checklist item," only for `expected_vision` and
+`expected_specialist`. To formalize Goal D we'd need:
+
+1. **Ground-truth `expected_verdict_for_submission` labels** for at
+   least the expected-measure-distance items on the canonical
+   submission(s). For Valley View v1 + el-md-exp, that means hand-
+   labeling 51 items with the correct pass/fail/n-v verdict against
+   the actual sheets.
+2. **A scoring rule for `not-verifiable`.** If ctrl produced
+   `not-verifiable` because vision-alone can't measure, and var-2
+   ran the measurement, then the *expected* var-2 verdict is whichever
+   the measurement supports. We can't just compare to ctrl's verdict —
+   that's the regression case we're explicitly trying to escape.
+
+Open observations from RUN_6 + RUN_7 that motivate Goal D:
+
+- **RUN_7 EL-2.1**: ctrl was unanimous `fail` (3/3), var-2 RUN_7 was
+  unanimous `not-verifiable` despite 9 measure-distance pairs running
+  successfully. The chain produced data; the agent didn't escalate to
+  fail. Suspected: the agent's post-measurement verdict prompt
+  doesn't aggressively reason from the new measurement evidence.
+- **RUN_7 EL-1.37**: ctrl `not-verifiable:2, fail:1`; var-2 RUN_7
+  `not-verifiable:2, fail:1` — same distribution despite 13 distance
+  measurements computed. No aggregation lift from the measurements.
+- **RUN_7 EL-13.10, EL-13.13, EL-13.21–.27**: pattern of
+  `not-verifiable:2 + 1 dissent` despite the chain running cleanly.
+  Suggests the agent erring on the side of "needs human review" in 2
+  of 3 runs.
+
+These cases are the seed for iter-2's Goal D work.
+
 ## Storage layout
 
 ```
@@ -213,7 +308,7 @@ those raw paths and emit the per-item-run.tsv summaries above.
 - Per-call prompt capture deferred (open TODO; not blocking hit-rate proof).
 - **Aggregation rule: strict majority vote across runs** (`2 × runs_called > runs_total`; ties fail). Applies uniformly across variants regardless of `runs_total`. All headline metrics (A, B) are reported post-aggregation, against `per-item.tsv`.
 - Goals A (overall hit rate) and B (specialist selection rate). **var2 ≥ var1**.
-- Specialist execution accuracy explicitly out of scope for iter 1.
+- ~~Specialist execution accuracy explicitly out of scope for iter 1.~~ **Extended 2026-05-11:** Goal C (correct tool execution) added once it became measurable — now sits at 100% post bureau#324 + conductor#153/#154. Goal D (correct post-result verdict) is the named iter-2 follow-up.
 
 ## Related
 
