@@ -1,0 +1,58 @@
+{
+  "callId": "20260511T174900174Z-sn0j",
+  "runIndex": "run-1",
+  "startedAt": "2026-05-11T17:49:00.174Z",
+  "completedAt": "2026-05-11T17:56:29.106Z",
+  "inputs": {
+    "checklistItemId": "el-md-exp:EL-13.38",
+    "checklistItemText": "Equipment pad installed within 4 feet of parking areas or vehicle routes lacks required 4-inch minimum diameter galvanized rigid metal posts (bollards) per AE Design equipment pad details, or bollards not spaced to allow equipment door opening",
+    "question": "For each transformer pad shown on this electrical plan, measure the distance from the transformer pad to the nearest parking area, parking aisle, drive lane, or vehicle circulation route. Indicate which transformer pads are located within 4 feet of parking or traffic areas. For those within 4 feet, identify whether bollards (4-inch diameter metal posts) are shown on the plan with detail specifications.",
+    "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+    "sheetNum": 21
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "bacd962b8af80b9bc2eb7133c303f7a9e490aa2dcac89404b55e42f72b7ebe6d",
+    "promptSource": "bureau",
+    "promptSourcePath": "/Users/wnavey/code/controlroom/conductor/workspace/bureau/jurisdictions/austin/workflows/review/prompts/vision-router.md",
+    "output": {
+      "problemType": "measurement",
+      "reasoning": "The agent question explicitly requests distance measurements from transformer pads to parking/vehicle areas to determine which pads fall within the 4-foot threshold, which is the primary compliance trigger. While the question also includes a presence/detail check for bollards, the measurement task (distance to parking areas) is the gating question that determines applicability of the bollard requirement.",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "measure-distance",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": "/Users/wnavey/code/controlroom/conductor/workspace/output/runs/run-1/vision-check-calls/20260511T174900174Z-sn0j/specialist-measure-distance",
+    "argConstruction": {
+      "pairs": [
+        {
+          "objectA": "Electrical Transformer Pad northwest of Building 1",
+          "objectB": "nearest vehicle drive lane to the west"
+        },
+        {
+          "objectA": "Electrical Transformer Pad west of Building 2",
+          "objectB": "nearest vehicle circulation route (circular drive) to the west"
+        },
+        {
+          "objectA": "Electrical Transformer Pad southwest of Building 8",
+          "objectB": "nearest vehicle drive lane to the west"
+        },
+        {
+          "objectA": "Electrical Transformer Pad east of Building 5",
+          "objectB": "nearest vehicle drive lane to the east"
+        },
+        {
+          "objectA": "Electrical Transformer Pad east of Building 7",
+          "objectB": "nearest vehicle drive lane to the east"
+        }
+      ],
+      "explanation": "Identified five electrical transformer pads across the site plan to measure clearances to their respective nearest adjacent vehicle drive lanes or circulation routes.",
+      "callDir": "/Users/wnavey/code/controlroom/conductor/workspace/output/runs/run-1/vision-check-calls/20260511T174900174Z-sn0j/specialist-extract-measurement-pairs"
+    }
+  },
+  "phase": "B"
+}

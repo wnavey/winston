@@ -1,0 +1,64 @@
+{
+  "type": "object",
+  "properties": {
+    "grouping": {
+      "type": "string",
+      "description": "The grouping ID without file extension (e.g., 'de-4')"
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "deficiencyId": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["fail", "not-verifiable"]
+          },
+          "codeCitations": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Code section references applicable to this finding"
+          },
+          "applicableAreas": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Physical locations on the property where this finding applies"
+          },
+          "sheetReferences": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["documentId", "sheetNumber"],
+              "additionalProperties": false,
+              "properties": {
+                "documentId": { "type": "string" },
+                "sheetNumber": { "type": "integer" }
+              }
+            }
+          },
+          "documentReferences": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["documentId", "label"],
+              "additionalProperties": false,
+              "properties": {
+                "documentId": { "type": "string" },
+                "label": { "type": "string" }
+              }
+            }
+          },
+          "comment": {
+            "type": "string",
+            "description": "Concise deficiency statement (1-2 sentences) explaining what is wrong or not verifiable"
+          }
+        },
+        "required": ["deficiencyId", "status", "codeCitations", "applicableAreas", "sheetReferences", "documentReferences", "comment"]
+      }
+    }
+  },
+  "required": ["grouping", "findings"]
+}

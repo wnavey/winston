@@ -1,0 +1,59 @@
+{
+  "callId": "20260511T175051402Z-yu6s",
+  "runIndex": "run-3",
+  "startedAt": "2026-05-11T17:50:51.402Z",
+  "completedAt": "2026-05-11T18:03:16.123Z",
+  "inputs": {
+    "checklistItemId": "el-md-exp:EL-2.1",
+    "checklistItemText": "Non-utility-compatible trees proposed within 15 lateral feet of overhead electric distribution conductor or equipment",
+    "question": "Looking at the plant legend on Sheet 31 (the KEY NOTES and tree symbols), identify which tree species symbols appear within 15 feet of the OHE line along the southern boundary. What are the actual tree type symbols (e.g., shapes, letters) visible near the OHE line?",
+    "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+    "sheetNum": 31,
+    "regionHint": "southern property boundary and Key Notes legend block (Block 5) showing tree symbols"
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "bacd962b8af80b9bc2eb7133c303f7a9e490aa2dcac89404b55e42f72b7ebe6d",
+    "promptSource": "bureau",
+    "promptSourcePath": "/Users/wnavey/code/controlroom/conductor/workspace/bureau/jurisdictions/austin/workflows/review/prompts/vision-router.md",
+    "output": {
+      "problemType": "measurement",
+      "reasoning": "Although the agent question begins with a legend-reading task (generic), the core request is to identify which tree species symbols appear within 15 feet of the OHE line—this requires measuring the lateral distance from trees to the conductor and determining compliance with the 15-foot clearance requirement. The legend lookup is a prerequisite step, but the actual compliance verification is a distance/clearance measurement.",
+      "confidence": 0.85,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "measure-distance",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": "/Users/wnavey/code/controlroom/conductor/workspace/output/runs/run-3/vision-check-calls/20260511T175051402Z-yu6s/specialist-measure-distance",
+    "argConstruction": {
+      "pairs": [
+        {
+          "objectA": "grey shaded tree canopy symbol at southwest corner",
+          "objectB": "OHE line along southern boundary"
+        },
+        {
+          "objectA": "tree symbol with '+' and 'E' at southeast corner",
+          "objectB": "OHE line along southern boundary"
+        },
+        {
+          "objectA": "tree symbol with '+' and 'M' at southeast corner",
+          "objectB": "OHE line along southern boundary"
+        },
+        {
+          "objectA": "scalloped tree symbol with 'M' at southeast corner",
+          "objectB": "OHE line along southern boundary"
+        },
+        {
+          "objectA": "scalloped tree symbol with 'M' and dot at southeast corner",
+          "objectB": "OHE line along southern boundary"
+        }
+      ],
+      "explanation": "Five clearances between distinct tree symbols located along the southern boundary and the southern OHE line.",
+      "callDir": "/Users/wnavey/code/controlroom/conductor/workspace/output/runs/run-3/vision-check-calls/20260511T175051402Z-yu6s/specialist-extract-measurement-pairs"
+    }
+  },
+  "phase": "B"
+}

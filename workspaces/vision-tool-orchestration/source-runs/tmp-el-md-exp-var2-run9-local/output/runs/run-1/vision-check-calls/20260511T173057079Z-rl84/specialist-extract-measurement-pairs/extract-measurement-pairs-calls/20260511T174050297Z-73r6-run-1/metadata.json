@@ -1,0 +1,90 @@
+{
+  "callId": "20260511T174050297Z-73r6-run-1",
+  "inputs": {
+    "projectId": "63cead15-41f8-418c-b0ef-bd5c2b44719a",
+    "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+    "sheetNum": "21",
+    "submissionVersionId": "55fb6548-814f-4287-bc4a-6018b756d730",
+    "question": "Identify all transformer pad locations on this electrical plan and for each transformer pad, determine which side has the access door (typically marked with an arrow or callout). For each access door side, measure the horizontal distance to the nearest building, structure, or enclosed area. Indicate whether these distances meet or exceed 10 feet.",
+    "checklistItemId": "el-md-exp:EL-13.10",
+    "checklistItemText": "Transformer pad hot-stick use area (access door side) lacks minimum 10-foot clearance to open area or adjacent building/structure",
+    "regionHint": null,
+    "classifierReasoning": "The agent question explicitly asks to 'measure the horizontal distance' from the access door side of transformer pads to nearby buildings/structures and compare against a 10-foot threshold. This is a clearance measurement task, not a presence or identification check, despite the question's multi-part phrasing that begins with feature identification.",
+    "dpi": 150
+  },
+  "cropBbox": {
+    "x0": 0.028,
+    "y0": 0.026,
+    "x1": 0.91,
+    "y1": 0.965
+  },
+  "drawingBlock": {
+    "bbox": {
+      "x0": 0.028,
+      "y0": 0.026,
+      "x1": 0.91,
+      "y1": 0.965
+    },
+    "blockId": "510496e2-20c8-4270-965b-76c6d2903ad6",
+    "areaFraction": 0.828198,
+    "dominanceRatio": null
+  },
+  "renderResult": {
+    "width": 4763,
+    "height": 3381
+  },
+  "result": {
+    "pairs": [
+      {
+        "objectA": "access door side of Electrical Transformer Pad west of Bldg. 1 (NW area)",
+        "objectB": "west exterior wall of Bldg. 1"
+      },
+      {
+        "objectA": "access door side of Electrical Transformer Pad west of Bldg. 2 (middle west area)",
+        "objectB": "west exterior wall of Bldg. 2"
+      },
+      {
+        "objectA": "access door side of Electrical Transformer Pad west of Bldg. 8 (SW area)",
+        "objectB": "west exterior wall of Bldg. 8"
+      },
+      {
+        "objectA": "access door side of Electrical Transformer Pad located between Bldg. 4 and Bldg. 5",
+        "objectB": "nearest exterior wall of adjacent Bldg. 4 or Bldg. 5"
+      },
+      {
+        "objectA": "access door side of Electrical Transformer Pad located south of Bldg. 4 and east of Bldg. 7",
+        "objectB": "nearest exterior wall of adjacent Bldg. 4 or Bldg. 7"
+      }
+    ],
+    "explanation": "Identified five electrical transformer pads along the underground electric line loop; each is paired with its closest adjacent building to verify the 10-foot hot-stick clearance on the access door side.",
+    "callId": "20260511T174050297Z-73r6-run-1",
+    "model": "google/gemini-3.1-pro-preview",
+    "_meta": {
+      "callId": "20260511T174050297Z-73r6-run-1",
+      "cropBbox": {
+        "x0": 0.028,
+        "y0": 0.026,
+        "x1": 0.91,
+        "y1": 0.965
+      },
+      "drawingBlock": {
+        "bbox": {
+          "x0": 0.028,
+          "y0": 0.026,
+          "x1": 0.91,
+          "y1": 0.965
+        },
+        "blockId": "510496e2-20c8-4270-965b-76c6d2903ad6",
+        "areaFraction": 0.828198,
+        "dominanceRatio": null
+      },
+      "model": "google/gemini-3.1-pro-preview",
+      "promptLength": 4674,
+      "validationNotes": []
+    }
+  },
+  "timing": {
+    "startedAt": 1778521250298,
+    "finishedAt": 1778521269023
+  }
+}
