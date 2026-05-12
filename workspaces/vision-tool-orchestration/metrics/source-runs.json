@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0",
-  "lastUpdated": "2026-05-11",
+  "lastUpdated": "2026-05-12",
   "purpose": "Source-of-truth tracker for the 6 runs (3 variants \u00d7 2 sets) feeding the vision-check phase-1 metrics. Each entry pins the run identifiers, submission, tooling, artifacts, and known issues so the per-variant TSV builds and analysis.md stay traceable.",
   "canonicalStorage": "Artifacts for each active source run live at source-runs/<set>/<variant>/. When a run is replaced, the prior artifacts are wiped and replaced \u2014 only the supersedes block here records what came before. See source-runs/README.md.",
   "successCriteria": {
@@ -252,24 +252,24 @@
       "metricsTsvPath": "metrics/el-md-exp/var2-vision-specialist-routing/per-item.tsv",
       "kickoffDoc": null,
       "notes": [
-        "Local conductor execution (--step=review-runs --runs=3). First var-2 run on the per-run output layout (conductor#155) \u2014 vision-check-calls metadata sits under output/runs/run-N/ with runIndex stamped on metadata.json, enabling real per-run attribution.",
-        "67 vision_check calls total (run-1: 19, run-2: 27, run-3: 21). Classifier intent: generic=42, measurement=25.",
-        "23 measure-distance subprocesses, all 23 succeeded. 2 calls short-circuited at extract-measurement-pairs (returned 0 pairs).",
-        "**Goal A** (strict-majority invocation on expected=yes): 8/51 = 15.7%. On expected=no: 46/50 = 92.0%. Net 54/101 = 53.5%.",
-        "**Goal B** (strict-majority `measurement` on expected=measure-distance items): 5/51 = 9.8%. Regressed vs RUN_7's 23.5% \u2014 driver is the 43 expected-md items where majority of runs called nothing at all.",
+        "Local conductor execution (--step=review-runs --runs=3). First var-2 run on the per-run output layout (conductor#155). 67 vision_check calls total (run-1: 19, run-2: 27, run-3: 21). Classifier intent: generic=42, measurement=25.",
+        "23 measure-distance subprocesses dispatched, all 23 succeeded. 2 calls short-circuited at extract-measurement-pairs (returned 0 pairs).",
+        "**Goal A** (strict-majority invocation on expected=yes): 8/54 = 14.8%. On expected=no: 43/47 = 91.5%.",
+        "**Goal B raw**: 5/54 = 9.3%. **Adjusted** (drop 21 valid-skip rows): 5/33 = 15.2%. **Strict-clear** (also drop 16 mixed): 5/17 = 29.4%.",
         "**Goal C** (subprocess success on dispatched measure-distance): 23/23 = 100%.",
-        "Inspection TSV at metrics/el-md-exp/tmp/el-md-exp-var2-run-9/el-md-exp-var2-run9-vision-check-calls-compared-to-expected.tsv."
+        "Inspection TSV at metrics/el-md-exp/tmp/el-md-exp-var2-run-9/.",
+        "**Note 2026-05-12**: denominators reflect expected.tsv update \u2014 EL-13.21/22/23 reclassified from `expected_vision=no` to `expected_vision=yes, expected_specialist=measure-distance` (all 3 are horizontal-clearance requirements between transformer pads and utility lines). Prior published numbers used 51/50 denominators."
       ],
       "goals": {
         "A": {
           "hits": 8,
-          "total": 51,
-          "rate": "15.7%"
+          "total": 54,
+          "rate": "14.8%"
         },
         "A_misuse": {
-          "hits": 46,
-          "total": 50,
-          "rate": "92.0%"
+          "hits": 43,
+          "total": 47,
+          "rate": "91.5%"
         },
         "B_strict_majority": {
           "hits": 5,
@@ -281,7 +281,23 @@
           "total": 23,
           "rate": "100%"
         },
-        "D_post_result_verdict": "not measured \u2014 iter-2 follow-up"
+        "D_post_result_verdict": "not measured \u2014 iter-2 follow-up",
+        "B_raw": {
+          "hits": 5,
+          "total": 54,
+          "rate": "9.3%"
+        },
+        "B_adjusted_drop_valid_skips": {
+          "hits": 5,
+          "total": 33,
+          "rate": "15.2%",
+          "valid_skips_dropped": 21
+        },
+        "B_strict_clear_misses_only": {
+          "hits": 5,
+          "total": 17,
+          "rate": "29.4%"
+        }
       },
       "supersedes": {
         "runLabel": "VISION_CHECK_REVIEW_EL_MD_EXP_RUN_7_BACKUP_LOCAL_3_RUNS",

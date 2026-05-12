@@ -225,12 +225,12 @@ and known issues so the per-variant TSV builds and
 - **First var-2 run on the per-run output layout** (conductor#155). `vision-check-calls` metadata sits under `output/runs/run-N/` with `runIndex` stamped on each `metadata.json`, so per-(item × run) attribution comes from real tool invocations instead of agentTrace.tools_used.
 - 67 vision_check calls total: **run-1=19, run-2=27, run-3=21**. Classifier intent: `generic=42, measurement=25, drawing_inspect=0`. 23 measure-distance subprocesses, all 23 succeeded; 2 additional measurement-classified calls short-circuited at extract-measurement-pairs (returned 0 pairs).
 - **Goals (strict-majority across 3 runs):**
-  - **Goal A** (any vision invoked, strict-majority): **15.7%** (8/51) on expected=yes, **92.0%** (46/50) on expected=no. Net overall 53.5% (54/101).
-  - **Goal B** (majority `measurement` on expected_specialist=measure-distance): **9.8%** (5/51). One 3-way-tie (EL-13.13). 43 of 51 expected-md items had majority `none`.
+  - **Goal A** (any vision invoked, strict-majority): **14.8%** (8/54) on expected=yes, **91.5%** (43/47) on expected=no. _Note: denominators reflect 2026-05-12 expected.tsv reclassification of EL-13.21/22/23 from `no/none` → `yes/measure-distance`._
+  - **Goal B raw** (majority `measurement` on expected_specialist=measure-distance): **9.3%** (5/54). All three new items (EL-13.21/22/23) were `majority=none` in RUN_9, so they enlarge the denominator without contributing to the numerator.
   - **Goal C** (subprocess success on dispatched measure-distance): **100%** (23/23).
   - **Goal D** (correct post-result verdict): **not measured — iter-2 follow-up**.
-- **Regression vs RUN_7**: Goal A on expected=yes dropped from 49.0% → 15.7%; Goal B from 27.5% → 9.8%. The drop is real-attribution honest — RUN_7 numbers were partly inflated by agentTrace.tools_used over-reporting (the agent self-reports vision use in 41 (item × run) pairs that have no corresponding `vision-check-calls/metadata.json`). On expected=no, RUN_9 *improved* (68.0% → 92.0%) — the agent is more conservative across the board.
-- **Driver to investigate:** the 43 expected-md items where majority of runs invoked nothing at all. See [`metrics/el-md-exp/tmp/el-md-exp-var2-run-9/run-9-no-vision-check-analysis.md`](el-md-exp/tmp/el-md-exp-var2-run-9/run-9-no-vision-check-analysis.md) for per-item hypothesis (valid skip vs invalid skip).
+- **Regression vs RUN_7**: Goal A on expected=yes dropped from 49.0% → 14.8%; Goal B from 27.5% → 9.3%. The drop is real-attribution honest — RUN_7 numbers were partly inflated by agentTrace.tools_used over-reporting (the agent self-reports vision use in 41 (item × run) pairs that have no corresponding `vision-check-calls/metadata.json`). RUN_7's denominators also used the pre-2026-05-12 51/50 split.
+- **Driver to investigate:** the 46 expected-md items where majority of runs invoked nothing at all. See [`metrics/el-md-exp/tmp/el-md-exp-var2-run-9/run-9-no-vision-check-analysis.md`](el-md-exp/tmp/el-md-exp-var2-run-9/run-9-no-vision-check-analysis.md) for per-item hypothesis (valid skip vs invalid skip).
 
 **Supersedes**
 
@@ -244,7 +244,7 @@ For phase 1 to declare done, all 6 cells should be ✅ **current** with no outst
 - [ ] cc / var2: re-fire at `runs=3` to retire runs-disparity confounder on cc Goal A
 - [x] el-md-exp / ctrl-baseline: phase-1 numbers populated (Goal A 41.2%; Goal B n/a)
 - [x] el-md-exp / var1: re-fired as `VAR1_RUN_2` post bureau#317. Coverage closed (303/303 cells). **Goal A 74.5%**, Goal B 0/51 (specialist still never invoked).
-- [x] el-md-exp / var2: re-fired as `RUN_9_LOCAL` post conductor#155 (per-run output layout) + conductor#156 (3 runs, real per-call attribution). **Goal A 15.7% (expected=yes) / 92.0% (expected=no), Goal B 9.8%, Goal C 100%.** Numbers regress vs RUN_7 because attribution is no longer inflated by agentTrace.tools_used. Driver to investigate: 43/51 expected-md items had majority `none` — see [`run-9-no-vision-check-analysis.md`](el-md-exp/tmp/el-md-exp-var2-run-9/run-9-no-vision-check-analysis.md).
+- [x] el-md-exp / var2: re-fired as `RUN_9_LOCAL` post conductor#155 (per-run output layout) + conductor#156. Then RUN_10_LOCAL fired post bureau#340 prompt tweak. RUN_9: **Goal A 14.8%/91.5%, Goal B raw 9.3%, Goal C 100%**. RUN_10: **Goal A 20.4%/89.4%, Goal B raw 20.4%** (+11.1pp), big lift after the prompt tweak especially on EL-13.21/22/23. Denominators updated 2026-05-12 (51 → 54 expected-md). See [`run-10-vs-run-9-comparison.md`](el-md-exp/tmp/el-md-exp-var2-run-10/run-10-vs-run-9-comparison.md).
 - [x] **fix measure-distance overlay's `review.md`** ✅ landed via bureau#317 + validated by VAR1_RUN_2.
 - [x] **bureau-side classifier prompt iteration for el-md-exp** ✅ delivered as conductor#151 + bureau#318 + validated by RUN_3.
 - [x] **conductor measurement-dispatch wiring** ✅ delivered as conductor#153 + conductor#154 + bureau#324. Validated by RUN_6_BACKUP_LOCAL + RUN_7_BACKUP_LOCAL_3_RUNS.

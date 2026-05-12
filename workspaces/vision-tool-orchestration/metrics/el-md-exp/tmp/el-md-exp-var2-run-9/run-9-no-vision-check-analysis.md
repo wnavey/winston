@@ -18,26 +18,26 @@
 
 ## Headline
 
-Total items analyzed: **46**
+Total items analyzed: **49**
 
 | verdict | count | share |
 |---|---:|---:|
-| `invalid_missing_dimensions` | 7 | 15.2% |
-| `invalid_probable` | 3 | 6.5% |
-| `valid_not_applicable` | 14 | 30.4% |
-| `valid_no_feature` | 2 | 4.3% |
-| `valid_other` | 4 | 8.7% |
-| `valid_other_data_gap` | 3 | 6.5% |
-| `mixed` | 13 | 28.3% |
+| `invalid_missing_dimensions` | 7 | 14.3% |
+| `invalid_probable` | 3 | 6.1% |
+| `valid_not_applicable` | 14 | 28.6% |
+| `valid_no_feature` | 2 | 4.1% |
+| `valid_other` | 4 | 8.2% |
+| `valid_other_data_gap` | 3 | 6.1% |
+| `mixed` | 16 | 32.7% |
 
 **Reading:**
 
 - **7 confirmed *invalid skips*** — the agent saw the feature on the plan and explicitly said dimensions weren't annotated. Exactly what `measure-distance` is built for. Latent Goal B headroom: if the classifier had fired `measurement`, the specialist would have computed the distance instead of the agent declaring `not-verifiable`.
 - **3 probable invalid skips** — all 3 runs `not-verifiable`, no non-spatial data gap cited, but reasoning didn't trip the strict "no dimensions" regex. Worth manual confirmation.
 - **23 valid skips** — `measure-distance` wouldn't have helped: feature not on plan (2), requirement doesn't apply (14), real verdict reached without measurement (4), or non-spatial data gap (3).
-- **13 mixed.** Runs disagreed; needs manual review.
+- **16 mixed.** Runs disagreed; needs manual review.
 
-If we restrict Goal B's denominator to the 28 items where vision/measurement *could* have helped (i.e. drop the 23 valid-skip items from the 51), RUN_9's adjusted Goal B becomes **5 / 28 = 17.9%**. The remaining 23 items in this denominator are where the agent skipped vision but probably shouldn't have, and represent the real Goal B headroom.
+If we restrict Goal B's denominator to the 28 items where vision/measurement *could* have helped (i.e. drop the 23 valid-skip items from the 51), RUN_9's adjusted Goal B becomes **5 / 28 = 17.9%**. The remaining 26 items in this denominator are where the agent skipped vision but probably shouldn't have, and represent the real Goal B headroom.
 
 ## Per-item detail
 
@@ -418,6 +418,69 @@ Each entry: item_id (verdict), expected item text, then per-run status + observa
 **run-3** — status=`not-verifiable`
 - *observation:* Electrical plan shows five transformer pad locations but no dimensions are provided between adjacent pads.
 - *reasoning:* Without specific distance callouts between transformer pads, compliance with 5-foot separation cannot be verified.
+
+---
+
+### EL-13.21 — `mixed`
+
+> Transformer pads lack minimum 5-foot horizontal clearance from water lines
+
+- **majority vision_check:** `none`  ·  **per-run intent:** run-1=`none`, run-2=`measurement`, run-3=`none`
+- **expected:** `expected_specialist = measure-distance` (`subClassification=distance-only`)
+
+**run-1** — status=`not-verifiable`
+- *observation:* Sheet 19 (Utility Tap Plan) shows water line routing. Sheet 21 (Electrical Plan) shows transformer locations. However, no specific clearance dimensions are annotated between transformer pads and water lines on either sheet.
+- *reasoning:* While both elements are shown on the submitted plans, the specific clearance verification cannot be definitively determined without dimensional annotations or detailed overlay measurements.
+
+**run-2** — status=`fail`
+- *observation:* Vision measurement of Utility Tap Plan (Sheet 19) shows water line routing and transformer pad locations. Measurements from pad edges to nearest blue water service lines yielded: 1.4 feet, 3.7 feet, and 3.5 feet for three pads.
+- *reasoning:* The measured clearances are less than the 5-foot horizontal minimum required by the code. This is a direct and measurable code violation for three transformer pads.
+
+**run-3** — status=`not-verifiable`
+- *observation:* Utility plan (Sheet 19) shows water utility routing and includes transformer pad symbol in legend but does not depict any transformer pads in the drawing.
+- *reasoning:* Without transformer pad locations shown on the utility plan, the separation distance to water lines cannot be evaluated.
+
+---
+
+### EL-13.22 — `mixed`
+
+> Transformer pads lack minimum 5-foot horizontal clearance from wastewater lines
+
+- **majority vision_check:** `none`  ·  **per-run intent:** run-1=`none`, run-2=`measurement`, run-3=`none`
+- **expected:** `expected_specialist = measure-distance` (`subClassification=distance-only`)
+
+**run-1** — status=`not-verifiable`
+- *observation:* Sheet 19 shows wastewater infrastructure. Sheet 21 shows transformer pads. However, specific clearance dimensions are not annotated between these elements.
+- *reasoning:* While both elements are present on the plans, explicit clearance verification cannot be determined from the submitted drawings without dimensional annotations.
+
+**run-2** — status=`fail`
+- *observation:* Vision measurement of Utility Tap Plan shows wastewater line (purple/magenta line) proximity to transformer pad west of Building 1, measuring 4.9 feet from pad edge to line.
+- *reasoning:* The measured clearance of 4.9 feet is below the 5-foot horizontal minimum required by code. This represents a 0.1-foot violation of the standard.
+
+**run-3** — status=`not-verifiable`
+- *observation:* Utility plan (Sheet 19) shows wastewater utility routing but transformer pads are not depicted in the drawing.
+- *reasoning:* Without transformer locations marked on the utility plan, separation distances to wastewater infrastructure cannot be evaluated.
+
+---
+
+### EL-13.23 — `mixed`
+
+> Transformer pads lack minimum 5-foot horizontal clearance from storm drain lines
+
+- **majority vision_check:** `none`  ·  **per-run intent:** run-1=`none`, run-2=`measurement`, run-3=`none`
+- **expected:** `expected_specialist = measure-distance` (`subClassification=distance-only`)
+
+**run-1** — status=`not-verifiable`
+- *observation:* Storm sewer infrastructure is shown on Sheet 12 (Storm Sewer Plan) and transformer locations on Sheet 21. However, specific clearance dimensions are not provided between transformer pads and storm drain infrastructure.
+- *reasoning:* While both elements are present on the submitted plans, specific clearance verification cannot be definitively determined without dimensional annotations or detailed overlay analysis.
+
+**run-2** — status=`pass`
+- *observation:* Vision measurement of Utility Tap Plan shows storm drain line locations and distances to all five transformer pads: 59.1 feet, 51.5 feet, 8.5 feet, 59.3 feet, and 52.1 feet respectively.
+- *reasoning:* All measured clearances exceed the 5-foot horizontal minimum requirement per UCM Section 2.9.1.B.2.
+
+**run-3** — status=`not-verifiable`
+- *observation:* Storm sewer plan shows drainage infrastructure but does not include transformer pad locations.
+- *reasoning:* Transformer locations are not identified on the stormwater infrastructure sheets, preventing verification of separations.
 
 ---
 
