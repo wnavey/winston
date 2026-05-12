@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
 """Build metrics/el-md-exp/var2-vision-specialist-routing/per-item-run.tsv (TSV 4, raw).
 
-Long format: one row per (item × run). Source is RUN_9_LOCAL — the
-first var-2 run on the per-run output layout (conductor#155), where
-`vision-check-calls/` metadata sits under `output/runs/run-N/` with
-`runIndex` stamped on each `metadata.json`. Means per-(item × run)
-attribution comes from real tool invocations now, not the prior
-agentTrace.tools_used + canonical-intent-precedence trick.
+Long format: one row per (item × run). Source is RUN_10_LOCAL — fired
+post bureau#340 prompt tweak (vision_check capability list adds
+"dimensional analysis, distance computation"). Per-run output layout
+(conductor#155). Per-(item × run) attribution comes from real tool
+invocations recorded in `output/runs/run-N/vision-check-calls/<callId>/metadata.json`.
 
 Per (item × run):
   tool_called = highest-precedence classifier intent among all
@@ -39,7 +38,7 @@ from pathlib import Path
 
 HERE = Path(__file__).parent.resolve()
 WORKSPACE = HERE.parent.parent.parent.parent
-RUN_LABEL = "VISION_CHECK_REVIEW_EL_MD_EXP_RUN_9_LOCAL"
+RUN_LABEL = "VISION_CHECK_REVIEW_EL_MD_EXP_RUN_10_LOCAL"
 RUNS_DIR = WORKSPACE / "source-runs" / "el-md-exp" / "var-2" / "output" / "runs"
 EXPECTED_TSV = HERE.parent.parent / "expected-vision-selection" / "expected.tsv"
 OUT_TSV = HERE.parent / "per-item-run.tsv"

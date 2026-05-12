@@ -43,7 +43,7 @@ HERE = Path(__file__).parent.resolve()
 # scripts → tmp/el-md-exp-var2-run-10 → tmp → el-md-exp → metrics → vision-tool-orchestration
 WORKSPACE = HERE.parent.parent.parent.parent.parent
 TSV = HERE.parent / "el-md-exp-var2-run10-vision-check-calls-compared-to-expected.tsv"
-RUNS = WORKSPACE / "source-runs" / "tmp-el-md-exp-var2-run10-local" / "output" / "runs"
+RUNS = WORKSPACE / "source-runs" / "el-md-exp" / "var-2" / "output" / "runs"
 OUT = HERE.parent / "run-10-no-vision-check-analysis.md"
 
 # Patterns
