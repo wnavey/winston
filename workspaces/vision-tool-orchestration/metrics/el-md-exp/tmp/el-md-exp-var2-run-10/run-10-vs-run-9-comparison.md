@@ -10,20 +10,20 @@ Both runs: same submission (Valley View Townhomes v1), same submissionVersionId,
 | metric | RUN_9 | RUN_10 | delta |
 |---|---:|---:|---:|
 | total `vision_check` calls (all items) | 67 | 86 | **+19** |
-| Goal B raw | 5/51 = 9.8% | 8/51 = 15.7% | **+5.9pp** |
-| Goal B adjusted | 5/30 = 16.7% | 8/34 = 23.5% | **+6.8pp** |
-| Goal B strict-clear | 5/17 = 29.4% | 8/24 = 33.3% | **+3.9pp** |
+| Goal B raw | 5/54 = 9.3% | 11/54 = 20.4% | **+11.1pp** |
+| Goal B adjusted | 5/33 = 15.2% | 11/37 = 29.7% | **+14.5pp** |
+| Goal B strict-clear | 5/17 = 29.4% | 11/27 = 40.7% | **+11.3pp** |
 
-All three Goal B variants moved up. Modest absolute movement (3 more measurement-majority items, on a 51-item denominator), but consistent across both raw and denominator-adjusted views.
+All three Goal B variants moved up. RUN_10 contributed 6 more measurement-majority items on a 54-item denominator. The lift is larger after the EL-13.21/22/23 reclassification — those 3 items moved from `mixed` in RUN_9 (denom-only) to `measurement` in RUN_10 (numerator+denom).
 
-## Verdict distribution on the 51 expected-md items
+## Verdict distribution on the 54 expected-md items
 
 | no_call_verdict / state | RUN_9 | RUN_10 | delta |
 |---|---:|---:|---:|
 | `invalid_missing_dimensions` | 6 | 7 | +1 |
 | `invalid_probable` | 3 | 4 | +1 |
-| `mixed` | 13 | 10 | -3 |
-| `n/a` | 8 | 13 | +5 |
+| `mixed` | 16 | 10 | -6 |
+| `n/a` | 8 | 16 | +8 |
 | `valid_no_feature` | 1 | 0 | -1 |
 | `valid_not_applicable` | 14 | 15 | +1 |
 | `valid_other` | 4 | 1 | -3 |
@@ -36,6 +36,7 @@ Effective bucket: `measurement` if majority_vision_check=measurement (Goal B hit
 | RUN_9 bucket → RUN_10 bucket | count |
 |---|---:|
 | `valid_not_applicable` → `valid_not_applicable` | 10 |
+| `mixed` → `measurement (Goal B hit)` | 5 🟢 (moved INTO Goal B) |
 | `mixed` → `valid_not_applicable` | 5 |
 | `invalid_missing_dimensions` → `invalid_missing_dimensions` | 4 |
 | `measurement (Goal B hit)` → `generic (vision called, wrong specialist)` | 3 🔴 (LOST from Goal B) |
@@ -45,7 +46,6 @@ Effective bucket: `measurement` if majority_vision_check=measurement (Goal B hit
 | `valid_not_applicable` → `mixed` | 2 |
 | `mixed` → `invalid_missing_dimensions` | 2 |
 | `measurement (Goal B hit)` → `measurement (Goal B hit)` | 2 |
-| `mixed` → `measurement (Goal B hit)` | 2 🟢 (moved INTO Goal B) |
 | `valid_not_applicable` → `measurement (Goal B hit)` | 2 🟢 (moved INTO Goal B) |
 | `valid_other` → `invalid_missing_dimensions` | 1 |
 | `generic (vision called, wrong specialist)` → `valid_other` | 1 |
