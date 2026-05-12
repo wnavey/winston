@@ -1,0 +1,58 @@
+{
+  "callId": "20260511T232705227Z-d0xl",
+  "runIndex": "run-3",
+  "startedAt": "2026-05-11T23:27:05.227Z",
+  "completedAt": "2026-05-11T23:32:03.924Z",
+  "inputs": {
+    "checklistItemId": "el-md-exp:EL-13.25",
+    "checklistItemText": "Transformer pads lack minimum 12-inch horizontal and vertical clearance from other underground utilities (except gas, fuel, steam)",
+    "question": "Are there any underground utilities (water, wastewater, storm drain, electrical conduits) shown within 12 inches of transformer pads on the plan?",
+    "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+    "sheetNum": 21
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "bacd962b8af80b9bc2eb7133c303f7a9e490aa2dcac89404b55e42f72b7ebe6d",
+    "promptSource": "bureau",
+    "promptSourcePath": "/Users/wnavey/code/controlroom/conductor/workspace/bureau/jurisdictions/austin/workflows/review/prompts/vision-router.md",
+    "output": {
+      "problemType": "measurement",
+      "reasoning": "The agent is asking whether underground utilities are within 12 inches of transformer pads, which is a direct clearance-distance question requiring plan-view measurement between two physical features to verify compliance with the 12-inch minimum clearance requirement.",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "measure-distance",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": "/Users/wnavey/code/controlroom/conductor/workspace/output/runs/run-3/vision-check-calls/20260511T232705227Z-d0xl/specialist-measure-distance",
+    "argConstruction": {
+      "pairs": [
+        {
+          "objectA": "Electrical Transformer Pad near Unit 101 (NW area)",
+          "objectB": "nearest underground utility line (water, wastewater, or storm drain)"
+        },
+        {
+          "objectA": "Electrical Transformer Pad near Unit 201 (West side)",
+          "objectB": "nearest underground utility line (water, wastewater, or storm drain)"
+        },
+        {
+          "objectA": "Electrical Transformer Pad near Unit 801 (SW area)",
+          "objectB": "nearest underground utility line (water, wastewater, or storm drain)"
+        },
+        {
+          "objectA": "Electrical Transformer Pad near Unit 504 (East side)",
+          "objectB": "nearest underground utility line (water, wastewater, or storm drain)"
+        },
+        {
+          "objectA": "Electrical Transformer Pad near Unit 704 (SE area)",
+          "objectB": "nearest underground utility line (water, wastewater, or storm drain)"
+        }
+      ],
+      "explanation": "Five transformer-to-nearest-utility clearances corresponding to each transformer pad identified on the site plan.",
+      "callDir": "/Users/wnavey/code/controlroom/conductor/workspace/output/runs/run-3/vision-check-calls/20260511T232705227Z-d0xl/specialist-extract-measurement-pairs"
+    }
+  },
+  "phase": "B"
+}

@@ -1,0 +1,55 @@
+{
+  "callId": "20260511T224403531Z-nmla",
+  "runIndex": "run-3",
+  "startedAt": "2026-05-11T22:44:03.531Z",
+  "completedAt": "2026-05-11T22:47:46.122Z",
+  "inputs": {
+    "checklistItemId": "el-md-exp:EL-13.2",
+    "checklistItemText": "Transformer pads lack minimum 5-foot clearance from retaining walls",
+    "question": "Are retaining walls shown on the site plan or grading plan, and what is the clearance distance from transformer pads to any retaining walls?",
+    "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+    "sheetNum": 21,
+    "regionHint": "retaining walls near transformer locations"
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "bacd962b8af80b9bc2eb7133c303f7a9e490aa2dcac89404b55e42f72b7ebe6d",
+    "promptSource": "bureau",
+    "promptSourcePath": "/Users/wnavey/code/controlroom/conductor/workspace/bureau/jurisdictions/austin/workflows/review/prompts/vision-router.md",
+    "output": {
+      "problemType": "measurement",
+      "reasoning": "Although the agent question begins with a presence check (sheet discovery), the primary and substantive part of the question asks for 'clearance distance from transformer pads to any retaining walls,' which is a direct measurement requirement matching the checklist's 5-foot clearance compliance check. The presence element is secondary framing; the core task is measuring the clearance.",
+      "confidence": 0.92,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "measure-distance",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": "/Users/wnavey/code/controlroom/conductor/workspace/output/runs/run-3/vision-check-calls/20260511T224403531Z-nmla/specialist-measure-distance",
+    "argConstruction": {
+      "pairs": [
+        {
+          "objectA": "Electrical Transformer Pad west of Building 1",
+          "objectB": "Existing Stone Retaining Wall on the east side of the site"
+        },
+        {
+          "objectA": "Electrical Transformer Pad west of Building 8",
+          "objectB": "Existing Stone Retaining Wall on the east side of the site"
+        },
+        {
+          "objectA": "Electrical Transformer Pad between Building 4 and Building 5",
+          "objectB": "Existing Stone Retaining Wall on the east side of the site"
+        },
+        {
+          "objectA": "Electrical Transformer Pad between Building 7 and Building 6",
+          "objectB": "Existing Stone Retaining Wall on the east side of the site"
+        }
+      ],
+      "explanation": "Four electrical transformer pads are identified on the site plan; each is paired with the nearest retaining wall structure (located along the eastern boundary) to verify clearances.",
+      "callDir": "/Users/wnavey/code/controlroom/conductor/workspace/output/runs/run-3/vision-check-calls/20260511T224403531Z-nmla/specialist-extract-measurement-pairs"
+    }
+  },
+  "phase": "B"
+}

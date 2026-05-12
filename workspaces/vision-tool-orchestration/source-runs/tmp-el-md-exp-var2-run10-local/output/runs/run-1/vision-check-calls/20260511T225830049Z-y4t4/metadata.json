@@ -1,0 +1,32 @@
+{
+  "callId": "20260511T225830049Z-y4t4",
+  "runIndex": "run-1",
+  "startedAt": "2026-05-11T22:58:30.049Z",
+  "completedAt": "2026-05-11T23:00:40.123Z",
+  "inputs": {
+    "checklistItemId": "el-md-exp:EL-2.7",
+    "checklistItemText": "Trees proposed within 10 lateral feet of pad-mounted electric equipment, or between equipment access door and drivable surface",
+    "question": "On the Preliminary Electrical Design Plan (Sheet 21) or landscape plan (Sheet 31), are there any pad-mounted transformers or electrical equipment boxes shown? If yes, are trees shown within approximately 10 feet of these equipment locations?",
+    "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+    "sheetNum": 21
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "bacd962b8af80b9bc2eb7133c303f7a9e490aa2dcac89404b55e42f72b7ebe6d",
+    "promptSource": "bureau",
+    "promptSourcePath": "/Users/wnavey/code/controlroom/conductor/workspace/bureau/jurisdictions/austin/workflows/review/prompts/vision-router.md",
+    "output": {
+      "problemType": "generic",
+      "reasoning": "The agent question begins with a presence check ('are there any pad-mounted transformers or electrical equipment boxes shown?'), which is a sheet-discovery and feature-identification task. While the requirement ultimately concerns distance compliance, the agent is performing progressive verification by first establishing whether the equipment exists on the plans before measuring clearances.",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "vision",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": null
+  },
+  "phase": "B"
+}

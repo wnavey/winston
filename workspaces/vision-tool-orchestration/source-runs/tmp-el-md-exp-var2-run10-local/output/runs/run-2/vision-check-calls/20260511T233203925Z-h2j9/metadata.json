@@ -1,0 +1,42 @@
+{
+  "callId": "20260511T233203925Z-h2j9",
+  "runIndex": "run-2",
+  "startedAt": "2026-05-11T23:32:03.925Z",
+  "completedAt": "2026-05-11T23:33:02.206Z",
+  "inputs": {
+    "checklistItemId": "el-md-exp:EL-13.12",
+    "checklistItemText": "Transformer pads lack minimum 5-foot clearance from fire hydrants",
+    "question": "Where is the fire hydrant located relative to the transformer pads? Is there at least 5 feet of clearance between any transformer pad and the fire hydrant?",
+    "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+    "sheetNum": 10
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "bacd962b8af80b9bc2eb7133c303f7a9e490aa2dcac89404b55e42f72b7ebe6d",
+    "promptSource": "bureau",
+    "promptSourcePath": "/Users/wnavey/code/controlroom/conductor/workspace/bureau/jurisdictions/austin/workflows/review/prompts/vision-router.md",
+    "output": {
+      "problemType": "measurement",
+      "reasoning": "The agent question explicitly asks for clearance distance measurement between two physical features (transformer pads and fire hydrant), which is the core compliance check for this requirement.",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "measure-distance",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": "/Users/wnavey/code/controlroom/conductor/workspace/output/runs/run-2/vision-check-calls/20260511T233203925Z-h2j9/specialist-measure-distance",
+    "argConstruction": {
+      "pairs": [
+        {
+          "objectA": "Proposed Fire Hydrant located at the southeast curve of the inner fire lane, south of Building 7 (Unit 705)",
+          "objectB": "Rectangular transformer pad immediately east of the southeast Proposed Fire Hydrant"
+        }
+      ],
+      "explanation": "Identified one proposed fire hydrant and adjacent transformer pad in the southeast area of the site plan.",
+      "callDir": "/Users/wnavey/code/controlroom/conductor/workspace/output/runs/run-2/vision-check-calls/20260511T233203925Z-h2j9/specialist-extract-measurement-pairs"
+    }
+  },
+  "phase": "B"
+}

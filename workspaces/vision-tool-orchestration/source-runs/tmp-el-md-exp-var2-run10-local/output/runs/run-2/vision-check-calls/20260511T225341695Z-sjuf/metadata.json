@@ -1,0 +1,78 @@
+{
+  "callId": "20260511T225341695Z-sjuf",
+  "runIndex": "run-2",
+  "startedAt": "2026-05-11T22:53:41.695Z",
+  "completedAt": "2026-05-11T22:57:00.916Z",
+  "inputs": {
+    "checklistItemId": "el-md-exp:EL-13.37",
+    "checklistItemText": "Transformer pad dimensions do not match Austin Energy Design-approved transformer pad detail sheets for specified service type (single-phase or three-phase)",
+    "question": "What are the dimensions (width and length) of each transformer pad shown on this plan? Are they labeled with specific measurements?",
+    "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+    "sheetNum": 21
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "bacd962b8af80b9bc2eb7133c303f7a9e490aa2dcac89404b55e42f72b7ebe6d",
+    "promptSource": "bureau",
+    "promptSourcePath": "/Users/wnavey/code/controlroom/conductor/workspace/bureau/jurisdictions/austin/workflows/review/prompts/vision-router.md",
+    "output": {
+      "problemType": "measurement",
+      "reasoning": "The agent is asking for specific dimensional measurements (width and length) of transformer pads on the plan, which directly supports the checklist requirement to verify pad dimensions against approved standards. This is a measurement task, not a generic presence or label-readout question.",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "measure-distance",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": "/Users/wnavey/code/controlroom/conductor/workspace/output/runs/run-2/vision-check-calls/20260511T225341695Z-sjuf/specialist-measure-distance",
+    "argConstruction": {
+      "pairs": [
+        {
+          "objectA": "north edge of Electrical Transformer Pad west of Bldg. 1",
+          "objectB": "south edge of Electrical Transformer Pad west of Bldg. 1"
+        },
+        {
+          "objectA": "east edge of Electrical Transformer Pad west of Bldg. 1",
+          "objectB": "west edge of Electrical Transformer Pad west of Bldg. 1"
+        },
+        {
+          "objectA": "north edge of Electrical Transformer Pad west of Bldg. 2",
+          "objectB": "south edge of Electrical Transformer Pad west of Bldg. 2"
+        },
+        {
+          "objectA": "east edge of Electrical Transformer Pad west of Bldg. 2",
+          "objectB": "west edge of Electrical Transformer Pad west of Bldg. 2"
+        },
+        {
+          "objectA": "north edge of Electrical Transformer Pad west of Bldg. 8",
+          "objectB": "south edge of Electrical Transformer Pad west of Bldg. 8"
+        },
+        {
+          "objectA": "east edge of Electrical Transformer Pad west of Bldg. 8",
+          "objectB": "west edge of Electrical Transformer Pad west of Bldg. 8"
+        },
+        {
+          "objectA": "north edge of Electrical Transformer Pad between Bldg. 4 and Bldg. 5",
+          "objectB": "south edge of Electrical Transformer Pad between Bldg. 4 and Bldg. 5"
+        },
+        {
+          "objectA": "east edge of Electrical Transformer Pad between Bldg. 4 and Bldg. 5",
+          "objectB": "west edge of Electrical Transformer Pad between Bldg. 4 and Bldg. 5"
+        },
+        {
+          "objectA": "north edge of Electrical Transformer Pad between Bldg. 7 and Bldg. 6",
+          "objectB": "south edge of Electrical Transformer Pad between Bldg. 7 and Bldg. 6"
+        },
+        {
+          "objectA": "east edge of Electrical Transformer Pad between Bldg. 7 and Bldg. 6",
+          "objectB": "west edge of Electrical Transformer Pad between Bldg. 7 and Bldg. 6"
+        }
+      ],
+      "explanation": "Five electrical transformer pads were identified on the plan. For each pad, two pairs are provided (north-south edges and east-west edges) to measure both width and length.",
+      "callDir": "/Users/wnavey/code/controlroom/conductor/workspace/output/runs/run-2/vision-check-calls/20260511T225341695Z-sjuf/specialist-extract-measurement-pairs"
+    }
+  },
+  "phase": "B"
+}

@@ -1,0 +1,54 @@
+{
+  "callId": "20260511T230532801Z-yea5",
+  "runIndex": "run-2",
+  "startedAt": "2026-05-11T23:05:32.802Z",
+  "completedAt": "2026-05-11T23:12:14.669Z",
+  "inputs": {
+    "checklistItemId": "el-md-exp:EL-13.21",
+    "checklistItemText": "Transformer pads lack minimum 5-foot horizontal clearance from water lines",
+    "question": "On the utility plan, are the water lines shown, and if so, are there any water lines within 5 feet horizontally of any transformer pads?",
+    "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+    "sheetNum": 19
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "bacd962b8af80b9bc2eb7133c303f7a9e490aa2dcac89404b55e42f72b7ebe6d",
+    "promptSource": "bureau",
+    "promptSourcePath": "/Users/wnavey/code/controlroom/conductor/workspace/bureau/jurisdictions/austin/workflows/review/prompts/vision-router.md",
+    "output": {
+      "problemType": "measurement",
+      "reasoning": "The agent question explicitly asks whether water lines are within 5 feet horizontally of transformer pads, which is a clearance measurement task. Although the question begins with a presence check (\"are water lines shown\"), the core inquiry is a distance/clearance measurement between two physical features (water lines and transformer pads) against a 5-foot threshold.",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "measure-distance",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": "/Users/wnavey/code/controlroom/conductor/workspace/output/runs/run-2/vision-check-calls/20260511T230532801Z-yea5/specialist-measure-distance",
+    "argConstruction": {
+      "pairs": [
+        {
+          "objectA": "transformer pad (green square) west of Building 1",
+          "objectB": "nearest water line (blue line) to the transformer pad west of Building 1"
+        },
+        {
+          "objectA": "transformer pad (green square) west of Building 2",
+          "objectB": "nearest water line (blue line) to the transformer pad west of Building 2"
+        },
+        {
+          "objectA": "transformer pad (green square) east of Building 5",
+          "objectB": "nearest water line (blue line) to the transformer pad east of Building 5"
+        },
+        {
+          "objectA": "transformer pad (green square) east of Building 6",
+          "objectB": "nearest water line (blue line) to the transformer pad east of Building 6"
+        }
+      ],
+      "explanation": "Identified four transformer pads (green squares) on the utility plan and paired each with its nearest water line (blue lines) to verify horizontal clearance.",
+      "callDir": "/Users/wnavey/code/controlroom/conductor/workspace/output/runs/run-2/vision-check-calls/20260511T230532801Z-yea5/specialist-extract-measurement-pairs"
+    }
+  },
+  "phase": "B"
+}

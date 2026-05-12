@@ -1,0 +1,58 @@
+{
+  "callId": "20260511T222035423Z-zrs1",
+  "runIndex": "run-3",
+  "startedAt": "2026-05-11T22:20:35.423Z",
+  "completedAt": "2026-05-11T22:22:10.916Z",
+  "inputs": {
+    "checklistItemId": "el-md-exp:EL-13.33",
+    "checklistItemText": "Transformer pads not located 100% on private property, located in public right-of-way, or straddling property lines",
+    "question": "Are transformer pads shown within the property boundary (shown on sheet 21 as the main site boundary), and do any transformer pads appear to be located outside the property line or in the right-of-way?",
+    "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+    "sheetNum": 21
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "bacd962b8af80b9bc2eb7133c303f7a9e490aa2dcac89404b55e42f72b7ebe6d",
+    "promptSource": "bureau",
+    "promptSourcePath": "/Users/wnavey/code/controlroom/conductor/workspace/bureau/jurisdictions/austin/workflows/review/prompts/vision-router.md",
+    "output": {
+      "problemType": "measurement",
+      "reasoning": "The agent is asking whether transformer pads are located within property boundaries and whether any straddle or fall outside the property line—this requires measuring/assessing the spatial relationship between transformer pad locations and the property boundary line, which is a clearance/containment measurement task.",
+      "confidence": 0.92,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "measure-distance",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": "/Users/wnavey/code/controlroom/conductor/workspace/output/runs/run-3/vision-check-calls/20260511T222035423Z-zrs1/specialist-measure-distance",
+    "argConstruction": {
+      "pairs": [
+        {
+          "objectA": "Electrical Transformer Pad west of Bldg. 1",
+          "objectB": "nearest property line"
+        },
+        {
+          "objectA": "Electrical Transformer Pad west of Bldg. 2",
+          "objectB": "nearest property line"
+        },
+        {
+          "objectA": "Electrical Transformer Pad west of Bldg. 8",
+          "objectB": "nearest property line"
+        },
+        {
+          "objectA": "Electrical Transformer Pad east of Bldg. 4",
+          "objectB": "nearest property line"
+        },
+        {
+          "objectA": "Electrical Transformer Pad east of Bldg. 7",
+          "objectB": "nearest property line"
+        }
+      ],
+      "explanation": "Five transformer-to-property-line clearance checks corresponding to the five labeled Electrical Transformer Pads on the site plan.",
+      "callDir": "/Users/wnavey/code/controlroom/conductor/workspace/output/runs/run-3/vision-check-calls/20260511T222035423Z-zrs1/specialist-extract-measurement-pairs"
+    }
+  },
+  "phase": "B"
+}

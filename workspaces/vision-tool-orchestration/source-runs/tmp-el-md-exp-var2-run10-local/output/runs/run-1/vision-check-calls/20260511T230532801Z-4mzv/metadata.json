@@ -1,0 +1,62 @@
+{
+  "callId": "20260511T230532801Z-4mzv",
+  "runIndex": "run-1",
+  "startedAt": "2026-05-11T23:05:32.801Z",
+  "completedAt": "2026-05-11T23:17:53.079Z",
+  "inputs": {
+    "checklistItemId": "el-md-exp:EL-2.8",
+    "checklistItemText": "Trees proposed within 5 lateral feet of underground electric equipment",
+    "question": "On Sheet 21 (Preliminary Electrical Design Plan), are there pull boxes or other underground electrical equipment marked with specific locations? If yes, are there any trees (shown as circles on the landscape plan) located within 5 feet of these underground equipment locations?",
+    "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+    "sheetNum": 21
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "bacd962b8af80b9bc2eb7133c303f7a9e490aa2dcac89404b55e42f72b7ebe6d",
+    "promptSource": "bureau",
+    "promptSourcePath": "/Users/wnavey/code/controlroom/conductor/workspace/bureau/jurisdictions/austin/workflows/review/prompts/vision-router.md",
+    "output": {
+      "problemType": "measurement",
+      "reasoning": "The agent question explicitly asks whether trees are located within 5 feet of underground electrical equipment, which is a distance/clearance measurement task. Although the question begins with a presence check (sheet discovery and equipment identification), the core compliance question requires measuring the lateral distance between trees and equipment against the 5-foot threshold.",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "measure-distance",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": "/Users/wnavey/code/controlroom/conductor/workspace/output/runs/run-1/vision-check-calls/20260511T230532801Z-4mzv/specialist-measure-distance",
+    "argConstruction": {
+      "pairs": [
+        {
+          "objectA": "Electrical Pull Box near NW corner of Bldg 1",
+          "objectB": "Tree circle northwest of Bldg 1"
+        },
+        {
+          "objectA": "Underground Electric Line west of Bldg 1",
+          "objectB": "Tree circle west of Bldg 1"
+        },
+        {
+          "objectA": "Electrical Transformer Pad west of Bldg 2",
+          "objectB": "Tree circle north of Transformer Pad west of Bldg 2"
+        },
+        {
+          "objectA": "Electrical Transformer Pad west of Bldg 8",
+          "objectB": "Tree circle west of Bldg 8"
+        },
+        {
+          "objectA": "Electrical Pull Box near NE corner of Bldg 5",
+          "objectB": "Tree circle east of Bldg 5"
+        },
+        {
+          "objectA": "Electrical Transformer Pad east of Bldg 5",
+          "objectB": "Tree circle east of Bldg 5"
+        }
+      ],
+      "explanation": "Identified several pull boxes, transformer pads, and underground electric lines that are in close proximity to tree circles on the plan.",
+      "callDir": "/Users/wnavey/code/controlroom/conductor/workspace/output/runs/run-1/vision-check-calls/20260511T230532801Z-4mzv/specialist-extract-measurement-pairs"
+    }
+  },
+  "phase": "B"
+}

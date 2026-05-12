@@ -1,0 +1,32 @@
+{
+  "callId": "20260511T234201070Z-exrc",
+  "runIndex": "run-1",
+  "startedAt": "2026-05-11T23:42:01.070Z",
+  "completedAt": "2026-05-11T23:42:28.715Z",
+  "inputs": {
+    "checklistItemId": "el-md-exp:EL-2.1",
+    "checklistItemText": "Non-utility-compatible trees proposed within 15 lateral feet of overhead electric distribution conductor or equipment",
+    "question": "On Sheet 31, look at the plant legend symbols. Can you identify what the circles/symbols mean for the trees shown at the bottom edge near the OHE line? Based on the legend, these are marked 'M' for Mitigation Trees. According to the plant schedule on Sheet 35, the proposed trees are Cedar Elm, Live Oak, Texas Mountain Laurel, and Mexican Redbud. Given their typical mature heights (Cedar Elm 40-50 ft, Live Oak 40-80 ft, Texas Mountain Laurel 25 ft, Mexican Redbud 20-30 ft), which of these would NOT be utility-compatible (i.e., which exceed 20 feet mature height except the noted exceptions)?",
+    "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+    "sheetNum": 31
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "bacd962b8af80b9bc2eb7133c303f7a9e490aa2dcac89404b55e42f72b7ebe6d",
+    "promptSource": "bureau",
+    "promptSourcePath": "/Users/wnavey/code/controlroom/conductor/workspace/bureau/jurisdictions/austin/workflows/review/prompts/vision-router.md",
+    "output": {
+      "problemType": "generic",
+      "reasoning": "The agent is asking for tree-type identification, legend interpretation, and species-compatibility classification based on mature height thresholds—not a distance measurement between trees and the OHE conductor. Although the checklist requirement is about lateral clearance (a measurement problem), the agent question is performing a narrower, prerequisite step: determining which proposed tree species are utility-incompatible by type, before any clearance measurement would occur.",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "vision",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": null
+  },
+  "phase": "B"
+}

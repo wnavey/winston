@@ -1,0 +1,32 @@
+{
+  "callId": "20260511T224350391Z-bqw6",
+  "runIndex": "run-2",
+  "startedAt": "2026-05-11T22:43:50.391Z",
+  "completedAt": "2026-05-11T22:47:46.127Z",
+  "inputs": {
+    "checklistItemId": "el-md-exp:EL-13.38",
+    "checklistItemText": "Equipment pad installed within 4 feet of parking areas or vehicle routes lacks required 4-inch minimum diameter galvanized rigid metal posts (bollards)",
+    "question": "For each transformer pad shown, is it located within 4 feet of parking areas or vehicle circulation routes? If so, are bollards shown on the plan, and if not, are they documented elsewhere?",
+    "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+    "sheetNum": 21
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "bacd962b8af80b9bc2eb7133c303f7a9e490aa2dcac89404b55e42f72b7ebe6d",
+    "promptSource": "bureau",
+    "promptSourcePath": "/Users/wnavey/code/controlroom/conductor/workspace/bureau/jurisdictions/austin/workflows/review/prompts/vision-router.md",
+    "output": {
+      "problemType": "generic",
+      "reasoning": "The agent is asking a presence/documentation question (are bollards shown or documented?) rather than a measurement question. While the checklist requirement involves a 4-foot distance threshold, the agent's question is progressive verification: first identifying whether pads are within 4 feet of parking/routes (presence/proximity check), then checking for bollard presence or documentation (feature presence/note readout). The actual 4-foot clearance measurement is implicit context, but the agent is not asking for a distance measurement right now.",
+      "confidence": 0.92,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "vision",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": null
+  },
+  "phase": "B"
+}

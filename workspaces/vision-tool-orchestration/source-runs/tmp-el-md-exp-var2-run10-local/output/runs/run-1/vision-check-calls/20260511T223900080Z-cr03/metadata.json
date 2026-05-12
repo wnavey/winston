@@ -1,0 +1,32 @@
+{
+  "callId": "20260511T223900080Z-cr03",
+  "runIndex": "run-1",
+  "startedAt": "2026-05-11T22:39:00.080Z",
+  "completedAt": "2026-05-11T22:44:04.704Z",
+  "inputs": {
+    "checklistItemId": "el-md-exp:EL-13.9",
+    "checklistItemText": "Transformer pads lack minimum 20-foot horizontal/radial clearance from fire escapes or stairs serving as fire escapes (oil-filled equipment)",
+    "question": "Are fire escapes shown on Sheet 21 or other plan sheets? Are there stairs shown on the elevation drawings that serve as fire escapes? If transformer pads are located on Sheet 21, what is their distance from any fire escapes or exit stairs?",
+    "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+    "sheetNum": 21
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "bacd962b8af80b9bc2eb7133c303f7a9e490aa2dcac89404b55e42f72b7ebe6d",
+    "promptSource": "bureau",
+    "promptSourcePath": "/Users/wnavey/code/controlroom/conductor/workspace/bureau/jurisdictions/austin/workflows/review/prompts/vision-router.md",
+    "output": {
+      "problemType": "generic",
+      "reasoning": "The agent question begins with sheet-discovery and presence checks (are fire escapes shown? are there stairs serving as fire escapes?), which are generic visual inspection tasks. Although the question ends with a measurement component, the agent is first conducting progressive verification to identify whether the relevant features exist before attempting clearance measurement.",
+      "confidence": 0.85,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "vision",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": null
+  },
+  "phase": "B"
+}

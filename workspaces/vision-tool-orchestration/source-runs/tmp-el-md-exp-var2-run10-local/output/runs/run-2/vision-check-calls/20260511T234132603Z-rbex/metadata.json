@@ -1,0 +1,37 @@
+{
+  "callId": "20260511T234132603Z-rbex",
+  "runIndex": "run-2",
+  "startedAt": "2026-05-11T23:41:32.603Z",
+  "completedAt": "2026-05-11T23:42:01.067Z",
+  "inputs": {
+    "checklistItemId": "el-md-exp:EL-13.19",
+    "checklistItemText": "Transformer pads lack minimum 15-foot clearance from fire lanes",
+    "question": "Are any of the transformer pads located within fire lanes or within 15 feet of fire lane markings on the fire protection plan?",
+    "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+    "sheetNum": 10
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "bacd962b8af80b9bc2eb7133c303f7a9e490aa2dcac89404b55e42f72b7ebe6d",
+    "promptSource": "bureau",
+    "promptSourcePath": "/Users/wnavey/code/controlroom/conductor/workspace/bureau/jurisdictions/austin/workflows/review/prompts/vision-router.md",
+    "output": {
+      "problemType": "measurement",
+      "reasoning": "The agent question explicitly asks about distance ('within 15 feet of fire lane markings'), which is a clearance measurement task, even though it is phrased as a yes/no question. The core verification requires measuring the distance from transformer pads to fire lane boundaries to determine compliance with the 15-foot minimum clearance requirement.",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "extract-measurement-pairs",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": "/Users/wnavey/code/controlroom/conductor/workspace/output/runs/run-2/vision-check-calls/20260511T234132603Z-rbex/specialist-extract-measurement-pairs",
+    "argConstruction": {
+      "pairs": [],
+      "explanation": "There are no objects explicitly labeled as transformer pads on this drawing, so the requested clearance to the fire lanes cannot be measured.",
+      "callDir": "/Users/wnavey/code/controlroom/conductor/workspace/output/runs/run-2/vision-check-calls/20260511T234132603Z-rbex/specialist-extract-measurement-pairs"
+    }
+  },
+  "phase": "B"
+}

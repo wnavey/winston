@@ -1,0 +1,37 @@
+{
+  "callId": "20260511T233611757Z-begk",
+  "runIndex": "run-2",
+  "startedAt": "2026-05-11T23:36:11.757Z",
+  "completedAt": "2026-05-11T23:36:22.032Z",
+  "inputs": {
+    "checklistItemId": "el-md-exp:EL-13.2",
+    "checklistItemText": "Transformer pads lack minimum 5-foot clearance from retaining walls",
+    "question": "Are there any retaining walls adjacent to the transformer pads? If so, what is the distance from each transformer pad to the nearest retaining wall?",
+    "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+    "sheetNum": 38
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "bacd962b8af80b9bc2eb7133c303f7a9e490aa2dcac89404b55e42f72b7ebe6d",
+    "promptSource": "bureau",
+    "promptSourcePath": "/Users/wnavey/code/controlroom/conductor/workspace/bureau/jurisdictions/austin/workflows/review/prompts/vision-router.md",
+    "output": {
+      "problemType": "measurement",
+      "reasoning": "The agent question includes both a presence check (are there retaining walls?) and a distance measurement (what is the distance?). Since the checklist requirement is fundamentally about clearance compliance, and the agent is asking for the actual distance measurement to evaluate the 5-foot minimum, the measurement component takes precedence and defines the routing.",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "extract-measurement-pairs",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": "/Users/wnavey/code/controlroom/conductor/workspace/output/runs/run-2/vision-check-calls/20260511T233611757Z-begk/specialist-extract-measurement-pairs",
+    "argConstruction": {
+      "pairs": [],
+      "explanation": "There are no transformer pads visible in this drawing region.",
+      "callDir": "/Users/wnavey/code/controlroom/conductor/workspace/output/runs/run-2/vision-check-calls/20260511T233611757Z-begk/specialist-extract-measurement-pairs"
+    }
+  },
+  "phase": "B"
+}

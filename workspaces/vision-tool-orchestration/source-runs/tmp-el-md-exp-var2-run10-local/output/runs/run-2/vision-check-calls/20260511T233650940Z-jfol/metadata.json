@@ -1,0 +1,58 @@
+{
+  "callId": "20260511T233650940Z-jfol",
+  "runIndex": "run-2",
+  "startedAt": "2026-05-11T23:36:50.940Z",
+  "completedAt": "2026-05-11T23:38:50.151Z",
+  "inputs": {
+    "checklistItemId": "el-md-exp:EL-13.28",
+    "checklistItemText": "Transformer locations or proposed facilities lack minimum 15-foot radius clearance from overhead distribution primary and neutral conductors (measured from conductors, not pole centerline)",
+    "question": "Are there any overhead distribution lines shown on the electrical or utility plans? If so, are the transformer pads within 15 feet (measured radially from the conductors) of any overhead lines?",
+    "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+    "sheetNum": 21
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "bacd962b8af80b9bc2eb7133c303f7a9e490aa2dcac89404b55e42f72b7ebe6d",
+    "promptSource": "bureau",
+    "promptSourcePath": "/Users/wnavey/code/controlroom/conductor/workspace/bureau/jurisdictions/austin/workflows/review/prompts/vision-router.md",
+    "output": {
+      "problemType": "measurement",
+      "reasoning": "The agent question explicitly asks for a radial distance measurement between transformer pads and overhead distribution conductors to verify the 15-foot clearance requirement, which is a direct measurement task despite the initial presence-check phrasing.",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "measure-distance",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": "/Users/wnavey/code/controlroom/conductor/workspace/output/runs/run-2/vision-check-calls/20260511T233650940Z-jfol/specialist-measure-distance",
+    "argConstruction": {
+      "pairs": [
+        {
+          "objectA": "Electrical Transformer Pad west of Bldg. 1",
+          "objectB": "Overhead line (OHE) running north-south along the west property boundary"
+        },
+        {
+          "objectA": "Electrical Transformer Pad west of Bldg. 2",
+          "objectB": "Overhead line (OHE) running north-south along the west property boundary"
+        },
+        {
+          "objectA": "Electrical Transformer Pad west of Bldg. 8",
+          "objectB": "Overhead line (OHE) running north-south along the west property boundary"
+        },
+        {
+          "objectA": "Electrical Transformer Pad between Bldg. 4 and Bldg. 5",
+          "objectB": "Overhead line (OHE) running east-west along the south property boundary"
+        },
+        {
+          "objectA": "Electrical Transformer Pad east of Bldg. 7",
+          "objectB": "Overhead line (OHE) running east-west along the south property boundary"
+        }
+      ],
+      "explanation": "There are five designated electrical transformer pads on the plan; each pair measures the clearance from a pad to its nearest overhead distribution line (OHE) located along either the west or south property boundaries.",
+      "callDir": "/Users/wnavey/code/controlroom/conductor/workspace/output/runs/run-2/vision-check-calls/20260511T233650940Z-jfol/specialist-extract-measurement-pairs"
+    }
+  },
+  "phase": "B"
+}

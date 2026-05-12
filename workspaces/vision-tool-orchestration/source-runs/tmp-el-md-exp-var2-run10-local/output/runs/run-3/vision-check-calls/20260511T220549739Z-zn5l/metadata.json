@@ -1,0 +1,55 @@
+{
+  "callId": "20260511T220549739Z-zn5l",
+  "runIndex": "run-3",
+  "startedAt": "2026-05-11T22:05:49.739Z",
+  "completedAt": "2026-05-11T22:14:07.879Z",
+  "inputs": {
+    "checklistItemId": "el-md-exp:EL-2.1",
+    "checklistItemText": "Non-utility-compatible trees proposed within 15 lateral feet of overhead electric distribution conductor or equipment",
+    "question": "Where are the overhead electric (OHE) lines shown on this landscape plan? Show me all OHE lines, their locations relative to the site, and any trees positioned near them. What is the closest proximity of any proposed tree to an OHE line?",
+    "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+    "sheetNum": 31,
+    "regionHint": "Check all areas of the site, particularly where utility lines are labeled"
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "bacd962b8af80b9bc2eb7133c303f7a9e490aa2dcac89404b55e42f72b7ebe6d",
+    "promptSource": "bureau",
+    "promptSourcePath": "/Users/wnavey/code/controlroom/conductor/workspace/bureau/jurisdictions/austin/workflows/review/prompts/vision-router.md",
+    "output": {
+      "problemType": "measurement",
+      "reasoning": "Although the agent question begins with sheet-discovery and feature-identification sub-questions, it culminates in a direct measurement request: 'What is the closest proximity of any proposed tree to an OHE line?' This is the operative question that determines compliance with the 15-foot lateral clearance requirement. The preamble questions are progressive verification steps leading to the measurement.",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "measure-distance",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": "/Users/wnavey/code/controlroom/conductor/workspace/output/runs/run-3/vision-check-calls/20260511T220549739Z-zn5l/specialist-measure-distance",
+    "argConstruction": {
+      "pairs": [
+        {
+          "objectA": "proposed mitigation tree 'M' in the extreme southwest corner",
+          "objectB": "OHE (overhead electric) line along the southern property boundary"
+        },
+        {
+          "objectA": "westernmost proposed tree in the cluster of three in the southeast corner near label H.7",
+          "objectB": "OHE (overhead electric) line along the southern property boundary"
+        },
+        {
+          "objectA": "middle proposed mitigation tree 'M' in the cluster of three in the southeast corner",
+          "objectB": "OHE (overhead electric) line along the southern property boundary"
+        },
+        {
+          "objectA": "easternmost proposed mitigation tree 'M' in the cluster of three in the southeast corner near label H.6",
+          "objectB": "OHE (overhead electric) line along the southern property boundary"
+        }
+      ],
+      "explanation": "Identified the overhead electric (OHE) line running along the southern boundary and paired it with the closest proposed trees in the southwest and southeast corners to determine minimum clearance.",
+      "callDir": "/Users/wnavey/code/controlroom/conductor/workspace/output/runs/run-3/vision-check-calls/20260511T220549739Z-zn5l/specialist-extract-measurement-pairs"
+    }
+  },
+  "phase": "B"
+}

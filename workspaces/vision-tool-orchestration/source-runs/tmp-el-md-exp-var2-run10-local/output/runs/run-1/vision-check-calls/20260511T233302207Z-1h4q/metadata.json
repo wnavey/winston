@@ -1,0 +1,54 @@
+{
+  "callId": "20260511T233302207Z-1h4q",
+  "runIndex": "run-1",
+  "startedAt": "2026-05-11T23:33:02.207Z",
+  "completedAt": "2026-05-11T23:34:20.582Z",
+  "inputs": {
+    "checklistItemId": "el-md-exp:EL-2.3",
+    "checklistItemText": "Large trees (mature height 40+ feet per ECM Appendix F) proposed within 25 lateral feet of overhead electric distribution conductor or equipment",
+    "question": "Based on the site plan sheets, the proposed trees in the plant schedule are Cedar Elm, Live Oak, Texas Mountain Laurel, and Mexican Redbud. Looking at the landscape plan (Sheet 31), identify the trees shown near the OHE line at the bottom of the site and estimate their distances from the OHE line. Are any large trees (Cedar Elm and Live Oak, which mature to 40-50 feet) shown within approximately 25 feet of the OHE line?",
+    "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+    "sheetNum": 31
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "bacd962b8af80b9bc2eb7133c303f7a9e490aa2dcac89404b55e42f72b7ebe6d",
+    "promptSource": "bureau",
+    "promptSourcePath": "/Users/wnavey/code/controlroom/conductor/workspace/bureau/jurisdictions/austin/workflows/review/prompts/vision-router.md",
+    "output": {
+      "problemType": "measurement",
+      "reasoning": "The agent is asking for distance estimates from identified trees to the OHE line and whether any fall within the 25-foot threshold—this is a clearance measurement question, not a presence check. Although the agent begins by identifying tree species from the schedule, the core question requires measuring lateral distances between tree locations and the OHE conductor.",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "measure-distance",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": "/Users/wnavey/code/controlroom/conductor/workspace/output/runs/run-1/vision-check-calls/20260511T233302207Z-1h4q/specialist-measure-distance",
+    "argConstruction": {
+      "pairs": [
+        {
+          "objectA": "proposed tree symbol in the bottom left corner of the site",
+          "objectB": "OHE line running along the bottom of the site"
+        },
+        {
+          "objectA": "westernmost proposed tree in the cluster at the bottom right corner of the site",
+          "objectB": "OHE line running along the bottom of the site"
+        },
+        {
+          "objectA": "middle proposed tree in the cluster at the bottom right corner of the site",
+          "objectB": "OHE line running along the bottom of the site"
+        },
+        {
+          "objectA": "easternmost proposed tree in the cluster at the bottom right corner of the site",
+          "objectB": "OHE line running along the bottom of the site"
+        }
+      ],
+      "explanation": "Measurements between the four proposed trees located near the southern property line and the adjacent overhead electric (OHE) line.",
+      "callDir": "/Users/wnavey/code/controlroom/conductor/workspace/output/runs/run-1/vision-check-calls/20260511T233302207Z-1h4q/specialist-extract-measurement-pairs"
+    }
+  },
+  "phase": "B"
+}

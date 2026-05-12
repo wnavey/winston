@@ -1,0 +1,33 @@
+{
+  "callId": "20260511T223638611Z-1ny9",
+  "runIndex": "run-2",
+  "startedAt": "2026-05-11T22:36:38.611Z",
+  "completedAt": "2026-05-11T22:36:55.270Z",
+  "inputs": {
+    "checklistItemId": "el-md-exp:EL-2.1",
+    "checklistItemText": "Non-utility-compatible trees proposed within 15 lateral feet of overhead electric distribution conductor or equipment",
+    "question": "Is the overhead electric line marked as distribution or transmission? Does it show poles, conductors, or other infrastructure details that indicate the voltage level?",
+    "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+    "sheetNum": 31,
+    "regionHint": "Along the bottom/southern boundary where OHE is marked"
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "bacd962b8af80b9bc2eb7133c303f7a9e490aa2dcac89404b55e42f72b7ebe6d",
+    "promptSource": "bureau",
+    "promptSourcePath": "/Users/wnavey/code/controlroom/conductor/workspace/bureau/jurisdictions/austin/workflows/review/prompts/vision-router.md",
+    "output": {
+      "problemType": "generic",
+      "reasoning": "The agent is asking about feature identification and labeling (voltage classification, infrastructure type) to determine whether the overhead line qualifies as 'distribution' for the 15-foot rule. This is a presence/identification check, not a distance measurement. The actual 15-foot clearance measurement would come after this classification is confirmed.",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "vision",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": null
+  },
+  "phase": "B"
+}

@@ -1,0 +1,43 @@
+{
+  "callId": "20260511T223811457Z-9648",
+  "runIndex": "run-3",
+  "startedAt": "2026-05-11T22:38:11.457Z",
+  "completedAt": "2026-05-11T22:39:00.079Z",
+  "inputs": {
+    "checklistItemId": "el-md-exp:EL-1.14",
+    "checklistItemText": "Retaining walls do not maintain minimum 7.5-foot horizontal sky-to-ground clearance from outermost electric line where overhead facilities are present",
+    "question": "Show the retaining wall on the south side of the property and the overhead electric line. What is the horizontal distance between them? Are any dimension annotations provided to show clearance compliance?",
+    "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+    "sheetNum": 9,
+    "regionHint": "South property boundary where OHE line runs near retaining wall"
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "bacd962b8af80b9bc2eb7133c303f7a9e490aa2dcac89404b55e42f72b7ebe6d",
+    "promptSource": "bureau",
+    "promptSourcePath": "/Users/wnavey/code/controlroom/conductor/workspace/bureau/jurisdictions/austin/workflows/review/prompts/vision-router.md",
+    "output": {
+      "problemType": "measurement",
+      "reasoning": "The agent is directly asking for the horizontal distance between two physical features (retaining wall and overhead electric line), which is a clearance measurement question that aligns with the 7.5-foot minimum clearance requirement.",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "measure-distance",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": "/Users/wnavey/code/controlroom/conductor/workspace/output/runs/run-3/vision-check-calls/20260511T223811457Z-9648/specialist-measure-distance",
+    "argConstruction": {
+      "pairs": [
+        {
+          "objectA": "overhead electric line (OHE) running east-west along the south property boundary",
+          "objectB": "concrete retaining wall running parallel to the OHE line along the south property boundary"
+        }
+      ],
+      "explanation": "Measuring the clearance between the overhead electric line and the concrete retaining wall along the south property boundary.",
+      "callDir": "/Users/wnavey/code/controlroom/conductor/workspace/output/runs/run-3/vision-check-calls/20260511T223811457Z-9648/specialist-extract-measurement-pairs"
+    }
+  },
+  "phase": "B"
+}

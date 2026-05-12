@@ -1,0 +1,32 @@
+{
+  "callId": "20260511T223658082Z-c1f8",
+  "runIndex": "run-1",
+  "startedAt": "2026-05-11T22:36:58.082Z",
+  "completedAt": "2026-05-11T22:38:11.459Z",
+  "inputs": {
+    "checklistItemId": "el-md-exp:EL-13.25",
+    "checklistItemText": "Transformer pads lack minimum 12-inch horizontal and vertical clearance from other underground utilities (except gas, fuel, steam)",
+    "question": "Are underground utility lines shown on Sheet 21 (such as water, wastewater, storm sewer lines)? Do any of these utility lines appear to cross near or under the transformer pads? Are clearance dimensions provided between transformer pads and underground utilities?",
+    "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+    "sheetNum": 21
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "bacd962b8af80b9bc2eb7133c303f7a9e490aa2dcac89404b55e42f72b7ebe6d",
+    "promptSource": "bureau",
+    "promptSourcePath": "/Users/wnavey/code/controlroom/conductor/workspace/bureau/jurisdictions/austin/workflows/review/prompts/vision-router.md",
+    "output": {
+      "problemType": "generic",
+      "reasoning": "The agent is performing progressive verification: first checking for presence of underground utilities on the sheet and their proximity to transformer pads, then asking whether clearance dimensions are labeled/documented. These are sheet-discovery and feature-presence questions, not actual distance measurements. The measurement check (if needed) would come after confirming utilities and dimensions are visible.",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "vision",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": null
+  },
+  "phase": "B"
+}
