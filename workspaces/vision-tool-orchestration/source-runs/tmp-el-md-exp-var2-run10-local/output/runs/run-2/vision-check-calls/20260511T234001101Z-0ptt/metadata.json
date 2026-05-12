@@ -1,0 +1,42 @@
+{
+  "callId": "20260511T234001101Z-0ptt",
+  "runIndex": "run-2",
+  "startedAt": "2026-05-11T23:40:01.101Z",
+  "completedAt": "2026-05-11T23:41:32.601Z",
+  "inputs": {
+    "checklistItemId": "el-md-exp:EL-13.17",
+    "checklistItemText": "Transformer pads lack minimum 5-foot clearance from bike racks",
+    "question": "Are there any bike racks shown on the site plan? If so, are any within 5 feet of the transformer pads?",
+    "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+    "sheetNum": 9
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "bacd962b8af80b9bc2eb7133c303f7a9e490aa2dcac89404b55e42f72b7ebe6d",
+    "promptSource": "bureau",
+    "promptSourcePath": "/Users/wnavey/code/controlroom/conductor/workspace/bureau/jurisdictions/austin/workflows/review/prompts/vision-router.md",
+    "output": {
+      "problemType": "measurement",
+      "reasoning": "The agent question explicitly asks whether bike racks are within 5 feet of transformer pads, which is a clearance measurement task; the presence check ('are there any bike racks') is a preliminary sub-step, but the core question requires measuring the distance between two features to verify compliance with the 5-foot minimum.",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "measure-distance",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": "/Users/wnavey/code/controlroom/conductor/workspace/output/runs/run-2/vision-check-calls/20260511T234001101Z-0ptt/specialist-measure-distance",
+    "argConstruction": {
+      "pairs": [
+        {
+          "objectA": "hatched area labeled '(2) Short Term Bicycle Parking Spaces' located north of Bldg. 2 Unit 201",
+          "objectB": "solid black rectangle indicated by the 'Transformer Pad (Typ.)' leader line, located west of the circular driveway"
+        }
+      ],
+      "explanation": "Identified the single labeled bicycle parking area and paired it with the closest labeled transformer pad to verify the minimum clearance.",
+      "callDir": "/Users/wnavey/code/controlroom/conductor/workspace/output/runs/run-2/vision-check-calls/20260511T234001101Z-0ptt/specialist-extract-measurement-pairs"
+    }
+  },
+  "phase": "B"
+}

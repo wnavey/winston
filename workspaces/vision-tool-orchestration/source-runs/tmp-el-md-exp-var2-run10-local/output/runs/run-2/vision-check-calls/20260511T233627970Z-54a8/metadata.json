@@ -1,0 +1,37 @@
+{
+  "callId": "20260511T233627970Z-54a8",
+  "runIndex": "run-2",
+  "startedAt": "2026-05-11T23:36:27.970Z",
+  "completedAt": "2026-05-11T23:36:50.938Z",
+  "inputs": {
+    "checklistItemId": "el-md-exp:EL-13.3",
+    "checklistItemText": "Transformer pads lack required clearance from fences and gates - 5 feet for sides with operators/controls, 3 feet for sides without operators/controls (from removable ventilated fences)",
+    "question": "Are there any fences or gates shown adjacent to the transformer pads on the site plan? If so, what are the clearance distances, and which side of the transformer pad (access door side vs. non-access side) faces the fence?",
+    "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+    "sheetNum": 9
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "bacd962b8af80b9bc2eb7133c303f7a9e490aa2dcac89404b55e42f72b7ebe6d",
+    "promptSource": "bureau",
+    "promptSourcePath": "/Users/wnavey/code/controlroom/conductor/workspace/bureau/jurisdictions/austin/workflows/review/prompts/vision-router.md",
+    "output": {
+      "problemType": "measurement",
+      "reasoning": "Although the agent question begins with a presence check ('Are there any fences or gates'), the primary and substantive part of the question explicitly asks for clearance distances between transformer pads and fences, which is a measurement task. The agent is also asking for directional context (access vs. non-access side) to apply the differential clearance rules (5 feet vs. 3 feet), confirming that the core task is measuring and comparing distances against the requirement thresholds.",
+      "confidence": 0.92,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "extract-measurement-pairs",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": "/Users/wnavey/code/controlroom/conductor/workspace/output/runs/run-2/vision-check-calls/20260511T233627970Z-54a8/specialist-extract-measurement-pairs",
+    "argConstruction": {
+      "pairs": [],
+      "explanation": "While a transformer pad is labeled on the west side of the site plan, there are no fences or gates shown adjacent to it or any other potential transformer pads in this drawing.",
+      "callDir": "/Users/wnavey/code/controlroom/conductor/workspace/output/runs/run-2/vision-check-calls/20260511T233627970Z-54a8/specialist-extract-measurement-pairs"
+    }
+  },
+  "phase": "B"
+}

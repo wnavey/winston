@@ -1,0 +1,32 @@
+{
+  "callId": "20260511T223638610Z-9h8q",
+  "runIndex": "run-1",
+  "startedAt": "2026-05-11T22:36:38.610Z",
+  "completedAt": "2026-05-11T22:36:58.513Z",
+  "inputs": {
+    "checklistItemId": "el-md-exp:EL-2.12",
+    "checklistItemText": "Tree clearances measured from utility pole centerline or structure instead of from outer electric conductor",
+    "question": "On Sheet 31 (landscape plan), are there any dimension lines showing tree clearances from overhead electric infrastructure? If yes, do the dimension lines originate from the outer conductor (the actual wire/line), or from the pole centerline?",
+    "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+    "sheetNum": 31
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "bacd962b8af80b9bc2eb7133c303f7a9e490aa2dcac89404b55e42f72b7ebe6d",
+    "promptSource": "bureau",
+    "promptSourcePath": "/Users/wnavey/code/controlroom/conductor/workspace/bureau/jurisdictions/austin/workflows/review/prompts/vision-router.md",
+    "output": {
+      "problemType": "generic",
+      "reasoning": "The agent is asking a two-part presence and identification question: (1) whether dimension lines exist on the sheet, and (2) what feature they originate from. This is a visual inspection for label/annotation presence and source identification, not a measurement of an actual distance between physical features. The measurement compliance itself (tree-to-conductor vs. tree-to-pole-centerline) will be evaluated once these dimensions are located and read.",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "vision",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": null
+  },
+  "phase": "B"
+}

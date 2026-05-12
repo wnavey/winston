@@ -1,0 +1,32 @@
+{
+  "callId": "20260511T220549734Z-847w",
+  "runIndex": "run-2",
+  "startedAt": "2026-05-11T22:05:49.734Z",
+  "completedAt": "2026-05-11T22:20:35.425Z",
+  "inputs": {
+    "checklistItemId": "el-md-exp:EL-13.1",
+    "checklistItemText": "Transformer pads lack minimum 5-foot clearance from buildings, structures, and building foundations",
+    "question": "Are transformer pads shown on Sheet 21? If so, what are the dimensions and horizontal clearances from buildings or other structures?",
+    "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+    "sheetNum": 21
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "bacd962b8af80b9bc2eb7133c303f7a9e490aa2dcac89404b55e42f72b7ebe6d",
+    "promptSource": "bureau",
+    "promptSourcePath": "/Users/wnavey/code/controlroom/conductor/workspace/bureau/jurisdictions/austin/workflows/review/prompts/vision-router.md",
+    "output": {
+      "problemType": "generic",
+      "reasoning": "The agent is first asking a presence/sheet-discovery question ('Are transformer pads shown on Sheet 21?'), which is a prerequisite check before any clearance measurement can occur. Although the full requirement involves a 5-foot clearance measurement, the agent's immediate question is narrower and focuses on locating and identifying transformer pads and their dimensions, not yet measuring clearance distances.",
+      "confidence": 0.75,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "vision",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": null
+  },
+  "phase": "B"
+}

@@ -1,0 +1,32 @@
+{
+  "callId": "20260511T222351923Z-q7aj",
+  "runIndex": "run-1",
+  "startedAt": "2026-05-11T22:23:51.923Z",
+  "completedAt": "2026-05-11T22:24:11.191Z",
+  "inputs": {
+    "checklistItemId": "el-md-exp:EL-13.38",
+    "checklistItemText": "Equipment pad installed within 4 feet of parking areas or vehicle routes lacks required 4-inch minimum diameter galvanized rigid metal posts (bollards) per AE Design equipment pad details, or bollards not spaced to allow equipment door opening",
+    "question": "Are any transformer pads located within 4 feet of parking areas or vehicle circulation routes? If so, are bollards shown on the plan for these transformer pads? Are bollard specifications or detail references shown on this sheet?",
+    "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+    "sheetNum": 21
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "bacd962b8af80b9bc2eb7133c303f7a9e490aa2dcac89404b55e42f72b7ebe6d",
+    "promptSource": "bureau",
+    "promptSourcePath": "/Users/wnavey/code/controlroom/conductor/workspace/bureau/jurisdictions/austin/workflows/review/prompts/vision-router.md",
+    "output": {
+      "problemType": "generic",
+      "reasoning": "The agent is performing progressive verification: first identifying presence of transformer pads near parking/routes (presence check), then checking for bollard presence and specification references (feature/label readout). These are all visual identification and documentation checks, not distance measurements. The actual clearance measurement (4 feet) is already given as a constraint; the agent is verifying compliance artifacts (bollards, details) rather than measuring distances.",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "vision",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": null
+  },
+  "phase": "B"
+}

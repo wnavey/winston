@@ -1,0 +1,54 @@
+{
+  "callId": "20260511T230040122Z-f3rz",
+  "runIndex": "run-3",
+  "startedAt": "2026-05-11T23:00:40.122Z",
+  "completedAt": "2026-05-11T23:05:32.800Z",
+  "inputs": {
+    "checklistItemId": "el-md-exp:EL-13.36",
+    "checklistItemText": "Electrical routing from transformer to meter not 100% on private property",
+    "question": "Are electrical service lines/conduits shown routing from transformer pads to meters, and do these electrical routing paths stay entirely within the property boundary or enter the right-of-way/public area?",
+    "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+    "sheetNum": 21
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "bacd962b8af80b9bc2eb7133c303f7a9e490aa2dcac89404b55e42f72b7ebe6d",
+    "promptSource": "bureau",
+    "promptSourcePath": "/Users/wnavey/code/controlroom/conductor/workspace/bureau/jurisdictions/austin/workflows/review/prompts/vision-router.md",
+    "output": {
+      "problemType": "measurement",
+      "reasoning": "The agent question asks whether electrical routing paths stay entirely within the property boundary or enter public areas—this requires visual inspection to determine the spatial relationship and clearance between the electrical conduit route and the property boundary line, which is a measurement/clearance task rather than a simple presence or label check.",
+      "confidence": 0.85,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "measure-distance",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": "/Users/wnavey/code/controlroom/conductor/workspace/output/runs/run-3/vision-check-calls/20260511T230040122Z-f3rz/specialist-measure-distance",
+    "argConstruction": {
+      "pairs": [
+        {
+          "objectA": "Blue Underground Electric Line routing on the west side of the site",
+          "objectB": "West property boundary line"
+        },
+        {
+          "objectA": "Blue Underground Electric Line routing on the south side of the site",
+          "objectB": "South property boundary line"
+        },
+        {
+          "objectA": "Blue Underground Electric Line routing on the east side of the site",
+          "objectB": "East property boundary line"
+        },
+        {
+          "objectA": "Blue Underground Electric Line routing on the north side of the site",
+          "objectB": "North property boundary line"
+        }
+      ],
+      "explanation": "Checking the clearance and containment of the underground electrical routing lines relative to the property boundaries on all four sides of the site to verify they do not enter the right-of-way.",
+      "callDir": "/Users/wnavey/code/controlroom/conductor/workspace/output/runs/run-3/vision-check-calls/20260511T230040122Z-f3rz/specialist-extract-measurement-pairs"
+    }
+  },
+  "phase": "B"
+}

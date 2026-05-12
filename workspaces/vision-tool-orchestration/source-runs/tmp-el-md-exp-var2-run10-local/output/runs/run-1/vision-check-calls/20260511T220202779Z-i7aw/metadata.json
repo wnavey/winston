@@ -1,0 +1,58 @@
+{
+  "callId": "20260511T220202779Z-i7aw",
+  "runIndex": "run-1",
+  "startedAt": "2026-05-11T22:02:02.779Z",
+  "completedAt": "2026-05-11T22:05:49.732Z",
+  "inputs": {
+    "checklistItemId": "el-md-exp:EL-13.1",
+    "checklistItemText": "Transformer pads lack minimum 5-foot clearance from buildings, structures, and building foundations",
+    "question": "How many transformer pads are shown on Sheet 21, what are their locations relative to buildings, and what is the approximate horizontal distance from each transformer pad to the nearest building?",
+    "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+    "sheetNum": 21
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "bacd962b8af80b9bc2eb7133c303f7a9e490aa2dcac89404b55e42f72b7ebe6d",
+    "promptSource": "bureau",
+    "promptSourcePath": "/Users/wnavey/code/controlroom/conductor/workspace/bureau/jurisdictions/austin/workflows/review/prompts/vision-router.md",
+    "output": {
+      "problemType": "measurement",
+      "reasoning": "Although the agent question begins with a presence/count query (progressive verification), the primary and substantive part of the question asks for 'approximate horizontal distance from each transformer pad to the nearest building'—which is a clearance measurement directly addressing the 5-foot minimum requirement. The distance measurement is the core compliance check.",
+      "confidence": 0.92,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "measure-distance",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": "/Users/wnavey/code/controlroom/conductor/workspace/output/runs/run-1/vision-check-calls/20260511T220202779Z-i7aw/specialist-measure-distance",
+    "argConstruction": {
+      "pairs": [
+        {
+          "objectA": "Electrical Transformer Pad located west of Bldg. 1",
+          "objectB": "West exterior wall of Bldg. 1"
+        },
+        {
+          "objectA": "Electrical Transformer Pad located west of Unit 201 in Bldg. 2",
+          "objectB": "West exterior wall of Unit 201 in Bldg. 2"
+        },
+        {
+          "objectA": "Electrical Transformer Pad located west of Unit 801 in Bldg. 8",
+          "objectB": "West exterior wall of Unit 801 in Bldg. 8"
+        },
+        {
+          "objectA": "Electrical Transformer Pad located east of Unit 704 in Bldg. 7",
+          "objectB": "East exterior wall of Unit 704 in Bldg. 7"
+        },
+        {
+          "objectA": "Electrical Transformer Pad located between Bldg. 4 and Bldg. 5",
+          "objectB": "West exterior wall of Unit 503 in Bldg. 5"
+        }
+      ],
+      "explanation": "Identified five explicitly labeled electrical transformer pads on the site plan and paired each with the closest exterior building wall to measure the requested clearances.",
+      "callDir": "/Users/wnavey/code/controlroom/conductor/workspace/output/runs/run-1/vision-check-calls/20260511T220202779Z-i7aw/specialist-extract-measurement-pairs"
+    }
+  },
+  "phase": "B"
+}

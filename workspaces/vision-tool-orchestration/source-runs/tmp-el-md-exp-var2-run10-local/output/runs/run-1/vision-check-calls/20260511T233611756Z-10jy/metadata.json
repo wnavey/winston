@@ -1,0 +1,32 @@
+{
+  "callId": "20260511T233611756Z-10jy",
+  "runIndex": "run-1",
+  "startedAt": "2026-05-11T23:36:11.756Z",
+  "completedAt": "2026-05-11T23:36:50.940Z",
+  "inputs": {
+    "checklistItemId": "el-md-exp:EL-2.1",
+    "checklistItemText": "Non-utility-compatible trees proposed within 15 lateral feet of overhead electric distribution conductor or equipment",
+    "question": "On Sheet 31 (landscape plan), the trees shown very close to the OHE line at the bottom of the site (within 0.1 to 2 feet) - are these trees labeled with species symbols (like the symbols used in the plant legend: circles with different patterns)? Can you identify which tree species they are based on the plant schedule symbols?",
+    "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+    "sheetNum": 31
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "bacd962b8af80b9bc2eb7133c303f7a9e490aa2dcac89404b55e42f72b7ebe6d",
+    "promptSource": "bureau",
+    "promptSourcePath": "/Users/wnavey/code/controlroom/conductor/workspace/bureau/jurisdictions/austin/workflows/review/prompts/vision-router.md",
+    "output": {
+      "problemType": "generic",
+      "reasoning": "The agent is asking for label/symbol identification and species lookup from the plant schedule, not a distance measurement. Although the checklist requirement is about lateral clearance (a measurement problem), the agent question is narrower and focused on presence and identification of species labels—a prerequisite step before compatibility can be assessed. This is a feature-identification and legend-reading task, not a clearance measurement.",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "vision",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": null
+  },
+  "phase": "B"
+}

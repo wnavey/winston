@@ -1,0 +1,33 @@
+{
+  "callId": "20260511T223811458Z-e3ff",
+  "runIndex": "run-3",
+  "startedAt": "2026-05-11T22:38:11.458Z",
+  "completedAt": "2026-05-11T22:44:03.526Z",
+  "inputs": {
+    "checklistItemId": "el-md-exp:EL-13.35",
+    "checklistItemText": "Transformer easements not shown around pads, or easement width inadequate for Austin Energy accessibility requirements",
+    "question": "Are transformer easements (separate from other utility easements) shown on the site plan, and if shown, what is the width of the transformer easement around the pads?",
+    "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+    "sheetNum": 2,
+    "regionHint": "easement plat showing transformer easements"
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "bacd962b8af80b9bc2eb7133c303f7a9e490aa2dcac89404b55e42f72b7ebe6d",
+    "promptSource": "bureau",
+    "promptSourcePath": "/Users/wnavey/code/controlroom/conductor/workspace/bureau/jurisdictions/austin/workflows/review/prompts/vision-router.md",
+    "output": {
+      "problemType": "generic",
+      "reasoning": "The agent is asking a two-part presence and identification question: (1) whether transformer easements are shown at all, and (2) if present, what is their width. The first part is a feature-presence check (generic), and while the second part involves a measurement, the agent's primary focus is on identifying and locating the easement feature itself before measuring it. This is progressive verification where presence/identification precedes clearance or dimension verification.",
+      "confidence": 0.85,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "vision",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": null
+  },
+  "phase": "B"
+}

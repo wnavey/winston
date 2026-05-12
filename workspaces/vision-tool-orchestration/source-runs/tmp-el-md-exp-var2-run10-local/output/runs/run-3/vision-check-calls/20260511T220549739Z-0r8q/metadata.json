@@ -1,0 +1,63 @@
+{
+  "callId": "20260511T220549739Z-0r8q",
+  "runIndex": "run-3",
+  "startedAt": "2026-05-11T22:05:49.739Z",
+  "completedAt": "2026-05-11T22:16:53.297Z",
+  "inputs": {
+    "checklistItemId": "el-md-exp:EL-1.1",
+    "checklistItemText": "Buildings and permanent structures do not maintain minimum 7 feet 6 inches horizontal sky-to-ground clearance from overhead electric conductors",
+    "question": "Are overhead electric lines shown on the site plan? If so, what is the horizontal distance from the outermost conductor to the nearest building or permanent structure, and is a 7.5-foot clearance dimension clearly labeled?",
+    "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+    "sheetNum": 9,
+    "regionHint": "Throughout the site plan, particularly around buildings and utility corridors"
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "bacd962b8af80b9bc2eb7133c303f7a9e490aa2dcac89404b55e42f72b7ebe6d",
+    "promptSource": "bureau",
+    "promptSourcePath": "/Users/wnavey/code/controlroom/conductor/workspace/bureau/jurisdictions/austin/workflows/review/prompts/vision-router.md",
+    "output": {
+      "problemType": "measurement",
+      "reasoning": "The agent question is asking for a specific horizontal distance measurement between overhead electric conductors and the nearest building/structure, which directly addresses the clearance compliance requirement. While the question includes a presence check as a preliminary step, the core request is a clearance measurement against the 7'6\" standard.",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "measure-distance",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": "/Users/wnavey/code/controlroom/conductor/workspace/output/runs/run-3/vision-check-calls/20260511T220549739Z-0r8q/specialist-measure-distance",
+    "argConstruction": {
+      "pairs": [
+        {
+          "objectA": "Overhead Electric (OHE) line along the west property boundary",
+          "objectB": "west exterior wall of Building 1"
+        },
+        {
+          "objectA": "Overhead Electric (OHE) line along the west property boundary",
+          "objectB": "west exterior wall of Building 2"
+        },
+        {
+          "objectA": "Overhead Electric (OHE) line along the west property boundary",
+          "objectB": "west exterior wall of Building 8"
+        },
+        {
+          "objectA": "Overhead Electric (OHE) line along the south property boundary",
+          "objectB": "south exterior wall of Building 8"
+        },
+        {
+          "objectA": "Overhead Electric (OHE) line along the south property boundary",
+          "objectB": "south exterior wall of Building 7"
+        },
+        {
+          "objectA": "Overhead Electric (OHE) line along the south property boundary",
+          "objectB": "concrete retaining wall running parallel to the south property line"
+        }
+      ],
+      "explanation": "Identified the Overhead Electric (OHE) lines running along the western and southern boundaries and paired them with the nearest buildings (1, 2, 7, and 8) and permanent structures (southern retaining wall) to verify horizontal clearance dimensions.",
+      "callDir": "/Users/wnavey/code/controlroom/conductor/workspace/output/runs/run-3/vision-check-calls/20260511T220549739Z-0r8q/specialist-extract-measurement-pairs"
+    }
+  },
+  "phase": "B"
+}

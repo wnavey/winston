@@ -1,0 +1,42 @@
+{
+  "callId": "20260511T231753080Z-q14l",
+  "runIndex": "run-2",
+  "startedAt": "2026-05-11T23:17:53.080Z",
+  "completedAt": "2026-05-11T23:19:19.018Z",
+  "inputs": {
+    "checklistItemId": "el-md-exp:EL-13.22",
+    "checklistItemText": "Transformer pads lack minimum 5-foot horizontal clearance from wastewater lines",
+    "question": "Are there any wastewater lines within 5 feet horizontally of any of the transformer pads shown on the utility plan?",
+    "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+    "sheetNum": 19
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "bacd962b8af80b9bc2eb7133c303f7a9e490aa2dcac89404b55e42f72b7ebe6d",
+    "promptSource": "bureau",
+    "promptSourcePath": "/Users/wnavey/code/controlroom/conductor/workspace/bureau/jurisdictions/austin/workflows/review/prompts/vision-router.md",
+    "output": {
+      "problemType": "measurement",
+      "reasoning": "The agent is asking whether wastewater lines are within a specific distance threshold (5 feet) of transformer pads, which requires measuring the horizontal clearance between these two features to verify compliance with the minimum clearance requirement.",
+      "confidence": 0.95,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "measure-distance",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": "/Users/wnavey/code/controlroom/conductor/workspace/output/runs/run-2/vision-check-calls/20260511T231753080Z-q14l/specialist-measure-distance",
+    "argConstruction": {
+      "pairs": [
+        {
+          "objectA": "transformer pad (solid green square) located on the west side of the site, west of Building 8 and south of the main entrance driveway",
+          "objectB": "proposed wastewater line (solid magenta line) running north-south immediately east of the transformer pad"
+        }
+      ],
+      "explanation": "Identified the single transformer pad shown on the plan and paired it with the adjacent proposed wastewater line to verify horizontal clearance.",
+      "callDir": "/Users/wnavey/code/controlroom/conductor/workspace/output/runs/run-2/vision-check-calls/20260511T231753080Z-q14l/specialist-extract-measurement-pairs"
+    }
+  },
+  "phase": "B"
+}

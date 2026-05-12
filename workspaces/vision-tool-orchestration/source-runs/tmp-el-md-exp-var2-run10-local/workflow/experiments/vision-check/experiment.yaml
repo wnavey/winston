@@ -1,0 +1,24 @@
+# Vision-Check experiment overlay
+#
+# Loaded by conductor when --experiment=vision-check is passed to the
+# review workflow. Overrides the `review-runs` step to:
+#   - use this directory's review.md (stock prompt with vision_check
+#     replacing the vision tool section)
+#   - expose vision_check as the SOLE vision-capable tool. The
+#     conductor MCP tool internally classifies the question via the
+#     bureau-side prompts/vision-router.md and dispatches to the right
+#     specialist (vision / inspect-drawing / measure-distance).
+#
+# Baseline (no --experiment flag) keeps the workflow's default prompt
+# and tools list — vision only.
+#
+# Phase C of the vision-tool-orchestration initiative. Iter-1 success
+# criteria + plan: see
+# winston/workspaces/vision-tool-orchestration/plan.md.
+name: vision-check
+description: Route all vision-related tool calls through a classifier-driven entry point (vision_check) that dispatches to the right specialist.
+overrides:
+  review-runs:
+    prompt: review.md
+    tools:
+      - vision_check

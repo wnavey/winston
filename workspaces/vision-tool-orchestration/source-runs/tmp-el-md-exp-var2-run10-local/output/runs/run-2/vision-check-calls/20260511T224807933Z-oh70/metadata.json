@@ -1,0 +1,58 @@
+{
+  "callId": "20260511T224807933Z-oh70",
+  "runIndex": "run-2",
+  "startedAt": "2026-05-11T22:48:07.933Z",
+  "completedAt": "2026-05-11T22:53:41.694Z",
+  "inputs": {
+    "checklistItemId": "el-md-exp:EL-13.1",
+    "checklistItemText": "Transformer pads lack minimum 5-foot clearance from buildings, structures, and building foundations",
+    "question": "Measuring the distance from the edge of each transformer pad to the nearest building wall, do all four transformer pads maintain at least 5 feet of clearance from the buildings they are near?",
+    "documentId": "1144b126-1216-4dee-a89c-178950fa7777",
+    "sheetNum": 21
+  },
+  "classifier": {
+    "modelId": "anthropic/claude-haiku-4-5",
+    "promptSha256": "bacd962b8af80b9bc2eb7133c303f7a9e490aa2dcac89404b55e42f72b7ebe6d",
+    "promptSource": "bureau",
+    "promptSourcePath": "/Users/wnavey/code/controlroom/conductor/workspace/bureau/jurisdictions/austin/workflows/review/prompts/vision-router.md",
+    "output": {
+      "problemType": "measurement",
+      "reasoning": "The agent is directly asking for a clearance distance measurement between transformer pad edges and building walls to verify compliance with the 5-foot minimum clearance requirement, which is the core compliance check.",
+      "confidence": 0.99,
+      "fallbackUsed": false
+    }
+  },
+  "dispatch": {
+    "specialistCalled": "measure-distance",
+    "success": true,
+    "fallbackReason": null,
+    "specialistCallDir": "/Users/wnavey/code/controlroom/conductor/workspace/output/runs/run-2/vision-check-calls/20260511T224807933Z-oh70/specialist-measure-distance",
+    "argConstruction": {
+      "pairs": [
+        {
+          "objectA": "Electrical Transformer Pad west of Bldg. 1",
+          "objectB": "west exterior wall of Bldg. 1"
+        },
+        {
+          "objectA": "Electrical Transformer Pad west of Bldg. 2",
+          "objectB": "west exterior wall of Bldg. 2"
+        },
+        {
+          "objectA": "Electrical Transformer Pad west of Bldg. 8",
+          "objectB": "west exterior wall of Bldg. 8"
+        },
+        {
+          "objectA": "Electrical Transformer Pad between Bldg. 4 and Bldg. 5",
+          "objectB": "east exterior wall of Bldg. 4"
+        },
+        {
+          "objectA": "Electrical Transformer Pad between Bldg. 4 and Bldg. 5",
+          "objectB": "west exterior wall of Bldg. 5"
+        }
+      ],
+      "explanation": "Identified the four electrical transformer pads on the plan and paired each with its nearest adjacent building wall(s) to verify the 5-foot minimum clearance.",
+      "callDir": "/Users/wnavey/code/controlroom/conductor/workspace/output/runs/run-2/vision-check-calls/20260511T224807933Z-oh70/specialist-extract-measurement-pairs"
+    }
+  },
+  "phase": "B"
+}
