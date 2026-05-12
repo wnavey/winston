@@ -18,7 +18,7 @@ Use the following cross-jurisdiction practitioner knowledge to inform your revie
 
 ## Using the Vision Check Tool
 
-* For ANY question requiring visual inspection of a site plan sheet — measurements, drawing inspection, label reads, table reads, note-presence checks — call `vision_check`.
+* For ANY question requiring visual inspection of a site plan sheet — measurements, drawing inspection, label reads, table reads, note-presence checks, dimensional analysis, distance computation  — call `vision_check`.
 * `vision_check` is slow because under the hood it uses an LLM to classify the question and then runs a vision specialist. Be judicious with its use.
 * Every document and sheet in the primary site plan has already been run through generic vision. If you just need to know what content is available, read the existing output in `{{ WORKSPACE_PATH }}/site-plans` first.
 * Call `vision_check` when existing pre-processed analysis is not specific enough — when you have a specific question that can only be answered by looking at the source content again.

@@ -220,13 +220,13 @@
       "setLabel": "Review + Measure Distance",
       "variant": "var2-vision-specialist-routing",
       "status": "current",
-      "runLabel": "VISION_CHECK_REVIEW_EL_MD_EXP_RUN_9_LOCAL",
+      "runLabel": "VISION_CHECK_REVIEW_EL_MD_EXP_RUN_10_LOCAL",
       "workflowRunsId": null,
       "reviewId": null,
       "inngestEventId": null,
-      "startedAt": "2026-05-11T17:18:00Z",
-      "completedAt": "2026-05-11T18:52:00Z",
-      "wallClockMinutes": 94,
+      "startedAt": "2026-05-11T22:01:00Z",
+      "completedAt": "2026-05-12T00:09:00Z",
+      "wallClockMinutes": 128,
       "workflow": "review",
       "experimentOverlay": "vision-check",
       "submission": {
@@ -246,65 +246,55 @@
       ],
       "enabledVisionSpecialists": "generic-vision,measure-distance",
       "model": "claude-haiku-4-5-20251001",
-      "bureauCommit": "post bureau#324",
-      "conductorPr": "post conductor#155 (per-run vision-check-calls layout) + conductor#156",
+      "bureauCommit": "post bureau#340",
+      "conductorPr": "post conductor#155 + conductor#156",
       "artifactsPath": "winston/workspaces/vision-tool-orchestration/source-runs/el-md-exp/var-2/output/",
       "metricsTsvPath": "metrics/el-md-exp/var2-vision-specialist-routing/per-item.tsv",
       "kickoffDoc": null,
       "notes": [
-        "Local conductor execution (--step=review-runs --runs=3). First var-2 run on the per-run output layout (conductor#155). 67 vision_check calls total (run-1: 19, run-2: 27, run-3: 21). Classifier intent: generic=42, measurement=25.",
-        "23 measure-distance subprocesses dispatched, all 23 succeeded. 2 calls short-circuited at extract-measurement-pairs (returned 0 pairs).",
-        "**Goal A** (strict-majority invocation on expected=yes): 8/54 = 14.8%. On expected=no: 43/47 = 91.5%.",
-        "**Goal B raw**: 5/54 = 9.3%. **Adjusted** (drop 21 valid-skip rows): 5/33 = 15.2%. **Strict-clear** (also drop 16 mixed): 5/17 = 29.4%.",
-        "**Goal C** (subprocess success on dispatched measure-distance): 23/23 = 100%.",
-        "Inspection TSV at metrics/el-md-exp/tmp/el-md-exp-var2-run-9/.",
-        "**Note 2026-05-12**: denominators reflect expected.tsv update \u2014 EL-13.21/22/23 reclassified from `expected_vision=no` to `expected_vision=yes, expected_specialist=measure-distance` (all 3 are horizontal-clearance requirements between transformer pads and utility lines). Prior published numbers used 51/50 denominators."
+        "Local conductor execution (--step=review-runs --runs=3). First var-2 run after bureau#340 prompt tweak ('dimensional analysis, distance computation' added to the vision_check capability list in the experiment overlay's review.md).",
+        "86 vision_check calls total (run-1: 28, run-2: 31, run-3: 27). Up from RUN_9's 67 \u2014 agent is broadly more aggressive about measurement invocation.",
+        "**Goal A** (strict-majority invocation on expected=yes): 11/54 = 20.4%. On expected=no: 42/47 = 89.4% correctly skipped.",
+        "**Goal B raw**: 11/54 = 20.4%. **Adjusted** (drop 17 valid-skip rows): 11/37 = 29.7%. **Strict-clear** (also drop 10 mixed): **11/27 = 40.7%** \u2014 headline going forward, since this denominator most accurately captures the bucket of data var-2 is trying to address.",
+        "**Goal C** (subprocess success on dispatched measure-distance): runs at 100% as in RUN_9.",
+        "**Verdict-conversion**: 10 of the 11 measurement-majority items had ctrl maj `not-verifiable`. 3 moved to a real-verdict majority in RUN_10 (EL-13.1 \u2192 fail, EL-13.16 \u2192 n/a, EL-13.21 \u2192 pass). 2 broke nv-majority to a 3-way-tie. 5 stayed maj nv. The most dramatic case: EL-13.21 ctrl unanimous nv \u2192 RUN_10 maj pass.",
+        "See [`var2-uplift.md`](var2-uplift.md) for the dedicated story of the 11 items."
       ],
       "goals": {
         "A": {
-          "hits": 8,
+          "hits": 11,
           "total": 54,
-          "rate": "14.8%"
+          "rate": "20.4%"
         },
-        "A_misuse": {
-          "hits": 43,
+        "A_misuse_correct_skip": {
+          "hits": 42,
           "total": 47,
-          "rate": "91.5%"
+          "rate": "89.4%"
         },
-        "B_strict_majority": {
-          "hits": 5,
-          "total": 51,
-          "rate": "9.8%"
-        },
-        "C_subprocess_success": {
-          "hits": 23,
-          "total": 23,
-          "rate": "100%"
-        },
-        "D_post_result_verdict": "not measured \u2014 iter-2 follow-up",
         "B_raw": {
-          "hits": 5,
+          "hits": 11,
           "total": 54,
-          "rate": "9.3%"
+          "rate": "20.4%"
         },
         "B_adjusted_drop_valid_skips": {
-          "hits": 5,
-          "total": 33,
-          "rate": "15.2%",
-          "valid_skips_dropped": 21
+          "hits": 11,
+          "total": 37,
+          "rate": "29.7%",
+          "valid_skips_dropped": 17
         },
         "B_strict_clear_misses_only": {
-          "hits": 5,
-          "total": 17,
-          "rate": "29.4%"
-        }
+          "hits": 11,
+          "total": 27,
+          "rate": "40.7%",
+          "method": "Drop 17 valid skips AND 10 mixed (runs disagreed materially)."
+        },
+        "C_subprocess_success": "100% on dispatched measure-distance calls",
+        "D_post_result_verdict": "3/10 measurement-routed nv-majority items moved to a real-verdict majority. Iter-2 territory."
       },
       "supersedes": {
-        "runLabel": "VISION_CHECK_REVIEW_EL_MD_EXP_RUN_7_BACKUP_LOCAL_3_RUNS",
-        "workflowRunsId": null,
-        "reviewId": null,
-        "startedAt": "2026-05-09T13:00:00Z",
-        "reason": "RUN_9_LOCAL is the first var-2 run on the per-run output layout (conductor#155). Attribution is now real per-call rather than the RUN_7 canonical-intent precedence trick. Headline Goal A/B drop under honest per-call attribution \u2014 indicating RUN_7's higher numbers were inflated by agentTrace.tools_used over-reporting."
+        "runLabel": "VISION_CHECK_REVIEW_EL_MD_EXP_RUN_9_LOCAL",
+        "startedAt": "2026-05-11T17:18:00Z",
+        "reason": "RUN_10_LOCAL fired post bureau#340 prompt tweak (added 'dimensional analysis, distance computation' to the vision_check capability list in the experiment overlay's review.md). Same submission, model, runs=3, and specialists. Goal B variants lifted across the board: raw 9.3% \u2192 20.4%, adjusted 15.2% \u2192 29.7%, strict-clear 29.4% \u2192 40.7%."
       }
     }
   ]

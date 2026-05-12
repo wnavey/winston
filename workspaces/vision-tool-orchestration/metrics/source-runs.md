@@ -27,7 +27,7 @@ and known issues so the per-variant TSV builds and
 | **cc** | var2-routing | 🔁 needs-rerun | `VISION_CHECK_CC_RUN_4` | **1** | 1700 S. Lamar v2 |
 | **el-md-exp** | ctrl-baseline | ✅ current | `VISION_CHECK_REVIEW_EL_MD_EXP_BASELINE_V3` | 3 | Valley View v1 |
 | **el-md-exp** | var1-bifurcated | ✅ current | `VISION_CHECK_REVIEW_EL_MD_EXP_VAR1_RUN_2` | 3 | Valley View v1 |
-| **el-md-exp** | var2-routing | ✅ current (runs=3 local, per-run output layout) | `VISION_CHECK_REVIEW_EL_MD_EXP_RUN_9_LOCAL` | 3 | Valley View v1 |
+| **el-md-exp** | var2-routing | ✅ current (post bureau#340 prompt tweak) | `VISION_CHECK_REVIEW_EL_MD_EXP_RUN_10_LOCAL` | 3 | Valley View v1 |
 
 | Status | Meaning |
 |---|---|
@@ -202,12 +202,12 @@ and known issues so the per-variant TSV builds and
 
 | Field | Value |
 |---|---|
-| `runLabel` | `VISION_CHECK_REVIEW_EL_MD_EXP_RUN_9_LOCAL` |
+| `runLabel` | `VISION_CHECK_REVIEW_EL_MD_EXP_RUN_10_LOCAL` |
 | Inngest event id | _n/a — local conductor execution_ |
 | `workflow_runs.id` | _n/a — local, no DB row_ |
 | Review id | _n/a — local, no DB row_ |
-| Started | 2026-05-11 17:18 UTC (local) |
-| Completed | 2026-05-11 18:52 UTC (local; ~94 min wall clock) |
+| Started | 2026-05-11 22:01 UTC (local) |
+| Completed | 2026-05-12 00:09 UTC (local; ~128 min wall clock) |
 | Workflow / overlay | `review` + `--experiment=vision-check` |
 | Submission | Valley View Townhomes v1 (`submissionVersionId=55fb6548-…`) |
 | Guide | `el-md-exp` |
@@ -215,26 +215,28 @@ and known issues so the per-variant TSV builds and
 | Agent tools | `vision_check`, `semantic-search-blocks` |
 | Flags | `logAllAgentTrace=true`, `step=review-runs` |
 | `enabledVisionSpecialists` | `"generic-vision,measure-distance"` |
-| Bureau commit | post bureau#324 |
-| Conductor PR | post conductor#155 (per-run vision-check-calls layout) + conductor#156 (`site_plan_number` drop) |
-| Artifacts | [`source-runs/el-md-exp/var-2/output/`](../source-runs/el-md-exp/var-2/output/) (canonical, **per-run layout**) |
+| Bureau commit | post bureau#340 (vision_check capability list adds "dimensional analysis, distance computation") |
+| Conductor PR | post conductor#155 (per-run vision-check-calls layout) + conductor#156 |
+| Artifacts | [`source-runs/el-md-exp/var-2/output/`](../source-runs/el-md-exp/var-2/output/) (canonical) |
 | Metrics TSV | [`metrics/el-md-exp/var2-vision-specialist-routing/per-item.tsv`](el-md-exp/var2-vision-specialist-routing/per-item.tsv) |
-| Inspection TSV (per-run intent vs expected) | [`metrics/el-md-exp/tmp/el-md-exp-var2-run-9/`](el-md-exp/tmp/el-md-exp-var2-run-9/) |
+| Inspection TSV (per-run intent vs expected) | [`metrics/el-md-exp/tmp/el-md-exp-var2-run-10/`](el-md-exp/tmp/el-md-exp-var2-run-10/) |
+| RUN_10 vs RUN_9 comparison | [`metrics/el-md-exp/tmp/el-md-exp-var2-run-10/run-10-vs-run-9-comparison.md`](el-md-exp/tmp/el-md-exp-var2-run-10/run-10-vs-run-9-comparison.md) |
 
 **Notes**
-- **First var-2 run on the per-run output layout** (conductor#155). `vision-check-calls` metadata sits under `output/runs/run-N/` with `runIndex` stamped on each `metadata.json`, so per-(item × run) attribution comes from real tool invocations instead of agentTrace.tools_used.
-- 67 vision_check calls total: **run-1=19, run-2=27, run-3=21**. Classifier intent: `generic=42, measurement=25, drawing_inspect=0`. 23 measure-distance subprocesses, all 23 succeeded; 2 additional measurement-classified calls short-circuited at extract-measurement-pairs (returned 0 pairs).
+- **First var-2 run after bureau#340 prompt tweak** — added `dimensional analysis, distance computation` to the vision_check capability list in the experiment overlay's `review.md`. Same submission, model, runs=3, and specialists as RUN_9.
+- 86 `vision_check` calls total: **run-1=28, run-2=31, run-3=27**. Up from RUN_9's 67 — agent is broadly more aggressive about measurement invocation post-tweak.
 - **Goals (strict-majority across 3 runs):**
-  - **Goal A** (any vision invoked, strict-majority): **14.8%** (8/54) on expected=yes, **91.5%** (43/47) on expected=no. _Note: denominators reflect 2026-05-12 expected.tsv reclassification of EL-13.21/22/23 from `no/none` → `yes/measure-distance`._
-  - **Goal B raw** (majority `measurement` on expected_specialist=measure-distance): **9.3%** (5/54). All three new items (EL-13.21/22/23) were `majority=none` in RUN_9, so they enlarge the denominator without contributing to the numerator.
-  - **Goal C** (subprocess success on dispatched measure-distance): **100%** (23/23).
-  - **Goal D** (correct post-result verdict): **not measured — iter-2 follow-up**.
-- **Regression vs RUN_7**: Goal A on expected=yes dropped from 49.0% → 14.8%; Goal B from 27.5% → 9.3%. The drop is real-attribution honest — RUN_7 numbers were partly inflated by agentTrace.tools_used over-reporting (the agent self-reports vision use in 41 (item × run) pairs that have no corresponding `vision-check-calls/metadata.json`). RUN_7's denominators also used the pre-2026-05-12 51/50 split.
-- **Driver to investigate:** the 46 expected-md items where majority of runs invoked nothing at all. See [`metrics/el-md-exp/tmp/el-md-exp-var2-run-9/run-9-no-vision-check-analysis.md`](el-md-exp/tmp/el-md-exp-var2-run-9/run-9-no-vision-check-analysis.md) for per-item hypothesis (valid skip vs invalid skip).
+  - **Goal A** (any vision invoked, strict-majority): **20.4%** (11/54) on expected=yes, **89.4%** (42/47) on expected=no.
+  - **Goal B raw** (majority `measurement` on expected_specialist=measure-distance): **20.4%** (11/54).
+  - **Goal B adjusted** (drop 17 valid-skip rows per TSV `no_call_verdict`): **29.7%** (11/37).
+  - **Goal B strict-clear** (also drop 10 `mixed`): **40.7%** (11/27) — **headline going forward**, since this denominator most accurately captures the bucket var-2 is trying to address.
+  - **Goal C** (subprocess success on dispatched measure-distance): **100%** (carried from RUN_9 pipeline; chain unchanged).
+  - **Goal D** (correct post-result verdict): **3/10** measurement-routed nv-majority items moved to a real-verdict majority — iter-2 territory.
+- **Verdict-conversion lift over ctrl:** 10 of the 11 measurement-majority items had ctrl maj `not-verifiable` (5 of those unanimous). 3 moved to a real-verdict majority in RUN_10 (EL-13.1 → fail, EL-13.16 → n/a, EL-13.21 → pass). 2 broke nv-majority to a 3-way-tie. 5 stayed maj nv. **Most dramatic case:** EL-13.21 went from ctrl unanimous `not-verifiable` → RUN_10 majority `pass`. See [`var2-uplift.md`](var2-uplift.md) for the per-item story.
 
 **Supersedes**
 
-`VISION_CHECK_REVIEW_EL_MD_EXP_RUN_7_BACKUP_LOCAL_3_RUNS` (started 2026-05-09 13:00 UTC, runs=3 local). RUN_7 used the flat `output/vision-check-calls/` layout and the canonical-intent precedence trick for per-run attribution. RUN_9 is the first run on the per-run layout (conductor#155), so per-call attribution is no longer derived. Headline numbers regress under honest attribution; this is a measurement-honesty correction, not a model regression on the dispatch side (Goal C still at 100%).
+`VISION_CHECK_REVIEW_EL_MD_EXP_RUN_9_LOCAL` (started 2026-05-11 17:18 UTC, runs=3 local). Same submission, model, runs, and specialists. Only difference: bureau#340 prompt tweak landed between RUN_9 and RUN_10, adding `dimensional analysis, distance computation` to the `vision_check` capability list. Goal B variants lifted across the board: raw 9.3% → 20.4%, adjusted 15.2% → 29.7%, strict-clear 29.4% → 40.7%.
 ---
 
 ## What "complete" looks like
@@ -244,7 +246,7 @@ For phase 1 to declare done, all 6 cells should be ✅ **current** with no outst
 - [ ] cc / var2: re-fire at `runs=3` to retire runs-disparity confounder on cc Goal A
 - [x] el-md-exp / ctrl-baseline: phase-1 numbers populated (Goal A 41.2%; Goal B n/a)
 - [x] el-md-exp / var1: re-fired as `VAR1_RUN_2` post bureau#317. Coverage closed (303/303 cells). **Goal A 74.5%**, Goal B 0/51 (specialist still never invoked).
-- [x] el-md-exp / var2: re-fired as `RUN_9_LOCAL` post conductor#155 (per-run output layout) + conductor#156. Then RUN_10_LOCAL fired post bureau#340 prompt tweak. RUN_9: **Goal A 14.8%/91.5%, Goal B raw 9.3%, Goal C 100%**. RUN_10: **Goal A 20.4%/89.4%, Goal B raw 20.4%** (+11.1pp), big lift after the prompt tweak especially on EL-13.21/22/23. Denominators updated 2026-05-12 (51 → 54 expected-md). See [`run-10-vs-run-9-comparison.md`](el-md-exp/tmp/el-md-exp-var2-run-10/run-10-vs-run-9-comparison.md).
+- [x] el-md-exp / var2: canonical is now `RUN_10_LOCAL` (post bureau#340 prompt tweak). **Goal A 20.4% / 89.4%, Goal B strict-clear 40.7% (11/27)** — headline. 3 of 11 measurement-majority items moved from ctrl `not-verifiable` to a real verdict; most dramatic flip was EL-13.21 ctrl unanimous nv → RUN_10 maj pass. See [`var2-uplift.md`](var2-uplift.md).
 - [x] **fix measure-distance overlay's `review.md`** ✅ landed via bureau#317 + validated by VAR1_RUN_2.
 - [x] **bureau-side classifier prompt iteration for el-md-exp** ✅ delivered as conductor#151 + bureau#318 + validated by RUN_3.
 - [x] **conductor measurement-dispatch wiring** ✅ delivered as conductor#153 + conductor#154 + bureau#324. Validated by RUN_6_BACKUP_LOCAL + RUN_7_BACKUP_LOCAL_3_RUNS.

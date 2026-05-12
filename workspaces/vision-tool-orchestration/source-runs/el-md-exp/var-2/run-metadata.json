@@ -1,14 +1,14 @@
 {
   "set": "el-md-exp",
   "variant": "var-2",
-  "variantLabel": "var2-routing (vision_check; classifier dispatches; per-run output layout — output/runs/run-N/vision-check-calls/...)",
-  "runLabel": "VISION_CHECK_REVIEW_EL_MD_EXP_RUN_9_LOCAL",
+  "variantLabel": "var2-routing (vision_check; classifier dispatches; per-run output layout; post bureau#340 prompt tweak)",
+  "runLabel": "VISION_CHECK_REVIEW_EL_MD_EXP_RUN_10_LOCAL",
   "workflowRunsId": null,
   "reviewId": null,
   "inngestEventId": null,
-  "startedAt": "2026-05-11T17:18:00Z",
-  "completedAt": "2026-05-11T18:52:00Z",
-  "wallClockMinutes": 94,
+  "startedAt": "2026-05-11T22:01:00Z",
+  "completedAt": "2026-05-12T00:09:00Z",
+  "wallClockMinutes": 128,
   "workflow": "review",
   "experimentOverlay": "vision-check",
   "submission": {
@@ -22,22 +22,22 @@
   "flags": ["logAllAgentTrace=true", "step=review-runs"],
   "enabledVisionSpecialists": "generic-vision,measure-distance",
   "model": "claude-haiku-4-5-20251001",
-  "bureauCommit": "post bureau#324",
-  "conductorPr": "post conductor#155 (per-run vision-check-calls layout) + conductor#156 (site_plan_number drop)",
+  "bureauCommit": "post bureau#340 (vision_check capability list adds 'dimensional analysis, distance computation')",
+  "conductorPr": "post conductor#155 (per-run vision-check-calls layout) + conductor#156",
   "notes": [
-    "Local conductor execution (--step=review-runs --runs=3). First var-2 run on the new per-run output layout (conductor#155) — vision-check-calls metadata sits under output/runs/run-N/ with runIndex stamped on metadata.json, enabling real per-run attribution.",
-    "67 vision_check calls total (run-1: 19, run-2: 27, run-3: 21). Classifier intent: generic=42, measurement=25.",
-    "23 measure-distance subprocesses dispatched, all 23 succeeded. 2 calls short-circuited at extract-measurement-pairs (returned 0 pairs).",
-    "**Goal A**: 8/51 (15.7%) on expected=yes, 46/50 (92.0%) on expected=no — agent invokes vision LESS often than RUN_7. Net 53.5% overall.",
-    "**Goal B** (majority `measurement` after strict-majority vote): 5/51 (9.8%). Regressed vs RUN_7's 23.5% — primary driver is the 43 expected-md items where majority of runs called nothing at all.",
-    "**Goal C** (subprocess success rate): 23/23 = 100% on the calls that reached measure-distance.",
-    "Inspection TSV: ../../../metrics/el-md-exp/tmp/el-md-exp-var2-run-9/el-md-exp-var2-run9-vision-check-calls-compared-to-expected.tsv"
+    "Local conductor execution (--step=review-runs --runs=3). Per-run output layout (conductor#155).",
+    "86 vision_check calls total (run-1: 28, run-2: 31, run-3: 27).",
+    "**Goal B raw**: 11/54 = 20.4%. **Adjusted** (drop 17 valid-skip rows): 11/37 = 29.7%. **Strict-clear** (also drop 10 mixed): 11/27 = 40.7%.",
+    "**Goal A** (strict-majority invocation on expected=yes): 11/54 = 20.4%. On expected=no: 42/47 = 89.4% correctly skipped.",
+    "**Verdict-conversion**: 10 of the 11 measurement-majority items had ctrl maj `not-verifiable`. 3 moved to a real-verdict majority in RUN_10 (EL-13.1 → fail, EL-13.16 → n/a, EL-13.21 → pass). 2 broke nv-majority to a 3-way-tie. 5 stayed maj nv. The single most dramatic case: EL-13.21 went from ctrl unanimous nv → RUN_10 maj pass.",
+    "**The bureau#340 prompt tweak** ('dimensional analysis, distance computation' added to the vision_check capability list in the experiment overlay's review.md) was the trigger between this run and RUN_9. Headline Goal B variants lifted across the board: raw 9.3% → 20.4%, adjusted 15.2% → 29.7%, strict-clear 29.4% → 40.7%.",
+    "Analysis artifacts: metrics/el-md-exp/tmp/el-md-exp-var2-run-10/. Side-by-side comparison with RUN_9: run-10-vs-run-9-comparison.md."
   ],
   "supersedes": {
-    "runLabel": "VISION_CHECK_REVIEW_EL_MD_EXP_RUN_7_BACKUP_LOCAL_3_RUNS",
+    "runLabel": "VISION_CHECK_REVIEW_EL_MD_EXP_RUN_9_LOCAL",
     "workflowRunsId": null,
     "reviewId": null,
-    "startedAt": "2026-05-09T13:00:00Z",
-    "reason": "RUN_9 is the first run on the per-run output layout (conductor#155), so attribution is no longer dependent on the canonical-intent precedence trick. Headline numbers shift downward — under honest per-call attribution, Goal A drops to 15.7% (expected=yes) and Goal B to 9.8%, indicating RUN_7's higher numbers were partly inflated by agentTrace.tools_used over-reporting."
+    "startedAt": "2026-05-11T17:18:00Z",
+    "reason": "RUN_10 fired post bureau#340 prompt tweak. Same submission, same model, same runs=3 — only difference is the vision_check capability list now mentions 'dimensional analysis, distance computation'. Goal B nearly doubled on the strict-clear denominator (29.4% → 40.7%)."
   }
 }

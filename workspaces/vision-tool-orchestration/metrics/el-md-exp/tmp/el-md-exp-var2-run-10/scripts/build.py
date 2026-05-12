@@ -50,7 +50,7 @@ from collections import defaultdict, Counter
 HERE = Path(__file__).parent.resolve()
 # scripts → tmp/el-md-exp-var2-run-10 → tmp → el-md-exp → metrics → vision-tool-orchestration
 WORKSPACE = HERE.parent.parent.parent.parent.parent
-RUN10 = WORKSPACE / "source-runs" / "tmp-el-md-exp-var2-run10-local" / "output" / "runs"
+RUN10 = WORKSPACE / "source-runs" / "el-md-exp" / "var-2" / "output" / "runs"
 EXPECTED_TSV = WORKSPACE / "metrics" / "el-md-exp" / "expected-vision-selection" / "expected.tsv"
 OUT_TSV = HERE.parent / "el-md-exp-var2-run10-vision-check-calls-compared-to-expected.tsv"
 
