@@ -191,11 +191,6 @@ for the full movement matrix.
   Requires ground-truth verdict labels for the expected-measure-distance
   items; not yet built.
 
-- **Hardcoded scale (`scaleInchesPerFoot=0.05`, i.e. 1"=20').** Sheets
-  at other scales (1"=10', 1"=40', floor plans at 1/8"=1') will
-  mismeasure proportionally. Doesn't affect Goal A/B (routing + execution
-  success) but does affect *measurement accuracy*.
-
 - **Goal A misuse is now 10.6%** — the agent calls vision on
   `shouldCall=no` items only 10.6% of the time in RUN_10, down from
   RUN_9's 8.5% and far below var-1's ~70%. The selectivity story is
@@ -223,19 +218,15 @@ for the full movement matrix.
    moved into measurement in RUN_10). Consider an explicit rule like
    "if you observe the feature on the plan but no dimension annotation,
    ask a measurement question instead of marking not-verifiable".
-3. **Per-sheet scale extraction** — replace the hardcoded
-   `scaleInchesPerFoot=0.05` with a real lookup (title block extraction
-   via small LLM call, or sheet metadata). Unblocks measurement
-   *accuracy*.
-4. **Classifier prompt tuning to lift Goal B further** — the classifier
+3. **Classifier prompt tuning to lift Goal B further** — the classifier
    still picks generic for ~60% of expected-md items. The chain
    mechanism is sound; what remains is teaching the classifier to
    recognize more of the measurement question shapes.
-5. **Substation/Inngest cloud-path hang** — cloud RUN_4 and RUN_5
+4. **Substation/Inngest cloud-path hang** — cloud RUN_4 and RUN_5
    both hung in Substation's `Substation-workflow-run` Inngest function
    with no LLM activity. Local execution works fine; root cause
    unidentified. Pre-existing platform issue, not specific to this
    experiment.
-6. **Audit the remaining `vertical-or-mixed` / `shouldCall=no` items**
+5. **Audit the remaining `vertical-or-mixed` / `shouldCall=no` items**
    in `item-classification.json`. EL-13.21/22/23 were mis-labeled
    (caught in PR #73); worth scanning for others.
