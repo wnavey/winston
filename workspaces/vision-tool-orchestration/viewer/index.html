@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>vision_check debugger</title>
+<style>
+  :root {
+    --bg: #fafafa;
+    --panel: #fff;
+    --border: #e3e3e3;
+    --text: #1f2328;
+    --muted: #6b7280;
+    --accent: #2e7d32;
+    --accent-bg: #eef6f0;
+    --blue: #3b82f6;
+    --blue-bg: #eff6ff;
+    --purple: #9333ea;
+    --orange: #d68910;
+    --red: #c0392b;
+    --green: #1e8449;
+    --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  html, body { height: 100%; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: var(--text); background: var(--bg); }
+  body { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+
+  header { padding: 8px 14px; background: var(--panel); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 14px; flex-shrink: 0; }
+  header h1 { font-size: 13px; font-weight: 600; margin: 0; }
+  header .meta { font-size: 11px; color: var(--muted); font-family: var(--mono); }
+  header .filters { display: flex; gap: 6px; align-items: center; margin-left: auto; flex-wrap: wrap; }
+  header input[type=text] { font-size: 11px; padding: 3px 6px; border: 1px solid var(--border); border-radius: 4px; font-family: var(--mono); width: 160px; }
+  header .chip { font-size: 10px; padding: 3px 8px; border-radius: 10px; background: #f3f4f6; border: 1px solid transparent; cursor: pointer; user-select: none; color: var(--muted); }
+  header .chip.active { background: var(--accent-bg); color: var(--accent); border-color: #9bce9f; }
+  header .chip:hover { background: #e8eaee; }
+
+  main { flex: 1; display: flex; overflow: hidden; }
+
+  /* Left: call list */
+  #call-list { width: 280px; flex: 0 0 280px; background: var(--panel); border-right: 1px solid var(--border); overflow-y: auto; }
+  .run-group { border-bottom: 1px solid var(--border); }
+  .run-head { padding: 6px 12px; font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; background: #f9fafb; user-select: none; cursor: pointer; display: flex; align-items: center; gap: 4px; }
+  .run-head .count { margin-left: auto; font-weight: 500; color: var(--muted); font-size: 10px; }
+  .run-head .arrow { font-size: 9px; width: 10px; display: inline-block; transition: transform 0.1s; }
+  .run-head.collapsed .arrow { transform: rotate(-90deg); }
+  .run-list { list-style: none; padding: 0; margin: 0; }
+  .run-group.collapsed .run-list { display: none; }
+  .call-item { padding: 6px 12px 6px 16px; cursor: pointer; border-left: 3px solid transparent; font-family: var(--mono); font-size: 11px; line-height: 1.35; }
+  .call-item:hover { background: #f3f4f6; }
+  .call-item.active { background: var(--accent-bg); border-left-color: var(--accent); }
+  .call-item .row1 { display: flex; align-items: center; gap: 4px; }
+  .call-item .iid { font-weight: 600; color: var(--text); }
+  .call-item .pill { padding: 1px 6px; border-radius: 8px; font-size: 9px; font-weight: 600; letter-spacing: 0.02em; }
+  .pill.measurement { background: #fef3c7; color: #92400e; }
+  .pill.generic { background: var(--blue-bg); color: #1e40af; }
+  .pill.drawing_inspect { background: #ede9fe; color: #6d28d9; }
+  .pill.dispatch-ok { background: #e7f5ea; color: var(--green); }
+  .pill.dispatch-fb { background: #fdf3e0; color: var(--orange); }
+  .pill.dispatch-fail { background: #fdecea; color: var(--red); }
+  .call-item .question { color: var(--muted); font-family: inherit; font-size: 11px; margin-top: 2px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .call-item .meta { font-size: 9px; color: var(--muted); margin-top: 2px; font-family: var(--mono); }
+
+  /* Center: call detail */
+  #call-detail { flex: 1 1 0; min-width: 0; overflow-y: auto; padding: 16px 22px; }
+  #call-detail .empty { color: var(--muted); text-align: center; padding: 80px 20px; font-size: 13px; }
+  .section { margin-bottom: 22px; }
+  .section h3 { font-size: 10.5px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 8px; padding-bottom: 4px; border-bottom: 1px solid var(--border); }
+  .kv-grid { display: grid; grid-template-columns: 170px 1fr; gap: 4px 14px; font-size: 12px; line-height: 1.6; }
+  .kv-grid .k { color: var(--muted); font-family: var(--mono); font-size: 11px; }
+  .kv-grid .v { font-family: var(--mono); font-size: 11px; word-break: break-word; }
+  .kv-grid .v.plain { font-family: inherit; font-size: 12px; word-break: normal; }
+  .reasoning-box { background: var(--blue-bg); border-left: 3px solid var(--blue); padding: 8px 12px; font-size: 12px; line-height: 1.5; border-radius: 0 4px 4px 0; margin-top: 4px; }
+  .reasoning-box.measurement { background: #fef9e7; border-left-color: var(--orange); }
+  pre.code-block { background: #f7f7f8; border: 1px solid var(--border); border-radius: 4px; padding: 8px 12px; font-size: 11px; line-height: 1.45; overflow: auto; margin: 4px 0; max-height: 360px; font-family: var(--mono); white-space: pre-wrap; word-break: break-word; }
+
+  /* Sub-call list */
+  .subcall-list { display: flex; flex-direction: column; gap: 8px; }
+  .subcall-item { border: 1px solid var(--border); border-radius: 6px; padding: 8px 12px; background: var(--panel); cursor: pointer; transition: all 0.1s; }
+  .subcall-item:hover { background: #f9fafb; }
+  .subcall-item.active { border-color: var(--accent); background: var(--accent-bg); }
+  .subcall-item .head { display: flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: 11px; }
+  .subcall-item .pair { font-weight: 600; }
+  .subcall-item .dist { margin-left: auto; font-weight: 700; color: var(--accent); }
+  .subcall-item .dist.error { color: var(--red); }
+  .subcall-item .objects { display: flex; gap: 14px; font-size: 11px; margin-top: 4px; color: var(--text); }
+  .subcall-item .objects .label { color: var(--muted); margin-right: 4px; font-weight: 500; font-family: var(--mono); }
+
+  /* Right: subcall detail */
+  #subcall-detail { width: 480px; flex: 0 0 480px; background: var(--panel); border-left: 1px solid var(--border); overflow-y: auto; padding: 16px 20px; }
+  #subcall-detail .empty { color: var(--muted); text-align: center; padding: 60px 12px; font-size: 12px; }
+  .canvas-stage { background: #2b2b2b; border-radius: 6px; padding: 10px; margin: 8px 0; }
+  .canvas-stage .toolbar { display: flex; gap: 12px; margin-bottom: 6px; font-size: 11px; color: #ccc; flex-wrap: wrap; }
+  .canvas-stage .toolbar label { display: inline-flex; align-items: center; gap: 3px; cursor: pointer; user-select: none; }
+  .canvas-stage .call-toggle { display: flex; border: 1px solid #555; border-radius: 4px; overflow: hidden; }
+  .canvas-stage .call-toggle button { background: #3a3a3a; color: #ccc; border: none; padding: 3px 10px; font-size: 11px; cursor: pointer; }
+  .canvas-stage .call-toggle button.active { background: var(--accent); color: #fff; }
+  .canvas-wrap { position: relative; display: inline-block; max-width: 100%; }
+  .canvas-wrap img { display: block; max-width: 100%; height: auto; border-radius: 3px; }
+  .canvas-wrap canvas { position: absolute; inset: 0; pointer-events: none; }
+
+  .obj-card { border: 1px solid var(--border); border-radius: 4px; padding: 8px 10px; background: #fff; font-size: 11px; }
+  .obj-card .head { font-weight: 600; display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+  .obj-card .swatch { width: 11px; height: 11px; border-radius: 2px; }
+  .obj-card .swatch.A { background: rgba(30,132,73,0.4); border: 1px solid #1e8449; }
+  .obj-card .swatch.B { background: rgba(15,90,140,0.4); border: 1px solid #0f5a8c; }
+  .obj-card .desc { color: var(--muted); font-size: 11px; line-height: 1.4; margin-bottom: 3px; }
+  .obj-card code { background: #f3f4f6; padding: 1px 4px; border-radius: 3px; font-size: 10.5px; font-family: var(--mono); }
+
+  details > summary { cursor: pointer; font-size: 11px; color: var(--muted); padding: 4px 0; font-weight: 500; }
+  details > summary:hover { color: var(--text); }
+  details[open] > summary { margin-bottom: 4px; }
+
+  .info-note { background: var(--blue-bg); border: 1px solid #93c5fd; color: #1e40af; padding: 6px 10px; font-size: 11px; line-height: 1.45; border-radius: 4px; margin-top: 6px; }
+  .warn-note { background: #fff7e6; border: 1px solid #f7c77a; color: #7a4f00; padding: 6px 10px; font-size: 11px; line-height: 1.45; border-radius: 4px; margin-top: 6px; }
+  .err-note { background: #fdecea; border: 1px solid #f1a39a; color: var(--red); padding: 6px 10px; font-size: 11px; line-height: 1.45; border-radius: 4px; margin-top: 6px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>vision_check debugger</h1>
+  <span class="meta" id="header-meta">loading…</span>
+  <div class="filters">
+    <input type="text" id="filter-text" placeholder="filter by item id or text…" />
+    <span class="chip" data-filter="intent" data-value="measurement">measurement</span>
+    <span class="chip" data-filter="intent" data-value="generic">generic</span>
+    <span class="chip" data-filter="run" data-value="run-1">run-1</span>
+    <span class="chip" data-filter="run" data-value="run-2">run-2</span>
+    <span class="chip" data-filter="run" data-value="run-3">run-3</span>
+    <span class="chip" data-filter="clear" data-value="">clear filters</span>
+  </div>
+</header>
+
+<main>
+  <aside id="call-list"></aside>
+  <section id="call-detail"><div class="empty">Select a vision_check call from the left to see its classifier output, dispatch outcome, and specialist sub-calls.</div></section>
+  <aside id="subcall-detail"><div class="empty">Select a measure-distance pair from the center pane to inspect its cropped image, Gemini localization, and final distance.</div></section>
+</main>
+
+<script>
+const GEMINI_FILL = 'rgba(46, 204, 113, 0.18)';
+const GEMINI_STROKE = 'rgba(46, 204, 113, 0.9)';
+const PURPLE = 'rgba(147, 51, 234, 0.95)';
+const LABEL_A = '#1e8449';
+const LABEL_B = '#0f5a8c';
+
+const state = {
+  manifest: null,
+  flatCalls: [],         // [{src, call}, …]
+  selectedCallKey: null, // `${runIndex}/${callId}`
+  selectedSubcallId: null,
+  filters: { intent: new Set(), run: new Set(), text: '' },
+  currentImageMode: 'call1', // 'call1' | 'call2'
+};
+
+const $ = sel => document.querySelector(sel);
+
+function escapeHtml(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function kv(k, v, plain=false) {
+  if (v === null || v === undefined || v === '') return '';
+  return `<div class="k">${escapeHtml(k)}</div><div class="v${plain ? ' plain' : ''}">${escapeHtml(String(v))}</div>`;
+}
+
+async function loadManifest() {
+  const res = await fetch('manifest.json');
+  if (!res.ok) {
+    $('#call-list').innerHTML = `<div style="padding:20px;color:var(--red);font-size:12px">Failed to load manifest.json. Did you run build-manifest.py?</div>`;
+    return;
+  }
+  state.manifest = await res.json();
+  // Flatten calls across sources, retaining the source for header context.
+  for (const src of state.manifest.sources) {
+    for (const call of src.calls) {
+      state.flatCalls.push({ src, call });
+    }
+  }
+  renderHeaderMeta();
+  renderCallList();
+}
+
+function renderHeaderMeta() {
+  const m = state.manifest;
+  const ts = m.generatedAt ? new Date(m.generatedAt).toISOString().replace('T', ' ').replace(/\..+/, ' UTC') : '';
+  const srcLabels = m.sources
+    .filter(s => s.calls.length)
+    .map(s => `${s.set}/${s.variant} (${s.runLabel || '?'})`)
+    .join(' · ');
+  $('#header-meta').textContent = `${m.totalCalls} call(s) · ${srcLabels} · built ${ts}`;
+}
+
+function intentOf(call) {
+  return (call.classifier && call.classifier.output && call.classifier.output.problemType) || '?';
+}
+function specialistOf(call) {
+  return (call.dispatch && call.dispatch.specialistCalled) || '?';
+}
+function dispatchClass(call) {
+  if (!call.dispatch) return 'dispatch-fail';
+  if (call.dispatch.success === false) return 'dispatch-fail';
+  if (call.dispatch.fallbackReason) return 'dispatch-fb';
+  return 'dispatch-ok';
+}
+
+function matchesFilter({src, call}) {
+  const f = state.filters;
+  const intent = intentOf(call);
+  if (f.intent.size && !f.intent.has(intent)) return false;
+  if (f.run.size && !f.run.has(call.runIndex)) return false;
+  if (f.text) {
+    const q = f.text.toLowerCase();
+    const haystack = `${call.itemIdShort} ${call.inputs.checklistItemId || ''} ${call.inputs.checklistItemText || ''} ${call.inputs.question || ''}`.toLowerCase();
+    if (!haystack.includes(q)) return false;
+  }
+  return true;
+}
+
+function renderCallList() {
+  const groups = {};  // run -> [calls]
+  for (const fc of state.flatCalls) {
+    if (!matchesFilter(fc)) continue;
+    const r = fc.call.runIndex || 'unknown';
+    (groups[r] = groups[r] || []).push(fc);
+  }
+  const runs = Object.keys(groups).sort();
+  if (!runs.length) {
+    $('#call-list').innerHTML = `<div style="padding:20px;color:var(--muted);font-size:12px">No calls match filters.</div>`;
+    return;
+  }
+  let html = '';
+  for (const r of runs) {
+    const calls = groups[r];
+    html += `<div class="run-group" data-run="${r}">
+      <div class="run-head"><span class="arrow">▾</span>${r}<span class="count">${calls.length}</span></div>
+      <ul class="run-list">`;
+    for (const fc of calls) {
+      const c = fc.call;
+      const intent = intentOf(c);
+      const itemId = c.itemIdShort || c.inputs.checklistItemId || '?';
+      const sheet = c.inputs.sheetNum != null ? `sheet-${c.inputs.sheetNum}` : '';
+      const key = `${c.runIndex}/${c.callId}`;
+      const dcls = dispatchClass(c);
+      const fb = c.dispatch && c.dispatch.fallbackReason;
+      html += `<li class="call-item" data-key="${escapeHtml(key)}">
+        <div class="row1">
+          <span class="iid">${escapeHtml(itemId)}</span>
+          <span class="pill ${intent}">${escapeHtml(intent)}</span>
+          ${fb ? `<span class="pill dispatch-fb" title="fallback: ${escapeHtml(fb)}">↩</span>` : ''}
+        </div>
+        <div class="question">${escapeHtml(c.inputs.question || '')}</div>
+        <div class="meta">${escapeHtml(c.callId)} · ${escapeHtml(sheet)}</div>
+      </li>`;
+    }
+    html += '</ul></div>';
+  }
+  $('#call-list').innerHTML = html;
+
+  // Re-apply active selection if still in list
+  if (state.selectedCallKey) {
+    const sel = $('#call-list .call-item[data-key="' + state.selectedCallKey + '"]');
+    if (sel) sel.classList.add('active');
+  }
+}
+
+function findCallByKey(key) {
+  return state.flatCalls.find(fc => `${fc.call.runIndex}/${fc.call.callId}` === key);
+}
+
+function renderCallDetail() {
+  const fc = findCallByKey(state.selectedCallKey);
+  if (!fc) {
+    $('#call-detail').innerHTML = `<div class="empty">Select a vision_check call from the left.</div>`;
+    return;
+  }
+  const c = fc.call;
+  const cls = c.classifier || {};
+  const out = cls.output || {};
+  const disp = c.dispatch || {};
+  const intent = intentOf(c);
+
+  let html = '';
+
+  // Header card with checklist item
+  html += `<div class="section">
+    <h3>Checklist Item</h3>
+    <div class="kv-grid">
+      ${kv('item id', c.inputs.checklistItemId)}
+      ${kv('run', c.runIndex)}
+      ${kv('callId', c.callId)}
+      ${kv('document', c.inputs.documentId)}
+      ${kv('sheet', c.inputs.sheetNum)}
+    </div>
+    ${c.inputs.checklistItemText ? `<div class="info-note">${escapeHtml(c.inputs.checklistItemText)}</div>` : ''}
+  </div>`;
+
+  // Agent question + classifier
+  html += `<div class="section">
+    <h3>Agent Question</h3>
+    <div class="info-note">${escapeHtml(c.inputs.question || '')}</div>
+  </div>`;
+
+  html += `<div class="section">
+    <h3>Classifier</h3>
+    <div class="kv-grid">
+      ${kv('problemType', out.problemType)}
+      ${kv('confidence', out.confidence)}
+      ${kv('fallbackUsed', out.fallbackUsed)}
+      ${kv('promptSha', (cls.promptSha256 || '').slice(0,12))}
+      ${kv('modelId', cls.modelId)}
+    </div>
+    ${out.reasoning ? `<div class="reasoning-box ${intent}"><b>reasoning:</b> ${escapeHtml(out.reasoning)}</div>` : ''}
+  </div>`;
+
+  // Dispatch
+  html += `<div class="section">
+    <h3>Dispatch</h3>
+    <div class="kv-grid">
+      ${kv('specialistCalled', disp.specialistCalled)}
+      ${kv('success', disp.success)}
+      ${kv('fallbackReason', disp.fallbackReason)}
+    </div>
+    ${disp.fallbackReason ? `<div class="warn-note">fell back to generic: <code>${escapeHtml(disp.fallbackReason)}</code></div>` : ''}
+  </div>`;
+
+  // Extract-measurement-pairs
+  if (c.specialistExtract) {
+    const ex = c.specialistExtract;
+    const pairs = ex.pairs || [];
+    html += `<div class="section">
+      <h3>extract-measurement-pairs (${pairs.length} pair${pairs.length===1?'':'s'})</h3>`;
+    if (ex.explanation) html += `<div class="info-note"><b>extractor:</b> ${escapeHtml(ex.explanation)}</div>`;
+    if (pairs.length === 0) {
+      html += `<div class="warn-note">No pairs returned — short-circuited before reaching measure-distance.</div>`;
+    } else {
+      html += `<details><summary>view raw pairs JSON (${pairs.length})</summary>
+        <pre class="code-block">${escapeHtml(JSON.stringify(pairs, null, 2))}</pre>
+      </details>`;
+    }
+    html += `</div>`;
+  }
+
+  // measure-distance sub-calls
+  if (c.specialistMeasureDistance && c.specialistMeasureDistance.subCalls.length) {
+    const sc = c.specialistMeasureDistance.subCalls;
+    html += `<div class="section">
+      <h3>measure-distance pairs (${sc.length})</h3>
+      <div class="subcall-list">`;
+    for (const s of sc) {
+      const dist = s.finalResult && s.finalResult.distanceFeet;
+      const conf = s.finalResult && s.finalResult.confidence;
+      const active = s.id === state.selectedSubcallId ? 'active' : '';
+      html += `<div class="subcall-item ${active}" data-subcall="${escapeHtml(s.id)}">
+        <div class="head">
+          <span class="pair">pair ${escapeHtml(s.id.split('-').pop())}</span>
+          <span class="dist ${dist == null ? 'error' : ''}">${dist != null ? `${dist} ft (${conf || '?'})` : 'no result'}</span>
+        </div>
+        <div class="objects">
+          <div><span class="label">A:</span>${escapeHtml(s.objectA || '?')}</div>
+          <div><span class="label">B:</span>${escapeHtml(s.objectB || '?')}</div>
+        </div>
+      </div>`;
+    }
+    html += `</div></div>`;
+  }
+
+  // Raw metadata expandable
+  html += `<details><summary>raw metadata.json</summary>
+    <pre class="code-block">${escapeHtml(JSON.stringify({
+      classifier: c.classifier, dispatch: c.dispatch, inputs: c.inputs,
+      startedAt: c.startedAt, completedAt: c.completedAt, phase: c.phase,
+    }, null, 2))}</pre>
+  </details>`;
+
+  $('#call-detail').innerHTML = html;
+}
+
+function renderSubcallDetail() {
+  const fc = findCallByKey(state.selectedCallKey);
+  if (!fc || !state.selectedSubcallId) {
+    $('#subcall-detail').innerHTML = `<div class="empty">Select a measure-distance pair from the center pane.</div>`;
+    return;
+  }
+  const md = (fc.call.specialistMeasureDistance || {}).subCalls || [];
+  const sc = md.find(s => s.id === state.selectedSubcallId);
+  if (!sc) {
+    $('#subcall-detail').innerHTML = `<div class="empty">Sub-call not found.</div>`;
+    return;
+  }
+  const final = sc.finalResult || {};
+  const mode = state.currentImageMode;
+  const callData = sc[mode] || {};
+  const loc = callData.localization || {};
+
+  let html = '';
+  html += `<div class="section">
+    <h3>Final Measurement</h3>
+    <div class="kv-grid">
+      ${kv('distanceFeet', final.distanceFeet)}
+      ${kv('confidence', final.confidence)}
+      ${kv('objectA', sc.objectA)}
+      ${kv('objectB', sc.objectB)}
+      ${kv('scaleInchesPerFoot', sc.scaleInchesPerFoot)}
+    </div>
+  </div>`;
+
+  if (sc.reasoning) {
+    html += `<div class="section">
+      <h3>Why this pair was measured</h3>
+      <div class="reasoning-box">${escapeHtml(sc.reasoning)}</div>
+    </div>`;
+  }
+
+  // Canvas stage
+  html += `<div class="section">
+    <h3>Gemini Localization (${mode})</h3>
+    <div class="canvas-stage">
+      <div class="toolbar">
+        <div class="call-toggle">
+          <button data-call-mode="call1" class="${mode==='call1'?'active':''}">call1</button>
+          <button data-call-mode="call2" class="${mode==='call2'?'active':''}">call2</button>
+        </div>
+        <label><input type="checkbox" id="sc-toggle-bbox" checked />bboxes</label>
+        <label><input type="checkbox" id="sc-toggle-np" checked />nearestPoint</label>
+        <label><input type="checkbox" id="sc-toggle-yx" />swap y/x</label>
+      </div>
+      ${callData.cropped
+        ? `<div class="canvas-wrap" id="sc-canvas-wrap">
+            <img id="sc-img" src="${escapeHtml(callData.cropped)}" alt="cropped" crossorigin="anonymous" />
+            <canvas id="sc-canvas"></canvas>
+          </div>`
+        : `<div style="color:#aaa;padding:20px">No cropped image for ${mode}</div>`}
+    </div>
+  </div>`;
+
+  // Per-object cards
+  for (const key of ['objectA', 'objectB']) {
+    const obj = loc[key];
+    if (!obj) continue;
+    const label = key.slice(-1);
+    html += `<div class="obj-card">
+      <div class="head"><span class="swatch ${label}"></span>Object ${label}</div>
+      <div class="desc">${escapeHtml(obj.description || '')}</div>
+      <div>${kv('found', obj.found, true)}${kv('bbox', obj.bbox ? '[' + obj.bbox.join(', ') + ']' : null, true)}${kv('nearestPoint', obj.nearestPoint ? '[' + obj.nearestPoint.join(', ') + ']' : null, true)}${kv('confidence', obj.confidence, true)}</div>
+    </div>`;
+  }
+
+  // Localization meta + Gemini text response
+  html += `<details><summary>raw localization (${mode}-localization.json)</summary>
+    <pre class="code-block">${escapeHtml(JSON.stringify(loc, null, 2))}</pre>
+  </details>`;
+
+  if (callData.response) {
+    html += `<details><summary>Gemini response (${mode}-response.txt)</summary>
+      <pre class="code-block" id="sc-response-block">loading…</pre>
+    </details>`;
+  }
+  if (callData.prompt) {
+    html += `<details><summary>prompt sent (${mode}-prompt.txt)</summary>
+      <pre class="code-block" id="sc-prompt-block">loading…</pre>
+    </details>`;
+  }
+  if (sc.legendText) {
+    html += `<details><summary>legend.txt (shared)</summary>
+      <pre class="code-block">${escapeHtml(sc.legendText)}</pre>
+    </details>`;
+  }
+  if (sc.debugImage) {
+    html += `<details><summary>debug.png</summary>
+      <div style="background:#2b2b2b;padding:8px;border-radius:4px;margin-top:6px"><img src="${escapeHtml(sc.debugImage)}" style="max-width:100%;display:block;border-radius:3px" /></div>
+    </details>`;
+  }
+
+  $('#subcall-detail').innerHTML = html;
+
+  // Wire up canvas overlay + toggles
+  const img = $('#sc-img');
+  if (img) {
+    const sync = () => syncCanvasAndDraw(loc);
+    if (img.complete) sync();
+    else img.addEventListener('load', sync);
+    window.addEventListener('resize', sync, { passive: true });
+    ['sc-toggle-bbox', 'sc-toggle-np', 'sc-toggle-yx'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener('change', sync);
+    });
+  }
+
+  // Load prompt/response lazily (avoid bloating manifest)
+  if (callData.response) loadTextInto(callData.response, 'sc-response-block');
+  if (callData.prompt) loadTextInto(callData.prompt, 'sc-prompt-block');
+}
+
+async function loadTextInto(path, elId) {
+  try {
+    const r = await fetch(path);
+    const t = await r.text();
+    const el = document.getElementById(elId);
+    if (el) el.textContent = t.length > 60000 ? t.slice(0, 60000) + '\n…[truncated]' : t;
+  } catch (e) {
+    const el = document.getElementById(elId);
+    if (el) el.textContent = `failed: ${e}`;
+  }
+}
+
+function syncCanvasAndDraw(loc) {
+  const img = $('#sc-img');
+  const canvas = $('#sc-canvas');
+  if (!img || !canvas) return;
+  const w = img.clientWidth, h = img.clientHeight;
+  canvas.width = w; canvas.height = h;
+  drawOverlay(canvas, loc);
+}
+
+function drawOverlay(canvas, loc) {
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+  if (!loc) return;
+  const showBbox = $('#sc-toggle-bbox')?.checked ?? true;
+  const showNp = $('#sc-toggle-np')?.checked ?? true;
+  const swapYX = $('#sc-toggle-yx')?.checked ?? false;
+  const denorm = (v, d) => (v / 1000) * d;
+
+  if (showBbox) {
+    ['objectA','objectB'].forEach(key => {
+      const obj = loc[key];
+      if (!obj || !obj.found || !obj.bbox) return;
+      const [a0, b0, a1, b1] = obj.bbox;
+      const [x0, y0, x1, y1] = swapYX ? [b0, a0, b1, a1] : [a0, b0, a1, b1];
+      const px = denorm(x0, W), py = denorm(y0, H);
+      const pw = denorm(x1 - x0, W), ph = denorm(y1 - y0, H);
+      ctx.fillStyle = GEMINI_FILL;
+      ctx.strokeStyle = GEMINI_STROKE;
+      ctx.lineWidth = 2;
+      ctx.fillRect(px, py, pw, ph);
+      ctx.strokeRect(px, py, pw, ph);
+      ctx.fillStyle = key === 'objectA' ? LABEL_A : LABEL_B;
+      ctx.font = 'bold 20px -apple-system, sans-serif';
+      ctx.textBaseline = 'top';
+      ctx.fillText(key.slice(-1), px + 5, py + 3);
+    });
+  }
+  if (showNp) {
+    const pts = {};
+    ['objectA','objectB'].forEach(key => {
+      const obj = loc[key];
+      if (!obj || !obj.found || !obj.nearestPoint) return;
+      const [a, b] = obj.nearestPoint;
+      const [npX, npY] = swapYX ? [b, a] : [a, b];
+      const ppx = denorm(npX, W), ppy = denorm(npY, H);
+      pts[key] = { x: ppx, y: ppy };
+      ctx.beginPath();
+      ctx.arc(ppx, ppy, 7, 0, Math.PI * 2);
+      ctx.fillStyle = PURPLE;
+      ctx.fill();
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    });
+    if (pts.objectA && pts.objectB) {
+      ctx.beginPath();
+      ctx.moveTo(pts.objectA.x, pts.objectA.y);
+      ctx.lineTo(pts.objectB.x, pts.objectB.y);
+      ctx.strokeStyle = PURPLE;
+      ctx.lineWidth = 2;
+      ctx.setLineDash([6, 4]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+  }
+}
+
+// ── Wire events ──
+
+$('#call-list').addEventListener('click', e => {
+  const head = e.target.closest('.run-head');
+  if (head) {
+    head.parentElement.classList.toggle('collapsed');
+    head.classList.toggle('collapsed');
+    return;
+  }
+  const item = e.target.closest('.call-item');
+  if (!item) return;
+  document.querySelectorAll('#call-list .call-item.active').forEach(el => el.classList.remove('active'));
+  item.classList.add('active');
+  state.selectedCallKey = item.dataset.key;
+  state.selectedSubcallId = null;
+  state.currentImageMode = 'call1';
+  renderCallDetail();
+  renderSubcallDetail();
+});
+
+$('#call-detail').addEventListener('click', e => {
+  const subitem = e.target.closest('.subcall-item');
+  if (!subitem) return;
+  state.selectedSubcallId = subitem.dataset.subcall;
+  state.currentImageMode = 'call1';
+  document.querySelectorAll('#call-detail .subcall-item.active').forEach(el => el.classList.remove('active'));
+  subitem.classList.add('active');
+  renderSubcallDetail();
+});
+
+$('#subcall-detail').addEventListener('click', e => {
+  const btn = e.target.closest('[data-call-mode]');
+  if (!btn) return;
+  state.currentImageMode = btn.dataset.callMode;
+  renderSubcallDetail();
+});
+
+document.querySelectorAll('header .chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    const f = chip.dataset.filter;
+    const v = chip.dataset.value;
+    if (f === 'clear') {
+      state.filters.intent.clear();
+      state.filters.run.clear();
+      state.filters.text = '';
+      $('#filter-text').value = '';
+      document.querySelectorAll('header .chip.active').forEach(c => c.classList.remove('active'));
+      renderCallList();
+      return;
+    }
+    const set = state.filters[f];
+    if (set.has(v)) { set.delete(v); chip.classList.remove('active'); }
+    else { set.add(v); chip.classList.add('active'); }
+    renderCallList();
+  });
+});
+
+$('#filter-text').addEventListener('input', e => {
+  state.filters.text = e.target.value;
+  renderCallList();
+});
+
+loadManifest();
+</script>
+</body>
+</html>
