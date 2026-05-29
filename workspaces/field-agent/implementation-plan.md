@@ -71,7 +71,7 @@ Phase 1 explicitly **does not** include the Claude Agent SDK, the diligence skil
 |---|---|---|
 | Worker location | Standalone laptop process | Not a Vercel Sandbox; not part of Substation |
 | Inngest transport | Connect (outbound websocket) | TS SDK v4 (GA), Connect feature in public beta — fine for our use case |
-| Inngest app structure | **Two apps in one environment** | Substation is app A (existing, `serve()`). field-agent is app B (new, Connect). Events route by name across the env |
+| Inngest app structure | **Fourth app in the existing prod environment** | Substation, Conductor, Dispatcher already live as separate apps in one Inngest prod env. field-agent joins as a fourth app (Connect transport). Events route by name across the env. No new env, no branch env — follows existing precedent. |
 | Status persistence | New `diligence_runs` Supabase table | Owned by Substation's Supabase project; worker writes status, trigger route reads it |
 | Skill invocation (Phase 2) | `@anthropic-ai/claude-agent-sdk` in-process | Not subprocess; programmatic session with `noetic-tools` plugin loaded |
 | Trigger surface | New Hono route in Substation | `POST /diligence/trigger`; reuses Substation auth + `submission-data` bucket |
