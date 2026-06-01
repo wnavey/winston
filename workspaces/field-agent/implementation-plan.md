@@ -32,7 +32,29 @@ What this means concretely: the trigger surface, event routing, worker model, st
 
 Phase 2 swaps field-agent's stub body for actual `@anthropic-ai/claude-agent-sdk` invocation of the `noetic-tools:diligence-report` skill, AND adds the cityhall UX so the chat can kick off diligence runs and surface them as RCM cards in the conversation.
 
-Two workstreams; they can develop in parallel but the smoke test ties them together.
+**Workstream ordering:** P2-B (cityhall trigger + RCM) can ship first. The new feature flag described below lets us validate the chat-driven trigger pipeline without burning Anthropic tokens — field-agent stays in stub mode unless the flag is on. P2-A (real skill invocation) ships behind the flag, gets validated incrementally, and then we flip the flag from `false` to `true` once we trust the real path.
+
+### Feature flag: `full-feasibility-run-enabled`
+
+A new Vercel flag on cityhall, default **`false`**, gates whether a triggered diligence run actually invokes the diligence-report skill or falls through to the Phase 1 stub behavior. The flag flows cityhall → substation → field-agent as a request param.
+
+**Flow:**
+
+1. Cityhall server-side reads the flag at request time (whichever Vercel mechanism — env var, Edge Config, or Vercel Feature Flags — backs the flag). Default `false`.
+2. Cityhall passes the boolean in the substation POST body: `{ document_version_id, conversation_id, full_run: <bool> }`. Omitted = treated as `false`.
+3. Substation accepts `full_run` as an optional field in the body schema (`z.boolean().default(false)`), forwards it in the Inngest event payload: `data: { diligence_run_id, full_run }`.
+4. field-agent's `DiligenceRequestSchema` adds `full_run: z.boolean().default(false)`. The handler branches: `full_run === true` → invoke the skill (P2-A path), `false` → run the existing stub.
+
+**Default-safe at every layer:** missing/unset is treated as `false` end-to-end. A misconfigured cityhall, a stale substation, or an older field-agent build all gracefully fall back to stub behavior. No accidental real runs without explicit opt-in.
+
+**Not persisted on the row.** The boolean lives in the request → event → handler decision and is not stored on `diligence_runs`. Phase 1 stub completions are short (a few seconds with `STUB_SLEEP_MS=10000`); real runs are tens of minutes. The duration gap makes it obvious which mode a row was in if you need to debug after the fact. Once we're confident enough to flip the flag permanently to `true`, we can rip the parameter out entirely and the `diligence_runs` schema stays untouched.
+
+**What this changes in P2-A and P2-B:**
+
+- **P2-A commit 6** wraps the new `step.run('invoke-skill', ...)` in `if (event.data.full_run) { ... } else { /* existing stub */ }`. Both branches still flip status to `running` first and `completed` (or `failed`) at the end — same lifecycle, different body.
+- **P2-B** includes the cityhall flag-reading wiring (new env var lookup or Vercel SDK call) and threads `full_run` through to substation. Substation's POST body schema and Inngest event payload pick up the new optional field.
+
+---
 
 ### Workstream P2-A — field-agent runs the real skill
 
@@ -40,16 +62,20 @@ Replace the stub body with the canonical 6-phase pipeline the skill orchestrates
 
 **Sequencing (each a separate commit):**
 
-1. **Commit 6 — swap the sleep for the skill, return paths only.**
-   Add `@anthropic-ai/claude-agent-sdk` to `field-agent/package.json`. Replace the `step.sleep('stub-work', ...)` call with:
+1. **Commit 6 — swap the sleep for the skill (flag-gated), return paths only.**
+   Add `@anthropic-ai/claude-agent-sdk` to `field-agent/package.json`. Branch on `event.data.full_run`:
    ```ts
-   const deliverable = await step.run('invoke-skill', async () => {
-     return invokeDiligenceSkill({
-       diligenceRunId,
-       documentVersionId: row.document_version_id,
-       conversationId: row.conversation_id,
+   if (event.data.full_run) {
+     const deliverable = await step.run('invoke-skill', async () => {
+       return invokeDiligenceSkill({
+         diligenceRunId,
+         documentVersionId: row.document_version_id,
+         conversationId: row.conversation_id,
+       });
      });
-   });
+   } else {
+     // existing Phase 1 stub: step.sleep('stub-work', STUB_SLEEP_MS)
+   }
    ```
    `invokeDiligenceSkill` lives in `field-agent/src/skill/invoke.ts`. It:
    - Loads the intake `document_version` + its `document_section` rows from Supabase (address, intended use, tier content)
@@ -77,16 +103,18 @@ Replace the stub body with the canonical 6-phase pipeline the skill orchestrates
 
 Currently the only way to kick off a diligence run is the `trigger-diligence.sh` curl helper. Phase 2 brings the action into the cityhall intake chat: when the user is ready to run diligence, the chat agent (or a UI button — see open question below) triggers it, and the conversation shows a **`diligence_running_job` RCM card** linking to the existing status page.
 
-#### Trigger mechanism
+#### Trigger mechanism — locked: intake chat agent tool
 
-**Two options, design decision to make before implementing:**
+A new `requestDiligenceRun` tool added to the cityhall intake agent's tool registry. Matches the existing `updateIntakeNotes` tool pattern — one declared tool, agent invokes it when ready. The agent decides when to call it (typically after Tier 1 is complete and the user has signaled they're ready) and the tool's server-side `execute` handler:
 
-| Option | How user kicks it off | Pros | Cons |
-|---|---|---|---|
-| **Agent tool** | New `requestDiligenceRun` tool on the cityhall intake agent. Agent decides to call it (e.g. after Tier 1 completion + user agreement) or user asks it directly | Matches existing `updateIntakeNotes` pattern; agent has full context to decide; no UI changes | Agent might mis-fire; users can't kick off manually if agent doesn't oblige |
-| **Right-panel button** | "Run Diligence" button in the intake right panel; enabled once Tier 1 is complete; fires a direct request from the page | Explicit user control; no LLM in the trigger loop; predictable | Doesn't auto-fire on milestones; agent isn't aware of the trigger unless we plumb it through |
+1. Reads `full-feasibility-run-enabled` flag
+2. Calls `POST /api/projects/<projectId>/diligence` on substation with `{ document_version_id, conversation_id, full_run }` and the user's JWT
+3. Inserts the `diligence_running_job` RCM `chat_message` with the returned `dlr_<uuid>`
+4. Returns `{ ok: true, diligence_run_id }` (or `{ ok: false, error }`) to the model so it knows the trigger landed before composing its reply
 
-Probably the right answer is **both, in sequence**: ship the agent tool first (smaller cityhall diff, matches existing patterns, lets the chat-driven flow work end-to-end), then add the button later as a manual override. The RCM design works the same regardless of trigger.
+The system prompt picks up a paired instruction telling the model when it's appropriate to call `requestDiligenceRun` (e.g. "only after the user has confirmed they want to proceed; never on speculation; never twice in the same conversation").
+
+A right-panel button as a manual override is **deferred to Phase 3**. The agent tool covers the primary flow.
 
 #### Server-side flow (cityhall calls substation)
 
@@ -136,16 +164,27 @@ create unique index chat_message_rcm_diligence_running_job_once_per_conv
 
 (Same pattern as `chat_message_rcm_tier_1_info_complete_once_per_conv`.) Cityhall's writer catches the `23505` and resolves to the existing run's RCM instead of double-firing.
 
-Open question: do we want this to be **once per conversation**, or **once per intake submission**? Once per conversation means a new chat thread can re-trigger; once per intake means literally one diligence run per submission. For Phase 2 I'd start with once-per-conversation since it matches the other RCM index granularity; revisit if we want stricter dedup.
+**Granularity locked: once per conversation.** Matches the other RCM index granularity. A new intake conversation can re-trigger a diligence run if the user wants; stricter dedup (once per intake submission) can land later if it turns out to be needed.
 
 #### Files touched (estimated)
 
+**Cityhall:**
 - `cityhall/src/lib/rcm/schemas.ts` — add `DiligenceRunningJobPayloadSchema` to the discriminated union
 - `cityhall/src/lib/rcm/components.ts` — map `diligence_running_job → DiligenceRunningJob.svelte`
 - `cityhall/src/lib/rcm/DiligenceRunningJob.svelte` *(new)* — the renderer
-- `cityhall/src/routes/api/chat/intake/+server.ts` — add `requestDiligenceRun` tool to the agent's tool registry; call substation; insert the RCM
-- `cityhall/src/lib/server/substation.ts` — already has `substationPost`; no new helper needed
-- `substation/supabase/migrations/<timestamp>_diligence_running_job_rcm_index.sql` *(new)* — partial unique index
+- `cityhall/src/routes/api/chat/intake/+server.ts` — add `requestDiligenceRun` tool definition + server-side `execute` handler; add a paired instruction to the system prompt
+- `cityhall/src/lib/intake/request-diligence-run.ts` *(new)* — the tool's execute body: read the flag, call substation, insert the RCM. Pure function for testability
+- Flag-reading: depends on which Vercel mechanism backs `full-feasibility-run-enabled` — env var, Edge Config read, or Vercel Flags SDK. Lookup goes in one place (the tool's execute) so it's easy to swap later
+- `cityhall/src/lib/server/substation.ts` — already has `substationPost`; pass through the new `full_run` field in the body
+
+**Substation:**
+- `substation/src/routes/diligence.ts` — extend the POST body schema with `full_run: z.boolean().default(false)`; thread it into the Inngest event payload
+- `substation/src/routes/diligence.integration.test.ts` — add cases covering the `full_run=true` / `full_run=false` / `full_run` omitted paths (assert event payload includes the boolean)
+- `substation/supabase/migrations/<timestamp>_diligence_running_job_rcm_index.sql` *(new)* — partial unique index for the RCM
+
+**field-agent:**
+- `field-agent/src/inngest/events.ts` — `DiligenceRequestSchema` adds `full_run: z.boolean().default(false)`
+- `field-agent/src/inngest/functions/diligence-run.ts` — branch on `parsed.full_run`; existing stub becomes the `false` arm
 
 ### Phase 2 pre-flight check (do first)
 
@@ -347,8 +386,23 @@ Don't block Phase 2; mention if you want me to chip these between rounds.
 
 ## What's next (when you're ready)
 
-1. **Phase 2 pre-flight** — the 30-line Agent SDK invocation script. Eliminates the biggest unknown before Phase 2 starts.
-2. **Workstream P2-A commit 6** — swap the stub for `step.run('invoke-skill', ...)` against the Agent SDK. Don't upload yet.
-3. **Workstream P2-A commit 7** — Supabase upload + `diligence_artifacts` rows. From here, the cityhall page starts showing artifact links.
-4. **Workstream P2-B in parallel** — design decision on trigger mechanism (agent tool vs button), then RCM schema + renderer + cityhall API handler.
-5. **End-to-end smoke test** — same shape as Phase 1 but the run produces real PDFs and the chat shows the running-job RCM.
+P2-B first, then P2-A, with the feature flag as the safety net between them.
+
+1. **P2-B — wire flag + trigger tool + RCM end-to-end with the worker still in stub mode.**
+   Substation gets the `full_run` field on the POST body + Inngest event. Cityhall gets the `requestDiligenceRun` agent tool, the RCM schema/renderer, and the flag-reading. field-agent gets a one-line schema update to accept `full_run` (still ignored — stub runs regardless).
+   *Validates:* chat trigger path, RCM rendering, idempotency, status-page link from the card.
+   *Doesn't burn:* zero Anthropic tokens.
+
+2. **Phase 2 pre-flight (before P2-A starts)** — 30-line standalone script that imports `@anthropic-ai/claude-agent-sdk`, invokes a known-good `noetic-tools` skill (`smoke-test` is the cheapest), captures the terminal message, exits clean. Eliminates the biggest unknown before we touch field-agent.
+
+3. **P2-A commit 6 — flag-gated skill invocation.** `if (event.data.full_run) { step.run('invoke-skill', ...) }`, else stub. Don't upload artifacts yet. Test by flipping the flag for a single test conversation and watching the run go.
+
+4. **P2-A commit 7 — Supabase upload + `diligence_artifacts` rows.** From here, the cityhall page starts showing artifact entries (still no signed URLs).
+
+5. **P2-A commit 8 — supporting-doc download path.** For runs whose conversation has attachments.
+
+6. **P2-A commit 9 — emit `diligence/completed` event.** No consumer yet; just sets up the future.
+
+7. **Substation: signed URL generation on the GET route.** Generates 72h signed URLs per artifact at read time.
+
+8. **End-to-end smoke test with `full_run=true`** — same shape as Phase 1 but the run produces real PDFs and the chat shows the running-job RCM. Validate it works for one test conversation, then flip the flag default to `true` in the Vercel project once we trust it.
