@@ -1,40 +1,175 @@
 # Field Agent — Implementation Plan
 
-A long-running API surface for the `noetic-tools:diligence-report` skill: cloud-deployed trigger publishes an Inngest event, a laptop-side worker consumes via Inngest Connect, runs the skill, and returns deliverables.
+> **Last verified:** 2026-06-01 — Phase 1 smoke-test passed end-to-end against prod.
+> **Status:** Phase 1 ✅ complete. Phase 2 not yet started. Phase 3 deferred.
 
-The plan is **scaffolding-first**: Phase 1 ships the entire pipeline with a stub worker that fakes the diligence run (sleep + status updates). Phase 2 swaps the stub for real skill invocation. This lets us validate every part of the system — trigger route, event routing, Connect transport, status tracking, deliverable handoff shape — before we depend on the slow, expensive, hard-to-debug skill itself.
+A long-running API surface for the `noetic-tools:diligence-report` skill: a cloud-deployed trigger publishes an Inngest event, a laptop-side worker (field-agent) consumes via Inngest Connect, runs the skill, and writes status + deliverables back through Supabase.
+
+The plan is **scaffolding-first**: Phase 1 shipped the entire pipeline with a stub worker. Phase 2 swaps the stub for real skill invocation. This lets us validate every part of the system — trigger route, event routing, Connect transport, status tracking, deliverable handoff shape — before we depend on the slow, expensive, hard-to-debug skill itself.
 
 ---
 
-## Goal
+## What shipped in Phase 1
 
-Trigger a Site Intelligence Report (SIR) run from a public HTTP endpoint and receive the resulting PDFs (SIR + Research Appendix) back as signed URLs, with progress observable along the way. Compute stays on Winston's laptop where the diligence skill, its plugins, and the durable `~/noetic/bureau/jurisdictions/<slug>/feasibility-guides/` directory already live.
+Validated end-to-end on 2026-06-01: `curl` → substation INSERT + Inngest event → field-agent (laptop, Connect) → status flip `queued → running → completed` → cityhall realtime UI updates without refresh.
 
-## Phase 1 scope (scaffolding)
+| Layer | What | PR |
+|---|---|---|
+| substation | `diligence_runs` + `diligence_artifacts` schema, RLS, realtime publication | [noetic-inc/substation#97](https://github.com/noetic-inc/substation/pull/97) |
+| substation | `POST /api/projects/:projectId/diligence` + `GET /:diligenceRunId` routes, integration tests | [noetic-inc/substation#98](https://github.com/noetic-inc/substation/pull/98) |
+| substation | `SUBSTATION_SERVICE_API_KEY` auth path with route allowlist (mirrors IG pattern) | [noetic-inc/substation#99](https://github.com/noetic-inc/substation/pull/99) |
+| field-agent | Initial scaffold (`@noetic/field-agent`, Node 22.4+, Inngest v4) | [noetic-inc/field-agent#1](https://github.com/noetic-inc/field-agent/pull/1) |
+| field-agent | Connect handshake + stub body (`mark-running` → `step.sleep` → `mark-completed`) | [noetic-inc/field-agent#2](https://github.com/noetic-inc/field-agent/pull/2) |
+| cityhall | `/project/[id]/diligence-runs/[id]` SSR page + Supabase realtime status widget | [noetic-inc/cityhall#483](https://github.com/noetic-inc/cityhall/pull/483) |
+| cityhall | `docs/feasibility-research-runner.md` architecture spec | [noetic-inc/cityhall#482](https://github.com/noetic-inc/cityhall/pull/482) |
+| winston | Plan, [`testing-kickoff.md`](./testing-kickoff.md), [`trigger-diligence.sh`](./trigger-diligence.sh) helper | wnavey/winston PRs #82, #83, #87, #88, #90, #91, #92 |
 
-- Substation trigger endpoint accepts requests and publishes events
-- Standalone `field-agent` connects to Inngest via Connect and consumes `diligence/requested` events
-- **Stub function body:** log the event, set status to `running`, sleep ~10 min, set status to `completed` with a placeholder result
-- Job status persisted to a new `diligence_runs` Supabase table
-- Substation status endpoint reads from the table
-- End-to-end smoke test: curl → event → stub worker → status flips → completion observable
+What this means concretely: the trigger surface, event routing, worker model, status persistence, and UI subscription all work in prod. The next time someone curls the trigger endpoint, the same loop runs — modulo the fact that field-agent's body is still a stub.
 
-Phase 1 explicitly **does not** include the Claude Agent SDK, the diligence skill itself, real PDF generation, or storage upload. Those land in Phase 2 against a working scaffold.
+---
 
-## Phase 2 scope (real diligence runs)
+## Phase 2 — Real diligence runs (NEXT)
 
-- Worker imports `@anthropic-ai/claude-agent-sdk`
-- Worker invokes `/diligence-report` skill programmatically with the event payload
-- Worker uploads resulting PDFs to Supabase storage with 72h signed URLs
-- Worker writes signed URLs + local path to the `diligence_runs.result` column
-- Concept-plan PDF download path implemented (worker pulls supporting docs from `submission-data` bucket before invoking the skill)
+Phase 2 swaps field-agent's stub body for actual `@anthropic-ai/claude-agent-sdk` invocation of the `noetic-tools:diligence-report` skill, AND adds the cityhall UX so the chat can kick off diligence runs and surface them as RCM cards in the conversation.
 
-## Phase 3 scope (productionization)
+Two workstreams; they can develop in parallel but the smoke test ties them together.
 
-- Move worker from laptop to an always-on VM (Fly.io / Hetzner) — same code, different host
-- Multi-tenant auth on the trigger endpoint
-- Concurrent runs / multi-worker scale-out
-- Webhook callbacks instead of polling for completion
+### Workstream P2-A — field-agent runs the real skill
+
+Replace the stub body with the canonical 6-phase pipeline the skill orchestrates internally (jurisdiction check → vision extraction → research → discipline analysis → synthesis → render). Field-agent wraps that in `step.run` boundaries so partial progress is durable across worker restarts.
+
+**Sequencing (each a separate commit):**
+
+1. **Commit 6 — swap the sleep for the skill, return paths only.**
+   Add `@anthropic-ai/claude-agent-sdk` to `field-agent/package.json`. Replace the `step.sleep('stub-work', ...)` call with:
+   ```ts
+   const deliverable = await step.run('invoke-skill', async () => {
+     return invokeDiligenceSkill({
+       diligenceRunId,
+       documentVersionId: row.document_version_id,
+       conversationId: row.conversation_id,
+     });
+   });
+   ```
+   `invokeDiligenceSkill` lives in `field-agent/src/skill/invoke.ts`. It:
+   - Loads the intake `document_version` + its `document_section` rows from Supabase (address, intended use, tier content)
+   - Downloads any `intake_attachment` files linked to the conversation
+   - Creates an Agent SDK session with the `noetic-tools` plugin loaded so `/diligence-report` is available
+   - Streams the agent's turns to a per-run log file under `~/noetic/diligence/<property-slug>/sir/run-<run-id>.log`
+   - Waits for the agent's terminal message and returns local paths to the produced PDFs
+   No Supabase storage upload yet — just returns where the files are on disk. Mark the run `completed` with the local paths in `result` JSONB (or leave `result` null and infer from artifacts; design choice).
+
+2. **Commit 7 — upload artifacts + insert `diligence_artifacts` rows.**
+   After `invoke-skill` resolves, a new `step.run('upload-artifacts')`:
+   - Uploads `site-intelligence-report.pdf` to `submission-data/diligence/<diligence-run-id>/sir.pdf`
+   - Uploads `research-appendix.pdf` to `.../appendix.pdf`
+   - INSERTs one `diligence_artifacts` row per file with `kind`, `storage_path`, `file_name`, `content_type`, `file_size`, `page_count`
+   The trigger route's `GET` endpoint already joins this table; the cityhall page will start showing artifacts as soon as rows land.
+   **Signed URL generation lives on the substation read side**, not on the worker — generated at GET time with 72h expiry via `sb.storage.from('submission-data').createSignedUrl(...)`. The worker doesn't need to know about URL lifetimes; the route handles them per request.
+
+3. **Commit 8 — supporting-doc / concept-plan download path.**
+   For runs that have attachments (concept plan PDFs, plats, etc. via `intake_attachment` documents linked to the conversation), download them into the working dir before invoking the skill. New helper at `field-agent/src/skill/download-supporting-docs.ts`. Skip cleanly when the conversation has no attachments.
+
+4. **Commit 9 — emit `diligence/completed` event.**
+   After `upload-artifacts` succeeds, fire `inngest.send({ name: 'diligence/completed', data: { diligence_run_id } })`. No consumer in this phase, but it sets up the future where downstream subscribers (notifications, follow-up workflows) can react without changing the worker contract.
+
+### Workstream P2-B — cityhall: trigger + `diligence_running_job` RCM
+
+Currently the only way to kick off a diligence run is the `trigger-diligence.sh` curl helper. Phase 2 brings the action into the cityhall intake chat: when the user is ready to run diligence, the chat agent (or a UI button — see open question below) triggers it, and the conversation shows a **`diligence_running_job` RCM card** linking to the existing status page.
+
+#### Trigger mechanism
+
+**Two options, design decision to make before implementing:**
+
+| Option | How user kicks it off | Pros | Cons |
+|---|---|---|---|
+| **Agent tool** | New `requestDiligenceRun` tool on the cityhall intake agent. Agent decides to call it (e.g. after Tier 1 completion + user agreement) or user asks it directly | Matches existing `updateIntakeNotes` pattern; agent has full context to decide; no UI changes | Agent might mis-fire; users can't kick off manually if agent doesn't oblige |
+| **Right-panel button** | "Run Diligence" button in the intake right panel; enabled once Tier 1 is complete; fires a direct request from the page | Explicit user control; no LLM in the trigger loop; predictable | Doesn't auto-fire on milestones; agent isn't aware of the trigger unless we plumb it through |
+
+Probably the right answer is **both, in sequence**: ship the agent tool first (smaller cityhall diff, matches existing patterns, lets the chat-driven flow work end-to-end), then add the button later as a manual override. The RCM design works the same regardless of trigger.
+
+#### Server-side flow (cityhall calls substation)
+
+Regardless of trigger mechanism:
+
+1. Cityhall calls `POST /api/projects/:projectId/diligence` on substation with `{ document_version_id, conversation_id }` in the body.
+2. Auth: the request goes out as the **user's Supabase JWT** (not the service API key), so `triggered_by_user_id` is populated on the row. The agent tool / button handler runs server-side in cityhall, so it has access to `locals.session.access_token`.
+3. Substation responds with the created `diligence_runs` row (prefixed `dlr_<uuid>` id, status `queued`).
+4. Cityhall INSERTs a new `chat_message` with `rcm_payload` carrying the `diligence_running_job` payload.
+5. Cityhall's existing realtime subscription on `chat_message` picks up the new row → re-renders the conversation → the card appears.
+
+#### RCM schema
+
+Adds a new entry to cityhall's `src/lib/rcm/schemas.ts` discriminated union:
+
+```ts
+export const DiligenceRunningJobPayloadSchema = z.object({
+  rcm_type: z.literal('diligence_running_job'),
+  data: z.object({
+    diligence_run_id: z.string(),       // dlr_<uuid> form
+    project_id: z.string(),             // for building the link
+    status: z.enum([
+      'queued', 'running', 'completed', 'failed', 'cancelled',
+    ]).optional(),                       // populated at insert time; static for Phase 2
+  }),
+});
+```
+
+#### RCM renderer
+
+New file `cityhall/src/lib/rcm/DiligenceRunningJob.svelte`. Renders a card with:
+- Title: "Diligence run kicked off" (or status-aware: "Running…" / "Completed" / "Failed")
+- The link: `/project/<project_id>/diligence-runs/<diligence_run_id>` (relative URL, opens in same tab; user can ⌘-click for a new tab)
+- A small status pill if `data.status` is set
+
+For Phase 2, the card is **static** — it shows the state at insert time and links the user to the live status page for updates. Phase 3 could make it mutate in place (subscribe to realtime on `diligence_runs` from the chat side and update `rcm_payload.data.status`), but that's overkill for the MVP and conflicts with the partial-unique-index pattern other RCMs use.
+
+#### Idempotency
+
+To prevent duplicate diligence runs when the agent / user double-triggers or a network retry happens, add a partial unique index in substation:
+
+```sql
+create unique index chat_message_rcm_diligence_running_job_once_per_conv
+  on chat_message ((rcm_payload->>'rcm_type'), conversation_id)
+  where rcm_payload->>'rcm_type' = 'diligence_running_job';
+```
+
+(Same pattern as `chat_message_rcm_tier_1_info_complete_once_per_conv`.) Cityhall's writer catches the `23505` and resolves to the existing run's RCM instead of double-firing.
+
+Open question: do we want this to be **once per conversation**, or **once per intake submission**? Once per conversation means a new chat thread can re-trigger; once per intake means literally one diligence run per submission. For Phase 2 I'd start with once-per-conversation since it matches the other RCM index granularity; revisit if we want stricter dedup.
+
+#### Files touched (estimated)
+
+- `cityhall/src/lib/rcm/schemas.ts` — add `DiligenceRunningJobPayloadSchema` to the discriminated union
+- `cityhall/src/lib/rcm/components.ts` — map `diligence_running_job → DiligenceRunningJob.svelte`
+- `cityhall/src/lib/rcm/DiligenceRunningJob.svelte` *(new)* — the renderer
+- `cityhall/src/routes/api/chat/intake/+server.ts` — add `requestDiligenceRun` tool to the agent's tool registry; call substation; insert the RCM
+- `cityhall/src/lib/server/substation.ts` — already has `substationPost`; no new helper needed
+- `substation/supabase/migrations/<timestamp>_diligence_running_job_rcm_index.sql` *(new)* — partial unique index
+
+### Phase 2 pre-flight check (do first)
+
+**Confirm `@anthropic-ai/claude-agent-sdk` can invoke a `noetic-tools` skill programmatically.**
+
+30-line throwaway script outside field-agent that imports the SDK, creates a session with the `noetic-tools` plugin loaded, invokes a tiny existing skill (e.g. `noetic-tools:smoke-test`), captures the final agent message, and exits. Verifies:
+
+- SDK + plugin discovery work without a TTY
+- The agent's terminal message is parseable from our process
+- Stdout/stderr streams behave (no zombie processes, clean shutdown)
+
+If it works, the rest of Phase 2 is mechanical wiring. If it doesn't, we diagnose the SDK before committing to changes inside field-agent.
+
+---
+
+## Phase 3 — Productionization (later)
+
+Out of scope for now, but the architecture is built to support it:
+
+- **Move field-agent off the laptop.** Same code, different host — a Fly.io machine, Hetzner box, or any always-on Linux box. Inngest Connect dials out from wherever it runs.
+- **Multi-tenancy / auth tightening.** Today the substation API key is a single global secret; in production it'd be per-org or per-service-account with proper rotation.
+- **Webhook callbacks on completion.** Anyone who wants to know when a diligence run finishes can subscribe to `diligence/completed` (Phase 2 emits it) or have substation POST to a registered webhook URL.
+- **Concurrent runs.** Today the worker has `concurrency: 1` on the `diligence-run` function. A real production cluster would scale this up, partitioned by something sensible (project, org, hardware capacity).
+- **Cleanup of old `diligence_runs` rows.** Test runs accumulate forever today. A retention policy + Inngest cron would garbage-collect rows older than N days that have `status != 'completed'` (or move completed ones to cold storage).
 
 ---
 
@@ -42,7 +177,7 @@ Phase 1 explicitly **does not** include the Claude Agent SDK, the diligence skil
 
 ```
 ┌────────────────────────────┐         ┌────────────────────────┐
-│ Substation (Vercel)        │         │ Inngest Cloud          │
+│ Substation (Vercel)        │         │ Inngest Cloud (prod)   │
 │ POST /diligence/trigger    │─send──▶ │ event:                 │
 │   - validate inputs        │         │ diligence/requested    │
 │   - insert diligence_runs  │         └───────────┬────────────┘
@@ -51,9 +186,9 @@ Phase 1 explicitly **does not** include the Claude Agent SDK, the diligence skil
 └────────────────────────────┘                     │ (outbound ws)
         ▲                                          ▼
         │ GET /diligence/:runId    ┌──────────────────────────────┐
-        │ (read diligence_runs)    │ field-agent (laptop)    │
+        │ (read diligence_runs)    │ field-agent (laptop)         │
         │                          │  Node 22.4+ standalone proc  │
-        │                          │   Phase 1: stub body         │
+        │                          │   Phase 1 (✅ shipped):       │
         │                          │     - update status=running  │
         │                          │     - sleep 10m              │
         │                          │     - update status=completed│
@@ -71,26 +206,18 @@ Phase 1 explicitly **does not** include the Claude Agent SDK, the diligence skil
 |---|---|---|
 | Worker location | Standalone laptop process | Not a Vercel Sandbox; not part of Substation |
 | Inngest transport | Connect (outbound websocket) | TS SDK v4 (GA), Connect feature in public beta — fine for our use case |
-| Inngest app structure | **Fourth app in the existing prod environment** | Substation, Conductor, Dispatcher already live as separate apps in one Inngest prod env. field-agent joins as a fourth app (Connect transport). Events route by name across the env. No new env, no branch env — follows existing precedent. |
-| Status persistence | New `diligence_runs` Supabase table | Owned by Substation's Supabase project; worker writes status, trigger route reads it |
+| Inngest app structure | **Fourth app in the existing prod environment** | Substation, Conductor, Dispatcher already live as separate apps in one Inngest prod env. field-agent joins as a fourth app (Connect transport). Events route by name across the env. |
+| Status persistence | `diligence_runs` Supabase table | Owned by Substation's Supabase project; worker writes status, trigger route reads it |
 | Skill invocation (Phase 2) | `@anthropic-ai/claude-agent-sdk` in-process | Not subprocess; programmatic session with `noetic-tools` plugin loaded |
-| Trigger surface | New Hono route in Substation | `POST /diligence/trigger`; reuses Substation auth + `submission-data` bucket |
+| Trigger surface | Hono route in Substation | `POST /api/projects/:projectId/diligence`; auth via `SUBSTATION_SERVICE_API_KEY` (route-restricted) OR user JWT |
 | Deliverable handoff (Phase 2) | **Both** — local copy + Supabase upload + 72h signed URLs | Local is source of truth; signed URLs for remote callers |
-
-### Open / TBD items
-
-- **Auth on `/diligence/trigger`.** Reuse whatever Substation uses for other org-scoped routes; confirm during implementation.
-- **Signed-URL bucket choice (Phase 2).** Default to `submission-data` (already configured). If we want diligence outputs in their own bucket for lifecycle policies, add a `diligence-deliverables` bucket — small change, but a decision to make.
-- **Concept plan PDF size cap.** Trigger route should reject uploads above some threshold (suggest 100MB) before paying for storage + the worker download.
-- **What happens if Inngest Connect websocket drops mid-run.** Tolerable because phases are durable via `step.run`; document the retry semantics so we know what re-runs look like.
+| Trigger from cityhall (Phase 2) | Agent tool first, button second | Two-stage rollout; both call substation as the user JWT to populate `triggered_by_user_id` |
 
 ---
 
-## `diligence_runs` + `diligence_artifacts` tables (new Supabase migration in Substation)
+## `diligence_runs` + `diligence_artifacts` tables
 
-The schema FK-anchors each run to the originating feasibility-intake `document_version` rather than storing raw address/intended_use strings. From any `diligence_runs` row we can reach the conversation, the intake document, its attachments, the submission, and the project via supported joins — validated against the existing schema before locking in.
-
-Output PDFs live in their own `diligence_artifacts` table (normalized, queryable, extensible) rather than a `result` JSONB blob.
+Shipped in [substation#97](https://github.com/noetic-inc/substation/pull/97). Reference schema:
 
 ```sql
 create table public.diligence_runs (
@@ -139,236 +266,58 @@ create index on public.diligence_artifacts (diligence_run_id);
 create index on public.diligence_artifacts (kind);
 ```
 
-Plus an `updated_at` auto-bump trigger and project-access-based RLS mirroring `submission_report` (reads gated by `user_can_see_project`; writes by `get_user_project_access_level IN ('write','admin')`). field-agent writes via service-role and bypasses RLS. Both tables added to `supabase_realtime` so cityhall's UI can observe status without polling.
+Plus `updated_at` auto-bump trigger, project-access-based RLS mirroring `submission_report`, both tables in `supabase_realtime` for cityhall subscriptions.
 
-**Schema rationale (decisions made during design):**
-- **`document_version_id` is the anchor**, not raw address/intended_use. Address, intended use, supporting attachments are all derivable from the intake document_version + its sections + its conversation's `chat_message_attachment` rows.
-- **No `workflow_runs` FK.** field-agent isn't driven by Substation's `workflow-run` Inngest function — it's its own Connect worker. The `inngest_event_id` gives us Inngest-dashboard correlation. `diligence_runs.status` is canonical.
-- **Status lifecycle owned by `diligence_runs`** (queued / running / completed / failed / cancelled). The trigger route inserts at `queued`; field-agent flips to `running` then `completed` (or `failed`).
-- **No `submission_version_id` column** — it's reachable in one join through `document_version`, and storing it would just denormalize.
-
-Migration lives at `substation/supabase/migrations/20260529180000_diligence_runs.sql` (PR noetic-inc/substation#97).
+**Phase 1 stub does not write `diligence_artifacts` rows.** Phase 2 commit 7 starts populating them.
 
 ---
 
-## Phase 1 workstreams
+## HTTP contract
 
-Three streams. Stream A and Stream B can develop in parallel once the table migration lands. Stream C is the smoke test that ties them together.
+Shipped in [substation#98](https://github.com/noetic-inc/substation/pull/98). Both endpoints mounted under `/api/projects/:projectId/` to match existing project-scoped conventions.
 
-### Stream A — `field-agent` repo (stub)
-
-**Location:** New repo at `/Users/winston/workspace/field-agent/`.
-
-**Layout (Phase 1 only — Phase 2 expands `src/`):**
+### `POST /api/projects/:projectId/diligence`
 
 ```
-field-agent/
-├── package.json
-├── tsconfig.json
-├── .env.example
-├── README.md
-├── src/
-│   ├── index.ts                 # entrypoint: starts Inngest Connect worker
-│   ├── inngest/
-│   │   ├── client.ts            # new Inngest({ id: 'field-agent' })
-│   │   └── functions/
-│   │       └── diligence-run.ts # the function — event diligence/requested
-│   ├── status/
-│   │   └── update.ts            # Supabase client; writes to diligence_runs
-│   └── lib/
-│       └── env.ts               # typed env loader
-└── scripts/
-    └── dev.ts                   # convenience runner
+body:    { document_version_id: uuid, conversation_id?: uuid }
+returns: { id: 'dlr_<uuid>', object: 'diligence_run', status: 'queued', ... }
+auth:    SUBSTATION_SERVICE_API_KEY (route-restricted, recommended for scripts)
+         OR a Supabase user JWT (populates triggered_by_user_id)
+status:  201 Created on success
 ```
 
-**Dependencies (Phase 1):**
-- `inngest@^3.34.1` (Connect support)
-- `@supabase/supabase-js`
-- `zod` (event payload validation)
-- TypeScript, tsx for dev
+Defense in depth: route confirms (a) the document_version belongs to `projectId`, (b) `document.kind = 'feasibility_intake'`. Bad inputs → `400`/`403`/`404` per kind of mismatch.
 
-(`@anthropic-ai/claude-agent-sdk` is added in Phase 2.)
+Generates `diligence_run_id` client-side (`crypto.randomUUID()`), fires the Inngest event with the id in the payload, INSERTs both ids together. No two-phase write.
 
-**Runtime requirements:** Node 22.4+ (native WebSocket).
+### `GET /api/projects/:projectId/diligence/:diligenceRunId`
 
-**Stub function shape — `diligence-run.ts`:**
-
-The event payload is minimal — just the `diligence_run_id`. The worker uses that to find the `diligence_runs` row and flip its status. Address/intended_use/attachments aren't passed via the event because they're already in the database via the `document_version_id` FK.
-
-```ts
-const STUB_SLEEP_MS = 10 * 60 * 1000; // 10 minutes — long enough to feel real
-
-export const diligenceRun = inngest.createFunction(
-  {
-    id: 'diligence-run',
-    concurrency: 1,
-    triggers: [{ event: 'diligence/requested' }],
-  },
-  async ({ event, step, logger }) => {
-    const { diligence_run_id } = DiligenceRequestSchema.parse(event.data);
-
-    logger.info('[diligence-run] received', { diligence_run_id });
-
-    await step.run('mark-running', async () => {
-      await updateRunStatus(diligence_run_id, {
-        status: 'running',
-        started_at: new Date().toISOString(),
-      });
-    });
-
-    await step.sleep('stub-work', `${STUB_SLEEP_MS}ms`);
-
-    await step.run('mark-completed', async () => {
-      await updateRunStatus(diligence_run_id, {
-        status: 'completed',
-        completed_at: new Date().toISOString(),
-      });
-    });
-
-    return { diligence_run_id, status: 'completed', stub: true };
-  },
-);
-```
-
-Phase 1 stub does **not** write `diligence_artifacts` rows — no PDFs are generated. That table starts seeing inserts in Phase 2 once the real skill produces SIR + Research Appendix PDFs.
-
-**Env vars (`.env.example`):**
-
-```
-INNGEST_APP_ID=field-agent
-INNGEST_EVENT_KEY=...
-INNGEST_SIGNING_KEY=...
-SUPABASE_URL=...
-SUPABASE_SERVICE_ROLE_KEY=...
-```
-
-(Phase 2 adds `ANTHROPIC_API_KEY` and `NOETIC_DILIGENCE_ROOT`.)
-
-**Run locally:**
-
-```bash
-cd /Users/winston/workspace/field-agent
-pnpm install
-pnpm dev   # tsx watch src/index.ts — opens Connect websocket
-```
-
-### Stream B — Substation trigger route + status endpoint
-
-**Files to touch:**
-
-- `substation/supabase/migrations/<timestamp>_diligence_runs.sql` *(new)* — table migration
-- `substation/src/routes/diligence.ts` *(new)* — Hono router for the two endpoints
-- `substation/src/index.ts` — mount the router
-- `substation/src/inngest/events.ts` *(check if exists; otherwise inline)* — type the `diligence/requested` event payload
-
-**Endpoints:**
-
-```
-POST /diligence/trigger
-  body: {
-    document_version_id: string   // MUST reference a feasibility_intake document_version
-  }
-  returns: {
-    diligence_run_id: string,
-    status: 'queued'
-  }
-
-GET /diligence/:diligence_run_id
-  returns: {
-    diligence_run_id: string,
-    status: 'queued' | 'running' | 'completed' | 'failed' | 'cancelled',
-    document_version_id: string,
-    conversation_id: string | null,
-    project_id: string,
-    error: string | null,
-    created_at: string,
-    started_at: string | null,
-    completed_at: string | null,
-    updated_at: string,
-    artifacts: Array<{
-      id: string,
-      kind: 'site_intelligence_report' | 'research_appendix' | 'supporting_document_copy',
-      file_name: string,
-      content_type: string,
-      file_size: number | null,
-      page_count: number | null,
-      signed_url: string                // generated at read time, 72h expiry (Phase 2)
-    }>
-  }
-```
-
-**Trigger handler logic:**
-
-1. Validate inputs with zod (`document_version_id` is a UUID).
-2. **Enforce the intake invariant:** look up the `document_version` → `document`, reject if `document.kind !== 'feasibility_intake'`. This is the application-layer check that backs the rationale-only comment in the migration.
-3. Derive `project_id` via `document_version.submission_version_id → submission.project_id`.
-4. (Optionally) look up `conversation_id` — find the most recent `feasibility_intake` conversation for the same project, if any.
-5. Resolve `triggered_by_user_id` from the request's auth context.
-6. `await inngest.send({ name: 'diligence/requested', data: { diligence_run_id: <to-be-determined> } })` — capture the returned event id.
-7. Insert into `diligence_runs` with `status='queued'`, the FKs from above, and the captured `inngest_event_id`.
-8. Return `{ diligence_run_id, status: 'queued' }`.
-
-Implementation note: the order of (6) and (7) creates a chicken-and-egg with `diligence_run_id`. Two options: (a) `insert` first to get the id, then `inngest.send` with that id, then `update` the row with `inngest_event_id`; or (b) `inngest.send` first to get the event id, then `insert` with both ids together. Option (b) is cleaner — one INSERT, no UPDATE.
-
-**Status handler:** `select` the row by `id`, join `diligence_artifacts` for the run's outputs, generate signed URLs for each artifact's `storage_path` at read time. No Inngest API needed because the worker writes status to the table directly.
-
-**Auth:** Whatever pattern `submissions.ts` uses — copy it. Worth a 15-min look during implementation.
-
-### Stream C — Inngest environment setup + end-to-end smoke test
-
-1. **Create a new Inngest app** in the Inngest dashboard for `field-agent`. Same environment as Substation.
-2. **Generate event key + signing key** for the new app. These go into the worker's `.env`.
-3. **Confirm event-name routing.** In Inngest, events are routed by name across all apps in an environment. Substation publishes `diligence/requested` from its existing app; the new worker app subscribes.
-4. **Smoke test sequence:**
-   - Worker running locally (`pnpm dev` in `field-agent`).
-   - Substation running locally (`pnpm dev` in `substation`).
-   - From a third terminal:
-
-     ```bash
-     # Pick an existing feasibility_intake document_version id from the local DB:
-     #   select dv.id from document_version dv
-     #     join document d on d.id = dv.document_id
-     #    where d.kind = 'feasibility_intake' limit 1;
-     #
-     # Then trigger the run:
-     curl -X POST http://localhost:3001/diligence/trigger \
-       -H 'Content-Type: application/json' \
-       -d '{ "document_version_id": "<uuid-of-feasibility-intake-doc-version>" }'
-     ```
-
-   - Poll `GET /diligence/:diligence_run_id` every ~30s.
-   - Verify status transitions: `queued` → `running` (within seconds) → `completed` (after ~10 min).
-   - Inngest dashboard shows a clean run with `mark-running` → `stub-work` (sleep) → `mark-completed` steps visible.
-
-If this passes, Phase 1 is done and the scaffolding is ready for Phase 2 to swap in the real skill body.
+Returns the row + joined `diligence_artifacts`. Phase 1 returns artifacts with raw `storage_path`. Phase 2 will add `signed_url` per artifact, generated at read time with 72h expiry.
 
 ---
 
-## Phase 1 sequencing — smallest viable first commit
+## Inngest event contract
 
-**Commit 1 (Stream B, schema):** Add the `diligence_runs` migration. Run locally to confirm. No code paths exercise it yet.
+```
+event: diligence/requested
+data:  { diligence_run_id: "<uuid>" }   // raw uuid, NOT dlr_ prefixed
+```
 
-**Commit 2 (Stream A, boots):** `field-agent` repo skeleton that boots, connects to Inngest via Connect, registers a no-op function for `diligence/requested` that just logs the event and returns. No status writes. Goal: prove the Connect websocket works with a test event fired manually from the Inngest CLI.
+Worker looks up the row by id and pulls everything else (intake doc, project, attachments) via DB joins. Minimal by design — address, intended use, supporting docs don't travel through the event.
 
-**Commit 3 (Stream A, stub body):** Wire up the Supabase client and the stub function body — mark-running, sleep, mark-completed. Test by manually inserting a `diligence_runs` row and firing a test event from the Inngest dashboard with a matching `runId`.
-
-**Commit 4 (Stream B, trigger):** `POST /diligence/trigger` route in Substation. End-to-end: curl → row inserted → event fired → worker picks it up → status flips.
-
-**Commit 5 (Stream B, status):** `GET /diligence/:runId` route. Smoke test (Stream C) runs against this.
-
-Each commit is independently shippable and verifiable. No big-bang merges.
+`diligence/completed` is **reserved for Phase 2 commit 9**. No consumer today.
 
 ---
 
-## Phase 2 sequencing (after Phase 1 lands)
+## Cleanup items / tech debt
 
-**Commit 6:** Add `@anthropic-ai/claude-agent-sdk` to the worker. Replace `step.sleep` with a `step.run('invoke-skill', ...)` that programmatically runs `/diligence-report`. Still no upload — return paths only.
+Don't block Phase 2; mention if you want me to chip these between rounds.
 
-**Commit 7:** Supabase upload + signed URL generation. Worker writes `result.signedUrls` into the row.
-
-**Commit 8:** Concept-plan download path. Worker pulls supporting docs from `submission-data` before invoking the skill.
-
-**Commit 9:** Emit `diligence/completed` event (for any future downstream subscribers).
+1. **Regenerate substation DB types.** Once Docker + local Supabase are running, `pnpm gen-types` in substation pulls `diligence_runs` / `diligence_artifacts` into the typed client. Then the `getDiligenceClient()` helper in `substation/src/routes/diligence.ts` (and its mirror in the integration test) can go away.
+2. **Promote `ZodError → 400` to `handleError`.** The per-route `safeParse` pattern I added in `routes/diligence.ts` to fix CI's 500s is local; centralizing the conversion would benefit every Substation route without per-route boilerplate. Separate small PR.
+3. **Hardening for the API key middleware.** The integration tests I added cover the happy path + 403/401 cases, but a stress test (wrong path + wrong method permutations) wouldn't hurt.
+4. **Cleanup SQL for test runs.** `testing-kickoff.md` includes a delete-all-completed snippet; could be a small script in this dir for convenience.
+5. **Replace `STUB_SLEEP_MS=10000` default usage in docs.** Once Phase 2 ships and there's no more stub, the `STUB_SLEEP_MS` env var should be removed from the worker entirely.
 
 ---
 
@@ -377,22 +326,29 @@ Each commit is independently shippable and verifiable. No big-bang merges.
 | Risk | Mitigation | Phase |
 |---|---|---|
 | Inngest Connect websocket drops mid-run | `step.run` per phase makes phases idempotent and resumable; Inngest at-least-once retries pick up where it left off | 1+ |
-| Stub `step.sleep` for 10m hits Inngest pricing surprise | Verify Inngest's free/paid step.sleep semantics before committing; the stub run is artificial and only used during scaffolding validation | 1 |
-| Claude Agent SDK output drift vs. skill expectations | Pin SDK version; test against the literal `diligence-report` skill version installed locally | 2 |
-| Skill expects interactive terminal output | The SDK gives us a programmatic session — should work, but verify by running the skill via SDK against a tiny test case before wiring up to Inngest | 2 |
+| Stub `step.sleep` for 10m hits Inngest pricing surprise | `step.sleep` doesn't burn compute — orchestrator bookkeeping only. Verified inexpensive in Phase 1 | 1 |
+| Claude Agent SDK output drift vs. skill expectations | Pin SDK version in field-agent's package.json; lock to the literal `diligence-report` skill version installed locally; the Phase 2 pre-flight catches issues before Phase 2 starts | 2 |
+| Skill expects interactive terminal output | The SDK gives us a programmatic session — should work, but verify via pre-flight before wiring up to Inngest | 2 |
 | Laptop sleeps mid-run | Inngest queues events while worker is offline; partial-run state is recoverable via `step.run` boundaries. Worst case: re-run from clean state | 2 |
 | Two Inngest apps in one env collide on function id | Function ids are app-scoped, not env-scoped — no collision | 1 |
+| Double-trigger from cityhall (agent + user click) | Partial unique index on `diligence_running_job` RCM dedupes at the DB layer | 2 |
+| Network failure between cityhall and substation during trigger | The cityhall handler should retry-or-surface; if the RCM is inserted but the trigger fails, we'd have a stuck card. Mitigate by inserting the RCM ONLY after substation returns 201 | 2 |
 
 ---
 
-## Pre-flight checks
+## Operational notes (Phase 1, current state)
 
-### Before Phase 1 starts
+- **Laptop = production worker for now.** When your laptop is asleep, events queue in Inngest and process when you come back online. That's fine for Phase 1/2 dev usage; eventually Phase 3 moves the worker to an always-on VM.
+- **`SUBSTATION_SERVICE_API_KEY` is a live secret.** It's in substation prod's env. Rotate value in `trigger-diligence.sh` (and tell anyone else with a copy) if you rotate the env var.
+- **Stub completions accumulate.** Every successful smoke-test run leaves a `diligence_runs` row in prod with `status='completed'`. Cleanup SQL in `testing-kickoff.md`.
+- **Phase 1 stub does not produce artifacts.** The cityhall page's artifacts section will be empty until Phase 2 commit 7 ships.
 
-**Inngest Connect happy path.** Fork the smallest Inngest Connect example from the docs, point it at a fresh app in our environment, fire a test event from the dashboard, confirm the worker receives and acks it. Done in under an hour; eliminates the biggest unknown.
+---
 
-### Before Phase 2 starts
+## What's next (when you're ready)
 
-**Claude Agent SDK can invoke a skill programmatically.** Write a 30-line script that uses the SDK to invoke any small `noetic-tools` skill (e.g. `smoke-test`) and confirm it runs to completion and we can capture the result. This validates the skill-invocation pathway before we wire it into the worker.
-
-If both check out at the right time, the rest of the plan is mechanical.
+1. **Phase 2 pre-flight** — the 30-line Agent SDK invocation script. Eliminates the biggest unknown before Phase 2 starts.
+2. **Workstream P2-A commit 6** — swap the stub for `step.run('invoke-skill', ...)` against the Agent SDK. Don't upload yet.
+3. **Workstream P2-A commit 7** — Supabase upload + `diligence_artifacts` rows. From here, the cityhall page starts showing artifact links.
+4. **Workstream P2-B in parallel** — design decision on trigger mechanism (agent tool vs button), then RCM schema + renderer + cityhall API handler.
+5. **End-to-end smoke test** — same shape as Phase 1 but the run produces real PDFs and the chat shows the running-job RCM.
