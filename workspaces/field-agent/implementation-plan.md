@@ -86,28 +86,68 @@ Phase 1 explicitly **does not** include the Claude Agent SDK, the diligence skil
 
 ---
 
-## `diligence_runs` table (new Supabase migration in Substation)
+## `diligence_runs` + `diligence_artifacts` tables (new Supabase migration in Substation)
+
+The schema FK-anchors each run to the originating feasibility-intake `document_version` rather than storing raw address/intended_use strings. From any `diligence_runs` row we can reach the conversation, the intake document, its attachments, the submission, and the project via supported joins — validated against the existing schema before locking in.
+
+Output PDFs live in their own `diligence_artifacts` table (normalized, queryable, extensible) rather than a `result` JSONB blob.
 
 ```sql
 create table public.diligence_runs (
   id uuid primary key default gen_random_uuid(),
-  run_id text unique not null,            -- Inngest event id, surfaced as API runId
-  property_slug text not null,
-  address text not null,
-  intended_use text not null,
-  supporting_docs jsonb default '[]'::jsonb,   -- [{ storage_path, kind }]
-  status text not null default 'queued',  -- queued | running | completed | failed
-  result jsonb,                            -- { signedUrls: { sir, appendix }, localPath } (Phase 2)
+  inngest_event_id text unique not null,                    -- API-facing runId equivalent
+
+  -- Primary anchor: the feasibility-intake document_version that triggered this run.
+  -- The kind='feasibility_intake' invariant is enforced by Substation's
+  -- /diligence/trigger route (application layer), not by a DB trigger.
+  document_version_id uuid not null references public.document_version(id),
+  conversation_id uuid references public.conversations(id),
+  project_id uuid not null references public.project(id),
+  triggered_by_user_id uuid references auth.users(id),
+
+  status text not null default 'queued'
+    check (status in ('queued','running','completed','failed','cancelled')),
   error text,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
+
+  created_at   timestamptz not null default now(),
+  updated_at   timestamptz not null default now(),
+  started_at   timestamptz,
+  completed_at timestamptz
 );
 
 create index on public.diligence_runs (status);
-create index on public.diligence_runs (property_slug);
+create index on public.diligence_runs (project_id);
+create index on public.diligence_runs (conversation_id);
+create index on public.diligence_runs (document_version_id);
+
+create table public.diligence_artifacts (
+  id uuid primary key default gen_random_uuid(),
+  diligence_run_id uuid not null references public.diligence_runs(id) on delete cascade,
+
+  kind text not null
+    check (kind in ('site_intelligence_report','research_appendix','supporting_document_copy')),
+  storage_path text not null,                                -- submission-data bucket
+  file_name    text not null,
+  content_type text not null default 'application/pdf',
+  file_size    bigint,
+  page_count   int,
+
+  created_at timestamptz not null default now()
+);
+
+create index on public.diligence_artifacts (diligence_run_id);
+create index on public.diligence_artifacts (kind);
 ```
 
-Update trigger to bump `updated_at` on row changes. Service-role writes only (worker + trigger route both run with service-role keys); no RLS needed for Phase 1.
+Plus an `updated_at` auto-bump trigger and project-access-based RLS mirroring `submission_report` (reads gated by `user_can_see_project`; writes by `get_user_project_access_level IN ('write','admin')`). field-agent writes via service-role and bypasses RLS. Both tables added to `supabase_realtime` so cityhall's UI can observe status without polling.
+
+**Schema rationale (decisions made during design):**
+- **`document_version_id` is the anchor**, not raw address/intended_use. Address, intended use, supporting attachments are all derivable from the intake document_version + its sections + its conversation's `chat_message_attachment` rows.
+- **No `workflow_runs` FK.** field-agent isn't driven by Substation's `workflow-run` Inngest function — it's its own Connect worker. The `inngest_event_id` gives us Inngest-dashboard correlation. `diligence_runs.status` is canonical.
+- **Status lifecycle owned by `diligence_runs`** (queued / running / completed / failed / cancelled). The trigger route inserts at `queued`; field-agent flips to `running` then `completed` (or `failed`).
+- **No `submission_version_id` column** — it's reachable in one join through `document_version`, and storing it would just denormalize.
+
+Migration lives at `substation/supabase/migrations/20260529180000_diligence_runs.sql` (PR noetic-inc/substation#97).
 
 ---
 
@@ -153,38 +193,44 @@ field-agent/
 
 **Stub function shape — `diligence-run.ts`:**
 
+The event payload is minimal — just the `diligence_run_id`. The worker uses that to find the `diligence_runs` row and flip its status. Address/intended_use/attachments aren't passed via the event because they're already in the database via the `document_version_id` FK.
+
 ```ts
 const STUB_SLEEP_MS = 10 * 60 * 1000; // 10 minutes — long enough to feel real
 
 export const diligenceRun = inngest.createFunction(
-  { id: 'diligence-run', concurrency: 1 },
-  { event: 'diligence/requested' },
+  {
+    id: 'diligence-run',
+    concurrency: 1,
+    triggers: [{ event: 'diligence/requested' }],
+  },
   async ({ event, step, logger }) => {
-    const { runId, propertySlug, address, intendedUse } =
-      DiligenceRequestSchema.parse(event.data);
+    const { diligence_run_id } = DiligenceRequestSchema.parse(event.data);
 
-    logger.info('diligence-run received', { runId, propertySlug, address });
+    logger.info('[diligence-run] received', { diligence_run_id });
 
     await step.run('mark-running', async () => {
-      await updateRunStatus(runId, { status: 'running' });
+      await updateRunStatus(diligence_run_id, {
+        status: 'running',
+        started_at: new Date().toISOString(),
+      });
     });
 
     await step.sleep('stub-work', `${STUB_SLEEP_MS}ms`);
 
     await step.run('mark-completed', async () => {
-      await updateRunStatus(runId, {
+      await updateRunStatus(diligence_run_id, {
         status: 'completed',
-        result: {
-          stub: true,
-          message: `stub completion for ${propertySlug} (${intendedUse})`,
-        },
+        completed_at: new Date().toISOString(),
       });
     });
 
-    return { runId, propertySlug, status: 'completed', stub: true };
+    return { diligence_run_id, status: 'completed', stub: true };
   },
 );
 ```
+
+Phase 1 stub does **not** write `diligence_artifacts` rows — no PDFs are generated. That table starts seeing inserts in Phase 2 once the real skill produces SIR + Research Appendix PDFs.
 
 **Env vars (`.env.example`):**
 
@@ -220,34 +266,51 @@ pnpm dev   # tsx watch src/index.ts — opens Connect websocket
 ```
 POST /diligence/trigger
   body: {
-    address: string,
-    intended_use: string,
-    concept_plan?: { storage_path: string }  // already uploaded via existing prepare-upload flow
+    document_version_id: string   // MUST reference a feasibility_intake document_version
   }
-  returns: { runId: string, propertySlug: string, status: 'queued' }
-
-GET /diligence/:runId
   returns: {
-    runId: string,
-    propertySlug: string,
-    status: 'queued' | 'running' | 'completed' | 'failed',
-    result?: { stub: true, message: string } | { signedUrls: {...}, localPath: string },
-    error?: string,
-    createdAt: string,
-    updatedAt: string
+    diligence_run_id: string,
+    status: 'queued'
+  }
+
+GET /diligence/:diligence_run_id
+  returns: {
+    diligence_run_id: string,
+    status: 'queued' | 'running' | 'completed' | 'failed' | 'cancelled',
+    document_version_id: string,
+    conversation_id: string | null,
+    project_id: string,
+    error: string | null,
+    created_at: string,
+    started_at: string | null,
+    completed_at: string | null,
+    updated_at: string,
+    artifacts: Array<{
+      id: string,
+      kind: 'site_intelligence_report' | 'research_appendix' | 'supporting_document_copy',
+      file_name: string,
+      content_type: string,
+      file_size: number | null,
+      page_count: number | null,
+      signed_url: string                // generated at read time, 72h expiry (Phase 2)
+    }>
   }
 ```
 
 **Trigger handler logic:**
 
-1. Validate inputs with zod
-2. Generate `propertySlug` from address (deterministic; same function used downstream)
-3. If `concept_plan.storage_path` provided, verify file exists in bucket (Phase 2 actually does something with it; Phase 1 just records the path)
-4. `inngest.send({ name: 'diligence/requested', data: { ... } })` — capture returned event id as `runId`
-5. `insert into diligence_runs (...)` with `status='queued'`
-6. Return `{ runId, propertySlug, status: 'queued' }`
+1. Validate inputs with zod (`document_version_id` is a UUID).
+2. **Enforce the intake invariant:** look up the `document_version` → `document`, reject if `document.kind !== 'feasibility_intake'`. This is the application-layer check that backs the rationale-only comment in the migration.
+3. Derive `project_id` via `document_version.submission_version_id → submission.project_id`.
+4. (Optionally) look up `conversation_id` — find the most recent `feasibility_intake` conversation for the same project, if any.
+5. Resolve `triggered_by_user_id` from the request's auth context.
+6. `await inngest.send({ name: 'diligence/requested', data: { diligence_run_id: <to-be-determined> } })` — capture the returned event id.
+7. Insert into `diligence_runs` with `status='queued'`, the FKs from above, and the captured `inngest_event_id`.
+8. Return `{ diligence_run_id, status: 'queued' }`.
 
-**Status handler:** Simple `select * from diligence_runs where run_id = $1`. No Inngest API needed because the worker writes status to the table directly.
+Implementation note: the order of (6) and (7) creates a chicken-and-egg with `diligence_run_id`. Two options: (a) `insert` first to get the id, then `inngest.send` with that id, then `update` the row with `inngest_event_id`; or (b) `inngest.send` first to get the event id, then `insert` with both ids together. Option (b) is cleaner — one INSERT, no UPDATE.
+
+**Status handler:** `select` the row by `id`, join `diligence_artifacts` for the run's outputs, generate signed URLs for each artifact's `storage_path` at read time. No Inngest API needed because the worker writes status to the table directly.
 
 **Auth:** Whatever pattern `submissions.ts` uses — copy it. Worth a 15-min look during implementation.
 
@@ -262,15 +325,18 @@ GET /diligence/:runId
    - From a third terminal:
 
      ```bash
+     # Pick an existing feasibility_intake document_version id from the local DB:
+     #   select dv.id from document_version dv
+     #     join document d on d.id = dv.document_id
+     #    where d.kind = 'feasibility_intake' limit 1;
+     #
+     # Then trigger the run:
      curl -X POST http://localhost:3001/diligence/trigger \
        -H 'Content-Type: application/json' \
-       -d '{
-         "address": "1700 S Lamar Blvd, Austin, TX",
-         "intended_use": "for-sale townhomes, ~40 units"
-       }'
+       -d '{ "document_version_id": "<uuid-of-feasibility-intake-doc-version>" }'
      ```
 
-   - Poll `GET /diligence/:runId` every ~30s.
+   - Poll `GET /diligence/:diligence_run_id` every ~30s.
    - Verify status transitions: `queued` → `running` (within seconds) → `completed` (after ~10 min).
    - Inngest dashboard shows a clean run with `mark-running` → `stub-work` (sleep) → `mark-completed` steps visible.
 
