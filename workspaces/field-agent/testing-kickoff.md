@@ -94,7 +94,44 @@ You need a prod-DB document_version row with `kind='feasibility_intake'`. Two pa
 3. Start an intake conversation; send any message. The intake document + version are created automatically.
 4. Look up the document_version_id (Option B query below).
 
-### Option B — query existing rows in prod Supabase
+### Option B — from a known `conversation_id`
+
+If you've been in the cityhall intake chat for a project, the chat URL already gives you a `conversation_id`. The URL pattern is:
+
+```
+<PROD_CITYHALL_URL>/project/<projectId>/submission/<submissionId>/intake/<conversationId>
+```
+
+Grab the `conversationId` segment and run this in Supabase Studio / psql to resolve it to the corresponding feasibility_intake document_version:
+
+```sql
+-- Given a conversation_id (the last segment of the cityhall intake URL),
+-- find the feasibility_intake document_version that belongs to the same
+-- project. Picks the most-recent if the project has more than one intake.
+SELECT
+  dv.id              AS document_version_id,
+  c.project_id       AS project_id,
+  c.id               AS conversation_id,
+  d.created_at       AS doc_created_at,
+  sv.version_number  AS submission_version
+FROM conversations c
+JOIN document d
+  ON d.project_id = c.project_id
+ AND d.kind = 'feasibility_intake'
+JOIN document_version dv
+  ON dv.document_id = d.id
+JOIN submission_version sv
+  ON sv.id = dv.submission_version_id
+WHERE c.id = '<CONVERSATION_ID>'
+ORDER BY dv.created_at DESC
+LIMIT 1;
+```
+
+Save `document_version_id` and `project_id` for Step 3. The trigger route also accepts an optional `conversation_id` in the body — passing it stamps the resulting `diligence_runs` row with the conversation FK, which makes the run traceable from the chat thread later.
+
+> **Note on the join shape:** `conversations` doesn't directly FK to the feasibility_intake document — they're related via `project_id`. The query picks the most-recent feasibility_intake `document_version` in that project, which is what you want for a fresh test. If the project happens to have multiple intake submissions, double-check the `submission_version` column to confirm you're targeting the one you mean.
+
+### Option C — query existing rows in prod Supabase
 
 Via Supabase Studio (dashboard → SQL Editor) or psql against the prod connection string:
 
@@ -144,6 +181,15 @@ curl -X POST "${PROD_SUBSTATION_URL}/api/projects/${PROJECT_ID}/diligence" \
   -H "Authorization: Bearer ${TOKEN}" \
   -H "Content-Type: application/json" \
   -d "{ \"document_version_id\": \"${DV_ID}\" }"
+```
+
+If you used Option B in Step 1, you have a `conversation_id` too. Optional but useful — passing it stamps the row with the chat thread FK so you can trace the run back to the conversation later:
+
+```bash
+curl -X POST "${PROD_SUBSTATION_URL}/api/projects/${PROJECT_ID}/diligence" \
+  -H "Authorization: Bearer ${TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d "{ \"document_version_id\": \"${DV_ID}\", \"conversation_id\": \"${CONVERSATION_ID}\" }"
 ```
 
 Expected response (HTTP 201):
