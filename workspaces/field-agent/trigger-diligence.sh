@@ -7,9 +7,9 @@
 # cityhall URL to open and watch the status flip live.
 #
 # ⚠️  DO NOT COMMIT THIS FILE WITH REAL VALUES FILLED IN.
-#     TOKEN is a real prod user credential and PROD_*_URL may point at prod
-#     infra. Edit locally, run, then `git restore` or `git stash` before
-#     pushing — never `git add` your filled-in version.
+#     API_KEY authorizes the diligence trigger and read endpoints. Treat it
+#     like any other secret. Edit locally, run, then `git restore` or
+#     `git stash` before pushing — never `git add` your filled-in version.
 #
 # See workspaces/field-agent/testing-kickoff.md for how to obtain each value.
 #
@@ -21,7 +21,10 @@ set -euo pipefail
 
 PROD_SUBSTATION_URL="REPLACE_ME"   # e.g. https://substation-noetic.vercel.app
 PROD_CITYHALL_URL="REPLACE_ME"     # e.g. https://app.noetic.inc — for the watch URL
-TOKEN="REPLACE_ME"                 # Supabase JWT from a signed-in cityhall session
+API_KEY="REPLACE_ME"               # value of SUBSTATION_SERVICE_API_KEY (set in
+                                   # substation's Vercel env). Auth route-restricted
+                                   # to POST/GET on diligence endpoints — see
+                                   # substation/src/middleware/auth.ts.
 PROJECT_ID="REPLACE_ME"            # prod project UUID
 DV_ID="REPLACE_ME"                 # feasibility_intake document_version UUID
 CONVERSATION_ID=""                 # optional — leave empty string to skip
@@ -29,7 +32,7 @@ CONVERSATION_ID=""                 # optional — leave empty string to skip
 # ─── END CONFIG ──────────────────────────────────────────────────────────────
 
 # Refuse to run with placeholder values for the required fields.
-for var in PROD_SUBSTATION_URL TOKEN PROJECT_ID DV_ID; do
+for var in PROD_SUBSTATION_URL API_KEY PROJECT_ID DV_ID; do
   if [ "${!var}" = "REPLACE_ME" ] || [ -z "${!var}" ]; then
     echo "ERROR: $var is unset or still set to 'REPLACE_ME'." >&2
     echo "       Edit the CONFIG block at the top of $0 and try again." >&2
@@ -54,7 +57,7 @@ trap 'rm -f "$RESPONSE_FILE"' EXIT
 
 HTTP_STATUS=$(curl -s -o "$RESPONSE_FILE" -w "%{http_code}" \
   -X POST "$URL" \
-  -H "Authorization: Bearer $TOKEN" \
+  -H "Authorization: Bearer $API_KEY" \
   -H "Content-Type: application/json" \
   -d "$BODY")
 
