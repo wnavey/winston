@@ -16,17 +16,21 @@ Once the one-time setup below is in place:
 
 ```bash
 # 1. Trigger
-TOKEN="eyJ..."  # from a signed-in prod cityhall tab (see Step 2)
+API_KEY="<value of SUBSTATION_SERVICE_API_KEY>"  # see Step 2
 PROJECT_ID="<from prod>"
 DV_ID="<feasibility_intake doc_version_id from prod>"
 
 curl -X POST "${PROD_SUBSTATION_URL}/api/projects/${PROJECT_ID}/diligence" \
-  -H "Authorization: Bearer ${TOKEN}" \
+  -H "Authorization: Bearer ${API_KEY}" \
   -H "Content-Type: application/json" \
   -d "{ \"document_version_id\": \"${DV_ID}\" }"
 
 # Returns: { "id": "dlr_<uuid>", "object": "diligence_run", "status": "queued", ... }
 ```
+
+Or use the helper script: edit the CONFIG block at the top of
+[`trigger-diligence.sh`](./trigger-diligence.sh), then run it. Same curl,
+plus input validation and a printed cityhall watch URL.
 
 ```
 # 2. Watch the UI (use the dlr_<uuid> from the response, prefix and all)
@@ -156,16 +160,27 @@ Pick a row that belongs to a project you have access to. Save both the `document
 
 ## Step 2 — Get a bearer token
 
-The bearer is the Supabase JWT for your signed-in cityhall session.
+### Option A (recommended) — the substation service API key
+
+Substation accepts a static API key as the bearer, but **only** for the diligence trigger and read endpoints (see `SERVICE_API_ROUTES` in `substation/src/middleware/auth.ts`). A leaked key can't be used against any other route, so it's the right tradeoff for an operational script.
+
+1. In the Vercel `substation` project → Settings → Environment Variables, find `SUBSTATION_SERVICE_API_KEY` and copy its value.
+2. That's your bearer. It does not expire.
+
+If `SUBSTATION_SERVICE_API_KEY` isn't set in the Vercel project yet, generate one (`openssl rand -hex 32`), add it to the substation env, redeploy, and use the same value here.
+
+### Option B — Supabase JWT from a signed-in cityhall session
+
+Useful when you want auth to attribute the run to a specific user (`triggered_by_user_id` is populated from the JWT's user id). Heavier to grab because Supabase chunks the cookie when it's larger than 4KB.
 
 1. Open `<PROD_CITYHALL_URL>` and sign in.
 2. DevTools → **Application** → **Cookies** → select your host.
-3. Find the cookie whose value is a JSON blob with `access_token` and `refresh_token` keys. The cookie name is typically `sb-<project-ref>-auth-token`.
-4. Copy the `access_token` string — that's the bearer. It looks like `eyJhbGciOi...` and is valid for ~1 hour.
+3. Find the cookie(s) named `sb-<project-ref>-auth-token` — there will likely be `.0` and `.1` chunks.
+4. Concatenate `.0` + `.1` (literal string concat, no separator). Strip the leading `base64-` prefix. Base64-decode. Parse the resulting JSON. The `access_token` field is your bearer.
 
-If you need to leave a long-running test going, re-grab a fresh token when the old one expires (you'll see `401` from substation).
+Valid for ~1 hour; re-grab when you see `401`.
 
-> **Don't use the prod service-role key in curl.** It's the most privileged credential in the system — using it in shell history / IDE terminals is unnecessarily risky. The user-JWT path is enough for smoke testing.
+> **Don't use the prod Supabase service-role key in curl.** It's the most privileged credential in the system and bypasses all RLS. The API-key path (Option A) is route-restricted and the right tool for this job.
 
 ---
 
@@ -173,12 +188,12 @@ If you need to leave a long-running test going, re-grab a fresh token when the o
 
 ```bash
 PROD_SUBSTATION_URL="https://..."  # your prod URL
-TOKEN="eyJ..."                     # from Step 2
+API_KEY="..."                      # from Step 2 (SUBSTATION_SERVICE_API_KEY)
 PROJECT_ID="..."                   # from Step 1
 DV_ID="..."                        # from Step 1
 
 curl -X POST "${PROD_SUBSTATION_URL}/api/projects/${PROJECT_ID}/diligence" \
-  -H "Authorization: Bearer ${TOKEN}" \
+  -H "Authorization: Bearer ${API_KEY}" \
   -H "Content-Type: application/json" \
   -d "{ \"document_version_id\": \"${DV_ID}\" }"
 ```
@@ -187,7 +202,7 @@ If you used Option B in Step 1, you have a `conversation_id` too. Optional but u
 
 ```bash
 curl -X POST "${PROD_SUBSTATION_URL}/api/projects/${PROJECT_ID}/diligence" \
-  -H "Authorization: Bearer ${TOKEN}" \
+  -H "Authorization: Bearer ${API_KEY}" \
   -H "Content-Type: application/json" \
   -d "{ \"document_version_id\": \"${DV_ID}\", \"conversation_id\": \"${CONVERSATION_ID}\" }"
 ```
