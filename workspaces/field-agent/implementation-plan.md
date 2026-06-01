@@ -1,4 +1,4 @@
-# Diligence Runner — Implementation Plan
+# Field Agent — Implementation Plan
 
 A long-running API surface for the `noetic-tools:diligence-report` skill: cloud-deployed trigger publishes an Inngest event, a laptop-side worker consumes via Inngest Connect, runs the skill, and returns deliverables.
 
@@ -13,7 +13,7 @@ Trigger a Site Intelligence Report (SIR) run from a public HTTP endpoint and rec
 ## Phase 1 scope (scaffolding)
 
 - Substation trigger endpoint accepts requests and publishes events
-- Standalone `diligence-worker` connects to Inngest via Connect and consumes `diligence/requested` events
+- Standalone `field-agent` connects to Inngest via Connect and consumes `diligence/requested` events
 - **Stub function body:** log the event, set status to `running`, sleep ~10 min, set status to `completed` with a placeholder result
 - Job status persisted to a new `diligence_runs` Supabase table
 - Substation status endpoint reads from the table
@@ -51,7 +51,7 @@ Phase 1 explicitly **does not** include the Claude Agent SDK, the diligence skil
 └────────────────────────────┘                     │ (outbound ws)
         ▲                                          ▼
         │ GET /diligence/:runId    ┌──────────────────────────────┐
-        │ (read diligence_runs)    │ diligence-worker (laptop)    │
+        │ (read diligence_runs)    │ field-agent (laptop)    │
         │                          │  Node 22.4+ standalone proc  │
         │                          │   Phase 1: stub body         │
         │                          │     - update status=running  │
@@ -71,7 +71,7 @@ Phase 1 explicitly **does not** include the Claude Agent SDK, the diligence skil
 |---|---|---|
 | Worker location | Standalone laptop process | Not a Vercel Sandbox; not part of Substation |
 | Inngest transport | Connect (outbound websocket) | TS SDK v4 (GA), Connect feature in public beta — fine for our use case |
-| Inngest app structure | **Two apps in one environment** | Substation is app A (existing, `serve()`). diligence-worker is app B (new, Connect). Events route by name across the env |
+| Inngest app structure | **Fourth app in the existing prod environment** | Substation, Conductor, Dispatcher already live as separate apps in one Inngest prod env. field-agent joins as a fourth app (Connect transport). Events route by name across the env. No new env, no branch env — follows existing precedent. |
 | Status persistence | New `diligence_runs` Supabase table | Owned by Substation's Supabase project; worker writes status, trigger route reads it |
 | Skill invocation (Phase 2) | `@anthropic-ai/claude-agent-sdk` in-process | Not subprocess; programmatic session with `noetic-tools` plugin loaded |
 | Trigger surface | New Hono route in Substation | `POST /diligence/trigger`; reuses Substation auth + `submission-data` bucket |
@@ -115,14 +115,14 @@ Update trigger to bump `updated_at` on row changes. Service-role writes only (wo
 
 Three streams. Stream A and Stream B can develop in parallel once the table migration lands. Stream C is the smoke test that ties them together.
 
-### Stream A — `diligence-worker` repo (stub)
+### Stream A — `field-agent` repo (stub)
 
-**Location:** New repo at `/Users/winston/workspace/diligence-worker/`.
+**Location:** New repo at `/Users/winston/workspace/field-agent/`.
 
 **Layout (Phase 1 only — Phase 2 expands `src/`):**
 
 ```
-diligence-worker/
+field-agent/
 ├── package.json
 ├── tsconfig.json
 ├── .env.example
@@ -130,7 +130,7 @@ diligence-worker/
 ├── src/
 │   ├── index.ts                 # entrypoint: starts Inngest Connect worker
 │   ├── inngest/
-│   │   ├── client.ts            # new Inngest({ id: 'diligence-worker' })
+│   │   ├── client.ts            # new Inngest({ id: 'field-agent' })
 │   │   └── functions/
 │   │       └── diligence-run.ts # the function — event diligence/requested
 │   ├── status/
@@ -189,7 +189,7 @@ export const diligenceRun = inngest.createFunction(
 **Env vars (`.env.example`):**
 
 ```
-INNGEST_APP_ID=diligence-worker
+INNGEST_APP_ID=field-agent
 INNGEST_EVENT_KEY=...
 INNGEST_SIGNING_KEY=...
 SUPABASE_URL=...
@@ -201,7 +201,7 @@ SUPABASE_SERVICE_ROLE_KEY=...
 **Run locally:**
 
 ```bash
-cd /Users/winston/workspace/diligence-worker
+cd /Users/winston/workspace/field-agent
 pnpm install
 pnpm dev   # tsx watch src/index.ts — opens Connect websocket
 ```
@@ -253,11 +253,11 @@ GET /diligence/:runId
 
 ### Stream C — Inngest environment setup + end-to-end smoke test
 
-1. **Create a new Inngest app** in the Inngest dashboard for `diligence-worker`. Same environment as Substation.
+1. **Create a new Inngest app** in the Inngest dashboard for `field-agent`. Same environment as Substation.
 2. **Generate event key + signing key** for the new app. These go into the worker's `.env`.
 3. **Confirm event-name routing.** In Inngest, events are routed by name across all apps in an environment. Substation publishes `diligence/requested` from its existing app; the new worker app subscribes.
 4. **Smoke test sequence:**
-   - Worker running locally (`pnpm dev` in `diligence-worker`).
+   - Worker running locally (`pnpm dev` in `field-agent`).
    - Substation running locally (`pnpm dev` in `substation`).
    - From a third terminal:
 
@@ -282,7 +282,7 @@ If this passes, Phase 1 is done and the scaffolding is ready for Phase 2 to swap
 
 **Commit 1 (Stream B, schema):** Add the `diligence_runs` migration. Run locally to confirm. No code paths exercise it yet.
 
-**Commit 2 (Stream A, boots):** `diligence-worker` repo skeleton that boots, connects to Inngest via Connect, registers a no-op function for `diligence/requested` that just logs the event and returns. No status writes. Goal: prove the Connect websocket works with a test event fired manually from the Inngest CLI.
+**Commit 2 (Stream A, boots):** `field-agent` repo skeleton that boots, connects to Inngest via Connect, registers a no-op function for `diligence/requested` that just logs the event and returns. No status writes. Goal: prove the Connect websocket works with a test event fired manually from the Inngest CLI.
 
 **Commit 3 (Stream A, stub body):** Wire up the Supabase client and the stub function body — mark-running, sleep, mark-completed. Test by manually inserting a `diligence_runs` row and firing a test event from the Inngest dashboard with a matching `runId`.
 
