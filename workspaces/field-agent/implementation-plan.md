@@ -65,6 +65,8 @@ A 30-line render spike surfaced that field-agent **cannot** consume `noetic-pdf`
 
 ## Phase 2-A.2 — Real diligence runs (NEXT)
 
+> **Design + spike findings:** [`diligence-report-skill-execution.md`](./diligence-report-skill-execution.md) — the architecture for invoking the shared skill headlessly (Model A), the SDK call shape, the path/env model, what the A/B/C spikes proved, worker-host dependencies, and the open decisions (Inngest long-step, human-gates). `invoke.ts` follows that doc.
+
 2-A.2 swaps the **dummy renderer** (shipped in 2-A.1) for actual `@anthropic-ai/claude-agent-sdk` invocation of the `noetic-tools:diligence-report` skill. Everything around it — trigger, RCM, status, render→upload→insert plumbing, signed URLs, UI links — already exists; 2-A.2 only changes *what produces the PDF buffers*.
 
 **Workstream ordering (history):** P2-B (cityhall trigger + RCM) shipped first, then 2-A.1 (artifact pipeline with a dummy renderer). The `full_run` flag was the safety net — it let us validate the chat-driven trigger and the whole artifact loop without burning Anthropic tokens. 2-A.2 wires the real skill behind that flag, gets validated incrementally, and then we flip the flag's default to `true` once we trust the real path.
