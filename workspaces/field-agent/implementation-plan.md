@@ -95,16 +95,18 @@ Swap 2-A.1's **dummy renderer** for the canonical 6-phase pipeline the skill orc
 **Sequencing:**
 
 1. **Swap the dummy render for the skill (flag-gated).** ⬜ remaining — the core of 2-A.2.
-   Add `@anthropic-ai/claude-agent-sdk` to `field-agent/package.json`. Branch on `event.data.full_run` inside the render step:
+   Add `@anthropic-ai/claude-agent-sdk` (**pin `0.2.74`**) to `field-agent/package.json`. Branch on `event.data.full_run`:
    ```ts
    if (event.data.full_run) {
-     // invoke the real skill (src/skill/invoke.ts)
+     // invoke the real skill (src/skill/invoke.ts) — NOT inside a long step.run
    } else {
      // 2-A.1 dummy renderer (src/artifacts/)
    }
    ```
    `invokeDiligenceSkill` (`field-agent/src/skill/invoke.ts`) creates an Agent SDK session with the `noetic-tools` plugin loaded, invokes `/diligence-report`, and returns the produced PDF buffers (or local paths). The intake `document_section` load already exists in `src/artifacts/load-intake.ts` and can be reused.
-   **Pre-flight first:** a throwaway script that imports `@anthropic-ai/claude-agent-sdk`, invokes a known-good skill headlessly, and captures the terminal message — the analogue of the `noetic-pdf` render spike that de-risked 2-A.1.
+   > **Handler shape (decided):** the real skill session is a single opaque 30–60 min SDK session — it does **not** sit inside a `step.run` (unlike the dummy render). The Inngest function **acks** (`mark-running`) and **hands off** to an in-process runner (concurrency-`1` semaphore); the runner writes terminal status to `diligence_runs`. See the [long-step ADR](./diligence-report-long-step-adr.md). The `else` dummy branch keeps its existing `step.run` shape.
+   **Pre-flight first:** a throwaway script that imports `@anthropic-ai/claude-agent-sdk`, invokes a known-good skill headlessly, and captures the terminal message — the analogue of the `noetic-pdf` render spike that de-risked 2-A.1. *(Done — Spikes A/B/C; see [skill-execution doc](./diligence-report-skill-execution.md).)*
+   **Host provisioning:** the real skill needs more than the dummy path — see [host-provisioning](./diligence-report-skill-execution-host-provisioning.md). Tier-1 (address-only) is the first real-run target; surveyor/agent-browser/vision are fast-follow.
 
 2. **Upload + insert `diligence_artifacts` rows.** ✅ **shipped in 2-A.1** (`src/artifacts/upload.ts` + `insert.ts`): uploads to `submission-data/diligence/<run-id>/{sir,appendix}.pdf` and upserts rows on `(diligence_run_id, kind)`. 2-A.2 just feeds it the *real* skill output instead of the dummy buffers — no structural change. **Signed URLs** (substation GET, 72h) and the **cityhall View/Download links** also shipped in 2-A.1.
 
@@ -213,7 +215,8 @@ Out of scope for now, but the architecture is built to support it:
 | Inngest app structure | **Fourth app in the existing prod environment** | Substation, Conductor, Dispatcher already live as separate apps in one Inngest prod env. field-agent joins as a fourth app (Connect transport). Events route by name across the env. |
 | Status persistence | `diligence_runs` Supabase table | Owned by Substation's Supabase project; worker writes status, trigger route reads it |
 | Artifact rendering (2-A.1) | `noetic-pdf` in-process via `renderToBuffer` | Built `dist/` consumed via `link:`; raw TSX can't be transpiled cross-repo (see 2-A.1 finding) |
-| Skill invocation (2-A.2) | `@anthropic-ai/claude-agent-sdk` in-process | Not subprocess; programmatic session with `noetic-tools` plugin loaded. **Not built yet.** |
+| Skill invocation (2-A.2) | `@anthropic-ai/claude-agent-sdk@0.2.74` in-process | Not subprocess; programmatic session with `noetic-tools` plugin loaded. **Not built yet.** |
+| Long skill session vs. Inngest (2-A.2) | **Ack-and-handoff** — Inngest fn acks + marks running, in-process runner runs the session, status tracked via `diligence_runs` + realtime | Skill is one opaque 30–60 min session — can't be wrapped per-phase in `step.run`. Concurrency moves in-process; recovery via stuck-run reconciler (fast-follow). See [ADR](./diligence-report-long-step-adr.md). |
 | Trigger surface | Hono route in Substation | `POST /api/projects/:projectId/diligence`; auth via `SUBSTATION_SERVICE_API_KEY` (route-restricted) OR user JWT |
 | Deliverable handoff | **Supabase upload only** + 72h signed URLs (minted at GET) | No local laptop copy for the dummy; revisit a local cache if the real skill's outputs are worth keeping on disk |
 | Trigger from cityhall (Phase 2) | Agent tool first, button second | Two-stage rollout; both call substation as the user JWT to populate `triggered_by_user_id` |
@@ -340,11 +343,12 @@ Don't block Phase 2; mention if you want me to chip these between rounds.
 
 | Risk | Mitigation | Phase |
 |---|---|---|
-| Inngest Connect websocket drops mid-run | `step.run` per phase makes phases idempotent and resumable; Inngest at-least-once retries pick up where it left off | 1+ |
+| Inngest Connect websocket drops mid-run (dummy/stub path) | The short steps (`mark-running` → render → insert → `mark-completed`) are idempotent; Inngest at-least-once retries pick up where they left off | 1 / 2-A.1 |
+| Worker crash mid-run (real skill, 2-A.2) | The skill session is **not** step-durable (one opaque SDK session, ack-and-handoff — see [ADR](./diligence-report-long-step-adr.md)). Once acked, Inngest won't retry. Recovery = in-process try/catch → `failed`, plus a stuck-run reconciler (startup reconcile + age sweeper). Fast-follow. | 2-A.2 |
 | `noetic-pdf` raw TSX can't be consumed cross-repo (classic vs automatic JSX in node_modules) | Resolved in 2-A.1: ship a built `dist/` (esbuild bundle + `.d.ts`), consume via `link:`. Required setup step: `pnpm build` in `noetic-pdf` | 2-A.1 |
 | Claude Agent SDK output drift vs. skill expectations | Pin SDK version in field-agent's package.json; lock to the literal `diligence-report` skill version installed locally; the 2-A.2 pre-flight catches issues before wiring | 2-A.2 |
 | Skill expects interactive terminal output | The SDK gives us a programmatic session — should work, but verify via pre-flight before wiring up to Inngest | 2-A.2 |
-| Laptop sleeps mid-run | Inngest queues events while worker is offline; partial-run state is recoverable via `step.run` boundaries. Worst case: re-run from clean state | 2 |
+| Laptop sleeps mid-run | Inngest queues *new* events while the worker is offline. An **in-flight** real run (2-A.2) is lost (the session dies with the process) and is recovered by the stuck-run reconciler → re-trigger. Worst case: re-run from clean state | 2-A.2 |
 | Two Inngest apps in one env collide on function id | Function ids are app-scoped, not env-scoped — no collision | 1 |
 | Double-trigger from cityhall (agent + user click) | Partial unique index on `diligence_running_job` RCM dedupes at the DB layer | 2 |
 | Network failure between cityhall and substation during trigger | The cityhall handler should retry-or-surface; if the RCM is inserted but the trigger fails, we'd have a stuck card. Mitigate by inserting the RCM ONLY after substation returns 201 | 2 |
