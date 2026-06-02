@@ -1,7 +1,7 @@
 # Field Agent — Implementation Plan
 
-> **Last verified:** 2026-06-01 — Phase 1 smoke-test passed end-to-end against prod.
-> **Status:** Phase 1 ✅ complete. Phase 2 not yet started. Phase 3 deferred.
+> **Last verified:** 2026-06-02 — Phase 1 + Phase 2-B both end-to-end against prod.
+> **Status:** Phase 1 ✅ complete · Phase 2-B ✅ complete (cityhall agent tool + RCM + flag plumbing) · Phase 2-A ⬜ remaining (real Claude Agent SDK skill invocation) · Phase 3 deferred.
 
 A long-running API surface for the `noetic-tools:diligence-report` skill: a cloud-deployed trigger publishes an Inngest event, a laptop-side worker (field-agent) consumes via Inngest Connect, runs the skill, and writes status + deliverables back through Supabase.
 
@@ -9,7 +9,9 @@ The plan is **scaffolding-first**: Phase 1 shipped the entire pipeline with a st
 
 ---
 
-## What shipped in Phase 1
+## What shipped
+
+### Phase 1 — scaffolding pipeline
 
 Validated end-to-end on 2026-06-01: `curl` → substation INSERT + Inngest event → field-agent (laptop, Connect) → status flip `queued → running → completed` → cityhall realtime UI updates without refresh.
 
@@ -24,7 +26,18 @@ Validated end-to-end on 2026-06-01: `curl` → substation INSERT + Inngest event
 | cityhall | `docs/feasibility-research-runner.md` architecture spec | [noetic-inc/cityhall#482](https://github.com/noetic-inc/cityhall/pull/482) |
 | winston | Plan, [`testing-kickoff.md`](./testing-kickoff.md), [`trigger-diligence.sh`](./trigger-diligence.sh) helper | wnavey/winston PRs #82, #83, #87, #88, #90, #91, #92 |
 
-What this means concretely: the trigger surface, event routing, worker model, status persistence, and UI subscription all work in prod. The next time someone curls the trigger endpoint, the same loop runs — modulo the fact that field-agent's body is still a stub.
+### Phase 2-B — chat trigger + `full_run` flag plumbing
+
+`requestDiligenceRun` agent tool in the cityhall intake chat fires runs end-to-end; a `diligence_running_job` RCM card surfaces the run with live status (via its own narrow realtime subscription). `full_run` flag flows cityhall → substation → field-agent; default `false` means the stub still runs (zero Anthropic tokens). field-agent observes + logs the flag but doesn't act on `full_run=true` yet (that's P2-A).
+
+| Layer | What | PR |
+|---|---|---|
+| substation | `full_run` field on POST body + Inngest event payload + integration tests | [noetic-inc/substation#100](https://github.com/noetic-inc/substation/pull/100) |
+| cityhall | `requestDiligenceRun` agent tool, `diligence_running_job` RCM (schema + renderer with realtime sub), `fullFeasibilityRunEnabled` Vercel flag, system-prompt update | [noetic-inc/cityhall#484](https://github.com/noetic-inc/cityhall/pull/484) |
+| field-agent | `DiligenceRequestSchema` picks up `full_run`; path + completion logging; soft guardrail (warn on `full_run=true` while P2-A pending) | [noetic-inc/field-agent#5](https://github.com/noetic-inc/field-agent/pull/5) |
+| winston | Plan: Phase 1 done + Phase 2 scope incl. RCM; trigger + idempotency locked; full-run feature flag captured | wnavey/winston PRs #93, #94 |
+
+What this means concretely: from cityhall's intake chat, the user can now tell the agent "go run the research," the agent calls the tool, a status card appears in the chat (with live updates), and the run flows through the existing pipeline — still as a stub. Flipping the Vercel flag to `true` today produces a warning in field-agent's logs but still stubs (P2-A is what makes the flag *do* something).
 
 ---
 
@@ -99,92 +112,41 @@ Replace the stub body with the canonical 6-phase pipeline the skill orchestrates
 4. **Commit 9 — emit `diligence/completed` event.**
    After `upload-artifacts` succeeds, fire `inngest.send({ name: 'diligence/completed', data: { diligence_run_id } })`. No consumer in this phase, but it sets up the future where downstream subscribers (notifications, follow-up workflows) can react without changing the worker contract.
 
-### Workstream P2-B — cityhall: trigger + `diligence_running_job` RCM
+### Workstream P2-B — cityhall: trigger + `diligence_running_job` RCM ✅
 
-Currently the only way to kick off a diligence run is the `trigger-diligence.sh` curl helper. Phase 2 brings the action into the cityhall intake chat: when the user is ready to run diligence, the chat agent (or a UI button — see open question below) triggers it, and the conversation shows a **`diligence_running_job` RCM card** linking to the existing status page.
+**Shipped.** From the cityhall intake chat, the user signals readiness ("go run the research"), the agent calls `requestDiligenceRun`, a `diligence_running_job` RCM card appears in the conversation with live status updates, and the run flows through the existing pipeline (still as a stub today; flipping the flag will swap it for real once P2-A lands).
 
-#### Trigger mechanism — locked: intake chat agent tool
+**Trigger mechanism — locked: intake chat agent tool.** `requestDiligenceRun` registered alongside `updateIntakeNotes` and `askClarifyingQuestion` in `cityhall/src/routes/api/chat/intake/+server.ts`. Input is `z.object({})` — the trigger is fully contextual (conversation + intake doc are known from the request context, not from the model). Right-panel manual-override button stays deferred to Phase 3.
 
-A new `requestDiligenceRun` tool added to the cityhall intake agent's tool registry. Matches the existing `updateIntakeNotes` tool pattern — one declared tool, agent invokes it when ready. The agent decides when to call it (typically after Tier 1 is complete and the user has signaled they're ready) and the tool's server-side `execute` handler:
+**Server-side flow:**
 
-1. Reads `full-feasibility-run-enabled` flag
-2. Calls `POST /api/projects/<projectId>/diligence` on substation with `{ document_version_id, conversation_id, full_run }` and the user's JWT
-3. Inserts the `diligence_running_job` RCM `chat_message` with the returned `dlr_<uuid>`
-4. Returns `{ ok: true, diligence_run_id }` (or `{ ok: false, error }`) to the model so it knows the trigger landed before composing its reply
+1. Cityhall reads `fullFeasibilityRunEnabled` (Vercel flag via the `defineFlag` helper, default `false`).
+2. Calls `POST /api/projects/:projectId/diligence` on substation with `{ document_version_id, conversation_id, full_run }` and the user's Supabase JWT (so `triggered_by_user_id` is populated on the row).
+3. Substation INSERTs the `diligence_runs` row, fires `diligence/requested` with `{ diligence_run_id, full_run }`, returns the row to cityhall.
+4. Cityhall INSERTs a `chat_message` with `rcm_payload: { rcm_type: 'diligence_running_job', data: { diligence_run_id, project_id, status: 'queued' } }`.
+5. Cityhall's chat realtime subscription picks up the new row → card renders.
+6. The RCM renderer (`DiligenceRunningJob.svelte`) opens its OWN narrow Supabase realtime subscription on `diligence_runs` filtered by id, plus an initial SELECT to catch up if status already changed since insert. Card updates in place as status flips. (`rcm_payload.data.status` itself stays at the insert-time snapshot; the live status lives in component state only — small, well-bounded display concern.)
 
-The system prompt picks up a paired instruction telling the model when it's appropriate to call `requestDiligenceRun` (e.g. "only after the user has confirmed they want to proceed; never on speculation; never twice in the same conversation").
+**Idempotency — once per conversation:** application-layer guard inside `request-diligence-run.ts` queries for an existing `diligence_running_job` RCM in this conversation before triggering; if found, returns `{ already_running: true, diligence_run_id }` so the model can tell the user instead of double-firing. The DB-level partial unique index (belt-and-suspenders) is not yet in place — listed under cleanup/tech-debt; the app-layer check has carried us this far.
 
-A right-panel button as a manual override is **deferred to Phase 3**. The agent tool covers the primary flow.
+**Files shipped (cityhall #484):**
+- `cityhall/src/lib/flags.ts` — new `fullFeasibilityRunEnabled` flag definition mirroring `feasibilityIntakeEnabled` / `intakeChatUseSonnet`
+- `cityhall/src/lib/rcm/schemas.ts` — `DiligenceRunningJobPayloadSchema` in the discriminated union
+- `cityhall/src/lib/rcm/DiligenceRunningJob.svelte` *(new)* — renderer with `$effect`-driven realtime subscription
+- `cityhall/src/lib/rcm/components.ts` — registers the renderer
+- `cityhall/src/lib/intake/request-diligence-run.ts` *(new)* — tool's execute body
+- `cityhall/src/routes/api/chat/intake/+server.ts` — tool registration + system-prompt update for when to call the tool
 
-#### Server-side flow (cityhall calls substation)
+**Files shipped (substation #100):**
+- `substation/src/routes/diligence.ts` — `full_run: z.boolean().default(false)` on body schema; forwarded to event payload
+- `substation/src/routes/diligence.integration.test.ts` — coverage for `full_run` true/false/omitted/non-boolean paths
 
-Regardless of trigger mechanism:
+**Files shipped (field-agent #5):**
+- `field-agent/src/inngest/events.ts` — `DiligenceRequestSchema` accepts `full_run`
+- `field-agent/src/inngest/functions/diligence-run.ts` — path logging + completion logging + soft guardrail (warn on `full_run=true` while P2-A pending)
 
-1. Cityhall calls `POST /api/projects/:projectId/diligence` on substation with `{ document_version_id, conversation_id }` in the body.
-2. Auth: the request goes out as the **user's Supabase JWT** (not the service API key), so `triggered_by_user_id` is populated on the row. The agent tool / button handler runs server-side in cityhall, so it has access to `locals.session.access_token`.
-3. Substation responds with the created `diligence_runs` row (prefixed `dlr_<uuid>` id, status `queued`).
-4. Cityhall INSERTs a new `chat_message` with `rcm_payload` carrying the `diligence_running_job` payload.
-5. Cityhall's existing realtime subscription on `chat_message` picks up the new row → re-renders the conversation → the card appears.
-
-#### RCM schema
-
-Adds a new entry to cityhall's `src/lib/rcm/schemas.ts` discriminated union:
-
-```ts
-export const DiligenceRunningJobPayloadSchema = z.object({
-  rcm_type: z.literal('diligence_running_job'),
-  data: z.object({
-    diligence_run_id: z.string(),       // dlr_<uuid> form
-    project_id: z.string(),             // for building the link
-    status: z.enum([
-      'queued', 'running', 'completed', 'failed', 'cancelled',
-    ]).optional(),                       // populated at insert time; static for Phase 2
-  }),
-});
-```
-
-#### RCM renderer
-
-New file `cityhall/src/lib/rcm/DiligenceRunningJob.svelte`. Renders a card with:
-- Title: "Diligence run kicked off" (or status-aware: "Running…" / "Completed" / "Failed")
-- The link: `/project/<project_id>/diligence-runs/<diligence_run_id>` (relative URL, opens in same tab; user can ⌘-click for a new tab)
-- A small status pill if `data.status` is set
-
-For Phase 2, the card is **static** — it shows the state at insert time and links the user to the live status page for updates. Phase 3 could make it mutate in place (subscribe to realtime on `diligence_runs` from the chat side and update `rcm_payload.data.status`), but that's overkill for the MVP and conflicts with the partial-unique-index pattern other RCMs use.
-
-#### Idempotency
-
-To prevent duplicate diligence runs when the agent / user double-triggers or a network retry happens, add a partial unique index in substation:
-
-```sql
-create unique index chat_message_rcm_diligence_running_job_once_per_conv
-  on chat_message ((rcm_payload->>'rcm_type'), conversation_id)
-  where rcm_payload->>'rcm_type' = 'diligence_running_job';
-```
-
-(Same pattern as `chat_message_rcm_tier_1_info_complete_once_per_conv`.) Cityhall's writer catches the `23505` and resolves to the existing run's RCM instead of double-firing.
-
-**Granularity locked: once per conversation.** Matches the other RCM index granularity. A new intake conversation can re-trigger a diligence run if the user wants; stricter dedup (once per intake submission) can land later if it turns out to be needed.
-
-#### Files touched (estimated)
-
-**Cityhall:**
-- `cityhall/src/lib/rcm/schemas.ts` — add `DiligenceRunningJobPayloadSchema` to the discriminated union
-- `cityhall/src/lib/rcm/components.ts` — map `diligence_running_job → DiligenceRunningJob.svelte`
-- `cityhall/src/lib/rcm/DiligenceRunningJob.svelte` *(new)* — the renderer
-- `cityhall/src/routes/api/chat/intake/+server.ts` — add `requestDiligenceRun` tool definition + server-side `execute` handler; add a paired instruction to the system prompt
-- `cityhall/src/lib/intake/request-diligence-run.ts` *(new)* — the tool's execute body: read the flag, call substation, insert the RCM. Pure function for testability
-- Flag-reading: depends on which Vercel mechanism backs `full-feasibility-run-enabled` — env var, Edge Config read, or Vercel Flags SDK. Lookup goes in one place (the tool's execute) so it's easy to swap later
-- `cityhall/src/lib/server/substation.ts` — already has `substationPost`; pass through the new `full_run` field in the body
-
-**Substation:**
-- `substation/src/routes/diligence.ts` — extend the POST body schema with `full_run: z.boolean().default(false)`; thread it into the Inngest event payload
-- `substation/src/routes/diligence.integration.test.ts` — add cases covering the `full_run=true` / `full_run=false` / `full_run` omitted paths (assert event payload includes the boolean)
-- `substation/supabase/migrations/<timestamp>_diligence_running_job_rcm_index.sql` *(new)* — partial unique index for the RCM
-
-**field-agent:**
-- `field-agent/src/inngest/events.ts` — `DiligenceRequestSchema` adds `full_run: z.boolean().default(false)`
-- `field-agent/src/inngest/functions/diligence-run.ts` — branch on `parsed.full_run`; existing stub becomes the `false` arm
+**Still to do for full P2-B closure:**
+- Substation migration: partial unique index `chat_message_rcm_diligence_running_job_once_per_conv` on `chat_message` to DB-enforce the once-per-conversation rule. Cityhall already handles `23505` via its app-layer check; this is defensive.
 
 ### Phase 2 pre-flight check (do first)
 
@@ -318,7 +280,11 @@ Shipped in [substation#98](https://github.com/noetic-inc/substation/pull/98). Bo
 ### `POST /api/projects/:projectId/diligence`
 
 ```
-body:    { document_version_id: uuid, conversation_id?: uuid }
+body:    {
+           document_version_id: uuid,
+           conversation_id?: uuid,
+           full_run?: boolean,   // defaults to false; gates real-skill invocation in field-agent
+         }
 returns: { id: 'dlr_<uuid>', object: 'diligence_run', status: 'queued', ... }
 auth:    SUBSTATION_SERVICE_API_KEY (route-restricted, recommended for scripts)
          OR a Supabase user JWT (populates triggered_by_user_id)
@@ -339,12 +305,15 @@ Returns the row + joined `diligence_artifacts`. Phase 1 returns artifacts with r
 
 ```
 event: diligence/requested
-data:  { diligence_run_id: "<uuid>" }   // raw uuid, NOT dlr_ prefixed
+data:  {
+         diligence_run_id: "<uuid>",   // raw uuid, NOT dlr_ prefixed
+         full_run: boolean,            // forwarded from substation POST body (default false)
+       }
 ```
 
-Worker looks up the row by id and pulls everything else (intake doc, project, attachments) via DB joins. Minimal by design — address, intended use, supporting docs don't travel through the event.
+Worker looks up the row by id and pulls everything else (intake doc, project, attachments) via DB joins. Minimal by design — address, intended use, supporting docs don't travel through the event. `full_run` rides in event.data so the worker can branch without an extra DB read.
 
-`diligence/completed` is **reserved for Phase 2 commit 9**. No consumer today.
+`diligence/completed` is **reserved for Phase 2 commit 9** of P2-A. No consumer today.
 
 ---
 
@@ -356,7 +325,8 @@ Don't block Phase 2; mention if you want me to chip these between rounds.
 2. **Promote `ZodError → 400` to `handleError`.** The per-route `safeParse` pattern I added in `routes/diligence.ts` to fix CI's 500s is local; centralizing the conversion would benefit every Substation route without per-route boilerplate. Separate small PR.
 3. **Hardening for the API key middleware.** The integration tests I added cover the happy path + 403/401 cases, but a stress test (wrong path + wrong method permutations) wouldn't hurt.
 4. **Cleanup SQL for test runs.** `testing-kickoff.md` includes a delete-all-completed snippet; could be a small script in this dir for convenience.
-5. **Replace `STUB_SLEEP_MS=10000` default usage in docs.** Once Phase 2 ships and there's no more stub, the `STUB_SLEEP_MS` env var should be removed from the worker entirely.
+5. **Replace `STUB_SLEEP_MS` default usage in docs.** Default in field-agent is now 3 min (was 10 in earlier drafts). Once P2-A ships and there's no more stub, the env var should be removed from the worker entirely.
+6. **Substation partial unique index on `diligence_running_job` RCM** — DB-enforced once-per-conversation; redundant with the cityhall app-layer check but useful belt-and-suspenders. Tiny migration.
 
 ---
 
@@ -375,34 +345,36 @@ Don't block Phase 2; mention if you want me to chip these between rounds.
 
 ---
 
-## Operational notes (Phase 1, current state)
+## Operational notes (current state)
 
-- **Laptop = production worker for now.** When your laptop is asleep, events queue in Inngest and process when you come back online. That's fine for Phase 1/2 dev usage; eventually Phase 3 moves the worker to an always-on VM.
+- **Laptop = production worker for now.** When your laptop is asleep, events queue in Inngest and process when you come back online. That's fine for current dev usage; Phase 3 moves the worker to an always-on VM.
 - **`SUBSTATION_SERVICE_API_KEY` is a live secret.** It's in substation prod's env. Rotate value in `trigger-diligence.sh` (and tell anyone else with a copy) if you rotate the env var.
-- **Stub completions accumulate.** Every successful smoke-test run leaves a `diligence_runs` row in prod with `status='completed'`. Cleanup SQL in `testing-kickoff.md`.
-- **Phase 1 stub does not produce artifacts.** The cityhall page's artifacts section will be empty until Phase 2 commit 7 ships.
+- **`fullFeasibilityRunEnabled` Vercel flag is the master switch.** Default `false`. Today flipping it to `true` produces a `logger.warn` in field-agent ("full_run=true received but field-agent is still stub-only — P2-A pending. Running stub regardless.") and the stub still runs. P2-A is what makes the flag actually do something.
+- **Stub completions accumulate.** Every successful chat-driven run leaves a `diligence_runs` row in prod with `status='completed'` plus a `diligence_running_job` RCM in the conversation. Cleanup SQL in `testing-kickoff.md`.
+- **Stub does not produce artifacts.** The cityhall page's artifacts section will be empty until P2-A commit 7 ships.
+- **RCM card updates live in chat.** The renderer subscribes to `diligence_runs` realtime updates filtered by id (with an initial SELECT to catch up on mount). Status flips visible without leaving the chat.
 
 ---
 
 ## What's next (when you're ready)
 
-P2-B first, then P2-A, with the feature flag as the safety net between them.
+P2-B is shipped; P2-A is what's left. The feature flag is the safety net — flipping it triggers warn-and-stub today, real skill once P2-A lands.
 
-1. **P2-B — wire flag + trigger tool + RCM end-to-end with the worker still in stub mode.**
-   Substation gets the `full_run` field on the POST body + Inngest event. Cityhall gets the `requestDiligenceRun` agent tool, the RCM schema/renderer, and the flag-reading. field-agent gets a one-line schema update to accept `full_run` (still ignored — stub runs regardless).
-   *Validates:* chat trigger path, RCM rendering, idempotency, status-page link from the card.
-   *Doesn't burn:* zero Anthropic tokens.
+1. **Phase 2-A pre-flight** — 30-line standalone script that imports `@anthropic-ai/claude-agent-sdk`, invokes a known-good `noetic-tools` skill (`smoke-test` is the cheapest), captures the terminal message, exits clean. Eliminates the biggest unknown before we touch field-agent's handler.
 
-2. **Phase 2 pre-flight (before P2-A starts)** — 30-line standalone script that imports `@anthropic-ai/claude-agent-sdk`, invokes a known-good `noetic-tools` skill (`smoke-test` is the cheapest), captures the terminal message, exits clean. Eliminates the biggest unknown before we touch field-agent.
+2. **P2-A commit 6 — flag-gated skill invocation.** Replace the `logger.warn(...)` inside the existing `if (full_run)` branch with `step.run('invoke-skill', ...)`. Don't upload artifacts yet. Test by flipping the flag for a single test conversation and watching the run go.
 
-3. **P2-A commit 6 — flag-gated skill invocation.** `if (event.data.full_run) { step.run('invoke-skill', ...) }`, else stub. Don't upload artifacts yet. Test by flipping the flag for a single test conversation and watching the run go.
+3. **P2-A commit 7 — Supabase upload + `diligence_artifacts` rows.** From here, the cityhall page starts showing artifact entries (still no signed URLs).
 
-4. **P2-A commit 7 — Supabase upload + `diligence_artifacts` rows.** From here, the cityhall page starts showing artifact entries (still no signed URLs).
+4. **P2-A commit 8 — supporting-doc download path.** For runs whose conversation has attachments.
 
-5. **P2-A commit 8 — supporting-doc download path.** For runs whose conversation has attachments.
+5. **P2-A commit 9 — emit `diligence/completed` event.** No consumer yet; just sets up the future.
 
-6. **P2-A commit 9 — emit `diligence/completed` event.** No consumer yet; just sets up the future.
+6. **Substation: signed URL generation on the GET route.** Generates 72h signed URLs per artifact at read time.
 
-7. **Substation: signed URL generation on the GET route.** Generates 72h signed URLs per artifact at read time.
+7. **End-to-end smoke test with `full_run=true`** — same shape as the Phase 1 + P2-B smoke test but the run produces real PDFs. Validate it works for one test conversation, then flip the flag default to `true` in the Vercel dashboard once we trust it.
 
-8. **End-to-end smoke test with `full_run=true`** — same shape as Phase 1 but the run produces real PDFs and the chat shows the running-job RCM. Validate it works for one test conversation, then flip the flag default to `true` in the Vercel project once we trust it.
+### Lower-priority cleanup (not blocking P2-A)
+
+- Substation migration: partial unique index `chat_message_rcm_diligence_running_job_once_per_conv` to DB-enforce once-per-conversation. Cityhall's app-layer check is carrying this for now.
+- Other items in the "Cleanup items / tech debt" section below.
