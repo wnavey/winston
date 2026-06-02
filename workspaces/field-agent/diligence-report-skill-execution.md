@@ -63,9 +63,9 @@ const q = query({
   options: {
     plugins: [{ type: 'local', path: NOETIC_TOOLS_PATH }], // ../claude-plugins/plugins/noetic-tools
     permissionMode: 'bypassPermissions',
-    allowDangerouslySkipPermissions: true,                 // required companion flag
+    allowDangerouslySkipPermissions: true,                 // real optional flag (sdk 0.2.74)
     cwd: workdir,                                          // skill writes outputs here
-    env: {                                                 // REAL env vars (see Paths below)
+    env: {                                                 // passes through to Bash subprocesses
       ...process.env,
       NOETIC_DILIGENCE_DIR: workdir,
       NOETIC_BUREAU_DIR: bureauPath,      // ../bureau
@@ -83,9 +83,17 @@ for await (const msg of q) {
 // then: read workdir/sir/deliverable/*.pdf → reuse src/artifacts/upload.ts + insert.ts
 ```
 
-> ⚠️ Confirm the SDK exposes an `env` passthrough on `query` options when
-> building. If not, set `process.env.NOETIC_*` before the call. The env vars
-> are **load-bearing** — see Paths below.
+> ✅ **`env` passthrough confirmed** against the installed
+> `@anthropic-ai/claude-agent-sdk@0.2.74` types: `env?: Record<string, string |
+> undefined>` and **defaults to `process.env`** — so the spread above replaces
+> the child environment and the `NOETIC_*` vars *do* reach the Bash tool's
+> subprocesses (including the surveyor shell-out). `cwd`, `plugins`,
+> `permissionMode: 'bypassPermissions'`, and `allowDangerouslySkipPermissions`
+> are all real fields in 0.2.74. **Pin the SDK to `0.2.74`** — the API is pre-1.0
+> and the public docs lag the installed types (a docs-only check claimed `env`
+> only accepts `API_TIMEOUT_MS` and that `allowDangerouslySkipPermissions`
+> doesn't exist; both are wrong against 0.2.74). The env vars are
+> **load-bearing** — see Paths below.
 
 ### SDK message shapes (learned from spikes)
 
@@ -95,14 +103,24 @@ for await (const msg of q) {
 - **assistant** messages carry `message.content[]`; `tool_use` blocks have
   `.name` (`Bash`, `Write`, `Agent`/Task, `WebFetch`, …) + `.input` — useful for
   progress logging / heartbeats.
-- **result** message has `.result` (final terminal text) and `.subtype`.
-- `listSubagents` / `getSubagentMessages` exist for inspecting fan-out.
+- **result** message has `.result` (final terminal text), `.subtype`, and
+  `total_cost_usd` — capture the latter onto `diligence_runs` for cost
+  observability (a full run is token-heavy).
+- `listSubagents` / `getSubagentMessages` — *unconfirmed against 0.2.74 types;
+  verify before relying on them.* Non-load-bearing (fan-out inspection only).
 
 ### Auth
 
-The SDK authenticates via the host's logged-in `claude` CLI credentials — **no
-`ANTHROPIC_API_KEY` required** (confirmed in Spike A). The worker host must have
-an authed `claude` CLI (or an API key).
+Spike A confirmed the SDK *will* authenticate via the host's logged-in `claude`
+CLI credentials with **no `ANTHROPIC_API_KEY`**. That works locally, but it
+depends on interactive login state (brittle on a headless VM) and Anthropic's
+published guidance is to use API-key auth for SDK use.
+
+**Recommendation: set `ANTHROPIC_API_KEY` explicitly on the worker host.** It's
+ToS-clean, survives the Phase 3 move to an always-on box, and removes a hidden
+dependency on CLI login. CLI-credential inheritance stays a dev-convenience
+fallback only. See
+[`diligence-report-skill-execution-host-provisioning.md`](./diligence-report-skill-execution-host-provisioning.md#auth-prefer-an-explicit-api-key).
 
 ### Kickoff prompt
 
@@ -203,30 +221,37 @@ Communication substrate is the **filesystem** under `$NOETIC_DILIGENCE_DIR`
 
 ## Worker-host dependencies
 
-For a *full* run (vs. data-gap-only), the host needs:
+Full provisioning detail, install commands, and a preflight verification script
+live in
+[`diligence-report-skill-execution-host-provisioning.md`](./diligence-report-skill-execution-host-provisioning.md).
+Summary by run tier:
 
-| Dependency | For | Status on dev host |
-|---|---|---|
-| Authed `claude` CLI (or `ANTHROPIC_API_KEY`) | SDK auth | ✅ present |
-| `noetic-tools` plugin (claude-plugins checkout) | skill discovery | ✅ |
-| `bureau` checkout (feasibility-guides) | Phase 0/3 | ✅ (austin guides on latest main) |
-| `surveyor` checkout + creds | Phase 2 property records | ❌ not checked out everywhere |
-| `agent-browser` + Chrome | Phase 2 web research | ❌ not installed (Chrome.app only) |
-| ImageMagick (`pdftoppm`, `magick`) | Phase 1 vision | ⚠️ verify |
-| Built `noetic-pdf` (`dist/`) | Phase 5 render | ✅ (build step) |
-| Gemini API key | Phase 1 vision | ⚠️ verify |
+- **Tier 1 — address-only full run (first real-run target):** Node 22.4+,
+  `ANTHROPIC_API_KEY`, `claude-plugins` + `bureau` checkouts, built `noetic-pdf`,
+  pinned `claude-agent-sdk@0.2.74`. surveyor/web-dependent disciplines land as
+  `data-gap` — an acceptable, honest first deliverable (confirmed in Spike C).
+- **Tier 2 — full-fidelity / attachments (fast-follow):** surveyor checkout +
+  creds, global `agent-browser` + Chrome, poppler/ImageMagick, Gemini key.
 
-Without surveyor + agent-browser, the run completes but every discipline
-collapses to `data-gap` (confirmed in Spike C).
+**Tier-2 tooling is explicitly a fast-follow, not a blocker for the first real
+run.** One sharp edge to respect: the **§9 Concept Plan Review path needs
+poppler/ImageMagick *and* a Gemini key** — when an attachment is present, Phase 1
+renders pages to PNG and calls Gemini, and if either is missing it **fails
+rather than degrading to a data-gap**. So Tier 1 must exclude attachments, and
+the trigger should refuse/strip attachments until Tier 2 is provisioned.
 
 ---
 
 ## Open decisions & risks (before/during `invoke.ts`)
 
-1. **Inngest long-running step** — a 30–60+ min `invokeDiligenceSkill` can't sit
-   in a normal `step.run` (step/exec timeouts). Decide: long step with raised
-   timeout + heartbeats, or run the session outside step memoization and persist
-   progress to `diligence_runs` directly. **Blocks the handler wiring shape.**
+1. **Inngest long-running step — RESOLVED.** The Inngest function is a thin
+   **ack** (validate → mark `running` → hand off → return); the 30–60 min skill
+   session runs **outside Inngest step memoization** in the persistent worker
+   process, and completion is tracked via `diligence_runs.status` + Supabase
+   realtime (no completion event required). Consequences — in-process
+   concurrency limit (Inngest `concurrency` no longer gates the heavy work) and a
+   stuck-run reconciler (fast-follow). Full rationale + alternatives:
+   [`diligence-report-long-step-adr.md`](./diligence-report-long-step-adr.md).
 2. **Human-in-the-loop gates → autonomous policy.** The skill escalates to a
    human on multi-jurisdiction, ambiguous use, surveyor failures, contradictions,
    etc. Mitigations: (a) the intake chat gates the trigger on Tier-1 completeness
@@ -237,14 +262,22 @@ collapses to `data-gap` (confirmed in Spike C).
 4. **Attachment download** — fetch `intake_attachment` files into
    `workdir/sir/source-pdfs/` before invoking (enables Phase 1 + §9 Concept Plan Review).
 5. **agent-browser / surveyor headless robustness** — unexercised in a real run.
-6. **`supporting_document_copy` artifacts** — unique-index move to `(run_id, storage_path)`.
+   **Fast-follow, not a blocker:** Tier-1 address-only runs don't need them (the
+   dependent disciplines land as `data-gap`). Validate during the Tier-2
+   build-out. See
+   [host-provisioning](./diligence-report-skill-execution-host-provisioning.md).
+6. **`supporting_document_copy` artifacts** — unique-index move from
+   `(run_id, kind)` to `(run_id, storage_path)`. Must land **before** the
+   supporting-doc download path (commit 8) or multi-doc runs conflict on insert.
 
 ---
 
 ## Build plan for `invoke.ts` (Phase 2-A.2)
 
 1. **2-A.2 pre-flight** *(done — Spikes A/B/C)*.
-2. **Decide the Inngest long-step approach** (open decision #1).
+2. **Inngest long-step approach** *(decided — ack-and-handoff; see
+   [ADR](./diligence-report-long-step-adr.md))*. Refactor `diligence-run.ts` to
+   ack + hand off to an in-process runner with a concurrency-`1` semaphore.
 3. **`src/skill/invoke.ts`** — assemble kickoff prompt from intake; download
    attachments into `source-pdfs/`; `query()` with `plugins` + `cwd` + `env`;
    stream messages (log phases); on `result`, return the deliverable PDF paths.
@@ -259,6 +292,8 @@ collapses to `data-gap` (confirmed in Spike C).
 
 ## Cross-refs
 
+- Long-step decision: [`diligence-report-long-step-adr.md`](./diligence-report-long-step-adr.md)
+- Host provisioning: [`diligence-report-skill-execution-host-provisioning.md`](./diligence-report-skill-execution-host-provisioning.md)
 - field-agent roadmap: [`implementation-plan.md`](./implementation-plan.md)
 - Canonical feature spec: cityhall `docs/feasibility-research-runner.md`
 - Path-config PR: [noetic-inc/claude-plugins#9](https://github.com/noetic-inc/claude-plugins/pull/9)
