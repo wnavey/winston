@@ -1,8 +1,13 @@
 # Diligence-Report Skill Execution in field-agent
 
-> **Status:** Architecture landed + de-risked via spikes (2026-06-02). The
-> `invoke.ts` implementation (Phase 2-A.2) is **not built yet** — this doc is
-> the design it will follow.
+> **Status (2026-06-03):** Phase 2-A.2 **built and merged** — field-agent
+> [#8](https://github.com/noetic-inc/field-agent/pull/8) (`invoke.ts` + in-process
+> runner, fire-and-handoff), [#9](https://github.com/noetic-inc/field-agent/pull/9)
+> (observability / `run-summary.json`), [#11](https://github.com/noetic-inc/field-agent/pull/11)
+> (intake-attachment download for vision). **In validation:**
+> [#10](https://github.com/noetic-inc/field-agent/pull/10) (minimal kickoff — the
+> fan-out fix) is under test against a real run. This doc is now the **as-built
+> design + findings from the first real runs**, not a forward design.
 >
 > **Scope:** how field-agent runs the real `noetic-tools:diligence-report` skill
 > headlessly to produce the Site Intelligence Report + Research Appendix,
@@ -50,50 +55,44 @@ behavior must *intentionally diverge* from the interactive skill; it does not.
 
 ### The SDK call
 
-`@anthropic-ai/claude-agent-sdk`'s `query({ prompt, options })` returns an async
-iterable of messages. field-agent's `src/skill/invoke.ts` (to be built) does:
+`@anthropic-ai/claude-agent-sdk@0.2.74`'s `query({ prompt, options })` returns an
+async iterable of messages. As built in `src/skill/`:
+
+- **`runner.ts`** — an in-process semaphore (`enqueueDiligenceRun`, default
+  concurrency `1`). The Inngest function acks and hands off here; the runner is
+  the real throughput gate (see the long-step ADR).
+- **`invoke.ts`** — `runDiligenceSession(runId)`: dup-guard (skip if the row
+  isn't `queued`) → download attachments (best-effort, vision-gated) → mark
+  `running` → `query()` → collect deliverables → reuse `upload.ts`/`insert.ts` →
+  terminal status → write `run-summary.json`. Never throws.
 
 ```ts
-import { query } from '@anthropic-ai/claude-agent-sdk';
-
-const workdir = `${REPO_ROOT}/workspace/${diligenceRunId}`; // field-agent/workspace/<id>
-
 const q = query({
-  prompt: kickoffFromIntake(intake, { workdir, bureauPath, surveyorPath }),
+  prompt: buildKickoffPrompt(intake, paths),          // kickoff.ts (minimal — see below)
   options: {
-    plugins: [{ type: 'local', path: NOETIC_TOOLS_PATH }], // ../claude-plugins/plugins/noetic-tools
+    plugins: [{ type: 'local', path: paths.noeticToolsPlugin }],
     permissionMode: 'bypassPermissions',
-    allowDangerouslySkipPermissions: true,                 // real optional flag (sdk 0.2.74)
-    cwd: workdir,                                          // skill writes outputs here
-    env: {                                                 // passes through to Bash subprocesses
-      ...process.env,
-      NOETIC_DILIGENCE_DIR: workdir,
-      NOETIC_BUREAU_DIR: bureauPath,      // ../bureau
-      NOETIC_SURVEYOR_DIR: surveyorPath,  // ../surveyor
-      NOETIC_PDF_DIR: noeticPdfPath,      // ../claude-plugins/plugins/noetic-tools/noetic-pdf
-    },
+    allowDangerouslySkipPermissions: true,
+    cwd: paths.workdir,                                // field-agent/workspace/<runId>
+    maxTurns: 400,                                     // runaway guard (env-overridable)
+    env: buildSessionEnv(paths),                       // ← default-deny allowlist, NOT process.env
   },
 });
-
-for await (const msg of q) {
-  if (msg.type === 'system' && msg.subtype === 'init') { /* assert plugin/skill loaded */ }
-  if (msg.type === 'assistant') { /* observe tool_use for progress/logging */ }
-  if (msg.type === 'result') { /* terminal — run finished */ }
-}
-// then: read workdir/sir/deliverable/*.pdf → reuse src/artifacts/upload.ts + insert.ts
 ```
 
-> ✅ **`env` passthrough confirmed** against the installed
-> `@anthropic-ai/claude-agent-sdk@0.2.74` types: `env?: Record<string, string |
-> undefined>` and **defaults to `process.env`** — so the spread above replaces
-> the child environment and the `NOETIC_*` vars *do* reach the Bash tool's
-> subprocesses (including the surveyor shell-out). `cwd`, `plugins`,
-> `permissionMode: 'bypassPermissions'`, and `allowDangerouslySkipPermissions`
-> are all real fields in 0.2.74. **Pin the SDK to `0.2.74`** — the API is pre-1.0
-> and the public docs lag the installed types (a docs-only check claimed `env`
-> only accepts `API_TIMEOUT_MS` and that `allowDangerouslySkipPermissions`
-> doesn't exist; both are wrong against 0.2.74). The env vars are
-> **load-bearing** — see Paths below.
+> ⚠️ **`env` is a default-deny allowlist, not a `process.env` spread.** An
+> earlier draft (and an earlier version of this doc) spread all of `process.env`
+> into the session — which leaks `SUPABASE_SERVICE_ROLE_KEY`, `INNGEST_SIGNING_KEY`,
+> etc. into a `bypassPermissions` agent that can read them via shell. PR #8's
+> review caught this. `buildSessionEnv` (in `paths.ts`) passes **only** an
+> operational allowlist (`PATH`, `HOME`, locale, `CLAUDE_CONFIG_DIR`,
+> `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`) + the resolved `NOETIC_*` paths. Host
+> secrets are withheld. The `NOETIC_*` vars are load-bearing for the skill's
+> shell commands — see Paths below.
+
+`cwd`, `plugins`, `permissionMode: 'bypassPermissions'`, `allowDangerouslySkipPermissions`,
+`maxTurns`, and `env` are all real `0.2.74` fields. **Pin the SDK to `0.2.74`** —
+the API is pre-1.0 and the public docs lag the installed types.
 
 ### SDK message shapes (learned from spikes)
 
@@ -116,30 +115,83 @@ CLI credentials with **no `ANTHROPIC_API_KEY`**. That works locally, but it
 depends on interactive login state (brittle on a headless VM) and Anthropic's
 published guidance is to use API-key auth for SDK use.
 
-**Recommendation: set `ANTHROPIC_API_KEY` explicitly on the worker host.** It's
-ToS-clean, survives the Phase 3 move to an always-on box, and removes a hidden
-dependency on CLI login. CLI-credential inheritance stays a dev-convenience
-fallback only. See
+**Current decision: stay on CLI-credential auth for now** (explicitly deferred
+`ANTHROPIC_API_KEY` — the real runs are on a logged-in dev box). The
+recommendation for Phase 3 stands: set `ANTHROPIC_API_KEY` on the always-on
+worker (ToS-clean, no dependency on interactive CLI login). `buildSessionEnv`
+already passes `ANTHROPIC_API_KEY` through if set. See
 [`diligence-report-skill-execution-host-provisioning.md`](./diligence-report-skill-execution-host-provisioning.md#auth-prefer-an-explicit-api-key).
 
-### Kickoff prompt
+### Kickoff prompt — keep it MINIMAL (the single-threaded finding)
 
-Assembled by field-agent from the intake (`src/artifacts/load-intake.ts`
-already loads the `document_section` rows): the property address, intended use,
-and any downloaded attachment paths. It also restates the working-root + path
-overrides (belt-and-suspenders with the env vars). Spike C confirmed the agent
-honors a cwd/path override given in the prompt.
+**The biggest lesson from the first real run.** `kickoff.ts` (`buildKickoffPrompt`)
+assembles three things only:
+1. the captured intake facts (`load-intake.ts` → `document_section` rows),
+2. the run's **actual** bureau/surveyor paths + working root, and
+3. one **autonomy directive** ("no human — never pause; record unknowns as
+   data-gaps").
+
+It deliberately does **nothing else** — it lets the skill's own
+`SKILL.md`/`pipeline.md` drive orchestration.
+
+**Why:** the first real run (`8ac7…`) **completed but ran single-threaded** — `0`
+`Task` subagents, a flat `intermediate/research-findings.md` instead of the
+8 `phase2-research/` + 10 `phase3-disciplines/` + `synthesis/` outputs, and a
+13pp SIR vs. the 25–40pp spec. A diagnostic confirmed the `Task` tool **was
+available** under our exact config (119 tools in the init list) — so the cause
+was our **kickoff over-constraining**: framing like "Tier 1 — address-only, skip
+Phase 1, degrade to data-gap, no attachments" told the model to do *less*, and
+it skimmed inline instead of fanning out. PR #10 strips that suppressive framing
+to the minimum above. (Validation of the fix is in flight.)
+
+**Two parts of the kickoff are load-bearing and must stay:**
+- The **autonomy directive** — the skill has human-gates ("ask the user",
+  "escalate"); headless, it must be told not to wait or it stalls. This governs
+  human-gates, not orchestration depth.
+- The **bureau/surveyor absolute paths.** The `NOETIC_*` env vars only resolve
+  the skill's *shell* commands (`${NOETIC_SURVEYOR_DIR:-…}`). The model's own
+  `Read`/`Glob` of external dirs takes a *literal* path — it won't expand
+  `$NOETIC_BUREAU_DIR`, and the skill's `~/noetic` default doesn't exist on
+  field-agent — so the actual paths must be stated or the model can't find the
+  feasibility-guides. (Removing this block briefly was a mistake; restored.)
+
+**General rule for porting skills to a headless SDK driver:** supply inputs +
+autonomy, then get out of the way. Suppressive/efficiency framing reads as
+"do less" and collapses the skill's intended fan-out.
 
 ### Output handoff — reuses 2-A.1
 
-The skill writes `workdir/sir/deliverable/{site-intelligence-report,research-appendix}.pdf`
-(+ `supporting-documents/*.pdf`). field-agent reads those into Buffers and reuses
-the **existing** `src/artifacts/upload.ts` + `insert.ts`. Only the *source* of
-the PDFs changes (real skill vs. dummy renderer) — the upload/insert/sign/UI
-loop is unchanged. Supporting-document copies become `supporting_document_copy`
-artifacts, which is when the `diligence_artifacts (diligence_run_id, kind)`
-unique index must move to `(diligence_run_id, storage_path)` (a run can have
-several).
+The skill writes `workdir/sir/deliverable/{site-intelligence-report,research-appendix}.pdf`.
+`collect-artifacts.ts` reads those into Buffers (the **SIR is required** — throws
+if missing) and reuses the **existing** `src/artifacts/upload.ts` + `insert.ts`.
+Only the *source* of the PDFs changes (real skill vs. dummy renderer) — the
+upload/insert/sign/UI loop is unchanged. Surfacing the skill's copied
+`supporting-documents/*.pdf` as `supporting_document_copy` artifacts is
+**deferred** (needs the `diligence_artifacts` unique index to move from
+`(run_id, kind)` → `(run_id, storage_path)` since a run can have several).
+
+### Attachments & vision (PR #11)
+
+When the intake conversation has attachments (concept plan, plats),
+`attachments.ts` downloads the vision-relevant ones (`.pdf/.png/.jpg`) via
+`chat_message → chat_message_attachment → document_version` into
+`workdir/sir/source-pdfs/` so the skill's Phase 1 vision + §9 run. **Gated on
+`visionReady()`** — `pdftoppm`/`magick` on PATH **and** `GEMINI_API_KEY` set
+(Phase 1 hard-fails without them). If the host can't do vision, or the step
+errors, it's **recorded as a note in `run-summary.json` and the run proceeds
+without local Phase 1** — never blocked (the intake already extracted those docs
+once). The whole step is best-effort. No kickoff change is needed — populating
+`source-pdfs/` is enough; the skill discovers it.
+
+### Observability (PR #9)
+
+`run-summary.json` in the run's workdir captures, on success **and** failure:
+`session_id` (→ the SDK transcript at `~/.claude/projects/<cwd>/<id>.jsonl`),
+`result_subtype`, `num_turns`, `total_cost_usd`, `usage`, a **tool-use
+histogram**, `deliverables`, and `notes[]`. This is what surfaced the
+single-threaded finding (the histogram showed `0` `Task` calls). It's run-level
+only — per-subagent attribution + a filesystem phase-inventory are open
+follow-ups.
 
 ---
 
@@ -257,36 +309,38 @@ the trigger should refuse/strip attachments until Tier 2 is provisioned.
    etc. Mitigations: (a) the intake chat gates the trigger on Tier-1 completeness
    (handles ambiguous-use upstream); (b) lean on the skill's own Bucket B
    ("verify at title / engineer to confirm") as the autonomous fallback.
-3. **Progress/status during the long run** — stream `tool_use` / phase markers to
-   `diligence_runs` so the cityhall UI shows more than "running".
-4. **Attachment download** — fetch `intake_attachment` files into
-   `workdir/sir/source-pdfs/` before invoking (enables Phase 1 + §9 Concept Plan Review).
-5. **agent-browser / surveyor headless robustness** — unexercised in a real run.
-   **Fast-follow, not a blocker:** Tier-1 address-only runs don't need them (the
-   dependent disciplines land as `data-gap`). Validate during the Tier-2
-   build-out. See
-   [host-provisioning](./diligence-report-skill-execution-host-provisioning.md).
-6. **`supporting_document_copy` artifacts** — unique-index move from
-   `(run_id, kind)` to `(run_id, storage_path)`. Must land **before** the
-   supporting-doc download path (commit 8) or multi-doc runs conflict on insert.
+3. **Attachment download — DONE (PR #11).** `intake_attachment` files are fetched
+   into `workdir/sir/source-pdfs/`, vision-gated; see "Attachments & vision".
+4. **Stuck-run reconciler — OPEN (fast-follow).** Fire-and-handoff trades away
+   Inngest retry, so a crash/sleep mid-run leaves a row stuck `running`. Need a
+   startup-reconcile + age-sweeper (per the ADR). Today it's a manual one-liner.
+5. **Tool allowlist — OPEN.** The session inherits ~90 unrelated host MCP tools
+   (Gmail/Slack/Supabase/Vercel/Noetic — 119 tools total). Restrict via
+   `allowedTools` for a leaner/cheaper/safer autonomous surface.
+6. **Per-subagent observability — OPEN (gated on the fan-out fix).** Hook-based
+   (`PostToolUse`/`SubagentStart`) per-subagent tool attribution + labels; only
+   meaningful once subagents actually fan out (PR #10 validating).
+7. **Progress/status during the long run — OPEN.** The UI sits at `running` for
+   30–60 min; stream `tool_use`/phase markers to a `diligence_runs` column.
+8. **`supporting_document_copy` artifacts — DEFERRED.** Unique-index move from
+   `(run_id, kind)` → `(run_id, storage_path)` before surfacing copied
+   supporting-docs as artifacts.
+9. **agent-browser / surveyor headless robustness** — still unexercised in a full
+   real run; validate during the Tier-2 build-out.
 
 ---
 
-## Build plan for `invoke.ts` (Phase 2-A.2)
+## Build plan / status (Phase 2-A.2)
 
-1. **2-A.2 pre-flight** *(done — Spikes A/B/C)*.
-2. **Inngest long-step approach** *(decided — ack-and-handoff; see
-   [ADR](./diligence-report-long-step-adr.md))*. Refactor `diligence-run.ts` to
-   ack + hand off to an in-process runner with a concurrency-`1` semaphore.
-3. **`src/skill/invoke.ts`** — assemble kickoff prompt from intake; download
-   attachments into `source-pdfs/`; `query()` with `plugins` + `cwd` + `env`;
-   stream messages (log phases); on `result`, return the deliverable PDF paths.
-4. **Wire behind `if (full_run)`** in `diligence-run.ts`; the `else` keeps the
-   2-A.1 dummy renderer. Feed `invoke.ts`'s output PDFs to the existing
-   `upload.ts` / `insert.ts`.
-5. **Emit `diligence/completed`** after success.
-6. **Real full-run smoke test** on a fully-provisioned host (surveyor +
-   agent-browser), then flip the `fullFeasibilityRunEnabled` flag default.
+1. ✅ **Pre-flight** — Spikes A/B/C.
+2. ✅ **Inngest long-step** — ack-and-handoff + in-process semaphore ([ADR](./diligence-report-long-step-adr.md), PR #8).
+3. ✅ **`src/skill/invoke.ts` + `runner.ts`** — query → collect deliverables → reuse `upload.ts`/`insert.ts` → terminal status (PR #8).
+4. ✅ **Wired behind `if (full_run)`** in `diligence-run.ts`; `else` keeps the 2-A.1 dummy renderer (PR #8).
+5. ✅ **Observability** — `run-summary.json` + session id + result capture (PR #9).
+6. ✅ **Attachment download** for Phase 1/§9, vision-gated (PR #11).
+7. 🟡 **Minimal kickoff (fan-out fix)** — PR #10, **in validation** (the single-threaded finding).
+8. ⬜ **Full-fidelity smoke** on a Tier-2 host (surveyor + agent-browser + vision), then flip `fullFeasibilityRunEnabled` default.
+9. ⬜ **Fast-follows:** stuck-run reconciler, tool allowlist, per-subagent observability, `diligence/completed` emission (deferred until a consumer exists).
 
 ---
 

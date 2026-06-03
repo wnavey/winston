@@ -1,7 +1,7 @@
 # Field Agent — Implementation Plan
 
-> **Last verified:** 2026-06-02 — Phase 1, 2-B, and the 2-A.1 artifact pipeline all end-to-end against prod.
-> **Status:** Phase 1 ✅ complete · Phase 2-B ✅ complete (cityhall agent tool + RCM + flag plumbing) · **Phase 2-A.1 ✅ complete — artifact pipeline with a dummy renderer** (render → upload → insert → signed-URL → UI links) · Phase 2-A.2 ⬜ remaining (real Claude Agent SDK skill invocation) · Phase 3 deferred.
+> **Last verified:** 2026-06-03.
+> **Status:** Phase 1 ✅ · Phase 2-B ✅ · **Phase 2-A.1 ✅** (dummy-renderer artifact pipeline) · **Phase 2-A.2 🟡 built + in validation** — real `claude-agent-sdk` skill invocation (`src/skill/`), observability, and attachment download all merged; the **minimal-kickoff fan-out fix (#10) is under test** against a real run · Phase 3 deferred.
 
 A long-running API surface for the `noetic-tools:diligence-report` skill: a cloud-deployed trigger publishes an Inngest event, a laptop-side worker (field-agent) consumes via Inngest Connect, runs the work, and writes status + deliverables back through Supabase.
 
@@ -63,24 +63,26 @@ A 30-line render spike surfaced that field-agent **cannot** consume `noetic-pdf`
 
 ---
 
-## Phase 2-A.2 — Real diligence runs (NEXT)
+## Phase 2-A.2 — Real diligence runs (built + validating)
 
-> **Design + spike findings:** [`diligence-report-skill-execution.md`](./diligence-report-skill-execution.md) — the architecture for invoking the shared skill headlessly (Model A), the SDK call shape, the path/env model, what the A/B/C spikes proved, worker-host dependencies, and the open decisions (Inngest long-step, human-gates). `invoke.ts` follows that doc.
+> **As-built design + first-run findings:** [`diligence-report-skill-execution.md`](./diligence-report-skill-execution.md) is the authoritative, current doc (the SDK call, the minimal-kickoff / single-threaded finding, the env allowlist, observability, attachments, and the live build-plan checklist). This section is the historical scope/decisions.
 
 2-A.2 swaps the **dummy renderer** (shipped in 2-A.1) for actual `@anthropic-ai/claude-agent-sdk` invocation of the `noetic-tools:diligence-report` skill. Everything around it — trigger, RCM, status, render→upload→insert plumbing, signed URLs, UI links — already exists; 2-A.2 only changes *what produces the PDF buffers*.
+
+**Shipped:** field-agent [#8](https://github.com/noetic-inc/field-agent/pull/8) (`invoke.ts` + in-process runner, fire-and-handoff, behind `if (full_run)`), [#9](https://github.com/noetic-inc/field-agent/pull/9) (observability), [#11](https://github.com/noetic-inc/field-agent/pull/11) (attachment download). **In validation:** [#10](https://github.com/noetic-inc/field-agent/pull/10) (minimal kickoff — the fan-out fix). **The first real run completed but ran single-threaded** (0 `Task` subagents, ~13pp SIR); the diagnostic showed `Task` was available, so the cause was an over-constrained kickoff, fixed in #10 (under test).
 
 **Workstream ordering (history):** P2-B (cityhall trigger + RCM) shipped first, then 2-A.1 (artifact pipeline with a dummy renderer). The `full_run` flag was the safety net — it let us validate the chat-driven trigger and the whole artifact loop without burning Anthropic tokens. 2-A.2 wires the real skill behind that flag, gets validated incrementally, and then we flip the flag's default to `true` once we trust the real path.
 
 ### Feature flag: `full-feasibility-run-enabled`
 
-A Vercel flag on cityhall, default **`false`**, will gate whether a triggered run invokes the real diligence-report skill (2-A.2) or runs the current dummy-render artifact pipeline. The flag flows cityhall → substation → field-agent as a request param. **Today it has no behavioural effect** — both values run the dummy pipeline — but it's plumbed end-to-end and ready to branch the moment 2-A.2 lands.
+A Vercel flag on cityhall, default **`false`**, gates whether a triggered run invokes the real diligence-report skill or runs the dummy-render artifact pipeline. The flag flows cityhall → substation → field-agent as a request param. **As of 2-A.2 it now branches for real:** `full_run=true` → the real skill (in-process runner); `full_run=false` → the 2-A.1 dummy pipeline. Default stays `false` (no accidental token spend) until the real path is validated, then we flip it.
 
 **Flow:**
 
 1. Cityhall server-side reads the flag at request time (whichever Vercel mechanism — env var, Edge Config, or Vercel Feature Flags — backs the flag). Default `false`.
 2. Cityhall passes the boolean in the substation POST body: `{ document_version_id, conversation_id, full_run: <bool> }`. Omitted = treated as `false`.
 3. Substation accepts `full_run` as an optional field in the body schema (`z.boolean().default(false)`), forwards it in the Inngest event payload: `data: { diligence_run_id, full_run }`.
-4. field-agent's `DiligenceRequestSchema` has `full_run: z.boolean().default(false)`. **2-A.2** will branch the handler: `full_run === true` → invoke the real skill, `false` → the dummy pipeline (or whatever fallback we keep). Today both run the dummy pipeline.
+4. field-agent's `DiligenceRequestSchema` has `full_run: z.boolean().default(false)`. The handler branches: `full_run === true` → ack + hand off to the in-process runner that invokes the real skill; `false` → the 2-A.1 dummy pipeline (in-Inngest steps).
 
 **Default-safe at every layer:** missing/unset is treated as `false` end-to-end. No accidental real (token-spending) runs without explicit opt-in.
 
@@ -92,29 +94,14 @@ A Vercel flag on cityhall, default **`false`**, will gate whether a triggered ru
 
 Swap 2-A.1's **dummy renderer** for the canonical 6-phase pipeline the skill orchestrates internally (jurisdiction check → vision extraction → research → discipline analysis → synthesis → render). The surrounding plumbing — upload, `diligence_artifacts` upsert, signed URLs, UI links — already exists from 2-A.1; the work below is mostly *where the PDF buffers come from*.
 
-**Sequencing:**
+**As built** (detail + the live checklist live in the [skill-execution doc](./diligence-report-skill-execution.md)):
 
-1. **Swap the dummy render for the skill (flag-gated).** ⬜ remaining — the core of 2-A.2.
-   Add `@anthropic-ai/claude-agent-sdk` (**pin `0.2.74`**) to `field-agent/package.json`. Branch on `event.data.full_run`:
-   ```ts
-   if (event.data.full_run) {
-     // invoke the real skill (src/skill/invoke.ts) — NOT inside a long step.run
-   } else {
-     // 2-A.1 dummy renderer (src/artifacts/)
-   }
-   ```
-   `invokeDiligenceSkill` (`field-agent/src/skill/invoke.ts`) creates an Agent SDK session with the `noetic-tools` plugin loaded, invokes `/diligence-report`, and returns the produced PDF buffers (or local paths). The intake `document_section` load already exists in `src/artifacts/load-intake.ts` and can be reused.
-   > **Handler shape (decided):** the real skill session is a single opaque 30–60 min SDK session — it does **not** sit inside a `step.run` (unlike the dummy render). The Inngest function **acks** (`mark-running`) and **hands off** to an in-process runner (concurrency-`1` semaphore); the runner writes terminal status to `diligence_runs`. See the [long-step ADR](./diligence-report-long-step-adr.md). The `else` dummy branch keeps its existing `step.run` shape.
-   **Pre-flight first:** a throwaway script that imports `@anthropic-ai/claude-agent-sdk`, invokes a known-good skill headlessly, and captures the terminal message — the analogue of the `noetic-pdf` render spike that de-risked 2-A.1. *(Done — Spikes A/B/C; see [skill-execution doc](./diligence-report-skill-execution.md).)*
-   **Host provisioning:** the real skill needs more than the dummy path — see [host-provisioning](./diligence-report-skill-execution-host-provisioning.md). Tier-1 (address-only) is the first real-run target; surveyor/agent-browser/vision are fast-follow.
-
-2. **Upload + insert `diligence_artifacts` rows.** ✅ **shipped in 2-A.1** (`src/artifacts/upload.ts` + `insert.ts`): uploads to `submission-data/diligence/<run-id>/{sir,appendix}.pdf` and upserts rows on `(diligence_run_id, kind)`. 2-A.2 just feeds it the *real* skill output instead of the dummy buffers — no structural change. **Signed URLs** (substation GET, 72h) and the **cityhall View/Download links** also shipped in 2-A.1.
-
-3. **Supporting-doc / concept-plan download path.** ⬜ remaining.
-   For runs with `intake_attachment` documents (concept plan PDFs, plats), download them into the working dir before invoking the skill. New helper `field-agent/src/skill/download-supporting-docs.ts`. Skip cleanly when none. Will also add the `supporting_document_copy` artifact kind — which is when the `(diligence_run_id, kind)` unique index needs revisiting (a run can have several supporting docs; likely move the conflict target to `(diligence_run_id, storage_path)`).
-
-4. **Emit `diligence/completed` event.** ⬜ remaining.
-   After the run completes, fire `inngest.send({ name: 'diligence/completed', data: { diligence_run_id } })`. No consumer yet; sets up downstream subscribers (notifications, follow-up workflows) without changing the worker contract.
+1. ✅ **Real skill invocation, flag-gated** (#8). `field-agent/src/skill/` — `runner.ts` (in-process semaphore, concurrency 1) + `invoke.ts` (`runDiligenceSession`). The handler **acks + hands off** (the 30–60 min SDK session does **not** sit in a `step.run`); the runner writes terminal status. `else` keeps the 2-A.1 dummy pipeline. Reuses `load-intake.ts` + `upload.ts`/`insert.ts`. SDK pinned `0.2.74`; `env` is a default-deny allowlist (`buildSessionEnv`), not a `process.env` spread.
+2. ✅ **Upload + insert** — unchanged from 2-A.1; the real skill's deliverable PDFs flow through `upload.ts`/`insert.ts`.
+3. ✅ **Observability** (#9) — `run-summary.json` (session id, cost, turns, tool histogram, notes).
+4. ✅ **Attachment download for Phase 1/§9** (#11) — vision-gated; `source-pdfs/`.
+5. 🟡 **Minimal kickoff (fan-out fix)** (#10) — **in validation** against a real run. The first run single-threaded; this strips the suppressive framing so the skill self-orchestrates its Phase 2/3 fan-out.
+6. ⬜ **Remaining / fast-follow:** stuck-run reconciler, tool allowlist, per-subagent observability, supporting-doc artifacts (`(run_id, storage_path)` index), `diligence/completed` emission (no consumer yet), full-fidelity Tier-2 smoke → flip the flag default.
 
 ### Workstream P2-B — cityhall: trigger + `diligence_running_job` RCM ✅
 

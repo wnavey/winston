@@ -1,7 +1,11 @@
 # ADR: Running the long diligence skill session outside the Inngest step
 
-> **Status:** Accepted (2026-06-02). Supersedes open decision #1 in
-> [`diligence-report-skill-execution.md`](./diligence-report-skill-execution.md).
+> **Status:** Accepted (2026-06-02) · **Implemented** in field-agent
+> [#8](https://github.com/noetic-inc/field-agent/pull/8) — ack-and-handoff +
+> in-process semaphore (`src/skill/runner.ts`), terminal status written by the
+> runner. Consequence (1) (in-process concurrency limit) is done; consequence
+> (2) (**stuck-run reconciler**) remains a fast-follow. Supersedes open decision
+> #1 in [`diligence-report-skill-execution.md`](./diligence-report-skill-execution.md).
 >
 > **Context owner:** field-agent. Affects the `diligence-run` Inngest function
 > and the (to-be-built) `src/skill/invoke.ts`.
