@@ -55,9 +55,13 @@ Gemini (needs the key). If an attachment is present and either is missing, Phase
 1 does **not** gracefully degrade to a data-gap — it fails. So:
 
 - **Tier 1 (address-only) explicitly excludes attachments** and is unaffected.
-- **Tier 2 must provision #10 + #11 before accepting attachment runs.** Until
-  then, the trigger path should refuse/strip attachments rather than start a run
-  that will fail in Phase 1.
+- **Tier 2 must provision #10 + #11 before accepting attachment runs.**
+- **Now handled in field-agent (PR #11):** `attachments.ts` gates download on
+  `visionReady()` (`pdftoppm`/`magick` + `GEMINI_API_KEY`). On a non-vision host
+  it **skips the download and notes it in `run-summary.json`**, so the run
+  proceeds address-only instead of hard-failing Phase 1 — no cross-repo
+  "refuse/strip" gate is required for safety (though cityhall may still choose to
+  withhold attachments from under-provisioned workers as an optimization).
 
 ### Degradation without Tier-2 tools
 
