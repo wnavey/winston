@@ -138,28 +138,35 @@ weren't in scope.
 
 ## Path to making var-2 core
 
-We've identified four gates to clear before flipping the production
-default. One is a Phase 1 blocker; the other three are Phase 2 anchor
-work.
+We identified four gates to clear before flipping the production
+default. **The Phase 1 blocker (dynamic scale) has landed**; the
+remaining three are Phase 2 anchor work.
 
-### Phase 1 close-out — the one remaining must-fix
+### Phase 1 close-out — dynamic scale (LANDED 2026-05-12)
 
-**Dynamic scale extraction.** The current chain hardcodes
-`scaleInchesPerFoot = 0.05` (1"=20'). Sheets at any other scale
-(1"=10', 1"=40', floor plans at 1/8"=1') get measurements that are
-proportionally wrong but look correct. This is a silent-correctness
-bug — the agent confidently returns a wrong distance and reaches a
-wrong verdict.
+The hardcoded `scaleInchesPerFoot = 0.05` constant has been replaced
+with cache-first dynamic resolution. Shipped as bureau#350 +
+conductor#159 — see those PRs for full diffs and tests.
 
-Fix: detect the scale per sheet, either from the title block (via a
-small LLM extraction call) or from sheet metadata if available.
-Concretely: drop the hardcoded value in
-`bureau/.../measure-distance.ts`'s arg-construction path and replace
-with a per-sheet lookup.
+**How it works now:** when the vision_check measurement route hits a
+dispatch, conductor checks
+`output/runs/run-N/cache/sheet-NN/drawing-scale.json` for a cached
+scale. On cache miss it invokes a new bureau script
+(`scripts/extract-scale.ts`) that hands `guide.md` + `blocks.md` for
+that sheet to Haiku and asks for the scale in a structured format
+(`{paper_value, paper_unit, real_value, real_unit, confidence}`).
+Conductor converts to `scaleInchesPerFoot` via deterministic unit
+math, snaps to the architectural-scale whitelist (1"=10', 1"=20', …,
+1"=100', plus 1/8"=1' family) within ±5% tolerance, then writes the
+cache file. On extraction failure or whitelist miss the dispatch
+returns a clean `scale_not_determinable` error to the agent rather
+than silently using a default — loud-fail eliminates the original
+silent-wrong-data risk.
 
-Severity: same tier as the original `version_number` ordering bug or
-the silent-empty-projects-dir bug we caught earlier in Phase 1 —
-silent wrong-data, not loud-error. **Must fix before Phase 1 closes.**
+Validation pass: RUN_11 (next local fire) should produce cache files
+under `output/runs/run-N/cache/sheet-NN/` and effectively identical
+distance values to RUN_10 on the 1"=20' sheets the agent has been
+measuring.
 
 ### Phase 2 anchors
 
@@ -204,8 +211,8 @@ These are real follow-ups but explicitly deferred:
 
 ## Phase 1 closing checklist
 
-- [ ] **Dynamic scale extraction** — single must-fix. See gating
-  section above.
+- [x] **Dynamic scale extraction** — shipped 2026-05-12 (bureau#350 + conductor#159).
+  Cache-first per-sheet resolution; loud-fail on `scale_not_determinable`.
 - [x] el-md-exp ctrl-baseline ✅ current
 - [x] el-md-exp var1-bifurcated ✅ current (RUN_2, runs=3)
 - [x] el-md-exp var2-routing ✅ current (RUN_10_LOCAL, runs=3, post bureau#340 prompt tweak)
