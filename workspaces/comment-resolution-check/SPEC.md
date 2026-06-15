@@ -322,10 +322,14 @@ the MCR's own vocabulary):
 
 ## 9. Key design decisions / open questions
 
-1. **Where do CRC guides live?** They're **per-submission/bespoke**, so they do **not**
-   belong in `bureau` git (unlike review/completeness guides). Proposal: generate in-run;
-   optionally persist to Supabase storage per project (e.g. `{projectId}/crc/`), like
-   `atomic-mcr.json`. Decide if we need persisted, versioned guides for audit.
+1. **Where do CRC guides live? — direction set, MVP deferred.** Per-submission/bespoke, so
+   **not** in `bureau` git. Lean **Supabase DB**: CRC checklist items are structured,
+   queryable, and map 1:1 to city comments, so they fit as first-class rows that can
+   *double as the per-comment resolution-tracking unit* across target versions. **Supabase
+   storage + a DB pointer** (mirroring `atomic-mcr.json` at `{projectId}/eval-data/`) is a
+   lighter alternative, not ruled out. **MVP: local files** in the run workspace — exactly
+   how completeness-check loads its checklist `*.md` files — so no DB/storage work is needed
+   to validate the workflow.
 2. **`match_criteria` — largely resolved (see §2.1).** Reuse `mcr-prep`'s `atomic-mcr.json`
    as the shared front-end output; transform B **projects** it to the execution schema
    (keep `requirement`/`specific_deliverable`/`must_reference_location`/`code_reference`/
@@ -336,15 +340,45 @@ the MCR's own vocabulary):
    mental model)? (§6)
 4. **Granularity:** check at atomic-issue level but **report at city-comment level** —
    confirm this roll-up is what we want.
-5. **Updated-plan input:** Iteration 1 verifies against the updated **submission version's
-   plan set** (the new `submission_version`). The redline PDF is a *later* input (§7), not
-   the primary signal for iteration 1.
+5. **Version anchoring — baseline vs. target (important; mostly phase 2).** A submission has
+   many `submission_version` rows (v0…vN). Exactly **one** is the set *sent to the city* for
+   a cycle (e.g. **v4 → U0**); the MCR is a **point-in-time city response anchored to that
+   baseline version**. CRC then evaluates **later** versions (v5, v6…) — the *targets* —
+   against the **baseline's** MCR/guides, so a CRC run needs **two** version refs: the
+   *target* (`reviews.submission_version_id`) and the *baseline cycle* the guides came from.
+   **This anchor does not exist in the schema yet** — `submission_version` has only
+   `version_number/label/status/submitted_at/created_at`, and `submitted_at` fires when
+   *our* review triggers, **not** when plans were sent to the **city**. (Proposed model
+   below.) Iteration-1 plan input is still just the target version's plan set; redlines come
+   later (§7). **MVP:** skip the flag — generate guides from a given MCR, store locally, run
+   against a chosen version; map version↔MCR by hand (fine for 7800 #4, where baseline ==
+   target == #4 → all-fail).
 6. **Scope boundary — regressions (new, from the execute-from framing).** CRC does
    closed-form verification of the *old* MCR comments. A revision can *introduce new*
    problems the city will flag next cycle; closed-form verification won't catch those.
    Proposal: **MVP scope = old-comment resolution only**; flag "new-issue detection" as a
    known gap (that's the formal `review`'s job, not CRC's). Worth making an explicit,
    conscious boundary so it isn't mistaken for full coverage.
+
+### Proposed data model — review cycles & version anchoring
+
+The phase-2 foundation for DB + UI. Sketch:
+
+- **Cycle anchor (two options):**
+  - *(a) columns on `submission_version`* — `sent_to_city_at`, `city_cycle` (e.g. `U0`).
+    Lightweight.
+  - *(b) a `city_review_cycle` table* — `{ id, baseline_submission_version_id, cycle_label
+    (U0/U1/…), mcr_review_id | mcr_storage_path, received_at }`. Cleaner, supports multiple
+    cycles per project, and is where the MCR + derived CRC guides hang. **Lean (b).**
+- **MCR as data:** an external review row (`reviews`, `review_type='mcr'` / source=city,
+  `submission_version_id` = baseline) whose `review_comments` are the city comments; CRC
+  guides derive 1:1 from these (and may *be* the DB rows, per §9.1).
+- **CRC run:** `reviews` row, `review_type='comment_resolution_check'`,
+  `submission_version_id` = **target** (v5/v6), linked to the baseline cycle (via
+  `prior_review_id` → the MCR review, or a `city_review_cycle` id). Findings attach per
+  `comment_number`, reusing `comment_triage` (which already surfaces prior-cycle status).
+- **MVP carve-out:** none of this is needed for phase 1 — guides local, version↔MCR mapping
+  by hand.
 
 ---
 
@@ -372,11 +406,14 @@ accuracy ground truth is the city's **resolution verdict in a later-cycle MCR**
 
 - **Iteration 1 (this initiative's MVP):** MCR-only. Harden `mcr-prep` ingestion pattern →
   CRC guide generator (B) → CRC review workflow (clone completeness-check, 2-status schema)
-  → wire to DB. Smoke-test on 7800 #4 U0 (expect all-fail).
+  → run against a chosen submission version. **CRC guides stored locally; version↔MCR
+  mapping done by hand** (no DB/cycle flag yet). Smoke-test on 7800 #4 U0 (expect all-fail).
 - **Iteration 2:** redline ingestion via `navalbase` → `mcr-prep-1.1` supplement (AW/AE).
-- **Iteration 3:** richer status taxonomy; applicant-facing report with draft BLUE
-  responses; U1 accuracy eval; UI (upload MCR + new version, trigger via Substation,
-  comment-by-comment results view leveraging `comment_triage`).
+- **Iteration 3 (DB + UI):** **city-review-cycle anchor** (flag a version as sent-to-city →
+  U0 baseline) and **DB-backed CRC guides** (§9.1, §9 proposed model); richer status
+  taxonomy; applicant-facing report with draft BLUE responses; U1 accuracy eval; UI (upload
+  MCR + new version, trigger via Substation, comment-by-comment results view leveraging
+  `comment_triage`).
 
 ---
 
@@ -394,8 +431,10 @@ EPIC: Comment Resolution Check (CRC)
 │   └─ Smoke test on 7800 #4 U0 (expect all-fail)
 ├─ W2  Redlines (iteration 2)
 │   └─ navalbase extract → comments.txt → mcr-prep-1.1 supplement
-└─ W3  UI / infra
-    ├─ Data model: review_type='comment_resolution_check'; chaining via prior_review_id
+└─ W3  UI / infra (phase 2)
+    ├─ Data model: city_review_cycle anchor — flag a version as sent-to-city → U0 baseline
+    ├─ Data model: review_type='comment_resolution_check'; target vs baseline version refs; chain via prior_review_id
+    ├─ CRC guide storage: Supabase DB (preferred) or storage+pointer   [MVP = local files]
     ├─ Upload MCR + new submission version; trigger via Substation (not dead cityhall path)
     └─ Comment-by-comment results UI (comment_triage)
 ```
