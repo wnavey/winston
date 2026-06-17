@@ -19,6 +19,12 @@ and produces a per-comment resolution status.
   Source artifacts (prior MCR, redlines) live here. See its README for
   what's present and what's still missing.
 
+## Spec
+
+See [`SPEC.md`](./SPEC.md) — full context + proposals from the 2026-06-15 brainstorm
+(reuse map: `mcr-prep`/`mcr-convert` ingestion, completeness-check workflow clone,
+navalbase for redlines later). To be reviewed/refined in a follow-up session.
+
 ## TODOs
 
-(intentionally sparse — to be filled in as the MVP scope firms up)
+(tracked in SPEC.md §12 — proposed `bd` epic, not yet created)
