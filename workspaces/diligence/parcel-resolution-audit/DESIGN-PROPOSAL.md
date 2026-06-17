@@ -6,7 +6,16 @@
 
 ### Update history
 
-- **v0.3 (current):**
+- **v0.4 (current):**
+  - **Single-extractor vision pass:** dropped the dual-model (Gemini 3.1 Pro + Opus 4.7) pattern for this skill. Use native Opus 4.7 vision only. Rationale: Phase 1's dual-extractor exists to catch confabulation on dense recorded-instrument / plat text; the scoped extraction in this skill targets a much narrower set of signals (title-block parcel IDs, drawn boundary, "interior lot lines abandoned" callouts) where a single high-quality vision pass is sufficient.
+  - **Clarified the 15% multi-parcel threshold:** the threshold compares the *concept-plan declared total area* (title-block "as drawn") against the *resolved parcel set's combined GIS-polygon acreage*. If declared > resolved × 1.15, that's the assemblage signal — the engineer drew against more land than the resolved parcel set explains. Worked example for Chastain Square: declared 9.60 ac vs primary-only polygon 7.38 ac = 30% delta → exceeds 15% → assemblage suspected → investigate.
+  - **Clarified the adjoining-parcels GIS sweep:** it runs UNCONDITIONALLY in Step 4a (even when no concept plan is provided). Buffer the primary parcel polygon by ~50 ft, query the parcel layer for all polygons whose geometry intersects the buffer. Capture each adjoining parcel's ParcelID, owner, acreage, and use code. The sweep is the "cheap programmatic check" — it's what catches assemblage when there's no concept plan, and pre-populates candidates for the concept-plan-driven check in Step 4b.
+  - **Fail-fast on missing jurisdiction tooling:** if the resolved jurisdiction has no surveyor config (no `surveyor/jurisdictions/<slug>.md`), the skill **fails fast** rather than reaching for a generic fallback. It writes a `location-resolution.md` with `status: failed:no-jurisdiction-tooling` plus the input data and an explicit "we cannot robustly resolve this here" message. The caller (diligence-report) decides whether to stop or to fall back to a coarse-grade generic source (e.g. Census ArcGIS Geocoder, FCC Block API, OpenAddresses). Keeps the skill's contract honest: it produces a high-confidence resolution or it produces nothing.
+  - **Owner-name normalization → LLM.** The shared-owner heuristic in the adjoining-parcels sweep uses an LLM check rather than exact-string or Levenshtein. "IRT Property Co" vs "IRT PROPERTY COMPANY" vs "IRT PROPERTIES INC" → the LLM normalizes corporate-form suffixes, casing, and known aliases (Equity One → Regency Centers post-merger; IRT Property → Equity One pre-merger). Same approach as the skill's chain-of-title reasoning. Land in v1.
+  - **Auto-invoked is a hard dependency.** Diligence-report Phase 0 invokes `parcel-geo-location-resolution` as a hard dependency. If the new skill fails, Phase 0 fails. There is no "skip if unavailable" fallback in diligence-report itself; the caller-side fallback is the responsibility of the user (or a future flag).
+  - **Concept-plan georeferencing deferred to v2.** True PDF-to-WGS84 georeferencing (so we can overlay the parcel polygon directly on the concept plan as a programmatic geometric check) requires either title-block declared corner coordinates (rare) or manual control-point picking. Not trivial enough for v1. Visual three-way comparison (concept plan + Google Maps aerial + cadastral GIS screenshot) is the v1 substitute and gets us most of the value.
+  - **Output file stays `location-resolution.md`.** Verbose dir-name + file-name redundancy is fine; clarity beats brevity.
+- **v0.3:**
   - Added a dedicated "Concept-plan preprocessing" section to Part 2. The new skill borrows the imagemagick + poppler pattern verbatim from `diligence-report/references/phase1-vision-extraction.md` — `pdftoppm` for dual-DPI rendering (300 + 600), `magick` for quadrant crops, de-skew/rotate for non-standard orientations. Scoped vision extraction (dual-extractor: Gemini 3.1 Pro + Opus 4.7) targets multi-parcel signals specifically — title-block parcel IDs, declared plat references, "abandoned interior lot lines" callouts, multi-tract labels — narrower than Phase 1's full feature inventory. Concept plans are vectorized CAD-produced PDFs often larger than 8.5×11 with fine-print labels; preprocessing is load-bearing.
   - Output layout adds `<output-dir>/concept-plan-extracted/` with dual extractions + reconciled view, for traceability and audit.
   - Phase C estimate increased from 2-3 days to 3-5 days to account for the vision-pass work.
@@ -218,11 +227,32 @@ STEP 1 — Jurisdiction detection
   logic; geocode the address, point-in-polygon against state/county/city boundaries).
   ↓
 STEP 2 — Primary parcel resolution via surveyor MCP
-  Start the surveyor MCP server for <slug>. Call the appropriate tool based on input type:
-    - Address → <jur>_assessor_search(query=address, searchType=address)
-    - Lat/lon  → <jur>_parcel_details_by_point(lon, lat)  (or polygon point-query)
-    - Parcel  → <jur>_parcel_details(parcelId)
-  Get back: primary ParcelID + WGS84 centroid + assessor record.
+  Check: does the jurisdiction have a surveyor config
+    (surveyor/jurisdictions/<slug>.md)?
+
+    YES → start the surveyor MCP server for <slug>. Call the appropriate tool
+          based on input type:
+            - Address → <jur>_assessor_search(query=address, searchType=address)
+            - Lat/lon  → <jur>_parcel_details_by_point(lon, lat)
+            - Parcel  → <jur>_parcel_details(parcelId)
+          Get back: primary ParcelID + WGS84 centroid + assessor record.
+
+    NO  → FAIL FAST. The skill does not silently fall back to a generic
+          source (Census geocoder, FCC Block API, OpenAddresses, etc.).
+          Write location-resolution.md with:
+            status: failed:no-jurisdiction-tooling
+            message: "Surveyor has no config for <jurisdiction>. Cannot
+                      robustly resolve parcel + lat/lon from this skill."
+            available_inputs: {address?, lat-lon?, parcel-id?}
+            recommended_caller_action: "diligence-report Phase 0 should
+              either (a) stop and request user confirmation of an
+              alternative resolution, or (b) accept a coarse-grade
+              fallback (Census ArcGIS Geocoder, etc.) at the caller's
+              own risk."
+          Return non-zero exit status. The caller (diligence-report)
+          decides whether to stop or proceed with a fallback.
+
+          See "Fail-fast contract" below for the full failure modes.
   ↓
 STEP 3 — Customer-supplied input reconciliation
   If the user supplied any of address+lat/lon+parcel, reconcile each pairwise against
@@ -232,17 +262,35 @@ STEP 3 — Customer-supplied input reconciliation
 STEP 4 — Multi-parcel detection (THE NEW LOAD-BEARING STEP)
   Goal: identify whether the project's scope extends beyond the primary parcel.
 
-  4a. Always perform: adjoining-parcels GIS sweep.
-      Buffer the primary parcel polygon by ~50 ft and query the parcel layer for any
-      polygon intersecting the buffer. For each adjoining parcel, capture:
-        - ParcelID
-        - Owner name
-        - Acreage
-        - Land use code
-      Flag any adjoining parcel that shares:
-        - Owner name with primary (likely assemblage)
-        - Subdivision name with primary (potentially related)
-        - Use code with primary (suggestive)
+  4a. Always perform: adjoining-parcels GIS sweep. Runs UNCONDITIONALLY — even
+      when no concept plan is provided. It is the cheap programmatic check that
+      catches assemblage from GIS signals alone, and pre-populates candidates
+      that Step 4b's concept-plan analysis can then reconcile against.
+
+      Mechanics:
+        - Buffer the primary parcel polygon by ~50 ft.
+        - Query the parcel layer for all polygons whose geometry intersects
+          the buffer. Use the jurisdiction's spatial-query endpoint (e.g.
+          ArcGIS `query?geometry=...&geometryType=esriGeometryPolygon&
+          spatialRel=esriSpatialRelIntersects`).
+        - For each adjoining parcel, capture: ParcelID, Owner, Acreage,
+          LandUseCode, Subdivision (if present in CAMA).
+
+      Heuristic flags:
+        - Shared owner name with primary (LLM-normalized — handles "IRT
+          Property Co" vs "IRT PROPERTY COMPANY" vs known-merger aliases
+          like "Equity One" → "Regency Centers" post-2017). LIKELY
+          assemblage; confidence: high.
+        - Shared subdivision name with primary. POSSIBLY assemblage;
+          confidence: medium. Surface to user.
+        - Shared use code with primary (e.g. both LUCode 343 — shopping
+          center). SUGGESTIVE only; confidence: low. Note but do not
+          escalate.
+
+      Every adjoining parcel — flagged or not — is recorded in
+      <output-dir>/concept-plan-extracted/adjoining-parcels.json for audit
+      trail. The skill never silently discards a candidate; it just classifies
+      confidence and surfaces a recommendation.
 
   4b. If a concept-plan / site-plan image is provided, perform multi-source spatial
       reconciliation (modeled on references/spatial-grounding.md). Concept plans
@@ -280,10 +328,11 @@ STEP 4 — Multi-parcel detection (THE NEW LOAD-BEARING STEP)
                - Any callouts about lot lines being abandoned / dissolved /
                  vacated (a concept plan that says "ALL INTERIOR LOT LINES TO BE
                  ABANDONED" is a smoking gun for assemblage)
-             Use Gemini 3.1 Pro and Opus 4.7 in parallel, same dual-extractor
-             pattern as Phase 1; flag disagreements rather than silently picking.
-             Save the two extractions + the reconciled view to
-             <output-dir>/concept-plan-extracted/.
+             SINGLE-extractor pass: native Opus 4.7 vision against the rendered
+             pages + crops. No dual-model reconciliation — the scoped target set
+             is narrow enough that a single high-quality vision pass is
+             sufficient (and faster + cheaper). Save the extraction to
+             <output-dir>/concept-plan-extracted/concept-plan-data.md.
 
         iii. Capture a north-up Google Maps satellite screenshot via agent-browser,
              centered on the primary centroid, at a zoom where the parcel and
@@ -353,7 +402,26 @@ Reconciliation rules:
 | Adjoining parcel shares only subdivision name | Possibly assemblage. Add to candidate set with `confidence: medium`. Surface to user. |
 | Google Maps shows buildings on adjoining lots that look part of the same property (same brand, no fence, no driveway separation) | Possibly assemblage. Add to candidate set with `confidence: medium`. Surface to user. |
 
-**Block condition:** if the concept plan's drawn extent is materially larger than the resolved parcel set's combined acreage (>15% delta), **STOP** and surface to user. This is the analog of spatial-grounding's hard-cardinal-flip block.
+**Block condition (the 15% threshold, defined precisely):** if the concept-plan-declared total area (the title-block "as drawn" acreage extracted from the concept plan vision pass) is more than **15% larger** than the **resolved parcel set's combined GIS-polygon acreage**, treat as assemblage suspected and **STOP** for human confirmation.
+
+Formula:
+```
+delta = (concept_plan_declared_area - resolved_parcel_set_total_area)
+        / resolved_parcel_set_total_area
+
+if delta > 0.15 → BLOCK, surface to user
+```
+
+Worked example (Chastain Square):
+- Concept-plan declared: 9.60 ac
+- Primary-parcel-only polygon: 7.38 ac
+- delta = (9.60 - 7.38) / 7.38 = 30% → exceeds 15% → BLOCK
+- After Step 4a adjoining-parcels sweep adds two more parcels (1.45 + 0.75 ac), total resolved = 9.58 ac
+- delta = (9.60 - 9.58) / 9.58 = 0.2% → resolution confirmed, no block
+
+The threshold is intentionally generous (15%, not e.g. 5%) because concept-plan title-block areas can include ROW dedications, sub-tract footprints, and other figures that aren't legally part of the parcel. We want to block on assemblage, not on routine boundary-vs-drawn discrepancies. Tunable per jurisdiction if a guide warrants.
+
+This is the analog of spatial-grounding's hard-cardinal-flip block — same posture (surface to human, persist the discrepancy, do not auto-resolve).
 
 ### Concept-plan preprocessing (imagemagick + poppler)
 
@@ -416,9 +484,7 @@ concept-plan-extracted/
 ├── crop-SW.png  crop-SE.png
 ├── crop-drawing.png                        ← (if drawing region isolated)
 ├── crop-titleblock.png                     ← (if title-block region isolated)
-├── gemini-3.1-pro-extraction.md            ← raw Gemini extraction (audit trail)
-├── opus-4.7-extraction.md                  ← raw Opus extraction (audit trail)
-└── concept-plan-data.md                    ← reconciled view (what STEP 4b.v reads)
+└── concept-plan-data.md                    ← Opus 4.7 scoped extraction (what STEP 4b.v reads)
 ```
 
 **Scoped extraction targets** for the location-resolution use case (narrower than Phase 1's full feature inventory):
@@ -453,18 +519,39 @@ Multi-parcel signals:
   - References to a unified development plan / replat / lot consolidation
 ```
 
-**Dual-extractor reconciliation.** Same as Phase 1 vision: run both Gemini 3.1 Pro and Opus 4.7 against the same image set, save both raw extractions, reconcile in `concept-plan-data.md`. Disagreements on a parcel-ID label get a `// DISAGREEMENT` flag and human verification rather than silent pick.
+**Single-extractor pass — Opus 4.7 native vision.** Unlike diligence-report's Phase 1 (which runs Gemini 3.1 Pro + Opus 4.7 in parallel and reconciles), this skill uses Opus 4.7 vision alone. Rationale: the scoped target set is narrow (title-block parcel IDs, drawn boundary, "interior lot lines abandoned" callouts, declared total area) — the kind of signals Opus 4.7 reads reliably without confabulation. The dual-extractor pattern in Phase 1 exists specifically to catch Gemini-class confabulation on dense recorded-instrument / plat *text*; our targets are higher-level structural features, where single-pass Opus is sufficient. Faster + cheaper at the Phase 0 slot where latency matters.
 
 **Relationship to diligence-report's Phase 1 vision.**
 
-This skill performs a scoped vision pass focused on multi-parcel detection. Diligence-report's Phase 1 then runs the full vision extraction (every measurement, every easement, every callout, etc.) against the same PDF after location-resolution has finished. Two vision passes happen on the same concept plan — *intentional duplication* because:
+This skill performs a scoped single-extractor vision pass focused on multi-parcel detection. Diligence-report's Phase 1 then runs the full dual-extractor vision against the same PDF after location-resolution has finished. Two vision passes happen on the same concept plan — *intentional duplication* because:
 
 - Location-resolution must run BEFORE Phase 1 to produce the correct parcel set that Phase 1 (and Phase 2/3) keys off
-- The two passes have genuinely different scopes
+- The two passes have genuinely different scopes (and different extractor configurations)
 - Both produce structured outputs for traceability and cross-check
 - The scoped pass is cheaper than the full pass and runs in the more time-sensitive Phase 0 slot
 
 If the duplication becomes costly, a future refactor can factor the preprocessing into a shared reference (`diligence-report/references/concept-plan-preprocessing.md` ← both skills depend on this) and let the two extractions co-locate their pixel work. Defer to v2.
+
+### Fail-fast contract
+
+The skill produces high-confidence resolution or it produces nothing. There is no "good enough" middle ground that silently degrades the downstream pipeline. Failure modes and required behavior:
+
+| Failure | Behavior | `location-resolution.md` status |
+|---|---|---|
+| No surveyor config for the jurisdiction | Fail fast. No generic-geocoder fallback inside this skill. | `failed:no-jurisdiction-tooling` |
+| Surveyor config exists but the assessor address-search returned zero results | Surface to user with the attempted query, the resolved jurisdiction, and the tools tried. Do not silently broaden the search. | `failed:address-not-found` |
+| Customer-supplied input conflicts with authoritative resolution (lat/lon > 250 m from authoritative parcel, OR customer parcel ID resolves to a different polygon than the address) | STOP and surface (same posture as the existing subject-location gate) | `stopped:customer-input-mismatch` |
+| Concept plan declares an area > 15% larger than the resolved parcel set | STOP and surface (assemblage suspected, see "Block condition" above) | `stopped:assemblage-suspected` |
+| Concept-plan vision pass returns no extractable title block (rotated, scanned, illegible) | Continue with adjoining-parcels sweep only; note in methodology that concept-plan signal was unavailable | `completed-with-warnings:concept-plan-unreadable` |
+| Adjoining-parcels sweep finds N ≥ 3 high-confidence assemblage candidates by shared-owner | Continue, but surface as a confirmation prompt to user before finalizing | `completed-with-warnings:multiple-assemblage-candidates` |
+
+**Why no fallback for the no-jurisdiction-tooling case:** if the skill silently falls back to a generic geocoder, the caller has no way to tell whether the resolution it got is high-confidence (jurisdiction-specific assessor) or low-confidence (Census ArcGIS). Both look the same in `location-resolution.md`. The whole point of the standardized output is that downstream consumers can trust it — that trust survives only if we refuse to produce low-confidence resolutions in the same channel as high-confidence ones.
+
+The caller is welcome to do its own fallback. Diligence-report's Phase 0, on receiving `failed:no-jurisdiction-tooling`, can:
+- Stop and ask the user for help (the right default)
+- Or accept a coarse-grade Census-ArcGIS-Geocoder fallback if the user explicitly opts in (a future flag)
+
+Either way, the caller's decision is logged in `phase0.json` and visible to auditors. The skill's responsibility ends at "we cannot robustly resolve this; here's what we have."
 
 ### Standardized output — `location-resolution.md`
 
@@ -661,14 +748,15 @@ This stands alone. Lands the audit trail before any behavior changes.
 
 At this point: Phase 0 of diligence-report can invoke the new skill instead of doing the work inline (with `--output-dir $NOETIC_DILIGENCE_DIR/location-resolution/`), but behavior is identical to today (just better-tested and better-logged).
 
-### Phase C — multi-parcel detection (3-5 days)
+### Phase C — multi-parcel detection (3-4 days)
 
-- Add Step 4a (adjoining-parcels sweep) — pure GIS work, no agent-browser
+- Add Step 4a (adjoining-parcels sweep, unconditional) — pure GIS work, no agent-browser. Spatial-relation query against the parcel layer; LLM-based owner-name normalization for shared-owner detection.
 - Add Step 4b concept-plan preprocessing (imagemagick + poppler — borrow Phase 1 vision pattern verbatim; output to `<output-dir>/concept-plan-extracted/`)
-- Add Step 4b scoped vision extraction (dual-extractor Gemini 3.1 Pro + Opus 4.7, narrower target set than Phase 1)
+- Add Step 4b scoped vision extraction (**single-extractor Opus 4.7 vision**, narrower target set than Phase 1's dual-extractor pass)
 - Add Step 4b three-way comparison (concept-plan extraction + Google Maps aerial + cadastral GIS screenshot) — agent-browser captures saved to `<output-dir>/site-aerial.png` and `<output-dir>/site-cadastral.png`
 - Add Step 4b assemblage detection via point-sampling on Google Maps
-- Update `location-resolution.md` schema to support N parcels
+- Implement the 15% block threshold (concept-declared area vs resolved-parcel-set GIS-polygon acreage)
+- Update `location-resolution.md` schema to support N parcels with confidence labels
 - Update diligence-report's `seed-site-data.md` template + downstream consumers (this is the bigger downstream change — see audit §5 on per-acre calcs, restrictive-covenants discipline, etc.)
 - **Dependencies:** the runtime must have `poppler-utils` (`pdftoppm`) and `imagemagick` (`magick`) installed and on PATH. Confirm in skill SKILL.md and document the apt/brew install commands.
 - Smoke test against Chastain Square (Atlanta) — must find all 3 parcels
@@ -704,15 +792,22 @@ These are follow-on items for the brainstorm to enumerate, not blockers for the 
 - ~~Skill name~~ → `parcel-geo-location-resolution`.
 - ~~Output directory~~ → `$NOETIC_DILIGENCE_DIR/location-resolution/` when invoked by diligence-report.
 
+**Resolved in v0.4:**
+
+- ~~Multi-parcel block threshold~~ → 15% delta between concept-plan-declared area and resolved-parcel-set GIS-polygon acreage. Formula and worked example documented.
+- ~~Adjoining-parcels sweep scope~~ → runs UNCONDITIONALLY in Step 4a (even with no concept plan); 50-ft buffer; spatial-intersect query against the parcel layer; LLM-normalized owner-name match.
+- ~~Owner-name normalization~~ → LLM. Land in v1.
+- ~~Jurisdiction tooling missing~~ → fail-fast. No silent fallback to generic geocoders inside this skill. Caller (diligence-report) decides whether to stop or fall back.
+- ~~Concept-plan georeferencing~~ → defer to v2. Visual three-way comparison is the v1 substitute.
+- ~~Auto-invoke vs manual~~ → auto-invoke, hard dependency on diligence-report.
+- ~~Output file name~~ → keep `location-resolution.md`.
+- ~~Single vs dual vision pass for this skill~~ → single-extractor (Opus 4.7 native vision). Phase 1's dual-extractor pattern is for full feature extraction; the scoped target set here is narrow enough for one pass.
+
 **Still open:**
 
-1. **Multi-parcel detection threshold** — 15% acreage delta as the block condition; confirm or tune.
-2. **Phasing order** — does A → B → C → D → E land in the right order, or should observability + regex fix (A+E) land first to stop the bleeding?
-3. **Owner-name normalization** — defer to v2, or land in v1?
-4. **Concept-plan georeferencing** — defer to v2, or worth investigating now?
-5. **Scope of post-hoc validation** — should the skill be able to *amend* an existing run (write a new seed, re-run only affected phases), or only validate? Recommend validate-only in v1; amend in v2.
-6. **Output file name inside `location-resolution/`** — keep `location-resolution.md` (dir-name + file-name redundant), or shorten to `resolution.md` / `output.md` / `subject.md`?
-7. **Vision pass duplication with Phase 1** — keep two independent vision passes on the concept plan (one scoped in this skill, one full in Phase 1), or factor the preprocessing into a shared reference and let both skills co-locate pixel work? Recommend: keep separate for v1; revisit once both are stable.
+1. **Phasing order** — does A → B → C → D → E land in the right order, or should observability + regex fix (A+E) land first to stop the bleeding?
+2. **Scope of post-hoc validation** — should the skill be able to *amend* an existing run (write a new seed, re-run only affected phases), or only validate? Recommend validate-only in v1; amend in v2.
+3. **Vision pass duplication with diligence-report Phase 1** — keep separate (current design) or factor preprocessing into a shared reference? Recommend: keep separate for v1; revisit once both are stable.
 
 ---
 
