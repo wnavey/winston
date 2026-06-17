@@ -473,4 +473,78 @@ The original audit (§3 "What we didn't check for", §5.R1 "silent-degradation p
 
 ---
 
-**End of audit. No fixes proposed; brainstorm phase to follow.**
+## 11. Addendum 2 — Phase 0 MCP tool-call observability gap (follow-up)
+
+This section was added after §10 in response to a question about which specific tools Phase 0 used to resolve the parcel. Investigating that question surfaced a structural observability gap worth recording.
+
+### What the run dir records about Phase 0 tool usage
+
+`run-manifest/phase0.json:7-22` records tools at the **MCP server level**, not at the function/tool level:
+
+```json
+"tools": [
+  { "name": "bureau-feasibility-guides", "status": "completed", "detail": "..." },
+  { "name": "fulton-gis",                "status": "completed",
+    "detail": "Fulton County PropertyMapViewer Tax Parcel layer 11 +
+               Fulton CAMA address-search resolved parcel 17 009500040675
+               and computed WGS84 centroid" },
+  { "name": "atlanta-dpcd-gis",          "status": "completed",
+    "detail": "City of Atlanta DPCD LandUsePlanning + Geopolitical Area
+               MapServers — confirmed C-1-C zoning, NPU-B, Council District 7,
+               no overlays, FEMA Zone X" }
+]
+```
+
+The `name` field is the *MCP server*. The `detail` field is **agent-authored prose** — not a structured tool-call log.
+
+### What this means
+
+The Phase 0 actual MCP tool calls are not persisted to the run directory. They live only in Claude's session transcript:
+
+- We cannot tell from the run alone which MCP functions were invoked (`fulton_assessor_search` vs `fulton_parcel_details` vs both vs neither).
+- We cannot tell the call order, the input arguments, the result payloads, or the number of calls.
+- We cannot tell which tool produced which downstream value in `seed-site-data.md`.
+
+A representative example: `seed-site-data.md:52` carries `FEMA Zone X (Area of Minimal Flood Hazard) … FIRM panel 13121C0232F (Fulton countywide, effective 2013-09-18) … Per NFHL` — clear evidence that a FEMA tool was called in Phase 0 (NFHL is the FEMA National Flood Hazard Layer). But `phase0.json` mis-attributes "FEMA Zone X" to the `atlanta-dpcd-gis` tool block, which does not host NFHL. The actual `fema_flood_lookup` (or `fema_flood_profile`) call exists nowhere in the structured manifest.
+
+### Triangulating what was probably called
+
+Mapping `phase0.json` `detail` strings + data fields that ended up in `seed-site-data.md` against the tool surface defined in `surveyor/jurisdictions/atlanta-ga.md:30-52`:
+
+| MCP tool | Evidence for "called in Phase 0" |
+|---|---|
+| `fulton_assessor_search` (Fulton CAMA address-search) | `phase0.json:14-17` "address-search returned one parcel"; `seed-site-data.md:43` |
+| `fulton_parcel_details` (ParcelID → polygon + centroid) | `phase0.json:14-17` "computed WGS84 centroid from outFields=*, outSR=4326 ring geometry"; `seed-site-data.md:43` |
+| `atlanta_property_profile` (point → ZONECLASS, NPU, Council, SAP, overlays) | `phase0.json:18-21`; `seed-site-data.md:49-50, 59` |
+| `fema_flood_lookup` or `fema_flood_profile` (probably) | `seed-site-data.md:52` "Per NFHL" — but mis-attributed to `atlanta-dpcd-gis` in the manifest |
+| `fulton_property_profile` (Land Lot 95, TAD/CID/subdivision) | `seed-site-data.md:29` "Land Lot 95, 17th District" — could be Phase 0 or Phase 2 |
+
+Phase 2's `research-findings.jsonl` starts at `22:23:22.097Z` with a first tool call at `22:23:25` that *already knows* the ParcelID (`fulton_parcel_details({parcelId: "17 009500040675"})`) — confirming that Phase 0 (which ran `22:05:50–22:09:35`) had already resolved it. But the Phase 0 calls themselves are not in `research-findings.jsonl` because that JSONL is written only by the surveyor's diligence-mode CLI, not by Claude's Phase 0 invocation of the surveyor as an MCP server.
+
+### Why this observability gap matters
+
+The same class of failure that produced `customer_supplied_pin: null` (§1) lives here in a more general form: **Phase 0 produces narrative summaries rather than structured tool-call logs.** Consequences:
+
+1. **Post-hoc audit cannot reproduce Phase 0 deterministically.** An auditor cannot confirm "tool X with args Y was called and returned Z." The audit must rely on `seed-site-data.md` prose and `phase0.json.tools[].detail` strings, both of which are agent-authored summaries that can drift from the actual call.
+2. **Cost / latency analysis is impossible.** No durations, no token counts, no per-call cost breakdown for Phase 0.
+3. **Caching and resume cannot key off Phase 0 calls.** Without structured input-args + result-data, a resume cannot detect "this call already happened, skip it."
+4. **The atlanta-dpcd-gis mis-attribution of FEMA Zone X demonstrates the failure mode.** The narrative can be wrong about which server produced which value. If FEMA Zone A had been silently elided into the atlanta-dpcd-gis bucket, a flood-zone misclassification would have no audit trail.
+5. **Multi-parcel detection (the original audit subject) becomes harder to enforce.** If a future fix wants to check "did Phase 0 query for adjoining parcels?", there's no way to verify because the call log doesn't exist.
+
+The contrast: Phase 2's surveyor diligence-mode writes a clean structured JSONL (`research-findings.jsonl`) with one row per tool call, `sequence_number`, `tool_name`, `input_args`, `result_data`, `duration_ms`, `created_at`. Phase 0 uses the same MCP servers but does not produce the equivalent log.
+
+### Risk classification
+
+Adding to §5 cross-cutting risks as **R8 — Phase 0 tool-call observability gap.** Distinct from the R1-R7 silent-degradation paths in that this is observability, not behavior: the pipeline produces correct seed data in many cases. But when it doesn't (as here, with `customer_supplied_pin: null` and possibly FEMA mis-attribution), there is no machine-readable trail.
+
+### Additional file:line references for this addendum
+
+- `diligence/atlanta-grocery-run-2/run-manifest/phase0.json:7-22` — tools[] block (MCP-server-level)
+- `diligence/atlanta-grocery-run-2/seed-site-data.md:43, 52, 59` — data fields whose source must be inferred
+- `surveyor/workspaces/atlanta-grocery-run-2/intermediate/research-findings.jsonl` (rows 1-2) — Phase 2 entries that already know the ParcelID (proving Phase 0 resolved it but didn't log how)
+- `claude-plugins/plugins/noetic-tools/skills/diligence-report/references/run-manifest.md:107-138` — Phase 0 manifest schema (no `mcp_calls[]` array)
+- `surveyor/jurisdictions/atlanta-ga.md:30-52` — the tool surface that *could* have been called
+
+---
+
+**End of audit. No fixes proposed; brainstorm + design phase to follow.**
