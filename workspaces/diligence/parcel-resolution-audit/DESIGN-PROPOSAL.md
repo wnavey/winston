@@ -6,7 +6,12 @@
 
 ### Update history
 
-- **v0.2 (current):**
+- **v0.3 (current):**
+  - Added a dedicated "Concept-plan preprocessing" section to Part 2. The new skill borrows the imagemagick + poppler pattern verbatim from `diligence-report/references/phase1-vision-extraction.md` — `pdftoppm` for dual-DPI rendering (300 + 600), `magick` for quadrant crops, de-skew/rotate for non-standard orientations. Scoped vision extraction (dual-extractor: Gemini 3.1 Pro + Opus 4.7) targets multi-parcel signals specifically — title-block parcel IDs, declared plat references, "abandoned interior lot lines" callouts, multi-tract labels — narrower than Phase 1's full feature inventory. Concept plans are vectorized CAD-produced PDFs often larger than 8.5×11 with fine-print labels; preprocessing is load-bearing.
+  - Output layout adds `<output-dir>/concept-plan-extracted/` with dual extractions + reconciled view, for traceability and audit.
+  - Phase C estimate increased from 2-3 days to 3-5 days to account for the vision-pass work.
+  - Phase C dependencies clarified: `poppler-utils` and `imagemagick` must be installed and on PATH; documented in SKILL.md.
+- **v0.2:**
   - Renamed the proposed skill from `location-resolution` → **`parcel-geo-location-resolution`** (more specific about what's being resolved).
   - Flipped Part 1 from caller-passes-`--log-mcp-calls`-flag to **producer-owned logging with smart path resolution** — observability is now a property of the tool, not a property of the prompt. Logging is always on unless explicitly disabled.
   - Applied the same producer-owned-logging pattern to the new skill: it always writes a JSONL log to its own output directory as part of its public output contract.
@@ -163,7 +168,16 @@ Everything the skill produces lands under a single output directory chosen by th
 ├── location-resolution-mcp-calls.jsonl ← producer-owned MCP-call log (always written)
 ├── site-aerial.png                    ← Google Maps satellite screenshot (when multi-parcel detection runs)
 ├── site-cadastral.png                 ← jurisdiction GIS cadastral screenshot
-└── concept-plan-extracted/            ← any visual extractions from a supplied concept-plan image
+└── concept-plan-extracted/            ← preprocessed renders + scoped vision extraction
+    ├── page-{N}.png                   ← 300 DPI full-page renders (pdftoppm)
+    ├── page-hires-{N}.png             ← 600 DPI full-page renders
+    ├── page-hires-{N}-rotated.png     ← (if rotation needed)
+    ├── crop-{NW,NE,SW,SE}.png         ← quadrant crops of the hi-res render (magick)
+    ├── crop-drawing.png               ← (if drawing region isolated)
+    ├── crop-titleblock.png            ← (if title-block region isolated)
+    ├── gemini-3.1-pro-extraction.md   ← raw Gemini scoped extraction
+    ├── opus-4.7-extraction.md         ← raw Opus scoped extraction
+    └── concept-plan-data.md           ← reconciled view (STEP 4b.v reads this)
 ```
 
 When invoked by `diligence-report` Phase 0, `<output-dir>` is `$NOETIC_DILIGENCE_DIR/location-resolution/`. When invoked independently from the CLI, the user supplies a path.
@@ -231,24 +245,73 @@ STEP 4 — Multi-parcel detection (THE NEW LOAD-BEARING STEP)
         - Use code with primary (suggestive)
 
   4b. If a concept-plan / site-plan image is provided, perform multi-source spatial
-      reconciliation (modeled on references/spatial-grounding.md):
-        i.   Capture a north-up Google Maps satellite screenshot via agent-browser,
+      reconciliation (modeled on references/spatial-grounding.md). Concept plans
+      are vectorized CAD-produced PDFs, often larger than 8.5x11 inches, often
+      rotated, often with the title-block scale + drawn boundary at small
+      typographic sizes. Naive vision-pass against the raw PDF page renders at
+      150 DPI loses too much. We need to preprocess.
+
+        i.   PREPROCESS the concept plan PDF (imagemagick + poppler — same pattern
+             as diligence-report Phase 1 vision). See the "Concept-plan
+             preprocessing" section below for the full command set.
+               - Render each page at 300 DPI (normal pass) AND 600 DPI (hi-res).
+               - If the page is rotated (title block on the side, north arrow not
+                 pointing up), de-skew or rotate before any vision pass.
+               - Crop the high-DPI render into quadrants (NE / NW / SE / SW), the
+                 isolated drawing area, and the isolated tables/title-block area.
+                 This reduces per-call pixel attention budget and raises measurement
+                 precision.
+               - Save everything to <output-dir>/concept-plan-extracted/.
+
+        ii.  SCOPED vision extraction on the preprocessed renders. The goal is
+             narrower than diligence-report Phase 1 — we are looking for evidence
+             of multi-parcel scope, not full site facts. Extract:
+               - Title block: declared parcel ID(s) (singular or plural — many
+                 plans list all parcels in the assemblage), plat reference, total
+                 site area (the "9.60 ac" the engineer drew against), scale
+               - Drawn property boundary: where the engineer's line work says the
+                 site begins and ends
+               - Building footprints + their locations relative to the drawn
+                 boundary
+               - Any labels suggesting multiple lots: "Lot A / Lot B", "Parcel 1
+                 / Parcel 2", "Tract A", subdivision-and-lot references, recorded
+                 plat callouts, or notes like "see plat of <subdivision> for lot
+                 lines"
+               - Any callouts about lot lines being abandoned / dissolved /
+                 vacated (a concept plan that says "ALL INTERIOR LOT LINES TO BE
+                 ABANDONED" is a smoking gun for assemblage)
+             Use Gemini 3.1 Pro and Opus 4.7 in parallel, same dual-extractor
+             pattern as Phase 1; flag disagreements rather than silently picking.
+             Save the two extractions + the reconciled view to
+             <output-dir>/concept-plan-extracted/.
+
+        iii. Capture a north-up Google Maps satellite screenshot via agent-browser,
              centered on the primary centroid, at a zoom where the parcel and
              immediately-adjacent properties are visible. Save to
              <output-dir>/site-aerial.png.
-        ii.  Capture a screenshot of the assessor's PropertyMapViewer (or equivalent
-             jurisdiction GIS viewer) at the same coordinate, with the parcel layer
-             visible. This shows the cadastral lot lines. Save to
+
+        iv.  Capture a screenshot of the assessor's PropertyMapViewer (or
+             equivalent jurisdiction GIS viewer) at the same coordinate, with the
+             parcel layer visible. This shows the cadastral lot lines. Save to
              <output-dir>/site-cadastral.png.
-        iii. Read the concept-plan image alongside the two screenshots. Compare:
-               - Does the concept plan's drawn extent fit inside the primary parcel
-                 polygon? (Geometric containment.)
+
+        v.   THREE-WAY comparison: the preprocessed concept-plan extraction
+             + the cadastral screenshot + the aerial. Check:
+               - Does the concept plan's drawn extent fit inside the primary
+                 parcel polygon? (Geometric containment.)
                - Do the concept plan's labeled site features (parking, buildings,
                  driveways) all land inside the primary parcel, or do some extend
-                 over adjoining lots?
+                 over adjoining lots per the cadastral?
+               - Does the concept plan declare a parcel ID (or multiple) that
+                 differ from the one resolved in STEP 2?
+               - Does the title-block total-area match the assessor's LandAcres
+                 within the 15% block threshold?
                - Are there any labeled buildings on the concept plan that sit on
                  *different* lots per the cadastral screenshot?
-        iv.  If any check suggests assemblage:
+               - Does the concept plan callout "interior lot lines to be
+                 abandoned" or equivalent assemblage language?
+
+        vi.  If any check suggests assemblage:
                - Identify the lat/lon of each suspected additional parcel by
                  sampling points inside their footprints on Google Maps. Use
                  agent-browser to click-and-read coordinates, or compute from
@@ -291,6 +354,117 @@ Reconciliation rules:
 | Google Maps shows buildings on adjoining lots that look part of the same property (same brand, no fence, no driveway separation) | Possibly assemblage. Add to candidate set with `confidence: medium`. Surface to user. |
 
 **Block condition:** if the concept plan's drawn extent is materially larger than the resolved parcel set's combined acreage (>15% delta), **STOP** and surface to user. This is the analog of spatial-grounding's hard-cardinal-flip block.
+
+### Concept-plan preprocessing (imagemagick + poppler)
+
+Borrowed directly from `diligence-report/references/phase1-vision-extraction.md` and `prompts/phase1-vision.md`. The pattern is proven; the new skill should use it verbatim with light adaptation to its narrower scope.
+
+**Why preprocessing matters.** Concept plans are vectorized PDFs produced in CAD (Civil 3D, AutoCAD, MicroStation). They are typically:
+- Larger than 8.5×11 (24×36, 30×42, or full ANSI E at 34×44 inches are common)
+- Sometimes rotated (title block on the side or bottom)
+- Dense with fine-print text (dim strings, parcel labels, notes, scale bars) that loses legibility under naive 150-DPI rendering
+- Drawn with thin line work that aliases badly at low DPI
+
+A vision-pass that just dumps the raw PDF to the model misses the title-block parcel IDs, the abandoned-interior-lot-lines callout, the small "Lot A / Lot B" labels — exactly the signals we need for multi-parcel detection.
+
+**Tooling.** `poppler-utils` (provides `pdftoppm`) for rasterizing, `imagemagick` (provides `magick`) for cropping and de-skewing.
+
+**Commands (per supplied concept-plan PDF):**
+
+```bash
+OUT="${OUTPUT_DIR}/concept-plan-extracted"
+mkdir -p "$OUT"
+
+# Normal-pass render: 300 DPI per page → used for overview + title-block reading
+pdftoppm -r 300 -png "${CONCEPT_PLAN_PDF}" "$OUT/page"
+
+# Hi-res render: 600 DPI per page → used for fine-print labels, dim strings, scale bar
+pdftoppm -r 600 -png "${CONCEPT_PLAN_PDF}" "$OUT/page-hires"
+
+# De-skew / rotate if needed (the agent decides after viewing the normal render)
+magick "$OUT/page-hires-1.png" -deskew 40% "$OUT/page-hires-1-deskewed.png"
+# OR for a known fixed rotation (title block was on the left side):
+magick "$OUT/page-hires-1.png" -rotate 90 "$OUT/page-hires-1-rotated.png"
+
+# Quadrant crops of the hi-res render → raises per-call vision precision
+magick "$OUT/page-hires-1.png" -crop 50%x50%+0+0     "$OUT/crop-NW.png"
+magick "$OUT/page-hires-1.png" -crop 50%x50%+50%+0   "$OUT/crop-NE.png"
+magick "$OUT/page-hires-1.png" -crop 50%x50%+0+50%   "$OUT/crop-SW.png"
+magick "$OUT/page-hires-1.png" -crop 50%x50%+50%+50% "$OUT/crop-SE.png"
+
+# Optional: isolate the drawing area + the tables/title-block area as separate crops
+# The agent identifies the regions from the normal render before issuing these.
+magick "$OUT/page-hires-1.png" -crop <WxH+x+y> "$OUT/crop-drawing.png"
+magick "$OUT/page-hires-1.png" -crop <WxH+x+y> "$OUT/crop-titleblock.png"
+```
+
+**Why dual-DPI:** 300 DPI is enough for the agent to read overall layout, identify the title block, and locate features. 600 DPI is needed when the agent wants to read a 4-pt dimension string or a tightly-packed lot-line callout. The two are complementary; both are kept.
+
+**Why quadrant crops:** vision models attend to pixels in proportion to the call's image budget. A 30×42 page rendered at 600 DPI is 18,000×25,200 pixels (~450 MP) — way over the per-call budget. Quadranting yields four ~112 MP images, each of which fits within typical vision-call budgets at far higher effective resolution than the original full-page render.
+
+**De-skew / rotate.** If the agent sees from the normal render that the title block is on a side rather than the top, OR the north arrow doesn't point up, OR the drawing is skewed (uncommon but happens on scanned PDFs), apply the appropriate `magick -rotate` or `magick -deskew` before the hi-res / quadrant pass. The orientation that ends up feeding the vision model should always be north-up with the title block at the bottom (or wherever the engineer's standard places it).
+
+**Output directory layout** under `<output-dir>/concept-plan-extracted/`:
+
+```
+concept-plan-extracted/
+├── page-1.png                              ← 300 DPI full-page render
+├── page-2.png                              ← (if multi-page)
+├── page-hires-1.png                        ← 600 DPI full-page render
+├── page-hires-1-rotated.png                ← (if rotation needed)
+├── crop-NW.png  crop-NE.png
+├── crop-SW.png  crop-SE.png
+├── crop-drawing.png                        ← (if drawing region isolated)
+├── crop-titleblock.png                     ← (if title-block region isolated)
+├── gemini-3.1-pro-extraction.md            ← raw Gemini extraction (audit trail)
+├── opus-4.7-extraction.md                  ← raw Opus extraction (audit trail)
+└── concept-plan-data.md                    ← reconciled view (what STEP 4b.v reads)
+```
+
+**Scoped extraction targets** for the location-resolution use case (narrower than Phase 1's full feature inventory):
+
+```
+Title block:
+  - Project name
+  - Declared parcel ID(s) (capture all of them — if the title block lists
+    multiple, that is itself a signal)
+  - Recorded-plat reference (subdivision name + volume/page or book/page)
+  - Total site area (the engineer's "as drawn" acreage / SF)
+  - Scale declaration ("1\" = 20'", etc.)
+  - Owner of record
+  - Engineer + design firm + date
+
+Drawn boundary:
+  - Where the line work delineates the site
+  - Whether the boundary is one closed polygon or multiple polygons
+  - Any "abandoned lot line" / "vacated easement" callouts inside the boundary
+
+Building footprints:
+  - Each building's approximate corners (for later cadastral overlay)
+  - Whether buildings are labeled by lot ("Building A on Lot 1" etc.)
+
+Multi-parcel signals:
+  - Subdivision callouts ("Lot 1 Block A of <subdivision>; Lot 2 Block A ...")
+  - "Parcel 1 / Parcel 2 / Parcel 3" labels anywhere on the plan
+  - "Tract A" / "Tract B" labels
+  - "Interior lot lines to be abandoned"
+  - "Plat amendment to combine parcels"
+  - Multiple plat references in the title block
+  - References to a unified development plan / replat / lot consolidation
+```
+
+**Dual-extractor reconciliation.** Same as Phase 1 vision: run both Gemini 3.1 Pro and Opus 4.7 against the same image set, save both raw extractions, reconcile in `concept-plan-data.md`. Disagreements on a parcel-ID label get a `// DISAGREEMENT` flag and human verification rather than silent pick.
+
+**Relationship to diligence-report's Phase 1 vision.**
+
+This skill performs a scoped vision pass focused on multi-parcel detection. Diligence-report's Phase 1 then runs the full vision extraction (every measurement, every easement, every callout, etc.) against the same PDF after location-resolution has finished. Two vision passes happen on the same concept plan — *intentional duplication* because:
+
+- Location-resolution must run BEFORE Phase 1 to produce the correct parcel set that Phase 1 (and Phase 2/3) keys off
+- The two passes have genuinely different scopes
+- Both produce structured outputs for traceability and cross-check
+- The scoped pass is cheaper than the full pass and runs in the more time-sensitive Phase 0 slot
+
+If the duplication becomes costly, a future refactor can factor the preprocessing into a shared reference (`diligence-report/references/concept-plan-preprocessing.md` ← both skills depend on this) and let the two extractions co-locate their pixel work. Defer to v2.
 
 ### Standardized output — `location-resolution.md`
 
@@ -487,12 +661,16 @@ This stands alone. Lands the audit trail before any behavior changes.
 
 At this point: Phase 0 of diligence-report can invoke the new skill instead of doing the work inline (with `--output-dir $NOETIC_DILIGENCE_DIR/location-resolution/`), but behavior is identical to today (just better-tested and better-logged).
 
-### Phase C — multi-parcel detection (2-3 days)
+### Phase C — multi-parcel detection (3-5 days)
 
 - Add Step 4a (adjoining-parcels sweep) — pure GIS work, no agent-browser
-- Add Step 4b (concept-plan spatial reconciliation) — agent-browser + Google Maps + jurisdiction GIS viewer screenshots saved to `<output-dir>/site-aerial.png` and `<output-dir>/site-cadastral.png`
+- Add Step 4b concept-plan preprocessing (imagemagick + poppler — borrow Phase 1 vision pattern verbatim; output to `<output-dir>/concept-plan-extracted/`)
+- Add Step 4b scoped vision extraction (dual-extractor Gemini 3.1 Pro + Opus 4.7, narrower target set than Phase 1)
+- Add Step 4b three-way comparison (concept-plan extraction + Google Maps aerial + cadastral GIS screenshot) — agent-browser captures saved to `<output-dir>/site-aerial.png` and `<output-dir>/site-cadastral.png`
+- Add Step 4b assemblage detection via point-sampling on Google Maps
 - Update `location-resolution.md` schema to support N parcels
 - Update diligence-report's `seed-site-data.md` template + downstream consumers (this is the bigger downstream change — see audit §5 on per-acre calcs, restrictive-covenants discipline, etc.)
+- **Dependencies:** the runtime must have `poppler-utils` (`pdftoppm`) and `imagemagick` (`magick`) installed and on PATH. Confirm in skill SKILL.md and document the apt/brew install commands.
 - Smoke test against Chastain Square (Atlanta) — must find all 3 parcels
 
 ### Phase D — Validation harness (1 day)
@@ -534,6 +712,7 @@ These are follow-on items for the brainstorm to enumerate, not blockers for the 
 4. **Concept-plan georeferencing** — defer to v2, or worth investigating now?
 5. **Scope of post-hoc validation** — should the skill be able to *amend* an existing run (write a new seed, re-run only affected phases), or only validate? Recommend validate-only in v1; amend in v2.
 6. **Output file name inside `location-resolution/`** — keep `location-resolution.md` (dir-name + file-name redundant), or shorten to `resolution.md` / `output.md` / `subject.md`?
+7. **Vision pass duplication with Phase 1** — keep two independent vision passes on the concept plan (one scoped in this skill, one full in Phase 1), or factor the preprocessing into a shared reference and let both skills co-locate pixel work? Recommend: keep separate for v1; revisit once both are stable.
 
 ---
 
