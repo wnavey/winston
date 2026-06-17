@@ -1,15 +1,39 @@
-# Design Proposal — `location-resolution` sub-skill + Phase 0 observability
+# Design Proposal — `parcel-geo-location-resolution` skill + Phase 0 observability
 
 **Branch:** `parcel-resolution-audit`
 **Status:** Draft for brainstorm. Open for redirection.
 **Companions:** `AUDIT.md` (the audit this design responds to), `research-notes.md` (file:line trace).
 
+### Update history
+
+- **v0.2 (current):**
+  - Renamed the proposed skill from `location-resolution` → **`parcel-geo-location-resolution`** (more specific about what's being resolved).
+  - Flipped Part 1 from caller-passes-`--log-mcp-calls`-flag to **producer-owned logging with smart path resolution** — observability is now a property of the tool, not a property of the prompt. Logging is always on unless explicitly disabled.
+  - Applied the same producer-owned-logging pattern to the new skill: it always writes a JSONL log to its own output directory as part of its public output contract.
+  - Codified the output-directory convention: when `diligence-report` invokes the skill, it passes `--output-dir $NOETIC_DILIGENCE_DIR/location-resolution/`. Skill outputs (the standardized `.md`, the MCP-call log, and any screenshots) all land in that subdirectory.
+- **v0.1:** initial draft (see git history on this file for the prior version).
+
+### Quick reference — terminology after rename
+
+| Concept | Value |
+|---|---|
+| Skill name (and skill directory under `claude-plugins/.../skills/`) | `parcel-geo-location-resolution` |
+| Output directory when invoked by `diligence-report` | `$NOETIC_DILIGENCE_DIR/location-resolution/` |
+| Standardized output file | `location-resolution.md` (inside the output dir) |
+| Structured MCP-call log | `location-resolution-mcp-calls.jsonl` (inside the output dir) |
+| Screenshots | `site-aerial.png`, `site-cadastral.png` (inside the output dir) |
+| CLI wrapper (for independent invocation) | `noetic-parcel-geo-resolve` |
+
+The output namespace (`location-resolution/`) is deliberately shorter than the skill name; the dir + filename together (`location-resolution/location-resolution.md`) is verbose enough that we can consider shortening the file name to `resolution.md` once we're sure of the schema. Open question for the brainstorm.
+
+---
+
 This document proposes two coupled changes:
 
-1. A new **`location-resolution`** sub-skill that hardens address → (parcel ID + lat/lon) resolution, handles multi-parcel sites explicitly, and produces a standardized `location-resolution.md` artifact.
+1. A new **`parcel-geo-location-resolution`** skill that hardens address → (parcel ID + lat/lon) resolution, handles multi-parcel sites explicitly, and produces a standardized `location-resolution.md` artifact.
 2. **Phase 0 MCP tool-call observability fixes** so the audit gap in §11 of the audit (narrative summaries instead of structured logs) becomes a structured log we can validate against.
 
-Both are aimed at one outcome: **independent validation without re-running the full pipeline**. The sub-skill should be runnable on its own against an address (or lat/lon, or parcel ID), produce its standardized output, and feed Phase 0 of `diligence-report` as a deterministic input.
+Both are aimed at one outcome: **independent validation without re-running the full pipeline**. The skill should be runnable on its own against an address (or lat/lon, or parcel ID), produce its standardized output, and feed Phase 0 of `diligence-report` as a deterministic input.
 
 ---
 
@@ -33,17 +57,44 @@ Mirror the Phase 2 JSONL schema for Phase 0. Every MCP tool invocation in Phase 
 
 Schema is **byte-compatible** with the surveyor's `research-findings.jsonl`. One JSONL reader serves both. Existing `phase0.json` `tools[]` block stays for the rollup view; the new JSONL is the audit trail.
 
-### How calls get logged
+### How calls get logged — producer-owned with smart path resolution
 
-Three options, ranked best → worst:
+**Principle: observability is a property of the producer, not the caller.**
 
-| Option | Mechanism | Pros | Cons |
-|---|---|---|---|
-| **A. Surveyor MCP server writes the JSONL** | Add a `--log-mcp-calls <path>` flag to `surveyor src/server.ts`; the surveyor wraps each tool handler with append-to-JSONL middleware. | Single source of truth; identical schema to Phase 2; works for both MCP-server-mode and diligence-mode | Surveyor doesn't know what "Phase 0" / "step" is; caller must inject context via env or a header. Header-passthrough adds wiring. |
-| **B. Skill prompt logs after each call** | Phase 0 prompt instructs the agent to append a JSONL row after every MCP call. | No surveyor changes | Agent compliance is unreliable; agent can forget; defeats the purpose of structured logging |
-| **C. Hook in `~/.claude/settings.json`** | A `PostToolUse` hook captures every MCP call and writes to a JSONL under the run dir. | Truly invisible to the agent; can't be skipped | Hook would need to identify which run dir to write to; cross-session state; only works in Claude Code, not for users running the skill via SDK |
+If logging requires the caller to pass a flag, every new caller is a new chance to forget — and the audit gap re-emerges silently. The whole reason we have this audit is that Phase 0's caller (Claude in the skill) did the right thing for MCP calls without leaving a structured trail. We shouldn't fix that by adding a new way to forget.
 
-**Recommended: Option A** with a thin context-injection mechanism (env var `NOETIC_PHASE_LOG` pointing at the JSONL path; surveyor reads it once on startup and appends every tool call there).
+So: **the surveyor MCP server logs every tool call by default. Always. Unless explicitly disabled.**
+
+**Implementation:** the surveyor MCP server (`surveyor/src/server.ts`) wraps each tool handler with append-to-JSONL middleware. The output path is resolved at startup in this precedence order:
+
+```
+1. --log-mcp-calls <path>           ← explicit override flag (caller knows best)
+2. --no-log-mcp-calls               ← explicit disable (rare; unit tests, ad-hoc queries)
+3. $NOETIC_PHASE_LOG env var        ← caller-injected without flag
+4. cwd looks like a diligence run   ← auto-detect:
+                                      <cwd>/.surveyor-mcp-calls.jsonl
+                                      ("looks like a run dir" = contains
+                                       seed-site-data.md OR run-manifest/)
+5. fallback                         ← ~/.local/share/noetic/surveyor-mcp-calls.jsonl
+                                      (append-only, rotated at ~100 MB, never lost)
+```
+
+Logging is on unless rule 2 fires. Diligence-report's Phase 0 doesn't need to pass anything — it invokes the surveyor MCP server from the run dir and rule 4 kicks in automatically. A future skill author who's never read this audit gets observability for free.
+
+**Why not the alternatives:**
+
+| Rejected option | Why |
+|---|---|
+| Skill prompt logs after each call | Agent compliance is unreliable; defeats the purpose |
+| Hook in `~/.claude/settings.json` (`PostToolUse`) | Cross-session state; only works in Claude Code, not for SDK users; hook would still need to identify the run dir |
+| Caller passes `--log-mcp-calls` (the original v0.1 proposal) | Caller-cooperation is the same failure mode the audit identified. Switching to producer-owned-logging makes the audit trail a property of the tool, not a property of the prompt. |
+
+**Trade-offs honestly:**
+
+- Slight filesystem-write cost on every surveyor MCP invocation. Negligible (one append per call).
+- The default path needs to handle weird cwd cases (someone runs the MCP server from `/`, `/tmp`, etc.). The fallback to `~/.local/share/noetic/` covers it. We never silently drop a log.
+- Log rotation. The fallback path grows over time; cap at ~100 MB so it doesn't fill a disk. Standard.
+- Privacy / test fixtures. If someone runs the surveyor MCP for an ad-hoc query they don't want logged, they pass `--no-log-mcp-calls`. Explicit opt-out is fine.
 
 ### Manifest schema extension
 
@@ -88,9 +139,9 @@ Small. Worth doing before the next diligence run regardless of what else happens
 
 ---
 
-## Part 2 — The `location-resolution` sub-skill
+## Part 2 — The `parcel-geo-location-resolution` skill
 
-### Why a separate skill (or sub-skill)
+### Why a separate skill
 
 Three criteria for separating:
 
@@ -98,9 +149,32 @@ Three criteria for separating:
 2. **Reusable.** Other skills (`diligence-report`, `feasibility-intake-chat`, future tools) need the same address-to-parcel resolution. A shared skill avoids duplication.
 3. **Deterministic input contract.** The output is a single file (`location-resolution.md`) with a fixed schema. Downstream consumers (Phase 0 of `diligence-report`) read that file and have a deterministic seed.
 
-These match the criteria for a **standalone skill**, not a sub-skill. A sub-skill (Skill files nested inside another skill) is fine when only the parent needs it; here we want broader reuse. Recommend: standalone skill at `claude-plugins/plugins/noetic-tools/skills/location-resolution/`.
+These match the criteria for a **standalone skill**, not a sub-skill. A sub-skill (Skill files nested inside another skill) is fine when only the parent needs it; here we want broader reuse. Skill lives at `claude-plugins/plugins/noetic-tools/skills/parcel-geo-location-resolution/`.
 
-Diligence-report's Phase 0 then invokes `location-resolution` via the standard `Skill` tool and reads back `location-resolution.md`.
+Diligence-report's Phase 0 invokes `parcel-geo-location-resolution` via the standard `Skill` tool, passing `--output-dir $NOETIC_DILIGENCE_DIR/location-resolution/`, and reads back `location-resolution.md` from that directory.
+
+### Output-directory convention
+
+Everything the skill produces lands under a single output directory chosen by the caller:
+
+```
+<output-dir>/
+├── location-resolution.md             ← the standardized artifact (what callers read)
+├── location-resolution-mcp-calls.jsonl ← producer-owned MCP-call log (always written)
+├── site-aerial.png                    ← Google Maps satellite screenshot (when multi-parcel detection runs)
+├── site-cadastral.png                 ← jurisdiction GIS cadastral screenshot
+└── concept-plan-extracted/            ← any visual extractions from a supplied concept-plan image
+```
+
+When invoked by `diligence-report` Phase 0, `<output-dir>` is `$NOETIC_DILIGENCE_DIR/location-resolution/`. When invoked independently from the CLI, the user supplies a path.
+
+### Logging — producer-owned, mirrors Part 1
+
+The skill always writes `location-resolution-mcp-calls.jsonl` to its output directory as part of its public output contract. No caller flag is needed; the skill knows where to put the log because it knows its own output directory.
+
+Schema matches Part 1's surveyor-MCP-call JSONL (same `{type, kind, sequence_number, source_id, tool_name, input_args, result_data, success, duration_ms, created_at}` row shape). One JSONL reader serves both. Adds a `step` field so post-hoc analysis can distinguish "primary-resolution" from "adjoining-sweep" from "multi-parcel-spatial-recon" calls within a single skill run.
+
+Disabling (rare): `--no-log-mcp-calls` opts out. There is no rule-4-style cwd fallback because the skill always has an output directory available; if no output dir is supplied the skill errors out at startup, not silently.
 
 ### Inputs — accept any one of three
 
@@ -161,11 +235,11 @@ STEP 4 — Multi-parcel detection (THE NEW LOAD-BEARING STEP)
         i.   Capture a north-up Google Maps satellite screenshot via agent-browser,
              centered on the primary centroid, at a zoom where the parcel and
              immediately-adjacent properties are visible. Save to
-             location-resolution/site-aerial.png.
+             <output-dir>/site-aerial.png.
         ii.  Capture a screenshot of the assessor's PropertyMapViewer (or equivalent
              jurisdiction GIS viewer) at the same coordinate, with the parcel layer
              visible. This shows the cadastral lot lines. Save to
-             location-resolution/site-cadastral.png.
+             <output-dir>/site-cadastral.png.
         iii. Read the concept-plan image alongside the two screenshots. Compare:
                - Does the concept plan's drawn extent fit inside the primary parcel
                  polygon? (Geometric containment.)
@@ -188,12 +262,12 @@ STEP 4 — Multi-parcel detection (THE NEW LOAD-BEARING STEP)
       hint about site size. If material disagreement (>15% delta), surface a
       warning to the user without blocking.
   ↓
-STEP 5 — Write location-resolution.md
+STEP 5 — Write location-resolution.md to <output-dir>
   Produce the standardized output (schema below).
   ↓
-STEP 6 — Log everything
-  Write phase0-mcp-calls.jsonl (or location-resolution-mcp-calls.jsonl) with every
-  MCP tool call this skill made.
+STEP 6 — Tool-call log is already written
+  location-resolution-mcp-calls.jsonl was appended in real time as the skill ran;
+  no separate write step. Producer-owned, always on (see "Logging" above).
 ```
 
 ### Multi-source spatial reconciliation — borrowing from spatial-grounding
@@ -224,7 +298,8 @@ Reconciliation rules:
 # Location Resolution — <Address>
 
 **Resolved at:** <ISO timestamp>
-**Skill version:** location-resolution v1.0
+**Skill version:** parcel-geo-location-resolution v1.0
+**Output directory:** `<output-dir>/` (companion files: `location-resolution-mcp-calls.jsonl`, `site-aerial.png`, `site-cadastral.png`)
 
 ## Confirmed Subject Location (single source of truth)
 
@@ -272,7 +347,7 @@ Reconciliation rules:
 
 ## Tool-Call Log
 
-Full structured log: `location-resolution-mcp-calls.jsonl` (8 calls, total 3.2 seconds).
+Full structured log: `./location-resolution-mcp-calls.jsonl` (relative to this file's output directory). 8 calls, total 3.2 seconds.
 
 ## Open Questions for the User
 
@@ -293,7 +368,7 @@ Update `pipeline.md` Phase 0:
  1. **Emit start stub** — write `run-manifest/phase0.json` with `status: "in_progress"` ...
  2. Parse parcel(s) and intended use from user input
 -3. Identify jurisdiction:
-+3. **Resolve location** — invoke the `location-resolution` skill with the user's
++3. **Resolve location** — invoke the `parcel-geo-location-resolution` skill with the user's
 +   input (address / lat-lon / parcel ID) and any concept-plan image. Read the
 +   resulting `location-resolution.md` as the canonical parcel set + coordinate.
 +   The skill produces:
@@ -344,33 +419,46 @@ Three bullets now; the surveyor's `parcels.ts` regex sees three multi-token PINs
 
 The whole point of separation. Validation workflows:
 
-- **Run `location-resolution` against a known address with a known parcel set; assert the output matches.** Smoke test for the skill itself.
-- **Run `location-resolution` against an address with a known assemblage (Chastain Square); assert it finds all 3 parcels.** Regression test.
-- **Run `location-resolution` with an intentionally-wrong customer-supplied lat/lon; assert the skill stops at the reconciliation gate.** Safety test.
-- **Run `location-resolution` against an existing `diligence-report` run's input; compare the produced `location-resolution.md` to the run's seed-site-data.md.** Re-validation of an existing run without re-running it. *This is the workflow that would have caught the Chastain Square 3-parcel issue post-hoc.*
+- **Run `parcel-geo-location-resolution` against a known address with a known parcel set; assert the output matches.** Smoke test for the skill itself.
+- **Run `parcel-geo-location-resolution` against an address with a known assemblage (Chastain Square); assert it finds all 3 parcels.** Regression test.
+- **Run `parcel-geo-location-resolution` with an intentionally-wrong customer-supplied lat/lon; assert the skill stops at the reconciliation gate.** Safety test.
+- **Run `parcel-geo-location-resolution` against an existing `diligence-report` run's input; compare the produced `location-resolution.md` to the run's seed-site-data.md.** Re-validation of an existing run without re-running it. *This is the workflow that would have caught the Chastain Square 3-parcel issue post-hoc.*
 
 A simple CLI wrapper:
 
 ```bash
-$ noetic-location-resolve \
+$ noetic-parcel-geo-resolve \
     --address "4279 Roswell Rd NE, Atlanta, GA 30342" \
     --concept-plan inputs/chastain-square-cp15.pdf \
-    --output /tmp/test-resolution/
+    --output-dir /tmp/test-resolution/
+
+# Produces:
+#   /tmp/test-resolution/location-resolution.md
+#   /tmp/test-resolution/location-resolution-mcp-calls.jsonl
+#   /tmp/test-resolution/site-aerial.png
+#   /tmp/test-resolution/site-cadastral.png
 ```
+
+When invoked from `diligence-report` Phase 0, the same skill is called with `--output-dir $NOETIC_DILIGENCE_DIR/location-resolution/`.
 
 ### Open design questions
 
-These are real choices the brainstorm should land:
+**Resolved in v0.2** (no longer open):
 
-1. **Standalone skill vs sub-skill of diligence-report?** Recommendation: standalone, given reuse potential. But sub-skill is easier to scope.
-2. **Where does the skill live?** `claude-plugins/plugins/noetic-tools/skills/location-resolution/`.
-3. **Does the skill produce its own working directory or write into the diligence run's working directory?** Recommendation: caller-controlled output path. Diligence-report passes `$NOETIC_DILIGENCE_DIR` so `location-resolution.md` lands at the run root.
-4. **Multi-parcel detection threshold for the "hard stop" — what's the right delta?** Spatial-grounding uses ±25% for trigger margins; I propose 15% for parcel-set acreage. Tunable.
-5. **How aggressive should the adjoining-parcels sweep be?** 50-ft buffer is generous for contiguous assemblages; non-contiguous assemblages (e.g. two parcels separated by a third-party lot) need a different strategy. Defer to v2.
-6. **Owner-name normalization for the shared-owner heuristic.** Exact-string match is brittle. Levenshtein? LLM check? Defer to v2.
-7. **What if the jurisdiction has no surveyor config?** The skill falls back to `agent-browser` against the county appraisal district + GIS viewer, same as today's `subject-location-gate.md:30-33`. Worth keeping that capability inside the new skill.
-8. **Concept plan georeferencing.** Phase 1 vision extracts the title-block area number; could we go further and georeference the concept plan PDF for a true geometric overlay check? Probably v2.
-9. **Should the skill be auto-invoked by diligence-report Phase 0, or run manually first?** Recommendation: auto-invoke. The CLI wrapper exists for testing and post-hoc validation.
+- ~~Standalone skill vs sub-skill~~ → standalone, at `claude-plugins/plugins/noetic-tools/skills/parcel-geo-location-resolution/`.
+- ~~Caller flag vs producer-owned logging~~ → producer-owned with smart path resolution (Part 1) for the surveyor; skill writes its own log to its output directory (Part 2).
+- ~~Output directory convention when invoked by diligence-report~~ → `$NOETIC_DILIGENCE_DIR/location-resolution/`; everything the skill produces lands inside.
+- ~~Skill name~~ → `parcel-geo-location-resolution`.
+
+**Still open:**
+
+1. **Multi-parcel detection block threshold — what's the right delta?** Currently proposed 15% acreage delta. Spatial-grounding uses ±25% for trigger margins. Tunable per jurisdiction.
+2. **How aggressive should the adjoining-parcels sweep be?** 50-ft buffer is generous for contiguous assemblages; non-contiguous (e.g. two parcels separated by a third-party lot) needs a different strategy. Defer to v2.
+3. **Owner-name normalization for the shared-owner heuristic.** Exact-string match is brittle. Levenshtein? LLM check? Defer to v2.
+4. **What if the jurisdiction has no surveyor config?** The skill falls back to `agent-browser` against the county appraisal district + GIS viewer, same as today's `subject-location-gate.md:30-33`. Worth keeping that capability inside the new skill.
+5. **Concept plan georeferencing.** Phase 1 vision extracts the title-block area number; could we go further and georeference the concept plan PDF for a true geometric overlay check? Probably v2.
+6. **Should the skill be auto-invoked by diligence-report Phase 0, or run manually first?** Recommendation: auto-invoke. The CLI wrapper exists for testing and post-hoc validation.
+7. **Output file name inside `location-resolution/`.** Currently `location-resolution.md` (dir-name + file-name redundant). Considered: `resolution.md`, `output.md`, `subject.md`. Defer to v2 — schema matters more than file name.
 
 ---
 
@@ -380,41 +468,42 @@ Rough sequencing if we move on this:
 
 ### Phase A — observability foundation (1-2 days, no behavioral change)
 
-- Add `--log-mcp-calls <path>` to surveyor `src/server.ts`
-- Update `references/run-manifest.md` schema for `phase0.mcp_calls` block
-- Update Phase 0 prompts to pass `--log-mcp-calls run-manifest/phase0-mcp-calls.jsonl`
+- Add producer-owned MCP-call logging to surveyor `src/server.ts` (middleware wrapper, smart-path resolver per the rules in Part 1, `--log-mcp-calls` override + `--no-log-mcp-calls` opt-out)
+- Update `references/run-manifest.md` schema for `phase0.mcp_calls` block (derived rollup pointing at the JSONL the surveyor now writes by default)
 - Tagged-union schema for `customer_supplied_pin`
+
+No Phase 0 prompt changes needed — surveyor logs by default; rule-4 cwd auto-detection writes the JSONL into the run dir.
 
 This stands alone. Lands the audit trail before any behavior changes.
 
-### Phase B — `location-resolution` skill v1, single-parcel path (2-3 days)
+### Phase B — `parcel-geo-location-resolution` skill v1, single-parcel path (2-3 days)
 
-- Create `claude-plugins/plugins/noetic-tools/skills/location-resolution/`
+- Create `claude-plugins/plugins/noetic-tools/skills/parcel-geo-location-resolution/`
 - SKILL.md, pipeline.md (analog of diligence-report's), references/
-- Accept all three input types (address / lat-lon / parcel ID); produce `location-resolution.md`
-- Single-parcel path only; multi-parcel detection deferred to v1.1
-- CLI wrapper for independent invocation
+- Accept all three input types (address / lat-lon / parcel ID); produce `location-resolution.md` plus the producer-owned `location-resolution-mcp-calls.jsonl`, both inside the caller-supplied `--output-dir`
+- Single-parcel path only; multi-parcel detection deferred to Phase C
+- CLI wrapper (`noetic-parcel-geo-resolve`) for independent invocation
 - Integration test against 3 known addresses (Atlanta, Austin, Round Rock for jurisdiction breadth)
 
-At this point: Phase 0 of diligence-report can invoke the new skill instead of doing the work inline, but behavior is identical to today (just better-tested and better-logged).
+At this point: Phase 0 of diligence-report can invoke the new skill instead of doing the work inline (with `--output-dir $NOETIC_DILIGENCE_DIR/location-resolution/`), but behavior is identical to today (just better-tested and better-logged).
 
 ### Phase C — multi-parcel detection (2-3 days)
 
 - Add Step 4a (adjoining-parcels sweep) — pure GIS work, no agent-browser
-- Add Step 4b (concept-plan spatial reconciliation) — agent-browser + Google Maps + jurisdiction GIS viewer screenshots
+- Add Step 4b (concept-plan spatial reconciliation) — agent-browser + Google Maps + jurisdiction GIS viewer screenshots saved to `<output-dir>/site-aerial.png` and `<output-dir>/site-cadastral.png`
 - Update `location-resolution.md` schema to support N parcels
 - Update diligence-report's `seed-site-data.md` template + downstream consumers (this is the bigger downstream change — see audit §5 on per-acre calcs, restrictive-covenants discipline, etc.)
 - Smoke test against Chastain Square (Atlanta) — must find all 3 parcels
 
 ### Phase D — Validation harness (1 day)
 
-- The `noetic-location-resolve` CLI
-- A `validate-against-run` mode that takes an existing diligence run dir and produces a diff between its seed-site-data.md and a fresh location-resolution.md
-- Integrate into the audit-diligence-run skill
+- The `noetic-parcel-geo-resolve` CLI
+- A `validate-against-run` mode that takes an existing diligence run dir and produces a diff between its `seed-site-data.md` and a fresh `location-resolution.md`
+- Integrate into the `audit-diligence-run` skill
 
 ### Phase E — Surveyor regex fix + downstream cleanup (already filed as B1 in multi-agent audit)
 
-This is independent of the location-resolution skill but should land in the same window — the regex fix is what allows the 3-parcel seed produced by the new skill to actually flow through to the surveyor's gate without crashing.
+Independent of the new skill but should land in the same window — the regex fix is what allows the 3-parcel seed produced by `parcel-geo-location-resolution` to actually flow through the surveyor's gate without crashing.
 
 ---
 
@@ -430,13 +519,21 @@ These are follow-on items for the brainstorm to enumerate, not blockers for the 
 
 ## Part 5 — Asks for the brainstorm
 
-1. **Standalone skill vs sub-skill** — recommendation is standalone; confirm or redirect.
-2. **Multi-parcel detection threshold** — 15% acreage delta as the block condition; confirm or tune.
-3. **Phasing** — does A → B → C → D → E land in the right order, or should observability + regex fix (A+E) land first to stop the bleeding?
-4. **Owner-name normalization** — defer to v2, or land in v1?
-5. **Concept-plan georeferencing** — defer to v2, or worth investigating now?
-6. **Scope of post-hoc validation** — should the skill be able to *amend* an existing run (write a new seed, re-run only affected phases), or only validate? Recommend validate-only in v1; amend in v2.
-7. **Naming** — `location-resolution` vs `parcel-resolution` vs something else? Audit currently uses both terms; `location-resolution` better captures the address + lat/lon + parcel triple.
+**Resolved in v0.2:**
+
+- ~~Standalone skill vs sub-skill~~ → standalone.
+- ~~Caller flag vs producer-owned logging~~ → producer-owned.
+- ~~Skill name~~ → `parcel-geo-location-resolution`.
+- ~~Output directory~~ → `$NOETIC_DILIGENCE_DIR/location-resolution/` when invoked by diligence-report.
+
+**Still open:**
+
+1. **Multi-parcel detection threshold** — 15% acreage delta as the block condition; confirm or tune.
+2. **Phasing order** — does A → B → C → D → E land in the right order, or should observability + regex fix (A+E) land first to stop the bleeding?
+3. **Owner-name normalization** — defer to v2, or land in v1?
+4. **Concept-plan georeferencing** — defer to v2, or worth investigating now?
+5. **Scope of post-hoc validation** — should the skill be able to *amend* an existing run (write a new seed, re-run only affected phases), or only validate? Recommend validate-only in v1; amend in v2.
+6. **Output file name inside `location-resolution/`** — keep `location-resolution.md` (dir-name + file-name redundant), or shorten to `resolution.md` / `output.md` / `subject.md`?
 
 ---
 
