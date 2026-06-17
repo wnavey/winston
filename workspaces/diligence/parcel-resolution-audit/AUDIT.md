@@ -392,4 +392,85 @@ All paths absolute.
 
 ---
 
+## 10. Addendum — Architectural finding: skill instructs, surveyor implements (follow-up)
+
+This section was added after the main audit. It captures the structural reason address-driven lookup produces a one-parcel answer with high confidence — relevant to the fixes brainstorm.
+
+### Where the endpoint URLs actually live
+
+The diligence-report skill contains **zero hardcoded references** to `PropertyMapViewer/MapServer/11`, `atlanta-dpcd-gis`, or any other GIS endpoint URL. A `grep -rn "PropertyMapViewer\|fulton-gis\|MapServer/11\|atlanta-dpcd"` across the entire skill returns no hits.
+
+What the skill *does* say about how to resolve a parcel from an address:
+
+- **`pipeline.md:24-25` (Phase 0, step 4):** *"Resolve the address to an authoritative parcel via the jurisdiction's CAD/GIS (the same Surveyor capability used for property records — CAD address/parcel search + the GIS parcel layer). If the jurisdiction has no Surveyor config, use the county appraisal-district + GIS portal via `agent-browser`."*
+- **`references/subject-location-gate.md:15-29` (Step 1):** *"Resolve the address to an authoritative parcel and coordinate using the same Surveyor capability already used for property records. **If the jurisdiction has a Surveyor config**, start the Surveyor MCP server for the jurisdiction and call its appraisal-district address/parcel search + GIS parcel/geocode tools directly."*
+
+These are the only Phase 0 prompts that touch parcel derivation. They tell the agent **what kind of operation to perform** ("address → parcel via the surveyor's CAD/GIS"), not which endpoints, layers, or tool names to use.
+
+The actual endpoint knowledge resides two layers below:
+
+1. **`surveyor/jurisdictions/atlanta-ga.md`** — the surveyor's per-jurisdiction "field guide." The Atlanta file's frontmatter lists `sources: [fulton-county-gis, dekalb-county-gis, atlanta-gis, fema-nfhl, ga-streams, gdot, census-qoz, gsccca]`, and the body contains a tool table with one-line descriptions of `fulton_assessor_search`, `fulton_parcel_details`, `fulton_property_profile`, `atlanta_property_profile`, plus an explicit "ID Mappings Between Systems" lookup chain at `atlanta-ga.md:53-60`:
+   > Address (user input) → fulton_assessor_search OR dekalb_assessor_search (address) → ParcelID + owner
+
+2. **`surveyor/src/sources/fulton-county-gis/config.ts`** — the TypeScript module that hardcodes the actual URLs:
+   ```ts
+   export const PROPERTY_MAPSERVER =
+     'https://gismaps.fultoncountyga.gov/arcgispub2/rest/services/PropertyMapViewer/PropertyMapViewer/MapServer';
+   export const TAX_PARCEL_LAYER = `${PROPERTY_MAPSERVER}/11`;
+   ```
+   The agent never reads this file. It calls the `fulton_assessor_search` *tool* (an MCP wrapper around this config), and the MapServer URL leaks back into the run only because the tool's response payload includes it as a `source` attribution — which is then quoted in `phase0.json:14-17`'s narrative `tools[].fulton-gis.detail` field.
+
+### The chain end-to-end
+
+```
+User: "4279 Roswell Rd NE, Atlanta GA 30342 (PIN# 17 00950004067)"
+  ↓
+Skill (pipeline.md:24-25): "Resolve via the surveyor's CAD/GIS."
+  ↓
+Skill (subject-location-gate.md:15-29): "Start the surveyor MCP for atlanta-ga
+  and call its address-search + parcel-layer tools."
+  ↓
+Surveyor field guide (jurisdictions/atlanta-ga.md:30-36, :53-60):
+  "Tools available: fulton_assessor_search, fulton_parcel_details,
+   atlanta_property_profile. Lookup chain: Address → ParcelID → geometry → zoning."
+  ↓
+MCP tool fulton_assessor_search:
+  hits surveyor/src/sources/fulton-county-gis/config.ts hardcoded URL
+  → returns one ParcelID + owner + acreage
+  ↓
+Phase 0 agent writes seed-site-data.md asserting "single-parcel site"
+```
+
+### Why this is structurally one-to-one
+
+**Address-driven lookup is one-to-one by construction.** The surveyor's `fulton_assessor_search` is a name implying a string-match against a CAMA address index, which returns the single best matching parcel. The "ID Mappings Between Systems" chain at `atlanta-ga.md:53-60` reads "Address → ParcelID" (singular) — there is no branch for "N matches found" or "primary parcel + adjoining members of an assemblage."
+
+This means: even if the assessor's index contained 3 parcels matching the same address (which it doesn't typically), the tool surface gives the agent one back. And for the common case where one street address ties to a primary parcel, the *other* parcels in an assemblage have *different* street addresses (the inline shops to the south, the "1907 area" in the northeast corner, etc.) and would never surface from an address query at all.
+
+In short: **the address-to-parcel chain produces a singular answer with high confidence because the tool surface, the field guide's ID Mappings chain, and the skill's "resolve to *an* authoritative parcel" all assume singularity.** None of them ask "what else is in scope?"
+
+### Three layers where multi-parcel awareness could be enforced
+
+These are observations only; fixes are deferred to the brainstorm.
+
+1. **Skill prompt (`references/subject-location-gate.md`).** Add a Step 1.5: *"Once you have the primary parcel, query adjoining parcels — within 50 ft, sharing subdivision name, or sharing owner name — and present any matches as candidate assemblage members for user confirmation."* This is a prompt-level change. It would not require new tools if the underlying GIS supports buffer + spatial query (Fulton's PropertyMapViewer does).
+2. **Surveyor field guide (`surveyor/jurisdictions/<slug>.md`).** Extend the "ID Mappings Between Systems" chain to include an adjoining-parcels branch. Today the Atlanta file's chain reads "Address → ParcelID." Tomorrow it could read "Address → primary ParcelID → adjoining ParcelIDs (within 50 ft / shared owner / shared subdivision) → flag candidates." This is a per-jurisdiction documentation change.
+3. **Tool layer (`surveyor/src/sources/<jurisdiction-gis>/`).** Add a first-class `fulton_adjoining_parcels` tool that takes a primary ParcelID and returns the N nearest parcels with owner/subdivision metadata. This is the most invasive layer but produces the cleanest signal for the agent to act on.
+
+### Why this finding strengthens the main audit
+
+The original audit (§3 "What we didn't check for", §5.R1 "silent-degradation paths") named the symptoms — "no adjoining-parcels GIS sweep," "owner-name search only ran against parcel-1's entities" — without pinning down *why* the pipeline never even attempted the check. This addendum answers that: **the pipeline doesn't check for assemblage members because no layer of its tool surface, field guide, or skill prompt instructs it to.** It's not a forgotten branch; it's an absent abstraction.
+
+### Additional file:line references for this addendum
+
+- `claude-plugins/plugins/noetic-tools/skills/diligence-report/pipeline.md:24-25` — Phase 0 step 4 (the entire delegation contract)
+- `claude-plugins/plugins/noetic-tools/skills/diligence-report/references/subject-location-gate.md:15-29` — Step 1 detail
+- `surveyor/jurisdictions/atlanta-ga.md:1-13` — sources frontmatter
+- `surveyor/jurisdictions/atlanta-ga.md:26-52` — tool table
+- `surveyor/jurisdictions/atlanta-ga.md:53-60` — ID Mappings Between Systems chain
+- `surveyor/src/sources/fulton-county-gis/config.ts:17-22` — hardcoded MapServer / TAX_PARCEL_LAYER URLs
+- `surveyor/src/sources/fulton-county-gis/{search.ts, details.ts, property-profile.ts}` — tool implementations
+
+---
+
 **End of audit. No fixes proposed; brainstorm phase to follow.**
