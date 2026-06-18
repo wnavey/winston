@@ -21,9 +21,11 @@ and produces a per-comment resolution status.
 
 ## Spec
 
-See [`SPEC.md`](./SPEC.md) — full context + proposals from the 2026-06-15 brainstorm
-(reuse map: `mcr-prep`/`mcr-convert` ingestion, completeness-check workflow clone,
-navalbase for redlines later). To be reviewed/refined in a follow-up session.
+See [`SPEC.md`](./SPEC.md) — refined 2026-06-18. Architecture is three components:
+a `generate-crc-guides` Claude Code skill (MCR → per-department checklist files),
+a Conductor workflow (clone of completeness-check, 2-status schema) that runs against
+the updated plan set, and a `generate-crc-report` Claude Code skill that renders the
+city-ready PDF. Both skills live in the `claude-plugins` repo.
 
 ## TODOs
 
