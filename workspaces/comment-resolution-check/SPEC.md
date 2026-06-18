@@ -1,8 +1,8 @@
 # Comment Resolution Check (CRC) — Spec & Proposals
 
-> **Status:** Draft for review (do not build yet). Captures all context gathered
-> during the 2026-06-15 brainstorm so a follow-up session can review and refine.
-> Author: brainstorm session `dsd-comment-rez-check`.
+> **Status:** Draft refined 2026-06-18 (originally captured 2026-06-15). Architecture
+> decisions taken in the 2026-06-18 refinement session are baked in; remaining open
+> items are listed in §9. Ready to drive iteration-1 implementation (see §11 + §12).
 
 ---
 
@@ -14,18 +14,17 @@ Noetic has two shipping review products today, plus this proposed third one:
 |---|---|---|---|---|
 | 1 | **Formal Site Plan Review** | U0+ formal review | `bureau/jurisdictions/austin/review-guides/{code}/*.md` | `train` workflow (10yr historic comments → k-means → atomic → group → consolidate → finalize) |
 | 2 | **Completeness Check** | Before formal review | `bureau/.../completeness-check/v2.5-trimmed/cc-*.md` | `completion-officer` repo (agentic research) |
-| 3 | **Comment Resolution Check (CRC)** ← *this* | After a U0 formal review, when the applicant resubmits | per-submission CRC guides (bespoke) | **MCR → guides (1:1 mapping)** |
+| 3 | **Comment Resolution Check (CRC)** ← *this* | After a U0 formal review, when the applicant resubmits | per-submission **crc-guides** (bespoke) | **`generate-crc-guides` Claude Code skill** (MCR → guide files, 1:1 mapping) |
 
 **The flow CRC lives in:** site plan passes the completeness check → enters U0 formal
 review → city departments review and issue a **Master Comment Report (MCR)** PDF → the
 civil engineering firm revises the plans → resubmits as a new submission version. CRC's
-job: **for every comment in the MCR, did the updated plan set resolve it?**
+job: **for every gradeable comment in the MCR, did the updated plan set resolve it?**
 
 **Primary user:** the applicant / civil engineering firm, as a self-check *before*
-resubmitting to the city. This sets the bar: **bias toward catching unresolved items**
-(a false "resolved" costs a wasted review cycle), and the deliverable should help the
-applicant write their per-comment response (the city requires a written response to
-every comment, marked in **BLUE**).
+resubmitting to the city. The deliverable is a city-ready PDF that helps the applicant
+write their per-comment response (the city requires a written response to every
+comment, marked in **BLUE**).
 
 ---
 
@@ -37,43 +36,47 @@ pipeline:
 - `train` **manufactures structure from noise** — clusters 10 years of messy historic
   comments and distills them into generic, jurisdiction-level guides. CRC needs none of
   that: **the city already atomized the work for us.** The MCR is already a list of
-  discrete, discipline-tagged, code-cited comments.
-- So CRC guide creation is a **1:1 mapping**: one MCR comment (→ atomic issue) → one CRC
-  checklist item. **No clustering, no synthesis, no cross-comment de-duplication.** We
-  retain the 1:1-mapping spirit of the Completion Officer, but we only ingest **two
-  document types**: the **Atomic MCR** (most comments) and **redline PDFs** (some
-  departments — see §7).
-- The *check itself* is **verification/diff** ("is requirement X now satisfied in the
-  updated plan?"), not a fresh open-ended review. Structurally it mirrors the
-  **completeness-check** workflow, but simpler.
+  discrete, department-tagged, code-cited comments.
+- CRC guide creation is a **1:1 mapping**: one MCR comment → one or more crc-guide
+  checklist items (compound comments decompose into N atomic items). **No clustering,
+  no synthesis, no cross-comment de-duplication, and no roll-up downstream — each
+  atomic item is a first-class row throughout.**
+- The *check itself* is **closed-form verification** ("is requirement X satisfied in
+  the updated plan?"), not a fresh open-ended review. Structurally it mirrors the
+  **completeness-check** workflow, but with a 2-status schema and no comment de-dup.
 
-### 2.1 The MCR's two roles — *measure against* vs. *execute from*
+### 2.1 What "resolved" means
 
-`mcr-prep` was built for a **different job** than CRC. The difference is real even though the
-front-end (PDF → structured checklist) is shared, and it's worth stating explicitly:
+**`resolved` = the CRC agent finds positive evidence in the updated (U1) plan set that
+requirement X is satisfied.** This is static verification against U1 — not a diff
+against U0. A requirement that was already satisfied at U0 still gets `resolved` if the
+U1 plan satisfies it.
 
-- **Formal-review eval (`mcr-prep`'s origin):** the formal review runs *independently*, and
-  its findings are **scored against** the atomic MCR to measure **recall** ("did we catch
-  what the city caught?"). The MCR is the **answer key**; the review is the subject under
-  test — the agent is **never shown** the MCR comments. The eval-oriented `match_criteria`
-  fields exist to fuzzily match two *independently produced* outputs.
-- **CRC (this product):** the workflow **executes from** the MCR checklist — each comment is
-  *handed to* the agent as the task ("is this requirement resolved in the updated plan?").
-  The MCR is the **input/instruction set**, not the answer key. There is **no
-  scoring/matching step** — the verdict is produced directly.
+Iteration-1 hands the agent **only** the U1 plan set. The city has already confirmed
+the failures exist on U0, so the agent does not need to re-verify the baseline. A
+future workflow flavor (see §11) may optionally pre-run the checks against U0 first to
+ground the agent in shared truth before running U1 — recorded as a possible future
+input parameter, not part of MVP.
 
-Consequences that shape the design:
-- The agent task is **closed-form verification** (confirm/deny a known requirement), not
-  **open-ended discovery** (find all problems). This is *why* completeness-check (also
-  verification-style) is the right template — not the discovery-style formal `review` — and
-  *why* no cross-comment de-dup is needed (we check a given list, not synthesize discoveries).
-- **Shared front-end, divergent contract:** reuse `mcr-prep`'s extraction + decomposition +
-  validation, but the per-item *record* diverges. CRC keeps the **execution** fields
-  (`requirement`, `specific_deliverable`, `must_reference_location`, `code_reference`,
-  `severity`, `parent_comment_id`, `source_text_from_mcr`) and drops the **matching rubric**
-  (`must_identify`, `acceptable_variations`, `acceptable_code_refs`, `code_citation_required`).
-  That projection lives in transform **B** (§4), so `mcr-prep` itself is **untouched** and
-  stays in production for eval.
+### 2.2 CRC vs. mcr-prep — why they are NOT shared infrastructure
+
+`mcr-prep` (which produces `atomic-mcr.json` for the `train`/`review` eval pipeline) is
+**not** CRC's ingestion path. The two have superficially similar inputs (MCR PDF →
+atomic issues) but materially different contracts:
+
+- **mcr-prep** exists to score formal-review **recall** ("did our independently-run
+  review surface what the city flagged?"). Its per-issue record carries a
+  **matching rubric** (`must_identify`, `acceptable_variations`, `acceptable_code_refs`,
+  `code_citation_required`) tuned for fuzzy-matching two independently produced outputs.
+  The agent under test is **never shown** the MCR.
+- **CRC** executes *from* the MCR: each comment is *handed to* the agent as the task.
+  There is no matching — the verdict is produced directly. The decomposition needs to
+  be tuned for **execution clarity for the verifier**, not for **recall calibration in
+  eval**.
+
+The decomposition granularity, output schema, and severity-/status-filtering policy are
+all different. CRC has its own dedicated path (`generate-crc-guides` skill, §5).
+`mcr-prep` is retained only as eval infrastructure for the formal review.
 
 ---
 
@@ -81,57 +84,12 @@ Consequences that shape the design:
 
 CRC is mostly assembly of existing parts. Verified file paths:
 
-### 3.1 MCR ingestion — `atomic-mcr.json` already exists ✅
-The "Atomic MCR" is a real, built artifact (originally for **eval** — scoring review
-recall against the city's own comments).
-
-- **`bureau/jurisdictions/austin/workflows/mcr-prep/`** (`workflow.yaml` + `prompts/mcr-prep.md`, v1.0)
-  - Opus agent reads `u0-mcr.pdf` + bureau codes → decomposes **all** city comments into
-    **atomic, testable issues** → writes `output/atomic-mcr.json` (+ `atomic-mcr-notes.md`).
-  - Decomposition rules: simple comment → 1 issue; compound ("A AND B AND C") → N issues;
-    vague code ref ("comply with DCM 1.2.4.E") → read the code section, 1 issue per
-    sub-requirement. **Explicitly: don't over-decompose, don't filter, include everything.**
-  - Validation gate: count reconciliation (`total_city_comments`, `total_atomic_issues`,
-    `departments`); incremental save after every comment.
-- **`mcr-prep-1.1/`** (v1.1) — additive **supplement** step: reads per-department
-  `supplemental-comments/<dept>/comments.txt` (one comment per line, `AW 3: ...`) and
-  appends atomic issues with `"source": "supplemental"`. **This is the natural ingestion
-  path for redline-sourced comments (e.g. Austin Water) once navalbase extracts them.**
-- **`mcr-convert/`** (`workflow.yaml` + `prompts/convert-mcr.md`) — remaps
-  `atomic-mcr.json` from **city department codes → review-guide discipline codes**,
-  preserving every issue (adds `source_department`). Mapping table lives in the prompt.
-- **Storage:** `conductor/scripts/{download,upload}_atomic_mcr.ts` ↔ Supabase storage at
-  **`{projectId}/eval-data/atomic-mcr.json`**.
-
-**`atomic-mcr.json` schema (per atomic issue):**
-```json
-{
-  "atomic_issue_id": "de-5-1",
-  "parent_comment_id": "DE 5",
-  "requirement": "Show drainage easements on drainage layout sheet",
-  "severity": "required | note | recommendation",
-  "code_reference": "DCM 1.2.4.G",
-  "specific_deliverable": "Drainage easements labeled on Sheet D-3 with document numbers",
-  "match_criteria": { "must_identify": "...", "must_reference_location": "...",
-                      "acceptable_code_refs": ["..."], "code_citation_required": false,
-                      "acceptable_variations": ["..."] },
-  "why_it_matters": "...",
-  "source_text_from_mcr": "..."
-}
-```
-> **Note on `match_criteria`:** these were designed for *eval* ("did a review agent
-> independently surface this comment?"). For CRC the central fields are `requirement`,
-> `severity`, `code_reference`, `specific_deliverable`, and `source_text_from_mcr`.
-> The matching-rubric fields (`must_identify`, `acceptable_variations`, `acceptable_code_refs`,
-> `code_citation_required`) exist to match two independently-produced outputs and are
-> **vestigial for CRC** (the agent is handed the comment directly — nothing to match). Drop
-> them in transform B; keep the execution fields. See §2.1 and §9.2.
-
-### 3.2 Execution template — the `completeness-check` workflow ✅
+### 3.1 Execution template — the `completeness-check` workflow ✅
 `bureau/jurisdictions/austin/workflows/completeness-check/workflow.yaml` is the structural
-model for CRC (simpler than the formal `review` workflow — **no comment de-dup**):
-- Single `review` step: **one agent per checklist grouping file** (`*.md`), `runs` N times,
-  `maxWorkers`, tools `vision` + `semantic-search-blocks`, schema-validated output.
+model for the CRC review workflow (simpler than the formal `review` workflow — no
+comment de-dup):
+- Single `review` step: **one agent per checklist grouping file** (`*.md`), `runs` N
+  times, `maxWorkers`, tools `vision` + `semantic-search-blocks`, schema-validated output.
 - `cross-run-consolidate-cc` (majority vote across runs) → `enrich-findings` →
   `format-reports` → `build-review-comments` (writes to DB).
 - **Already supports cycle chaining:** `priorReviewId` input → Conductor writes
@@ -140,135 +98,185 @@ model for CRC (simpler than the formal `review` workflow — **no comment de-dup
 - `commentNumberingMap` (TSV: checklist item id → comment number) and `forceOutcomes`
   (TSV forcing item outcomes) inputs exist and are reusable.
 
-**Completeness output schema** (`completeness.schema.json`) — CRC's schema is a near-clone:
+**Completeness output schema** (`completeness.schema.json`) — CRC's schema is a near-clone
+with a 2-status enum:
 ```jsonc
-{ "grouping": "cc-8",
+{ "grouping": "crc-dept-tpw",
   "findings": [{
-    "checklistItemId": "AW-05",
+    "checklistItemId": "TPW-3.1",
     "observation": "...", "reasoning": "...", "tools_used": [],
-    "status": "pass | fail | not-applicable",   // CRC → "resolved | failed" (see §8)
+    "status": "resolved | failed",
     "explanation": "6-30 words",
-    "resolution": "corrective action for fail, else null",
+    "resolution": "corrective action for failed, else null",
     "evidenceLocations": [{ "documentId": "...", "sheetNumber": 2, "label": "..." }]
   }] }
 ```
 
-### 3.3 Guide formats to mirror ✅
+### 3.2 Guide formats to mirror ✅
 - **Formal review guide** (`review-guides/{code}/N.md`): `## Description`,
   `## Regulatory Overview`, `## Code References`, `## Documents to Review`,
-  `## Checklist Items` table = `| ID | Deficiency | Code Citation | Applicability |`.
-- **Completeness guide** (`cc-N.md`): adds `## Key Terms`, `## Validation Methodology`;
-  table = `| ID | Item | Condition | Location | Location Binding | Requirement Source | Source Type | Fail Status |`.
-- CRC guides should "look like the review guide" (§6).
+  `## Checklist Items` table.
+- **Completeness guide** (`cc-N.md`): adds `## Key Terms`, `## Validation Methodology`.
+- CRC guides look like the review guide, grouped by **city department**, one row per
+  atomic checklist item (see §6).
 
-### 3.4 Data model (substation / Supabase) ✅
-- `submission` → `submission_version` (`version_number`, `status`) → `plan_set_version` /
-  `document_version` → `sheet_version`. Plan PDFs in the **`submission-data`** bucket.
+### 3.3 Data model (substation / Supabase) ✅
+- `submission` → `submission_version` (`version_number`, `status`, `submitted_at`,
+  `created_at`, `label`) → `plan_set_version` / `document_version` → `sheet_version`.
+  Plan PDFs in the **`submission-data`** bucket.
 - `reviews` (`review_type`, `submission_version_id`, `prior_review_id`, `is_current`,
   `output_json`) → `review_comments` (`comment_number`, `output_json`, `agent_trace`,
-  `sheet_references`) → `comment_triage` (`triage_status` already includes `resolved`).
-- `resolution_plan` table exists (review_id, content, chat messages) — currently unused.
+  `sheet_references`) → `comment_triage` (`triage_status TEXT NOT NULL DEFAULT 'new'`,
+  `triage_sub_status TEXT`; **no enum constraint** — the CRC value set is defined by
+  this spec, see §8.4).
+- `resolution_plan` table exists (review_id, content, chat messages) — **not used by
+  CRC.**
 - **Note:** cityhall's re-review route returns **HTTP 501 — "being migrated to
-  Substation."** CRC triggering should ride the Substation/Inngest path, not the dead one.
+  Substation."** Iteration-1 is CLI-driven via the `local-run` skill (§11), so this
+  doesn't block MVP; a v3 trigger path needs to ride Substation, not the dead one.
 
-### 3.5 Redline extraction — `navalbase` (later iteration) ⏳
-`navalbase` is a working pipeline that reads **red-ink markup off plan PDFs** and
+### 3.4 Storage layout — CRC artifacts ✅ (new conventions, §5)
+- **MCR PDF** lives where the user puts it (winston workspace today).
+- **crc-guides** (output of `generate-crc-guides`): saved to **both** local
+  `~/noetic/comment-resolution-check/{projectUuid}/{submissionUuid}/{submissionVersionNumber}/{crc-generation-number}/`
+  **and** Supabase storage bucket `crc-guides` at the same relative path. The
+  generation number is a 0-based index so re-runs are inspectable side-by-side.
+- **CRC PDF report** (output of `generate-crc-report`): local-only for MVP, at
+  `~/noetic/comment-resolution-check/{projectUuid}/{submissionUuid}/{submissionVersionNumber}/{crc-workflow-uuid}/`.
+  Keyed by the workflow run UUID (not the generation number) — multiple workflow runs
+  can use the same guide generation.
+
+### 3.5 Redline extraction — `navalbase` (v2 investigation) ⏳
+`navalbase` is a working pipeline that reads red-ink markup off plan PDFs and
 reconstructs structured, location-anchored comments (red-pixel pre-filter → Haiku triage →
 2-call detect-then-reason vision with bounding boxes + grouping) plus a reg-enrichment
-agent, with **324 cached real cases**. It does **not** do comment↔change matching or
-resolution verdicts, and has **no resolution ground truth**. Earmarked for **Iteration 2+**
-to extract comments from departments that deliver via redlines (see §7). AW-specific in its
-prompts/codes; the vision architecture is discipline-agnostic.
+agent. It does **not** do comment↔change matching or resolution verdicts, and has no
+resolution ground truth. **MVP scope ignores Austin Water redlines entirely.** In v2 we
+should investigate building a **separate shared Claude Code skill** that turns redline
+PDFs into structured comments, which `generate-crc-guides` (or a sibling skill) can then
+consume alongside the MCR PDF. See §7.
+
+### 3.6 PDF generation — `dsd` + `generate-report-pdf` skill ✅
+The CRC PDF report uses the same architectural precedent as `diligence-report`:
+shared styling in the **dsd** repo + the **`generate-report-pdf`** skill (server-free
+Chromium renderer; REPORT mode for consulting/diligence treatment). See Appendix A for
+paths.
 
 ---
 
-## 4. Proposed CRC pipeline
+## 4. Proposed CRC architecture (3 components)
 
 ```
-                 ┌─────────────────────────────────────────────────────────────┐
-   U0 MCR PDF ──►│ A. INGEST  (reuse mcr-prep / mcr-prep-1.1)                    │
-   [+ redlines   │    → atomic-mcr.json  (per city-dept atomic issues)          │
-    later, §7]   └─────────────────────────────────────────────────────────────┘
-                                          │
-                 ┌─────────────────────────────────────────────────────────────┐
-                 │ B. GENERATE CRC GUIDES  (NEW — light 1:1 transform)          │
-                 │    atomic-mcr.json → review-guide-style checklist markdown,  │
-                 │    one item per atomic issue, grouped by discipline          │
-                 │    (reuse mcr-convert dept→discipline mapping)               │
-                 └─────────────────────────────────────────────────────────────┘
-                                          │
-                 ┌─────────────────────────────────────────────────────────────┐
-   updated   ──► │ C. REVIEW  (clone of completeness-check workflow)            │
-   submission    │    one agent per CRC guide grouping, runs against the        │
-   version       │    updated submission's plan set → status resolved | failed  │
-   (plan set)    └─────────────────────────────────────────────────────────────┘
-                                          │
-                 ┌─────────────────────────────────────────────────────────────┐
-                 │ D. PERSIST + REPORT                                          │
-                 │    reviews(review_type='comment_resolution_check',          │
-                 │    prior_review_id=<U0 review>) + review_comments +         │
-                 │    comment_triage; applicant report: per-comment verdict,   │
-                 │    evidence, draft BLUE response                            │
-                 └─────────────────────────────────────────────────────────────┘
+                  ┌───────────────────────────────────────────────────────────────┐
+   MCR PDF   ───► │  A. SKILL: generate-crc-guides         (claude-plugins)       │
+   projectUuid    │     • HITL-driven (Claude Code skill, not Conductor workflow) │
+   submissionUuid │     • Decomposes MCR comments → crc-guide checklists          │
+   submissionVer# │     • Filters by status (Pending/New/Rejected) + severity     │
+                  │       (required + recommendation; HITL on unknowns)           │
+                  │     • Outputs: per-department .md files                       │
+                  │     • Saves both LOCAL and to Supabase storage `crc-guides`   │
+                  └───────────────────────────────────────────────────────────────┘
+                                                │
+                  ┌───────────────────────────────────────────────────────────────┐
+   pre-processed  │  B. CONDUCTOR WORKFLOW: comment-resolution-check              │
+   U1 plan set ──►│     • Clone of completeness-check; 2-status schema            │
+                  │     • Inputs: projectUuid, submissionUuid, submissionVer#     │
+                  │     • Default: fetch crc-guides from Supabase                 │
+                  │     • Optional override: --use-local-guides                   │
+                  │     • Runs single-run for MVP; medly + majority vote later    │
+                  │     • Writes reviews(review_type='crc') + review_comments     │
+                  │     • Populates comment_triage with CRC status (§8.4)         │
+                  └───────────────────────────────────────────────────────────────┘
+                                                │
+                  ┌───────────────────────────────────────────────────────────────┐
+                  │  C. SKILL: generate-crc-report         (claude-plugins)       │
+                  │     • Reads CRC workflow run output → city-ready PDF          │
+                  │     • Uses dsd shared styling + generate-report-pdf skill     │
+                  │     • Local-only for MVP                                      │
+                  │     • One-per-comment draft BLUE response included in PDF     │
+                  └───────────────────────────────────────────────────────────────┘
 ```
 
-**Only one genuinely new component (B).** A is reuse; C is a clone of completeness-check
-with a 2-status schema; D reuses existing tables + the `prior_review_id` chaining.
-
-**Iteration-1 simplification:** generate the CRC guides *in-run* (B as a workflow step
-feeding C in the same workflow) rather than persisting them first. Persist for
-inspection/versioning later if useful.
+**Why three components, not one workflow:** the MCR-to-guides translation has real
+edge cases (unknown comment statuses, ambiguous decomposition, non-plan-verifiable
+"pay the SIF" comments) that benefit from human-in-the-loop. Claude Code skill = cheap
+to iterate + natural HITL fit. The CRC review itself is plan-driven and parallelizable
+— Conductor's home turf. The PDF render is presentation logic — another skill, kept
+out of the review's critical path so PDF style iteration doesn't re-run reviews.
 
 ---
 
-## 5. Iteration-1 focus: a defined, repeatable MCR-ingestion pattern
+## 5. Iteration-1 focus: the `generate-crc-guides` skill
 
-The session's specific ask. Reuse `mcr-prep`, but harden it into a **repeatable pattern**.
-Grounded in the real **1700 S Lamar U0 MCR** (51 pages, **~190 structured comments**):
+The session's specific ask. Grounded in the real **1700 S Lamar U0 MCR** (51 pages,
+**~190 structured comments**).
 
-### 5.1 Real MCR structure (observed)
+### 5.1 Real MCR structure (observed at 1700)
 - **Comment-ID prefixes (city departments), with counts from 1700:**
   `SP 51, DE 37, CA 22, WQ 16, CM 14, TPW 20, PR 10, OWB 9, AWRR 7, AD 2, PB 2`.
 - **Two ID/format conventions** the parser must handle:
   - `TPW 1: Comment Status:` … text … `Reference: LDC 25-6-662`
   - `DE 0 – Current Status: Pending` … `U0:` text … (newer convention; body prefixed `U0:`)
-- **Per-comment status field** (`Current Status` / `Comment Status`): mostly `Pending` at
-  U0; vocabulary also includes `Cleared`, `Rejected`, `FYI`, `Informational`, `New`.
-  **In a later-cycle MCR, this field IS the city's resolution verdict → our eval label
-  (§10).**
+- **Per-comment status field** (`Current Status` / `Comment Status`) at U0 is mostly
+  `Pending`; vocabulary also includes `Cleared`, `Rejected`, `FYI`, `Informational`,
+  `New`. **In a later-cycle MCR, this field is the city's resolution verdict → our eval
+  label (§10).**
 - Most comments carry a `Reference:` code citation (LDC / TCM / ECM / UCM).
-- Mix of **plan-verifiable** ("dimension the distance…", "add note…") and **procedural**
-  ("pay the SIF", "schedule a meeting", "submit the worksheet") comments — the latter are
-  not verifiable from drawings (§8 status taxonomy handles this).
-- Some departments deliver comments **outside the MCR text** — e.g. the 1700 MCR points to
-  a **Bluebeam Studio share link for Austin Energy (AE) comments**. Confirms §7.
+- Mix of **plan-verifiable** and **procedural** ("pay the SIF", "schedule a meeting")
+  comments. The skill is responsible for filtering or HITL-flagging non-plan-verifiable
+  items so CRC isn't asked to verdict them.
+- Some departments deliver comments **outside the MCR text** — e.g. 1700 points to a
+  **Bluebeam Studio share link for Austin Energy (AE) comments**, and **Austin Water**
+  redlines a PDF. **MVP ignores both**; v2 investigation (§7).
 
-### 5.2 The repeatable pattern (what to define/harden)
+### 5.2 The repeatable pattern the skill encodes
 1. **Robust extraction** handling both ID conventions + the `U0:` body prefix.
-2. **Complete comment-ID-prefix → department dictionary.** `mcr-prep`'s example legend
-   (DE/CA/SP/EL/WQ/TR/FP/WB) is **incomplete** vs. real MCRs (missing TPW, AWRR, OWB, PB,
-   AD, CM, PR). Build/validate the full dictionary against `bureau/.../austin/departments/`.
-3. **Decomposition rules** (already specified in `mcr-prep.md`): simple→1, compound→N,
-   vague-code→N sub-requirements. Keep.
-4. **Validation gate:** count reconciliation (no dropped/merged comments) — already present.
-5. **Severity classification:** `required` / `recommendation` / `note` — drives which items
-   get a graded verdict (§8).
+2. **Complete department-prefix dictionary.** Real 1700 prefixes seen — `TPW, AWRR,
+   OWB, PB, CM, AD` — were not in `mcr-convert`'s legacy table (see Appendix B). The
+   skill builds and validates the full dictionary against
+   `bureau/.../austin/departments/`.
+3. **Status filter:** ingest only `Pending` / `New` / `Rejected`. Drop `Cleared` /
+   `FYI` / `Informational`. **Any unrecognized status → HITL prompt:** the human
+   decides include/drop per-comment.
+4. **Severity filter:** ingest only `required` and `recommendation`. Drop `note`.
+5. **Plan-verifiability filter:** drop or HITL-flag procedural comments that the U1
+   plan set cannot verify (pay fee, schedule meeting, submit worksheet, etc.).
+6. **Decomposition rules** (CRC-tuned, NOT mcr-prep's eval-tuned rules): simple
+   comment → 1 atomic item; compound ("A AND B AND C") → N items; vague code ref
+   ("comply with DCM 1.2.4.E") → read the code section, 1 item per sub-requirement.
+   Bias toward fewer items than mcr-prep would produce — each atomic item is a row in
+   the applicant's report, and over-decomposition forces the applicant to aggregate.
+7. **Validation gate:** count reconciliation (no silently dropped comments — drops
+   require an HITL decision logged).
 
-> Recommendation: validate the pattern on **≥2 real MCRs** (1700 + 7800) before locking it,
-> to confirm the prefix dictionary and both format conventions are covered.
+> Validate on **≥2 real MCRs** (1700 + 7800) before locking the skill behavior, to
+> confirm the prefix dictionary, both format conventions, and the HITL flow.
+
+### 5.3 Output: crc-guides
+Per-department `.md` files (see §6 for format), written to both:
+- Local: `~/noetic/comment-resolution-check/{projectUuid}/{submissionUuid}/{submissionVersionNumber}/{crc-generation-number}/`
+- Supabase storage bucket `crc-guides` at the same relative path.
+
+`crc-generation-number` starts at `0` and increments on re-gen so users can diff
+generations locally.
+
+### 5.4 Skill location
+`generate-crc-guides` lives in the **`claude-plugins`** repo
+(`~/noetic/claude-plugins/plugins/`).
 
 ---
 
 ## 6. CRC guide format (proposal)
 
-Mirror the **formal review guide**, one checklist row per atomic issue, grouped by
-discipline. The checklist "Deficiency" becomes the **requirement to verify as resolved**.
+Mirror the formal review guide, **one checklist row per atomic issue, grouped by city
+department.** The checklist "Deficiency" becomes the **requirement to verify as
+resolved**.
 
 ```markdown
-# CRC — Transportation & Access (TA) — 1700 S Lamar SP-2026-0136C U0→U1
+# CRC — TPW (Transportation & Public Works) — 1700 S Lamar SP-2026-0136C U0→U1
 
 ## Description
-Comment-resolution checks derived 1:1 from the U0 MCR comments assigned to this discipline.
+Comment-resolution checks derived 1:1 from the U0 MCR comments assigned to TPW.
 Each item verifies whether the updated plan set resolves a specific city comment.
 
 ## Source
@@ -280,140 +288,182 @@ MCR: SP-2026-0136C U0 (Final Report 2026-06-08). Items map 1:1 to atomic MCR iss
 | TPW-3.1 | TPW 3 | ROW for S. Lamar is sufficient (survey tie) OR 58 ft dedicated from existing centerline per ASMP | LDC 25-6-55 | required | Site/ROW dedication sheet |
 | TPW-6.1 | TPW 6 | On-street parking dimensioned ≥15 ft from either side of fire hydrants | TCM 9.2.3.1.B | required | Site plan / striping sheet |
 ```
-- **ID convention:** `{DISC}-{parentComment}.{subIssue}` keeps the city comment ID visible
-  (needed for the applicant's per-comment BLUE response and for `comment_number` chaining).
-- **Reporting unit = city comment.** Even when one comment decomposes into N atomic checks,
-  roll the verdict up to the parent comment for the applicant report + the next MCR cycle.
-- **Grouping:** by review-guide discipline (via `mcr-convert`) so the review agent gets the
-  right regulatory context — *or* by city department (matches how the applicant reads the
-  MCR). **Open question §9.3.**
+
+- **ID convention:** `{DEPT}-{parentComment}.{subIssue}` (e.g. `TPW-3.1`) — keeps the
+  city comment ID visible so the applicant can map each verdict back to the city
+  comment for their BLUE response.
+- **Reporting unit = atomic item.** No roll-up. If one city comment decomposed into 3
+  atomic items, the CRC output has 3 rows. The applicant aggregates verdicts into a
+  single BLUE response per city comment when writing back to the city — that's their
+  job, not CRC's.
+- **Grouping = city department** (`TPW`, `DE`, `AWRR`, etc.). Matches the MCR's own
+  structure and the applicant's mental model. Discipline-based grouping (via
+  `mcr-convert`) is not used for CRC.
 
 ---
 
-## 7. Redlines (Iteration 2+)
+## 7. Redlines (v2 investigation)
 
 Some departments — notably **Austin Water (AW)** and **Austin Energy (AE)** — put their
 comments in **redline PDFs / Bluebeam markup** instead of the MCR text. Plan:
-- **Iteration 1:** MCR-only. Earmark redlines; do not build.
-- **Iteration 2+:** reuse `navalbase` to vision-extract red-ink comments from the redline
-  PDFs → emit per-department `comments.txt` → feed `mcr-prep-1.1`'s **supplement** path to
-  append them to `atomic-mcr.json` (`"source": "supplemental"`). This slots cleanly into the
-  existing ingestion without new schema.
+- **MVP (iteration 1):** ignore redlines entirely. AW/AE comments are out of scope.
+- **V2 investigation:** build a **separate shared Claude Code skill** (likely reusing
+  `navalbase`'s red-ink vision pipeline) that turns a redline PDF into a structured
+  comment list. `generate-crc-guides` (or a sibling skill) then consumes both the MCR
+  PDF and the redline-extracted comments. **No mcr-prep-1.1 supplement path** — that
+  workflow was eval-pipeline-only and is not part of CRC's path.
 
 ---
 
 ## 8. Status taxonomy
 
-Start with **two** statuses per checklist item (per direction):
-- **`resolved`** — the updated plan satisfies the requirement.
-- **`failed`** — it does not (or can't be confirmed → bias to `failed` for an applicant tool).
+### 8.1 CRC checklist item statuses
+Iteration-1: **two statuses per item**:
+- **`resolved`** — the agent finds positive evidence in U1 that the requirement is
+  satisfied (see §2.1).
+- **`failed`** — it does not.
 
-Candidates for later (drawn from completeness-check's `pass/fail/warn/not-applicable` and
-the MCR's own vocabulary):
-- **`partially-resolved`** — some sub-issues of a comment resolved, not all.
+### 8.2 Bias rule
+**No explicit bias rule for iteration-1.** The original spec proposed biasing toward
+`failed` when evidence was ambiguous; that's deferred until we have real signal from a
+U1 cycle eval. Revisit in §11 v2/v3.
+
+### 8.3 Future-status candidates (not in MVP)
+Drawn from completeness-check's `pass/fail/warn/not-applicable` and the MCR's own
+vocabulary, to revisit after MVP:
+- **`partially-resolved`** — some atomic items resolved, not all. *Note: this is
+  display logic on the city-comment roll-up, not a per-atomic-item status. CRC stays
+  atomic; "partially-resolved" can be derived by the report skill if needed.*
 - **`not-verifiable-from-plans`** / **`procedural-action`** — for procedural comments
-  (pay fee, schedule meeting, submit worksheet) that drawings can't confirm; surface as an
-  action reminder rather than a pass/fail.
-- **`not-applicable`** — comment was informational/`note` severity.
+  the skill couldn't filter out (caught at CRC-time instead of skill-time).
+- **`not-applicable`** — for comments that became moot after the U0 cycle.
 
-**Eval mapping:** CRC `resolved` ≈ city next-MCR `Cleared`; CRC `failed` ≈ `Pending`/`Rejected`.
+### 8.4 `comment_triage.triage_status` value set
+`comment_triage.triage_status` is `TEXT NOT NULL DEFAULT 'new'` with **no enum
+constraint** in the schema. CRC defines the following values written during the CRC
+workflow:
+- `resolved` — CRC verdict `resolved`.
+- `failed` — CRC verdict `failed`.
+
+(The TEXT field tolerates other values written by other code paths; CRC writes only
+these two.)
+
+### 8.5 Eval mapping
+CRC `resolved` ≈ city next-MCR `Cleared`; CRC `failed` ≈ `Pending` / `Rejected`. Used
+in §10 accuracy eval against a labeled U1 ground truth.
 
 ---
 
-## 9. Key design decisions / open questions
+## 9. Open design decisions
 
-1. **Where do CRC guides live? — direction set, MVP deferred.** Per-submission/bespoke, so
-   **not** in `bureau` git. Lean **Supabase DB**: CRC checklist items are structured,
-   queryable, and map 1:1 to city comments, so they fit as first-class rows that can
-   *double as the per-comment resolution-tracking unit* across target versions. **Supabase
-   storage + a DB pointer** (mirroring `atomic-mcr.json` at `{projectId}/eval-data/`) is a
-   lighter alternative, not ruled out. **MVP: local files** in the run workspace — exactly
-   how completeness-check loads its checklist `*.md` files — so no DB/storage work is needed
-   to validate the workflow.
-2. **`match_criteria` — largely resolved (see §2.1).** Reuse `mcr-prep`'s `atomic-mcr.json`
-   as the shared front-end output; transform B **projects** it to the execution schema
-   (keep `requirement`/`specific_deliverable`/`must_reference_location`/`code_reference`/
-   `severity`/`parent_comment_id`/`source_text`; drop the matching rubric). `mcr-prep` stays
-   untouched. *Still to validate:* whether `mcr-prep`'s eval-oriented decomposition
-   granularity is also the right granularity for CRC verification.
-3. **Grouping unit:** discipline (regulatory context) vs. city department (applicant
-   mental model)? (§6)
-4. **Granularity:** check at atomic-issue level but **report at city-comment level** —
-   confirm this roll-up is what we want.
-5. **Version anchoring — baseline vs. target (important; mostly phase 2).** A submission has
-   many `submission_version` rows (v0…vN). Exactly **one** is the set *sent to the city* for
-   a cycle (e.g. **v4 → U0**); the MCR is a **point-in-time city response anchored to that
-   baseline version**. CRC then evaluates **later** versions (v5, v6…) — the *targets* —
-   against the **baseline's** MCR/guides, so a CRC run needs **two** version refs: the
-   *target* (`reviews.submission_version_id`) and the *baseline cycle* the guides came from.
-   **This anchor does not exist in the schema yet** — `submission_version` has only
-   `version_number/label/status/submitted_at/created_at`, and `submitted_at` fires when
-   *our* review triggers, **not** when plans were sent to the **city**. (Proposed model
-   below.) Iteration-1 plan input is still just the target version's plan set; redlines come
-   later (§7). **MVP:** skip the flag — generate guides from a given MCR, store locally, run
-   against a chosen version; map version↔MCR by hand (fine for 7800 #4, where baseline ==
-   target == #4 → all-fail).
-6. **Scope boundary — regressions (new, from the execute-from framing).** CRC does
-   closed-form verification of the *old* MCR comments. A revision can *introduce new*
-   problems the city will flag next cycle; closed-form verification won't catch those.
-   Proposal: **MVP scope = old-comment resolution only**; flag "new-issue detection" as a
-   known gap (that's the formal `review`'s job, not CRC's). Worth making an explicit,
-   conscious boundary so it isn't mistaken for full coverage.
+Most prior open questions resolved in the 2026-06-18 refinement session. Remaining
+items:
 
-### Proposed data model — review cycles & version anchoring
+### 9.1 Submission-version anchoring (deferred to v3)
+A submission has many `submission_version` rows (v0…vN). Exactly **one** is the set
+sent to the city for a cycle (e.g. **v4 → U0**); the MCR is a **point-in-time city
+response anchored to that baseline version**. CRC evaluates **later** versions (v5, v6…)
+— the *targets* — against the baseline's MCR. **The `submission_version` schema has
+no city-cycle anchor today** (only `version_number/label/status/submitted_at/created_at`,
+and `submitted_at` fires when *our* review triggers, not when plans were sent to the
+**city**).
 
-The phase-2 foundation for DB + UI. Sketch:
+- **Iteration-1 mitigation:** map version↔MCR by hand. The skill takes the
+  submission-version-uuid as a CLI input; the human is responsible for picking the
+  right one.
+- **v3 design:** add a `city_review_cycle` table — `{ id,
+  baseline_submission_version_id, cycle_label (U0/U1/…), mcr_storage_path,
+  received_at }`. Lighter alternative: add `sent_to_city_at` + `city_cycle` columns to
+  `submission_version`. Decide in v3.
 
-- **Cycle anchor (two options):**
-  - *(a) columns on `submission_version`* — `sent_to_city_at`, `city_cycle` (e.g. `U0`).
-    Lightweight.
-  - *(b) a `city_review_cycle` table* — `{ id, baseline_submission_version_id, cycle_label
-    (U0/U1/…), mcr_review_id | mcr_storage_path, received_at }`. Cleaner, supports multiple
-    cycles per project, and is where the MCR + derived CRC guides hang. **Lean (b).**
-- **MCR as data:** an external review row (`reviews`, `review_type='mcr'` / source=city,
-  `submission_version_id` = baseline) whose `review_comments` are the city comments; CRC
-  guides derive 1:1 from these (and may *be* the DB rows, per §9.1).
-- **CRC run:** `reviews` row, `review_type='comment_resolution_check'`,
-  `submission_version_id` = **target** (v5/v6), linked to the baseline cycle (via
-  `prior_review_id` → the MCR review, or a `city_review_cycle` id). Findings attach per
-  `comment_number`, reusing `comment_triage` (which already surfaces prior-cycle status).
-- **MVP carve-out:** none of this is needed for phase 1 — guides local, version↔MCR mapping
-  by hand.
+### 9.2 New-issue / regression detection (v2 feature, distinct from CRC)
+CRC does closed-form verification of the *old* MCR comments. A revision can introduce
+**new** problems that the city will flag next cycle; CRC won't catch those.
+
+**v2 feature, distinct from CRC:** compare formal-review checklist results between U0
+plans (submission #N) and U1 plans (submission #N+1), flag items that went
+`pass → fail` as regressions. Requires the formal `review` workflow to have been run
+against both versions. Not part of CRC's scope; lives alongside CRC in the same
+iteration-2 roadmap slot.
+
+### 9.3 Validate-gaps workflow flavor (future option, not MVP)
+A future CRC workflow input parameter could opt into a pre-pass against U0 to confirm
+each deficiency actually exists on the baseline before running U1. Gives the agent
+grounded shared truth at the cost of doubling the run. Not MVP; revisit when we have
+U1 accuracy data and a sense of whether the agent has hallucination problems.
+
+### 9.4 MCR-as-`reviews`-row (deferred)
+For now: the MCR PDF and the generated crc-guides live in Supabase storage only. The
+CRC workflow run creates the `reviews` row (`review_type='crc'`); the city's MCR is
+**not** persisted as a `reviews` row. If a query use case emerges (e.g. "list all
+projects with an open MCR"), revisit and consider `review_type='mcr'`.
 
 ---
 
 ## 10. Test plan
 
-**Two distinct "ground truths" — do not conflate (see §2.1):** the atomic MCR is ground
-truth for *formal-review recall* (`mcr-prep`'s original purpose), **not** for CRC. CRC's
+**Two distinct "ground truths" — do not conflate (see §2.2):** the atomic MCR is
+ground truth for *formal-review recall* (`mcr-prep`'s purpose), **not** for CRC. CRC's
 accuracy ground truth is the city's **resolution verdict in a later-cycle MCR**
-(`Cleared`/`Pending`). Having the atomic MCR does *not* mean we have CRC ground truth.
+(`Cleared` / `Pending`). Having the atomic MCR does *not* mean we have CRC ground truth.
 
-- **Smoke test (iteration 1): 7800 South Lamar, submission #4, U0.** We have its U0 and U0
-  comments but **no updated civil plans yet** → running CRC against U0 should make **every
-  gradeable (required) item `failed`.** This validates the end-to-end wiring (ingest →
-  guides → review → output) and the "bias to failed when unresolved" behavior.
-  - *Action:* locate/prep 7800's atomic MCR (`{projectId}/eval-data/atomic-mcr.json`) and
-    its U0 submission version id.
-- **Accuracy eval (later):** use a **later-cycle MCR (U1)** where the city marked each
-  comment `Cleared`/`Pending` as **labeled ground truth**; score CRC verdicts against it
-  (extend the existing `atomic-accuracy` eval pattern). User confirmed a U1 is
-  available/obtainable for 1700.
+### 10.1 Smoke test (iteration 1) — 7800 South Lamar, submission #4, U0
+We have its U0 MCR and its U0 plan set, but **no updated civil plans yet** → running
+CRC against U0 plans should make **every gradeable item `failed`** (the city's
+deficiencies obviously still exist on the same plans the city was reviewing).
+
+**What this validates:**
+- End-to-end wiring: skill → conductor workflow → reviews/review_comments → PDF skill.
+- Schema validity of the CRC output JSON.
+- Evidence locations point at real sheets in the U0 plan set.
+- `comment_triage` rows get written with status `failed`.
+
+**What this does NOT validate:**
+- The agent's ability to *correctly* produce `resolved` — that requires positive
+  examples and only comes from the U1 accuracy eval (§10.2).
+- Calibration on edge cases (procedural comments, ambiguous evidence, conflicting
+  sheets).
+
+> **Action:** prep 7800's `generate-crc-guides` output and locate its U0
+> submission_version_id.
+
+### 10.2 Accuracy eval (v2)
+Use a **later-cycle MCR (U1)** where the city marked each comment `Cleared` / `Pending`
+as labeled ground truth. Score CRC verdicts against it (extend the existing
+`atomic-accuracy` eval pattern). User confirmed a U1 is available/obtainable for 1700.
 
 ---
 
 ## 11. Iteration roadmap
 
-- **Iteration 1 (this initiative's MVP):** MCR-only. Harden `mcr-prep` ingestion pattern →
-  CRC guide generator (B) → CRC review workflow (clone completeness-check, 2-status schema)
-  → run against a chosen submission version. **CRC guides stored locally; version↔MCR
-  mapping done by hand** (no DB/cycle flag yet). Smoke-test on 7800 #4 U0 (expect all-fail).
-- **Iteration 2:** redline ingestion via `navalbase` → `mcr-prep-1.1` supplement (AW/AE).
-- **Iteration 3 (DB + UI):** **city-review-cycle anchor** (flag a version as sent-to-city →
-  U0 baseline) and **DB-backed CRC guides** (§9.1, §9 proposed model); richer status
-  taxonomy; applicant-facing report with draft BLUE responses; U1 accuracy eval; UI (upload
-  MCR + new version, trigger via Substation, comment-by-comment results view leveraging
-  `comment_triage`).
+- **Iteration 1 (MVP):** MCR-only.
+  - `generate-crc-guides` skill (Claude Code, in claude-plugins).
+  - CRC Conductor workflow (clone of completeness-check, 2-status schema, single-run).
+  - Minimal DB interactions in local-run mode (read plan set, write reviews +
+    review_comments + comment_triage rows).
+  - `generate-crc-report` skill (Claude Code, in claude-plugins, local-only output).
+  - Smoke test on 7800 #4 U0 (expect all-failed verdicts).
+
+- **Iteration 2:**
+  - Medly + majority vote in the CRC workflow (multiple runs, cross-run consolidate)
+    — mirrors completeness-check's `runs: N` + `cross-run-consolidate-cc`.
+  - Redlines investigation: a shared Claude Code skill that extracts structured
+    comments from redline PDFs (likely reusing `navalbase`'s vision pipeline), feeding
+    `generate-crc-guides`. Decide whether AW/AE move from "out of scope" to "in scope".
+  - Regression-detection feature: U0/U1 formal-review-output diff, flag `pass → fail`
+    items (§9.2). Distinct from CRC.
+  - U1 accuracy eval against a labeled later-cycle MCR (§10.2).
+
+- **Iteration 3 (DB + UI):**
+  - Submission-version anchoring (§9.1) — `city_review_cycle` table or
+    `submission_version` columns.
+  - PDF skill saves report PDF to Supabase storage (currently local-only).
+  - Reconsider MCR-as-`reviews`-row (§9.4) if a query use case has appeared.
+  - Substation/Inngest trigger path for CRC (replacing CLI as the primary entry).
+  - Applicant-facing UI: upload MCR + new submission version, trigger CRC, view
+    comment-by-comment results leveraging `comment_triage`.
+  - Validate-gaps flavor (§9.3) if iteration-2 accuracy data suggests we need it.
+  - Richer status taxonomy (§8.3) if the 2-status floor proves insufficient.
 
 ---
 
@@ -423,21 +473,36 @@ accuracy ground truth is the city's **resolution verdict in a later-cycle MCR**
 EPIC: Comment Resolution Check (CRC)
 ├─ W0  Eval & test data
 │   ├─ Prep 7800 #4 atomic MCR + locate U0 submission version
-│   └─ Obtain 1700 U1 MCR → build labeled ground-truth set
-├─ W1  MCR integration (iteration 1)
-│   ├─ Harden MCR ingestion pattern (prefix dictionary, both formats, validation)
-│   ├─ CRC guide generator: atomic-mcr.json → review-guide-style checklist (1:1)
-│   ├─ CRC review workflow (clone completeness-check; resolved/failed schema)
-│   └─ Smoke test on 7800 #4 U0 (expect all-fail)
-├─ W2  Redlines (iteration 2)
-│   └─ navalbase extract → comments.txt → mcr-prep-1.1 supplement
-└─ W3  UI / infra (phase 2)
-    ├─ Data model: city_review_cycle anchor — flag a version as sent-to-city → U0 baseline
-    ├─ Data model: review_type='comment_resolution_check'; target vs baseline version refs; chain via prior_review_id
-    ├─ CRC guide storage: Supabase DB (preferred) or storage+pointer   [MVP = local files]
-    ├─ Upload MCR + new submission version; trigger via Substation (not dead cityhall path)
-    └─ Comment-by-comment results UI (comment_triage)
+│   └─ Obtain 1700 U1 MCR → build labeled ground-truth set (v2 accuracy eval)
+├─ W1  Iteration 1 — MVP
+│   ├─ Build `generate-crc-guides` skill in claude-plugins
+│   │   • Department-prefix dictionary (validate ≥2 real MCRs)
+│   │   • Status filter (Pending/New/Rejected); HITL on unknown statuses
+│   │   • Severity filter (required + recommendation)
+│   │   • Plan-verifiability filter (drop/HITL procedural)
+│   │   • CRC-tuned decomposition (fewer atomic items than mcr-prep)
+│   │   • Output: local + Supabase `crc-guides` bucket
+│   ├─ Build CRC Conductor workflow (clone completeness-check; 2-status schema; single-run)
+│   │   • Inputs: projectUuid, submissionUuid, submissionVersionNumber
+│   │   • Default: fetch crc-guides from Supabase; --use-local-guides override
+│   │   • DB writes: reviews(review_type='crc') + review_comments + comment_triage
+│   ├─ Build `generate-crc-report` skill in claude-plugins (local-only PDF via dsd + generate-report-pdf)
+│   └─ Smoke test on 7800 #4 U0 (expect all-failed)
+├─ W2  Iteration 2
+│   ├─ Medly + majority vote in CRC workflow
+│   ├─ Redlines: shared skill for redline → structured comments (navalbase-backed); decide AW/AE inclusion
+│   ├─ Regression-detection feature (U0/U1 formal-review diff)
+│   └─ U1 accuracy eval against labeled ground truth
+└─ W3  Iteration 3 — DB + UI
+    ├─ city_review_cycle anchor (or submission_version columns)
+    ├─ PDF report to Supabase storage
+    ├─ MCR-as-reviews-row revisit (if query use case appeared)
+    ├─ Substation/Inngest trigger path
+    ├─ Applicant UI (upload + trigger + per-comment results)
+    ├─ Validate-gaps flavor (if needed)
+    └─ Richer status taxonomy (if needed)
 ```
+
 The `mayor` agent can drive W1/W2 implementation off these beads once the spec is approved.
 
 ---
@@ -446,21 +511,32 @@ The `mayor` agent can drive W1/W2 implementation off these beads once the spec i
 
 | Thing | Path |
 |---|---|
-| MCR ingestion (v1.0) | `bureau/jurisdictions/austin/workflows/mcr-prep/{workflow.yaml,prompts/mcr-prep.md}` |
-| MCR supplement (v1.1) | `bureau/jurisdictions/austin/workflows/mcr-prep-1.1/` |
-| MCR dept→discipline convert | `bureau/jurisdictions/austin/workflows/mcr-convert/` |
-| Atomic MCR storage scripts | `conductor/scripts/{download,upload}_atomic_mcr.ts` (Supabase `{projectId}/eval-data/atomic-mcr.json`) |
-| Completeness workflow (template) | `bureau/jurisdictions/austin/workflows/completeness-check/workflow.yaml` |
+| Completeness workflow (template for CRC review) | `bureau/jurisdictions/austin/workflows/completeness-check/workflow.yaml` |
 | Completeness output schema | `bureau/jurisdictions/austin/workflows/completeness-check/schemas/completeness.schema.json` |
 | Completeness guide example | `bureau/jurisdictions/austin/completeness-check/v2.5-trimmed/cc-1.md` |
 | Formal review guide example | `bureau/jurisdictions/austin/review-guides/{code}/*.md` |
-| Review output schema | `bureau/workflows/review/schemas/review.schema.json` |
+| MCR ingestion (eval-only — NOT CRC's path) | `bureau/jurisdictions/austin/workflows/mcr-prep/` |
+| MCR supplement (eval-only — NOT CRC's path) | `bureau/jurisdictions/austin/workflows/mcr-prep-1.1/` |
+| MCR dept→discipline convert (eval-only — NOT CRC's path) | `bureau/jurisdictions/austin/workflows/mcr-convert/` |
+| Atomic MCR storage scripts (eval-only) | `conductor/scripts/{download,upload}_atomic_mcr.ts` |
 | Data model (schema) | `substation/supabase/migrations/00000000000000_baseline.sql` |
-| Main web app | `cityhall/` (SvelteKit) |
-| Redline extraction (later) | `navalbase/` (pdfanalyzer, layer2, 324 cached cases) |
+| Main web app | `cityhall/` (SvelteKit; CRC UI is iteration-3) |
+| Redline extraction (v2 investigation) | `navalbase/` |
+| `claude-plugins` repo (skills home) | `~/noetic/claude-plugins/plugins/` |
+| `dsd` repo (shared PDF styling) | `~/noetic/dsd/` |
+| `generate-report-pdf` skill (PDF renderer) | noetic-tools plugin |
+| `diligence-report` skill (architectural precedent) | noetic-tools plugin |
 | Sample MCR (this folder) | `1700-S-Lamar/1700-S-Lamar-U0-MCR.pdf` |
+| 1700 AW redlines (not committed; ~127 MB) | `~/noetic/tmp/comment-resolution-check/` |
 
-## Appendix B — MCR comment-prefix → discipline mapping (from `mcr-convert`)
+## Appendix B — MCR comment-prefix → department dictionary
+
+Iteration-1's `generate-crc-guides` skill needs a complete city-department prefix
+dictionary. Real 1700 prefixes observed: `SP, DE, CA, WQ, CM, TPW, PR, OWB, AWRR, AD, PB`.
+
+The legacy `mcr-convert` workflow has a **prefix → discipline** mapping table used by
+the formal-review eval pipeline. It is **not used by CRC** (CRC groups by department,
+not discipline) but is preserved here as a reference for code-citation context:
 
 | City dept (MCR prefix) | Review-guide discipline | Notes |
 |---|---|---|
@@ -477,7 +553,6 @@ The `mayor` agent can drive W1/W2 implementation off these beads once the spec i
 | row | TA | Right-of-Way |
 | ad | ZLU | Austin Development |
 
-> Real 1700 prefixes seen — `TPW, AWRR, OWB, PB, CM` — are **not** in `mcr-convert`'s table.
-> Completing this mapping is part of W1 ("harden the prefix dictionary").
-</content>
-</invoke>
+> Real 1700 prefixes `TPW, AWRR, OWB, PB, CM` are absent from this table. Completing
+> the dictionary against `bureau/.../austin/departments/` is part of W1 ("build the
+> department-prefix dictionary").
