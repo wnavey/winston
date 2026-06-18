@@ -8,7 +8,7 @@
 
 ## 1. Overview
 
-**Purpose.** A Claude Code skill that turns a Master Comment Report PDF into per-department crc-guide markdown files, ready for the CRC Conductor workflow to verify against an updated plan set.
+**Purpose.** A Claude Code skill that turns a Master Comment Report PDF into per-department crc-guide markdown files — atomic checklist items plus a regulatory overview / key terms / validation methodology enriched from bureau — ready for the CRC Conductor workflow to verify against an updated plan set.
 
 **Location.** `~/noetic/claude-plugins/plugins/noetic-tools/skills/generate-crc-guides/`
 
@@ -148,6 +148,32 @@ Each emitted item gets:
 - `evidenceExpected`: short hint at where in the plan set this should appear (sheet type)
 - `sourcePage`: from parent (for traceability)
 
+### Phase 6.5 — Enrichment (per department)
+
+After atomic items are produced for a department, the skill enriches the guide with regulatory context drawn from bureau and LLM-composed framing sections. This is what gives crc-guides depth comparable to completeness-check guides — but scoped narrowly to what the MCR comments actually cite, not the department's full remit.
+
+**Inputs (per dept):**
+- All atomic items for the dept (from Phase 6)
+- All unique code citations across those items
+- MCR header info (project name, SP number, MCR date)
+
+**Steps** (run per dept, parallel where possible):
+
+1. **Citation collection.** Build `unique_citations: Set[(code, section)]` from the dept's items.
+2. **Bureau lookup (parallel per citation).** For each citation, resolve to `$NOETIC_WORKING_DIR/bureau/jurisdictions/austin/codes/{dir}/` and read the section. Reuses the path-resolution logic from §6. Section text is cached so Phase 6.3 decomposition and Phase 6.5 enrichment don't double-fetch.
+3. **LLM sub-prompts (5 calls per dept, sharing the loaded section text):**
+   - `description` — 2–3 sentences naming the themes covered.
+   - `regulatory-overview` — ~2 paragraphs synthesizing the cited code sections.
+   - `key-terms` — regulatory + project-specific terms with one-sentence definitions and citations. Target ~8, no hard cap.
+   - `documents-to-review` — short list of plan sheet types implied by the items.
+   - `validation-methodology` — 3–5 cross-references / nuances / resolution criteria; default sentence if nothing high-signal emerges.
+4. **Persist drafts.** Write each section to `scratch/enrichment/{dept}/{description,key-terms,reg-overview,docs,methodology}.md` so Phase 8 assembly is concatenation and any individual section can be regenerated without re-running everything.
+
+**Calibration (iteration 1):**
+- Run for every dept regardless of item count — single-item depts still get framing, just minimal.
+- Bureau backfill is best-effort. If a citation can't be located, include the parent section with a "(parent section — specific sub-section not located)" note.
+- If validation-methodology comes back empty / low-signal, write the default: "Each item is verified directly against the U1 plan set per its requirement statement; no cross-item dependencies identified at guide generation time."
+
 ### Phase 7 — HITL review batch
 
 If anything landed in the HITL bucket during Phases 2–5, present them all as a single batched review to the user (see §4 for mechanism). For each item the user picks: `include` (and supplies missing data if needed) or `drop` (with optional reason). Decisions are appended to `decisions.md` (§7).
@@ -213,15 +239,45 @@ For long lists, batch into chunks of ≤10 per question. Decisions are written t
 
 ### 5.2 Per-department guide format
 
+Structure draws from both formal review guides (`bureau/.../review-guides/wwp/*.md`) and completeness-check guides (`completion-officer/.../checklists/cc-*.md`). Sections sourced as follows:
+
+| Section | Source |
+|---|---|
+| Title | Hand-templated |
+| Description | Phase 6.5 LLM |
+| Source | Hand-templated from MCR metadata |
+| Regulatory Overview | Phase 6.5 bureau backfill + LLM synthesis |
+| Key Terms | Phase 6.5 bureau backfill + LLM (target ~8, not capped) |
+| Documents to Review | Phase 6.5 LLM |
+| Validation Methodology | Phase 6.5 LLM (default sentence if no patterns) |
+| Checklist Items | Phase 6 atomic items |
+
 ```markdown
 # CRC — {DEPT_FULL_NAME} ({DEPT_PREFIX}) — {project name} v{version_number}
 
 ## Description
-Comment-resolution checks derived 1:1 from the U0 MCR comments assigned to {DEPT}.
-Each item verifies whether the updated plan set resolves a specific city comment.
+Verifies resolution of {N} {DEPT} comments raised in the U0 MCR for
+{project}. Items cover [LLM-detected themes].
 
 ## Source
 MCR: {mcr filename}. Items map 1:1 to atomic MCR issues.
+
+## Regulatory Overview
+[Phase 6.5 LLM synthesis of cited code sections. ~2 paragraphs scoped to
+what the comments actually cite — NOT the dept's full regulatory remit.]
+
+## Key Terms
+- **{Term}** — definition (≤1 sentence). Citation: {code ref}.
+- ... (~8 terms, no hard cap)
+
+## Documents to Review
+- Site plan / ROW dedication exhibit
+- Striping and signing plan
+- ...
+
+## Validation Methodology
+- {Resolution criterion / cross-reference / nuance — 3–5 bullets, or a
+  single default sentence if no high-signal patterns are identified.}
 
 ## Checklist Items
 | ID | Parent Comment | Requirement to verify resolved | Code Citation | Severity | Evidence expected |
@@ -252,7 +308,9 @@ Then the table:
 
 ---
 
-## 6. Bureau access for vague-code-ref decomposition (Phase 6.3)
+## 6. Bureau access (Phase 6.3 decomposition + Phase 6.5 enrichment)
+
+Both phases use the same path resolution. Section text loaded once is cached and reused across consumers.
 
 **Citation prefix → code dir mapping** (shipped with the skill in `references/code-dir-map.tsv`):
 
@@ -266,15 +324,20 @@ FPCM    fpcm
 SSM     ssm
 ```
 
-Lookup strategy when an MCR comment is *just* a citation:
+**Lookup strategy** (given a `(code_prefix, section_id)` pair):
 
-1. Map the citation prefix to its bureau dir under `$NOETIC_WORKING_DIR/bureau/jurisdictions/austin/codes/{dir}/`.
-2. Read the code's `README.md` to get the citation convention (DCM and likely others document their own — see `dcm/README.md`).
+1. Map the prefix to its bureau dir under `$NOETIC_WORKING_DIR/bureau/jurisdictions/austin/codes/{dir}/`.
+2. Read the code's `README.md` for the citation convention (DCM and others document their own — see `dcm/README.md`).
 3. Walk `contents/Section N - Name/` folders to find the cited section. For DCM `1.2.4.E` → `Section 1 - Drainage Policy/.../1.2.4.E.md` (or whatever the naming convention turns out to be — discover at runtime via the README and a directory listing).
-4. Read the section file. Use an LLM pass to identify sub-requirements (numbered/lettered enumeration, "shall" clauses).
-5. Emit one atomic item per sub-requirement, each carrying the full sub-citation.
+4. Return the section text.
 
-**Graceful failure.** If the code dir doesn't exist for a citation, or the section can't be located, emit 1 row with the original citation and log a note in `decisions.md`. Don't block the run.
+**Phase 6.3 consumer.** When an MCR comment is *just* a citation, an LLM pass identifies sub-requirements in the section text (numbered/lettered enumeration, "shall" clauses) and emits one atomic item per sub-requirement.
+
+**Phase 6.5 consumer.** Section text feeds Regulatory Overview synthesis and Key Terms extraction; multiple sections per dept are loaded and passed to the LLM as combined context.
+
+**Graceful failure.**
+- Phase 6.3 → emit 1 row with the original citation, log in `decisions.md`. Don't block the run.
+- Phase 6.5 → include the parent section text with a "(parent section — specific sub-section not located)" note in Regulatory Overview; if even the parent is missing, fall back to "[Code section {citation} could not be located in bureau — see comment body for context.]" and log it.
 
 `$NOETIC_WORKING_DIR` defaults to `~/noetic/` and can be overridden by env var.
 
@@ -306,6 +369,7 @@ generate-crc-guides/
     severity-classification.md          # LLM prompt + rules
     plan-verifiability.md               # LLM prompt + rules
     decomposition.md                    # decomposition rules + bureau lookup
+    enrichment.md                       # Phase 6.5 sub-prompt sequencing + calibration
     output-format.md                    # guide file format + ignored-comments format
     hitl-flow.md                        # batched HITL prompt mechanics
     supabase-lookup.md                  # SQL ladder + queries
@@ -315,6 +379,11 @@ generate-crc-guides/
     judge-plan-verifiability.md         # yes/no/uncertain prompt
     decompose-comment.md                # compound English split prompt
     decompose-code-section.md           # vague code ref → sub-reqs prompt
+    enrich-description.md               # Phase 6.5: dept-level description
+    enrich-regulatory-overview.md       # Phase 6.5: synthesize cited sections
+    enrich-key-terms.md                 # Phase 6.5: term extraction
+    enrich-documents-to-review.md       # Phase 6.5: plan sheet inference
+    enrich-validation-methodology.md    # Phase 6.5: cross-refs / nuances
 ```
 
 `SKILL.md` itself stays under ~200 lines; deep detail lives in `references/` and `prompts/` and is loaded by the skill at runtime as needed.
