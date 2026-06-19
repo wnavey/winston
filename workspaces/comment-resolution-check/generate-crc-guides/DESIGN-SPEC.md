@@ -80,10 +80,11 @@ Output: `{projectUuid, submissionUuid, submissionVersionId, submissionVersionNum
 
 ### Phase 1 — Parse the MCR PDF
 
-**Approach:** `pdftotext` → LLM extraction pass over the text. Vision is *not* used in MVP.
+**Approach:** copy MCR → `pdftotext` → LLM extraction pass over the text. Vision is *not* used in MVP.
 
-1. Run `pdftotext -layout` on the MCR PDF to produce a text file in the skill's scratch dir.
-2. Single LLM extraction pass that emits a structured JSON array of raw comments:
+1. **Copy the source MCR PDF** to `{gen-dir}/mcr.pdf`. The user-supplied path can be anywhere; after this step, all downstream phases (and the bucket upload) reference the local copy at a known location. Original filename + sha256 captured in `manifest.json` for traceability.
+2. Run `pdftotext -layout {gen-dir}/mcr.pdf {gen-dir}/scratch/mcr.txt`.
+3. Single LLM extraction pass that emits a structured JSON array of raw comments:
 
    ```jsonc
    {
@@ -97,7 +98,7 @@ Output: `{projectUuid, submissionUuid, submissionVersionId, submissionVersionNum
    }
    ```
 
-3. Save raw extraction to `scratch/raw-comments.json` for re-runs / debugging.
+4. Save raw extraction to `scratch/raw-comments.json` for re-runs / debugging.
 
 **Both ID conventions handled in the same prompt:** `DEPT N:` and `DEPT N – Current Status: ...`. The `U0:` body prefix is stripped when present.
 
@@ -257,7 +258,7 @@ total_parsed == total_emitted_items_collapsed_to_parents
 
 ### Phase 10 — Supabase upload
 
-Mirror the local generation directory to the `crc-guides` storage bucket at the same relative path. Implementation: `mcp__claude_ai_Supabase__storage_upload` (or whichever upload primitive is available).
+Mirror the local generation directory — including the copied `mcr.pdf`, all `crc-*.md` files, `ignored-comments.md`, `decisions.md`, `manifest.json`, and the `figures/` subtree — to the `crc-guides` storage bucket at the same relative path. The `scratch/` subtree is local-only (not uploaded). Implementation: `mcp__claude_ai_Supabase__storage_upload` (or whichever upload primitive is available).
 
 ---
 
@@ -281,6 +282,7 @@ For long lists, batch into chunks of ≤10 per question. Decisions are written t
 $NOETIC_WORKING_DIR/comment-resolution-check/   # default: ~/noetic/comment-resolution-check
   {projectUuid}/{submissionUuid}/{submissionVersionNumber}/
     {generation-number}/
+      mcr.pdf                  # copied from user-supplied path at Phase 1; durable
       crc-sp.md
       crc-tpw.md
       crc-de.md
@@ -486,4 +488,3 @@ generate-crc-guides/
 - **`generation-number` zero-padding** — `0/` vs `0000/`? Default: no padding, just integer.
 - **Department slug for filenames** — lowercase prefix as-is (`crc-tpw.md`, `crc-awrr.md`)? Or slugified full name (`crc-transportation-public-works.md`)? Default: lowercase prefix — short and matches the ID convention.
 - **`pdftotext` flags** — `-layout` to preserve column structure, OR `-raw` for cleaner text feed. Default: `-layout` for the MCR's two-column tendencies; revisit if it produces garbled headers.
-- **MCR upload to Supabase** — the spec mentions MCR PDFs live "in winston" today. Should this skill *also* mirror the MCR itself to the `crc-guides` bucket alongside the guides (for self-contained reproducibility)? Default: yes, copy MCR PDF into the generation dir locally + upload to bucket.
