@@ -35,11 +35,33 @@
 - `--project-id` → skip project name search; still resolve submission + version.
 - `--submission-id` → skip submission search; still resolve version.
 
+### 2.4 Working directory
+
+The skill operates from `$NOETIC_WORKING_DIR`, a **conceptual root** for the user's noetic layout. Defaults to `~/noetic`. **Not a real environment variable** — it's notation for "wherever the user's noetic checkouts live." The skill reads bureau from a sibling directory and writes CRC outputs to another sibling directory.
+
+```
+$NOETIC_WORKING_DIR/                            # default: ~/noetic
+├── bureau/                                     # read by Phase 6.3 + Phase 6.5
+└── comment-resolution-check/                   # written by Phase 8
+    └── {projectUuid}/{submissionUuid}/{...}/
+```
+
+**Validation (runs first in Phase 0).** Before any DB or LLM work:
+
+1. Compute the candidate root. Default: `~/noetic`.
+2. Check that `{root}/bureau/` exists.
+3. If yes → that root is also the CRC output root. Proceed.
+4. If no → **fail fast** with: "Bureau not found at `{root}/bureau`. Provide the correct `$NOETIC_WORKING_DIR` (the directory that contains `bureau/` as a child). CRC outputs will land at `{provided_root}/comment-resolution-check/...` — a sibling of bureau." Re-validate the new value before proceeding.
+
+Single check anchors all reads (bureau) and writes (CRC outputs) against the same root. Modeled after diligence-report's `working-dir.md` pattern, but simpler — one conceptual variable instead of four real env vars.
+
 ---
 
 ## 3. Pipeline
 
-### Phase 0 — Resolve submission_version
+### Phase 0 — Pre-flight + resolve submission_version
+
+**3.0 Working directory check.** Validate `{NOETIC_WORKING_DIR}/bureau/` exists per §2.4; fail fast and prompt for the correct root if not. This determines where Phase 8 writes outputs (sibling of bureau).
 
 **3.1 Lookup ladder** (each step skipped if its output is already pinned by a CLI arg):
 
@@ -256,7 +278,7 @@ For long lists, batch into chunks of ≤10 per question. Decisions are written t
 ### 5.1 Directory layout
 
 ```
-~/noetic/comment-resolution-check/
+$NOETIC_WORKING_DIR/comment-resolution-check/   # default: ~/noetic/comment-resolution-check
   {projectUuid}/{submissionUuid}/{submissionVersionNumber}/
     {generation-number}/
       crc-sp.md
@@ -395,7 +417,7 @@ SSM     ssm
 - Phase 6.3 → emit 1 row with the original citation, log in `decisions.md`. Don't block the run.
 - Phase 6.5 → include the parent section text with a "(parent section — specific sub-section not located)" note in Regulatory Overview; if even the parent is missing, fall back to "[Code section {citation} could not be located in bureau — see comment body for context.]" and log it.
 
-`$NOETIC_WORKING_DIR` defaults to `~/noetic/` and can be overridden by env var.
+`$NOETIC_WORKING_DIR` is the conceptual noetic root (see §2.4); defaults to `~/noetic/`. Validated in Phase 0; not a real env var.
 
 ---
 
@@ -419,6 +441,7 @@ generate-crc-guides/
   SKILL.md                              # Frontmatter + overview + pipeline at a glance
   pipeline.md                           # Phase-by-phase detail (this design doc, cleaned)
   references/
+    working-dir.md                      # $NOETIC_WORKING_DIR conventions + Phase 0 validation
     dept-prefix-dict.tsv                # prefix → department name
     code-dir-map.tsv                    # citation prefix → bureau code dir
     status-filter.md                    # status vocab + filter rules
