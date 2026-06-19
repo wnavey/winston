@@ -8,7 +8,7 @@
 
 ## 1. Overview
 
-**Purpose.** A Claude Code skill that turns a Master Comment Report PDF into per-department crc-guide markdown files — atomic checklist items plus a regulatory overview / key terms / validation methodology enriched from bureau — ready for the CRC Conductor workflow to verify against an updated plan set.
+**Purpose.** A Claude Code skill that turns a Master Comment Report PDF into per-department crc-guide markdown files — atomic checklist items, a regulatory overview / key terms / validation methodology enriched from bureau, and figures cropped from the MCR with vision-generated descriptions — ready for the CRC Conductor workflow to verify against an updated plan set.
 
 **Location.** `~/noetic/claude-plugins/plugins/noetic-tools/skills/generate-crc-guides/`
 
@@ -130,6 +130,42 @@ For every kept comment, an LLM call answers:
 - `no` → drop, log reason.
 - `uncertain` → HITL bucket.
 
+### Phase 5.5 — Figure extraction (post-filter)
+
+For comments surviving Phases 3–5, extract any figures the MCR attached. Runs after the filters so we don't burn vision calls on dropped comments.
+
+**Inputs:** kept comments (each carries `source_page` from Phase 1), the MCR PDF.
+
+**Steps:**
+
+1. **Rasterize relevant pages.** `pdftoppm -r 150 mcr.pdf scratch/pages/page` → `page-NN.png`. Only render pages that host at least one kept comment.
+2. **Haiku detect + bound (one call per page).** Combined detection + bounding pass. Prompt:
+   > "Page N of an MCR. Kept comments on this page: `[{id: TPW 12, text_excerpt: '...streetscape... TCM 2.8.2.2'}, ...]`. For each figure on the page, return `{comment_id, bbox_pct: {x, y, w, h}, brief_label: '5-word figure label'}`. Express bbox as percent of page so it's DPI-independent."
+3. **Crop.** `convert page-NN.png -crop W%xH%+X%+Y% scratch/figures/{parent_comment_id}/N.png`. Sequential numbering per parent (`1.png`, `2.png`, ...).
+4. **Sonnet describe (one call per cropped figure).** Prompt produces a type classification + a description + a constraints list:
+   > "Cropped figure attached to MCR comment `{comment_id}: {comment_body_excerpt}` citing `{code_ref}`. Return JSON:
+   > - `type`: `reference-design` (a generic ideal-state diagram from a code or standard, not specific to this site plan) | `site-specific` (a screenshot, markup, or photo showing a defect or condition on the submitted plan) | `unclear`.
+   > - `description`: 2–4 sentences describing what the figure shows and any visible dimensions / labels / annotations.
+   > - `constraints`: array of numeric constraints visible (minimum dimensions, separations, offsets) as short strings."
+5. **Attach to raw comments.** Each kept comment gets a `figures` array:
+   ```jsonc
+   "figures": [{
+     "local_path": "scratch/figures/TPW-9/1.png",
+     "caption": "TCM Fig. 9-2 — Standard parking bulb-out",
+     "type": "reference-design",
+     "description": "Plan view of a parking bulb-out showing minimum dimensions: 30' end space, 22' interior space, 18' min from lane edge, 7-8' stall width, 10-11' lane width...",
+     "constraints": ["min 30' end space", "min 15' from hydrant", "min 7–8' stall width"]
+   }]
+   ```
+
+**Inheritance.** When Phase 6 decomposes a parent comment, all atomic sub-items inherit the parent's `figures` array (figures are parent-scoped, not per-sub-item).
+
+**Feeds Phase 6.5 enrichment.** Figure descriptions + constraints are part of the per-dept enrichment LLM's context, so Regulatory Overview / Validation Methodology can ground statements in the figure's actual content (e.g., "TPW 9 supplies TCM Fig. 9-2 with min 15' hydrant offset — verification requires the U1 striping plan to match that dimension").
+
+**HITL backfill.** If Phase 7 HITL flips a previously-dropped comment to `include`, Phase 5.5 is re-invoked just for that comment's `source_page` to backfill its figures.
+
+**Iteration-1 simplifications.** No image hashing / de-duplication — same figure under multiple comments produces multiple copies. No cross-run caching — re-runs always re-extract.
+
 ### Phase 6 — Decomposition
 
 For each kept comment, apply CRC decomposition rules:
@@ -230,9 +266,16 @@ For long lists, batch into chunks of ≤10 per question. Decisions are written t
       ignored-comments.md
       decisions.md
       manifest.json
+      figures/
+        TPW-9/1.png
+        TPW-12/1.png
+        ...
       scratch/
         raw-comments.json
         mcr.txt
+        pages/page-NN.png       # rasterized MCR pages (Phase 5.5)
+        figures/                # working crops (promoted to ../figures/ in Phase 8)
+        enrichment/{dept}/...
 ```
 
 `generation-number` = `max(existing) + 1`, starting at `0`.
@@ -251,6 +294,7 @@ Structure draws from both formal review guides (`bureau/.../review-guides/wwp/*.
 | Documents to Review | Phase 6.5 LLM |
 | Validation Methodology | Phase 6.5 LLM (default sentence if no patterns) |
 | Checklist Items | Phase 6 atomic items |
+| Figures | Phase 5.5 (Haiku detect + bound, Sonnet describe + classify) |
 
 ```markdown
 # CRC — {DEPT_FULL_NAME} ({DEPT_PREFIX}) — {project name} v{version_number}
@@ -283,6 +327,18 @@ what the comments actually cite — NOT the dept's full regulatory remit.]
 | ID | Parent Comment | Requirement to verify resolved | Code Citation | Severity | Evidence expected |
 |----|---------------|-------------------------------|---------------|----------|-------------------|
 | TPW-6.1 | TPW 6 | On-street parking dimensioned ≥15 ft from either side of fire hydrants | TCM 9.2.3.1.B | required | Site plan / striping sheet |
+
+## Figures
+
+- **TPW 9** — TCM Fig. 9-2, Standard parking bulb-out *(reference-design)*
+
+  ![Plan view of parking bulb-out with labeled minimum dimensions](figures/TPW-9/1.png)
+
+  Plan view of a parking bulb-out showing minimum dimensions: 30' end space,
+  22' interior space, 18' min from lane edge, 7–8' stall width, 10–11' lane
+  width. Fire hydrant marked at curb. Bicycle path adjacent.
+
+  Constraints: min 30' end space; min 15' from hydrant; min 7–8' stall width.
 ```
 
 ### 5.3 `ignored-comments.md`
@@ -368,6 +424,7 @@ generate-crc-guides/
     status-filter.md                    # status vocab + filter rules
     severity-classification.md          # LLM prompt + rules
     plan-verifiability.md               # LLM prompt + rules
+    figure-extraction.md                # Phase 5.5 pipeline (rasterize, detect, crop, describe)
     decomposition.md                    # decomposition rules + bureau lookup
     enrichment.md                       # Phase 6.5 sub-prompt sequencing + calibration
     output-format.md                    # guide file format + ignored-comments format
@@ -377,6 +434,8 @@ generate-crc-guides/
     extract-comments.md                 # PDF text → structured comments
     classify-severity.md                # severity inference prompt
     judge-plan-verifiability.md         # yes/no/uncertain prompt
+    detect-and-bound-figures.md         # Phase 5.5: Haiku per-page detection + bbox
+    describe-figure.md                  # Phase 5.5: Sonnet per-figure type + description
     decompose-comment.md                # compound English split prompt
     decompose-code-section.md           # vague code ref → sub-reqs prompt
     enrich-description.md               # Phase 6.5: dept-level description
