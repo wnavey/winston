@@ -31,51 +31,119 @@ Per dept (each event = 5 wasted internal attempts):
 
 Note the size column doesn't correlate — `crc-iw` (1 item) and `crc-sp` (49 items) both tripped exactly once. The failure mode is shape-level, not size-driven.
 
-## Failure pattern
+## Expected output shape
 
-Every coercion_failed event has the same `attempts` signature:
+The schema lives at `bureau/workflows/comment-resolution-check/schemas/crc.schema.json` and is referenced by the `review` step's `schema:` field in `workflow.yaml`. Conductor's agent SDK passes the schema to the model via a `StructuredOutput` tool — the validator at the orchestrator layer is `ajv` (compiled at step-executor boot).
+
+Top-level required shape:
 
 ```jsonc
 {
-  "attempts": [
-    { "kind": "object", "topLevelKeys": ["findings"], "hasFindingsArray": false },
-    { "kind": "object", "topLevelKeys": ["findings"], "hasFindingsArray": false },
-    { "kind": "object", "topLevelKeys": ["findings"], "hasFindingsArray": false },
-    { "kind": "object", "topLevelKeys": ["findings"], "hasFindingsArray": false },
-    { "kind": "object", "topLevelKeys": ["findings"], "hasFindingsArray": false }
+  "grouping": "crc-tpw",                  // REQUIRED — guide filename minus `.md`
+  "findings": [                            // REQUIRED — ARRAY of finding objects
+    {
+      "checklistItemId": "TPW-3.1",       // REQUIRED
+      "observation": "...",                // REQUIRED
+      "reasoning": "...",                  // REQUIRED
+      "tools_used": [],                    // REQUIRED — array, may be empty
+      "status": "resolved",                // REQUIRED — enum: resolved|failed|not-applicable
+      "explanation": "...",                // REQUIRED — 6-30 words
+      "evidenceLocations": [               // REQUIRED — array
+        { "documentId": "...", "label": "...", "sheetNumber": 2 }
+      ],
+      "resolution": null                   // optional — corrective action for `failed`
+    }
   ],
-  "schema_errors": [
-    "root: must have required property 'grouping', /findings: must be array",
-    ...
-  ]
+  "summary": "8 of 12 resolved, 3 failed, 1 not-applicable"   // optional
 }
 ```
 
-The agent returns an object with `findings` at the root and *no* `grouping` field. On retry it makes the same omission five times in a row before the outer workflow retry kicks in, the agent re-runs from scratch, and eventually produces the correct envelope.
+`grouping` and `findings` are both at the root, both `required`. `findings` is typed as `"type": "array"`. The schema does **not** define any property called `findings` *inside* `findings[]`.
 
-`hasFindingsArray: false` across all attempts is also notable — the inner `findings` value isn't even an array on these failing attempts, despite the top-level key being called `findings`. Likely a JSON-encoded-string-of-array shape, but the log doesn't surface the inner value.
+## What the agent actually emits
+
+Pulled the raw `StructuredOutput` tool_use payload from `workspace/logs/comment-resolution-check.log` for several of the failing attempts. The shape is consistent — and more specific than the orchestrator's `topLevelKeys: ["findings"]` summary suggests. The agent is **double-wrapping** the envelope:
+
+```jsonc
+// What the agent sent to StructuredOutput (FAILING)
+{
+  "findings": {                            // ← single top-level key
+    "grouping": "crc-lde",                 // ← the real envelope is one level too deep
+    "findings": [ /* ...array of findings objects... */ ],
+    "summary": "..."
+  }
+}
+```
+
+Whereas what the schema requires:
+
+```jsonc
+// What StructuredOutput expects (PASSING)
+{
+  "grouping": "crc-lde",
+  "findings": [ /* ...array of findings objects... */ ],
+  "summary": "..."
+}
+```
+
+In other words: the agent is treating the `StructuredOutput` tool as if its single input parameter were named `findings` and were expected to *contain* the envelope. But `StructuredOutput`'s parameters *are* the envelope — `grouping`, `findings`, `summary` are sibling top-level inputs, not children of a wrapper.
+
+This explains both schema errors that show up in every failing attempt:
+
+- `root: must have required property 'grouping'` — the real `grouping` is nested under `findings`, not at root.
+- `/findings: must be array` — the root-level `findings` is the outer-wrapper object, not the array.
+
+It also matches the orchestrator's per-attempt summary:
+
+```
+"attempts": [
+  { "kind": "object", "topLevelKeys": ["findings"], "hasFindingsArray": false },
+  ...
+]
+```
+
+`topLevelKeys: ["findings"]` — only one key at the root, the wrapper. `hasFindingsArray: false` — that one key holds a dict, not an array.
+
+The model commits to this misshape on attempt 1 and reproduces it five times in a row before the orchestrator's "exhausted retries" path fires and the outer workflow retry kicks in with a fresh agent session.
 
 ## Why this is happening (hypothesis)
 
-The review prompt (`bureau/workflows/comment-resolution-check/prompts/review.md`) introduces the full output shape in **Step 5 — Return Your Findings**, which is the last section the agent reads after walking through the guide (Step 1), checking applicability (Step 2), gathering evidence (Step 3), and evaluating each item (Step 4). By the time the agent is composing its tool call, it has spent the bulk of its attention on per-item evaluation logic and produces the findings array verbatim — forgetting to wrap.
+The model isn't *forgetting* the envelope — it's *adding* one. It treats the `StructuredOutput` tool as if it took a single parameter `findings` that holds the whole result object. That misreading is a known pattern for tools that expose schema-validated structured output: the model collapses tool name → first noun-like parameter and tries to stuff the whole shape underneath.
 
-Mirrors a class of failure the CC review prompt mitigates with a `CRITICAL — always call StructuredOutput with the full envelope` block. CRC has the same block, but it's only at Step 5 and doesn't appear to be sticking.
+CRC's `review.md` doesn't directly defend against this *specific* shape. The "WRONG" examples it lists are:
 
-## What we already tried
+```jsonc
+// Missing the `grouping` wrapper — findings cannot be at the root.
+{ "findings": [ ... ] }
 
-CRC's `review.md` already contains:
-- An explicit "WRONG — these fail schema validation" block showing the exact failure shape (`{ "findings": [...] }` without `grouping`).
-- A full skeleton example with all three top-level fields.
-- A "REQUIRED" annotation on `grouping` and `findings`.
+// Bare array — must be wrapped in an object with `grouping` and `findings`.
+[ { ... }, { ... } ]
 
-The model produces the documented anti-pattern anyway on ~60% of dept agents.
+// Empty object.
+{}
+```
+
+None of these match the actual failure mode, which is `{ "findings": { grouping, findings, summary } }`. The skeleton example in the prompt is correctly shaped, but the model is generalizing past it.
 
 ## Suggested mitigations (ranked by effort)
 
-1. **Hoist the envelope requirement out of Step 5.** Move the `{ grouping, findings, summary }` skeleton + the `grouping` derivation rule ("filename without `.md`") to the very top of the prompt, before Step 1. The agent reads top-down; the last instruction it sees should be the shape, not the content of `findings[]`.
-2. **Front the `grouping` field in the example.** Currently the example shows `findings` heavily; swap so `grouping` appears first and most prominently. Models pattern-match shapes from the example more than they parse the prose.
-3. **Sharper schema description.** Update `bureau/workflows/comment-resolution-check/schemas/crc.schema.json` so the `grouping` field's `description` reads something like *"REQUIRED. Set to the guide filename without `.md` extension (e.g. `crc-tpw`). Omitting this is the most common output mistake; the StructuredOutput call will be rejected without it."* The agent SDK surfaces this back to the model on retry — making it explicit at that boundary should reduce repeat-omission.
-4. **Validate-checklist precheck.** Worth checking whether the existing `validate-checklist` tool (`conductor/src/tools/validate-checklist.ts`) can be wired into the review step as a pre-tool-call structural check. Out of scope for a single bug-fix iteration but worth scoping.
+1. **Add the double-wrap to the documented anti-patterns.** Append a new "WRONG" example to `prompts/review.md` Step 5:
+
+   ```jsonc
+   // Double-wrapped — StructuredOutput's parameters ARE the envelope,
+   // not a child of a `findings` key.
+   { "findings": { "grouping": "...", "findings": [...], "summary": "..." } }
+   ```
+
+   This addresses the failure directly. The current "WRONG" list trains on `{ findings: [...] }` (missing grouping); the model is producing a different misshape that isn't anticipated.
+
+2. **Sharpen the schema's `findings` description.** Update `schemas/crc.schema.json` so the `findings` property reads something like *"REQUIRED at the top level. Must be an ARRAY of finding objects — not an object, not a wrapper for the rest of the envelope. The `grouping`, `findings`, and `summary` fields are siblings under the root, not children of any wrapper."* The agent SDK surfaces `description` text back to the model on retry; making the array-at-root constraint explicit at that boundary should help.
+
+3. **Restate the tool-parameter contract in the prompt.** Add one sentence to Step 5: *"`StructuredOutput`'s parameters are the envelope's top-level fields. Pass `grouping`, `findings`, and `summary` as separate parameters at the root — do not wrap them under a `findings:` key."*
+
+4. **Hoist the envelope shape above Step 1.** Lower priority once 1–3 are in. The model reads top-down; even if it commits to the wrong shape during evaluation, an early structural reminder anchors the right pattern. Helps with general envelope drift, not just the double-wrap.
+
+5. **Validate-checklist precheck (out of scope here).** The existing `validate-checklist` tool (`conductor/src/tools/validate-checklist.ts`) could be wired into the review step as a pre-tool-call structural check that catches the misshape before the orchestrator's 5-retry penalty kicks in. Bigger lift; revisit if 1–4 don't move the needle.
 
 Recommend trying mitigations 1 + 2 + 3 together as a single prompt/schema tweak and re-running the smoke test for comparison.
 
