@@ -27,6 +27,12 @@ a Conductor workflow (clone of completeness-check, 2-status schema) that runs ag
 the updated plan set, and a `generate-crc-report` Claude Code skill that renders the
 city-ready PDF. Both skills live in the `claude-plugins` repo.
 
+## Component design specs
+
+- [`generate-crc-guides/DESIGN-SPEC.md`](./generate-crc-guides/DESIGN-SPEC.md) — Claude Code skill that turns an MCR PDF into per-department crc-guide files.
+- [`crc-workflow/DESIGN-SPEC.md`](./crc-workflow/DESIGN-SPEC.md) — Conductor workflow that verifies each atomic item against the U1 plan set.
+- [`cityhall-ui/DESIGN-SPEC.md`](./cityhall-ui/DESIGN-SPEC.md) — applicant-facing review page in cityhall (this iteration: read-only view + triage, mirrors Completeness Check UI).
+
 ## TODOs
 
 (tracked in SPEC.md §12 — proposed `bd` epic, not yet created)
