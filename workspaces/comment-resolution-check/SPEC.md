@@ -249,8 +249,10 @@ The session's specific ask. Grounded in the real **1700 S Lamar U0 MCR** (51 pag
 7. **Validation gate:** count reconciliation (no silently dropped comments — drops
    require an HITL decision logged).
 
-> Validate on **≥2 real MCRs** (1700 + 7800) before locking the skill behavior, to
+> Validate on **additional real MCRs** before locking the skill behavior, to
 > confirm the prefix dictionary, both format conventions, and the HITL flow.
+> 1700 South Lamar is the only MCR in hand today — securing a second target is
+> tracked as W0.
 
 ### 5.3 Output: crc-guides
 Per-department `.md` files (see §6 for format), written to both:
@@ -407,7 +409,7 @@ ground truth for *formal-review recall* (`mcr-prep`'s purpose), **not** for CRC.
 accuracy ground truth is the city's **resolution verdict in a later-cycle MCR**
 (`Cleared` / `Pending`). Having the atomic MCR does *not* mean we have CRC ground truth.
 
-### 10.1 Smoke test (iteration 1) — 7800 South Lamar, submission #4, U0
+### 10.1 Smoke test (iteration 1) — 1700 South Lamar, U0
 We have its U0 MCR and its U0 plan set, but **no updated civil plans yet** → running
 CRC against U0 plans should make **every gradeable item `failed`** (the city's
 deficiencies obviously still exist on the same plans the city was reviewing).
@@ -424,7 +426,7 @@ deficiencies obviously still exist on the same plans the city was reviewing).
 - Calibration on edge cases (procedural comments, ambiguous evidence, conflicting
   sheets).
 
-> **Action:** prep 7800's `generate-crc-guides` output and locate its U0
+> **Action:** prep 1700's `generate-crc-guides` output and locate its U0
 > submission_version_id.
 
 ### 10.2 Accuracy eval (v2)
@@ -442,7 +444,7 @@ as labeled ground truth. Score CRC verdicts against it (extend the existing
   - Minimal DB interactions in local-run mode (read plan set, write reviews +
     review_comments + comment_triage rows).
   - `generate-crc-report` skill (Claude Code, in claude-plugins, local-only output).
-  - Smoke test on 7800 #4 U0 (expect all-failed verdicts).
+  - Smoke test on 1700 South Lamar U0 (expect all-failed verdicts).
 
 - **Iteration 2:**
   - Medly + majority vote in the CRC workflow (multiple runs, cross-run consolidate)
@@ -472,7 +474,7 @@ as labeled ground truth. Score CRC verdicts against it (extend the existing
 ```
 EPIC: Comment Resolution Check (CRC)
 ├─ W0  Eval & test data
-│   ├─ Prep 7800 #4 atomic MCR + locate U0 submission version
+│   ├─ Prep 1700 South Lamar atomic MCR + locate U0 submission version
 │   └─ Obtain 1700 U1 MCR → build labeled ground-truth set (v2 accuracy eval)
 ├─ W1  Iteration 1 — MVP
 │   ├─ Build `generate-crc-guides` skill in claude-plugins
@@ -487,7 +489,7 @@ EPIC: Comment Resolution Check (CRC)
 │   │   • Default: fetch crc-guides from Supabase; --use-local-guides override
 │   │   • DB writes: reviews(review_type='crc') + review_comments + comment_triage
 │   ├─ Build `generate-crc-report` skill in claude-plugins (local-only PDF via dsd + generate-report-pdf)
-│   └─ Smoke test on 7800 #4 U0 (expect all-failed)
+│   └─ Smoke test on 1700 South Lamar U0 (expect all-failed)
 ├─ W2  Iteration 2
 │   ├─ Medly + majority vote in CRC workflow
 │   ├─ Redlines: shared skill for redline → structured comments (navalbase-backed); decide AW/AE inclusion

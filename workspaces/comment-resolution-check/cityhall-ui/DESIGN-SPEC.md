@@ -1,10 +1,12 @@
 # Cityhall CRC UI — Design Spec
 
-> **Status:** Draft, 2026-06-22. Iteration-1 of the [CRC spec](../SPEC.md) §11
-> "Iteration 3 (DB + UI)", pulled forward. Drives implementation of the
-> applicant-facing view for CRC review runs: a left-nav entry plus a single
-> review page that mirrors the existing Completeness Check UI, with the
-> CRC-specific 3-status enum and atomic-item / parent-comment hierarchy.
+> **Status:** Draft, 2026-06-22 (revised same day after spec review — see §2
+> "Spec-review clarifications" C1–C8). Iteration-1 of the
+> [CRC spec](../SPEC.md) §11 "Iteration 3 (DB + UI)", pulled forward. Drives
+> implementation of the applicant-facing view for CRC review runs: a left-nav
+> entry plus a single review page that mirrors the existing Completeness
+> Check UI, with the CRC-specific 3-status enum and atomic-item /
+> parent-comment hierarchy.
 
 ---
 
@@ -66,7 +68,8 @@ rendering. No new routes, no new API endpoints, no schema changes.
 
 ## 2. Decisions captured
 
-Twenty design questions were resolved in the 2026-06-22 session. Compact ledger:
+Twenty-one design questions were resolved in the 2026-06-22 session, plus
+eight clarifications during the same-day spec-review pass. Compact ledger:
 
 | #  | Decision |
 |----|----------|
@@ -74,7 +77,7 @@ Twenty design questions were resolved in the 2026-06-22 session. Compact ledger:
 | Q2 | View-only — no in-UI trigger. Runs are kicked off via CLI / Substation. |
 | Q3 | No source MCR PDF surfacing in MVP. |
 | Q4 | Left nav only — no `/project/[projectId]` page card. |
-| Q5 | Nav label is `"MCR {U-version} resolution"` (e.g., `"MCR U0 resolution"`). |
+| Q5 | Nav label is `"MCR {U-version} resolution"` (e.g., `"U0 MCR resolution"`). |
 | Q6 | Show nav entry only when a `reviews` row with `review_type='crc'` exists for the active submission version — mirrors Completeness's visibility rule. |
 | Q7 | Reuse the existing `/project/[projectId]/review/[reviewId]` route; runtime branching on `reviews.review_type`. |
 | Q8 | Single-page accordion — no `[sectionId]` sub-routes. Filter tabs by status + items grouped by section, matching the Completeness layout. |
@@ -91,6 +94,19 @@ Twenty design questions were resolved in the 2026-06-22 session. Compact ledger:
 | Q19 | "X fixed" / "Y corrected" badges — same component + same semantics as Completeness. |
 | Q20 | "Download Report" button — rendered disabled with tooltip ("PDF generation moves to cloud in iter-3"). |
 | Q21 | "Inspect Review" button — mirror Completeness; point at the CRC review. |
+
+**Spec-review clarifications (2026-06-22 PM):**
+
+| #   | Decision |
+|-----|----------|
+| C1  | Comment-row implementation: clone the **inline collapsed/expanded row pattern** from `[reviewId]/+page.svelte`'s flat list (the Completeness flat list does NOT use `CompletenessCommentCard`). No new `CRCCommentCard.svelte` file. (Supersedes the §8 file plan.) |
+| C2  | `output_schema` value: **`'2026-06-crc'`** for both `reviews` and `review_comments`. Matches cityhall's date-based convention; closes §10.3. |
+| C3  | Workflow does NOT write to `review_sections`. Sections live in `reviews.output_json.sections`. The crc-workflow DESIGN-SPEC §6 has been revised to match. Implementing that revision is a **precondition** for landing this UI. |
+| C4  | `isCompletenessCheck` (and its CRC sibling) live in the **render layer** (`+page.svelte:40`), not in `+page.ts`'s parallel-fetch block. The fetch layer is review-type-agnostic. |
+| C5  | `ReviewNav.svelte` is used only by the formal-review page. Completeness doesn't use it; CRC doesn't either. (Bullet removed from §8.) |
+| C6  | Eagerly load full `review_comments` rows for CRC reviews — mirrors Completeness's existing pattern for the simplified schema. Do NOT extend `review_comment_index_rpc`. Closes §10.5. |
+| C7  | Smoke-test target is **1700 South Lamar U0** (7800 was a typo; not a real project). §9 and SPEC.md §10.1 updated. |
+| C8  | Page-header title is **"U0 MCR Resolution"** (and nav label **"U0 MCR resolution"**), not "MCR U0 Resolution". The `"U0"` token refers to the **MCR cycle**, not the plan version under review. |
 
 ---
 
@@ -139,7 +155,7 @@ const crcReview =
 const crcItem: NavItem | null = crcReview
   ? {
       icon: 'i-mingcute:file-check-line',   // TODO confirm with design — placeholder
-      label: `MCR U0 resolution`,           // TODO §10 — derive U-version dynamically
+      label: `U0 MCR resolution`,           // TODO §10 — derive U-version dynamically
       href: `${rootURL}/review/${crcReview.id}${vSuffix}`,
       selected: (page) =>
         page.url.pathname.startsWith(`${rootURL}/review/${crcReview.id}`),
@@ -198,7 +214,7 @@ bottom:
 
 | Slot | Completeness today | CRC |
 |---|---|---|
-| Title | `"Completeness Check"` | `"MCR U0 Resolution"` *(label hardcoded — §10 TODO)* |
+| Title | `"Completeness Check"` | `"U0 MCR Resolution"` *(label hardcoded — §10 TODO)* |
 | Status badge | `Complete` / `In Progress` | Same component, same rules |
 | Subtitle | Project name (e.g., `"Lamar + Collier"`) | Project name (unchanged) |
 | Top-right buttons | `Download Report`, `Inspect Review` | `Download Report` (disabled, tooltipped — Q20), `Inspect Review` (mirror — Q21) |
@@ -279,6 +295,15 @@ workflow must honour.
 `reasoning` / `evidenceLocations`, plus the triage bar. No changes to that
 component needed — it already operates on a `review_comment` row.
 
+**Row implementation note.** The Completeness review page's flat list does NOT
+use `CompletenessCommentCard.svelte` — that component is only used in the
+`[sectionId]` sub-routes (which CRC explicitly skips per Q8). The flat list
+in `[reviewId]/+page.svelte` uses an inline collapsed/expanded row pattern.
+CRC mirrors that pattern: **clone the inline row markup from the Completeness
+flat list** and re-skin it with the CRC status enum, atomic ID, and
+parent-comment chip. **No new `CRCCommentCard.svelte` file.** See §8 for the
+revised file plan.
+
 ---
 
 ## 5. Data model & queries
@@ -293,7 +318,7 @@ and `comment_triage`.
 | `id` | uuid |
 | `review_type` | `'crc'` |
 | `submission_version_id` | the U1 target version |
-| `output_schema` | `'crc-1'` *(proposed name — see §10 TODO)* |
+| `output_schema` | `'2026-06-crc'` (matches cityhall's date-based schema convention — same family as `'2026-04-simplified'`) |
 | `output_json` | `{ metadata, sections }` — see §6 |
 | `is_current` | `true` |
 | `organization_id` / `project_id` | scoped via RLS — no UI changes |
@@ -306,34 +331,39 @@ Per atomic item:
 |---|---|
 | `id` | uuid |
 | `review_id` | FK to the CRC `reviews` row |
-| `output_schema` | `'crc-1'` *(matches reviews row)* |
+| `output_schema` | `'2026-06-crc'` *(matches reviews row)* |
 | `comment_number` | sequential 1..N, deterministic across run (per crc-workflow DESIGN-SPEC §6.3) |
 | `output_json` | see §6.2 below |
 
 ### 5.3 Loader changes
 
-Two existing loaders need a CRC branch alongside the existing
-`isCompletenessCheck`:
+**`[reviewId]/+page.ts`** — no structural change needed. The parallel queries
+at lines 110-148 are not gated on `review_type` (verified 2026-06-22); they
+fetch the review row plus triage, plan-set, and resolution-plan data
+generically by `reviewId`. CRC inherits this unchanged.
 
-**`[reviewId]/+page.ts`** — the agent's research confirms this is the file
-that fans out the parallel queries for the review detail. Add a constant near
-the existing `isCompletenessCheck` derivation:
+A few render-time branches in `+page.ts` (around line 606+, in the
+legacy-vs-simplified-schema fork) DO check `review_type === 'completeness_check'`
+literal. During implementation, walk those and add an `|| 'crc'` arm
+wherever the CRC layout matches Completeness.
+
+**`+page.svelte`** is where the bulk of the type-branching lives. Add an
+`isCRC` rune sibling to the existing `isCompletenessCheck` derivation
+(`+page.svelte:40`):
 
 ```ts
-const isCRC = reviewQuery.data.review_type === 'crc';
+const isCRC = $derived(data.review.review_type === 'crc');
 ```
 
 Then wherever `isCompletenessCheck` gates rendering (or summary computation),
-add an `isCRC` branch. Most cases will collapse to `isCompletenessCheck || isCRC`
+add an `isCRC` branch. Most cases collapse to `isCompletenessCheck || isCRC`
 because the layouts are intentionally identical.
 
-The triage-row, plan-set, and resolution-plan parallel fetches are unchanged —
-they're already keyed on `reviewId`.
-
-The `loadCommentHistory` helper (`load-comment-history.ts`) may need a CRC
-branch depending on how it derives section structure; the implementer should
-walk it and confirm it doesn't hardcode `review_type` filters. *(Quick check
-during implementation, not a known blocker.)*
+**`load-comment-history.ts`** — verified 2026-06-22: branches on `outputSchema`
+(not `review_type`). With CRC emitting `output_schema = '2026-06-crc'`, the
+helper either (a) needs a new branch alongside `'2026-04-simplified'`, or (b)
+the CRC schema's history shape matches simplified closely enough to reuse that
+arm. Walk it during implementation.
 
 ### 5.4 Realtime
 
@@ -421,16 +451,16 @@ should be updated to match, if it doesn't already.
 ### 6.3 Section vs `review_sections`
 
 **Do not write to `review_sections`.** Per
-`cityhall/docs/review-output-schemas.md`, that table is deprecated; cityhall
-reads sections from `reviews.output_json.sections`. The CRC workflow's
-review-saver should emit only the JSON shape above. The crc-workflow
-DESIGN-SPEC currently mentions `review_sections` rows in §6.3 — this should
-be reconciled to **not** write to that table, just like the `2026-04-simplified`
-schema.
+`cityhall/docs/review-output-schemas.md:53-67`, that table is deprecated;
+cityhall reads sections from `reviews.output_json.sections`. The CRC
+workflow's review-saver must emit only the JSON shape above, matching how
+the `'2026-04-simplified'` schema works.
 
-> **Action for crc-workflow spec:** revise §6.3 to remove `review_sections`
-> writes, set `output_schema = 'crc-1'`, and emit `output_json.sections`
-> instead. Tracked as a follow-up bead — see §10.
+This is a **precondition** for this UI: the crc-workflow DESIGN-SPEC §6.3
+previously specified `review_sections` writes — it has been revised in
+this same change to drop those writes and emit `output_schema = '2026-06-crc'`
++ `output_json.sections` instead. See crc-workflow DESIGN-SPEC §6 for the
+authoritative shape.
 
 ---
 
@@ -458,7 +488,7 @@ Unchanged from Completeness. The same `TriageBar` component renders the same
 
 ### 7.3 Page header label (Q5, Q17)
 
-Title in the page header: `"MCR U0 Resolution"`. Hardcoded for MVP. See §10
+Title in the page header: `"U0 MCR Resolution"`. Hardcoded for MVP. See §10
 for the follow-up to derive `"U0"` dynamically.
 
 ### 7.4 Nav icon
@@ -484,33 +514,35 @@ src/routes/(app)/project/[projectId]/
 
   review/[reviewId]/
     +page.ts
-      • Add `isCRC = reviewQuery.data.review_type === 'crc'` derivation.
-      • Confirm parallel data fetches work unchanged for CRC review type.
+      • No structural change. The parallel data fetches at lines 110-148 are
+        already review-type-agnostic and work unchanged for CRC. Review-type
+        branching happens in the render layer (+page.svelte), not here.
+      • Note: any `review_type === 'completeness_check'` literal in the render
+        branches around line 606+ may need an `|| 'crc'` arm; walk those
+        during implementation.
 
     +page.svelte
-      • Add `isCRC` rune sibling to `isCompletenessCheck` (~line 40).
+      • Add `isCRC = $derived(data.review.review_type === 'crc')` sibling to
+        the existing `isCompletenessCheck` rune at line 40.
       • In each branch currently gated on isCompletenessCheck, broaden to
         `isCompletenessCheck || isCRC` where layout is identical, OR fork to
         isCRC-specific block where labels / status enums differ.
-      • Page title: when isCRC, render "MCR U0 Resolution".
+      • Page title: when isCRC, render "U0 MCR Resolution".
       • Items filter tabs: when isCRC, render [Failed | Resolved | N/A] instead
         of [Fail | Warn | Pass | N/A].
-      • Comment list: when isCRC, render CRCCommentCard (see below).
+      • Comment list: when isCRC, render the existing inline row pattern with
+        the CRC status map (see §4.3 "Row implementation note"). No new card
+        component — this is the same inline row Completeness uses in its flat
+        list. Skin changes only:
+         – status map: resolved/failed/not-applicable (reuse Completeness colors).
+         – atomic id (TPW-3.1) shown in row label instead of plain comment_number.
+         – Parent chip: render when ≥2 sibling atomic items share parentCommentId
+           (compute locally from the section's review_comments).
       • Top-right buttons: Download Report disabled with tooltip; Inspect Review
         passes through.
-
-    CRCCommentCard.svelte  (NEW)
-      • Clone of CompletenessCommentCard.svelte, with:
-         – status map: resolved/failed/not-applicable (reuse Completeness colors).
-         – atomic id (TPW-3.1) shown in row label.
-         – Parent chip: render when ≥2 sibling atomic items share parentCommentId
-           (computation is local — pass {parentCommentMembershipCount} as a prop
-           computed in +page.svelte from the section's review_comments).
-      • Triage bar wiring identical to Completeness.
-
-    (Optional: instead of a separate CRCCommentCard, extend CompletenessCommentCard
-     to take a status-map prop. Defer that refactor — for MVP, copy + edit is faster
-     and easier to revert.)
+      • Comments are loaded eagerly with full `output_json` (per §10.5) — do not
+        switch to the `review_comment_index_rpc` lazy path; Completeness's
+        eager-load pattern is what CRC inherits.
 ```
 
 **No changes required to:**
@@ -518,9 +550,10 @@ src/routes/(app)/project/[projectId]/
 - `triage/+server.ts` — PATCH endpoint is generic.
 - `SheetLightbox.svelte` — evidenceLocations shape matches Completeness's
   `sheetReferences` shape.
-- `ReviewNav.svelte` — secondary nav inside the review page; the CRC accordion
-  doesn't use `[sectionId]` sub-routes so ReviewNav's section links should
-  remain hidden or scoped same as in Completeness.
+- `CompletenessCommentCard.svelte` — only used by the formal-review
+  `[sectionId]` sub-routes, which CRC doesn't use. Untouched.
+- `ReviewNav.svelte` — only used by the formal-review page. Completeness
+  doesn't use it; CRC doesn't either.
 - Any Supabase migration. No DB schema changes.
 
 **Substation changes:** none for MVP.
@@ -529,21 +562,21 @@ src/routes/(app)/project/[projectId]/
 
 ## 9. Smoke test plan
 
-Mirrors crc-workflow DESIGN-SPEC §9 from the UI side. Target: the 7800 South
-Lamar #4 U0 smoke run (which is expected to produce all-failed verdicts), and
-the 1700 Lamar U0 run we already completed
-(workflow run `0e674308-f315-4b09-9b11-a1db3d193459`,
-review `7e79e197-8922-4c18-8a94-bc6d43218362`).
+Mirrors crc-workflow DESIGN-SPEC §9 from the UI side. Target: the 1700 South
+Lamar U0 self-test run (U0 guides against U0 plans, expected to produce
+all-failed verdicts) — workflow run
+`0e674308-f315-4b09-9b11-a1db3d193459`, review
+`7e79e197-8922-4c18-8a94-bc6d43218362`.
 
 1. **Pre-req:** the CRC workflow has written a `reviews` row with
    `review_type='crc'` and the `output_json.sections` shape from §6.
-2. **Left nav:** load `/project/{projectId}` for the Lamar + Collier project.
-   The "MCR U0 resolution" nav item should appear under Review, between
+2. **Left nav:** load `/project/{projectId}` for the 1700 South Lamar project.
+   The "U0 MCR resolution" nav item should appear under Review, between
    Completeness and the formal review link, only when the active submission
    version matches the CRC review's `submission_version_id`.
 3. **Review page:** clicking the nav lands on
    `/project/{projectId}/review/{crcReviewId}?v={u1VersionId}`. Verify:
-   - Header reads "MCR U0 Resolution".
+   - Header reads "U0 MCR Resolution".
    - Overall Results shows resolved/failed/n-a counts that match the row
      totals in the DB.
    - Items section defaults to the Failed tab.
@@ -574,54 +607,61 @@ Flagged for explicit follow-up beads, in priority order.
 
 ### 10.1 U-version label sourcing (Q5 / Q17)
 
-Hardcoded `"U0"` for MVP. The label string actually has two failure modes
-once a U1 cycle lands:
-- The nav label `"MCR U0 resolution"` becomes wrong for a U1→U2 run.
-- The page-header title `"MCR U0 Resolution"` becomes wrong for the same.
+Hardcoded `"U0"` for MVP. The `"U0"` token refers to the **MCR cycle whose
+comments are being resolved** — not the plan version under review (in the
+U0→U1 case CRC reviews U1 plans against U0 comments). Both label strings
+have two failure modes once a U1→U2 cycle lands:
+- The nav label `"U0 MCR resolution"` becomes wrong for a U1→U2 run.
+- The page-header title `"U0 MCR Resolution"` becomes wrong for the same.
 
-**Proposed v2 fix:** `generate-crc-guides` skill writes `cycleLabel` into the
-crc-guides manifest (the user provides it at run time). The CRC workflow
-propagates it to `reviews.output_json.metadata.cycleLabel` (§6.1). The UI
-reads it from there for both the nav and the header. Falls back to `"U0"`
-if absent (backward compat for runs created before this lands).
+**Proposed v2 fix:** `generate-crc-guides` skill writes `mcrCycleLabel` into
+the crc-guides manifest (the user provides it at run time — e.g. `"U0"`,
+`"U1"`). The CRC workflow propagates it to
+`reviews.output_json.metadata.mcrCycleLabel` (§6.1). The UI reads it from
+there for both the nav and the header. Falls back to `"U0"` if absent
+(backward compat for runs created before this lands).
 
-### 10.2 Drop `review_sections` writes from CRC workflow
+> **Naming.** Field is `mcrCycleLabel`, not the more ambiguous `cycleLabel`,
+> to make explicit it refers to the MCR cycle and not the plan/submission
+> version. §6.1 currently uses `cycleLabel` — update to `mcrCycleLabel` when
+> this lands.
 
-Per §6.3, the CRC workflow should not write to the deprecated
-`review_sections` table; the crc-workflow DESIGN-SPEC currently implies it
-does. Reconciliation needed before this UI ships — otherwise the page may
-render duplicated section data depending on which source any future shared
-loader prefers.
+### 10.2 Drop `review_sections` writes from CRC workflow — RESOLVED
 
-### 10.3 `output_schema` value
+Settled 2026-06-22: the crc-workflow DESIGN-SPEC §6 has been revised in this
+same change to (a) drop `review_sections` writes entirely and (b) emit
+`output_schema = '2026-06-crc'` with sections inside
+`reviews.output_json.sections`. Implementation of the revised workflow spec
+is a **precondition** for landing this UI; a beads issue should be opened
+against the bureau/crc-workflow side to track the code change.
 
-Proposed: `'crc-1'` for both `reviews.output_schema` and
-`review_comments.output_schema`. Confirm with the conductor team that this
-is the right naming convention (the existing one is `'2026-04-simplified'`,
-which suggests a date-stamped pattern — possibly `'2026-06-crc'` instead).
-Trivial to change either way.
+### 10.3 `output_schema` value — RESOLVED
+
+Settled 2026-06-22: **`'2026-06-crc'`** for both `reviews.output_schema` and
+`review_comments.output_schema`. Matches cityhall's existing date-based
+naming convention (`'2026-04-simplified'` is the precedent at
+`cityhall/src/lib/.../load-comment-history.ts:40` and
+`cityhall/docs/review-output-schemas.md`). The CRC workflow's review-saver
+must emit this exact string — see crc-workflow DESIGN-SPEC §6.
 
 ### 10.4 Nav icon
 
 `i-mingcute:file-check-line` is a guess. Confirm with the design team /
 existing icon library before merge. Not load-bearing — easy swap.
 
-### 10.5 Parent-comment grouping calculation
+### 10.5 Parent-comment grouping calculation — RESOLVED
 
-For MVP the `Parent: TPW 3` chip is computed client-side by grouping the
-section's loaded `review_comments` on `parentCommentId` and emitting the
-chip when the group size ≥ 2. This requires the section's full comment
-list to be loaded — which the existing `[reviewId]/[sectionId]/+page.ts`
-loader does today. For the single-page accordion (Q8), make sure the parent
-page loads the full comment set up front (the lazy
-`review_comment_index_rpc` path used for the `2026-04-simplified` schema
-returns headlines only — CRC needs the full `output_json` for each item or
-at minimum `parentCommentId` and `status`).
+The `Parent: TPW 3` chip is computed client-side by grouping the section's
+loaded `review_comments` on `parentCommentId` and emitting the chip when the
+group size ≥ 2.
 
-**Action:** during implementation, decide whether to (a) eagerly load full
-`review_comments` for CRC reviews, or (b) extend the index RPC to return
-`parentCommentId`. Option (a) is fine for MVP given expected CRC item counts
-(~200 atomic items for a 190-comment MCR).
+Settled 2026-06-22: **eagerly load full `review_comments` rows for CRC
+reviews** — same pattern Completeness already uses for the simplified schema
+(verified at `cityhall/src/routes/(app)/project/[projectId]/review/[reviewId]/+page.ts`
+where comment rows are fetched directly, not via `review_comment_index_rpc`).
+Do NOT extend the index RPC. The expected CRC item count (~200 atomic items
+for a 190-comment MCR) is well within the eager-load envelope Completeness
+already runs against.
 
 ### 10.6 In-progress display
 
@@ -674,8 +714,8 @@ generates structured MCR figure data that's worth surfacing.
 | Dimension | Completeness today | CRC (this spec) |
 |---|---|---|
 | Route | `/project/{p}/review/{r}` + `/[sectionId]` sub-routes | `/project/{p}/review/{r}` only — no sub-routes |
-| Left nav label | `Completeness` | `MCR U0 resolution` (hardcoded MVP) |
-| Page title | `Completeness Check` | `MCR U0 Resolution` |
+| Left nav label | `Completeness` | `U0 MCR resolution` (hardcoded MVP) |
+| Page title | `Completeness Check` | `U0 MCR Resolution` |
 | Filter tabs | `Fail | Warn | Pass | N/A` | `Failed | Resolved | N/A` |
 | Default filter | `Fail` | `Failed` |
 | Section grouping | by completeness check guide section (e.g. "Base Sheet Requirements") | by city department (TPW, DE, …) — slug `crc-{dept}` |
@@ -708,7 +748,9 @@ generates structured MCR figure data that's worth surfacing.
 - `cityhall/src/routes/(app)/project/[projectId]/review/[reviewId]/+page.svelte`
   — Completeness review page (CRC branch lands here).
 - `cityhall/src/routes/(app)/project/[projectId]/review/CompletenessCommentCard.svelte`
-  — comment-card pattern to clone into `CRCCommentCard.svelte`.
+  — only used by formal-review `[sectionId]` sub-routes. **Not** the pattern
+  CRC clones (see §4.3 "Row implementation note"). CRC clones the inline row
+  pattern from `[reviewId]/+page.svelte`'s flat list instead.
 - `cityhall/src/routes/(app)/project/[projectId]/review/TriageBar.svelte` +
   `CommentTriagePanel.svelte` — triage UI (reused unchanged).
 - `cityhall/src/routes/(app)/project/[projectId]/review/triage/+server.ts` —
@@ -718,4 +760,4 @@ generates structured MCR figure data that's worth surfacing.
   `app.noeticbuild.com/project/23301a8a-4cdb-4751-ac0c-93b97f0f5c12/review/54d5c002-4648-4fb0-b22d-d222cbbd02f9?v=5d05e3e0-2513-4bf3-a761-e2396d80efef`.
 - CRC run targeted for first smoke test:
   workflow `0e674308-f315-4b09-9b11-a1db3d193459`, review
-  `7e79e197-8922-4c18-8a94-bc6d43218362` (Lamar + Collier U0).
+  `7e79e197-8922-4c18-8a94-bc6d43218362` (1700 South Lamar U0).
