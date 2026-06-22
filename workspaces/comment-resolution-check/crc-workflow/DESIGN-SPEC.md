@@ -1,9 +1,14 @@
 # `comment-resolution-check` Conductor Workflow — Design Spec
 
-> **Status:** Draft, 2026-06-19. Iteration-1 of the [CRC spec](../SPEC.md) §4-B.
-> Drives implementation of the second of three CRC components: the Conductor
-> workflow that takes a U1 plan set + a generated crc-guides set and produces
-> per-comment resolution verdicts in `reviews` / `review_comments`.
+> **Status:** Draft, 2026-06-19; §6 revised 2026-06-22 to drop
+> `review_sections` writes, set `output_schema = '2026-06-crc'`, and embed
+> sections inside `reviews.output_json.sections` (precondition for the
+> cityhall UI — see cityhall-ui DESIGN-SPEC §6.3 + §10.2). Smoke-test target
+> corrected to 1700 South Lamar in the same pass. Iteration-1 of the
+> [CRC spec](../SPEC.md) §4-B. Drives implementation of the second of three
+> CRC components: the Conductor workflow that takes a U1 plan set + a
+> generated crc-guides set and produces per-comment resolution verdicts in
+> `reviews` / `review_comments`.
 
 ---
 
@@ -88,9 +93,9 @@ this shared file.
 
 ### 2.4 Smoke-test invocation (SPEC §10.1)
 
-For the 7800 #4 U0 self-test, both version IDs are the same:
+For the 1700 South Lamar U0 self-test, both version IDs are the same:
 ```
-submissionVersionId           = <7800 submission_version_id for #4>
+submissionVersionId           = <1700 South Lamar U0 submission_version_id>
 crcGuidesSubmissionVersionId  = <same id>
 crcGenerationNumber           = 0
 ```
@@ -245,18 +250,23 @@ because the output JSON shape differs in two material ways:
 ### 4.6 Step 6 — DB save (Conductor's `review-saver`)
 
 Conductor's `review-saver` infrastructure handles the actual INSERT into
-`reviews` / `review_sections` / `review_comments` when `review:` is set in
-the workflow YAML:
+`reviews` / `review_comments` when `review:` is set in the workflow YAML:
 
 ```yaml
 review: "{{ WORKSPACE_PATH }}/output/review-comments.json"
 ```
 
 It writes:
-- `reviews(review_type='crc', submission_version_id=<U1 id>, output_json=…)`
-- `review_sections(...)` — one per dept (TPW / DE / CA / WQ / CM / TPW / PR /
-  OWB / AWRR / AD / PB / SP)
-- `review_comments(...)` — one per atomic item
+- `reviews(review_type='crc', submission_version_id=<U1 id>, output_schema='2026-06-crc', output_json=…)`
+  — sections live inside `output_json.sections` (see §6.1).
+- `review_comments(...)` — one per atomic item, with
+  `output_schema='2026-06-crc'`.
+
+**Do NOT write to `review_sections`.** That table is deprecated per
+`cityhall/docs/review-output-schemas.md:53-67`; cityhall reads sections from
+`reviews.output_json.sections`. The CRC review-saver must mirror the
+`'2026-04-simplified'` schema's behavior — sections JSON only, no
+`review_sections` rows. (Revised 2026-06-22; see §6.)
 
 See §6 for the exact field mapping.
 
@@ -371,7 +381,10 @@ Identical shape to `completeness.schema.json` except:
 ### 6.3 DB writes
 
 Conductor's standard `review-saver` writes one `reviews` row per workflow
-run, with section + comment rows underneath.
+run, with `review_comments` rows underneath. **No `review_sections` rows**
+— that table is deprecated; section metadata lives inside
+`reviews.output_json.sections` (the cityhall UI reads from there, per
+`cityhall/docs/review-output-schemas.md:53-67`).
 
 | Table | Field | Value |
 |---|---|---|
@@ -379,12 +392,17 @@ run, with section + comment rows underneath.
 | `reviews` | `submission_version_id` | input `submissionVersionId` (U1) |
 | `reviews` | `prior_review_id` | `null` (MVP — see §2.3) |
 | `reviews` | `is_current` | `true` |
-| `reviews` | `output_json` | full `review-comments.json` payload |
-| `review_sections` | `name` | dept name (`TPW`, `DE`, …) |
-| `review_sections` | `code` | grouping id (`crc-tpw`, `crc-de`, …) |
+| `reviews` | `output_schema` | `'2026-06-crc'` |
+| `reviews` | `output_json` | `{ metadata, sections, … }` — sections embedded here, one entry per dept (`{slug:'crc-tpw', label:'TPW (Transportation & Public Works)', summary:'…'}`) |
+| `review_comments` | `output_schema` | `'2026-06-crc'` |
 | `review_comments` | `comment_number` | sequential `1..N` across all sections (see below) |
-| `review_comments` | `output_json` | one finding's full record |
+| `review_comments` | `output_json` | one finding's full record (includes `section` slug for grouping) |
 | `review_comments` | `sheet_references` | derived from `evidenceLocations` |
+
+**Sections shape inside `reviews.output_json`.** See cityhall-ui DESIGN-SPEC
+§6.1 for the authoritative contract. Summary: an array of
+`{slug, label, summary}` objects, one per dept represented in the MCR. The
+slug (`crc-tpw`) doubles as the foreign key from `review_comments.output_json.section`.
 
 **Sequential comment numbering.** The atomic checklist ID
 (e.g., `TPW-3.1`) stays in `output_json.checklistItemId` for traceability;
@@ -489,18 +507,18 @@ apply to CRC's shape):
 
 ## 9. Smoke-test plan (SPEC §10.1)
 
-Target: 7800 South Lamar, submission #4 (U0 plans, U0 MCR — no U1 yet).
+Target: 1700 South Lamar U0 (U0 plans, U0 MCR — no U1 yet).
 
-1. **Pre-req:** run `generate-crc-guides` against 7800's U0 MCR to produce
-   `crc-guides/{7800_project_uuid}/{7800_submission_uuid}/4/0/`. Verify the
-   bucket upload succeeded.
-2. **Pre-req:** confirm 7800's #4 site-plan data is preprocessed and
+1. **Pre-req:** run `generate-crc-guides` against 1700's U0 MCR to produce
+   `crc-guides/{1700_project_uuid}/{1700_submission_uuid}/{u0_version_number}/0/`.
+   Verify the bucket upload succeeded.
+2. **Pre-req:** confirm 1700's U0 site-plan data is preprocessed and
    accessible to Conductor.
 3. **Run:**
    ```
    conductor run comment-resolution-check \
-     --input submissionVersionId=<7800-v4-uuid> \
-     --input crcGuidesSubmissionVersionId=<7800-v4-uuid>
+     --input submissionVersionId=<1700-u0-uuid> \
+     --input crcGuidesSubmissionVersionId=<1700-u0-uuid>
    ```
 4. **Expected outcome:**
    - `reviews` row written with `review_type='crc'`, `submission_version_id`
@@ -530,12 +548,14 @@ Target: 7800 South Lamar, submission #4 (U0 plans, U0 MCR — no U1 yet).
 These are sub-decisions I'm making at MVP defaults; flag if any deserve
 different treatment.
 
-- **Section code in DB** — `crc-tpw`, `crc-de`, etc., derived from the guide
-  filename. Could instead be the bare dept prefix (`tpw`, `de`); I'm keeping
-  the `crc-` prefix so it's distinguishable from completeness-check sections
-  and formal-review sections in cross-table queries.
-- **Section name** — full department name from the skill's dept-prefix dict
-  (e.g., "Transportation & Public Works"). Could instead use the prefix only.
+- **Section slug** — `crc-tpw`, `crc-de`, etc. (in `output_json.sections[i].slug`),
+  derived from the guide filename. Could instead be the bare dept prefix
+  (`tpw`, `de`); keeping the `crc-` prefix so it's distinguishable from
+  completeness-check sections and formal-review sections in cross-table
+  queries / log greps.
+- **Section label** — full department name (e.g., "TPW (Transportation &
+  Public Works)") in `output_json.sections[i].label`, sourced from the
+  skill's dept-prefix dict.
 - **`crc-guides-manifest.json` location** — workspace-local at
   `output/crc-guides-manifest.json` (not uploaded as a top-level artifact).
   If we want it in `reviews.output_json` for queryability, add a field.
