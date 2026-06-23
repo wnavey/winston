@@ -9,7 +9,7 @@
 
 ## 1. Summary
 
-Add a multi-run majority-vote ("medly") capability to the `comment-resolution-check` Conductor workflow, mirroring the implementation in `completeness-check`. When `runs > 1`, each department's CRC guide is reviewed by N independent agent runs in parallel; a new `cross-run-consolidate-crc` script then performs per-atomic-item majority vote, assigns a confidence tier (high/medium/low), and writes a single consolidated finding plus the full per-run trace for downstream consumption. Default behavior is unchanged (`runs = 1` is a passthrough). Per-run trace lands in `review_comments.agent_trace` JSONB so cityhall surfaces confidence badges and per-run findings using its existing completeness-check UI components.
+Add a multi-run majority-vote ("medly") capability to the `comment-resolution-check` Conductor workflow, mirroring the implementation in `completeness-check`. When `runs > 1`, each department's CRC guide is reviewed by N independent agent runs in parallel; a new `cross-run-consolidate-crc` script then performs per-atomic-item majority vote, assigns a confidence tier (high/medium/low), and writes a single consolidated finding plus the full per-run trace for downstream consumption. Default behavior is unchanged (`runs = 1` is a passthrough). Per-run trace lands in `review_comments.agent_trace` JSONB so cityhall can surface the "Run voting" UX it already has for completeness-check — but **two small cityhall changes are required** for that UI to render correctly for `review_type='crc'` (routing + status colors; see §9).
 
 The design is deliberately a near-clone of the completeness-check medly path. **Mirror that workflow whenever an explicit decision is not called out below.**
 
@@ -17,18 +17,18 @@ The design is deliberately a near-clone of the completeness-check medly path. **
 
 - **Quality lift on disagreement-prone items.** Three independent reads should reduce single-agent false-positives on `resolved` and false-negatives on `failed`.
 - **Zero-impact default.** Workflow.yaml input `runs` defaults to `1`; when `1`, the new consolidate step is a passthrough and the on-disk + DB shape is identical to today.
-- **Mirror completeness-check.** Reuse paths, layouts, script names, severity/confidence semantics — minimize cognitive load and keep the cityhall UI un-touched.
+- **Mirror completeness-check.** Reuse paths, layouts, script names, severity/confidence semantics — minimize cognitive load.
+- **Minimal cityhall changes.** Two small touches to make the existing "Run voting" UI render for `review_type='crc'`: a routing branch (CRC reviews currently fall through to the formal-review `CommentCard`, not `CompletenessCommentCard`) and CRC's `resolved/failed` status colors. See §9.
 - **Opt-in by flag.** Medly is enabled per-run via CLI or workflow input override; the default workflow shape is single-run.
 
 ## 3. Non-goals
 
-- Fixing the structured-output retry storm bug (`bugs/STRUCT-OUTPUT-RETRY-STORM.md`). That is tracked as an independent risk; this spec proceeds without depending on its resolution. (See §9 risk register.)
-- Asymmetric voting (e.g. `resolved` requires unanimity). Future option, see §10.
-- Model-mixing across runs (Sonnet + Haiku ensemble). Future option, see §10.
-- Prompt-variance across runs. Future option, see §10.
-- Confidence-aware triage (`low confidence → triage_status='needs-review'`). Future option, see §10.
+- Fixing the structured-output retry storm bug (`bugs/STRUCT-OUTPUT-RETRY-STORM.md`). That is tracked as an independent risk; this spec proceeds without depending on its resolution. (See §10 risk register.)
+- Asymmetric voting (e.g. `resolved` requires unanimity). Future option, see §11.
+- Model-mixing across runs (Sonnet + Haiku ensemble). Future option, see §11.
+- Prompt-variance across runs. Future option, see §11.
+- Confidence-aware triage (`low confidence → triage_status='needs-review'`). Future option, see §11.
 - Eval / accuracy lift measurement under medly. Iteration-2 in the SPEC; explicitly deferred here.
-- Cityhall UI changes. The existing completeness-check UI components (`CommentCard.svelte`, `SimplifiedCommentCard.svelte`) already render confidence badges + per-run trace; CRC reuses them by writing the same `agent_trace` shape.
 - PDF report skill (`generate-crc-report`) changes. The PDF renders the consolidated verdict only.
 
 ## 4. Background
@@ -268,7 +268,82 @@ Mirrors completeness-check exactly. `review_comments.agent_trace` JSONB carries,
 
 CityHall's existing `CommentCard.svelte` reads `confidence`, `runCount`, `totalRuns`, and `perRunFindings` and renders confidence badges + an expandable per-run trace. **No cityhall changes are required** as long as the agent_trace shape matches completeness 1:1.
 
-## 9. Risk register
+## 9. CityHall UI changes (small)
+
+The "Run voting" UX shown in the reference screenshot — `internal` badge, "X of N votes for Y" summary, per-run cards with status badges and dissenting markers — lives in **`CompletenessCommentCard.svelte`**. Today cityhall routes only `review_type='completeness_check'` to that component; CRC currently falls through to **`CommentCard.svelte`** (the formal-review variant), whose per-run UI is functional but less polished and doesn't match the target UX.
+
+Two small touches light up the target UX for CRC. Both are pure UI; no DB migrations, no chat-API changes, no agent_trace shape changes.
+
+### 9.1 Change 1 — route CRC reviews to `CompletenessCommentCard`
+
+**File:** `cityhall/src/routes/(app)/project/[projectId]/review/[reviewId]/[sectionId]/+page.svelte` (around line 608-628).
+
+Today:
+
+```svelte
+{#if isCompletenessCheck}
+  <CompletenessCommentCard {comment} ... />
+{:else}
+  <CommentCard {comment} ... />
+{/if}
+```
+
+Change to:
+
+```svelte
+{#if isCompletenessCheck || isCRC}
+  <CompletenessCommentCard {comment} ... />
+{:else}
+  <CommentCard {comment} ... />
+{/if}
+```
+
+`isCRC` is already defined in the same file (`$derived(data.review.review_type === 'crc')` at line ~41). Verify the equivalent routing exists in the parent `[reviewId]/+page.svelte` if it also branches by review type; mirror there too.
+
+### 9.2 Change 2 — add CRC's status enum to per-run badge colors
+
+**File:** `cityhall/src/routes/(app)/project/[projectId]/review/CompletenessCommentCard.svelte` (around lines 274-279).
+
+Today, the per-run status badge color branches:
+
+```ts
+run.status === 'pass' ? 'text-green-700 bg-green-50 border-green-200' :
+run.status === 'fail' ? 'text-red-700 bg-red-50 border-red-200' :
+run.status === 'warn' ? 'text-yellow-700 bg-yellow-50 border-yellow-200' :
+run.status === 'not-applicable' ? 'text-gray-500 bg-gray-50 border-gray-200' :
+'text-amber-700 bg-amber-50 border-amber-200'  // fallback
+```
+
+Add `'resolved'` (green) and `'failed'` (red). `'not-applicable'` already works:
+
+```ts
+run.status === 'pass' || run.status === 'resolved'
+  ? 'text-green-700 bg-green-50 border-green-200' :
+run.status === 'fail' || run.status === 'failed'
+  ? 'text-red-700 bg-red-50 border-red-200' :
+run.status === 'warn'
+  ? 'text-yellow-700 bg-yellow-50 border-yellow-200' :
+run.status === 'not-applicable'
+  ? 'text-gray-500 bg-gray-50 border-gray-200' :
+'text-amber-700 bg-amber-50 border-amber-200'
+```
+
+Also audit the **top-level** `comment.status` badge (separate from per-run badges) in the same file and add the same `'resolved'` / `'failed'` branches if it has a parallel color switch. Likely a 1-line addition; confirm during implementation.
+
+### 9.3 What does NOT need to change
+
+- **The "X of N votes for Y" summary string** is already status-agnostic — it reads `comment.status` directly and renders whatever the word is (will say "votes for failed" / "votes for resolved" with no template changes).
+- **`agent_trace` shape.** Same JSONB shape as completeness; CRC writes it, the existing card reads it.
+- **`CommentCard.svelte`** (the formal-review variant). CRC routes off it via Change 1; its CRC-amber fallback becomes dead code on the CRC path but stays in place for `review_type='review'`.
+- **`SimplifiedCommentCard.svelte`** (a third variant). Not on the CRC review path; confirm during impl and skip.
+
+### 9.4 PR shape and ordering
+
+- Cityhall changes ship as a separate PR from the bureau workflow PR.
+- **Either can land first.** The bureau workflow writes the correct `agent_trace` shape regardless of UI; cityhall just renders it with the formal-review card (and amber per-run badges) until the UI PR lands.
+- Smoke-test plan (§12) runs against both PRs landed.
+
+## 10. Risk register
 
 ### R1 — Struct-output retry storm (`bugs/STRUCT-OUTPUT-RETRY-STORM.md`)
 
@@ -277,7 +352,7 @@ CityHall's existing `CommentCard.svelte` reads `confidence`, `runCount`, `totalR
 **Medly amplification:** Three runs per department multiplies the structured-output call count by ~3×. Naive expectation: ~3× the absolute number of retry storms per workflow run, and ~3× the cost overhead. If retry-storm rate is independent across runs (likely — the failure is intra-run, not cross-run), this scales linearly.
 
 **Treatment:** Independent track. This spec proceeds without requiring the bug fix. Implementation session should:
-- Run the smoke test (§11) with `runs=3` and **record** the count of `agent.structured_output.coercion_failed` events in the error log. If the count is markedly worse than `3 ×` the single-run baseline, escalate as a blocker.
+- Run the smoke test (§12) with `runs=3` and **record** the count of `agent.structured_output.coercion_failed` events in the error log. If the count is markedly worse than `3 ×` the single-run baseline, escalate as a blocker.
 - Add a note in the workflow.yaml `runs` description that medly compounds the retry-storm cost until the bug is fixed.
 
 ### R2 — Inngest 3-hour cap
@@ -288,7 +363,7 @@ CRC's 15 departments × `runs=3` × `maxWorkers=39` should comfortably fit per t
 
 The new `cross-run-consolidate-crc.ts` is a fork. When the completeness-check parent gets fixed for a bug in the vote algorithm, that fix won't auto-propagate. **Treatment:** add a one-line code comment at the top of the new script: `// Forked from bureau/jurisdictions/austin/workflows/completeness-check/scripts/cross-run-consolidate-cc.ts on 2026-06-23. Cross-reference upstream changes when modifying vote logic.`
 
-## 10. Open questions / future work
+## 11. Open questions / future work
 
 These are explicitly **not** in scope for this spec but noted so they don't get re-discovered:
 
@@ -297,7 +372,7 @@ These are explicitly **not** in scope for this spec but noted so they don't get 
 3. **Prompt-variance across runs** — vary the system prompt subtly (e.g. "be skeptical", "be charitable", "neutral") to force perspective diversity. Decorrelates mistakes that share a model's prior. Revisit after model-mixing is benchmarked.
 4. **Confidence-aware triage** — write `triage_status='needs-review'` for low-confidence items instead of the verdict. Surfaces disagreement as a triage signal rather than burying it in a UI badge. Iteration-3 candidate; deferred until cityhall has the UX affordance for it.
 
-## 11. Smoke test plan
+## 12. Smoke test plan
 
 Per the discussion that produced this spec, the smoke test is **reuse 1700 South Lamar U0 + manual disagreement spot-check**:
 
@@ -325,7 +400,7 @@ Per the discussion that produced this spec, the smoke test is **reuse 1700 South
 
    Mirroring whatever test pattern completeness-check uses, if any. If no existing test harness, this is good optional work; otherwise carry as a follow-up.
 
-## 12. Cost / wall-clock expectations
+## 13. Cost / wall-clock expectations
 
 No hard cap. Document in the workflow.yaml comments:
 
@@ -333,19 +408,19 @@ No hard cap. Document in the workflow.yaml comments:
 - `runs=3`: ~45 Sonnet agent calls plus ~3× the absolute retry-storm overhead. Within Inngest's 3-hour cap at `maxWorkers=39`.
 - Vision-tool calls scale linearly with runs; no cross-run caching today.
 
-Real numbers should be recorded during the smoke test (§11) and added back to this spec as a follow-up commit.
+Real numbers should be recorded during the smoke test (§12) and added back to this spec as a follow-up commit.
 
-## 13. Out of scope (explicit)
+## 14. Out of scope (explicit)
 
 - Fixing the structured-output retry storm. Separate beads.
 - CityHall UI changes. The completeness-check components already render the `agent_trace` shape we'll write.
 - PDF report (`generate-crc-report` skill) changes. Renders consolidated verdict only.
 - Eval / accuracy lift measurement.
-- Asymmetric voting, model-mixing, prompt-variance, confidence-aware triage (see §10).
+- Asymmetric voting, model-mixing, prompt-variance, confidence-aware triage (see §11).
 - Cross-run vision-tool caching.
 - Refactoring `cross-run-consolidate-cc.ts` / formal-review consolidate scripts into a shared library. (See §6.4 — option C in the Q&A discussion; not chosen.)
 
-## 14. Implementation checklist (for the next session)
+## 15. Implementation checklist (for the next session)
 
 A concise punch-list. Verify against the design above as you go.
 
@@ -354,11 +429,12 @@ A concise punch-list. Verify against the design above as you go.
 - [ ] **NEW script** — fork `cross-run-consolidate-cc.ts` to `bureau/workflows/comment-resolution-check/scripts/cross-run-consolidate-crc.ts`. Apply the 3-status enum + severity map per §6.4. Keep single-run passthrough.
 - [ ] **NEW step** — insert `cross-run-consolidate-crc` step between `review` and `enrich-findings`.
 - [ ] **MODIFIED script** — update `build-crc-review-comments.ts` to read `consolidatedFile` + `totalRuns` and embed per-run trace into `agent_trace` JSONB. Update workflow.yaml `args:` for this step.
-- [ ] **Smoke test** — run §11 plan (single-run + medly on 1700 U0 + hand-inspect 5–10 items).
-- [ ] **Record numbers** — wall-clock, agent-call counts, retry-storm event counts → append to §12 as a follow-up commit on the impl branch.
+- [ ] **CityHall PR (separate)** — apply §9 changes: route `isCRC` to `CompletenessCommentCard` in `[reviewId]/[sectionId]/+page.svelte`; add `'resolved'`/`'failed'` color branches in `CompletenessCommentCard.svelte`; audit top-level comment-status badge for the same. Ship as its own PR; can land before or after the bureau PR.
+- [ ] **Smoke test** — run §12 plan (single-run + medly on 1700 U0 + hand-inspect 5–10 items). Verify Run voting card renders for CRC after both PRs land.
+- [ ] **Record numbers** — wall-clock, agent-call counts, retry-storm event counts → append to §13 as a follow-up commit on the impl branch.
 - [ ] **Beads** — close the medly bead created with this spec; link the impl PR.
 
-## 15. Beads
+## 16. Beads
 
 - Sibling bead: **`noetic-bj8`** — CRC W1 (iteration 1 MVP).
 - **This spec's bead: `noetic-846`** — "CRC W2 — medly + majority vote in comment-resolution-check workflow". The bead description points back at this file; the impl PR closes it.
@@ -377,4 +453,6 @@ A concise punch-list. Verify against the design above as you go.
 | Completeness-check workflow (template) | `bureau/jurisdictions/austin/workflows/completeness-check/workflow.yaml` |
 | Completeness-check consolidate script (fork source) | `bureau/jurisdictions/austin/workflows/completeness-check/scripts/cross-run-consolidate-cc.ts` |
 | Completeness-check build-review-comments (fork source for the modifications) | `bureau/jurisdictions/austin/workflows/completeness-check/scripts/build-review-comments.ts` |
-| CityHall consumer of agent_trace | `cityhall/src/routes/(app)/project/[projectId]/review/CommentCard.svelte` |
+| CityHall consumer of agent_trace (formal review) | `cityhall/src/routes/(app)/project/[projectId]/review/CommentCard.svelte` |
+| CityHall "Run voting" card (target UX for CRC) | `cityhall/src/routes/(app)/project/[projectId]/review/CompletenessCommentCard.svelte` |
+| CityHall review-page routing branch (where CRC gets routed to the right card) | `cityhall/src/routes/(app)/project/[projectId]/review/[reviewId]/[sectionId]/+page.svelte` |
