@@ -1,6 +1,6 @@
 # `generate-crc-guides-from-redlines` — Design Spec
 
-> **Status:** Draft revised 2026-06-23 after a question-and-answer grill against the original 2026-06-22 draft. Companion to [`generate-crc-guides/DESIGN-SPEC.md`](../generate-crc-guides/DESIGN-SPEC.md). Drives implementation of a sibling Claude Code skill that turns a navalbase step-3 (or refined step-3) result for a single redline PDF into a per-department crc-guide file for the Comment Resolution Check workflow.
+> **Status:** Draft revised 2026-06-23 (second revision same-day, after grounding Phase 4 field names against an actual navalbase enriched JSON). Companion to [`generate-crc-guides/DESIGN-SPEC.md`](../generate-crc-guides/DESIGN-SPEC.md). Drives implementation of a sibling Claude Code skill that turns a navalbase step-3 (or refined step-3) result for a single redline PDF into a per-department crc-guide file for the Comment Resolution Check workflow.
 >
 > Read [`../SPEC.md`](../SPEC.md) for the parent CRC architecture, [`../generate-crc-guides/DESIGN-SPEC.md`](../generate-crc-guides/DESIGN-SPEC.md) for the MCR-sourced sibling, and [`../crc-workflow/DESIGN-SPEC.md`](../crc-workflow/DESIGN-SPEC.md) for the Conductor workflow that consumes the emitted guide. This document only specifies what's *different* from the MCR-sourced sibling.
 
@@ -58,7 +58,7 @@ Given `<detailed-analysis-results-path>` at:
 the skill resolves:
 
 - **Source PDF**: `<same-dir>/source.pdf` — symlink written by navalbase step-3 (or the refine skill). Required. Missing → abort with: *"source.pdf symlink missing — run `navalbase step-3-analyze-pdfs` once on this PDF to recreate it, or pass `--source-pdf <path>` explicitly."* In Phase 9 the skill follows the symlink and uploads the resolved file.
-- **Enriched layer-2 results (optional)**: `<same-dir>/enriched-analysis-results.json`. If present, used in Phase 4 for regulatory enrichment. If absent, the `## Regulatory Overview` and `## Key Terms` sections are omitted from the emitted guide.
+- **Enriched layer-2 results (optional)**: `<same-dir>/enriched-analysis-results.json`. If present, used in Phase 4 for regulatory enrichment. If absent, the `## Regulatory Overview` section is omitted from the emitted guide. (The `## Key Terms` section is never emitted by this skill regardless — see Phase 4.)
 
 ### 2.4 Working directory
 
@@ -79,16 +79,16 @@ Same convention as `generate-crc-guides`: `$NOETIC_WORKING_DIR` (default `~/noet
 
 ### Phase 1 — Identify candidate items
 
-Walk every `page_results[i].detailed_analysis.redline_comments[j]` and every `.graphical_edits[j]`. Build a flat list of candidates, each carrying the source navalbase fields plus a `source_kind` (`redline_comment` | `graphical_edit`) and the `(page_number, page_id)` it came from.
+Walk every `page_results[i].detailed_analysis.redline_comments[j]` and every `.graphical_edits[j]`. Build a flat list of candidates, each carrying the source navalbase fields plus a `source_kind` (`redline_comment` | `graphical_edit`) and the `(page_number, original_index)` it came from. `original_index` is the position `j` within its source array — this is the same key Phase 4 will use to join against the enriched file.
 
-**Scope filter.** Drop with logged reason in `ignored-comments.md`:
+**Scope filter.** Drop with logged reason in `ignored-comments-redlines.md`:
 
 - `reviewer_intent != "corrective"` → reason `informational`
 - `bounding_box == null` → reason `no-bbox` (no crop possible)
 
 There is **no category filter** and **no dept-mismatch filter**. The input PDF is presumed to belong to `--dept-code` in its entirety, regardless of which sheet type each individual redline appears on.
 
-**Row IDs.** Assign sequential IDs to surviving candidates in input order (page ascending, then page_id ascending): `{DEPT_CODE_UPPER}-RL-{N}` where N is 1..N. e.g. `AW-RL-1`, `AW-RL-2`, …. In `merge` mode (§5.3) numbering continues from the highest existing row ID in the existing dept file.
+**Row IDs.** Assign sequential IDs to surviving candidates in input order (page ascending, then `original_index` ascending — i.e. the natural order they appear in the source JSON's arrays): `{DEPT_CODE_UPPER}-RL-{N}` where N is 1..N. e.g. `AW-RL-1`, `AW-RL-2`, …. In `merge` mode (§5.3) numbering continues from the highest existing row ID in the existing dept file.
 
 ### Phase 2 — Render per-item crops
 
@@ -139,21 +139,26 @@ The subagent **must not** emit refinement-pipeline language ("Verified at 600 DP
 
 #### 3.3 If verify is ever added back
 
-For a future revision that re-introduces verification: only `verification.match: false` with `confidence: high` escalates to HITL. `confidence: low` or `medium` mismatches are auto-kept and flagged in `manifest.json`. (Recorded here so the policy is on record; v1 does not run verify.)
+For a future revision that re-introduces verification: only `verification.match: false` with `confidence: high` escalates to HITL. `confidence: low` or `medium` mismatches are auto-kept and flagged in `manifest-redlines.json`. (Recorded here so the policy is on record; v1 does not run verify.)
 
 ### Phase 4 — Opportunistic regulatory enrichment
 
-If `enriched-analysis-results.json` exists, match each candidate to its layer-2 entry by `(page_number, page_id)` (or by `id` if preserved across the refinement pass). For each match, copy:
+If `enriched-analysis-results.json` exists, match each candidate to its layer-2 entry by `(page_number, original_index)`, where `original_index` is the positional index of the comment within the source `detailed-analysis-results.json`'s `detailed_analysis.redline_comments[]` (or `graphical_edits[]`) array. `page_id` is **not** a navalbase concept — do not look for it. Note that the enriched file's `page_results[]` is filtered to only the pages that had at least one corrective item, so most pages from the detailed file will have no enriched counterpart and that's expected.
 
-- `final_enriched_comment` → contributes to the body of `## Regulatory Overview` (combined into a single dept-level paragraph summarizing across enriched items).
-- `code_citations[]` → the **Code Citation** column on this row, formatted as the citation string only (no section body).
-- `key_terms[]` → `## Key Terms` bullets, deduped across items and ordered by frequency.
+For each matched entry, copy:
 
-If `enriched-analysis-results.json` is **absent**: **omit the `## Regulatory Overview` and `## Key Terms` sections entirely** from the emitted guide. Do not fill with a reviewer-convention disclaimer — empty is cleaner than fake structure, and a disclaimer risks biasing the downstream verifier toward `failed`.
+- **Regulatory Overview body** — prefer `final_enriched_comment` (post-`layer-2-finalize`, the polished one-paragraph synthesis); fall back to `enriched_full_comment_inference` (raw layer-2 output) when finalize hasn't run; skip the item entirely if both are null. Combine the per-item bodies into a single dept-level paragraph for `## Regulatory Overview`.
+- **`regulatory_citations[]`** — the actual field name in navalbase output (NOT `code_citations`). Each entry has shape `{code, section, title, relevant_excerpt, file_path}`. Render the **Code Citation** column as `"{code} {section}"` (e.g. `UCM 2.5.1.E.3`) — no section body, no excerpt, no title. Multiple citations per row join with `; `.
+
+If `enriched-analysis-results.json` is **absent**: **omit the `## Regulatory Overview` section entirely** from the emitted guide. Do not fill with a reviewer-convention disclaimer — empty is cleaner than fake structure, and a disclaimer risks biasing the downstream verifier toward `failed`.
+
+**No `## Key Terms` section.** Navalbase enrichment does not produce a `key_terms[]` field; there is no source for that section. Unlike the MCR-sourced sibling skill (which derives key terms from bureau-section text), this skill does not perform its own bureau lookups (see §6). The section is omitted unconditionally — present neither when enrichment is absent nor when it is present.
 
 ### Phase 5 — Derive Evidence-expected sheet-class labels
 
-For each row, map navalbase `category` → a short sheet-class label following the convention in the existing `crc-tpw.md` / `crc-de.md` examples (single sheet-name string, not a sentence):
+For each row, read the navalbase `category` field from **`page_results[i].detailed_analysis.category`** — page-level scope. Every comment and graphical edit on a given page inherits its page's `category`. Some refined per-comment entries also carry a `category` field; these are redundant copies of the page-level value and are **ignored** by this skill (the page-level field is authoritative).
+
+Map that category → a short sheet-class label following the convention in the existing `crc-tpw.md` / `crc-de.md` examples (single sheet-name string, not a sentence):
 
 | navalbase `category` | `Evidence expected` |
 |---|---|
@@ -194,9 +199,9 @@ Write **one** markdown file per dept per generation: `<gen-dir>/crc-{dept-code}-
 
 Also emit:
 
-- `redlines-manifest.json` — sidecar tracking source PDFs and row-ID ranges per dept (§4.3).
-- `ignored-comments.md` — log of dropped candidates (§4.4).
-- `manifest.json` — standard skill manifest (§4.5).
+- `redlines-source-tracker.json` — sidecar tracking source PDFs and row-ID ranges per dept (§4.3).
+- `ignored-comments-redlines.md` — log of dropped candidates (§4.4). Distinct filename from the MCR sibling's `ignored-comments.md` so both can coexist in the same generation directory.
+- `manifest-redlines.json` — this skill's manifest (§4.5). Distinct filename from the MCR sibling's `manifest.json` for the same reason.
 
 ### Phase 8 — Validation gate
 
@@ -210,7 +215,7 @@ Mirror `<gen-dir>` (minus `scratch/`) to bucket `crc-guides` at the same relativ
 
 - Follow the `source.pdf` symlink and upload the resolved PDF to `<gen-dir>/source-pdfs/{filename}` (always; no sha256-based skip-if-exists check in v1).
 - Upload every PNG under `figures/`.
-- Upload the markdown, `redlines-manifest.json`, `ignored-comments.md`, and `manifest.json`.
+- Upload the markdown, `redlines-source-tracker.json`, `ignored-comments-redlines.md`, and `manifest-redlines.json`.
 
 ---
 
@@ -226,9 +231,11 @@ $NOETIC_WORKING_DIR/comment-resolution-check/
     crc-aw.md                           # MCR-sourced files from sibling skill (may coexist)
     crc-tpw.md
     ...
-    redlines-manifest.json              # per-dept source-PDF tracking
-    ignored-comments.md
-    manifest.json                       # this skill's manifest
+    redlines-source-tracker.json        # per-dept source-PDF tracking (this skill)
+    ignored-comments-redlines.md        # dropped-candidates log (this skill)
+    manifest-redlines.json              # this skill's manifest
+    ignored-comments.md                 # MCR sibling's log (if MCR sibling also ran this gen)
+    manifest.json                       # MCR sibling's manifest (if MCR sibling also ran this gen)
     source-pdfs/
       <filename>.pdf                    # resolved-symlink copy of each source redline PDF
     figures/
@@ -255,18 +262,13 @@ Verifies resolution of {N} redline markups raised against the {project name} U0 
 
 Redline PDF: {source.pdf filename}. Items map 1:1 to navalbase-extracted redline comments and graphical edits.
 
-<!-- The following two sections appear ONLY if enriched-analysis-results.json was present. -->
+<!-- The following section appears ONLY if enriched-analysis-results.json was present. -->
 
 ## Regulatory Overview
 
-{Phase 4 final_enriched_comment, combined across items}
+{Phase 4 enriched-comment bodies (final_enriched_comment when available, else enriched_full_comment_inference), combined across items into a single dept-level paragraph}
 
-## Key Terms
-
-- **{term}** — {definition}. Citation: {citation}.
-- ...
-
-<!-- End conditional sections. -->
+<!-- End conditional section. No `## Key Terms` section is emitted — navalbase enrichment does not produce a key_terms field, and this skill does not synthesize one. -->
 
 ## Documents to Review
 
@@ -302,9 +304,9 @@ Notes on the table:
 - The `Severity` column is always `required` for v1. The upstream refine pass is responsible for filtering out non-actionable / lesser redlines, so everything that survives to this skill is treated as required.
 - The heading `## Figures` (plural) matches the existing convention in `crc-tpw.md` / `crc-de.md`.
 
-### 4.3 `redlines-manifest.json`
+### 4.3 `redlines-source-tracker.json`
 
-Sidecar tracking which source PDFs contributed to which row-ID ranges for each dept's file in this generation. Used by §5's `merge` logic to extend an existing dept file with rows from a second source PDF.
+Sidecar tracking which source PDFs contributed to which row-ID ranges for each dept's file in this generation. Used by §5's `merge` logic to extend an existing dept file with rows from a second source PDF. Named distinctly from the MCR sibling's manifest so the two skills can write into the same generation directory without collision.
 
 ```jsonc
 {
@@ -340,15 +342,17 @@ Sidecar tracking which source PDFs contributed to which row-ID ranges for each d
 
 In a fresh `replace` or `bump version` run this file is overwritten / created. In `merge` mode a new `sources[]` entry is appended.
 
-### 4.4 `ignored-comments.md`
+### 4.4 `ignored-comments-redlines.md`
 
-Same shape as the MCR sibling's `ignored-comments.md`. Reason values for v1:
+Same shape as the MCR sibling's `ignored-comments.md` (filename intentionally namespaced so both can coexist in the same gen directory). Reason values for v1:
 
 - `no-bbox` — Phase 1 (item had `bounding_box: null`).
 - `informational` — Phase 1 (`reviewer_intent != "corrective"`).
 - `hitl-dropped` — Phase 6 (rare; only when the user picks `cancel` mid-run).
 
-### 4.5 `manifest.json`
+### 4.5 `manifest-redlines.json`
+
+Distinct filename from the MCR sibling's `manifest.json` so both skills can write into the same gen directory without collision.
 
 ```jsonc
 {
@@ -416,9 +420,9 @@ The skill **never modifies a file in a prior generation directory**. Versioning 
 
 ### 5.3 Mode semantics
 
-- **replace** — Overwrite `crc-{this-dept-code}-redlines.md` in the highest gen. The `dept_files["crc-{code}-redlines.md"]` entry in `redlines-manifest.json` is replaced. Row IDs restart at 1. Figures for the prior row IDs are removed from `figures/`.
+- **replace** — Overwrite `crc-{this-dept-code}-redlines.md` in the highest gen. The `dept_files["crc-{code}-redlines.md"]` entry in `redlines-source-tracker.json` is replaced. Row IDs restart at 1. Figures for the prior row IDs are removed from `figures/`.
 - **bump version** — Create a new generation directory (`{highest + 1}`). Copy forward every MCR-sourced `crc-*.md` and the other depts' `crc-*-redlines.md` (plus their `figures/` and `source-pdfs/`) from the previous gen so the new gen is self-contained for workflow consumption. Write this dept's redlines file fresh in the new gen. Row IDs start at 1.
-- **merge** — Append new rows to the existing `crc-{this-dept-code}-redlines.md` in the highest gen. Row IDs continue from the last one used (existing ends at `AW-RL-8` → new rows start at `AW-RL-9`). A new `sources[]` entry is appended to `redlines-manifest.json`. No content dedup — if two PDFs cover overlapping redlines, both are kept; the verifier handles any duplication downstream.
+- **merge** — Append new rows to the existing `crc-{this-dept-code}-redlines.md` in the highest gen. Row IDs continue from the last one used (existing ends at `AW-RL-8` → new rows start at `AW-RL-9`). A new `sources[]` entry is appended to `redlines-source-tracker.json`. No content dedup — if two PDFs cover overlapping redlines, both are kept; the verifier handles any duplication downstream.
 - **cancel** — Abort the run; emit no files.
 
 ---
@@ -427,7 +431,7 @@ The skill **never modifies a file in a prior generation directory**. Versioning 
 
 This skill does **not** perform its own bureau code-section lookups. Code citations come from one of two sources, in priority order:
 
-1. **Layer-2 enrichment** (if `enriched-analysis-results.json` is present) — the `code_citations[]` array is consumed verbatim.
+1. **Layer-2 enrichment** (if `enriched-analysis-results.json` is present) — the `regulatory_citations[]` array on each matched item is consumed. Each entry has shape `{code, section, title, relevant_excerpt, file_path}`; the **Code Citation** column renders `"{code} {section}"` only (no title, no excerpt, no file_path). Multiple citations join with `; `.
 2. **Margin-regex extraction** (Phase 5b, always run for rows without layer-2 citations) — literal code-reference strings the reviewer hand-wrote on the redlines are extracted from `transcribed_text` and `full_comment_inference`.
 
 Rows with no citation from either source show `—` in the Code Citation column. No section-text bodies are fetched from bureau — the citation string alone is sufficient signal for the verifier.
@@ -451,7 +455,17 @@ Rows with no citation from either source show `—` in the Code Citation column.
     └── opportunistic-enrichment.md     # Phase 4 matching rules
 ```
 
-`working-dir.md`, `hitl-flow.md`, `supabase-lookup.md`, and a shared department dictionary are concepts the MCR sibling already owns — these references either link out to the sibling's `references/` or live under a `_shared/` dir at the plugin root (decision deferred to implementation).
+`working-dir.md`, `hitl-flow.md`, and `supabase-lookup.md` are concepts the MCR sibling already owns and are 100% shared. This skill does **not** duplicate them — `SKILL.md` and `pipeline.md` reference them via relative path into the sibling skill's `references/`:
+
+```
+../generate-crc-guides/working-dir.md
+../generate-crc-guides/references/hitl-flow.md
+../generate-crc-guides/references/supabase-lookup.md
+```
+
+Both skills live under `~/noetic/claude-plugins/plugins/noetic-tools/skills/` so the relative path resolves at read-time. If a future edit forks behavior (e.g. a working-dir convention that differs for redlines), promote the divergent file into this skill's own `references/` then; don't pre-fork.
+
+A shared department dictionary is **not needed by this skill** — the MCR sibling's prefix dict maps short-code → label by scanning the MCR text. This skill takes `--dept-code` and `--dept-label` as explicit CLI args (per §2.1), so no dictionary lookup happens here.
 
 ---
 
@@ -478,3 +492,12 @@ This skill is the natural downstream consumer of `navalbase-refine-step-3-output
 4. Invoke `noetic-tools:generate-crc-guides-from-redlines` with `--detailed-analysis-results-path` pointing at either the raw or refined tree. The skill auto-detects and uses `enriched-analysis-results.json` if present.
 
 Running on the unrefined step-3 tree is supported. The user accepts the risk that process-noise items (sheet-index signposts, rejection stamps, "Apply comments to ALL sheets" boilerplate) may surface as rows in the emitted guide. Refining first is recommended but not enforced.
+
+### 9.1 Reference example inputs
+
+Concrete navalbase outputs to anchor implementation and validation against:
+
+- **Detailed-only (no enrichment) — unrefined step 3.** `~/noetic/navalbase/prev-step-3-outputs/santa-rita-atomic-mcr-run/analysis-results/13543927/SP-2025-0224C.SH_Pathways at Santa Rita Courts_Review U0.pdf/detailed-analysis-results.json`. 79 pages, `detailed_analysis.category` populated per page, `redline_comments[]` entries with `transcribed_text` / `full_comment_inference` / `bounding_box` / `reviewer_intent` but no `id` field (so Phase 4 matching has nothing to fall back on beyond `original_index`).
+- **Detailed + enriched (finalized).** `~/noetic/navalbase/prev-step-3-outputs/santa-rita-atomic-mcr-run/analysis-results/13543927/SP-2025-0224C.SH_Pathways at Santa Rita Courts_Review U0.pdf/enriched-analysis-results.json`. 10 pages (filtered to ones with ≥1 corrective item — note this is fewer than the detailed file's 79 pages, by design). Per-comment shape: `{original_index, classification, transcribed_text, full_comment_inference, enriched_full_comment_inference, regulatory_citations[], constraint_hypotheses[], final_enriched_comment}`. Both `final_enriched_comment` and `regulatory_citations[]` are populated here; this is the most-favorable Phase 4 input.
+
+The skill must produce a coherent guide from the detailed-only file (no `## Regulatory Overview`, all Code Citation columns come from Phase 5b margin regex or `—`) and a richer one from the detailed+enriched pair (Phase 4 supplies both the overview paragraph and the citations).
