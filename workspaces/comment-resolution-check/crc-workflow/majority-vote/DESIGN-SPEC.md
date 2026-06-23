@@ -9,7 +9,7 @@
 
 ## 1. Summary
 
-Add a multi-run majority-vote ("medly") capability to the `comment-resolution-check` Conductor workflow, mirroring the implementation in `completeness-check`. When `runs > 1`, each department's CRC guide is reviewed by N independent agent runs in parallel; a new `cross-run-consolidate-crc` script then performs per-atomic-item majority vote, assigns a confidence tier (high/medium/low), and writes a single consolidated finding plus the full per-run trace for downstream consumption. Default behavior is unchanged (`runs = 1` is a passthrough). Per-run trace lands in `review_comments.agent_trace` JSONB so cityhall can surface the "Run voting" UX it already has for completeness-check — but **two small cityhall changes are required** for that UI to render correctly for `review_type='crc'` (routing + status colors; see §9).
+Add a multi-run majority-vote ("medly") capability to the `comment-resolution-check` Conductor workflow, mirroring the implementation in `completeness-check`. When `runs > 1`, each department's CRC guide is reviewed by N independent agent runs in parallel; a new `cross-run-consolidate-crc` script then performs per-atomic-item majority vote, assigns a confidence tier (high/medium/low), and writes a single consolidated finding plus the full per-run trace for downstream consumption. Default behavior is unchanged (`runs = 1` is a passthrough). Per-run trace lands in `review_comments` JSONB so cityhall can surface the "Run voting" UX it already has for completeness-check — but **three small cityhall changes are required** for that UI to render correctly for `review_type='crc'` (routing, status colors, section-route zod schema; see §9). The nested-disclosure behavior (click a run row → expand to Explanation + Agent trace → expand to Observation + Reasoning) is automatic once the data fields are correctly populated by the workflow.
 
 The design is deliberately a near-clone of the completeness-check medly path. **Mirror that workflow whenever an explicit decision is not called out below.**
 
@@ -18,7 +18,7 @@ The design is deliberately a near-clone of the completeness-check medly path. **
 - **Quality lift on disagreement-prone items.** Three independent reads should reduce single-agent false-positives on `resolved` and false-negatives on `failed`.
 - **Zero-impact default.** Workflow.yaml input `runs` defaults to `1`; when `1`, the new consolidate step is a passthrough and the on-disk + DB shape is identical to today.
 - **Mirror completeness-check.** Reuse paths, layouts, script names, severity/confidence semantics — minimize cognitive load.
-- **Minimal cityhall changes.** Two small touches to make the existing "Run voting" UI render for `review_type='crc'`: a routing branch (CRC reviews currently fall through to the formal-review `CommentCard`, not `CompletenessCommentCard`) and CRC's `resolved/failed` status colors. See §9.
+- **Minimal cityhall changes.** Three small touches to make the existing "Run voting" UI render for `review_type='crc'`: a routing branch (CRC reviews currently fall through to the formal-review `CommentCard`, not `CompletenessCommentCard`), CRC's `resolved/failed` status colors, and a zod-schema enum widening on the section route. See §9.
 - **Opt-in by flag.** Medly is enabled per-run via CLI or workflow input override; the default workflow shape is single-run.
 
 ## 3. Non-goals
@@ -210,10 +210,25 @@ The output contract on disk is identical to completeness's:
 Today's script reads `output/enriched-findings.json` and the rephrased titles, then emits the `review-comments.json` shape for conductor's review-saver. Under medly it additionally:
 
 1. **Reads `output/consolidated-findings.json`** (passed via a new `--consolidatedFile` arg, mirroring completeness's `build-review-comments.ts`).
-2. **Embeds per-run trace into `agent_trace` JSONB** for each review comment. Shape mirrors completeness — include `perRunFindings: [{ run, status, explanation, observation, reasoning, evidenceLocations }, ...]`, plus top-level `confidence`, `runCount`, `totalRuns`.
+2. **Builds a `sourceFindings` array** carrying per-run trace into `review_comments.output_json` (so it lands in `agent_trace`-style JSONB for cityhall). Each `sourceFindings[]` entry has `{ ref, confidence, runCount, totalRuns, perRunFindings: [...] }`.
 3. **Adds a new `--totalRuns` arg** so the script knows how many runs were expected (matches completeness).
 
-When `runs = 1`, the consolidated file still exists (the passthrough writes it), with `totalRuns: 1`, `runCount: 1`, `confidence: 'high'` per item, and a single-entry `perRunFindings` array. CityHall will render this as a single-run trace, identical to today's UX modulo the badge.
+**Critical field mapping for `perRunFindings[]` (cityhall reads these exact names).** The agent's per-finding object uses the CRC schema's field names; cityhall's `CompletenessCommentCard.svelte` reads a different set. The build step performs the rename:
+
+| Source (agent / consolidate) | Destination (cityhall reads) | Notes |
+|---|---|---|
+| `prf.run` | `run` | passthrough (e.g. `"run-1"`) |
+| `prf.status` | `status` | passthrough — CRC enum (`resolved` / `failed` / `not-applicable`) |
+| `prf.explanation` | `comment` | **RENAME** — the UI's "Explanation" block reads `run.comment`. Without the rename, the expand area is empty. |
+| `prf.observation` | `observation` | passthrough; optional. Drives the inner "Agent trace → Observation" block. Omit when empty so the inner `<details>` doesn't render. |
+| `prf.reasoning` | `reasoning` | passthrough; optional. Drives the inner "Agent trace → Reasoning" block. Omit when empty. |
+| `prf.evidenceLocations` (mixed) | split into **`sheetReferences`** and **`documentReferences`** | Entries with `sheetNumber` → `sheetReferences[]` (`{ documentId, sheetNumber, label }`). Entries without → `documentReferences[]` (`{ documentId, label }`). Mirrors completeness's split (`build-review-comments.ts` line 234-239). |
+| n/a | `codeCitations` | `[atomic item's Code Citation]` from the enriched CRC checklist row, or `[]` if absent. |
+| n/a | `applicableAreas` | `[grouping.title]` (e.g. `"crc-tpw"`) — matches completeness's convention. |
+
+The nested-disclosure UX described in §9.4 is automatic once these fields are populated; no cityhall changes are needed beyond the three in §9.1–§9.3.
+
+When `runs = 1`, the consolidated file still exists (the passthrough writes it), with `totalRuns: 1`, `runCount: 1`, `confidence: 'high'` per item, and a single-entry `perRunFindings` array. CityHall will render this as a single-run trace.
 
 `workflow.yaml` updates the `args` block for this step:
 
@@ -330,14 +345,50 @@ run.status === 'not-applicable'
 
 Also audit the **top-level** `comment.status` badge (separate from per-run badges) in the same file and add the same `'resolved'` / `'failed'` branches if it has a parallel color switch. Likely a 1-line addition; confirm during implementation.
 
-### 9.3 What does NOT need to change
+### 9.3 Change 3 — extend the section-route zod schema to accept CRC's status enum
+
+**File:** `cityhall/src/routes/(app)/project/[projectId]/review/[reviewId]/[sectionId]/+page.ts` (around line 35-44).
+
+Today the per-run finding schema enumerates only completeness-check's status values:
+
+```ts
+const perRunFindingSchema = z.object({
+  ...
+  status: z.enum(['pass', 'fail', 'warn', 'unclear', 'not-applicable']).catch('fail' as const),
+  ...
+});
+```
+
+Without `'resolved'` / `'failed'` in the enum, CRC's per-run statuses get **silently coerced to `'fail'` via the `.catch()` fallback** — so the section page would render `'fail'` badges (red) regardless of the actual per-run value. The badge color you see in the screenshot would be right (red for fail), but the underlying `run.status` would be wrong, breaking the `votedForWinner` check (line 268: `run.status === comment.status`) since `comment.status` would be `'failed'` and the coerced `run.status` would be `'fail'`. Every run would show the "dissenting" marker.
+
+Change to mirror the parent route's already-CRC-aware schema (`[reviewId]/+page.ts` line ~600, which already includes `'resolved'` and `'failed'` with an explicit code comment about CRC):
+
+```ts
+status: z
+  .enum(['pass', 'fail', 'warn', 'unclear', 'not-applicable', 'resolved', 'failed'])
+  .catch('fail' as const),
+```
+
+**Audit any other zod `perRunFinding`-style schemas in the codebase** during impl and apply the same widening; the parent route was already prepped, but the section route was missed.
+
+### 9.4 Nested expand UX (automatic once the data is right)
+
+The screenshot's nested-disclosure behavior — click a run row → expand to show "Explanation" + collapsed "Agent trace" subsection; click "Agent trace" → expand to show "Observation" + "Reasoning" — is **already implemented** in `CompletenessCommentCard.svelte` (lines ~269-313). It is purely driven by the per-run finding's fields:
+
+- The outer `<details>` (run-N row) reads `run.comment` to render the "Explanation" block (lines 285-289).
+- The inner `<details>` ("Agent trace") only renders when `run.observation || run.reasoning` (line 291). It then reads `run.observation` (lines 297-302) and `run.reasoning` (lines 303-308).
+
+So **no component change is needed for the nested expand**. The implementation work is making sure `build-crc-review-comments` writes those exact field names. See §6.5 for the explicit field mapping (in particular, the agent emits `explanation` per the CRC schema; cityhall's per-run UI reads `comment`; the script must rename).
+
+### 9.5 What does NOT need to change
 
 - **The "X of N votes for Y" summary string** is already status-agnostic — it reads `comment.status` directly and renders whatever the word is (will say "votes for failed" / "votes for resolved" with no template changes).
-- **`agent_trace` shape.** Same JSONB shape as completeness; CRC writes it, the existing card reads it.
+- **`agent_trace` shape.** Same JSONB shape as completeness; CRC writes it, the existing card reads it (subject to §6.5's field-mapping work).
+- **The parent `[reviewId]/+page.ts` zod schema.** Already accepts `'resolved'` / `'failed'` — see the explicit code comment about CRC at line ~600.
 - **`CommentCard.svelte`** (the formal-review variant). CRC routes off it via Change 1; its CRC-amber fallback becomes dead code on the CRC path but stays in place for `review_type='review'`.
 - **`SimplifiedCommentCard.svelte`** (a third variant). Not on the CRC review path; confirm during impl and skip.
 
-### 9.4 PR shape and ordering
+### 9.6 PR shape and ordering
 
 - Cityhall changes ship as a separate PR from the bureau workflow PR.
 - **Either can land first.** The bureau workflow writes the correct `agent_trace` shape regardless of UI; cityhall just renders it with the formal-review card (and amber per-run badges) until the UI PR lands.
@@ -429,7 +480,8 @@ A concise punch-list. Verify against the design above as you go.
 - [ ] **NEW script** — fork `cross-run-consolidate-cc.ts` to `bureau/workflows/comment-resolution-check/scripts/cross-run-consolidate-crc.ts`. Apply the 3-status enum + severity map per §6.4. Keep single-run passthrough.
 - [ ] **NEW step** — insert `cross-run-consolidate-crc` step between `review` and `enrich-findings`.
 - [ ] **MODIFIED script** — update `build-crc-review-comments.ts` to read `consolidatedFile` + `totalRuns` and embed per-run trace into `agent_trace` JSONB. Update workflow.yaml `args:` for this step.
-- [ ] **CityHall PR (separate)** — apply §9 changes: route `isCRC` to `CompletenessCommentCard` in `[reviewId]/[sectionId]/+page.svelte`; add `'resolved'`/`'failed'` color branches in `CompletenessCommentCard.svelte`; audit top-level comment-status badge for the same. Ship as its own PR; can land before or after the bureau PR.
+- [ ] **CityHall PR (separate)** — apply all three §9 changes: (1) route `isCRC` to `CompletenessCommentCard` in `[reviewId]/[sectionId]/+page.svelte`; (2) add `'resolved'`/`'failed'` color branches in `CompletenessCommentCard.svelte` (audit top-level comment-status badge for the same); (3) widen the `perRunFindingSchema` zod enum in `[reviewId]/[sectionId]/+page.ts` to include `'resolved'` and `'failed'` (the parent `[reviewId]/+page.ts` schema is already widened — grep for any other zod sites). Ship as its own PR; can land before or after the bureau PR.
+- [ ] **Verify field mapping** — after both PRs land, spot-check on a real CRC review that the screenshot's full nested-expand behavior renders: click a run row → see "Explanation" + collapsed "Agent trace"; click "Agent trace" → see "Observation" + "Reasoning". Empty inner section is acceptable (means the agent didn't populate observation/reasoning); empty outer expand is a bug (means the `explanation` → `comment` rename in §6.5 was missed).
 - [ ] **Smoke test** — run §12 plan (single-run + medly on 1700 U0 + hand-inspect 5–10 items). Verify Run voting card renders for CRC after both PRs land.
 - [ ] **Record numbers** — wall-clock, agent-call counts, retry-storm event counts → append to §13 as a follow-up commit on the impl branch.
 - [ ] **Beads** — close the medly bead created with this spec; link the impl PR.
