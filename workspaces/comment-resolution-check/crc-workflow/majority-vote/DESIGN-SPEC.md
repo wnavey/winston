@@ -1,8 +1,7 @@
 # CRC Majority Vote (medly) — Design Spec
 
-> **Status:** Draft for implementation. 2026-06-23.
-> **Branch:** `crc-majority-vote-design-spec` (winston).
-> **Implementation target:** `bureau/workflows/comment-resolution-check/` (workflow.yaml + scripts + prompts/schemas if needed).
+> **Status:** Implementation in flight (2026-06-23). Bureau PR [noetic-inc/bureau#447](https://github.com/noetic-inc/bureau/pull/447) and cityhall PR [noetic-inc/cityhall#514](https://github.com/noetic-inc/cityhall/pull/514) opened on the same day. Refinements to this doc landed on branch `crc-medly-spec-refinements`.
+> **Implementation target:** `bureau/workflows/comment-resolution-check/` (workflow.yaml + scripts) + the three cityhall touches in §9.
 > **Successor work:** picked up by a fresh session via `bd ready` against the bead linked at the bottom of this spec.
 
 ---
@@ -196,7 +195,7 @@ Fork `bureau/jurisdictions/austin/workflows/completeness-check/scripts/cross-run
      'resolved': 0,
    };
    ```
-3. **Output filename** — completeness writes `{grouping}.md.json`; CRC's `enrich-findings` reads `output/findings/{checklistItem}.json` where `checklistItem` already includes `.md` in the filename pattern. **Match whatever pattern conductor's `output:` template currently produces** (verify by inspecting the single-run pre-consolidate file naming during implementation). Likely `{grouping}.md.json` to mirror completeness.
+3. **Output filename** — conductor's agent `output:` template is `{{ checklistItem }}.json` where `{{ checklistItem }}` resolves to the guide basename (e.g. `crc-tpw.md`); the resulting per-grouping file is `crc-tpw.md.json` (= `{grouping}.md.json` — same pattern completeness uses). Lock to that.
 4. **Status counts in the final log** — replace `pass/fail/unclear/n/a` with `resolved/failed/n/a`.
 5. **Single-run passthrough** — keep as-is. `runCount === 1` copies `runs/run-1/findings/*` to `findingsDir`.
 6. **Confidence semantics, vote algorithm, winning-finding selection, missing-run tolerance** — all preserved unchanged.
@@ -223,12 +222,12 @@ Today's script reads `output/enriched-findings.json` and the rephrased titles, t
 | `prf.observation` | `observation` | passthrough; optional. Drives the inner "Agent trace → Observation" block. Omit when empty so the inner `<details>` doesn't render. |
 | `prf.reasoning` | `reasoning` | passthrough; optional. Drives the inner "Agent trace → Reasoning" block. Omit when empty. |
 | `prf.evidenceLocations` (mixed) | split into **`sheetReferences`** and **`documentReferences`** | Entries with `sheetNumber` → `sheetReferences[]` (`{ documentId, sheetNumber, label }`). Entries without → `documentReferences[]` (`{ documentId, label }`). Mirrors completeness's split (`build-review-comments.ts` line 234-239). |
-| n/a | `codeCitations` | `[atomic item's Code Citation]` from the enriched CRC checklist row, or `[]` if absent. |
-| n/a | `applicableAreas` | `[grouping.title]` (e.g. `"crc-tpw"`) — matches completeness's convention. |
+| n/a | `codeCitations` | `[finding.codeCitation]` from the enriched CRC row (`[]` when absent) — `codeCitation` is the CRC schema name; completeness's parallel field is `requirementSource`. |
+| n/a | `applicableAreas` | `[grouping.departmentName]` (e.g. `"Transportation and Public Works"`) — matches the single-run CRC build script (`build-crc-review-comments.ts:200`). Completeness uses `grouping.title`; CRC uses `departmentName` because its grouping `id` (`crc-tpw`) is a section code, not a label. |
 
 The nested-disclosure UX described in §9.4 is automatic once these fields are populated; no cityhall changes are needed beyond the three in §9.1–§9.3.
 
-When `runs = 1`, the consolidated file still exists (the passthrough writes it), with `totalRuns: 1`, `runCount: 1`, `confidence: 'high'` per item, and a single-entry `perRunFindings` array. CityHall will render this as a single-run trace.
+When `runs = 1`, the passthrough copies `runs/run-1/findings/*` straight to `output/findings/` and **does not write `consolidated-findings.json`** (mirrors cc — no point synthesizing single-run vote metadata). `build-crc-review-comments` tolerates the file's absence (`fs.existsSync` check) and synthesizes a single-entry `sourceFindings` array from the enriched finding directly, with `totalRuns: 1`, `runCount: 1`, `confidence: 'high'`. CityHall renders this as a normal single-run trace.
 
 `workflow.yaml` updates the `args` block for this step:
 
@@ -260,7 +259,7 @@ The struct-output retry storm bug (`bugs/STRUCT-OUTPUT-RETRY-STORM.md`) is track
 
 ## 8. Per-run trace persistence (DB shape)
 
-Mirrors completeness-check exactly. `review_comments.agent_trace` JSONB carries, per atomic item:
+Mirrors completeness-check exactly. Each comment in `review-comments.json` carries a top-level `sourceFindings: SourceFinding[]` field; the conductor's review-saver lands that into `review_comments.output_json`'s comment record (alongside `confidence` / `runCount` / `totalRuns`). CityHall reads from there (`comment.sourceFindings`) — the JSONB column commonly nicknamed `agent_trace`-style metadata throughout this spec. Per atomic item:
 
 ```jsonc
 {
@@ -313,7 +312,13 @@ Change to:
 {/if}
 ```
 
-`isCRC` is already defined in the same file (`$derived(data.review.review_type === 'crc')` at line ~41). Verify the equivalent routing exists in the parent `[reviewId]/+page.svelte` if it also branches by review type; mirror there too.
+**Note (corrected from earlier spec versions):** `isCRC` lives in the **parent** `[reviewId]/+page.svelte:41` (`$derived(data.review.review_type === 'crc')`, snake_case from the parent's loader), NOT in the section route. The section route uses a remapped camelCase `data.review.reviewType` and only has `isCompletenessCheck` today. So Change 1 also requires:
+
+- **Add the `isCRC` derivation** to the section route: `const isCRC = $derived(data.review.reviewType === 'crc');`
+- **Widen the `reviewType` type union** in the section route's loader (both return-shape spots) from `'review' | 'completeness_check'` to `'review' | 'completeness_check' | 'crc'`.
+- **Skip the formal-review fail/unclear filter for CRC** in the section loader: today line ~395 reads `if (!isCompletenessCheck) comments = comments.filter(c => c.status === 'fail' || c.status === 'unclear')`. CRC's status enum is `failed`/`resolved`/`not-applicable`, so this filter would drop every CRC comment from the section view. Widen to `if (!isCompletenessCheck && !isCRC) …`.
+
+An `isCcStyle = $derived(isCompletenessCheck || isCRC)` alias (mirroring the parent route's pattern) is the cleanest way to wire the routing branch.
 
 ### 9.2 Change 2 — add CRC's status enum to per-run badge colors
 
@@ -343,7 +348,10 @@ run.status === 'not-applicable'
 'text-amber-700 bg-amber-50 border-amber-200'
 ```
 
-Also audit the **top-level** `comment.status` badge (separate from per-run badges) in the same file and add the same `'resolved'` / `'failed'` branches if it has a parallel color switch. Likely a 1-line addition; confirm during implementation.
+**Top-level `comment.status` badge** (separate from per-run badges) — confirmed during implementation. `CompletenessCommentCard.svelte:66-81` has a `statusStyle` derived that switches on `comment.status`. Add `case 'resolved'` (green, like `pass`) and `case 'failed'` (red, like `fail`). Two more incidental gates in the same file also key off the CC enum and need the CRC enum added symmetrically:
+
+- `fullyResolved={comment.status === 'pass'}` → `… === 'pass' || … === 'resolved'` (drives the triage-panel "resolved" affordance).
+- Resolution-display gate `(comment.status === 'fail' || … === 'warn' || … === 'unclear')` → also include `'failed'` so CRC's `failed` items render their resolution text.
 
 ### 9.3 Change 3 — extend the section-route zod schema to accept CRC's status enum
 
@@ -391,7 +399,7 @@ So **no component change is needed for the nested expand**. The implementation w
 ### 9.6 PR shape and ordering
 
 - Cityhall changes ship as a separate PR from the bureau workflow PR.
-- **Either can land first.** The bureau workflow writes the correct `agent_trace` shape regardless of UI; cityhall just renders it with the formal-review card (and amber per-run badges) until the UI PR lands.
+- **Bureau PR can land independently** — it writes the correct `sourceFindings` shape regardless of which card cityhall renders. **Cityhall Change 3 (the zod widening) is effectively a prereq for correct CRC run-voting UI.** Without it, every CRC per-run status silently coerces to `'fail'` via `.catch()`, breaking the `votedForWinner = run.status === comment.status` check — every run would show the "dissenting" marker regardless of vote. So the safe ordering is: ship bureau whenever; ship the cityhall PR before any user views a CRC `runs > 1` review.
 - Smoke-test plan (§12) runs against both PRs landed.
 
 ## 10. Risk register
