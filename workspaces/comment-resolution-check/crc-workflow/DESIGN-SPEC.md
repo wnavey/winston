@@ -177,6 +177,14 @@ manifest into the workspace.
 One agent per crc-*.md guide file. The agent processes **all atomic items
 within that one dept's guide** in a single session, then stops.
 
+When the generate-crc-guides skill splits a large department across multiple
+files (`crc-de-1.md`, `crc-de-2.md`, …) because it exceeded the 20-item cap, one
+review agent runs per part — and the agent doesn't know it's working on part of
+a larger department. The downstream `cross-run-consolidate-crc` and
+`enrich-findings` scripts strip the trailing `-{digits}` from each file's
+grouping ID to merge split parts into a single department section before the
+review-comments JSON is built.
+
 ```yaml
 - name: review
   agent:
@@ -349,9 +357,13 @@ Identical shape to `completeness.schema.json` except:
 
 ```jsonc
 {
-  "grouping": "crc-tpw",
+  "grouping": "crc-tpw",                                  // or "crc-de-1" / "crc-de-2"
+                                                          //   when the dept's guide
+                                                          //   was split across files
   "findings": [{
-    "checklistItemId": "TPW-3.1",
+    "checklistItemId": "TPW-3",                           // single-item parent;
+                                                          //   decomposed parents
+                                                          //   use "TPW-12.1" etc.
     "observation": "what I saw on which sheets",
     "reasoning": "how that drives the verdict",
     "tools_used": ["crc-vision-check"],
@@ -442,8 +454,9 @@ After a successful run, `{WORKSPACE_PATH}/` looks like:
     supplementary-docs/…
   crc-guides/                              # fetched by Step 1
     manifest.json                          # skill's manifest (read-only ref)
-    crc-tpw.md
-    crc-de.md
+    crc-tpw.md                             # dept ≤20 items
+    crc-de-1.md                            # dept >20 items splits into N parts;
+    crc-de-2.md                            #   stitched back together downstream
     …
     figures/
       TPW-9/1.png
@@ -452,8 +465,8 @@ After a successful run, `{WORKSPACE_PATH}/` looks like:
   output/
     crc-guides-manifest.json               # what we fetched + provenance
     findings/
-      crc-tpw.json
-      crc-de.json
+      crc-tpw.md.json                      # one file per department (split parts
+      crc-de.md.json                       #   merged by cross-run-consolidate-crc)
       …
     enriched-findings.json
     rephrased-items.json

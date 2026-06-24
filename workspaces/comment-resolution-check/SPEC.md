@@ -287,11 +287,13 @@ MCR: SP-2026-0136C U0 (Final Report 2026-06-08). Items map 1:1 to atomic MCR iss
 ## Checklist Items
 | ID | Parent Comment | Requirement to verify resolved | Code Citation | Severity | Evidence expected |
 |----|---------------|-------------------------------|---------------|----------|-------------------|
-| TPW-3.1 | TPW 3 | ROW for S. Lamar is sufficient (survey tie) OR 58 ft dedicated from existing centerline per ASMP | LDC 25-6-55 | required | Site/ROW dedication sheet |
-| TPW-6.1 | TPW 6 | On-street parking dimensioned ≥15 ft from either side of fire hydrants | TCM 9.2.3.1.B | required | Site plan / striping sheet |
+| TPW-3 | TPW 3 | ROW for S. Lamar is sufficient (survey tie) OR 58 ft dedicated from existing centerline per ASMP | LDC 25-6-55 | required | Site/ROW dedication sheet |
+| TPW-6 | TPW 6 | On-street parking dimensioned ≥15 ft from either side of fire hydrants | TCM 9.2.3.1.B | required | Site plan / striping sheet |
+| TPW-12.1 | TPW 12 | 7' tree and furniture zone provided, measured from back of curb | TCM 2.8.2.2 | required | Streetscape plan / cross-section |
+| TPW-12.2 | TPW 12 | 5' minimum clear zone (sidewalk) provided | TCM 2.8.2.2 | required | Streetscape plan / cross-section |
 ```
 
-- **ID convention:** `{DEPT}-{parentComment}.{subIssue}` (e.g. `TPW-3.1`) — keeps the
+- **ID convention:** `{DEPT}-{parentComment}` for parents with a single atomic item (e.g. `TPW-3`, `DE-0` — matches the MCR's own ID form). `{DEPT}-{parentComment}.{subIssue}` (e.g. `TPW-12.1`) when the parent decomposed into multiple items. Keeps the
   city comment ID visible so the applicant can map each verdict back to the city
   comment for their BLUE response.
 - **Reporting unit = atomic item.** No roll-up. If one city comment decomposed into 3
