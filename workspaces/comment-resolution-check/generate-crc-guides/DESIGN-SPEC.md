@@ -199,7 +199,7 @@ For each kept comment, apply CRC decomposition rules:
 
 Each emitted item gets:
 
-- `id`: `{DEPT}-{commentNumber}.{subIndex}` (subIndex = `1` for non-decomposed items)
+- `id`: `{DEPT}-{commentNumber}` for parents with a single atomic item (most common case — matches the MCR's own ID form). `{DEPT}-{commentNumber}.{subIndex}` (subIndex = `1..N`) when the parent decomposed into multiple items. The decomposition prompt always emits `.{subIndex}` (uniform contract); Phase 8 strips the `.1` from any parent whose final item count is exactly 1.
 - `parentComment`: `{DEPT} {commentNumber}`
 - `requirement`: the verification statement (one sentence)
 - `codeCitation`: copied from the parent comment; if Phase 6.3 decomposed via a code section, sub-citations are appended where available
@@ -239,10 +239,12 @@ If anything landed in the HITL bucket during Phases 2–5, present them all as a
 
 ### Phase 8 — Emit guide files + ignored-comments report
 
-1. Group items by department; for each department with ≥1 item, write `crc-{dept_lowercase_slug}.md` (see §5 for format).
-2. Write `ignored-comments.md` (see §5.3).
-3. Write `decisions.md` (HITL prompts + answers, for re-gen replay).
-4. Write `manifest.json` summarizing the run (counts, inputs, timestamps stamped at execution time, NOT inferred).
+1. **ID normalization.** For every parent comment with exactly one surviving atomic item, strip the `.1` suffix from that item's `id`. Parents with ≥2 items keep their `.{subIndex}` form. This runs after Phase 7 HITL decisions so a parent that dropped from 2 → 1 items via HITL also renormalizes.
+2. Group items by department. For each department with ≥1 item, write its guide file(s) (see §5 for format).
+3. **Per-file size cap.** If a dept has >20 atomic items, split into `crc-{dept}-1.md`, `crc-{dept}-2.md`, … on a parent-comment boundary (never split a single parent's decomposed items across files). Departments at or below the cap keep the canonical `crc-{dept}.md` name. Per-part body content: title + all enrichment sections are duplicated verbatim across parts; checklist table + figures are scoped to the items in each part. Downstream stitching in `bureau/workflows/comment-resolution-check/` strips the trailing `-{N}` to merge split parts into one department section in the final review report.
+4. Write `ignored-comments.md` (see §5.3).
+5. Write `decisions.md` (HITL prompts + answers, for re-gen replay).
+6. Write `manifest.json` summarizing the run (counts, inputs, timestamps stamped at execution time, NOT inferred). Dept counts sum across split parts; the file split is **not** surfaced in the manifest.
 
 ### Phase 9 — Validation gate
 
@@ -283,9 +285,10 @@ $NOETIC_WORKING_DIR/comment-resolution-check/   # default: ~/noetic/comment-reso
   {projectUuid}/{submissionUuid}/{submissionVersionNumber}/
     {generation-number}/
       mcr.pdf                  # copied from user-supplied path at Phase 1; durable
-      crc-sp.md
+      crc-sp.md                # dept ≤20 items
       crc-tpw.md
-      crc-de.md
+      crc-de-1.md              # dept >20 items splits across N parts
+      crc-de-2.md
       ...
       ignored-comments.md
       decisions.md
@@ -350,7 +353,9 @@ what the comments actually cite — NOT the dept's full regulatory remit.]
 ## Checklist Items
 | ID | Parent Comment | Requirement to verify resolved | Code Citation | Severity | Evidence expected |
 |----|---------------|-------------------------------|---------------|----------|-------------------|
-| TPW-6.1 | TPW 6 | On-street parking dimensioned ≥15 ft from either side of fire hydrants | TCM 9.2.3.1.B | required | Site plan / striping sheet |
+| TPW-6 | TPW 6 | On-street parking dimensioned ≥15 ft from either side of fire hydrants | TCM 9.2.3.1.B | required | Site plan / striping sheet |
+| TPW-12.1 | TPW 12 | 7' tree and furniture zone provided, measured from back of curb | TCM 2.8.2.2 | required | Streetscape plan / cross-section |
+| TPW-12.2 | TPW 12 | 5' minimum clear zone (sidewalk) provided | TCM 2.8.2.2 | required | Streetscape plan / cross-section |
 
 ## Figures
 
@@ -364,6 +369,28 @@ what the comments actually cite — NOT the dept's full regulatory remit.]
 
   Constraints: min 30' end space; min 15' from hydrant; min 7–8' stall width.
 ```
+
+#### Splitting large guides
+
+Empirically, CRC review agents hit context compaction on guides with >20 atomic items, degrading verdict quality. To bound the per-agent workload, departments above the cap split across multiple files.
+
+**Rules:**
+
+- **Hard cap:** 20 atomic items per guide file.
+- **Split unit:** atomic items, but a parent comment's decomposed atomic items (e.g. `TPW-12.1`, `TPW-12.2`, `TPW-12.3`) stay together. The split lands on a parent boundary, so a single part can hold 18–22 items depending on where the nearest boundary falls.
+- **Naming:** only triggered departments split. `crc-{dept}.md` (≤20) vs. `crc-{dept}-1.md` / `crc-{dept}-2.md` / … (>20). A single MCR may produce a mix of both forms.
+- **Order:** items keep MCR order (ascending parent number, then ascending subIndex); the first part holds the lowest-numbered parents.
+
+**Per-part body content:**
+
+| Section | Behavior |
+|---|---|
+| H1 title | Identical across all parts (no "Part X of Y" — agent shouldn't need to know it's a part) |
+| Description / Source / Regulatory Overview / Key Terms / Documents to Review / Validation Methodology | Duplicated verbatim across all parts (every part is self-contained for the agent) |
+| Checklist Items table | Scoped to this part's items |
+| Figures | Scoped to figures whose parent comment is in this part's items. Figure PNGs in `figures/` are shared on disk and uploaded once. |
+
+**Downstream stitching.** The CRC workflow (`bureau/workflows/comment-resolution-check/`) strips a trailing `-{digits}` from each guide-file basename to derive the dept-level grouping ID (`crc-de-1` → `crc-de`) and merges findings from all parts into a single department section in the final review report. The split is invisible in `review-comments.json` and downstream UI.
 
 ### 5.3 `ignored-comments.md`
 
