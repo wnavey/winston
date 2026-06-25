@@ -75,7 +75,7 @@ ledger:
 | Q10 | "Generation number" is a 0-based integer already stamped into `manifest.json` and the metadata blob. Stable, monotonic. |
 | Q11 | Checklist IDs are **not** stable across regenerations. Therefore the lookup must pin to the exact generation the review consumed — the review row already does this via `crcGuideGenerationNumber`. |
 | Q12 | **One** `source-map.json` per generation root, covering all departments. Department is a per-item field. ~217 items × ~600 B = ~130 KB; trivial. |
-| Q13 | Local + bucket path: `{root}/{projectUuid}/{submissionUuid}/{u0VersionNumber}/{crcGenerationNumber}/source-map.json`. Crops in a `source-text-crops/` sibling dir. |
+| Q13 | Local + bucket path: `{root}/{projectUuid}/{submissionUuid}/{submission_version.version_number}/{crcGenerationNumber}/source-map.json`. Crops in a `source-text-crops/` sibling dir. |
 | Q14 | Substation API returns the **entire** source-map for a review in one batch call. Items are ~217 max; per-row fetch would be N+1. |
 | Q15 | New endpoint owned by **Substation** (has Supabase storage + workflow-run DB access already). Cityhall is a thin consumer. |
 | Q16 | MVP UI is inline collapsible **under each row** (option a from the Q-list). Sidebar pattern (option c) is the v2 target — noted in §9.2. |
@@ -436,7 +436,7 @@ coord-frame translation (§8.4).
 {NOETIC_WORKING_DIR}/comment-resolution-check/
   {projectUuid}/
     {submissionUuid}/
-      {u0VersionNumber}/
+      {submission_version.version_number}/
         {crcGenerationNumber}/
           crc-aw.md
           crc-sp-1.md
@@ -478,7 +478,7 @@ manifest is a one-line change in both generate skills:
 
 ```
 crc-guides/
-  {projectUuid}/{submissionUuid}/{u0VersionNumber}/{crcGenerationNumber}/
+  {projectUuid}/{submissionUuid}/{submission_version.version_number}/{crcGenerationNumber}/
     crc-*.md                          (existing)
     mcr.pdf                           (existing)
     figures/...                       (existing)
