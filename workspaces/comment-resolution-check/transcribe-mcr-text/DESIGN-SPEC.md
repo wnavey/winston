@@ -310,8 +310,10 @@ in the existing skill:
     `source_span_verbatim` for that item.
 
   Phase 7.5 runs the extraction loop (§5.2), validates invariants
-  (§4.4), and writes `source-map.json`. Phase 8 then writes the
-  per-dept guide files.
+  (§4.4), checks for a pre-existing `source-map.json` (§6.4 step 1 —
+  the run-order invariant says one shouldn't exist; if it does, abort
+  unless `--force-overwrite-source-map`), and writes `source-map.json`.
+  Phase 8 then writes the per-dept guide files.
 
 **`generate-crc-guides-from-redlines` (redline path):** new **Phase 6.5**
 between the existing HITL-batch phase (Phase 6) and the guide-emit phase
@@ -571,12 +573,29 @@ ordering.
 
 **Protocol:**
 
-1. **MCR path emit (Phase 7.5).** Writes `source-map.json` from scratch.
-   `parent_comments[]` holds only `source_type: 'mcr_text'` entries;
-   `items[]` holds only MCR-sourced items. `source_pdfs` map contains
-   the MCR PDF entry. `stats` totals reflect MCR items only. This file
-   is uploaded by Phase 10 of the MCR skill alongside the rest of the
-   gen directory.
+1. **MCR path emit (Phase 7.5).**
+
+   **Pre-write existence check.** Before writing, the skill checks for
+   an existing `source-map.json` in the same gen directory:
+
+   - **Absent (the common case, and the only valid case under the
+     run-order invariant above).** Proceed to write from scratch.
+   - **Present.** Implies either a prior redline-first run (the
+     run-order invariant was violated) or a partial / aborted re-run
+     of the MCR skill into the same gen. The skill **aborts** with a
+     message naming how many `parent_comments[]` and `items[]` entries
+     (split by `source_type`) would be discarded. The user must
+     either bump the generation number to write to a clean directory,
+     or re-run with `--force-overwrite-source-map`. The `--force` path
+     overwrites the file and logs the discarded counts in
+     `manifest.json` under `source_map_overwritten` for auditability.
+
+   On a clean write (or after `--force`): the file holds only
+   `source_type: 'mcr_text'` entries in `parent_comments[]`; `items[]`
+   holds only MCR-sourced items; `source_pdfs` contains the MCR PDF
+   entry; `stats` totals reflect MCR items only. This file is uploaded
+   by Phase 10 of the MCR skill alongside the rest of the gen
+   directory.
 
 2. **Redline path emit (Phase 6.5).** Before writing, the skill checks
    for an existing `source-map.json` in the same gen directory:
@@ -623,10 +642,19 @@ ordering.
      it's removed.
    - **`bump version`** (new gen dir): the new gen's
      `source-map.json` is **copied forward verbatim** from the prior
-     gen's file alongside the MCR-sourced files the redline skill
-     copies (per redlines DESIGN-SPEC §5.3). The redline-path Phase
-     6.5 then runs against the copied file and appends the fresh
-     redline batch.
+     gen's file alongside the MCR-sourced `crc-{dept}.md` files the
+     redline skill copies (per redlines DESIGN-SPEC §5.3). This
+     copy-forward is correct **only because the redline skill copies
+     the MCR-sourced guides byte-identically** — so the prior
+     source-map's MCR-sourced `parent_comments[]`, `items[]`, and
+     `source_pdfs` entries remain accurate against the new gen's MCR
+     content. If a future variant of `bump version` ever re-runs the
+     MCR skill (e.g. to pick up a prompt change without bumping
+     `crcGenerationNumber` semantics), that variant **must regenerate
+     the source-map's MCR-sourced rows from scratch** instead of
+     copying forward, because the MCR content has changed. The
+     redline-path Phase 6.5 then runs against the copied file and
+     appends the fresh redline batch.
    - **`merge`** (append rows to an existing redline dept file):
      append the new redline entries to `parent_comments[]` and
      `items[]` with row IDs continuing from the last used (e.g. `AW-RL-9`
@@ -638,11 +666,15 @@ ordering.
    leave the file in an inconsistent state if the skill is killed
    mid-write.
 
-This protocol is the redline skill's responsibility — `generate-crc-guides`
-never reads a pre-existing `source-map.json` because it always runs
-first by contract. If that contract is ever relaxed (e.g. MCR-path
-re-runs into an existing gen), this section will need an MCR-side
-counterpart with symmetric logic.
+The append/merge logic itself is the redline skill's responsibility —
+when MCR runs first (the common case), it writes from scratch and the
+redline skill appends. The MCR-side existence check in step 1 is a
+**guard against the run-order invariant being violated** (redline-first
+or partial re-run), not true merge support: it refuses to overwrite
+rather than reconciling. If the contract is ever truly relaxed (e.g.
+MCR-path needs to merge into an existing redline-only
+`source-map.json`), step 1 grows symmetric read-and-append logic
+mirroring step 2, and `--force-overwrite-source-map` retires.
 
 ### 6.5 What gets re-uploaded on a regeneration
 
