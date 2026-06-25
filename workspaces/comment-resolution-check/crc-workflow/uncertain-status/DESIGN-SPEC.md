@@ -293,27 +293,35 @@ on `review_comments` is 3-state and `tentativeStatus` is omitted.
 
 ## 6. Schema changes
 
-### 6.1 `crc.schema.json` (consolidated / DB-bound) — widen `status`
+### 6.1 Schema files — both stay unchanged
 
-```jsonc
-{
-  "grouping": "crc-tpw",
-  "findings": [{
-    "checklistItemId": "TPW-3.1",
-    "observation": "…",
-    "reasoning": "…",
-    "tools_used": ["crc-vision-check"],
-    "status": "resolved | failed | not-applicable | uncertain",   // ← widened
-    "explanation": "6–30 words",
-    "resolution": "…",
-    "evidenceLocations": [{ "documentId": "…", "sheetNumber": 12, "label": "…" }]
-  }],
-  "summary": "…"
-}
-```
+Both `crc.emit.schema.json` and `crc.schema.json` remain on the
+existing 3-state `status` enum. `uncertain` never appears in either
+file's domain. Earlier drafts of this spec called for widening
+`crc.schema.json`; that was a misread of what the file documents (see
+breakdown below) and would describe a state the file never reaches.
 
-`crc.emit.schema.json` — **unchanged.** The agent never emits
-`uncertain`; the value is only ever produced by consolidation.
+**Why neither file needs widening:**
+
+| File | Role | Where it's used | Why no change |
+|---|---|---|---|
+| `crc.emit.schema.json` | Runtime SDK validation contract for the agent's per-run output | `workflow.yaml:122` → `schema: crc.emit.schema.json`; passed to the Agent SDK at each cell-agent invocation | The agent always emits a single-run verdict; `uncertain` is only ever produced by post-hoc consolidation across runs. Widening here would let the agent emit `uncertain` directly, which we explicitly do NOT want. |
+| `crc.schema.json` | Documentation of the canonical post-normalize per-cell shape (`grouping` injected, otherwise identical to the emit shape) | Referenced by `prompts/review.md:145` and code comments in `cross-run-consolidate-crc.ts:32` and `workflow.yaml:119`; **not wired into any runtime validator** | Documents the on-disk shape of `output/findings/{grouping}.md.json`. Per §5.2(c) that file holds `winningFinding` per item, and `winningFinding.status` is always 3-state — even when the consolidated status is `'uncertain'`, the winning finding is the earliest run that matched the `tentativeStatus`. So the file this schema describes genuinely stays 3-state. |
+
+**Where `uncertain` actually lives** (neither shape is bound to a
+JSON-schema file in the workflow folder today):
+
+- `output/consolidated-findings.json` — the array of `ConsolidatedItem`
+  records produced by `cross-run-consolidate-crc.ts`. Its TypeScript
+  interface is defined in §5.2 above; no `.schema.json` counterpart.
+- `review_comments.output_json.status` — set by
+  `build-crc-review-comments.ts` when it reads from the consolidated
+  map. Shape is defined in §6.2 below; no `.schema.json` counterpart.
+
+If a future spec wants formal validation of the consolidated or DB
+shapes, it can add new schema files
+(`crc.consolidated.schema.json` / `crc.db.schema.json`) without
+colliding with the existing two.
 
 ### 6.2 `review_comments.output_json` (CRC, per atomic item)
 
@@ -693,8 +701,11 @@ callout AROUND the tentative answer, not in place of it.
     `ConsolidatedItem` in `cross-run-consolidate-crc.ts`. Narrow the
     `tentativeStatus` field type to exclude `'uncertain'` per §5.2(c).
     Update final log line.
-  - [ ] Widen `crc.schema.json` `status` enum to include `uncertain`.
-    Leave `crc.emit.schema.json` unchanged.
+  - [ ] **Leave `crc.schema.json` AND `crc.emit.schema.json` both
+    unchanged.** `uncertain` only ever appears on
+    `consolidated-findings.json` (the TypeScript `ConsolidatedItem`
+    shape) and `review_comments.output_json` (the DB row) — neither
+    JSON-schema file documents those shapes. See §6.1.
   - [ ] Update `build-crc-review-comments.ts`:
     - Widen the local `ConsolidatedItem` interface (currently at
       lines ~125-131) to add `status` (4-state), `tentativeStatus`,
