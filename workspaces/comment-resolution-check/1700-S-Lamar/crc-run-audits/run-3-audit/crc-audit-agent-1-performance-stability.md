@@ -138,6 +138,8 @@ Run-5 is the heaviest, dragged by `crc-de-2` (77 min).
 
 ### Failure-shape evolution since the smoke run
 
+> **⚠️ Correction (added 2026-06-25, post-audit).** The "Recommendations" below credit "the 2026-06-20 mitigations" for narrowing the `["findings"]` shape. Those prompt mitigations were **never shipped** — the actual 06-24 change was the *lenient emit schema* (drops top-level `grouping`). That is what shrank the `findings`-specific wrapper (it removed the model's reason to nest under `findings`); the wrapping reflex itself is unchanged, which is why it migrated to `data`/`output`/`properties`. The lenient schema also silently disabled the failure-path repair (`tryRepairStructuredOutput` guards on the strict predicate), so wrapped shapes got no repair at all — making this run worse, not better, per cell. Fixes: conductor #197 (structure-based repair) + bureau #459 (prompt alignment). See `STRUCT-OUTPUT-RETRY-STORM.md` → "Update — 2026-06-25".
+
 The bug doc's diagnosis was specifically the **double-wrap** `{ findings: { grouping, findings, summary } }`. Top-level keys observed across all 36 storm events in *this* run, summed across the 5 inner attempts each (so ~180 attempt-level samples):
 
 | topLevelKeys (sorted) | Attempts | Notes |

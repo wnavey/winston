@@ -10,6 +10,8 @@
 
 ---
 
+> **⚠️ Correction (added 2026-06-25, post-audit).** This report states the `["findings"]` double-wrap "is mostly fixed" and attributes it to "the 2026-06-20 mitigations." That attribution is **wrong**: the bug doc's prompt mitigations (#1–3) were never shipped. The 06-24 intervention was the *lenient emit schema* (drops top-level `grouping`); it shrank the `findings`-specific wrapper but the model migrated to generic wrappers (`data`/`output`/`properties`), and per-cell storm rate actually *rose* (~15% → ~23%). It also silently disabled the failure-path repair under the lenient schema. Root cause is a generic "wrap the envelope under one key" reflex, independent of `grouping`. Fixes in flight: conductor #197 (structure-based repair) + bureau #459 (prompt). See `STRUCT-OUTPUT-RETRY-STORM.md` → "Update — 2026-06-25".
+
 ## TL;DR — Overall verdict: **DEGRADED**
 
 - Run completed cleanly: 110/110 review cells wrote structured output, 234 consolidated items, DB and storage uploads succeeded. Wall-clock 1h 49m (108.6 min), dominated by the `review` step (91.2%).
