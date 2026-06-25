@@ -191,11 +191,21 @@ One entry per source comment. Atomized children reference its `id`.
   wraps across columns or pages can be represented without a schema change
   later.
 - `crop_image` is the **parent crop** path (relative to generation root).
-  When present, the UI may render it with a sub-span highlight overlay
-  computed from the atomic item's bbox (§5.3, phase 2).
-- `source_type: 'pdf_redlines'` entries reuse the navalbase-cropped image
-  if available (the redline path already produces `figures/AW-RL-N/…`); see
-  §6.2 for path conventions.
+  Requiredness depends on `source_type`:
+  - `source_type: 'mcr_text'` — **optional in phase 1, required in phase
+    2.** Phase-1 writes omit the field (the crop-generation step at §5.4
+    has not run yet). Phase-2 writes always populate it, pointing at
+    `source-text-crops/{parent_id}.png`.
+  - `source_type: 'pdf_redlines'` — **required from phase 1.** The
+    upstream redline skill already crops every emitted row (null-bbox
+    rows are filtered upstream, per `generate-crc-guides-from-redlines`
+    DESIGN-SPEC §1 out-of-scope), so the source-map points directly at
+    the existing `figures/{parent_id}/…png` rather than re-cropping into
+    `source-text-crops/`. See §6.2 for path conventions.
+
+  When present (and regardless of source type), the UI may render the
+  crop with a sub-span highlight overlay computed from the atomic item's
+  bbox (§5.3, phase 2 for MCR; phase 1 for redlines).
 
 ### 4.3 `items[]`
 
@@ -379,9 +389,11 @@ For each emitted redline row:
   redline annotation text itself).
 - `parent_comments[i].bbox` = navalbase `bounding_box` directly.
 - `parent_comments[i].crop_image` = the existing
-  `figures/{comment_id}/…png` path written by the existing skill (Phase 5
-  of the redlines DESIGN-SPEC). **Phase 1 of this spec is allowed to
-  populate this for redlines but not for MCR** — see Q4.
+  `figures/{comment_id}/…png` path written by the redlines skill (Phase 5
+  of its DESIGN-SPEC). **Required from phase 1 for redline rows** — the
+  crop is a free passthrough from navalbase, not new work this spec
+  introduces (cf. Q4 and §4.2). MCR-sourced rows get their crops in
+  phase 2 only (§5.4).
 - `extraction.method = "navalbase_passthrough"`, `verbatim_match =
   "exact"`, `confidence = "high"`.
 
@@ -439,11 +451,13 @@ coord-frame translation (§8.4).
           decisions.md
           ignored-comments.md
           source-map.json                # NEW (phase 1)
-          source-text-crops/             # NEW (phase 2, mcr_text + redlines)
+          source-text-crops/             # NEW (phase 2 — mcr_text parents only)
             SP33.png
             SP36.png
-            AW-RL-3.png
             ...
+          # redline parent crops are NOT re-cropped into source-text-crops/;
+          # the source-map points at the existing figures/{parent_id}/…png
+          # written by the redlines skill (available from phase 1).
 ```
 
 ### 6.2 Crop path convention
