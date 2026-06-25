@@ -64,7 +64,7 @@ ledger:
 | #   | Decision |
 |-----|----------|
 | Q1  | Per-item entry carries **both** the full parent-comment text and the sub-span the item came from. Phase-2 crops are at parent-comment granularity, with sub-span coords stored separately so the UI can overlay a highlight on the parent crop. |
-| Q2  | One checklist item → one source span (1:1, may be N:1 to parents). Generation-time post-check flags `source_count > 1` as an emit-time error in `bureau_lookup_failures`-style log; never reaches the JSON. |
+| Q2  | One checklist item → one source span (1:1, may be N:1 to parents). Decomposition (`generate-crc-guides` Phase 6) is the upstream constraint; the source-map schema enforces 1:1 by construction (`items[i].source_span` is a single object, not an array) and so does not need a runtime guard. |
 | Q3  | Capture **both** the (often-equal) checklist ID and the raw MCR comment ID. They diverge when atomization splits a comment (e.g. `SP-33.1`, `SP-33.2` → parent `SP33`). |
 | Q4  | Redline path produces source-map rows too. Bring image crops forward into MVP for the redline path (navalbase already has bboxes and crops). For the text side, use navalbase's `referenced_element` as the verbatim. |
 | Q5  | Unified schema, with `source_type: 'mcr_text' \| 'pdf_redlines'` discriminator. The UI branches on this for conditional behavior (e.g. "Source: redline page X" vs "Source: MCR comment SP33"). |
@@ -167,9 +167,9 @@ One entry per source comment. Atomized children reference its `id`.
   "source_pdf": "mcr.pdf",            // path relative to generation root
   "verbatim_text": "SP33 - Current Status: Pending\nU0: Coordinate the Site Data Table and Landscape Plan to show a consistent amount of open space to meet Subchapter E Requirements. Show the type of open space proposed and provide dimensions and amenities required for that open space type. (Example: A landscape area other than one required by Subchapter C, Article 9 (Landscaping), provided such landscaped area has a minimum depth and width of 20 feet and a minimum total area of 650 square feet. The area shall include pedestrian amenities.)",
   "bbox": [                           // list to allow multi-page comments
-    { "page": 12, "x0": 72.0, "y0": 480.5, "x1": 540.0, "y1": 612.3, "coord_space": "pdf_user" }
+    { "page": 12, "x0": 72.0, "y0": 132.7, "x1": 540.0, "y1": 264.5, "coord_space": "pdf_topleft" }
   ],
-  "crop_image": "source-text-crops/SP33.png",  // optional in phase 1; written in phase 2
+  "crop_image": ["source-text-crops/SP33.png"],  // always an array; optional in phase 1, written in phase 2 for MCR-sourced parents
   "extraction": {
     "method": "deterministic",        // 'deterministic' | 'vision_recovery' | 'navalbase_passthrough' | 'failed'
     "verbatim_match": "exact",        // 'exact' | 'fuzzy' | 'vision' | 'failed'
@@ -181,27 +181,32 @@ One entry per source comment. Atomized children reference its `id`.
 
 **Field notes:**
 
-- `bbox.coord_space` is **always** `pdf_user` — origin bottom-left, PDF
-  user-space units (1/72 inch). This is the convention pdfplumber and
-  pymupdf use natively. When crops or the phase-3 PDF.js viewer translate
-  to image-pixel coords (origin top-left), the math is `y_image = page_h -
-  y_pdf` and the rect height needs flipping. Implementation hazard worth
-  testing once and locking down (see §8.4).
+- `bbox.coord_space` is **always** `pdf_topleft` — origin top-left, Y
+  increasing downward, units in PDF points (1/72 inch). This matches the
+  convention `pdfplumber` and `PyMuPDF` use natively in their Python APIs
+  (pdfplumber's `extract_words()` returns `top`/`bottom`; PyMuPDF's
+  `page.rect` and `Rect` are top-left). PDF's underlying user space is
+  bottom-left, but neither library exposes that to callers — and the
+  pixmap output of `page.get_pixmap()` is top-left as well. Storing in
+  the library-native frame means crop generation and (eventually) the
+  phase-3 PDF.js viewer don't need a y-flip. See §8.4 for the helper +
+  unit test recipe.
 - `bbox` is an **array** even when there's only one rect, so a comment that
   wraps across columns or pages can be represented without a schema change
   later.
-- `crop_image` is the **parent crop** path (relative to generation root).
-  Requiredness depends on `source_type`:
-  - `source_type: 'mcr_text'` — **optional in phase 1, required in phase
-    2.** Phase-1 writes omit the field (the crop-generation step at §5.4
-    has not run yet). Phase-2 writes always populate it, pointing at
-    `source-text-crops/{parent_id}.png`.
-  - `source_type: 'pdf_redlines'` — **required from phase 1.** The
-    upstream redline skill already crops every emitted row (null-bbox
-    rows are filtered upstream, per `generate-crc-guides-from-redlines`
-    DESIGN-SPEC §1 out-of-scope), so the source-map points directly at
-    the existing `figures/{parent_id}/…png` rather than re-cropping into
-    `source-text-crops/`. See §6.2 for path conventions.
+- `crop_image` is **always an array of strings** (relative paths to the
+  parent crop PNGs from the generation root), even when there's only a
+  single crop. Single-rect parents emit a 1-element array. Multi-rect /
+  multi-page parents emit one entry per rect, ordered to match `bbox[]`.
+  Phase-1 writes for `source_type: 'mcr_text'` may emit an **empty array**
+  (the crop-generation step at §5.4 has not run yet); phase-2 writes
+  always populate it. For `source_type: 'pdf_redlines'`, the field is
+  **required and non-empty from phase 1** — the upstream redline skill
+  already crops every emitted row (null-bbox rows are filtered upstream,
+  per `generate-crc-guides-from-redlines` DESIGN-SPEC §1 out-of-scope),
+  so the source-map points directly at the existing
+  `figures/{row_id}/1.png` rather than re-cropping into
+  `source-text-crops/`. See §6.2 for path conventions.
 
   When present (and regardless of source type), the UI may render the
   crop with a sub-span highlight overlay computed from the atomic item's
@@ -219,9 +224,9 @@ ID column in `crc-{dept}.md`).
   "parent_comment_id": "SP33",
   "source_span": {
     "verbatim_text": "Coordinate the Site Data Table and Landscape Plan to show a consistent amount of open space to meet Subchapter E Requirements.",
-    "char_offset_in_parent": [25, 158],   // [start, end_exclusive] in parent_comment.verbatim_text
+    "char_offset_in_parent": [25, 158],   // [start, end_exclusive] in parent_comment.verbatim_text; null when verbatim_text is null
     "bbox": [
-      { "page": 12, "x0": 96.0, "y0": 552.0, "x1": 540.0, "y1": 580.0, "coord_space": "pdf_user" }
+      { "page": 12, "x0": 96.0, "y0": 212.0, "x1": 540.0, "y1": 240.0, "coord_space": "pdf_topleft" }
     ]
   },
   "extraction": {
@@ -247,8 +252,11 @@ ID column in `crc-{dept}.md`).
   item with `bbox: []` and `confidence: "medium"`. The UI just doesn't draw
   the highlight overlay; the text-highlight still works.
 - `extraction.confidence: "low"` items are emitted with
-  `source_span.verbatim_text: null` and `extraction.method: "failed"`.
-  Surfaces as "source unknown" in the UI.
+  `source_span.verbatim_text: null`, `source_span.char_offset_in_parent:
+  null`, `source_span.bbox: []`, and `extraction.method: "failed"`. The
+  `verbatim_text` and `char_offset_in_parent` fields are **co-null**: if
+  either is null, both must be null. Surfaces as "source unknown" in the
+  UI.
 
 ### 4.4 Invariants enforced at emit time
 
@@ -258,13 +266,16 @@ The generate skills MUST validate before writing the file:
    `parent_comments[]`. No orphans.
 2. Every `parent_comments[i].id` is unique within the file.
 3. Every `items[i].checklist_id` is unique within the file.
-4. `items[i].source_span.char_offset_in_parent[0] < ...[1] <=
-   len(parent.verbatim_text)`. Off-by-one bugs caught at emit time.
+4. When `source_span.verbatim_text` is non-null,
+   `items[i].source_span.char_offset_in_parent[0] < ...[1] <=
+   len(parent.verbatim_text)`. Off-by-one bugs caught at emit time. When
+   `verbatim_text` is null, `char_offset_in_parent` MUST also be null
+   (the co-null rule from §4.3).
 5. `source_span.verbatim_text` (when non-null) equals
    `parent.verbatim_text[start:end]` exactly. (This is the contract that
    makes char-offsets meaningful.)
-6. The Q2 invariant: a single `checklist_id` cannot have ≥2 source spans.
-   The schema does not even allow it.
+6. When `parent_comments[i].crop_image` is non-empty, its length matches
+   `parent_comments[i].bbox` length — one crop per rect, same order.
 
 A violation halts emit and is logged in `manifest.json` under
 `source_map_emit_errors`. The guides still write; the source-map does not.
@@ -276,22 +287,51 @@ The UI then degrades gracefully (every row shows "source unknown").
 
 ### 5.1 Where this hooks in
 
-**`generate-crc-guides` (MCR path):** new **Phase 7.5** between the existing
-checklist-generation phase (Phase 7) and the file-write phase (Phase 8). At
-Phase 7.5 entry, the skill already has:
+**`generate-crc-guides` (MCR path):** this feature lands in **two** places
+in the existing skill:
 
-- The raw MCR text dump (`scratch/mcr.txt` from `pdftotext -layout`).
-- The parsed raw comments (`{raw_id, dept_prefix, comment_number, status,
-  body, code_reference, source_page}` array — DESIGN-SPEC §3.1).
-- The atomized checklist rows that will be written to `crc-{dept}.md`,
-  each tagged with its `parent_comment_id` (the existing "Parent Comment"
-  column).
+- **Phase 6 (Decomposition) — augmented.** The existing
+  `decompose-comment.md` and `decompose-code-section.md` LLM prompts each
+  gain a new required structured-output field, `source_span_verbatim`
+  (the exact substring of the parent comment that the emitted atomic
+  item is in reference to). See §11 for the coordinated-rollout
+  implications — this is a breaking change to the Phase-6 structured
+  output and prior-generation regenerations will fail until both prompts
+  and the source-map extraction loop ship together.
+- **New Phase 7.5 (Source-map emit) — between HITL (Phase 7) and the
+  file-write phase (Phase 8).** At Phase 7.5 entry the skill already has:
+  - The raw MCR text dump (`scratch/mcr.txt` from `pdftotext -layout`).
+  - The parsed raw comments (`{raw_id, dept_prefix, comment_number,
+    status, body, code_reference, source_page}` array — `generate-crc-guides`
+    DESIGN-SPEC §3.1).
+  - The post-HITL atomized checklist rows that will be written to
+    `crc-{dept}.md`, each tagged with its `parent_comment_id` (the
+    existing "Parent Comment" column) and the Phase-6-emitted
+    `source_span_verbatim` for that item.
 
-**`generate-crc-guides-from-redlines` (redline path):** new **Phase 5.5**
-between the existing checklist-emit phase and file-write. At entry the
-skill already has the navalbase `detailed-analysis-results.json` open with
-per-comment `bounding_box`, `transcribed_text`, and `referenced_element`
-fields available.
+  Phase 7.5 runs the extraction loop (§5.2), validates invariants
+  (§4.4), and writes `source-map.json`. Phase 8 then writes the
+  per-dept guide files.
+
+**`generate-crc-guides-from-redlines` (redline path):** new **Phase 6.5**
+between the existing HITL-batch phase (Phase 6) and the guide-emit phase
+(Phase 7). At Phase 6.5 entry the skill already has:
+
+- The navalbase `detailed-analysis-results.json` parsed, with each
+  surviving candidate carrying `bounding_box`, `transcribed_text`,
+  `referenced_element`, and `full_comment_inference`.
+- The per-item Phase-3 vision output (caption, refined `requirement`,
+  `figure_type`).
+- Matched Phase-4 layer-2 enrichment (when `enriched-analysis-results.json`
+  was present).
+- The Phase-5 sheet-class label and Phase-5b margin-regex citations.
+- Per-item crop already rendered to `<gen-dir>/figures/{row_id}/1.png`
+  (Phase 2 of the redlines spec) — the source-map's `crop_image` points
+  at this existing file rather than re-cropping.
+
+Phase 6.5 then either **creates** `source-map.json` (if the MCR-path
+skill did not run for this generation) or **merges into** the existing
+file (the common case — see §6.4 for the merge protocol).
 
 ### 5.2 The extraction loop (MCR path)
 
@@ -313,9 +353,10 @@ some scans via OCR.
 
 **Step 2 — Atomic sub-span (deterministic substring match).**
 
-For each atomic item under this parent: the existing Phase-7 LLM emit
-includes a new required field, `source_span_verbatim`, in its structured
-output. Substring-match that against `parent.verbatim_text`. On hit:
+For each atomic item under this parent: the augmented Phase-6 decomposition
+LLM emit (see §5.1) includes a new required field, `source_span_verbatim`,
+in its structured output. Substring-match that against
+`parent.verbatim_text`. On hit:
 
 - Record `char_offset_in_parent`.
 - Map those character offsets back to PDF rects via pdfplumber's
@@ -387,13 +428,16 @@ For each emitted redline row:
   (which is the underlying MCR-like text the redline references). If
   `referenced_element` is empty, fall back to `transcribed_text` (the
   redline annotation text itself).
-- `parent_comments[i].bbox` = navalbase `bounding_box` directly.
-- `parent_comments[i].crop_image` = the existing
-  `figures/{comment_id}/…png` path written by the redlines skill (Phase 5
-  of its DESIGN-SPEC). **Required from phase 1 for redline rows** — the
-  crop is a free passthrough from navalbase, not new work this spec
-  introduces (cf. Q4 and §4.2). MCR-sourced rows get their crops in
-  phase 2 only (§5.4).
+- `parent_comments[i].bbox` = navalbase `bounding_box` directly. (The
+  `coord_space` is `pdf_topleft` to match the §4.2 convention — verify
+  once against a known crop that navalbase's bbox frame agrees; it does
+  in practice because navalbase uses PyMuPDF under the hood.)
+- `parent_comments[i].crop_image` = `["figures/{row_id}/1.png"]` — the
+  existing per-item crop already rendered by the redlines skill's
+  Phase 2. **Required and non-empty from phase 1 for redline rows** —
+  the crop is a free passthrough, not new work this spec introduces
+  (cf. Q4 and §4.2). MCR-sourced rows get their crops in phase 2 only
+  (§5.4).
 - `extraction.method = "navalbase_passthrough"`, `verbatim_match =
   "exact"`, `confidence = "high"`.
 
@@ -412,19 +456,36 @@ import pymupdf
 for parent in parent_comments:
     if parent.source_type != "mcr_text": continue
     if not parent.bbox: continue
-    page = doc[parent.bbox[0]["page"] - 1]
-    rect = pdf_user_to_pixmap_rect(parent.bbox, page.rect.height)
-    pix = page.get_pixmap(clip=rect, dpi=180)
-    pix.save(f"{gen_dir}/source-text-crops/{parent.id}.png")
+    crop_paths = []
+    for i, rect_spec in enumerate(parent.bbox):
+        page = doc[rect_spec["page"] - 1]
+        # bbox is already in pdf_topleft — pymupdf's native frame — so
+        # no y-flip is needed. See §8.4.
+        rect = pymupdf.Rect(rect_spec["x0"], rect_spec["y0"],
+                            rect_spec["x1"], rect_spec["y1"])
+        pix = page.get_pixmap(clip=rect, dpi=600)
+        suffix = "" if len(parent.bbox) == 1 else f"--{i}"
+        out_path = f"source-text-crops/{parent.id}{suffix}.png"
+        pix.save(f"{gen_dir}/{out_path}")
+        crop_paths.append(out_path)
+    parent.crop_image = crop_paths
 ```
 
-180 DPI keeps the file size in low-double-digit KB per crop and stays
-legible on a retina display. Multi-rect bboxes (multi-page comments) emit
-multiple PNGs, named `{parent_id}--{rect_index}.png` — the source-map
-field becomes an array in that case.
+600 DPI matches the redline path's crop resolution (per
+`generate-crc-guides-from-redlines` DESIGN-SPEC §2 "Phase 2 — Render
+per-item crops"), so MCR-sourced and redline-sourced crops display at
+visually consistent fidelity side-by-side in the phase-2 sidebar UI. At
+600 DPI a typical MCR comment crop runs ~100–300 KB; downscale crops
+whose longest edge exceeds 4000 px to keep payloads bounded (same
+recipe as the redlines skill).
+
+Multi-rect bboxes (multi-page comments) emit multiple PNGs in
+`crop_image[]`, ordered to match `bbox[]`. Single-rect parents emit a
+1-element array (§4.2 field-notes contract).
 
 This step is cheap once bboxes are correct. The hazard is purely the
-coord-frame translation (§8.4).
+coord-frame discipline (§8.4) — but because we store bboxes in
+`pdf_topleft` (PyMuPDF's native frame), no flip is needed here.
 
 ---
 
@@ -493,7 +554,97 @@ u0VersionNumber, crcGenerationNumber)` tuple writes to its own prefix and
 is never overwritten. The cityhall lookup chain pins to the exact tuple
 via `reviews.metadata.crcGuides`.
 
-### 6.4 What gets re-uploaded on a regeneration
+### 6.4 Source-map merge protocol (MCR + redlines in one generation)
+
+Both `generate-crc-guides` and `generate-crc-guides-from-redlines` write
+into the same `{generation-number}/` directory. Per Q12, **exactly one
+`source-map.json` exists per generation** — when both skills run, the
+file holds the union of MCR-sourced and redline-sourced parent comments
+and items.
+
+**Run-order invariant.** `generate-crc-guides` (MCR path) **always runs
+first**; `generate-crc-guides-from-redlines` is a downstream supplement.
+The redlines skill never executes against an empty generation
+directory — it depends on the MCR-path's `manifest.json` and crc-guides
+to be in place per its own DESIGN-SPEC. The merge logic relies on this
+ordering.
+
+**Protocol:**
+
+1. **MCR path emit (Phase 7.5).** Writes `source-map.json` from scratch.
+   `parent_comments[]` holds only `source_type: 'mcr_text'` entries;
+   `items[]` holds only MCR-sourced items. `source_pdfs` map contains
+   the MCR PDF entry. `stats` totals reflect MCR items only. This file
+   is uploaded by Phase 10 of the MCR skill alongside the rest of the
+   gen directory.
+
+2. **Redline path emit (Phase 6.5).** Before writing, the skill checks
+   for an existing `source-map.json` in the same gen directory:
+
+   - **Present (the common case).** Read, parse, and **append**:
+     - For each redline candidate, push a new entry into
+       `parent_comments[]` (`source_type: 'pdf_redlines'`) and a new
+       entry into `items[]`. Row IDs (`AW-RL-N`) are unique against MCR
+       checklist IDs by construction (different prefix conventions —
+       MCR uses `{DEPT}-{commentNumber}[.{subIndex}]`, redlines use
+       `{DEPT_CODE_UPPER}-RL-{N}`).
+     - Add the redline source PDF to the `source_pdfs` map under its
+       `source-pdfs/{filename}.pdf` key.
+     - Recompute `stats` over the combined arrays.
+     - Update `generated_at` to the redline-path run's timestamp.
+     - Leave `schema_version` and `generation.*` unchanged (the
+       generation tuple is invariant across the two skills running in
+       the same gen).
+
+   - **Absent.** Write the file from scratch with only redline content
+     (the MCR skill hasn't been run for this gen yet — unusual but not
+     erroneous; the merge protocol degrades to "create" cleanly).
+
+3. **Invariants on merge.** All invariants from §4.4 must hold after the
+   merge:
+   - No `parent_comments[i].id` collisions between MCR and redline
+     entries. (MCR IDs look like `SP33` / `TPW-12`; redline IDs look
+     like `AW-RL-3` — disjoint by convention. If a future change
+     introduces a collision, the merge fails loudly and writes a
+     `source_map_emit_errors` entry to the redline skill's
+     `manifest-redlines.json`.)
+   - No `items[i].checklist_id` collisions for the same reason.
+   - `parent_comments[i].parent_comment_id` references resolve within
+     the merged file.
+
+4. **Redline versioning interaction.** The redlines skill's `replace` /
+   `bump version` / `merge` modes (per its DESIGN-SPEC §5) compose with
+   this protocol as follows:
+   - **`replace`** (overwrite a redline dept file in the current gen):
+     remove the existing redline `parent_comments[]` and `items[]`
+     entries for that dept from `source-map.json`, then append the
+     fresh redline batch. The `source_pdfs` map entry for the prior
+     source PDF stays put if any other dept still references it; else
+     it's removed.
+   - **`bump version`** (new gen dir): the new gen's
+     `source-map.json` is **copied forward verbatim** from the prior
+     gen's file alongside the MCR-sourced files the redline skill
+     copies (per redlines DESIGN-SPEC §5.3). The redline-path Phase
+     6.5 then runs against the copied file and appends the fresh
+     redline batch.
+   - **`merge`** (append rows to an existing redline dept file):
+     append the new redline entries to `parent_comments[]` and
+     `items[]` with row IDs continuing from the last used (e.g. `AW-RL-9`
+     onward). Add the new source PDF to `source_pdfs` if not already
+     present.
+
+5. **Write atomicity.** The redline-path skill writes
+   `source-map.json` via temp-file + rename so a partial merge cannot
+   leave the file in an inconsistent state if the skill is killed
+   mid-write.
+
+This protocol is the redline skill's responsibility — `generate-crc-guides`
+never reads a pre-existing `source-map.json` because it always runs
+first by contract. If that contract is ever relaxed (e.g. MCR-path
+re-runs into an existing gen), this section will need an MCR-side
+counterpart with symmetric logic.
+
+### 6.5 What gets re-uploaded on a regeneration
 
 A new `crcGenerationNumber` (e.g. `3` after `2`) writes to a **new prefix**
 and pulls a new review row when the workflow runs. The old prefix —
@@ -610,24 +761,34 @@ not appearing.
 
 ### 8.4 PDF coordinate space (implementation hazard)
 
-PDF user-space puts origin at bottom-left, Y increasing up. PIL / pymupdf
-pixmap output puts origin at top-left, Y increasing down. Every cropping
-pipeline gets this wrong once. The schema commits to `coord_space:
-"pdf_user"` everywhere. Converters live in one helper:
+The underlying PDF user space puts origin at bottom-left, Y increasing
+up. But every Python library we touch — `pdfplumber.extract_words()`,
+`PyMuPDF`'s `page.rect` / `Rect` / `page.get_pixmap(clip=…)`, PIL's
+image coords — uses **top-left origin with Y increasing down**. The
+schema commits to `coord_space: "pdf_topleft"` everywhere precisely so
+the in-memory frame matches the library-native frame and no y-flip is
+needed at crop time:
 
 ```python
-def pdf_user_to_pixmap_rect(bbox, page_height_pt):
-    return pymupdf.Rect(
-        bbox["x0"],
-        page_height_pt - bbox["y1"],
-        bbox["x1"],
-        page_height_pt - bbox["y0"],
-    )
+def bbox_to_pymupdf_rect(bbox):
+    # bbox is already in pdf_topleft (PyMuPDF's native frame).
+    # No page_height_pt needed; no y-flip needed.
+    return pymupdf.Rect(bbox["x0"], bbox["y0"], bbox["x1"], bbox["y1"])
 ```
 
-Unit-test this with one known parent crop visually verified by a human
-before committing the crop-generation code. The phase-3 PDF.js viewer
-needs the inverse for highlight overlays.
+PDF.js, in phase 3, also exposes a top-left frame to JavaScript consumers
+(via its viewport transforms), so highlight overlays drop in without a
+flip there either. If a future consumer wants true PDF user-space
+(bottom-left), the conversion is `y_pdf_user = page_height_pt -
+y_pdf_topleft` and the rect height inverts — but no in-tree consumer
+needs that today.
+
+**Unit test** the helper against one known parent crop visually verified
+by a human before the crop-generation code goes to production. The
+single failure mode worth testing is a bbox whose `y0` ≠ `y1` on a
+page whose CropBox origin is non-zero (rare in MCRs, but possible if a
+PDF has been re-imposed) — confirm the resulting PNG actually centers
+on the comment text.
 
 ### 8.5 Multi-page parent comments
 
@@ -642,23 +803,23 @@ shows them as a pair.
 Both generate skills follow a fixed sequence:
 
 1. Write all `crc-{dept}.md` files locally.
-2. Write `source-map.json` locally (after invariant validation).
+2. Write `source-map.json` locally (after invariant validation). The MCR
+   skill writes from scratch; the redline skill merges into an existing
+   file per §6.4 (or writes from scratch if absent).
 3. Upload everything to Supabase storage in one batch.
-4. Update `manifest.json` with the upload manifest.
+4. Update the skill's manifest file (`manifest.json` for MCR,
+   `manifest-redlines.json` for redlines) with the upload manifest.
 
-If step 2 fails (invariant violation), `source-map.json` is NOT written;
-step 3 uploads guides without source-map; the API returns `available:
-false` for any review against that generation. This is the same as 8.3
-and degrades silently.
+If step 2 fails (invariant violation), `source-map.json` is NOT written
+or overwritten; step 3 uploads guides without source-map (or with the
+pre-existing file untouched, in the redline-merge case); the API
+returns `available: false` for any review against that generation
+(or `available: true` against the partial pre-existing file for
+redline-merge failures). This is the same degradation as 8.3 — the UI
+shows "source unknown" for unmapped items and never hard-errors.
 
-### 8.7 Generation-time atomization regressions (Q2 guard)
-
-A future prompt change could break the "atomic items ≤ parents" rule and
-produce a checklist item that legitimately maps to ≥2 parent comments. The
-invariant §4.4.5 rejects this at emit time. The skill writes a warning to
-`manifest.json` under `source_map_emit_warnings: [{checklist_id, reason}]`,
-omits the violating row from `items[]`, and continues. The UI shows
-"source unknown" for that row, which is the desired conservative fallback.
+Both skills write `source-map.json` via temp-file + rename to keep the
+merge protocol atomic against mid-write kills.
 
 ---
 
@@ -735,7 +896,8 @@ Image rendering:
   browser).
 - A `<canvas>` overlay or absolutely-positioned `<div>` draws the
   highlight rect, computed by:
-  1. Take `source_span.bbox[0]` (pdf_user coords).
+  1. Take `source_span.bbox[0]` (pdf_topleft coords — Y already
+     increases downward, matching image-pixel orientation).
   2. Subtract the parent's bbox origin → relative coords inside the
      parent's bbox.
   3. Multiply by `crop_image_px_width / parent_bbox_width_pt` to get
@@ -796,16 +958,32 @@ panel could surface them across generations.
 
 ### Phase 1 — text-only MVP (this spec, ~2 weeks of work end-to-end)
 
-1. **Generate skills** — Both `generate-crc-guides` and
-   `generate-crc-guides-from-redlines` learn to emit `source-map.json`,
-   with the extraction loop and invariants.
-2. **Upload** — Both skills add `source-map.json` to their Supabase
-   upload manifest.
-3. **Substation** — `/api/crc/source-map?reviewId=…` endpoint, with
+1. **Generate skills (coordinated rollout — ship as one PR per skill).**
+   - `generate-crc-guides`:
+     - **Phase 6 prompt change (breaking).** Add `source_span_verbatim`
+       as a required field on the structured output of `decompose-comment.md`
+       and `decompose-code-section.md`. This is a breaking change to the
+       Phase-6 structured-output contract: an unaugmented Phase-6 emit
+       will be missing a now-required field; an augmented Phase-6 emit
+       against an unupdated extraction loop has no consumer for the new
+       field. The prompt change and the new Phase 7.5 extraction loop
+       must ship in the same PR. Any in-flight regenerations against
+       prior generations should complete or be cancelled before merging
+       (a half-written generation directory whose `crc-{dept}.md`
+       reflects the new prompts but whose `source-map.json` is missing
+       would still be benign — the UI just shows "source unknown" — but
+       internal consistency is easier to reason about if the cutover is
+       clean).
+     - New Phase 7.5 source-map emit (extraction loop + invariants).
+   - `generate-crc-guides-from-redlines`:
+     - New Phase 6.5 source-map emit, with the merge protocol from §6.4
+       reading any existing `source-map.json` from the MCR-path run.
+   - Both skills add `source-map.json` to their Supabase upload manifest.
+2. **Substation** — `/api/crc/source-map?reviewId=…` endpoint, with
    in-memory cache.
-4. **Cityhall** — Inline disclosure under each atomic row, text-only with
+3. **Cityhall** — Inline disclosure under each atomic row, text-only with
    `<mark>` highlight.
-5. **Smoke test** — Regenerate Lamar + Collier U0 CRC, verify §9.1 smoke
+4. **Smoke test** — Regenerate Lamar + Collier U0 CRC, verify §9.1 smoke
    checklist.
 
 Gate to phase 2: phase-1 is in production for ≥2 weeks with no source-map
@@ -845,13 +1023,14 @@ phase 2 the helper grows a mid-line-cut refinement.
 
 ### 12.2 LLM paraphrasing despite the instruction
 
-The Phase-7 (existing) LLM is asked to emit `source_span_verbatim` as a
-strict substring. It will sometimes paraphrase anyway — that's why the
-fuzzy-match fallback and vision-recovery exist. The risk: if paraphrasing
-gets bad enough that fuzzy match thresholds need to relax, span boundaries
-become unreliable. Mitigation: monitor `items_with_vision_recovery /
-total` per §10; if it climbs above ~15%, revisit the Phase-7 prompt rather
-than tuning fuzzy thresholds.
+The Phase-6 (decomposition) LLM is asked to emit `source_span_verbatim`
+as a strict substring. It will sometimes paraphrase anyway — that's why
+the fuzzy-match fallback and vision-recovery exist. The risk: if
+paraphrasing gets bad enough that fuzzy match thresholds need to relax,
+span boundaries become unreliable. Mitigation: monitor
+`items_with_vision_recovery / total` per §10; if it climbs above ~15%,
+revisit the Phase-6 decomposition prompts rather than tuning fuzzy
+thresholds.
 
 ### 12.3 Re-running the workflow against the same generation
 
@@ -916,9 +1095,9 @@ resulting `source-map.json` rows:
       "source_pdf": "mcr.pdf",
       "verbatim_text": "SP33 - Current Status: Pending\nU0: Coordinate the Site Data Table and Landscape Plan to show a consistent amount of open space to meet Subchapter E Requirements. Show the type of open space proposed and provide dimensions and amenities required for that open space type. (Example: A landscape area other than one required by Subchapter C, Article 9 (Landscaping), provided such landscaped area has a minimum depth and width of 20 feet and a minimum total area of 650 square feet. The area shall include pedestrian amenities.)",
       "bbox": [
-        { "page": 12, "x0": 72.0, "y0": 480.5, "x1": 540.0, "y1": 612.3, "coord_space": "pdf_user" }
+        { "page": 12, "x0": 72.0, "y0": 180.5, "x1": 540.0, "y1": 312.3, "coord_space": "pdf_topleft" }
       ],
-      "crop_image": "source-text-crops/SP33.png",
+      "crop_image": ["source-text-crops/SP33.png"],
       "extraction": {
         "method": "deterministic",
         "verbatim_match": "exact",
@@ -936,7 +1115,7 @@ resulting `source-map.json` rows:
         "verbatim_text": "Coordinate the Site Data Table and Landscape Plan to show a consistent amount of open space to meet Subchapter E Requirements.",
         "char_offset_in_parent": [40, 173],
         "bbox": [
-          { "page": 12, "x0": 96.0, "y0": 552.0, "x1": 540.0, "y1": 580.0, "coord_space": "pdf_user" }
+          { "page": 12, "x0": 96.0, "y0": 212.0, "x1": 540.0, "y1": 240.0, "coord_space": "pdf_topleft" }
         ]
       },
       "extraction": {
@@ -953,7 +1132,7 @@ resulting `source-map.json` rows:
         "verbatim_text": "Show the type of open space proposed and provide dimensions and amenities required for that open space type. (Example: A landscape area other than one required by Subchapter C, Article 9 (Landscaping), provided such landscaped area has a minimum depth and width of 20 feet and a minimum total area of 650 square feet. The area shall include pedestrian amenities.)",
         "char_offset_in_parent": [174, 533],
         "bbox": [
-          { "page": 12, "x0": 96.0, "y0": 492.0, "x1": 540.0, "y1": 551.0, "coord_space": "pdf_user" }
+          { "page": 12, "x0": 96.0, "y0": 241.0, "x1": 540.0, "y1": 300.0, "coord_space": "pdf_topleft" }
         ]
       },
       "extraction": {
