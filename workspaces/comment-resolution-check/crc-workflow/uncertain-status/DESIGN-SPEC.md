@@ -38,8 +38,9 @@ clean for that future spec — see §3.
 - **Tunable threshold.** Pre-set to 0.35, exposed as a workflow input
   so we can dial without a code change once we have U1 accuracy data.
 - **Backward-renderable.** Cityhall and the PDF should display old
-  CRC runs cleanly. We do this by backfilling 1700's existing medly-3
-  runs as part of impl rather than carrying a dual-schema renderer.
+  CRC runs cleanly. We do this by backfilling every existing CRC row
+  (all currently on `output_schema='legacy'` — see §6.4) as part of
+  impl rather than carrying a dual-schema renderer.
 - **Lay groundwork for manual override without committing to it.**
   Persist `tentativeStatus` + `voteBreakdown` so the future override UI
   has a sensible default to pre-fill. See §3 guardrails.
@@ -99,8 +100,8 @@ clean later:
 | D11 | Naming | **`uncertain`** | Q9. Differentiates from completeness/formal-review `unclear`. |
 | D12 | `tentativeStatus` field | New optional field on `review_comments.output_json`, populated **only when `status='uncertain'`** | Q6 + D10. Lets PDF report + override UI know what the would-be winner is. |
 | D13 | `voteBreakdown` field | Structured object on `review_comments.output_json` per row: `{ resolved: N, failed: N, "not-applicable": N, "missing": N }` | Q21. Prevents UI/PDF from recomputing from `perRunFindings`. `missing` = `totalRuns − presentRunCount`. |
-| D14 | `output_schema` bump | Bump from `'2026-06-crc'` → **`'2026-06-25-crc'`** on both `reviews` and `review_comments` | Q12. Lets cityhall key its renderer choice on schema string. |
-| D15 | Backfill | **One-off migration script** recomputes consolidation for all existing `'2026-06-crc'` rows and bumps them to `'2026-06-25-crc'` | Q14. Avoids a dual-schema renderer; 1700's two persisted medly-3 runs are the only known affected rows today. |
+| D14 | `output_schema` introduction | Add **`review_schema: '2026-06-25-crc'`** to `workflow.yaml`. CRC currently ships **without** a `review_schema` line, so the conductor saver defaults to `'legacy'` (`conductor/src/shared/review-saver.ts:555`) — every persisted CRC row in Supabase today carries `output_schema='legacy'`. We skip the intermediate `'2026-06-crc'` value the cityhall-ui DESIGN-SPEC contemplated (never shipped to workflow.yaml) and go straight to the dated form. | Q12. Provides forward-looking provenance and a hook for future schema-keyed cityhall rendering (today cityhall routes off `review_type='crc'`, not `output_schema`). |
+| D15 | Backfill | **One-off migration script** recomputes consolidation for all existing CRC rows (currently on `output_schema='legacy'`) and bumps them to `'2026-06-25-crc'` | Q14. Avoids a dual-schema renderer. Affected-row count is unknown without a query — the spec previously claimed "1700's two medly-3 runs" but the run-3 audit shows at least three 1700 reviews alone (gen-1 runs=3 + gen-1 + gen-2 runs=5), plus any other completed CRC reviews. Backfill MUST log row count so a zero-match scans as failure, not silent success. |
 | D16 | Triage interaction | **Untouched.** Uncertain does NOT auto-write `comment_triage` rows; the existing 5-value triage status set is unchanged | Q13 + Q19. The future override spec may add a triage value or a sibling field; this spec stays orthogonal. |
 | D17 | CityHall filter tabs | **Add 4th "Uncertain" tab** to the items list. **Default landing tab = `Uncertain` when any exist, else `Failed`** | Q15. |
 | D18 | CityHall status pill color | **Amber** (`text-amber-700 bg-amber-50 border-amber-200`) | Q16. Distinguishes from red `failed` and green `resolved`; matches the existing amber fallback in `CompletenessCommentCard.svelte:290`. |
@@ -212,16 +213,18 @@ interface ConsolidatedItem {
   ref: string;
   grouping: string;
   checklistItemId: string;
-  status: Status;                                    // widened
-  tentativeStatus: Status | null;                    // NEW — populated when status='uncertain'
-  voteBreakdown: VoteBreakdown;                      // NEW
-  confidence: 'high' | 'medium' | 'low';             // unchanged
+  status: Status;                                                    // widened to 4-state
+  tentativeStatus: 'resolved' | 'failed' | 'not-applicable' | null;  // NEW — populated when status='uncertain'; never carries 'uncertain' itself
+  voteBreakdown: VoteBreakdown;                                      // NEW
+  confidence: 'high' | 'medium' | 'low';                             // unchanged
   runCount: number;
   totalRuns: number;
-  perRunFindings: PerRunFinding[];                   // unchanged
-  winningFinding: AgentFinding;                      // earliest run matching `tentativeStatus` (when uncertain) or `status` (else)
+  perRunFindings: PerRunFinding[];                                   // unchanged
+  winningFinding: AgentFinding;                                      // earliest run matching `tentativeStatus` (when uncertain) or `status` (else)
 }
 ```
+
+Note that `AgentFinding` is **not** widened — it carries the per-run agent emit and stays 3-state. `winningFinding.status` is therefore always one of `resolved | failed | not-applicable`, even when the consolidated `status` is `'uncertain'`. This matters because `enrich-findings.ts` (next step) reads from `findingsDir/{grouping}.md.json` which contains `winningFinding` only, so the enriched totals it computes are necessarily 3-state — see §5.3's counts-derivation note.
 
 `winningFinding` selection rule: pick the earliest run whose status
 matches the **effective verdict for display** (i.e. `tentativeStatus`
@@ -244,24 +247,49 @@ Consolidated: ${N} items
 ### 5.3 `build-crc-review-comments.ts` — propagate new fields
 
 - Read `uncertainThreshold` (passed through as a new `--uncertainThreshold` arg) — only needed for metadata; the consolidate script has already applied the gate.
+- **Widen the local `ConsolidatedItem` interface** (currently at `build-crc-review-comments.ts:125-131`, which only carries `ref / confidence / runCount / totalRuns / perRunFindings`). Add:
+  - `status: 'resolved' | 'failed' | 'not-applicable' | 'uncertain'`
+  - `tentativeStatus: 'resolved' | 'failed' | 'not-applicable' | null`
+  - `voteBreakdown: { resolved: number; failed: number; 'not-applicable': number; missing: number }`
 - For each comment built from the consolidated row:
-  - Set `output_json.status` to the consolidated `status` (now possibly `'uncertain'`).
-  - When `consolidated.status === 'uncertain'`:
+  - **Switch the comment's `status:` assignment** from `finding.status` (per-run agent 3-state from the enriched finding) to `consolidated?.status ?? finding.status` — when a consolidated entry exists, its 4-state status is authoritative; the fallback only fires on the runs===1 passthrough path where no `consolidated-findings.json` was written.
+  - When `consolidated?.status === 'uncertain'`:
     - Set `output_json.tentativeStatus = consolidated.tentativeStatus`.
     - Set `output_json.voteBreakdown = consolidated.voteBreakdown`.
-  - When `status !== 'uncertain'`: still write `voteBreakdown` (cheap and useful); `tentativeStatus` is omitted.
+  - When `status !== 'uncertain'`: still write `voteBreakdown` when a consolidated entry exists (cheap and useful); `tentativeStatus` is omitted.
 - Roll up to `reviews.output_json.metadata`:
-  - Add `uncertainCount: number`.
-  - Add `uncertainThreshold: number` (the value used for this run — for provenance / debugging).
-- Bump both `output_schema` strings to `'2026-06-25-crc'`.
+  - **Derive the four status counts from the consolidated map, not from `enriched.totals`.** `enriched.totals.resolved` / `.failed` / `.notApplicable` come from `enrich-findings.ts`, which buckets by `winningFinding.status` — that's the per-run agent 3-state, so an item with consolidated `status='uncertain'` is still counted in `resolved`/`failed`/`notApplicable` there and would double-count the headline banner.
+  - Iterate the per-comment loop you're already in (or `consolidatedMap` directly) and, for each item, pick `consolidated?.status ?? finding.status` and increment exactly one of `resolvedCount` / `failedCount` / `notApplicableCount` / `uncertainCount`. Replaces today's pass-through from `enriched.totals.resolved` etc. (`build-crc-review-comments.ts:342-344`).
+  - When `consolidatedMap` is empty (runs===1 passthrough — see §5.4), fall back to `enriched.totals` for the three legacy counts (`uncertainCount` is necessarily 0).
+  - Add `uncertainCount: number` and `uncertainThreshold: number` (the value used for this run — for provenance / debugging).
+- The schema string on both rows lands as `'2026-06-25-crc'` automatically once `review_schema:` is added to `workflow.yaml` (§6.4) — this script doesn't set `output_schema` itself; the conductor saver reads from workflow config.
 
-### 5.4 Single-run / `runs < 3` passthrough
+### 5.4 Behavior when `runs < 3`
 
-Unchanged. The passthrough copies `runs/run-1/findings/*` and emits
-`status` directly from the agent's single verdict. The consolidate
-script's uncertain gate is bypassed when `totalRuns < 3`. The
-single-entry `sourceFindings` array carries the same shape minus the
-`tentativeStatus` field.
+Two conditions, often conflated; the implementer must handle them
+distinctly — they live at different layers.
+
+**`runs === 1` — full passthrough (unchanged).** `cross-run-consolidate-crc.ts`
+hits its early-return at line ~153 (`if (totalRuns === 1)`), merges
+`runs/run-1/findings/*` straight into `findingsDir/`, and does **NOT**
+write `consolidated-findings.json`. `build-crc-review-comments` therefore
+falls through its `fs.existsSync(consolidatedFile)` check and synthesizes
+a single-entry `sourceFindings` from the enriched finding directly.
+`output_json.status` is the agent's 3-state verdict, `tentativeStatus`
+is omitted, `voteBreakdown` is omitted (no vote occurred).
+
+**`runs === 2` — multi-run path runs but the uncertainty gate is
+disabled.** runs=2 does **not** hit the early-return; it takes the full
+multi-run path and writes `consolidated-findings.json` with
+`voteBreakdown` and full `perRunFindings`. What's bypassed is
+specifically the `if (totalRuns >= 3)` uncertainty gate per D5 inside
+`consolidate()` — every item lands with `status = winnerStatus`,
+`tentativeStatus = null`. `build-crc-review-comments` reads the
+consolidated map normally and just never sees `'uncertain'` as a
+consolidated status.
+
+In both cases the consolidated `status` is 3-state, so `output_json.status`
+on `review_comments` is 3-state and `tentativeStatus` is omitted.
 
 ## 6. Schema changes
 
@@ -336,19 +364,40 @@ Add two fields (CRC only):
 ```
 
 `resolvedCount` / `failedCount` / `notApplicableCount` (existing) count
-the corresponding statuses **strictly** — `uncertain` items count only
-toward `uncertainCount`, not toward `tentativeStatus`'s bucket. This is
-intentional: the headline banner shows what the agent committed to.
+the corresponding **consolidated 4-state** statuses strictly —
+`uncertain` items count only toward `uncertainCount`, not toward
+`tentativeStatus`'s bucket. This is intentional: the headline banner
+shows what the agent committed to. **Important:** in
+`build-crc-review-comments.ts`, derive these four counts from
+`consolidatedMap` (4-state) rather than `enriched.totals` (3-state,
+built by `enrich-findings.ts` from the per-run `winningFinding`) — the
+latter buckets every uncertain item into `tentativeStatus`'s slot and
+will double-count the banner. See §5.3 for the explicit fix.
 
-### 6.4 `output_schema` bump
+### 6.4 `output_schema` — first time on a non-`'legacy'` value
 
-Both `reviews.output_schema` and `review_comments.output_schema` move
-from `'2026-06-crc'` → `'2026-06-25-crc'`. CityHall keys its CRC
-renderer on the prefix `2026-..-crc` rather than the exact string —
-both old and new schemas should render through the same code path
-post-backfill (§7), but if a non-backfilled `'2026-06-crc'` row leaks
-through, cityhall falls back to "no uncertain status known" rendering
-(no amber pill, no tentative).
+CRC has shipped without a `review_schema:` field in `workflow.yaml`, so
+the conductor saver defaults to `output_schema='legacy'` on both
+`reviews` and `review_comments` (`conductor/src/shared/review-saver.ts:555`).
+The cityhall-ui DESIGN-SPEC's `'2026-06-crc'` value was decided
+2026-06-22 but never landed in the workflow.
+
+This spec lands the schema string for the first time:
+
+- **Add** `review_schema: "2026-06-25-crc"` to `workflow.yaml` as a
+  top-level key (mirrors `workflows/review/workflow.yaml:110` and
+  `workflows/review-anchored/workflow.yaml:51`).
+- All future CRC rows persist with `output_schema='2026-06-25-crc'`.
+- Existing rows (currently `'legacy'`) are migrated by the backfill in
+  §7.
+
+CityHall today routes CRC reviews by `review_type='crc'`, **not by
+`output_schema`** (no schema-keyed dispatch is wired up). The schema
+string is therefore forward-looking provenance + a hook for future
+schema-keyed rendering. If a row on `'legacy'` leaks through after the
+backfill runs, the existing cityhall code path renders it normally
+without uncertain awareness (no amber pill, no `tentativeStatus`,
+`voteBreakdown` absent — same behavior CRC has had since iteration-1).
 
 ## 7. Backfill (one-off migration)
 
@@ -359,26 +408,38 @@ post-merge.
 **Behavior:**
 
 1. Find all `reviews` rows with `review_type='crc'` AND
-   `output_schema='2026-06-crc'`.
-2. For each, fetch its `review_comments` rows.
-3. For each comment, read `output_json.perRunFindings[]`.
-4. Re-run `consolidate(...)` with `uncertainThreshold = 0.35` (the
+   `output_schema='legacy'`. (Every persisted CRC row to date is on
+   `'legacy'` because `workflow.yaml` never set `review_schema:` —
+   see §6.4.)
+2. **Log the match count up front and abort with a clear error if it's
+   zero.** Silent zero-match passes have masked targeting bugs in
+   adjacent migrations; we want this one loud.
+3. For each, fetch its `review_comments` rows.
+4. For each comment, read `output_json.perRunFindings[]`.
+5. Re-run `consolidate(...)` with `uncertainThreshold = 0.35` (the
    default; we don't try to retroactively choose a different value).
-5. Update `output_json.status` (may flip to `'uncertain'`),
+6. Update `output_json.status` (may flip to `'uncertain'`),
    `tentativeStatus`, `voteBreakdown`.
-6. Recompute the parent `reviews.output_json.metadata` counts.
-7. Bump both `output_schema` strings to `'2026-06-25-crc'`.
-8. Write `output_json.metadata.uncertainThreshold = 0.35` and
+7. Recompute the parent `reviews.output_json.metadata` counts — using
+   the same consolidated-map derivation as §5.3 (do **not** trust the
+   row's existing `resolvedCount` etc., which are 3-state from
+   `enriched.totals` and would double-count uncertain items).
+8. Bump both `output_schema` strings to `'2026-06-25-crc'`.
+9. Write `output_json.metadata.uncertainThreshold = 0.35` and
    `metadata.backfilledAt = <ISO timestamp>` (provenance — also makes
    the migration idempotent: skip rows that already have
    `backfilledAt`).
 
 **Idempotency:** rows on `'2026-06-25-crc'` are skipped. Rows on
-`'2026-06-crc'` get rewritten once and stamped.
+`'legacy'` get rewritten once and stamped.
 
-**Known affected rows (as of 2026-06-25):** the two 1700 South Lamar
-medly-3 runs. Confirm during impl via
-`SELECT id, submission_version_id, created_at FROM reviews WHERE review_type='crc' AND output_schema='2026-06-crc';`.
+**Affected-row scope (as of 2026-06-25):** every CRC review ever
+persisted, since they all carry `'legacy'`. The 1700 South Lamar
+run-3 audit alone references three CRC reviews (`3703349c…`
+2026-06-23 runs=3, `7e79e197…` 2026-06-19, `a8d07d22…` 2026-06-25
+runs=5); other projects with completed CRC runs add more. Confirm
+during impl via
+`SELECT id, submission_version_id, output_schema, created_at FROM reviews WHERE review_type='crc' ORDER BY created_at DESC;`.
 
 **Single-run rows** (no medly): the script still bumps the schema and
 writes a `voteBreakdown` (`{ status: 1 } + zeros + missing: 0`), but
@@ -529,15 +590,26 @@ rendering rule.
 
 Reuse 1700 South Lamar U0.
 
-1. **Backfill** the two existing 1700 medly-3 runs. Confirm:
-   - Both rows now carry `output_schema='2026-06-25-crc'`.
-   - Each row has `metadata.uncertainThreshold = 0.35` and a non-zero
-     `metadata.uncertainCount` (we expect a handful — the runs had
-     some 2-1 splits per the run-2 audit's variance reports, though
-     **2-1 in a 3-run is NOT uncertain under the locked rule**; only
-     1-1-1 ties are uncertain at runs=3, so the count may be small).
+1. **Backfill** all existing `output_schema='legacy'` CRC reviews
+   (every persisted CRC row to date). Confirm:
+   - **Backfill log printed a non-zero match count.** Zero-match
+     should have aborted (§7 step 2); if the log says e.g.
+     "matched 0 rows" the targeting query is wrong and nothing
+     downstream is valid.
+   - Spot-check the 1700 South Lamar reviews specifically
+     (`3703349c…` runs=3, `7e79e197…`, `a8d07d22…` runs=5 — see §7).
+     All three now carry `output_schema='2026-06-25-crc'`.
+   - Each backfilled row has `metadata.uncertainThreshold = 0.35`,
+     `metadata.backfilledAt = <ISO>`, and a derived `uncertainCount`.
+     For the runs=3 row we expect a small count (only 1-1-1 ties
+     trigger at runs=3 under the locked rule; 2-1 does not). For the
+     runs=5 row we expect more (3-2 splits and 3-1-1 splits both
+     trigger).
    - Spot-check 3-5 individual `review_comments` rows. Confirm
-     `output_json.voteBreakdown` matches what `perRunFindings` shows.
+     `output_json.voteBreakdown` matches what `perRunFindings` shows
+     and that `metadata.resolvedCount + failedCount +
+     notApplicableCount + uncertainCount = totalItems` (no
+     double-counting from the §5.3 / §6.3 fix).
 2. **CityHall** — open the backfilled run:
    - Land on the Uncertain tab if `uncertainCount > 0`; else Failed.
    - Amber pill renders on uncertain items.
@@ -614,17 +686,32 @@ callout AROUND the tentative answer, not in place of it.
 - [ ] **Bureau PR**
   - [ ] Add `uncertainThreshold` input to `workflow.yaml`; plumb to
     `cross-run-consolidate-crc` and `build-crc-review-comments` args.
+  - [ ] Add a top-level `review_schema: "2026-06-25-crc"` line to
+    `workflow.yaml` (CRC ships without one today, so existing rows
+    persist as `'legacy'` — see §6.4).
   - [ ] Widen `Status` type + add `consolidate()` + new fields to
-    `ConsolidatedItem` in `cross-run-consolidate-crc.ts`. Update final
-    log line.
+    `ConsolidatedItem` in `cross-run-consolidate-crc.ts`. Narrow the
+    `tentativeStatus` field type to exclude `'uncertain'` per §5.2(c).
+    Update final log line.
   - [ ] Widen `crc.schema.json` `status` enum to include `uncertain`.
     Leave `crc.emit.schema.json` unchanged.
-  - [ ] Update `build-crc-review-comments.ts` to persist
-    `tentativeStatus`, `voteBreakdown`, `metadata.uncertainCount`,
-    `metadata.uncertainThreshold`; bump both `output_schema` strings
-    to `'2026-06-25-crc'`.
-  - [ ] Add `backfill-uncertain-status.ts` one-off script with the
-    idempotency guard. Document in the workflow's README.
+  - [ ] Update `build-crc-review-comments.ts`:
+    - Widen the local `ConsolidatedItem` interface (currently at
+      lines ~125-131) to add `status` (4-state), `tentativeStatus`,
+      `voteBreakdown`.
+    - Switch the comment's `status:` assignment from `finding.status`
+      to `consolidated?.status ?? finding.status`.
+    - Derive `resolvedCount` / `failedCount` / `notApplicableCount` /
+      `uncertainCount` strictly from `consolidatedMap` (per §5.3) —
+      do NOT pass through `enriched.totals` for these four metadata
+      fields. Fall back to `enriched.totals` only on the runs===1
+      passthrough where `consolidatedMap` is empty.
+    - Persist `tentativeStatus`, `voteBreakdown` on each comment.
+    - Persist `metadata.uncertainCount` + `metadata.uncertainThreshold`.
+  - [ ] Add `backfill-uncertain-status.ts` one-off script targeting
+    `output_schema='legacy'` (NOT `'2026-06-crc'`, which never
+    existed). Log the match count up front; abort on zero. Idempotency
+    guard via `metadata.backfilledAt`.
   - [ ] Optional: fixture-based unit test for `consolidate()`.
 - [ ] **CityHall PR**
   - [ ] Add `uncertain` arm to `crcStatusPillClass`, `crcStatusLabel`,
