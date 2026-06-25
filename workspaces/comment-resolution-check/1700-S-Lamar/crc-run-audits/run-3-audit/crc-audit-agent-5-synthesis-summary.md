@@ -54,6 +54,17 @@
 ### P2 — Tool-name normalization
 - **What**: 7 aliases observed (`crc-vision-check`, `mcp__conductor_tools__crc_vision_check`, `crc_vision_check`; plus 4 semantic-search variants). TSVs report normalized counts; production code should canonicalize at the SDK boundary.
 
+### P2 — Auto-compaction fired 3× (downstream of storm, not cause)
+
+- **What**: 3 `type:system / subtype:compact_boundary` events during the `review` step, all `trigger:auto`:
+  - `crc-tpw-1.md / run-4` @ pre_tokens=174,921, cell wall-clock 16.6 min
+  - `crc-ev.md / run-5` @ pre_tokens=173,651, cell wall-clock 13.9 min
+  - `crc-sp-2.md / run-5` @ pre_tokens=167,995, cell wall-clock 30.4 min
+- **Pattern**: all three are the largest guide files (`crc-tpw-1.md` 22 KB, `crc-ev.md` 19 KB, `crc-sp-2.md` 18 KB). Auto-compaction threshold appears to be ~170 K tokens (Sonnet 4.5 has a 200 K context). No `compact_failed` / `compact_error` events.
+- **Storm overlap**: 1 of 3 (`crc-sp-2.md / run-5`) also fired `coercion_failed`. Crucially, the **storm event preceded compaction by ~9.5 min** (storm at t=1782388195681, compaction at t=1782388765749) — compaction is **downstream** of the storm (retries burned context until threshold), not upstream. The other 2 compacted cells did not storm.
+- **Why it matters**: secondary signal — the largest guides are skirting the context ceiling. If guide files grow further (more figures, more sub-items), more cells will compact and the risk of summary-induced reasoning drift goes up. **R-Z proposal**: split `crc-tpw-1.md`/`crc-ev.md` the way `crc-sp` was already split (sp-1..4) to keep cells comfortably under the threshold.
+- **Not in original audit**: this dimension was not asked of any of Agents 1–4. Surfacing here after the user explicitly asked. The fact that Agent 1 missed it is itself a small observability gap — `compact_boundary` events should be in the per-step audit checklist.
+
 ### P2 — Cross-review tally not available (gen mismatch)
 - **What**: two prior CRC reviews on this submission version exist (`3703349c-…` 2026-06-23, `7e79e197-…` 2026-06-19) but both used `crcGenerationNumber=1` vs current gen=2. Excluded from the running-variance and tool-usage tallies to avoid item-ref drift. Re-run a prior at gen=2 (or stamp a gen-stable item key) before the next audit.
 
