@@ -942,6 +942,12 @@ This phase requires phase 1's source-map fetch to already be wired up.
 
 ### 9.3 Phase 3 — PDF.js viewer with autoscroll + bbox overlay
 
+> **Companion spec:** [`../view-mcr-pdf/DESIGN-SPEC.md`](../view-mcr-pdf/DESIGN-SPEC.md)
+> ships a much smaller MVP — an `Open in MCR ↗` per-row link that opens the
+> source PDF in the browser's native viewer (no PDF.js, no overlay, no
+> autoscroll-to-bbox). Real usage data on that link informs whether the full
+> viewer below is worth building.
+
 Sketch only (no implementation in this spec):
 
 - A new "View in MCR" affordance that opens a modal or new route hosting
