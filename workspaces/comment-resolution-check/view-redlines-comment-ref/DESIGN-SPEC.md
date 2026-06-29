@@ -81,7 +81,7 @@ Resolved in the 2026-06-29 spec-shaping session:
 | D1 | The viewer is a real cityhall surface, not a tab to the browser's native viewer. Native viewers can't draw overlays; the overlay is the whole point. |
 | D2 | PDF rendering uses **PDF.js**, mirroring navalbase. Coord conversion goes `pdf_topleft` PDF points (source-map) → PDF.js viewport pixels at render time via `PDFPageProxy.getViewport({scale}).convertToViewportRectangle`. No re-derivation from navalbase's normalized `[0,1]` frame is needed; the source-map already denormalized to points. |
 | D3 | Bbox overlay: an absolutely-positioned `<canvas>` stacked over the PDF render canvas, redrawn on zoom / scroll / page-change. Same recipe as navalbase. Multi-rect parents (schema allows N rects per `bbox[]`) draw N highlights ordered with `bbox[]`. |
-| D4 | Substation owns one new endpoint that streams the source PDF bytes. Auth + filename validation gate happen there, same model as `crc-mcr-pdf`. **Endpoint name: `/api/crc/redline-pdf`** (Q6) — per-resource naming distinguishes redlines from the existing `/api/crc/mcr-pdf` and leaves room for future per-type endpoints (e.g. `/api/crc/figure-pdf` if a use case emerges). |
+| D4 | Substation owns one new endpoint that issues a signed URL for the source PDF. Auth + parent-comment validation gate happen there, same model as `crc-mcr-pdf`. **Endpoint name: `/api/crc/redline-pdf`** (Q6) — per-resource naming distinguishes redlines from the existing `/api/crc/mcr-pdf` and leaves room for future per-type endpoints. **Endpoint param: `parentCommentId`** (not `sourcePdfFilename`). The endpoint looks up the source-map, finds the parent, reads `parent.source_pdf`, and signs `{prefix}{source_pdf}`. Symmetric with the viewer URL, never leaks ~200-char filenames into proxy logs, and the path-traversal protection becomes implicit (you can only resolve to PDFs the generation skill actually emitted). |
 | D5 | Source-map is the single source of truth for `(page, bbox, verbatim_text, source_pdf_filename, department_code)` — the viewer's `+page.server.ts` `load` fetches it via the existing source-map service and hands the resolved parent comment to the page (Q5: minimal URL). |
 | D6 | The link to open the viewer lives in the existing source-disclosure aside (the one that hosts the MCR link), only when `source_type === 'pdf_redlines'` (D6 + Q16). |
 | D7 | URL shape (Q5): **minimal** — `?parentCommentId={id}`. The viewer derives everything else from the source-map. |
@@ -170,7 +170,7 @@ path lookup.
 ### 5.1 Wire contract
 
 ```
-GET /api/crc/redline-pdf?reviewId={uuid|rv_uuid}&sourcePdfFilename={key}
+GET /api/crc/redline-pdf?reviewId={uuid|rv_uuid}&parentCommentId={id}
 Authorization: Bearer {token}
 
 302 Found
@@ -179,26 +179,32 @@ Authorization: Bearer {token}
 400  - missing / invalid query params
 401  - missing/invalid bearer
 403  - authenticated but no project access
-404  - review not found / not CRC / sourcePdfFilename not in source-map / file missing in bucket
+404  - review not found / not CRC / parentCommentId not in source-map / not pdf_redlines / source PDF missing in bucket
 500  - storage error (signed-URL creation failure)
 ```
 
-`sourcePdfFilename` is a key into the source-map's `source_pdfs[]`
-record (e.g. `"source-pdfs/…AWPE U0 Redlines.pdf"`). Validation flow:
+`parentCommentId` is the row ID from `source-map.parent_comments[].id`
+(e.g. `"AW-RL-2"`). The endpoint resolves the source-PDF filename
+itself via the source-map; no filename ever appears in the URL or
+proxy. Validation flow:
 
 1. Resolve the review's `crcGuides.{bucket, prefix}`.
 2. Fetch + parse `source-map.json` (reuse `crc-source-map` service's
    cached LRU entry — same bucket/prefix → same key, so this is free
    on warm calls).
-3. Confirm `sourcePdfFilename` is a key in `source_pdfs[]`. **Reject
-   otherwise.** This is what protects against path-traversal /
-   arbitrary storage path lookup — the URL can only resolve to a file
-   the generation-side skill blessed.
-4. Verify `source_pdfs[sourcePdfFilename].uploaded_to_bucket === true`
-   (defense in depth — if false, 404 with `mcr_pdf_not_uploaded`-style
+3. Find `parent_comments[i]` where `id === parentCommentId`. **Reject
+   if missing** — protects against arbitrary lookups; the URL can only
+   resolve to a comment the generation-side skill actually emitted.
+4. Reject if `parent.source_type !== 'pdf_redlines'` — this endpoint
+   serves only redline PDFs. (MCR-sourced parents have their own
+   `/api/crc/mcr-pdf` endpoint per `view-mcr-pdf`.)
+5. Read `sourcePdfFilename = parent.source_pdf` (e.g. `"source-pdfs/
+   …AWPE U0 Redlines.pdf"`).
+6. Verify `source_pdfs[sourcePdfFilename].uploaded_to_bucket === true`
+   (defense in depth — if false, 404 with `redline_pdf_not_uploaded`
    code).
-5. Create a 15-min signed URL via `sb.storage.from(bucket).createSignedUrl(`${prefix}${sourcePdfFilename}`, 900)`.
-6. 302 redirect.
+7. Create a 15-min signed URL via `sb.storage.from(bucket).createSignedUrl(`${prefix}${sourcePdfFilename}`, 900)`.
+8. 302 redirect.
 
 ### 5.2 Why 302 (not byte-proxy)
 
@@ -235,10 +241,13 @@ viewer re-issues the load (see §6.10 for the re-issue handler).
 5. Read `metadata.crcGuides.{bucket, prefix}`; 404 if missing.
 6. Fetch + parse `source-map.json` (reuse `getSourceMapForReview` or
    factor a shared helper).
-7. Validate `sourcePdfFilename` is in `source_pdfs[]`. 404 otherwise.
-8. Verify `source_pdfs[sourcePdfFilename].uploaded_to_bucket`.
-9. `sb.storage.from(bucket).createSignedUrl(...)` with 900s TTL.
-10. Return a 302 with the signed URL.
+7. Find `parent_comments[i]` where `id === parentCommentId`. 404
+   otherwise.
+8. Reject if `parent.source_type !== 'pdf_redlines'` (404).
+9. Resolve `sourcePdfFilename = parent.source_pdf`.
+10. Verify `source_pdfs[sourcePdfFilename].uploaded_to_bucket`.
+11. `sb.storage.from(bucket).createSignedUrl(`${prefix}${sourcePdfFilename}`, 900)`.
+12. Return a 302 with the signed URL.
 
 Hono route adapter at `src/routes/crc-redline-pdf.ts`, registered as
 `api.route('/crc/redline-pdf', crcRedlinePdf)` in `src/index.ts`.
@@ -276,14 +285,14 @@ const SUBSTATION_URL = getEnvVar('SUBSTATION_URL') ?? 'http://localhost:3001';
 export const GET: RequestHandler = async ({ locals, params, url }) => {
   if (!locals.user) throw error(401, 'Unauthorized');
 
-  const sourcePdfFilename = url.searchParams.get('sourcePdfFilename');
-  if (!sourcePdfFilename) throw error(400, 'sourcePdfFilename required');
+  const parentCommentId = url.searchParams.get('parentCommentId');
+  if (!parentCommentId) throw error(400, 'parentCommentId required');
 
   const token = getAccessToken(locals);
   const substationUrl =
     `${SUBSTATION_URL}/api/crc/redline-pdf` +
     `?reviewId=${encodeURIComponent(params.reviewId)}` +
-    `&sourcePdfFilename=${encodeURIComponent(sourcePdfFilename)}`;
+    `&parentCommentId=${encodeURIComponent(parentCommentId)}`;
 
   let res: Response;
   try {
@@ -355,13 +364,14 @@ export const load: PageServerLoad = async ({ locals, params, url, fetch }) => {
     review: { id: params.reviewId },
     parent,
     siblings,
-    sourcePdfFilename: parent.source_pdf,
     initialPage: parent.bbox[0]?.page ?? 1,
     // The PDF URL the viewer hands to PDF.js — a relative URL to the
-    // cityhall proxy (which 302s to Supabase).
+    // cityhall proxy (which forwards to substation, which 302s to
+    // Supabase). The parentCommentId is the only identifier; substation
+    // resolves the source-PDF filename from the source-map itself.
     pdfUrl:
       `/project/${params.projectId}/review/${params.reviewId}/redline-pdf` +
-      `?sourcePdfFilename=${encodeURIComponent(parent.source_pdf)}`,
+      `?parentCommentId=${encodeURIComponent(parent.id)}`,
   };
 };
 ```
@@ -429,7 +439,7 @@ We pin the same version to start; bumping is a one-line config change.
 
 ```ts
 const doc = await pdfjsLib.getDocument({
-  url: pdfUrl,             // /project/.../redline-pdf?sourcePdfFilename=...
+  url: pdfUrl,             // /project/.../redline-pdf?parentCommentId=...
   withCredentials: true,   // forward cityhall session cookie via the proxy hop
 }).promise;
 ```
@@ -889,11 +899,10 @@ The page's server `load` fetches the source-map, finds the matching
 `parent_comments[]` entry, and resolves:
 
 ```
-sourcePdfFilename = "source-pdfs/1700 S Lamar Blvd Sp-2026-0136C AWPE U0 Redlines.pdf"
 initialPage       = 8
-focusedParent     = { id: "AW-RL-2", department_code: "AW", verbatim_text: "…", bbox: [{ page: 8, x0: 953.86, … }] }
+focusedParent     = { id: "AW-RL-2", department_code: "AW", verbatim_text: "…", source_pdf: "source-pdfs/…AWPE U0 Redlines.pdf", bbox: [{ page: 8, x0: 953.86, … }] }
 siblings          = [ all other AW-RL-* parents whose source_pdf is the same redline PDF ]
-pdfUrl            = "/project/{projectId}/review/{reviewId}/redline-pdf?sourcePdfFilename=…"
+pdfUrl            = "/project/{projectId}/review/{reviewId}/redline-pdf?parentCommentId=AW-RL-2"
 ```
 
 Page hydration:
