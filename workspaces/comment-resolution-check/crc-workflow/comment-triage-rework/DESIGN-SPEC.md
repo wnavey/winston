@@ -174,21 +174,34 @@ When `usesNewCrcTriage` is true:
 - Filter tabs render the 3-tab set (Failed / Resolved / Uncertain). No N/A tab.
 - Row pills render with the 2-value (+ uncertain) enum; legacy `not-applicable`
   items coerce to `resolved` for display.
-- The triage panel renders the new TriageBar variant.
+- The triage panel renders the new `CrcVerdictTriageBar` component (§6.2).
 - The counts banner renders agent + effective + Corrected chip.
 - The Notes-filter dropdown renders the All / Has override / No override options.
 
 When false: legacy CRC rendering (unchanged from today).
 
-### 6.2 New TriageBar variant
+### 6.2 New `CrcVerdictTriageBar` component
 
-Either as a `variant`-prop branch of the existing `TriageBar.svelte` or a sibling
-component (`CrcVerdictTriageBar.svelte`). Renders:
+A new sibling component `CrcVerdictTriageBar.svelte` living next to the existing
+`TriageBar.svelte`. Not a `variant`-prop branch — the button-set shape, the
+agent-verdict-driven default, the absence of a sub-status row, and the new
+required `agentVerdict` prop diverge from legacy enough that a single component
+would be mostly conditionals. Sibling components also give a clean delete path
+when CC migrates (§10).
 
-- **Button set** depending on the agent's verdict (D10).
+Renders:
+
+- **Button set** depending on the agent's verdict (D10), taking `agentVerdict`
+  as a required prop.
 - **Auto-selection** of the agent's verdict when no `comment_triage` row exists.
-- **Triage-note textarea** (existing, reused) — applicable to any selection.
-- **No sub-status** controls. `triage_sub_status` stays unused for CRC.
+- **Triage-note textarea** with **1-second debounce on keystroke**, reusing the
+  exact semantics from `TriageBar.svelte:onNoteInput` (per-keystroke `oninput`
+  → 1000ms `setTimeout` → single PATCH; timer cleared on row navigation and on
+  component destroy; tiny "Saving…" → "Saved ✓" indicator). Note-debounce
+  machinery may be duplicated inline or extracted to a shared helper —
+  implementer's choice.
+- **No sub-status** controls. `triage_sub_status` stays unused for CRC; the
+  PATCH payload always sends `triage_sub_status: null`.
 
 PATCH calls hit the existing `/project/[projectId]/review/triage` endpoint with
 `triage_status` set to one of the new values (`'resolved'`, `'failed'`,
@@ -202,15 +215,19 @@ The UI default state — no `comment_triage` row exists for an item:
 
 User actions and their DB effects:
 - **User clicks the default button (same as agent) with empty note** → no DB write.
-- **User types in the note** → PATCH writes a row with
-  `triage_status = agent verdict`, `triage_note = text`. (Row exists but is
-  "effectively no override" per D12.)
-- **User clicks a different button** → PATCH writes a row with
+- **User types in the note** → 1s debounce after the last keystroke, then a
+  single PATCH writes a row with `triage_status = agent verdict`,
+  `triage_note = text`. (Row exists but is "effectively no override" per D12.)
+  See §6.2 for the exact note-debounce semantics (reused from legacy
+  `TriageBar.svelte`).
+- **User clicks a different button** → immediate PATCH; row written with
   `triage_status = user pick`, `triage_note` unchanged.
-- **User reverts the button to agent verdict (with note still present)** → PATCH
-  updates `triage_status` back to agent verdict; row stays.
-- **User clears the note (with verdict still equal to agent)** → PATCH updates
-  `triage_note = null`. Row is now "effectively no override" but stays in the DB.
+- **User reverts the button to agent verdict (with note still present)** →
+  immediate PATCH updates `triage_status` back to agent verdict; row stays.
+- **User clears the note (with verdict still equal to agent)** → 1s debounce
+  after the last keystroke, then PATCH updates `triage_note = null`. Row stays
+  in the DB as "effectively no override" (D12) — the renderer never
+  distinguishes it from no-row, so deleting would be wasted work.
 
 The renderer treats the **no-row case** and the **effectively-no-override case** as
 identical for display purposes. No special UI cue distinguishes them.
@@ -228,16 +245,28 @@ The agent's original verdict is always visible inside the triage panel.
 
 ### 6.5 Counts banner
 
-Three pieces of count info, per D13. Sketch:
+Three pieces of count info, per D13. Sketch, using `1b2f8fa5...` (229 comments
+total: 32 resolved + 1 coerced N/A + 167 failed + 29 uncertain) with a
+hypothetical 3 failed→resolved overrides:
 
 ```
-Resolved: 32   Failed: 167   Uncertain: 29              ← agent counts (primary)
-After overrides: 35 / 165 / 28        Corrected: 3      ← effective + chip (secondary)
+Resolved: 33   Failed: 167   Uncertain: 29              ← agent counts (primary)
+After overrides: 36 / 164 / 29        Corrected: 3      ← effective + chip (secondary)
 ```
+
+Both rows total 229. **Invariant — no invisible items.** Every comment in
+`review_comments` must contribute to exactly one bucket in the agent-counts row
+and to exactly one bucket in the after-overrides row. The sums of each row
+equal the run's total comment count. The N/A→resolved coercion (§6.8) is what
+enforces this on the new side — without it, the 1 stranded N/A in
+`1b2f8fa5...` would be unaccounted for and the banner numbers wouldn't match
+the tab row counts. Any future status value that escapes the canonical 3-state
+set MUST be assigned a display bucket; the banner never silently drops items.
 
 Definitions:
 - **Agent counts** = `review_comments.output_json.status` aggregated, with the
-  render-layer N/A→resolved coercion applied for display consistency.
+  render-layer N/A→resolved coercion applied. The 33 above = 32 native
+  resolved + 1 coerced N/A.
 - **Effective counts** = agent counts after applying overrides (where a
   `comment_triage` row's `triage_status` differs from the agent's verdict for
   that comment).
@@ -248,7 +277,8 @@ Definitions:
 
 If pilot UX feedback says the three count surfaces is too much, fold "After
 overrides" into the Corrected chip ("Corrected: 3 (net +3 resolved / -3 failed)").
-Captured as a possible follow-up in §14.
+Captured as a possible follow-up in §14. Note that any such collapse must still
+honor the no-invisible-items invariant — every comment remains accounted for.
 
 ### 6.6 Filter tabs
 
@@ -288,7 +318,8 @@ straggler) without a backfill.
 Coercion sites:
 - Pill rendering (color + label)
 - Filter-tab bucketing (counted as resolved in the Resolved tab)
-- Agent-count totals in the banner
+- Agent-count totals in the banner (per §6.5 — coerced items roll into the
+  Resolved column so the banner totals match the tab row counts)
 - Effective-count totals (override comparisons use the coerced value as the
   baseline)
 
@@ -528,10 +559,18 @@ cityhall/src/routes/(app)/project/[projectId]/review/
     • Wire render-layer N/A→resolved coercion (D8 / §6.8).
     • Widen any local zod schemas enumerating triage_status.
 
+  CrcVerdictTriageBar.svelte  (NEW — sibling to TriageBar.svelte)
+    • Per-agent-verdict button set; takes `agentVerdict` as a required prop.
+    • Auto-selects the agent verdict on mount; lazy DB writes per §6.3.
+    • Note textarea with 1s keystroke debounce — reuses semantics from
+      TriageBar.svelte:onNoteInput (oninput → 1000ms setTimeout → PATCH; timer
+      cleared on row navigation + destroy; "Saving…/Saved ✓" indicator). Copy
+      the debounce machinery inline or extract to a shared helper — caller's
+      choice.
+    • Always sends `triage_sub_status: null` in the PATCH payload.
+
   TriageBar.svelte
-    • EITHER add a `variant: 'legacy' | 'crc-verdict'` prop and branch internally,
-    • OR split into TriageBar.svelte (legacy) + CrcVerdictTriageBar.svelte (new).
-    • New variant renders per-agent-verdict button set with auto-selection.
+    • Unchanged. Continues to serve the legacy CC + pre-cutover CRC paths.
 
   CommentTriagePanel.svelte
     • When `usesNewCrcTriage`, render new variant.
@@ -646,8 +685,9 @@ header) as part of this PR.
         coerce legacy N/A to resolved).
   - [ ] Branch counts banner: agent counts, effective counts, Corrected chip.
   - [ ] Branch Notes-filter dropdown options: All / Has override / No override.
-  - [ ] New TriageBar variant (per-agent-verdict button set, auto-select,
-        lazy DB writes).
+  - [ ] New `CrcVerdictTriageBar.svelte` sibling component (per-agent-verdict
+        button set, auto-select, lazy DB writes, 1s keystroke debounce reusing
+        legacy TriageBar's note semantics).
   - [ ] Wire `CommentTriagePanel` to surface agent verdict + `tentativeStatus`
         context.
   - [ ] Add "overridden" badge to row pill rendering when user verdict ≠ agent
