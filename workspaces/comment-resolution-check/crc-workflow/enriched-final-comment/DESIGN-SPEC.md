@@ -36,6 +36,17 @@ nulls out only that comment's `enrichedFinalComment` and lets the
 existing `comment` field carry the UI. The workflow step never fails
 the whole run.
 
+This is implemented in two layers: (a) the agent's normal "soft
+failure" path always returns a schema-valid response with
+`enrichedFinalComment: null` + `source.failureReason`, so the cell is
+treated as a success by Conductor; (b) for the residual case of true
+hard cell failure (transport exhaustion past `retries`, structured-output
+deserialization failure), the step relies on a Conductor
+`continueOnFailure: true` primitive that does not yet exist in
+`step-executor.ts` — a prerequisite Conductor PR introduces it. Without
+that primitive, a single hard-failed cell halts the whole workflow at
+`engine.ts:371–376`. See §6.7 for the dependency.
+
 CityHall reads `enrichedFinalComment` behind a Vercel feature flag,
 falling back to `comment` when null or when the flag is off. No DB
 migration — the new field rides inside the existing
@@ -173,8 +184,9 @@ in workflow-run artifacts.
 | D20 | Code-citation weave | **Allowed and encouraged when the codeCitation came from the MCR comment** (i.e. from the finding's `codeCitation` field). Phrase inline as authoritative reference: `"…required by DCM Fig. 9-2"` | Q11. Reinforces the verdict's regulatory anchor. |
 | D21 | Tool-trace translation | **Tool names forbidden; translate intent into plain English.** `tools_used=["crc-vision-check"]` → `"Visual review of Sheet C-2.1…"` or `"Inspection of the U1 plan sheet…"`. `tools_used=["semantic-search-blocks"]` → `"A search across the plan set…"` or omitted entirely | Q7. The agent transforms tool usage into evidence-grounded prose. |
 | D22 | Forbidden terms list | **First-person framing** ("I checked…", "I found…"), **run references** ("Run 2…", "across three runs…"), **internal IDs / paths** (UUIDs, document IDs, project IDs, `projects/<id>/…`), **internal idioms** (`blocks.md`, `facts.md`, `U0`, `U1`, `MCR`, "checklist item", "atomic item"), **tool literal strings** (`crc-vision-check`, `semantic-search-blocks`, `StructuredOutput`) | Q10 + this-spec confirmation. Replacement guidance below in §6.4. |
-| D23 | Lint-fail handling | **Retry once with correction** (prompt the agent with the offending term and a directive to rewrite); on second failure, **null-out** `enrichedFinalComment` and let the UI fall back to `comment` | Q15. One retry caps tail latency without unbounded loops. |
-| D24 | Agent step retries | `retries: 1` (one initial call + one retry) at the Conductor step level | D23 implements lint retry in the prompt-handler; this is the network/API retry budget. |
+| D23 | Lint-fail handling | **Agent self-checks once and rewrites**; on second self-check failure, the agent **emits a schema-valid response** with `enrichedFinalComment: null` and `source.failureReason = "lint-failed"`. The cell still returns success to Conductor. | Q15 + audit. Soft-failing inside a schema-valid response keeps Conductor's per-cell view as "success" and avoids tripping the agent step's failure path on routine lint rejects. |
+| D24 | Agent step retries | `retries: 3` at the Conductor step level | Bumped from 1 → 3 to cover transient API errors before Conductor sees a hard cell failure. D23 handles lint inside the prompt-handler; this budget is purely network/API. |
+| D24a | Hard-failure tolerance (Conductor primitive) | Step uses **`continueOnFailure: true`**, which requires a prerequisite Conductor PR adding the field to agent-step schema + executor. Without it, one cell exhausting `retries` halts the entire workflow at `engine.ts:371–376`. | Audit. Closes the residual hard-failure case that D23 + D24 can't cover from inside the agent (deserialization failure, transport exhaustion). |
 | D25 | Always-enrich | **Yes**, no unanimous-resolved shortcut | Q17. UX consistency + we're not optimizing cost in iter-1. |
 | D26 | Output file | `output/enriched-final-comments.json` — flat object `{ ref: { enrichedFinalComment: string | null, source: { cohortRuns: string[], cohortSize: number, prosePattern: 'single-cohort' | 'uncertain' } } }` | Single file for easy inspection and merge into `build-crc-review-comments`. |
 | D27 | Merge into review-comments.json | `build-crc-review-comments` reads `enriched-final-comments.json` (if present) and stamps `enrichedFinalComment` per comment via the existing `checklistRef` key | Mirrors the existing `consolidatedFile` plumbing. Absent file → all comments get `enrichedFinalComment: null`. |
@@ -236,7 +248,7 @@ Insert three new steps between `enrich-findings` and `rephrase-titles`:
   # can glob-fan-out and write one output per cell with no concurrent-write
   # management. Skipped when enrichComments=false.
   - name: prepare-enrichment-inputs
-    when: "{{ input.enrichComments }}"
+    if: "{{ input.enrichComments }}"
     script:
       name: prepare-enrichment-inputs
       args:
@@ -247,27 +259,39 @@ Insert three new steps between `enrich-findings` and `rephrase-titles`:
 
   # Step 3.5b — agent fan-out: one cell per atomic comment. Each agent reads
   # its input file (cohort runs + finding context), writes one output file
-  # containing { enrichedFinalComment, source }. Per-comment failure isolation:
-  # a bad cell writes a null enrichedFinalComment, never fails the step.
+  # containing { enrichedFinalComment, source }. Per-comment failure isolation
+  # is two-layer: (i) the agent ALWAYS returns a schema-valid response, so
+  # lint-fails surface as enrichedFinalComment=null with source.failureReason
+  # and the cell reports success to Conductor; (ii) for residual hard cell
+  # failure (transport exhaustion past retries, deserialization failure),
+  # `continueOnFailure: true` lets the step keep running. NOTE: that field
+  # is added to Conductor by the prerequisite PR in §6.7; it is silently
+  # ignored by older Conductor builds, so the bureau PR must not merge until
+  # the Conductor PR is deployed.
   - name: enrich-final-comment
-    when: "{{ input.enrichComments }}"
+    if: "{{ input.enrichComments }}"
     agent:
       model: "{{ input.enrichmentModel }}"
       effort: "{{ input.enrichmentEffort }}"
       prompt: enrich-final-comment.md
     checklistItems: "{{ WORKSPACE_PATH }}/output/enrichment-inputs/*.json"
     schema: enriched-final-comment.schema.json
-    output: "{{ WORKSPACE_PATH }}/output/enrichment-results/{{ checklistItem }}.json"
-    retries: 1
+    # `{{ checklistItem }}` is the basename of the matched input file
+    # INCLUDING extension (`crc-tpw__TPW-3.1.json`), so the output template
+    # must NOT append a trailing `.json` — doing so would write
+    # `crc-tpw__TPW-3.1.json.json` and the collector script would miss every
+    # cell. See conductor/src/orchestrator/checklist-manager.ts:196.
+    output: "{{ WORKSPACE_PATH }}/output/enrichment-results/{{ checklistItem }}"
+    retries: 3
     maxWorkers: "{{ input.enrichmentMaxWorkers }}"
-    continueOnFailure: true   # per-comment failure does NOT fail the step
+    continueOnFailure: true   # requires Conductor PR (§6.7)
 
   # Step 3.5c — merge per-cell agent outputs into a single
   # enriched-final-comments.json keyed by ref, which build-crc-review-comments
   # then reads. Tolerates missing cell outputs (failed agents) by writing
   # null for those refs.
   - name: collect-enriched-final-comments
-    when: "{{ input.enrichComments }}"
+    if: "{{ input.enrichComments }}"
     script:
       name: collect-enriched-final-comments
       args:
@@ -336,10 +360,18 @@ Wire the new file into `build-crc-review-comments`:
         "prosePattern": "single-cohort" | "uncertain"
       }
       ```
-    - `ref-slug` = `ref` with `:` → `__`, safe for filesystem.
+    - Input filename = `{ref-slug}.json`, where `ref-slug` = `ref` with
+      `:` → `__`, safe for filesystem.
 
-Filename slugging keeps the `{{ checklistItem }}` template intact for the
-output file (Conductor strips the extension).
+The `{{ checklistItem }}` template expands to the matched input file's
+basename including extension (e.g. `crc-tpw__TPW-3.1.json`) — see
+`conductor/src/orchestrator/checklist-manager.ts:196` (`path.basename`)
+and `template-engine.ts:144`. We exploit that by giving inputs `.json`
+and using `{{ checklistItem }}` with no trailing `.json` as the agent
+step's `output:` template, so the per-cell result file lands at
+`enrichment-results/crc-tpw__TPW-3.1.json`. The collector script
+therefore looks up `resultsDir/{ref-slug}.json` (i.e.
+`resultsDir/{checklistItem-basename}`) and the keying is direct.
 
 #### `collect-enriched-final-comments.ts`
 
@@ -464,15 +496,19 @@ The prompt is short. Sketch:
 >
 > **Self-check before emitting**: scan your draft for any forbidden
 > term. If you spot one, rewrite. If after one rewrite a forbidden
-> term remains, emit `enrichedFinalComment: null` with
-> `source.failureReason = "lint-failed"`.
+> term remains, emit a schema-valid response with
+> `enrichedFinalComment: null` and `source.failureReason = "lint-failed"`.
+> **Never throw, never refuse, never emit an out-of-schema response.**
+> A soft null is always the right fallback; it is the contract that
+> lets the surrounding workflow continue.
 
-The script-side post-validation also runs the forbidden-terms regex
-list as a belt-and-suspenders check (D23). If the agent's
-self-rewrite passes its own check but the script-side check still
-trips, the script writes a corrected null with
-`source.failureReason = "lint-failed"`. No second agent retry — D24
-already gives the agent one retry budget.
+The script-side post-validation runs the forbidden-terms regex list
+as a belt-and-suspenders check (D23). If the agent's self-rewrite
+passes its own check but the script-side check still trips, the
+collector (`collect-enriched-final-comments`) overwrites the field
+with `enrichedFinalComment: null` + `source.failureReason =
+"lint-failed"` before merging. No second agent retry — D24's network
+retry budget is purely for transient API failures, not lint.
 
 ### 6.5 Cityhall changes
 
@@ -516,6 +552,40 @@ Pinned by a unit test that asserts every reason has at least one
 forbidden example and one allowed neighbor (e.g. `"Sheet 4"` is
 allowed, `"block 4"` near `blocks.md` is forbidden).
 
+### 6.7 Conductor prerequisite PR (`continueOnFailure` on agent steps)
+
+The fan-out step's failure-isolation guarantee depends on a Conductor
+primitive that does not exist today. Concretely:
+
+- `conductor/src/orchestrator/step-executor.ts:1016–1022` returns
+  `success: false` from a parallel agent step whenever any cell has
+  `failed > 0` after retries.
+- `conductor/src/orchestrator/engine.ts:371–376` then `break`s out of
+  the step loop on `success: false`, halting the entire workflow
+  (including the downstream `rephrase-titles`, `upload-titles-cache`,
+  `build-crc-review-comments`, and the review-save).
+
+D23 makes the *agent* always return a schema-valid response, so the
+common "lint reject" path no longer counts as a cell failure. But the
+residual hard-failure cases (structured-output deserialization
+failure, transport exhaustion past `retries: 3`) still hit the path
+above and would cascade. To close that gap, a small Conductor PR
+introduces a `continueOnFailure: boolean` field on the agent-step
+schema (`types.ts`) and threads it through `step-executor.ts` so that
+when set, the step returns `success: true` with a summary of failed
+cells instead of `success: false`.
+
+**Dependency ordering:**
+
+1. Conductor PR lands and is deployed to the Substation pool that
+   runs CRC.
+2. Bureau PR (this spec) merges. The bureau workflow.yaml uses
+   `continueOnFailure: true`, which a pre-prereq Conductor would
+   silently ignore (unknown YAML key) — so merging out of order means
+   one bad cell still halts the workflow until the Conductor side
+   catches up. Hold the bureau PR behind the Conductor deploy.
+3. Cityhall PR can land any time after step 2.
+
 ## 7. Failure modes & risks
 
 | Risk | Mitigation |
@@ -530,6 +600,8 @@ allowed, `"block 4"` near `blocks.md` is forbidden).
 | Cityhall renders longer text in a card sized for 30 words | Cityhall PR checks card overflow; if needed, add a max-height with read-more, or stack the title above. UI change isolated behind the feature flag. |
 | Enrichment quality regression on a future model bump | The metadata stamp `enrichmentVersion: "1.0"` lets us bump to `"1.1"` when prompt changes meaningfully. Tooling can compare versions across runs to A/B. |
 | The `comment` field stops being meaningful because we never look at it | We deliberately keep `comment` unchanged. UI fallback path keeps it load-bearing for unenriched rows, off-flag rendering, and debug tooling. |
+| Bureau PR ships before the Conductor `continueOnFailure` PR is deployed | YAML field is silently dropped (unknown key); one hard-failed enrichment cell halts the entire workflow at `engine.ts:371–376`, losing the run and the save. Mitigation: hold the bureau PR behind the Conductor deploy (§6.7 dependency ordering). Defense-in-depth: the agent's always-valid-schema contract (D23) means routine lint rejects never trip this path even if the Conductor PR slips. |
+| Transient API error past `retries: 3` on a single cell | With `continueOnFailure: true`, the cell's output file is absent → `collect-enriched-final-comments` writes `enrichedFinalComment: null` with `source.failureReason = 'agent-failed'`. Without `continueOnFailure` (pre-Conductor-PR), the workflow halts — see row above. |
 
 ## 8. Out-of-scope follow-ups (future work)
 
@@ -591,6 +663,10 @@ allowed, `"block 4"` near `blocks.md` is forbidden).
 
 ## 10. Rollout plan
 
+0. **Conductor PR (§6.7) merged and deployed** to the Substation pool
+   that runs CRC. This is a hard prerequisite — the bureau PR's
+   `continueOnFailure: true` is silently dropped by older Conductor
+   builds, and one hard cell failure would halt the run.
 1. Bureau PR merged; workflow defaults `enrichComments: true` from the
    first deploy. (Cityhall flag is off, so UI doesn't change.)
 2. Run on 1–2 active projects; inspect
@@ -678,9 +754,11 @@ occur on new runs. The uncertain prose pattern is exercised by §A.4.
 
 ---
 
-> *Drives bureau PR (workflow.yaml + prepare-enrichment-inputs.ts +
-> collect-enriched-final-comments.ts + enrichment-lint.ts +
-> enrich-final-comment.schema.json + prompts/enrich-final-comment.md +
-> build-crc-review-comments.ts modification + tests) and a
-> small cityhall PR (Vercel-flag-gated read of
-> `enrichedFinalComment` with fallback to `comment`).*
+> *Drives three PRs landing in order: (1) a prerequisite Conductor PR
+> adding `continueOnFailure: boolean` to the agent-step schema +
+> executor (see §6.7); (2) a bureau PR (workflow.yaml +
+> prepare-enrichment-inputs.ts + collect-enriched-final-comments.ts +
+> enrichment-lint.ts + enrich-final-comment.schema.json +
+> prompts/enrich-final-comment.md + build-crc-review-comments.ts
+> modification + tests); (3) a small cityhall PR (Vercel-flag-gated
+> read of `enrichedFinalComment` with fallback to `comment`).*
