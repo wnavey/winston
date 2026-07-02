@@ -1,8 +1,10 @@
 # Design Spec: First-Class `warn` Status via the Fail Status Column
 
-**Status:** Approved for implementation
+**Status:** Implemented — bureau [#496](https://github.com/noetic-inc/bureau/pull/496), completion-officer [#19](https://github.com/noetic-inc/completion-officer/pull/19)
 **Date:** 2026-07-02
 **Scope:** Completeness-check workflow (bureau `workflows/completeness-check/` + jurisdiction guides), with a port of guide changes to completion-officer
+
+> **Revision note (same day):** during implementation the design was tightened beyond the original text: the legacy fail→warn overlay at the DB-write boundary (`build-review-comments.ts`) is **deleted outright** rather than retained as a fallback, and `apply-forced-outcomes.ts` now writes forced warns **natively** instead of downgrading them to `fail` for downstream re-derivation. Fresh runs have exactly one policy-enforcement point: the enrich-findings clamp. Sections 3 and 5 below reflect this.
 
 ## Problem
 
@@ -52,7 +54,9 @@ Add a status-policy section to Step 4:
 
 **3. Enforcement clamp** (`scripts/enrich-findings.ts`, plus `finalize-cc-re-review.ts` in the anchored workflow)
 
-The existing demotion overlay is repurposed as a validation clamp, so the per-item policy is enforced by code rather than prompt compliance:
+The per-item policy is enforced by code rather than prompt compliance, at exactly one point per pipeline. For fresh runs that point is `enrich-findings.ts` (the step that parses the guides and first sees raw agent findings); the legacy fail→warn overlay downstream in `build-review-comments.ts` is deleted — the DB-write boundary passes statuses through untouched. The anchored re-review keeps its own clamp in `finalize-cc-re-review.ts` because that pipeline has no enrich step; the finalize script is its policy-application point.
+
+Clamp rules:
 
 - Item `failStatus=warn`, agent emitted `fail` → clamp to `warn`. (Preserves today's behavior exactly; these items can never surface a fail.)
 - Item `failStatus=fail` (or column absent), agent emitted `warn` → clamp to `fail`. (Closes the agreeable-agent loophole once warn is schema-legal.)
@@ -69,8 +73,9 @@ The existing demotion overlay is repurposed as a validation clamp, so the per-it
 
 **5. Consumer sweep**
 
-- `scripts/build-review-comments.ts`, `scripts/generate-reports.ts`, `scripts/cross-run-consolidate-cc.ts`: handle organic `warn` in counts, filtering, and rendering.
-- `scripts/apply-forced-outcomes.ts`: already speaks warn (forced-outcomes TSV allows pass/fail/warn/not-applicable); verify merge precedence is unchanged — forced outcomes still override organic findings, including organic warns.
+- `scripts/build-review-comments.ts`: organic `warn` in counts and rendering; the `isWarnOverlay`/`isForcedWarn` demotion logic and the `warnFromFailCount` count reconciliation are removed — statuses pass through as-is.
+- `scripts/generate-reports.ts`, `scripts/cross-run-consolidate-cc.ts`: handle organic `warn` in counts, filtering, and rendering (consolidation tie-break severity: fail > unclear > warn > n/a > pass).
+- `scripts/apply-forced-outcomes.ts`: writes forced warns natively (`status: 'warn'`). Previously it downgraded a forced warn to `status: 'fail'` and relied on the boundary overlay to re-derive warn — that was the last dependency on the overlay. Merge precedence unchanged: forced outcomes still override organic findings, and forced findings are exempt from the clamp.
 - `prompts/format-reports.md`: warn rendering guidance.
 - Anchored workflow (`jurisdictions/austin/workflows/completeness-check-anchored/`): same clamp semantics in `finalize-cc-re-review.ts`.
 - **Out of repo scope, needs owner notification:** City Hall UI status rendering — organic warns will start flowing where previously warn only arrived via overlay demotion or forced outcomes.
@@ -96,5 +101,5 @@ The existing demotion overlay is repurposed as a validation clamp, so the per-it
 
 ## Verification
 
-- Unit-level: run `enrich-findings.ts` against a synthetic findings file exercising all clamp paths (warn-item fail → warn; fail-item warn → fail; fail-or-warn both pass through; logs emitted).
-- End-to-end: local `completeness-check` run on 1700 S Lamar v4 with `version=v2.6-trimmed`. Expected: CC-21-04 emits `warn` natively (Analysis Point 3 acknowledgment in the Engineering and Drainage Report qualifies under the protocol; the AP1 2-yr increase is a protocol matching-rule test), ADR-07-class items unchanged vs. prior runs.
+- Unit-level (**done**): `enrich-findings.ts` run against a synthetic six-path fixture — advisory fail → warn (clamped, logged); blocking warn → fail (clamped, logged); fail-or-warn passes through in both directions; forced warn on a blocking item exempt; pass untouched. The same fixture then flowed through `build-review-comments.ts` post-overlay-removal: statuses pass through, counts correct (1 pass / 2 fail / 3 warn).
+- End-to-end (**pending merge**): local `completeness-check` run on 1700 S Lamar v4 with `version=v2.6-trimmed`. Expected: CC-21-04 emits `warn` natively (Analysis Point 3 acknowledgment in the Engineering and Drainage Report qualifies under the protocol; the AP1 2-yr increase is a protocol matching-rule test), ADR-07-class items unchanged vs. prior runs.
