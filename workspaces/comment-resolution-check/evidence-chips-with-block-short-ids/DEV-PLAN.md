@@ -12,6 +12,25 @@
 
 ---
 
+## Summary
+
+We're adding stable, per-sheet numeric IDs to content blocks so CRC evidence
+chips in the review UI can deep-link to a specific block on a specific
+sheet — not just the sheet as a whole. UUIDs would work in principle, but
+Haiku 4.5 running at 30-worker parallelism across dozens of items will
+hallucinate them, so we're using short integers (1..N per sheet_version)
+that follow the existing pattern of `sheetNumber`. The IDs are computed
+deterministically from bounding-box reading order (top-then-left) so they
+stay meaningful and reproducible. To avoid regenerating 1,147 existing
+`reading_guide` narratives that reference the old category-alphabetical
+numbering, we're versioning the numbering scheme per sheet_version —
+legacy sheets keep their old rendering, new sheets get short_id numbering
+plus deep-linkable chips. Post-processing in the review workflows strips
+`blockNumber` from legacy sheets before it hits `review_comments`, keeping
+the data clean and the UI's fallback behavior automatic.
+
+---
+
 ## 1. Overview
 
 **End goal (unchanged from block-short-id).** CRC evidence chips deep-link
