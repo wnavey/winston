@@ -35,11 +35,14 @@ keeping the data clean and the UI's fallback behavior automatic.
 
 ## 1. Overview
 
-**End goal (unchanged from block-short-id).** CRC evidence chips deep-link
-to a specific content block on a specific sheet:
+**End goal (refined 2026-07-03).** CRC evidence chips resolve to a
+specific content block on a specific sheet of the reviewed submission
+version. Chip click opens an enhanced modal (block highlighted +
+auto-zoomed, pan/zoom controls — see §3.5); from the modal, an "open
+sheet" button deep-links to the real sheet page in a new tab:
 
 ```
-/project/{projectId}/plan-set/sheet/{sheetNumber}?block={blockNumber}
+/project/{projectId}/plan-set/sheet/{sheetNumber}?block={blockNumber}&sv={submissionVersionId}
 ```
 
 **Problem discovered during block-short-id rollout.** `sheet_version.reading_guide`
@@ -303,18 +306,66 @@ Definitely CRC. Probably also completeness-check. Regular review workflow
 may or may not, depending on whether its schema even has `blockNumber`
 today.
 
-### 3.5 Cityhall URL wiring
+### 3.5 Cityhall — enhanced evidence-chip modal + URL wiring
 
-- Evidence chip click handler resolves `?block={blockNumber}` against
-  `content_block` for the sheet_version. If no `blockNumber` present
-  (legacy sheet or agent didn't cite one), fall back to the sheet-level
-  URL.
-- No change needed to gate on scheme here if (b) is used at review-save
-  time — legacy sheets simply won't have `blockNumber` in their
-  `review_comments` rows.
-- **TODO:** locate the current sheet-page loader
-  (`/project/[projectId]/plan-set/sheet/[sheetNumber]/+page.ts` — path
-  to confirm) and hook `?block=` into the existing highlight state.
+**Interaction model (decided 2026-07-03).** Chip click keeps opening a
+modal on the review page, as today — it does NOT navigate away. The
+sheet-page deep-link moves inside the modal as an "open sheet" button.
+The current `SheetLightbox.svelte` (a plain image viewer receiving
+`thumbnailStoragePath` + `label` + `onClose`) is replaced/extended with
+four capabilities:
+
+1. **Block highlight.** When the chip's evidenceLocation carries a
+   `blockNumber` (site-plan sheet, specific block), render the block's
+   bounding box over the sheet image — outline plus shaded overlay.
+   `content_block.bounding_box` is `{x, y, width, height}` normalized
+   0–1, top-left origin; the sheet page already renders these as
+   percentage-positioned absolute overlays, so the same technique
+   applies directly to the modal image.
+2. **Auto-zoom on the block.** Deliberately dumb for v1: ~2x zoom
+   centered on the bounding-box center, clamped so the block stays
+   fully in the viewport. No smart fit-to-block math.
+3. **Pan/zoom controls.** Zoom in / zoom out buttons, a **Fit** button
+   that resets to fit-the-sheet, and panning via click-drag plus
+   up/down/left/right arrow buttons. These controls are present for ALL
+   sheets in the modal, block or no block.
+4. **"Open sheet" button.** Opens, in a new tab, the real sheet page
+   pinned to the reviewed version with the block selected:
+   `/project/{projectId}/plan-set/sheet/{sheetNumber}?block={blockNumber}&sv={submissionVersionId}`.
+   Depends on `noetic-aqy` (version-aware sheet URL). The sheet page's
+   existing `selectedBlock` highlight state hydrates from `?block=`.
+
+**Fallback matrix:**
+
+| `blockNumber` on chip | `reviews.submission_version_id` | Modal behavior | "Open sheet" URL |
+|---|---|---|---|
+| present | present | highlight + auto-zoom + controls | `?block={n}&sv={sv}` |
+| absent | present | plain sheet + controls | `?sv={sv}` |
+| absent | absent (legacy review) | plain sheet + controls (today's behavior + controls) | sheet URL only (active version) |
+
+`blockNumber`-present + `sv`-absent shouldn't occur: `blockNumber` only
+survives the §3.4 gate on modern runs, which always carry
+`submission_version_id`.
+
+**Data plumbing.** The modal needs the cited block's bounding box, which
+`review_comments` doesn't carry. On modal open, resolve it live:
+`submission_plan_set` (by `sv`) → `plan_set_version` → `sheet_version`
+(by `sheet_number`) → `content_block` where `short_id = blockNumber`,
+select `bounding_box` — the same junction chain the sheet-page loader
+already uses. Non-blocking failure: if the lookup misses (block deleted,
+scheme drift), degrade to the plain-modal row of the matrix.
+*Alternative if the extra queries bother us:* denormalize the bbox into
+the evidenceLocation at gate time (§3.4 already has the manifest in
+hand) — deferred; keep the persisted shape minimal until the live
+lookup proves annoying.
+
+**Resolution caveat.** The modal displays the sheet's thumbnail JPEG; at
+2x zoom it may be soft. Acceptable for v1 ("dumb" zoom by design) — a
+higher-res render (e.g. rasterizing from `storage_path`) is a follow-up,
+and the "open sheet" button is the escape hatch for reading fine detail.
+
+- No change needed to gate on scheme here — legacy sheets simply won't
+  have `blockNumber` in their `review_comments` rows (§3.4).
 
 ### 3.6 Bureau CRC schema + prompt
 
@@ -380,8 +431,13 @@ not a wrong link. No cross-voter evidence merging.
    the gate exists to prevent.
 6. **Bureau CRC schema + prompt** — add optional `blockNumber` and the
    citation instruction.
-7. **Cityhall URL wiring + sheet-page loader** — §3.5. Depends on
-   `noetic-aqy` (version-aware sheet URL) landing first.
+7. **Cityhall enhanced modal + URL wiring** — §3.5: lightbox gains block
+   highlight, auto-zoom, pan/zoom controls, and the "open sheet" button;
+   sheet-page loader hydrates `selectedBlock` from `?block=`. Depends on
+   `noetic-aqy` (version-aware sheet URL) landing first. The modal
+   enhancements (highlight/zoom/controls) don't depend on `noetic-aqy` —
+   only the "open sheet" button does — so the modal work can start
+   in parallel.
 
 Chain is unidirectional. Nothing depends on earlier steps until step 7
 actually surfaces the deep-link in the UI.
@@ -404,7 +460,13 @@ actually surfaces the deep-link in the UI.
 - [ ] **Scope for `review` and `completeness-check`.** Do we want
       block-level deep-linking there too, or CRC-only for the first
       slice? See §3.4 / §3.6.
-- [ ] **Cityhall sheet-page loader location.** See §3.5.
+- [x] **Cityhall sheet-page loader location.** Confirmed 2026-07-03:
+      `cityhall/src/routes/(app)/project/[projectId]/plan-set/sheet/[sheetNum]/+page.ts`
+      (note: `[sheetNum]`, not `[sheetNumber]`). Block highlight state is
+      `selectedBlock` in the sibling `+page.svelte`; blocks render as
+      percentage-positioned bbox overlays. Loader must also start
+      selecting `content_block.short_id` (absent from current query and
+      from the generated DB types — regenerate).
 - [ ] **Beads bookkeeping.** Existing issues `noetic-yrn` (epic),
       `noetic-w01` (Phase 1 writer, folded into PR #127), `noetic-gdp`
       (Phase 2 NOT NULL/UNIQUE) still apply. New issues to file for the
