@@ -25,9 +25,11 @@ stay meaningful and reproducible. To avoid regenerating 1,147 existing
 `reading_guide` narratives that reference the old category-alphabetical
 numbering, we're versioning the numbering scheme per sheet_version —
 legacy sheets keep their old rendering, new sheets get short_id numbering
-plus deep-linkable chips. Post-processing in the review workflows strips
-`blockNumber` from legacy sheets before it hits `review_comments`, keeping
-the data clean and the UI's fallback behavior automatic.
+plus deep-linkable chips. Post-processing in the review workflows — driven
+by a per-sheet block manifest the project downloader writes into the
+workspace — strips `blockNumber` from legacy sheets and validates it
+against the sheet's real short_ids before it hits `review_comments`,
+keeping the data clean and the UI's fallback behavior automatic.
 
 ---
 
@@ -143,6 +145,15 @@ Do it in the same UPDATE as writing the reading_guide, so the two are
 atomic — a sheet_version row is never in a state where the scheme claims
 `short-id-ordered` but the guide is still legacy (or vice versa).
 
+**Guard the stamp.** Only stamp `'short-id-ordered'` when *every* block
+fetched in (a) has a non-null `short_id`. The `?? i + 1` fallback in (b)
+is a safety net, not an expected path — if it ever fires, the guide's
+"Block N" labels silently mix short_ids with array indexes (possibly
+colliding), and stamping the scheme anyway would falsify the system's
+only integrity claim. If any block lacks `short_id`, log loudly and
+leave the row at the legacy default (fails safe: sheet-level links,
+never wrong deep-links).
+
 **(d) `plan-set.logic.ts:141-142` prior-version copy path.** Currently
 copies `summary` and `reading_guide`. Also select + copy
 `block_numbering_scheme`:
@@ -198,6 +209,55 @@ short-id sheets this produces sparse numbering (e.g. Block 4, 5, 8 —
 matching short_id gaps). For legacy sheets it produces the same
 sparse numbering as today.
 
+**Block manifest for downstream scripts.** In the same per-sheet loop,
+the downloader writes a machine-readable `block-manifest.json` at the
+workspace root:
+
+```json
+{
+  "sheets": [
+    {
+      "documentId": "<plan_set_id>",
+      "sheetNumber": 3,
+      "sheetVersionId": "…",
+      "blockNumberingScheme": "short-id-ordered",
+      "validBlockNumbers": [1, 2, 4, 7]
+    },
+    {
+      "documentId": "<plan_set_id>",
+      "sheetNumber": 4,
+      "sheetVersionId": "…",
+      "blockNumberingScheme": "legacy-category-order"
+    }
+  ]
+}
+```
+
+- `documentId` is the plan_set id — the same value evidenceLocations
+  carry (it's what README.md advertises as the vision-tool document ID),
+  so gate scripts can match on `(documentId, sheetNumber)` directly.
+- `validBlockNumbers` is the full set of `short_id`s on the sheet —
+  all blocks, including boilerplate (a boilerplate block is still a
+  real, highlightable content_block). Omitted for legacy sheets.
+- This exists because the downstream persistence scripts
+  (`build-crc-review-comments.ts`, `enrich-findings.ts`,
+  completeness-check's `build-review-comments.ts`) are pure JSON→JSON
+  transforms with **no Supabase access and no plan_set_version
+  context** — they cannot map `(documentId, sheetNumber)` to a
+  sheet_version on their own. The downloader already has every row in
+  hand; a local file read keeps DB credentials and join logic out of
+  bureau scripts entirely.
+
+**Surveyor mirror.** `surveyor/src/download.ts` is a declared behavioral
+mirror of this file (its header says "Synced with
+`conductor/src/shared/project-downloader.ts`") and is still on
+`.order('category')` + `i + 1` numbering (`download.ts:250, 549`). Port
+the same scheme branching and the block-manifest write so the two files
+stay behaviorally identical. Surveyor serves standalone diligence/local
+flows, not the review persistence path, so this is off the critical
+chain — but skipping it would leave short-id sheets rendering
+guide-mismatched numbering in every surveyor-produced workspace.
+
 ### 3.4 Review workflows — emit `blockNumber` conditionally
 
 Applies to `review`, `completeness-check`, and `comment-resolution-check`
@@ -214,9 +274,18 @@ and to avoid conditional prompting complexity.
   awareness required in the prompt.
 - Downstream scripts that transform agent output into `review_comments`
   rows (`build-crc-review-comments.ts`, `build-review-comments.ts`, etc.)
-  join to `sheet_version` and check `block_numbering_scheme`. If
-  `'legacy-category-order'`, strip `blockNumber` from the emitted
-  evidenceLocation.
+  read `block-manifest.json` from the workspace (§3.3) — a local file
+  read, since these scripts have no Supabase access. For each
+  evidenceLocation carrying a `blockNumber`, look up
+  `(documentId, sheetNumber)` in the manifest and strip the field
+  unless the sheet is `'short-id-ordered'` **and** the value is in
+  `validBlockNumbers`.
+- The validity check is load-bearing, not belt-and-suspenders: the whole
+  reason for short ints over UUIDs is hallucination, but a hallucinated
+  *integer* usually resolves to a real (wrong) block — a silent bad
+  deep-link — where a hallucinated UUID fails loudly. Checking against
+  `validBlockNumbers` converts that failure mode into a sheet-level
+  fallback.
 - Legacy sheets: `blockNumber` is `undefined` in the persisted row →
   cityhall renders a sheet-level link. New sheets: `blockNumber` present
   → cityhall deep-links.
@@ -261,6 +330,29 @@ today.
 Same additions should be considered for the shared review + completeness-check
 schemas + prompts, depending on scope decision above.
 
+### 3.7 Pipeline pass-through — verified 2026-07-03
+
+`blockNumber` has to survive every hop between the agent's structured
+output and the persisted `review_comments` row. Audited each hop against
+the actual code:
+
+| Hop | Verdict | Evidence |
+|-----|---------|----------|
+| Agent emit vs `crc.emit.schema.json` | ✅ add field | No `additionalProperties: false` on evidenceLocations items; declare `blockNumber` so the model emits it reliably. |
+| Conductor ajv validation | ✅ passes | `new Ajv({ allErrors: true, strict: false })` in `structured-output-repair.ts:151` — no `removeAdditional`, unknown props untouched. |
+| `normalizeStructuredOutput` (emit → strict recompile) | ✅ passes | Envelope-level only: injects/derives `grouping`, extracts the findings array; finding objects pass through unmodified. |
+| Cross-run consolidation (`cross-run-consolidate-crc.ts:258-288`) | ✅ passes | Winning finding = **earliest run whose status matches the effective status**, carried wholesale (`evidenceLocations` by reference, no rebuild). |
+| `enrich-findings.ts` | ✅ passes | evidenceLocations passed through unchanged. |
+| Enrichment agent (`enriched-final-comment.schema.json`) | ✅ not in path | Its `additionalProperties: false` schema outputs prose + source metadata only; evidenceLocations feed its *input* but don't round-trip through its output. |
+| `build-crc-review-comments.ts:273-283` | ⚠️ **must edit** | Rebuilds evidence **field-by-field** (`documentId`/`sheetNumber`/`label`) — would silently drop `blockNumber`. This is also the gate site (§3.4), so the same edit adds the field and the manifest check. |
+
+**Consolidation semantics (decided 2026-07-03).** The rendered card takes
+the first winning voter's finding — explanation, agentTrace, and
+evidenceLocations together. If that voter didn't cite a `blockNumber`
+but other majority voters did, the block reference is dropped. Accepted:
+keeps consolidation simple, and the failure mode is a sheet-level link,
+not a wrong link. No cross-voter evidence merging.
+
 ---
 
 ## 4. Rollout order
@@ -272,15 +364,26 @@ schemas + prompts, depending on scope decision above.
    `sheet.logic.ts` + `plan-set.logic.ts` edits from §3.2. Once deployed,
    new + modified sheet_versions get `'short-id-ordered'`; copied
    (unchanged) sheets inherit their prior scheme.
-3. **Conductor project-downloader** — §3.3 branching. Once deployed, both
-   schemes are correctly rendered.
-4. **Bureau CRC schema + prompt** — add optional `blockNumber` and the
-   citation instruction.
+3. **Conductor project-downloader** — §3.3 branching + `block-manifest.json`.
+   Once deployed, both schemes are correctly rendered and the manifest is
+   in every review workspace for the gate to read.
+4. **Surveyor mirror** — same §3.3 edits ported to
+   `surveyor/src/download.ts`. Off the review critical path; can land
+   any time after (1)+(2).
 5. **CRC workflow post-processing gate** — §3.4 (option b) in
-   `build-crc-review-comments.ts` + `enrich-findings.ts`.
-6. **Cityhall URL wiring + sheet-page loader** — §3.5.
+   `build-crc-review-comments.ts` + `enrich-findings.ts`: read
+   `block-manifest.json`, strip legacy/invalid `blockNumber`s.
+   **Deliberately before the schema/prompt step:** the gate is a no-op
+   while agent output has no `blockNumber`, but shipping the schema
+   first would open a window where ungated (legacy/hallucinated)
+   `blockNumber`s persist to `review_comments` — the exact dirty rows
+   the gate exists to prevent.
+6. **Bureau CRC schema + prompt** — add optional `blockNumber` and the
+   citation instruction.
+7. **Cityhall URL wiring + sheet-page loader** — §3.5. Depends on
+   `noetic-aqy` (version-aware sheet URL) landing first.
 
-Chain is unidirectional. Nothing depends on earlier steps until step 6
+Chain is unidirectional. Nothing depends on earlier steps until step 7
 actually surfaces the deep-link in the UI.
 
 ---
@@ -292,6 +395,12 @@ actually surfaces the deep-link in the UI.
 - [x] **Enforcement approach for §3.4.** Decided 2026-07-03: post-processing
       gate (option b). Agent always emits `blockNumber`; downstream
       scripts strip it for legacy sheets before persisting.
+      Refined same day (audit finding): the gate reads a
+      `block-manifest.json` written by the project downloader (§3.3)
+      instead of joining to `sheet_version` — the build scripts are pure
+      JSON→JSON with no Supabase access — and additionally validates
+      `blockNumber` against the sheet's real `short_id` set to catch
+      hallucinated-but-plausible integers.
 - [ ] **Scope for `review` and `completeness-check`.** Do we want
       block-level deep-linking there too, or CRC-only for the first
       slice? See §3.4 / §3.6.
@@ -302,6 +411,15 @@ actually surfaces the deep-link in the UI.
       pieces in this plan: sheet_version column migration, substation
       writer amendment, conductor read-side branching, bureau/workflow
       changes, cityhall URL.
+- [ ] **Version-aware sheet page URL — `noetic-aqy` (prereq for step 6).**
+      Filed 2026-07-03 (audit finding). The sheet page always resolves the
+      ACTIVE submission version and short_ids are recomputed per
+      sheet_version, so block deep-links silently re-point after any
+      resubmission. Add a `?sv={submissionVersionId}` param (sourced from
+      `reviews.submission_version_id`) that overrides the existing
+      junction resolution in the loader; propagate through prev/next nav.
+      The §3.5 URL becomes
+      `/plan-set/sheet/{sheetNumber}?block={blockNumber}&sv={submissionVersionId}`.
 - [ ] **Rename block-short-id/DEV-PLAN.md's §3.4 note.** The "boilerplate
       filter produces sparse numbering; agent may be confused by gaps"
       TODO in the earlier plan applies verbatim here.
