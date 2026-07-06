@@ -166,12 +166,36 @@ precedent on `output:` templates: `{{ checklistItem }}` expands to the
 input file's basename INCLUDING `.json` — do not append another
 extension.
 
+**File handoff — MANDATORY, learned from the CRC enrichment failure
+(§6.1):** the prompt file MUST name the cell's specific input file via
+the template variable, e.g.:
+
+```
+Your input file is `{{ WORKSPACE_PATH }}/output/uncertain-explanation-inputs/{{ checklistItem }}`.
+Read that exact file now. Do NOT list the inputs directory or read any
+other file in it. If the file does not exist or cannot be parsed,
+return null fields with failureReason: "input-missing" — never
+substitute a different file.
+```
+
+Conductor renders `{{ checklistItem }}` inside prompt bodies per cell
+(`step-executor.ts:1095`, in place since conductor PR #33; working
+precedent: CC's own `review.md` line 6). CRC's enrich-final-comment
+prompt instead shipped a literal `{ref-slug}` placeholder — every cell
+got an identical prompt naming a file that doesn't exist, and the run
+produced 86.6% nulls + 39/40 wrong-item prose (audit §6.1). The
+implementer MUST verify the rendered prompt of one real cell contains
+the actual filename before calling this step done.
+
 **Emit schema** (`uncertain-explanation.emit.schema.json`): object with
-two required string fields, `uncertainExplanation` and
-`agentTraceUncertainExplanation`, plus an optional `failureReason`
-string the agent sets (with both fields null) when it cannot produce a
-compliant answer — the always-schema-valid pattern from CRC
-enrich-final-comment.
+required fields `ref` (string — echoed verbatim from the input file's
+`ref` field), `uncertainExplanation` and `agentTraceUncertainExplanation`
+(strings, nullable), plus optional `failureReason`. The `ref` echo is
+the cheap, deterministic anti-misattribution invariant: the collector
+rejects any cell whose echoed `ref` doesn't match the ref derived from
+its filename (§3.4). The always-schema-valid pattern from CRC
+enrich-final-comment applies: on any inability to comply, the agent
+returns null fields + `failureReason`, never free-text refusals.
 
 **Prompt contract** (`prompts/explain-uncertain.md`), the load-bearing
 rules:
@@ -208,6 +232,18 @@ Args: `resultsDir`, `inputsDir`, `outputFile`.
   keyed by `ref`.
 - Null-fill any input whose result file is missing
   (`failureReason: 'agent-failed'`) — D13.
+- **Ref cross-check (anti-misattribution, from CRC audit R-6-5/§6.1):**
+  derive the expected ref from each result file's name and compare to
+  the `ref` the agent echoed from inside its input file. Mismatch →
+  null both fields, `failureReason: 'ref-mismatch'`, loud log. This is
+  the deterministic guard against the wrong-file failure mode.
+- **Attribution heuristic (from CRC audit R-6-3, defense-in-depth):**
+  require the `uncertainExplanation` to mention at least one content
+  keyword from the input's `itemText`, OR a sheet/document label from
+  the per-run `evidenceLocations`. On failure:
+  `failureReason: 'attribution-mismatch'`, null the external field,
+  keep the internal one, log the trip. Permissive threshold — this
+  backstops hallucination, it doesn't grade prose quality.
 - **Belt-and-suspenders lint on `uncertainExplanation`** (script-side,
   mirroring CRC's forbidden-terms pass): case-insensitive match on
   `run \d` / `runs` (word), `vote`, `facts.md`, `blocks.md`,
@@ -215,7 +251,13 @@ Args: `resultsDir`, `inputsDir`, `outputFile`.
   field with `failureReason: 'lint-reject'`, KEEP the internal field
   (it is allowed to say all of that). Cityhall/PDF fall back to the
   winning finding's explanation when the external field is null.
-- Zero inputs → write an empty map `{}` and exit 0.
+- **Failure-rate tripwire:** after merging, if > 50% of cells ended
+  null (any failureReason), exit non-zero with a summary — a systemic
+  handoff failure must fail the workflow loudly, not degrade silently.
+  The CRC enrichment run shipped 86.6% nulls to the DB without any
+  step noticing (audit §6.1).
+- Zero inputs → write an empty map `{}` and exit 0 (the tripwire only
+  applies when inputs exist).
 
 ### 3.5 MODIFIED — `build-review-comments.ts`
 
@@ -273,12 +315,46 @@ same rationale as the parent spec's D14).
   step alive; collector null-fills; comment renders exactly as it does
   today (winning-finding explanation + vote callout). Degraded, not
   broken.
-- **Lint reject** → external field null (falls back like above),
-  internal field preserved.
+- **Lint / ref-mismatch / attribution reject** → external field null
+  (falls back like above), internal field preserved on lint rejects,
+  both nulled on ref-mismatch.
+- **Systemic failure (> 50% cells null)** → collector exits non-zero
+  and fails the workflow loudly (§3.4 tripwire).
 - **Zero uncertain items** → prepare writes nothing, agent step no-ops
   via `allowEmptyChecklist`, collector writes `{}`, build stamps
   nothing. This is the common case and must add ~0 wall-clock.
 - **`explainUncertain=false`** → all three steps skipped via `if:`.
+
+### 6.1 Precedent: the CRC enrichment failure (2026-07-01 audit)
+
+CRC's `enrich-final-comment` — the architecture template for this
+feature — **failed catastrophically on its first live run**
+(`d1ff47e7-7c77-4a54-9d1c-4d6bae26046e`, 291 cells; audit at
+`crc-audits/d1ff47e7…/crc-audit-agent-6-enrich-final-comments-audit.md`):
+86.6% of comments got a null enrichment and 39 of the 40 non-null cells
+wrote prose about a DIFFERENT checklist item.
+
+Root cause: the prompt named the input file as a literal
+`{ref-slug}.json` placeholder — never substituted — so every cell got
+an identical prompt and no way to know which of the 291 input files was
+its own. Cells either gave up (null via the schema-valid fallback) or
+grabbed an arbitrary file and confidently synthesized wrong-item prose.
+
+Corrections this spec bakes in (vs. the audit's recommendations):
+
+| Audit item | This spec |
+|---|---|
+| R-6-1 (fix the handoff) | §3.3 mandatory `{{ checklistItem }}` handoff + never-substitute-a-file instruction + rendered-prompt verification. NOTE: the audit proposed a conductor engine change, but conductor has rendered `{{ checklistItem }}` in prompt bodies since PR #33 (`step-executor.ts:1095`) — the CRC bug was purely the prompt's literal placeholder. One-line fix. |
+| R-6-3 (attribution assertion) | §3.4 attribution heuristic |
+| R-6-5 (ref contract validation) | §3.3 `ref` echo in the emit schema + §3.4 cross-check — stronger and cheaper than keywords alone |
+| (not in audit) | §3.4 failure-rate tripwire — the CRC run wrote 86.6% nulls to the DB with zero step-level signal |
+| R-6-4 (default off until verified) | D3 keeps default `true` per the Q&A, BUT the bureau PR must not merge until the §9 smoke test has demonstrated a correctly-attributed run (§9 step 1 is the gate) |
+| R-6-2 (per-cell telemetry) | Out of scope here (conductor-level); noted as the reason the CRC bug took a UI user to notice |
+
+**As of 2026-07-06 the CRC bug itself is still unfixed** — the CRC
+prompt still contains `{ref-slug}` and `enrichComments` still defaults
+true. Fixing CRC is a separate one-line bureau PR outside this spec's
+scope; flagged to the team.
 
 ## 7. CityHall changes
 
@@ -323,7 +399,11 @@ Folds into the parent spec's pending §10 smoke test (runs=3/runs=5 on
 1. runs=3 with ≥1 uncertain item: input files written (forced items
    skipped), one agent cell per item, both fields present on the
    uncertain rows, external field passes lint (grep the output for the
-   forbidden terms), internal field names runs.
+   forbidden terms), internal field names runs. **Attribution gate
+   (from §6.1): verify one cell's rendered prompt contains its actual
+   input filename, and verify every produced `uncertainExplanation` is
+   about ITS OWN checklist item** (the ref cross-check makes this
+   mechanical; also eyeball 2–3). This step gates the bureau merge.
 2. runs=3 with ZERO uncertain items (or `uncertainThreshold=0.0`… note
    0 disables nothing — use a review that happens to be decisive):
    prepare writes nothing, agent step no-ops via `allowEmptyChecklist`,
