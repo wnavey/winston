@@ -301,6 +301,18 @@ and to avoid conditional prompting complexity.
   deep-link — where a hallucinated UUID fails loudly. Checking against
   `validBlockNumbers` converts that failure mode into a sheet-level
   fallback.
+- `documentId` is load-bearing at this gate (decided 2026-07-06), not
+  just a join convenience: `blockNumber` is only meaningful relative to a
+  sheet, and `sheetNumber` only relative to a document. An
+  evidenceLocation whose `documentId` is missing or not found in the
+  manifest cannot be validated — strip its `blockNumber`. Never
+  substitute a guessed document (e.g. "assume the primary plan set"):
+  validating a `blockNumber` against the wrong sheet's
+  `validBlockNumbers` can pass by coincidence, which reintroduces the
+  precise-but-wrong failure the check exists to prevent. Corollary: the
+  cityhall loader's `primaryDocId` label-regex backfill (fills missing
+  `documentId`s for display) never confers deep-link eligibility — any
+  ref that needed the backfill already lost its `blockNumber` here.
 - Legacy sheets: `blockNumber` is `undefined` in the persisted row →
   cityhall renders a sheet-level link. New sheets: `blockNumber` present
   → cityhall deep-links.
@@ -376,11 +388,18 @@ document isn't the primary plan set.
 
 The modal needs the cited block's bounding box, which
 `review_comments` doesn't carry. On modal open, resolve it live:
-`submission_plan_set` (by `sv`) → `plan_set_version` → `sheet_version`
-(by `sheet_number`) → `content_block` where `short_id = blockNumber`,
-select `bounding_box` — the same junction chain the sheet-page loader
-already uses. Non-blocking failure: if the lookup misses (block deleted,
-scheme drift), degrade to the plain-modal row of the matrix.
+`submission_plan_set` (by `sv`) → `plan_set_version` **where
+`plan_set_id = documentId`** → `sheet_version` (by `sheet_number`) →
+`content_block` where `short_id = blockNumber`, select `bounding_box` —
+the same junction chain the sheet-page loader already uses, plus the
+`documentId` filter (decided 2026-07-06). The filter is required, not
+defensive: a submission version can reference more than one plan set,
+and `sheet_number` is only unique within one — resolving by sheet number
+alone can fetch a bbox from the wrong document's sheet and draw an
+authoritative-looking highlight in the wrong place. Non-blocking
+failure: if the lookup misses (`documentId` doesn't resolve under `sv`,
+block deleted, scheme drift), degrade to the plain-modal row of the
+matrix — never fall back to a documentId-less lookup.
 *Alternative if the extra queries bother us:* denormalize the bbox into
 the evidenceLocation at gate time (§3.4 already has the manifest in
 hand) — deferred; keep the persisted shape minimal until the live
@@ -488,6 +507,16 @@ actually surfaces the deep-link in the UI.
 - [ ] **Scope for `review` and `completeness-check`.** Do we want
       block-level deep-linking there too, or CRC-only for the first
       slice? See §3.4 / §3.6.
+- [x] **`documentId` is a load-bearing key.** Decided 2026-07-06: block
+      deep-links treat `documentId` as a required part of the lookup key
+      everywhere it appears — the §3.4 gate (manifest match on
+      `(documentId, sheetNumber)`; missing/unknown `documentId` → strip
+      `blockNumber`) and the §3.5 bbox resolution (`plan_set_version`
+      filtered by `plan_set_id = documentId`; lookup miss → plain modal,
+      never a documentId-less fallback). Display-only conveniences (the
+      cityhall `primaryDocId` label-regex backfill, the
+      `sheetThumbnailPaths[sheetNumber]` map) stay as-is but never confer
+      deep-link eligibility.
 - [x] **Cityhall sheet-page loader location.** Confirmed 2026-07-03:
       `cityhall/src/routes/(app)/project/[projectId]/plan-set/sheet/[sheetNum]/+page.ts`
       (note: `[sheetNum]`, not `[sheetNumber]`). Block highlight state is
