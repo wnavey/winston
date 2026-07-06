@@ -112,14 +112,18 @@ cityhall cleans up in two tiers:
 - **Delete the fresh-output surface:** the `ccUnclearCount` derivation
   (`+page.svelte:553`, reads `metadata.unclearCount ?? 0`) and any CC
   banner "Unclear" chip. New reviews never write `unclearCount` (§4).
-- **Keep `'unclear'` at the parse boundary for historical rows:** the
-  zod status enums (§8.5) and the `VersionTimeline.svelte:39-53`
-  `unclear` color/label arms stay, commented as legacy-only. Optional
-  hardening: verify no `review_comments` rows carry `status='unclear'`;
-  if the DB is clean, delete the enum value and timeline arms too.
-  **Do NOT delete blind** — the enums `.catch('fail')`, so removing
-  `'unclear'` while legacy rows exist would silently redisplay them
-  as FAIL.
+- **Keep `'unclear'` at the parse boundary:** the per-run zod enums
+  (§8.5) and the `VersionTimeline.svelte:39-53` `unclear`
+  color/label arms stay. This is not only a legacy-rows concern — the
+  section route serves all review types, and **formal review
+  (`review_type='review'`) still legitimately emits `unclear` today**
+  (the section loader's formal-review filter keys on it at
+  `[sectionId]/+page.ts:414`), so `'unclear'` in the shared enums is
+  live, not vestigial. For CC specifically it is legacy-only:
+  optionally verify no CC `review_comments` rows carry
+  `status='unclear'` and comment the arms accordingly. **Do NOT delete
+  from the shared enums** — they `.catch('fail')`, so removal would
+  silently redisplay formal-review unclear items as FAIL.
 
 ## 5. Design decisions (locked, from the 2026-07-06 Q&A)
 
@@ -490,30 +494,51 @@ play:
   entries carry `output_json.status` verbatim, so the value flows
   automatically once the workflow writes it.
 
-### 8.5 Zod / type widening — HARD REQUIREMENT, ships first
+### 8.5 Zod / type topology — verify, don't widen
 
-**Audit finding (2026-07-06): the top-level comment `status` enums are
-NOT yet widened.** `[reviewId]/+page.ts:~685` and
-`[sectionId]/+page.ts:~40` validate with
-`z.enum(['pass','fail','warn','unclear','not-applicable','resolved','failed']).catch('fail')`
-— `'uncertain'` is missing. The `.catch('fail')` makes the failure mode
-silent: an uncertain row is not rejected, it is **displayed as FAIL** —
-the worst possible misreading of "don't trust this verdict."
+**Corrected audit finding (2026-07-06, second pass): the top-level
+comment `status` is NOT enum-constrained anywhere on the CC/CRC render
+path**, so there is no zod widening to do for it — and the enum sites a
+grep will surface are per-run schemas that must NOT be widened. The
+parse topology, verified against current cityhall:
 
-- Widening these enums to accept `'uncertain'` is a hard requirement
-  (not an audit), and per the rollout order (§13) it deploys BEFORE any
-  bureau change that can write `status='uncertain'`.
-- (Follow-up outside this spec: legacy-path CRC uncertain rows would hit
-  the same `.catch('fail')` coercion today — worth checking whether any
-  exist.)
-- `perRunFindingSchema` needs **no status widening** (per-run statuses
-  are always 4-state). Default zod *strips* the unknown `emittedStatus`
-  key rather than erroring — acceptable (nothing re-serializes the
-  parsed data back to the DB), but if the UI ever wants to render the
-  raw emitted status, the field must be added to the schema, not merely
-  tolerated.
-- The CC section-route status filter (if any mirrors the formal-review
-  fail/unclear filter) must not drop uncertain items.
+- **Parent loader** (`[reviewId]/+page.ts:51, 99`): top-level comment
+  `status` parses as `z.string().catch('')` — any value, including
+  `'uncertain'`, flows through verbatim.
+- **Section loader** (`[sectionId]/+page.ts:114`): a plain cast,
+  `status: (c.status as ReviewComment['status']) ?? 'fail'`, with a
+  code comment (from the CRC uncertain work) noting it is deliberately
+  cast wide so `uncertain` renders without a fallthrough to fail. The
+  `ReviewComment['status']` TS union already includes `'uncertain'`.
+- This is why CRC `uncertain` renders in production today.
+- **The `.catch('fail')` enums at `[reviewId]/+page.ts:~685` and
+  `[sectionId]/+page.ts:~40` are the `perRunFinding` schemas** — an
+  earlier draft of this section misread them as top-level comment
+  status. Per-run statuses are never `'uncertain'` (§7.2; the parent
+  enum carries an explicit NOTE to that effect). **Do NOT add
+  `'uncertain'` to `perRunFindingSchema`** — a per-run `'uncertain'` in
+  the DB would be a data bug, and the `.catch('fail')` coercion
+  surfacing it loudly-as-wrong is preferable to masking it.
+- Also do NOT remove `'unclear'` from those per-run enums as part of
+  the §4 cleanup: the section route serves all review types, and formal
+  review (`review_type='review'`) still legitimately emits `unclear`.
+
+What the implementer actually does here:
+
+- **Verify** the topology above still holds at impl time (the string
+  parse + cast). If anyone has since enum-constrained top-level status,
+  that enum must include `'uncertain'` — that would be the silent
+  `.catch('fail')` hazard the earlier draft warned about.
+- **Guardrail for the future:** any new zod enum introduced over
+  top-level CC comment status must include `'uncertain'`.
+- Confirm zod's default key-stripping of the new optional
+  `emittedStatus` per-run field is acceptable (it is — nothing
+  re-serializes parsed data back to the DB), but if the UI ever wants
+  to render the raw emitted status, add the field to
+  `perRunFindingSchema` explicitly.
+- The CC section-route path must not drop uncertain items: the
+  formal-review-only filter at `[sectionId]/+page.ts:413-414` already
+  exempts CC/CRC — verify it stays that way.
 
 ## 9. Reports (D17)
 
@@ -598,8 +623,13 @@ Fresh runs only (no backfill).
   The D12 resolution-text carry is deliberate and bounded (fail/warn
   tentative only).
 - **R5 — Deploy-order inversion.** If the bureau PR reaches production
-  before the cityhall enum widening, every uncertain item silently
-  renders as FAIL (§8.5 `.catch('fail')`) — no error surfaces anywhere.
+  before the cityhall PR, uncertain items degrade unevenly on today's
+  UI: the amber pill and All-tab listing work (status-keyed, already
+  shipped by CRC), but the **version-history strip renders every
+  uncertain entry as a confident red FAIL** (`VersionTimeline.svelte`'s
+  `statusColor`/`statusLabel` fall through to FAIL for unknown values —
+  §8.4), there is no Uncertain tab, and no banner count. The timeline
+  fall-through is silent-wrong — no error surfaces anywhere.
   Mitigation: §13 rollout order; the cityhall PR is fully
   backward-compatible with 4-state reviews, so shipping it early
   costs nothing.
@@ -616,24 +646,28 @@ Fresh runs only (no backfill).
 
 ## 13. Implementation checklist
 
-**Rollout order (load-bearing):** the cityhall zod widening (§8.5)
-deploys FIRST — before any bureau change that can write
-`status='uncertain'`. The current enums `.catch('fail')`, so an
-uncertain row hitting an un-widened cityhall silently displays as FAIL
-(no error, no log). Sequence: **(1) cityhall PR** (at minimum the §8.5
-enum widening; in practice the whole PR — everything in it is
-backward-compatible with 4-state reviews), **(2) bureau PR**, **(3)
-first uncertain-producing run**.
+**Rollout order (load-bearing):** the cityhall PR deploys FIRST —
+before any bureau change that can write `status='uncertain'`. On
+today's cityhall an uncertain item would get the amber pill (already
+status-keyed from CRC) but render as a confident red FAIL in the
+version-history strip (`VersionTimeline.svelte` falls through to FAIL
+for unknown statuses — §8.4, R5), with no Uncertain tab and no banner
+count. The timeline fall-through is silent-wrong: no error, no log.
+Sequence: **(1) cityhall PR** (at minimum the §8.4 VersionTimeline arm;
+in practice the whole PR — everything in it is backward-compatible with
+4-state reviews), **(2) bureau PR**, **(3) first uncertain-producing
+run**.
 
 - [ ] **Pre-req (bead `noetic-4ji`)** — delete vestigial `unclear`
   plumbing per §4 (may ship inside the bureau PR as its first commit).
 - [ ] **CityHall PR (ships first — see rollout order)**
-  - [ ] **Zod widening (hard req):** add `'uncertain'` to the top-level
-    CC comment `status` enums (`[reviewId]/+page.ts`,
-    `[sectionId]/+page.ts`); note the `.catch('fail')` hazard (§8.5).
+  - [ ] **Verify parse topology (§8.5):** top-level comment `status` is
+    still `z.string()` (parent) / cast (section) — no enum constrains
+    it. Do NOT add `'uncertain'` to `perRunFindingSchema`; any future
+    top-level enum must include it.
   - [ ] §4.1 `unclear` cleanup: remove `ccUnclearCount` + CC Unclear
-    chip; keep parse-boundary `'unclear'` (legacy rows) unless DB
-    verified clean.
+    chip; keep parse-boundary `'unclear'` (formal review still emits it
+    live through the shared section route, plus legacy rows).
   - [ ] Add `uncertain` tab to CC branch of `ccStatusTabs`.
   - [ ] Widen `ccUncertainCount` derivation to CC; banner chip/segment.
   - [ ] Audit `statusStyle` reach + any CC-only pill helpers.
