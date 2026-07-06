@@ -103,6 +103,24 @@ This also retires the CRC spec's naming concern (its D11 chose
 `uncertain` specifically to avoid CC's `unclear`): `unclear` no longer
 exists in live CC output, so `uncertain` is unambiguous.
 
+### 4.1 CityHall-side `unclear` vestiges (cityhall PR)
+
+`unclear` is no longer a possible workflow output, but reviews written
+before bureau #496 (2026-07-02) may still carry it in the DB, so
+cityhall cleans up in two tiers:
+
+- **Delete the fresh-output surface:** the `ccUnclearCount` derivation
+  (`+page.svelte:553`, reads `metadata.unclearCount ?? 0`) and any CC
+  banner "Unclear" chip. New reviews never write `unclearCount` (§4).
+- **Keep `'unclear'` at the parse boundary for historical rows:** the
+  zod status enums (§8.5) and the `VersionTimeline.svelte:39-53`
+  `unclear` color/label arms stay, commented as legacy-only. Optional
+  hardening: verify no `review_comments` rows carry `status='unclear'`;
+  if the DB is clean, delete the enum value and timeline arms too.
+  **Do NOT delete blind** — the enums `.catch('fail')`, so removing
+  `'unclear'` while legacy rows exist would silently redisplay them
+  as FAIL.
+
 ## 5. Design decisions (locked, from the 2026-07-06 Q&A)
 
 | # | Decision | Choice | Source |
@@ -125,7 +143,7 @@ exists in live CC output, so `uncertain` is unambiguous.
 | D16 | Backfill | **None** | Q16 |
 | D17 | Reports | Uncertain items render with an "agent could not reach consensus — tentative verdict: X (breakdown)" callout, CRC D20 treatment | Q18 |
 | D18 | `output_schema` | **Stays `'legacy'`** — no `review_schema:` line, new fields ride inside `output_json` (same rationale as CRC D14: cityhall renders an "Unsupported review format" error for unknown schema strings) | Q19 |
-| D19 | Deliverables | This winston spec PR now; implementation = one bureau PR + one cityhall PR. No impl beads created from this spec (only the §4 pre-req bead exists) | Q20 |
+| D19 | Deliverables | This winston spec PR now; implementation = one cityhall PR (**ships/deploys first** — §13 rollout order) + one bureau PR. No impl beads created from this spec (only the §4 pre-req bead exists) | Q20 |
 | D20 | Emit schema | `completeness.emit.schema.json` / `completeness.schema.json` **unchanged** — the agent never emits `uncertain` | Q9 |
 
 ## 6. Workflow changes
@@ -438,6 +456,17 @@ When `voteBreakdown.missing > 0`, say so explicitly — "uncertain because
 2 of 5 runs produced no finding" is materially different from "runs
 disagreed 3-2."
 
+**Known display quirk — accepted for now (2026-07-06):** the per-run
+vote strip's `votedForWinner` check
+(`CompletenessCommentCard.svelte:~340`) is
+`run.status === comment.status`, and no run can ever equal
+`'uncertain'`, so on an uncertain item every run chip renders as
+dissenting — including runs that backed the tentative winner.
+Semantically defensible ("no run voted for the displayed verdict"), the
+underlying data renders correctly, and CRC ships this same behavior
+today. If it proves confusing, the fix is a one-liner: compare against
+`tentativeStatus` when `status === 'uncertain'`.
+
 ### 8.4 Prior-review version deltas (D15)
 
 `ccVersionDeltas` (`+page.svelte:~630-675`) computes `fixed`
@@ -452,21 +481,37 @@ play:
   The existing conditionals already do this implicitly (neither arm
   matches `'uncertain'`) — verify, don't assume.
 - **Version-history strip renders uncertain first-class** so the
-  "v1: Uncertain → v2: Pass" progression is visible: wherever the
-  history entries' statuses are mapped to colors/labels, add the amber
-  `uncertain` arm. `commentHistory` entries carry
-  `output_json.status` verbatim, so the value flows automatically once
-  the workflow writes it.
+  "v1: Uncertain → v2: Pass" progression is visible. The mapping site
+  is `VersionTimeline.svelte:39-53` (`statusColor` / `statusLabel`);
+  add an amber `uncertain` arm to both. **Caution:** both helpers
+  currently fall through to red `FAIL` for unrecognized statuses, so
+  missing this renders a prior `uncertain` as a confident FAIL — a
+  silent-wrong failure, not a visibly broken one. `commentHistory`
+  entries carry `output_json.status` verbatim, so the value flows
+  automatically once the workflow writes it.
 
-### 8.5 Zod / type widening
+### 8.5 Zod / type widening — HARD REQUIREMENT, ships first
 
-- Any zod enum validating **top-level CC comment `status`** must accept
-  `'uncertain'` — audit `[reviewId]/+page.ts` and
-  `[sectionId]/+page.ts` (the CRC uncertain work already widened some of
-  these; grep for enum sites listing `'pass', 'fail', 'warn'`).
+**Audit finding (2026-07-06): the top-level comment `status` enums are
+NOT yet widened.** `[reviewId]/+page.ts:~685` and
+`[sectionId]/+page.ts:~40` validate with
+`z.enum(['pass','fail','warn','unclear','not-applicable','resolved','failed']).catch('fail')`
+— `'uncertain'` is missing. The `.catch('fail')` makes the failure mode
+silent: an uncertain row is not rejected, it is **displayed as FAIL** —
+the worst possible misreading of "don't trust this verdict."
+
+- Widening these enums to accept `'uncertain'` is a hard requirement
+  (not an audit), and per the rollout order (§13) it deploys BEFORE any
+  bureau change that can write `status='uncertain'`.
+- (Follow-up outside this spec: legacy-path CRC uncertain rows would hit
+  the same `.catch('fail')` coercion today — worth checking whether any
+  exist.)
 - `perRunFindingSchema` needs **no status widening** (per-run statuses
-  are always 4-state), but must tolerate the new optional
-  `emittedStatus` field — check for `.strict()` schemas.
+  are always 4-state). Default zod *strips* the unknown `emittedStatus`
+  key rather than erroring — acceptable (nothing re-serializes the
+  parsed data back to the DB), but if the UI ever wants to render the
+  raw emitted status, the field must be added to the schema, not merely
+  tolerated.
 - The CC section-route status filter (if any mirrors the formal-review
   fail/unclear filter) must not drop uncertain items.
 
@@ -552,6 +597,12 @@ Fresh runs only (no backfill).
   UI renders `status` first; tentative appears only inside the callout.
   The D12 resolution-text carry is deliberate and bounded (fail/warn
   tentative only).
+- **R5 — Deploy-order inversion.** If the bureau PR reaches production
+  before the cityhall enum widening, every uncertain item silently
+  renders as FAIL (§8.5 `.catch('fail')`) — no error surfaces anywhere.
+  Mitigation: §13 rollout order; the cityhall PR is fully
+  backward-compatible with 4-state reviews, so shipping it early
+  costs nothing.
 
 ## 12. Out of scope / future work
 
@@ -565,8 +616,32 @@ Fresh runs only (no backfill).
 
 ## 13. Implementation checklist
 
+**Rollout order (load-bearing):** the cityhall zod widening (§8.5)
+deploys FIRST — before any bureau change that can write
+`status='uncertain'`. The current enums `.catch('fail')`, so an
+uncertain row hitting an un-widened cityhall silently displays as FAIL
+(no error, no log). Sequence: **(1) cityhall PR** (at minimum the §8.5
+enum widening; in practice the whole PR — everything in it is
+backward-compatible with 4-state reviews), **(2) bureau PR**, **(3)
+first uncertain-producing run**.
+
 - [ ] **Pre-req (bead `noetic-4ji`)** — delete vestigial `unclear`
   plumbing per §4 (may ship inside the bureau PR as its first commit).
+- [ ] **CityHall PR (ships first — see rollout order)**
+  - [ ] **Zod widening (hard req):** add `'uncertain'` to the top-level
+    CC comment `status` enums (`[reviewId]/+page.ts`,
+    `[sectionId]/+page.ts`); note the `.catch('fail')` hazard (§8.5).
+  - [ ] §4.1 `unclear` cleanup: remove `ccUnclearCount` + CC Unclear
+    chip; keep parse-boundary `'unclear'` (legacy rows) unless DB
+    verified clean.
+  - [ ] Add `uncertain` tab to CC branch of `ccStatusTabs`.
+  - [ ] Widen `ccUncertainCount` derivation to CC; banner chip/segment.
+  - [ ] Audit `statusStyle` reach + any CC-only pill helpers.
+  - [ ] Uncertain callout (tentative + breakdown + missing-runs note).
+  - [ ] Version-history strip: amber uncertain arm in
+    `VersionTimeline.svelte` `statusColor`/`statusLabel` (today both
+    fall through to red FAIL for unknown values); verify
+    fixed/regressed counters exclude uncertain endpoints.
 - [ ] **Bureau PR**
   - [ ] `workflow.yaml`: add `uncertainThreshold` input; add
     `uncertainThreshold` + `checklistsDir` to `cross-run-consolidate-cc`
@@ -585,15 +660,6 @@ Fresh runs only (no backfill).
   - [ ] Schemas untouched; `prompts/format-reports.md` paragraph for
     uncertain rendering (§9).
   - [ ] Unit test for `consolidate()` incl. clamp-normalization cases.
-- [ ] **CityHall PR**
-  - [ ] Add `uncertain` tab to CC branch of `ccStatusTabs`.
-  - [ ] Widen `ccUncertainCount` derivation to CC; banner chip/segment.
-  - [ ] Audit `statusStyle` reach + any CC-only pill helpers.
-  - [ ] Uncertain callout (tentative + breakdown + missing-runs note).
-  - [ ] Version-history strip: amber uncertain arm; verify
-    fixed/regressed counters exclude uncertain endpoints.
-  - [ ] Zod audit: top-level CC `status` enums + `emittedStatus`
-    tolerance on per-run schemas.
 - [ ] **Smoke test** per §10; record observed uncertain rates → append
   to this spec.
 
