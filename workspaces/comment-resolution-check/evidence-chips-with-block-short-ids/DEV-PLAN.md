@@ -359,7 +359,22 @@ four capabilities:
 survives the §3.4 gate on modern runs, which always carry
 `submission_version_id`.
 
-**Data plumbing.** The modal needs the cited block's bounding box, which
+**Data plumbing.** Today's chip click handlers pass only
+`{ sheetNumber, label }` to the lightbox and ignore the ref's `documentId`
+entirely — the image resolves via a `sheetThumbnailPaths[sheetNumber]` map
+built from the project's *first* plan_set only (correct today by the
+single-primary-plan-set convention, but unchecked). The version pinning is
+already right: that map is built from the `plan_set_version` matching
+`reviews.submission_version_id`, falling back to latest for legacy rows.
+The enhanced modal makes `documentId` load-bearing: the click handlers
+(all three call sites: `[reviewId]/+page.svelte`,
+`SimplifiedCommentCard.svelte`, legacy `CommentCard.svelte`) must thread
+the full evidenceLocation — `documentId`, `sheetNumber`, `blockNumber` —
+plus `submission_version_id`, and the bbox lookup must match on
+`(documentId, sheetNumber)`, degrading to the plain modal when the
+document isn't the primary plan set.
+
+The modal needs the cited block's bounding box, which
 `review_comments` doesn't carry. On modal open, resolve it live:
 `submission_plan_set` (by `sv`) → `plan_set_version` → `sheet_version`
 (by `sheet_number`) → `content_block` where `short_id = blockNumber`,
@@ -408,6 +423,7 @@ the actual code:
 | `enrich-findings.ts` | ✅ passes | evidenceLocations passed through unchanged. |
 | Enrichment agent (`enriched-final-comment.schema.json`) | ✅ not in path | Its `additionalProperties: false` schema outputs prose + source metadata only; evidenceLocations feed its *input* but don't round-trip through its output. |
 | `build-crc-review-comments.ts:273-283` | ⚠️ **must edit** | Rebuilds evidence **field-by-field** (`documentId`/`sheetNumber`/`label`) — would silently drop `blockNumber`. This is also the gate site (§3.4), so the same edit adds the field and the manifest check. |
+| Cityhall review-page loader (`cityhall/src/routes/(app)/project/[projectId]/review/[reviewId]/+page.ts` ~739-752) | ⚠️ **must edit** | Found 2026-07-06: an **eighth hop past persistence.** The loader maps each persisted sheet ref **field-by-field** into `comment.sheetReferences` (`documentId`/`sheetNumber`/`label`) — so `blockNumber` would die here even after every server-side hop passes it through. The same mapping also back-fills missing `documentId`s with `primaryDocId` via a `Sheet N` label regex. Edit alongside the §3.5 chip work. |
 
 **Consolidation semantics (decided 2026-07-03).** The rendered card takes
 the first winning voter's finding — explanation, agentTrace, and
