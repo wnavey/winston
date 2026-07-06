@@ -251,6 +251,18 @@ workspace root:
   hand; a local file read keeps DB credentials and join logic out of
   bureau scripts entirely.
 
+**Prior prototype (reverted 2026-07-06).** An uncommitted working-tree
+diff in `conductor/src/shared/project-downloader.ts` implemented the
+superseded unconditional short_id flip (order by `short_id`, number as
+`short_id ?? i + 1` — no scheme branching, no manifest). It was reverted
+so local conductor runs can't produce workspaces where legacy sheets'
+blocks.md numbering mismatches their reading_guide narratives, and so
+the working tree matches the baseline this section describes. The diff
+is preserved verbatim as
+[`project-downloader-unconditional-shortid.patch`](./project-downloader-unconditional-shortid.patch)
+alongside this plan — a reference starting point, not to be applied
+as-is.
+
 **Surveyor mirror.** `surveyor/src/download.ts` is a declared behavioral
 mirror of this file (its header says "Synced with
 `conductor/src/shared/project-downloader.ts`") and is still on

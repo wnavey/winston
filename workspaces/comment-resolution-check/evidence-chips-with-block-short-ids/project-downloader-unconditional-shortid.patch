@@ -1,0 +1,55 @@
+diff --git a/src/shared/project-downloader.ts b/src/shared/project-downloader.ts
+index fe4ec2e..561bf8f 100644
+--- a/src/shared/project-downloader.ts
++++ b/src/shared/project-downloader.ts
+@@ -52,6 +52,10 @@ interface ContentBlockRow {
+   description: string;
+   content: string | null;
+   bounding_box: unknown;
++  // Stable per-sheet_version ordinal (1..N) populated by substation on insert
++  // and backfilled for existing rows. Nullable during the CRC block-short-id
++  // rollout gap; falls back to array index in writeSheet when null.
++  short_id: number | null;
+ }
+ 
+ interface DocumentWithVersion {
+@@ -244,11 +248,14 @@ export async function downloadProjectFiles(
+     const sv = entry.sheet_version;
+     if (!sv) continue;
+ 
++    // Order by short_id so blocks.md ordinals match the persisted per-sheet
++    // identifier. NULLs sort last during the rollout gap — those rows fall
++    // back to array-index numbering inside writeSheet.
+     const { data: blocks, error: blocksError } = await supabase
+       .from('content_block')
+-      .select('id, category, description, content, bounding_box')
++      .select('id, category, description, content, bounding_box, short_id')
+       .eq('sheet_version_id', sv.id)
+-      .order('category', { ascending: true });
++      .order('short_id', { ascending: true, nullsFirst: false });
+ 
+     if (blocksError) {
+       logger.warn(
+@@ -590,12 +597,16 @@ function writeSheet(destDir: string, sheet: SheetData, blocks: ContentBlockRow[]
+   const sheetDir = path.join(destDir, 'primary-site-plan', `sheet-${sheetNum}`);
+   fs.mkdirSync(sheetDir, { recursive: true });
+ 
+-  // Number blocks using their position in the full list (ordered by category ASC),
+-  // matching the numbering used in the reading guide prompt. Then filter out
+-  // boilerplate — the agent doesn't need title blocks and seals 36 times, but
+-  // the remaining blocks keep their original numbers so the reading guide references
+-  // still map correctly.
+-  const numbered = blocks.map((block, i) => ({ block, blockNum: i + 1 }));
++  // Number blocks using the persisted content_block.short_id (assigned by
++  // substation in bounding-box reading order, y ASC then x ASC). During the
++  // CRC block-short-id rollout gap, rows can have NULL short_id — those fall
++  // back to their sorted-array index. Boilerplate is filtered from rendering
++  // but numbers stay sparse (a filtered block leaves a gap in the sequence)
++  // so an evidence-chip lookup by short_id maps 1:1 to the DB.
++  const numbered = blocks.map((block, i) => ({
++    block,
++    blockNum: block.short_id ?? i + 1,
++  }));
+   const substantive = numbered.filter(({ block }) => !isBoilerplateBlock(block));
+ 
+   // Split blocks into large (own file) and small (combined file)
