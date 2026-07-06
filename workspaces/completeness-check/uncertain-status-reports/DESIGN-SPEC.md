@@ -1,32 +1,46 @@
 # Completeness Check `uncertain` Status — Report Rendering — Design Spec
 
-> **Status:** Draft, 2026-07-06. Follow-up to the
+> **Status:** Draft, 2026-07-06 (rev 2 — added the substation PDF
+> surface, §3.6). Follow-up to the
 > [uncertain-status DESIGN-SPEC](../uncertain-status/DESIGN-SPEC.md)
 > (winston #144), whose §9 deferred report handling per the 2026-07-06
 > session. Parent feature shipped in bureau #509 + cityhall #565.
-> Drives one small bureau-only PR.
+> Drives one small bureau PR + one small substation PR.
 
 ---
 
 ## 1. Summary
 
-Make the completeness-check markdown reports (the `format-reports` agent
-step's consolidated + per-grouping outputs) render `uncertain` items
-honestly instead of silently displaying their tentative verdict.
+Make BOTH completeness-check report surfaces render `uncertain` items
+honestly instead of silently displaying a wrong verdict:
 
-**The bug this fixes:** `format-reports` reads
+1. **Bureau markdown run-artifacts** — the `format-reports` agent
+   step's consolidated + per-grouping outputs (§3.1–§3.5).
+2. **Substation PDF** — the `/completeness-check-pdf` route +
+   `CompletenessCheckReportDocument` React-PDF renderer, the
+   customer-facing "Download PDF" (§3.6). **Missed by both prior specs**
+   — the parent spec's consumer sweep audited cityhall only.
+
+**The markdown bug:** `format-reports` reads
 `output/enriched-findings.json`, whose findings carry `winningFinding`
 statuses — and the winning finding for an uncertain item is deliberately
 the earliest run matching the *tentative* winner (that's how the parent
 spec keeps `findingsDir` 4-state). So on a `runs >= 3` review, the
 reports currently render every uncertain item as its tentative status
-with full confidence — the report-level analog of the VersionTimeline
-silent-FAIL problem the cityhall PR fixed (parent spec §8.4).
+with full confidence.
 
-Fix shape (D1 below): `enrich-findings.ts` stamps the consolidated
+**The PDF bug (worse, and live since bureau #509 merged):**
+`completeness-check-pdf.ts`'s `normalizeStatus()` coerces any status
+outside its allow-list to **`'fail'`** — the exact `.catch('fail')`
+hazard pattern the parent spec's §8.5 warned about, in a repo nobody
+audited. The first `runs >= 3` review with an uncertain item renders it
+as a confident FAIL in the PDF.
+
+Fix shapes: for markdown, `enrich-findings.ts` stamps the consolidated
 truth (`consolidatedStatus` / `tentativeStatus` / `voteBreakdown`) onto
 each enriched finding — a deterministic join in code — and the
-`format-reports` prompt just renders it.
+`format-reports` prompt just renders it (D1). For the PDF, widen the
+allow-list + status components and render the D20 callout (§3.6).
 
 ## 2. Decisions (locked, 2026-07-06 session)
 
@@ -38,7 +52,7 @@ each enriched finding — a deterministic join in code — and the
 | D4 | Item rendering | CRC-D20 treatment: status `Uncertain` + consensus callout with tentative verdict + vote breakdown (+ missing-runs note). `?` marker in the consolidated items table. |
 | D5 | Forced-finding precedence | **Enrich does NOT stamp consolidated fields on forced findings** — mirrors the clamp's existing forced-exemption pattern in the same script, so the display rule downstream stays a plain `consolidatedStatus ?? status` with no precedence logic in the prompt. A force that overrode an uncertain vote renders as the forced status (consistent with build-review-comments). |
 
-## 3. Changes (all in `bureau/workflows/completeness-check/`)
+## 3. Changes (§3.1–§3.5 in `bureau/workflows/completeness-check/`; §3.6 in substation)
 
 ### 3.1 `scripts/enrich-findings.ts`
 
@@ -125,6 +139,50 @@ references. The prompt-based `format-reports` step superseded it. If
 someone needs an offline report from run artifacts later, resurrect
 from git history.
 
+### 3.6 Substation PDF (`/completeness-check-pdf`) — separate PR
+
+The customer-facing PDF reads `reviews` + `review_comments.output_json`
+directly from Supabase and renders via React-PDF. Changes:
+
+**`src/routes/completeness-check-pdf.ts`:**
+- Add `'uncertain'` to the local `Status` type and `ALLOWED_STATUSES`.
+  This alone defuses the `normalizeStatus() → 'fail'` coercion.
+- Parse `tentativeStatus` (string, validated against the 4-state agent
+  enum) and `voteBreakdown` (object, defensively) from
+  `commentJson` into the comment passed to the document.
+
+**`src/pdf/components/status.ts`:**
+- Add `'uncertain'` to the shared `Status` union with
+  `STATUS_LABEL: 'Uncertain'`, `STATUS_COLOR: '#D97706'` (amber —
+  matches cityhall's amber pill; shares the hue with legacy `unclear`,
+  acceptable since the two never co-occur), and
+  `STATUS_COLOR_SOFT: '#FFFBEB'`.
+
+**`src/pdf/completeness-check-document.tsx`:**
+- `CcReviewComment`: optional `tentativeStatus` / `voteBreakdown`.
+- `countByStatus`: add the `uncertain` bucket. (`getEffectiveStatus`
+  needs no change — triage overrides only rewrite `fail`.)
+- Summary page: `uncertain` StackedBar segment + count chip and a
+  section-table column, both conditional on `overallCounts.uncertain > 0`
+  — mirror the existing `showUnclear` pattern exactly.
+- Section rows: `hasIssue` includes `uncertain` (warning icon).
+- `STATUS_GROUP_ORDER`: `fail, warn, uncertain, unclear, pass,
+  not-applicable` (matches cityhall's CC tab order).
+- Per-item rendering in the Uncertain group: the D20 callout as an
+  annotation line between title and explanation — "Agent could not
+  reach consensus. Tentative verdict: Fail — 2 fail / 1 pass across
+  runs (1 run produced no finding)." Non-zero buckets only, severity
+  order, missing clause only when > 0. Built by a pure helper so it's
+  unit-testable.
+- `DetailMeta` (Reference Docs / Resolution lines): render for
+  `uncertain` items too — the resolution carried from the tentative
+  winner is exactly what the reader needs behind the callout.
+
+**Deploy note:** unlike the parent feature there is no ordering
+constraint against bureau (already merged) — but ship this promptly:
+until it deploys, any uncertain item renders as FAIL in downloaded
+PDFs. The change is backward-compatible with all existing reviews.
+
 ## 4. Data shape — `enriched-findings.json` additions
 
 ```jsonc
@@ -159,13 +217,18 @@ from git history.
    markers; detailed report shows the callout with correct vote counts;
    no "Unclear" anywhere in output.
 3. Grep the repo post-delete for `generate-reports` — only git history.
+4. **Substation**: unit test the callout-text helper; render the PDF for
+   a review with uncertain items (once one exists post-smoke-test) and
+   verify the chip/column/group/callout; render an old 4-state review
+   and confirm byte-identical layout (conditional chrome hidden).
 
 ## 6. Out of scope
 
-- Any cityhall change (reports are run artifacts, not UI).
-- A customer-facing CC PDF (no such deliverable exists today; if one is
-  built, it should read the same stamped enriched shape).
+- Any cityhall change (the cityhall UI shipped in #565; the markdown
+  reports are run artifacts).
 - BRC consuming the stamped fields (noted in §3.2 as marginal).
+- CRC's PDF (`generate-crc-report` skill) — separate pipeline, its
+  uncertain rendering is specced in the CRC uncertain-status spec §9.
 
 ## 7. References
 
