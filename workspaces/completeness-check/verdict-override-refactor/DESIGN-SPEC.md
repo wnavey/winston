@@ -121,11 +121,17 @@ COMMENT ON COLUMN public.comment_triage.verdict_override IS
   'CRC values: resolved|failed|uncertain. NULL = no override (agent verdict stands). '
   'Orthogonal to triage_status, which carries the disposition axis (to-fix|formal-note).';
 
--- CRC unification backfill (§7.2). The value-based WHERE is safe with no
+-- CRC unification backfill (§7.2): copy the verdict, then RESET the source.
+-- The reset is load-bearing for the rollout (§11): a row only matches this
+-- WHERE clause while it still carries a verdict in triage_status, so once
+-- reset, re-running the statement cannot clobber verdict_override values
+-- written later through the new UI. The value-based WHERE is safe with no
 -- date/review-type join: resolved/failed/uncertain are disjoint from every
--- legacy CC triage value, so this can only match post-cutover CRC rows.
+-- legacy CC triage value, so this can only match post-cutover CRC rows —
+-- and those rows' triage_status is never read again after this ships.
 UPDATE public.comment_triage
-SET verdict_override = triage_status
+SET verdict_override = triage_status,
+    triage_status = 'new'
 WHERE triage_status IN ('resolved', 'failed', 'uncertain');
 ```
 
@@ -138,7 +144,7 @@ existing `review_id` index.
 | Column | Meaning | Written by |
 |---|---|---|
 | `verdict_override` | Verdict axis. CC: `pass`/`fail`/`warn`/`not-applicable`/`uncertain`†. CRC: `resolved`/`failed`/`uncertain`. NULL = agent verdict stands | New CC determination row; `CrcVerdictTriageBar` |
-| `triage_status` | Disposition axis: `new`/`to-fix`/`formal-note`. Frozen legacy values (`incorrect`, `na`, old CRC verdicts pre-backfill) may exist on old reviews and are ignored by new-side code | New CC disposition row; legacy TriageBar (old reviews only) |
+| `triage_status` | Disposition axis: `new`/`to-fix`/`formal-note`. Frozen legacy values (`incorrect`, `na`) persist on old CC reviews and are ignored by new-side code. CRC verdict values are wiped by the backfill's reset and can only reappear transiently via old-UI writes during the deploy gap (repaired in §11 step 3) | New CC disposition row; legacy TriageBar (old reviews only) |
 | `triage_sub_status` | `escalate`/`will-fix` under `formal-note` | New CC disposition row; legacy TriageBar |
 | `triage_note` | Shared free-text note | Everything |
 
@@ -173,6 +179,15 @@ The PATCH body gains `verdict_override?: string | null`, passed through to the
 upsert. `triage_status` remains required (defaulting to `'new'` from the
 client when the user has only set a verdict). No value validation — consistent
 with the endpoint today.
+
+**Omission semantics are load-bearing:** `verdict_override` is included in the
+upsert row **only when the key is present in the body** — an omitted field
+means "don't touch," not "set NULL." Old cityhall clients writing during the
+migration→deploy gap (§11) don't send the field; if omission nulled the
+column, every old-UI edit would silently wipe a backfilled verdict before the
+gap-repair statement could run. Clearing an override is never needed as an
+operation: the revert path writes the agent-matching value instead
+(effectively-no-override, D10).
 
 One behavioral note: because the upsert writes the full row, the client must
 always send *both* axes' current values (not just the changed one), or an
@@ -315,9 +330,14 @@ side (D5/D6).
 
 ### 7.8 `CrcVerdictTriageBar` + `ccNewCrcOverrides` (CRC unification)
 
-- `CrcVerdictTriageBar` writes the user's pick to `verdictOverride`
-  (`triage_status` sent as its current value, defaulting `'new'`); reads
-  initial selection from `triage.verdictOverride`.
+- `CrcVerdictTriageBar` writes the user's pick to `verdictOverride` and
+  **always sends `triage_status: 'new'`** — post-cutover CRC has no
+  disposition axis, so there is no current value worth preserving. Echoing
+  the row's stored `triage_status` back would be actively harmful: a stale
+  verdict value written to the row via the old UI during the deploy gap
+  would be perpetuated by every new-UI edit, permanently re-arming the
+  gap-repair statement's WHERE clause against that row (§11). Reads initial
+  selection from `triage.verdictOverride`.
 - `ccNewCrcOverrides` and the CRC Has/No-override filter read
   `verdictOverride` instead of `triage_status` +
   `NEW_CRC_VERDICT_VALUES`-set-membership (the set moves from "which values
@@ -413,16 +433,46 @@ Counts in both PDF renderers derive from `effectiveStatus`.
 
 ## 11. Rollout & sequencing
 
-1. **Substation PR deploys first**: migration (column + backfill) + endpoint +
-   PDF changes. The new column is invisible to the current cityhall build —
-   zero-risk window.
+1. **Substation PR deploys first**: migration (column + copy-and-reset
+   backfill, §5.1) + endpoint + PDF changes. The new column is invisible to
+   the current cityhall build — zero-risk window for CC. For CRC there is a
+   known gap (step 3).
 2. **Cityhall PR deploys second**, with `CC_VERDICT_TRIAGE_CUTOVER_AT` set at
    merge time (a moment safely after the substation deploy, before any CC run
-   whose review should get the new UI).
-3. **Post-deploy**: re-run the one-line backfill UPDATE once. This closes the
-   window where an in-flight CRC verdict pick landed in `triage_status`
-   between migration and cityhall deploy (at current CRC usage — 18 total
-   verdict rows — this is minutes of exposure; the re-run is idempotent).
+   whose review should get the new UI). **Record the deploy instant** — step 3
+   needs it.
+3. **Immediately after the cityhall deploy**, run the gap-repair statement
+   once:
+
+   ```sql
+   UPDATE public.comment_triage
+   SET verdict_override = triage_status,
+       triage_status = 'new'
+   WHERE triage_status IN ('resolved', 'failed', 'uncertain')
+     AND updated_at < '<cityhall deploy instant>';
+   ```
+
+   This repairs rows a user edited through the **old** CRC UI during the
+   migration→deploy gap: those writes land in `triage_status` (the endpoint's
+   omission semantics, §6.2, keep the stale backfilled `verdict_override`
+   intact rather than nulling it), so the verdict axis is behind the user's
+   latest pick until this statement copies it across.
+
+   **The time predicate is mandatory, not belt-and-suspenders.** A row edited
+   old-UI during the gap and then re-triaged through the *new* UI before this
+   statement runs carries the user's newest determination in
+   `verdict_override` and the superseded gap value in `triage_status`; without
+   the predicate, the statement would revert the newest pick to the gap value.
+   With it, such rows are skipped — correct, because the newer new-UI pick
+   wins. (These are actively-triaged rows — double-digit daily writes on live
+   CRC reviews — so the deploy→repair window sees real traffic; run the
+   statement promptly, but the predicate is what makes it safe rather than
+   the promptness.)
+
+   The statement converges thanks to the reset: any row it touches leaves the
+   WHERE clause's domain, and new-UI writes never re-enter it
+   (`CrcVerdictTriageBar` always sends `triage_status: 'new'`, §7.8). A second
+   run matches nothing.
 
 Reverse-order deploy fails safely: cityhall writing `verdict_override` before
 the column exists would 500 on triage writes — hence the ordering, mirrored
@@ -432,13 +482,23 @@ from CRC rework R1.
 
 ## 12. Risk register
 
-### R1 — Cross-repo deploy ordering
-As §11. Substation strictly first; idempotent backfill re-run mops up the race.
+### R1 — Cross-repo deploy ordering + the CRC deploy gap
+As §11. Substation strictly first. Old-UI CRC writes during the
+migration→cityhall-deploy gap land in `triage_status`; the time-predicated
+gap-repair statement (§11 step 3) copies them across without touching rows the
+user has since re-triaged through the new UI. Three mechanisms make the repair
+safe, and all three are required: the backfill's reset (§5.1), the endpoint's
+omission semantics (§6.2), and the repair's `updated_at` predicate. A naive
+re-run of the raw backfill would silently revert post-deploy user
+determinations on these actively-triaged rows.
 
 ### R2 — Axis clobbering on upsert
 The endpoint upserts the full row, so a client sending only one axis would
-null the other. Mitigation: single optimistic state object in `CcTriagePanel`
-sends both axes on every write (§6.2, §7.2); component test pins it.
+null the other. Mitigation, per axis: `verdict_override` is protected
+endpoint-side by omission semantics (§6.2 — absent key means "don't touch");
+`triage_status`/`triage_note` are protected client-side by `CcTriagePanel`'s
+single optimistic state object sending the full row on every write (§7.2).
+Component + endpoint tests pin both.
 
 ### R3 — Disposition invisibly retained after verdict flip
 A user sets To Fix, then overrides the verdict to Pass; the disposition
@@ -461,15 +521,17 @@ needs a triage rework.
 `CrcVerdictTriageBar`'s write path and `ccNewCrcOverrides`' read path both
 change. Mitigation: the existing CRC component tests move with the column;
 add a read-compat assertion that backfilled rows (non-null `verdict_override`,
-stale verdict in `triage_status`) render identically to fresh rows.
+`triage_status = 'new'`) render identically to fresh rows, plus one for the
+transient gap shape (stale verdict still in `triage_status`, §11 step 3),
+which must render from `verdict_override` alone.
 
 ---
 
 ## 13. Implementation checklist
 
 **Substation PR**
-- [ ] Migration: `verdict_override` column + CRC backfill (§5.1)
-- [ ] `comment-triage.ts`: accept + upsert `verdict_override` (§6.2)
+- [ ] Migration: `verdict_override` column + CRC copy-and-reset backfill (§5.1)
+- [ ] `comment-triage.ts`: accept + upsert `verdict_override`; omitted key ≠ NULL (§6.2) — endpoint test pins omission semantics
 - [ ] `completeness-check-pdf.ts`: gate + effective-status counts + two-axis annotations (§6.3)
 - [ ] Regenerate `database.types.ts`
 
@@ -487,7 +549,7 @@ stale verdict in `triage_status`) render identically to fresh rows.
 - [ ] Component tests: browser-mode tests following `CommentTriagePanel.svelte.test.ts`
       (cityhall#571's pattern) — lazy-write, axis-clobber guard (R2), disposition
       visibility on effective-status change, uncertain revert-only
-- [ ] Post-deploy: re-run backfill UPDATE (§11.3)
+- [ ] Immediately post-deploy: run the time-predicated gap-repair statement (§11 step 3) with the recorded cityhall deploy instant
 
 **What does NOT change**
 - `TriageBar.svelte` (byte-identical; legacy renders only)
