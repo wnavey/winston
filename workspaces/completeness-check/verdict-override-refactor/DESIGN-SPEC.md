@@ -294,6 +294,16 @@ Default selection = agent verdict. Lazy DB instantiation per D10. Colors
 follow the existing CC status palette (green pass, red fail, amber warn +
 uncertain, gray N/A).
 
+**The button set is a pure function of the agent verdict, fixed for the life
+of the row.** The user's determination changes which pill is highlighted —
+never which pills exist or their order. In particular, on an agent-uncertain
+row the Uncertain pill stays present and clickable after the user picks Pass
+(or anything else): clicking it back is the revert path that writes
+`verdict_override = 'uncertain'` (§5.2 †). D7's "revert-only" constrains
+which *rows* offer an Uncertain pill (agent-uncertain rows only), not how
+long the pill survives on those rows. This matches `CrcVerdictTriageBar`,
+where the option set derives from the `agentVerdict` prop alone.
+
 **Row 2 — disposition** (`To Fix` / `Formal Note`, with the
 escalate/will-fix sub-row under Formal Note), rendered only when
 `effectiveStatus ∈ {fail, warn}` (D8). Selecting a disposition writes
