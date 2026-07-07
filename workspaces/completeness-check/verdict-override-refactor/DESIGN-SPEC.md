@@ -57,8 +57,10 @@ Three coordinated changes, shipping together:
    "verdict" anywhere in the system.
 
 **Cutover is date-gated, mirroring CRC.** New behavior applies to CC reviews
-with `reviews.completed_at > CC_VERDICT_TRIAGE_CUTOVER_AT` (constant picked at
-cityhall-PR merge time). Older CC reviews keep the legacy 5-value UI, legacy
+with `reviews.completed_at > CC_VERDICT_TRIAGE_CUTOVER_AT` — one instant,
+picked when the **substation** PR is authored (it merges first and its PDF
+endpoint gates on it too), set safely in the future at the planned cityhall
+deploy time, and defined identically in both repos (§7.1). Older CC reviews keep the legacy 5-value UI, legacy
 counts math, and legacy PDF rendering, entirely frozen. No coalesce layer
 between the two worlds: all future CC runs are on new site plans, and existing
 version chains with legacy triage are test artifacts, known to be brittle
@@ -226,8 +228,15 @@ statement always has the stale-but-intact value to work with.
 ### 6.3 `src/routes/completeness-check-pdf.ts` (react-pdf CC report)
 
 - Select `verdict_override` alongside the existing triage columns.
-- Gate on the same cutover date (the endpoint already loads
-  `reviews.completed_at`; CC-typed + post-cutover → new semantics).
+- Gate on `CC_VERDICT_TRIAGE_CUTOVER_AT` (§7.1 — one instant, defined in both
+  repos; substation is the source of truth since it merges first). The
+  endpoint does **not** currently load what the gate needs: its reviews
+  select is `metadata, output_json, updated_at` and it never checks
+  `review_type`. Add `completed_at, review_type` to the select and gate on
+  `review_type` = completeness-check AND
+  `completed_at > CC_VERDICT_TRIAGE_CUTOVER_AT` — the exact predicate
+  cityhall's `usesNewCcTriage` uses, so the UI and the PDF can never disagree
+  about which era a review belongs to.
 - New side: counts derive from `effectiveStatus`; per-comment annotations
   render from both axes (§10). Old side: existing rendering, untouched.
 - `src/types/database.types.ts` regenerated.
@@ -238,6 +247,17 @@ statement always has the stale-but-intact value to work with.
 
 ### 7.1 The cutover gate
 
+**One instant, two repos.** `CC_VERDICT_TRIAGE_CUTOVER_AT` is picked when the
+**substation PR is authored** — substation merges and deploys first, and its
+PDF endpoint gates on the same constant (§6.3), so the value must exist
+before cityhall's PR does. Choose an instant safely in the future: at (or
+just before) the planned cityhall deploy time. A future-dated constant is
+harmless on both sides — reviews completed before it render legacy-style
+everywhere, consistently. What is *not* harmless is drift: if the two repos'
+constants differ, a review completed between them renders new-style in the UI
+and legacy-style in the PDF (or vice versa) — mismatched counts on the same
+review. The checklist pins an equality check.
+
 In `[reviewId]/+page.svelte`, alongside the CRC gate:
 
 ```ts
@@ -245,7 +265,8 @@ In `[reviewId]/+page.svelte`, alongside the CRC gate:
 // verdict-override-refactor/DESIGN-SPEC.md). CC reviews completed strictly
 // after this instant render the two-axis determination/disposition panel.
 // Older runs keep the legacy 5-value TriageBar and legacy counts math.
-const CC_VERDICT_TRIAGE_CUTOVER_AT = '<picked at merge time>';
+// MUST equal the constant in substation's completeness-check-pdf.ts (§6.3).
+const CC_VERDICT_TRIAGE_CUTOVER_AT = '<picked at substation-PR time>';
 const usesNewCcTriage = $derived(
   isCompletenessCheck &&
     data.review.completed_at != null &&
@@ -473,13 +494,18 @@ Counts in both PDF renderers derive from `effectiveStatus`.
 ## 11. Rollout & sequencing
 
 1. **Substation PR deploys first**: migration (column + copy-and-reset
-   backfill, §5.1) + endpoint + PDF changes. The new column is invisible to
-   the current cityhall build — zero-risk window for CC. For CRC there is a
-   known gap (step 3).
-2. **Cityhall PR deploys second**, with `CC_VERDICT_TRIAGE_CUTOVER_AT` set at
-   merge time (a moment safely after the substation deploy, before any CC run
-   whose review should get the new UI). **Record the deploy instant** — step 3
-   needs it.
+   backfill, §5.1) + endpoint + PDF changes. This PR is where
+   `CC_VERDICT_TRIAGE_CUTOVER_AT` is fixed (§7.1) — pick it at authoring
+   time, future-dated to the planned cityhall deploy. The new column is
+   invisible to the current cityhall build — zero-risk window for CC. For CRC
+   there is a known gap (step 3).
+2. **Cityhall PR deploys second**, defining `CC_VERDICT_TRIAGE_CUTOVER_AT` as
+   the **identical instant** already merged in substation (checklist pins the
+   equality). **Record the deploy instant** — step 3 needs it. If the deploy
+   slips past the constant, that's acceptable: reviews completed in the slip
+   window get legacy triage writes from the old build, and the new UI ignores
+   any legacy `incorrect`/`na` picks made there (D5) — prefer deploying
+   promptly over re-picking the constant.
 3. **Immediately after the cityhall deploy**, run the gap-repair statement
    once:
 
@@ -555,10 +581,15 @@ explicit so it isn't reported as a bug.
 ### R5 — Stale/racy legacy values on the new side
 §8.2. Set-membership tolerance at every read site.
 
-### R6 — Hardcoded cutover date(s)
-Two constants now (CRC + CC). Same accepted tradeoff as CRC rework R6; both
-are candidates for a future workflow-metadata flag if a third workflow ever
-needs a triage rework.
+### R6 — Hardcoded cutover date(s), now duplicated cross-repo
+Two gate constants (CRC + CC), and the CC one is defined in **two repos**
+(cityhall UI gate §7.1, substation PDF gate §6.3). Drift between the copies
+means the UI and PDF disagree about a review's era — mismatched counts on the
+same review. Mitigations: substation is the source of truth (merges first);
+cityhall's constant carries a MUST-equal comment pointing at it; the
+checklist pins an explicit equality check at cityhall-PR review time. Same
+accepted hardcoding tradeoff as CRC rework R6; all of it is a candidate for a
+future workflow-metadata flag if a third workflow ever needs a triage rework.
 
 ### R7 — CRC behavior regression from the column move
 `CrcVerdictTriageBar`'s write path and `ccNewCrcOverrides`' read path both
@@ -575,11 +606,12 @@ which must render from `verdict_override` alone.
 **Substation PR**
 - [ ] Migration: `verdict_override` column + CRC copy-and-reset backfill (§5.1)
 - [ ] `comment-triage.ts`: accept `verdict_override`; conditional-include write semantics for all mutable fields (absent = unchanged, explicit null = clear) (§6.2) — endpoint test pins the absent-vs-null distinction
-- [ ] `completeness-check-pdf.ts`: gate + effective-status counts + two-axis annotations (§6.3)
+- [ ] Define `CC_VERDICT_TRIAGE_CUTOVER_AT` (source of truth; future-dated to planned cityhall deploy) (§7.1)
+- [ ] `completeness-check-pdf.ts`: add `completed_at, review_type` to the reviews select; gate + effective-status counts + two-axis annotations (§6.3)
 - [ ] Regenerate `database.types.ts`
 
 **Cityhall PR**
-- [ ] `CC_VERDICT_TRIAGE_CUTOVER_AT` gate (§7.1)
+- [ ] `CC_VERDICT_TRIAGE_CUTOVER_AT` gate (§7.1) — **verify byte-identical to substation's constant** (R6)
 - [ ] `CcTriagePanel.svelte` — verdict row + disposition row + note (§7.2)
 - [ ] `CommentTriagePanel.svelte`: `ccVerdictTriage` branch; disposition-only inheritance (§7.3)
 - [ ] `triage/client.ts`, `types-simplified.ts`, `load-comment-history.ts` (§7.4)
