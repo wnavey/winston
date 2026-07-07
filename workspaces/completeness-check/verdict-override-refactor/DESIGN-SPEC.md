@@ -192,25 +192,36 @@ override* (possible via the revert path) — identical to CRC rework §6.3.
 
 ### 6.2 `src/routes/comment-triage.ts`
 
-The PATCH body gains `verdict_override?: string | null`, passed through to the
-upsert. `triage_status` remains required (defaulting to `'new'` from the
-client when the user has only set a verdict). No value validation — consistent
-with the endpoint today.
+The PATCH body gains `verdict_override?: string | null` — and, more
+importantly, the endpoint's write semantics change from "pass-through full
+row" to **conditional include for every mutable field**:
 
-**Omission semantics are load-bearing:** `verdict_override` is included in the
-upsert row **only when the key is present in the body** — an omitted field
-means "don't touch," not "set NULL." Old cityhall clients writing during the
-migration→deploy gap (§11) don't send the field; if omission nulled the
-column, every old-UI edit would silently wipe a backfilled verdict before the
-gap-repair statement could run. Clearing an override is never needed as an
-operation: the revert path writes the agent-matching value instead
-(effectively-no-override, D10).
+| Field state in body | Effect |
+|---|---|
+| Key absent | Column left unchanged |
+| Key present, non-null | Column written |
+| Key present, explicit `null` | Column cleared (`triage_sub_status` / `triage_note` / `verdict_override`) |
 
-One behavioral note: because the upsert writes the full row, the client must
-always send *both* axes' current values (not just the changed one), or an
-axis-B write would null out axis A. The cityhall client already works this way
-for status+note; the new panel keeps both axes in one optimistic state object
-(§7.4).
+Today the endpoint builds the upsert row unconditionally
+(`triage_sub_status: body.triage_sub_status ?? null`, etc.), which makes
+every writer forever responsible for echoing fields it doesn't own — or
+silently nulling them. Supabase upserts only update columns present in the
+payload, so building the row with conditional spreads eliminates the entire
+clobber class **server-side, for every writer**: `BulkTriageLightbox`
+bulk-marking N items To Fix (§7.10), the inherited-disposition confirm flow
+(§7.3), and any service-role caller are safe by construction, with no need to
+load and resend each row's current verdict.
+
+`triage_status` is no longer a required body field — the column's DB default
+(`'new'`) covers creates; `review_comment_id` + `review_id` remain required.
+No value validation — consistent with today. Clearing `verdict_override` via
+explicit `null` is permitted for symmetry but unused by the UI: the revert
+path writes the agent-matching value instead (effectively-no-override, D10).
+
+**The deploy-gap property (§11) follows directly from key-absence semantics:**
+old cityhall clients never mention `verdict_override`, so their writes during
+the migration→deploy gap cannot wipe a backfilled verdict — the gap-repair
+statement always has the stale-but-intact value to work with.
 
 ### 6.3 `src/routes/completeness-check-pdf.ts` (react-pdf CC report)
 
@@ -271,8 +282,11 @@ pass/N/A stays in the DB but doesn't render (D9).
 **Note textarea** — one shared note, same 1000ms-debounce machinery as the
 sibling components.
 
-**Optimistic state** holds both axes + note in one object so every
-`postTriage` call sends the full row (§6.2).
+**Optimistic state** holds both axes + note in one object for UI purposes,
+but each `postTriage` call sends **only the fields that interaction changes**
+— the endpoint's conditional-include semantics (§6.2) make partial writes
+safe, so the wire contract never depends on the client echoing the axis it
+doesn't own.
 
 ### 7.3 `CommentTriagePanel.svelte`
 
@@ -290,8 +304,10 @@ mirroring `crcVerdictTriage`. When set:
 
 ### 7.4 Wire types
 
-- `triage/client.ts`: `TriageWriteRequest` gains
-  `verdictOverride: string | null`; payload gains `verdict_override`. The
+- `triage/client.ts`: `TriageWriteRequest`'s value fields all become
+  optional (`triageStatus?`, `triageSubStatus?`, `triageNote?`,
+  `verdictOverride?`); the payload includes only the keys the caller
+  provided, mirroring the endpoint's absent/null distinction (§6.2). The
   cityhall `triage/+server.ts` proxy forwards the body verbatim — no change.
 - `types-simplified.ts`: `CommentTriage` gains `verdictOverride: string | null`;
   `CommentHistoryEntry` gains `verdictOverride: string | null`.
@@ -353,8 +369,12 @@ side (D5/D6).
   the row's stored `triage_status` back would be actively harmful: a stale
   verdict value written to the row via the old UI during the deploy gap
   would be perpetuated by every new-UI edit, permanently re-arming the
-  gap-repair statement's WHERE clause against that row (§11). Reads initial
-  selection from `triage.verdictOverride`.
+  gap-repair statement's WHERE clause against that row (§11). Note this is a
+  deliberate key-present write, not an omission: under §6.2 the component
+  *could* leave `triage_status` untouched by omitting the key, but sending
+  `'new'` actively scrubs any stale gap value the moment a user edits the
+  row — don't "simplify" it to omission. Reads initial selection from
+  `triage.verdictOverride`.
 - `ccNewCrcOverrides` and the CRC Has/No-override filter read
   `verdictOverride` instead of `triage_status` +
   `NEW_CRC_VERDICT_VALUES`-set-membership (the set moves from "which values
@@ -369,8 +389,10 @@ Gated like everything else. New side annotations per §10; legacy branches
 
 ### 7.10 `BulkTriageLightbox`
 
-New side: bulk actions offer dispositions (+ note) only (D14). Legacy
-behavior unchanged for old reviews.
+New side: bulk actions offer dispositions (+ note) only (D14). Its writes
+send only `triage_status`/`triage_note` — safe by construction under §6.2's
+conditional include, with no need to load and resend each of the N items'
+current `verdict_override`. Legacy behavior unchanged for old reviews.
 
 ---
 
@@ -510,12 +532,16 @@ re-run of the raw backfill would silently revert post-deploy user
 determinations on these actively-triaged rows.
 
 ### R2 — Axis clobbering on upsert
-The endpoint upserts the full row, so a client sending only one axis would
-null the other. Mitigation, per axis: `verdict_override` is protected
-endpoint-side by omission semantics (§6.2 — absent key means "don't touch");
-`triage_status`/`triage_note` are protected client-side by `CcTriagePanel`'s
-single optimistic state object sending the full row on every write (§7.2).
-Component + endpoint tests pin both.
+Eliminated server-side by §6.2's conditional-include semantics: a write that
+doesn't mention a field cannot change it, so no writer — `CcTriagePanel`,
+`BulkTriageLightbox` (§7.10), the inherited-disposition confirm flow (§7.3),
+future service-role callers — ever needs to echo the axis it doesn't own.
+(The alternative, keeping the full-row pass-through and making every client
+responsible, would require enumerating and hardening each of those writers
+individually, forever — rejected.) Residual risk is a caller sending an
+explicit `null` unintentionally; the endpoint test pins the absent-vs-null
+distinction, and the cityhall client only produces explicit `null` for
+clearing notes/sub-status — never for `verdict_override`.
 
 ### R3 — Disposition invisibly retained after verdict flip
 A user sets To Fix, then overrides the verdict to Pass; the disposition
@@ -548,7 +574,7 @@ which must render from `verdict_override` alone.
 
 **Substation PR**
 - [ ] Migration: `verdict_override` column + CRC copy-and-reset backfill (§5.1)
-- [ ] `comment-triage.ts`: accept + upsert `verdict_override`; omitted key ≠ NULL (§6.2) — endpoint test pins omission semantics
+- [ ] `comment-triage.ts`: accept `verdict_override`; conditional-include write semantics for all mutable fields (absent = unchanged, explicit null = clear) (§6.2) — endpoint test pins the absent-vs-null distinction
 - [ ] `completeness-check-pdf.ts`: gate + effective-status counts + two-axis annotations (§6.3)
 - [ ] Regenerate `database.types.ts`
 
