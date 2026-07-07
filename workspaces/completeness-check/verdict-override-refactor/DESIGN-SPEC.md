@@ -8,6 +8,23 @@
 > uncertain status work ([uncertain-status DESIGN-SPEC](../uncertain-status/DESIGN-SPEC.md)).
 > Drives one substation PR (migration + endpoint + PDF) and one cityhall PR (UI).
 
+**Terminology:**
+
+- **CC** = the **completeness-check** workflow
+  ([`bureau/workflows/completeness-check/workflow.yaml`](https://github.com/noetic-inc/bureau/blob/main/workflows/completeness-check/workflow.yaml))
+  — checks a submitted site plan for the content required to initiate formal
+  review. Agent verdicts: `pass` / `fail` / `warn` / `not-applicable` /
+  `uncertain`.
+- **CRC** = the **comment-resolution-check** workflow
+  ([`bureau/workflows/comment-resolution-check/workflow.yaml`](https://github.com/noetic-inc/bureau/blob/main/workflows/comment-resolution-check/workflow.yaml))
+  — checks whether a resubmitted site plan resolves the jurisdiction's prior
+  review comments. Agent verdicts: `resolved` / `failed` (+ consolidation-time
+  `uncertain`).
+
+Both render in cityhall's review page (`[reviewId]/+page.svelte`) as
+CC-style flat-list reviews and share the `comment_triage` table this spec
+refactors.
+
 ---
 
 ## 1. Summary
