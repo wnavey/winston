@@ -42,8 +42,8 @@ string → Chromium print.
 
 | Layer | File | Fate |
 |---|---|---|
-| UI button + filename | `cityhall/src/routes/(app)/project/[projectId]/review/[reviewId]/+page.svelte:2050` (`handleDownloadPdf()` at :486) | **Unchanged** |
-| Cityhall proxy | `…/completeness-check/pdf/+server.ts` | **Unchanged** |
+| UI button + filename | `cityhall/src/routes/(app)/project/[projectId]/review/[reviewId]/+page.svelte:2050` (`handleDownloadPdf()` at :486) | **Small change** — download gains an in-flight state (§7.1); filename logic unchanged |
+| Cityhall proxy | `…/completeness-check/pdf/+server.ts` | **Small change** — add a fetch timeout (§7.1); auth/streaming unchanged |
 | Substation endpoint (data fetch) | `substation/src/routes/completeness-check-pdf.ts:125-288` | **Kept** — data fetching, triage merge, cutover gate all stay; only the render call swaps |
 | React-PDF document | `substation/src/pdf/completeness-check-document.tsx` | **Replaced** by an RDS template; deleted after cutover |
 | CC-only React-PDF components | `src/pdf/components/stacked-bar.tsx`, `src/pdf/components/status-icon.tsx` | **Deleted** after cutover (used only by the CC document) |
@@ -253,7 +253,7 @@ the parity QA (§9) a pure rendering comparison.
 | 2 | Renderer libraryization (`renderReportMarkup` / `assembleReportHtml` / `printPdf`) + CLI refactored onto it | dsd | — |
 | 3 | Publish `@noetic/report-design-system` + `@noetic/report-renderer` — **precompiled** per §3.4, package build sharing the CLI's esbuild config | dsd | 2 |
 | 4 | New RDS components + status tokens (§4.2), with samples | dsd | — (parallel with 2/3) |
-| 5 | CC template in substation (plain TSX composing packaged components — no build changes per §3.2) + endpoint swap behind `CC_PDF_RENDERER=rds\|react-pdf` env flag | substation | 1, 3, 4 |
+| 5 | CC template in substation (plain TSX composing packaged components — no build changes per §3.2) + endpoint swap behind `CC_PDF_RENDERER=rds\|react-pdf` env flag + per-instance render serialization; cityhall download loading state + proxy timeout (§7.1) | substation, cityhall | 1, 3, 4 |
 | 6 | Parity QA (§9), flip flag default, remove flag + delete CC-only React-PDF code (`completeness-check-document.tsx`, `stacked-bar.tsx`, `status-icon.tsx`); shared React-PDF infra and dep stay for the other reports | substation | 5 |
 
 Estimated total: ~1.5–2.5 weeks. Workstream 1 is the risk-retirement step — do it first;
@@ -267,9 +267,23 @@ second template, never on React-PDF.
 
 ## 7. Deltas from current behavior (explicit)
 
-1. **Latency:** download goes from near-instant (React-PDF streams) to ~2–5s (Chromium
-   launch + print). Same order of magnitude; acceptable for a download button. Mitigate
-   with warm browser reuse.
+1. **Latency — and it must be owned in the UX.** Download goes from near-instant
+   (React-PDF streams) to ~2–5s warm, realistically **5–15s on a cold start** of the
+   PDF function. Today's `handleDownloadPdf()` is a bare anchor click — no spinner, no
+   disable-on-click — and the cityhall proxy `fetch` has no timeout. At these latencies
+   users will multi-click and fire concurrent renders. In scope for workstream 5:
+   - **Cityhall handler:** switch from anchor click to a fetch → blob → object-URL
+     download (an anchor click gives the page no completion signal, so this is what
+     makes a loading state possible). Disable the button + show a spinner while
+     in-flight; re-enable on completion; surface a toast on error. Filename logic
+     unchanged.
+   - **Cityhall proxy:** add an abort timeout (e.g. `AbortSignal.timeout(60_000)`) so a
+     hung render doesn't hold the connection open indefinitely; map abort to a 504.
+   - **PDF function:** serialize renders per warm instance (a simple in-process
+     queue/mutex around the browser). The UI fix stops one user's multi-clicks, but two
+     users can still land on the same instance; serialization bounds Chromium memory to
+     one render at a time, and the dedicated function (§3.1) already confines any
+     queuing delay to PDF traffic.
 2. **Typography/layout will not be pixel-identical** — it will be *better* (real
    paged-media layout, RDS type system), but any downstream consumer expecting exact
    page counts or coordinates (none known) would notice.
