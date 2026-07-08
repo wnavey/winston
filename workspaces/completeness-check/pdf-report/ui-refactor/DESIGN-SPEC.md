@@ -34,8 +34,9 @@ navigation, or agent interaction is involved.
 The CC report is the *easy* case for productionizing this: unlike SIRs (where an agent
 authors a bespoke `pages.tsx` per report), the CC report is **one fixed template + JSON
 data**. All authoring-time machinery (esbuild bundling, tsx, CSS Module compilation,
-font inlining) moves to substation's **build**; the only runtime work is
-`renderToStaticMarkup(template(data))` → HTML string → Chromium print.
+font inlining) happens at **build time** — in dsd's package build (§3.4), not at
+request time; the only runtime work is `renderToStaticMarkup(template(data))` → HTML
+string → Chromium print.
 
 ## 2. Current state (what we're replacing)
 
@@ -120,14 +121,14 @@ that), (b) PDF-function cold/warm render latency and memory high-water mark, and
 if (a) fails: a dedicated render service (small always-on container with dsd + full
 Playwright, `POST /render`) — same library code, different host.
 
-### 3.2 Build-time (substation)
+### 3.2 Build-time (substation): nearly nothing
 
-- tsup/esbuild compiles the CC template + RDS components. Add CSS Modules handling to
-  the build (esbuild `css-modules` support — same approach the dsd CLI uses in stage 1)
-  and emit the combined CSS as a build artifact imported as a string.
-- Albert Sans + Lora TTFs inlined as base64 `@font-face` blocks at build time (reuse the
-  dsd renderer's font-embedding code).
-- The wordmark SVG and status icon SVGs inline via esbuild's `dataurl` loader (as in dsd).
+Because the packages ship **precompiled** (§3.4), substation's build stays essentially
+untouched: no CSS Modules loader, no `@/` alias, no font or SVG asset wiring. The CC
+template (§4) is plain TSX that composes packaged RDS components — any CC-specific
+styling lives in the new RDS components inside the package, so the template carries no
+CSS of its own. tsup compiles it like any other TSX file in the repo. Theme CSS, fonts,
+and inlined assets all arrive through the packages.
 
 ### 3.3 dsd changes: renderer libraryization
 
@@ -145,16 +146,48 @@ Extract stages 2–4 of `dsd/web/scripts/render-report/cli.ts` into an importabl
 The CLI's stage 1 (esbuild of an arbitrary `pages.tsx`) stays CLI-only; substation
 doesn't need it.
 
-### 3.4 dsd changes: packaging
+### 3.4 dsd changes: packaging (precompiled — decided)
 
 RDS is currently isolated by design ("no exports outside dsd"). That policy changes:
-publish **`@noetic/report-design-system`** (components + theme CSS + fonts) and
-**`@noetic/report-renderer`** (the extracted library) as private packages (GitHub
-Packages or the org's registry). This is a prerequisite and the first PR in the
-sequence; it also unblocks the CRC PDF ("moves to cloud in iter-3") and any future
-product-surface PDFs on the same stack. A git submodule is the fallback if package
-publishing is contentious, but packages are the recommendation — vendored copies are
-ruled out (drift defeats the point of standardizing).
+publish two private packages (GitHub Packages or the org's registry). This is a
+prerequisite and the first PR in the sequence; it also unblocks the CRC PDF ("moves to
+cloud in iter-3") and any future product-surface PDFs on the same stack. A git
+submodule is the fallback if package publishing is contentious, but packages are the
+recommendation — vendored copies are ruled out (drift defeats the point of
+standardizing).
+
+**The packages ship precompiled, not raw source.** Raw TSX + `.module.css` would force
+every consumer to replicate dsd's build (CSS Modules loader, `@/` alias resolution, JSX
+config, `dataurl` asset loaders) — a per-consumer build burden and a config-drift
+surface that defeats the standardization goal. The consumer contract is instead:
+*import components, call the renderer* — React as the only peer dependency.
+
+**`@noetic/report-design-system`:**
+- `dist/index.js` — ESM, JSX pre-transformed, CSS Modules compiled to hashed-classname
+  maps, wordmark/status SVGs and small PNGs inlined as data URIs. React 19 peer dep.
+- `dist/styles.css` — the compiled component CSS bundle (what the dsd CLI's stage 1
+  emits as `bundle.css`).
+- `theme.css`, `report-theme.css` — token/`@page`/print-primitive layers, shipped as-is
+  (the renderer strips and regenerates `@font-face` at assemble time, unchanged from
+  the CLI's behavior).
+- `fonts/` — Albert Sans + Lora TTFs plus a generated `fonts.js` exporting the base64
+  `@font-face` block, so no consumer touches font files.
+- Built in dsd CI **with the same esbuild config module the render CLI's stage 1 uses**
+  (extract it as a shared module) — the CLI must keep compiling raw source because it
+  bundles arbitrary agent-authored `pages.tsx`, and a shared config is what prevents
+  package output and CLI output from drifting.
+
+**`@noetic/report-renderer`:**
+- Exports `renderReportMarkup` / `assembleReportHtml` / `printPdf` (§3.3) plus a
+  one-call convenience `renderReportPdf(element, { browser })`.
+- Depends on `@noetic/report-design-system` for theme CSS + fonts, so `assembleReportHtml`
+  needs zero asset wiring from the consumer.
+- Browser injection: accepts a `playwright-core` browser/launch config —
+  `@sparticuz/chromium` on Vercel, locally-installed Playwright Chromium in dev and in
+  the dsd CLI.
+
+Versioning: the two packages version in lockstep (renderer pins its exact
+design-system version); consumers pin both.
 
 ## 4. The CC report template in RDS vocabulary
 
@@ -217,9 +250,9 @@ the parity QA (§9) a pure rendering comparison.
 |---|---|---|---|
 | 1 | Spike: second function entry (`dist/pdf.js`) with `@sparticuz/chromium` + `playwright-core` hello-world PDF, deployed; verify multi-function routing under the `@vercel/hono` preset, measure PDF-function cold/warm latency + memory, and confirm the main function's artifact/cold start are unchanged | substation | — |
 | 2 | Renderer libraryization (`renderReportMarkup` / `assembleReportHtml` / `printPdf`) + CLI refactored onto it | dsd | — |
-| 3 | Publish `@noetic/report-design-system` + `@noetic/report-renderer` | dsd | 2 |
+| 3 | Publish `@noetic/report-design-system` + `@noetic/report-renderer` — **precompiled** per §3.4, package build sharing the CLI's esbuild config | dsd | 2 |
 | 4 | New RDS components + status tokens (§4.2), with samples | dsd | — (parallel with 2/3) |
-| 5 | CC template in substation + build wiring (CSS Modules, fonts) + endpoint swap behind `CC_PDF_RENDERER=rds\|react-pdf` env flag | substation | 1, 3, 4 |
+| 5 | CC template in substation (plain TSX composing packaged components — no build changes per §3.2) + endpoint swap behind `CC_PDF_RENDERER=rds\|react-pdf` env flag | substation | 1, 3, 4 |
 | 6 | Parity QA (§9), flip flag default, remove flag + delete CC-only React-PDF code (`completeness-check-document.tsx`, `stacked-bar.tsx`, `status-icon.tsx`); shared React-PDF infra and dep stay for the other reports | substation | 5 |
 
 Estimated total: ~1.5–2.5 weeks. Workstream 1 is the risk-retirement step — do it first;
