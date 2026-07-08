@@ -60,7 +60,8 @@ Preserved behavioral contract:
 ## 3. Target architecture
 
 ```
-request → substation endpoint (auth, fetch review/comments/triage — unchanged)
+request → substation PDF function (dedicated entry, §3.1)
+        → endpoint logic (auth, fetch review/comments/triage — unchanged)
         → buildCcReportProps(data)                        (unchanged shape, §5)
         → <CompletenessCheckReport {...props} />           (new RDS template)
         → renderToStaticMarkup(...)                        (React, in-process)
@@ -69,25 +70,55 @@ request → substation endpoint (auth, fetch review/comments/triage — unchange
         → stream application/pdf                           (unchanged)
 ```
 
-### 3.1 Runtime: Chromium inside substation's Vercel function
+### 3.1 Runtime: a dedicated PDF function in substation (Chromium isolated from the API)
 
-Substation deploys as a Vercel Node function (`substation/vercel.ts`: `dist/index.js`,
-maxDuration 800). Chromium runs there via the standard serverless pattern:
+Substation currently deploys as a **single** Vercel Node function
+(`substation/vercel.ts`: `dist/index.js`, maxDuration 800, no memory override) — one
+Hono app (`src/index.ts`) serving every route: auth, triage, CRC, Inngest, PDFs. Putting
+Chromium into that mono-function is ruled out, because the blast radius is the whole
+API, not just PDFs:
 
-- **`@sparticuz/chromium`** (~50MB stripped Chromium built for AWS-Linux/Vercel) +
-  **`playwright-core`** (or `puppeteer-core`; pick whichever the extracted dsd library
-  standardizes on — recommend `playwright-core` to match the dsd CLI).
-- Launch args and executable path come from `@sparticuz/chromium`; local dev falls back
-  to the Playwright-installed Chromium (env switch, same pattern the community packages
-  document).
+1. **Cold-start artifact tax on every route.** One function = one deployment artifact;
+   a ~50–70MB Chromium layer inflates cold-start fetch/extract for a triage save that
+   never touches Chromium. Lazy-importing the renderer avoids module-eval cost only,
+   not artifact cost.
+2. **Memory is provisioned per-function.** Guaranteeing render headroom (1.5–3GB) would
+   mean provisioning — and paying for — render-class instances across all API traffic.
+3. **Contention and failure coupling (the real incident generator).** Under Fluid
+   Compute, warm instances serve multiple concurrent invocations: a render pinning
+   CPU/RAM for seconds degrades co-located requests, and a Chromium OOM/crash kills
+   every in-flight request on that instance. Long-lived browser reuse inside the
+   general API process adds zombie/leak risk to everything.
+4. **Shared 250MB uncompressed budget.** Chromium permanently eats a large fixed chunk;
+   all future dependency growth would compete with it.
+
+**Design: a second function entry point.** Same repo, same deploy:
+
+- New tsup entry `src/pdf-function.ts` → `dist/pdf.js` — a minimal Hono app mounting
+  only the render route(s). Added to the `functions` map in `vercel.ts` with its own
+  memory (1.5–3GB) and maxDuration; path routing sends
+  `…/completeness-check/pdf` to it ahead of the main catch-all.
+- The main API function stays at its current size, memory, and cold-start profile —
+  unaffected by this migration.
+- Inside the PDF function: **`@sparticuz/chromium`** (brotli-compressed Chromium
+  engineered for the 250MB limit, extracts to `/tmp` at runtime) +
+  **`playwright-core`** (matching the dsd CLI). Local dev falls back to the
+  Playwright-installed Chromium via env switch. Browser-instance reuse across warm
+  invocations is safe here because only render traffic shares these instances.
 - Expected latency: ~2–5s per download (cold Chromium launch + print of a 10–40 page
-  document; dsd renders 180-page SIRs in ~3s locally). Reuse the browser instance across
-  warm invocations.
-- **Function budget check (first implementation task):** confirm bundle size
-  (50MB Chromium layer + fonts) and memory (target 1.5–3GB) fit substation's plan.
-  If they don't, fallback is a dedicated render service (small always-on container with
-  dsd + full Playwright, `POST /render`) — same library code, different host. Decide
-  after a spike, not up front.
+  document; dsd renders 180-page SIRs in ~3s locally). The PDF function pays its own
+  Chromium cold start on the first download after idle — acceptable for a download
+  button.
+- Data-fetch code (§5) is shared between the two entries as ordinary modules; the
+  cityhall proxy is unaffected (path routing is internal to Vercel).
+
+**Spike (workstream 1) must answer:** (a) does the `@vercel/hono` framework-preset
+setup cleanly support a second entry + path routing to it (the tsup config keeps `hono`
+external specifically for framework detection — verify multi-function coexists with
+that), (b) PDF-function cold/warm render latency and memory high-water mark, and
+(c) that the main function's artifact size and cold start are **unchanged**. Fallback
+if (a) fails: a dedicated render service (small always-on container with dsd + full
+Playwright, `POST /render`) — same library code, different host.
 
 ### 3.2 Build-time (substation)
 
@@ -184,7 +215,7 @@ the parity QA (§9) a pure rendering comparison.
 
 | # | Workstream | Repo | Depends on |
 |---|---|---|---|
-| 1 | Spike: `@sparticuz/chromium` + `playwright-core` hello-world PDF from substation's deployed function; measure cold/warm latency, bundle size, memory | substation | — |
+| 1 | Spike: second function entry (`dist/pdf.js`) with `@sparticuz/chromium` + `playwright-core` hello-world PDF, deployed; verify multi-function routing under the `@vercel/hono` preset, measure PDF-function cold/warm latency + memory, and confirm the main function's artifact/cold start are unchanged | substation | — |
 | 2 | Renderer libraryization (`renderReportMarkup` / `assembleReportHtml` / `printPdf`) + CLI refactored onto it | dsd | — |
 | 3 | Publish `@noetic/report-design-system` + `@noetic/report-renderer` | dsd | 2 |
 | 4 | New RDS components + status tokens (§4.2), with samples | dsd | — (parallel with 2/3) |
@@ -208,8 +239,10 @@ second template, never on React-PDF.
 2. **Typography/layout will not be pixel-identical** — it will be *better* (real
    paged-media layout, RDS type system), but any downstream consumer expecting exact
    page counts or coordinates (none known) would notice.
-3. **New production dependency:** a Chromium binary in the function bundle. Ownership:
-   substation. Pin `@sparticuz/chromium` to the playwright-core-compatible version.
+3. **New production dependency and a second Vercel function:** a Chromium binary lives
+   in a dedicated PDF function (`dist/pdf.js`), isolated from the main API function,
+   which keeps its current size, memory, and cold-start profile. Ownership: substation.
+   Pin `@sparticuz/chromium` to the playwright-core-compatible version.
 4. **RDS repo policy:** RDS becomes an externally consumable package (was: isolated).
 5. **Not a delta — a hard invariant:** the cutover constant and every triage-annotation
    string (legacy five-value and two-axis wording, D11 note-sharing rule) and
