@@ -6,10 +6,20 @@
 ## Decision
 
 The Report Design System (RDS) in `dsd/web/components/report-design-system/` and its
-Chromium-based print pipeline are the standard for all Noetic PDF output. The
+Chromium-based print pipeline are the standard for Noetic PDF output going forward. The
 completeness-check "Download Report" PDF — currently rendered with `@react-pdf/renderer`
 in substation — migrates to that stack. Feature parity with the existing report is
 required; deltas from current behavior are listed explicitly in §7.
+
+**Scope: the CC report only.** Substation renders three other PDFs with React-PDF —
+submission report (`src/routes/submission-report-pdf.ts:71`), resolution plan
+(`src/routes/resolution-plan-pdf.ts:76`), and SIR (`src/routes/sir-pdf.ts:95`) — and
+their documents share `src/pdf/theme.ts`, `noetic-document.tsx`, `LogoHeader`,
+`PageFooter`, and `status.ts`. **Those reports stay as-is on React-PDF**, and the shared
+React-PDF infrastructure (including the `@react-pdf/renderer` dependency) stays with
+them. This migration deletes only CC-exclusive code (§2). If/when the other reports
+migrate, that's separate work on the infrastructure this spec builds — but no such
+migration is planned or implied here.
 
 ## 1. Why Chromium is part of this (context, once)
 
@@ -34,9 +44,10 @@ font inlining) moves to substation's **build**; the only runtime work is
 | UI button + filename | `cityhall/src/routes/(app)/project/[projectId]/review/[reviewId]/+page.svelte:2050` (`handleDownloadPdf()` at :486) | **Unchanged** |
 | Cityhall proxy | `…/completeness-check/pdf/+server.ts` | **Unchanged** |
 | Substation endpoint (data fetch) | `substation/src/routes/completeness-check-pdf.ts:125-288` | **Kept** — data fetching, triage merge, cutover gate all stay; only the render call swaps |
-| React-PDF document | `substation/src/pdf/completeness-check-document.tsx` | **Replaced** by an RDS template |
-| React-PDF theme + components | `substation/src/pdf/theme.ts`, `src/pdf/components/*`, `src/pdf/noetic-document.tsx` | **Deleted** after cutover (with `@react-pdf/renderer` dep) |
-| Pure-text helpers | `src/pdf/components/uncertain-callout.ts`, triage annotation strings | **Ported as-is** (see §7.5) |
+| React-PDF document | `substation/src/pdf/completeness-check-document.tsx` | **Replaced** by an RDS template; deleted after cutover |
+| CC-only React-PDF components | `src/pdf/components/stacked-bar.tsx`, `src/pdf/components/status-icon.tsx` | **Deleted** after cutover (used only by the CC document) |
+| Shared React-PDF infra | `src/pdf/theme.ts`, `src/pdf/noetic-document.tsx`, `src/pdf/components/logo-header.tsx`, `page-footer.tsx`, `status.ts`, `@react-pdf/renderer` dep | **Stays** — used by the submission-report, resolution-plan, and SIR PDFs, which are out of scope |
+| Pure-text helpers | `src/pdf/components/uncertain-callout.ts` (+ test), triage annotation strings | **Ported as-is** into the new template's module (see §7.5) |
 
 Preserved behavioral contract:
 - **On-demand generation with live data.** Triage state (`verdict_override`,
@@ -178,7 +189,7 @@ the parity QA (§9) a pure rendering comparison.
 | 3 | Publish `@noetic/report-design-system` + `@noetic/report-renderer` | dsd | 2 |
 | 4 | New RDS components + status tokens (§4.2), with samples | dsd | — (parallel with 2/3) |
 | 5 | CC template in substation + build wiring (CSS Modules, fonts) + endpoint swap behind `CC_PDF_RENDERER=rds\|react-pdf` env flag | substation | 1, 3, 4 |
-| 6 | Parity QA (§9), flip flag default, remove flag + delete React-PDF code path and dep | substation | 5 |
+| 6 | Parity QA (§9), flip flag default, remove flag + delete CC-only React-PDF code (`completeness-check-document.tsx`, `stacked-bar.tsx`, `status-icon.tsx`); shared React-PDF infra and dep stay for the other reports | substation | 5 |
 
 Estimated total: ~1.5–2.5 weeks. Workstream 1 is the risk-retirement step — do it first;
 if it fails substation's function budget, swap the host to a render service (§3.1
