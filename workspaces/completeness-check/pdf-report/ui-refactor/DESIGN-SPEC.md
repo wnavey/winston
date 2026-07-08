@@ -48,7 +48,7 @@ string → Chromium print.
 | React-PDF document | `substation/src/pdf/completeness-check-document.tsx` | **Replaced** by an RDS template; deleted after cutover |
 | CC-only React-PDF components | `src/pdf/components/stacked-bar.tsx`, `src/pdf/components/status-icon.tsx` | **Deleted** after cutover (used only by the CC document) |
 | Shared React-PDF infra | `src/pdf/theme.ts`, `src/pdf/noetic-document.tsx`, `src/pdf/components/logo-header.tsx`, `page-footer.tsx`, `status.ts`, `@react-pdf/renderer` dep | **Stays** — used by the submission-report, resolution-plan, and SIR PDFs, which are out of scope |
-| Pure-text helpers | `src/pdf/components/uncertain-callout.ts` (+ test), triage annotation strings | **Ported as-is** into the new template's module (see §7.5) |
+| Presentation-independent logic + text | `getEffectiveStatus`, `STATUS_GROUP_ORDER`, D9/D11 annotation rules, unclear/uncertain column gating, all-N/A bucketing, `src/pdf/components/uncertain-callout.ts` (+ test), triage annotation strings | **Moved, not rewritten** into a plain-TS module the new template consumes (see §7.5) |
 
 Preserved behavioral contract:
 - **On-demand generation with live data.** Triage state (`verdict_override`,
@@ -204,8 +204,9 @@ tree (`<ReportDocument>` root). Document structure, mirroring today's report:
    creates its own named `@page`, which forces a page break and gives a per-section
    footer label. This reproduces today's one-detail-page-per-section behavior exactly
    (note: this is the opposite of the SIR Part-grouping convention, deliberately).
-4. Within each section: findings grouped by status (fail → warn → uncertain → pass →
-   n/a), each group with a colored rail head, each finding with dot/title/triage
+4. Within each section: findings grouped by effective status in `STATUS_GROUP_ORDER`
+   (fail → warn → uncertain → unclear → pass → n/a — ported, not re-derived; §7.5),
+   each group with a colored rail head, each finding with dot/title/triage
    annotation/explanation/refs/resolution.
 
 ### 4.1 Component mapping (existing RDS components)
@@ -277,11 +278,33 @@ second template, never on React-PDF.
    which keeps its current size, memory, and cold-start profile. Ownership: substation.
    Pin `@sparticuz/chromium` to the playwright-core-compatible version.
 4. **RDS repo policy:** RDS becomes an externally consumable package (was: isolated).
-5. **Not a delta — a hard invariant:** the cutover constant and every triage-annotation
-   string (legacy five-value and two-axis wording, D11 note-sharing rule) and
-   `buildUncertainCalloutText` port **byte-identically**. They are mirrored in
-   cityhall's UI; drift makes PDF and UI disagree about a review's triage era or
-   wording. Port the pure-text helpers by moving the files, not rewriting them.
+5. **Not a delta — a hard invariant:** the drift-prone core of the CC document ports
+   **by moving code, not rewriting it** — and that core is logic as much as strings.
+   All of it is mirrored (in wording or behavior) by cityhall's UI; drift makes PDF and
+   UI disagree about a review's triage era, wording, or effective verdicts. The
+   move-don't-rewrite list, explicitly (all in
+   `substation/src/pdf/completeness-check-document.tsx` unless noted):
+   - the cutover constant `CC_VERDICT_TRIAGE_CUTOVER_AT`
+     (`src/routes/completeness-check-pdf.ts:48`);
+   - every triage-annotation string — legacy five-value and two-axis wording, including
+     the D9 rule (a disposition annotation renders only when the *effective* status is
+     fail/warn; a disposition retained inert after a verdict flip stays invisible,
+     `:170`) and the D11 note-sharing rule (the shared note renders once — on the
+     verdict line if overridden, else on the disposition line, `:173`);
+   - `getEffectiveStatus(...)` (`:120`) — triage-aware status resolution
+     (`verdict_override` ?? agent status, era-gated);
+   - `STATUS_GROUP_ORDER` (`:610`) — `fail → warn → uncertain → unclear → pass →
+     not-applicable`, driving both group ordering and severity precedence;
+   - the conditional Unclear/Uncertain column/chip logic (`showUnclear`/`showUncertain`
+     — hidden when their count is zero);
+   - the all-N/A section bucketing (`allNa`, `:569`) — dash icon, dimmed row, and the
+     "Not applicable for Site Application" divider;
+   - `buildUncertainCalloutText` (`src/pdf/components/uncertain-callout.ts`, with its
+     test).
+   Extract these into a plain-TS module (e.g. `src/pdf/cc-report-logic.ts`) consumed by
+   the new template; the extraction diff must be move-only, and the existing
+   uncertain-callout test moves with it. Only presentation (React-PDF `StyleSheet`
+   trees, layout JSX) is rewritten.
 6. **Internal links, filename, auth path, on-demand freshness:** unchanged.
 
 ## 8. Open questions
