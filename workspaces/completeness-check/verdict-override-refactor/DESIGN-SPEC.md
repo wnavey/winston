@@ -1,0 +1,674 @@
+# CC Verdict Override Refactor — Design Spec
+
+> **Status:** Draft, 2026-07-07.
+> The Completeness Check follow-on anticipated by
+> [CRC comment-triage-rework DESIGN-SPEC §10](../../comment-resolution-check/crc-workflow/comment-triage-rework/DESIGN-SPEC.md).
+> Builds on the always-visible triage bar restored in
+> [cityhall#571](https://github.com/noetic-inc/cityhall/pull/571) and the CC
+> uncertain status work ([uncertain-status DESIGN-SPEC](../uncertain-status/DESIGN-SPEC.md)).
+> Drives one substation PR (migration + endpoint + PDF) and one cityhall PR (UI).
+
+**Terminology:**
+
+- **CC** = the **completeness-check** workflow
+  ([`bureau/workflows/completeness-check/workflow.yaml`](https://github.com/noetic-inc/bureau/blob/main/workflows/completeness-check/workflow.yaml))
+  — checks a submitted site plan for the content required to initiate formal
+  review. Agent verdicts: `pass` / `fail` / `warn` / `not-applicable` /
+  `uncertain`.
+- **CRC** = the **comment-resolution-check** workflow
+  ([`bureau/workflows/comment-resolution-check/workflow.yaml`](https://github.com/noetic-inc/bureau/blob/main/workflows/comment-resolution-check/workflow.yaml))
+  — checks whether a resubmitted site plan resolves the jurisdiction's prior
+  review comments. Agent verdicts: `resolved` / `failed` (+ consolidation-time
+  `uncertain`).
+
+Both render in cityhall's review page (`[reviewId]/+page.svelte`) as
+CC-style flat-list reviews and share the `comment_triage` table this spec
+refactors.
+
+---
+
+## 1. Summary
+
+Three coordinated changes, shipping together:
+
+1. **Split user comment triage into two orthogonal axes, each with its own DB
+   column.** Today's 5-value `triage_status` conflates two different questions:
+
+   | Axis | Question | Legacy values that answered it |
+   |---|---|---|
+   | **Determination** (verdict override) | "What is the *correct* status of this item?" | `incorrect` (≈ force Pass), `na` (≈ force N/A) |
+   | **Disposition** (acknowledgement) | "What are *we going to do* about this finding?" | `to-fix`, `formal-note` |
+
+   A new nullable `comment_triage.verdict_override` column carries the
+   determination axis. `triage_status` narrows to the disposition axis for new
+   writes (`new` / `to-fix` / `formal-note`); `incorrect` and `na` are retired.
+
+2. **Replace CC's 5-value triage bar with a two-row panel**, date-gated like
+   CRC's rework: a CRC-style verdict-pick row ("Your determination":
+   Pass / Fail / Warn / N/A, defaulted to the agent's verdict, lazy DB write),
+   plus a disposition row (To Fix / Formal Note + note) shown when the
+   effective verdict is Fail or Warn. This is what finally gives users a way to
+   adjudicate `uncertain` items — the original motivation for this refactor.
+
+3. **Unify CRC onto the same column.** The 18 production rows where
+   post-cutover CRC verdicts live in `triage_status` are backfilled into
+   `verdict_override` in the same migration; `CrcVerdictTriageBar` switches to
+   writing the new column. Once the rollout completes (through the
+   repair-and-reset pass, §11 step 3), `triage_status` never means "verdict"
+   anywhere in the system — not just for gated readers, but for any raw
+   consumer of the table.
+
+**Cutover is date-gated, mirroring CRC.** New behavior applies to CC reviews
+with `reviews.completed_at > CC_VERDICT_TRIAGE_CUTOVER_AT` — one instant,
+picked when the **substation** PR is authored (it merges first and its PDF
+endpoint gates on it too), set safely in the future at the planned cityhall
+deploy time, and defined identically in both repos (§7.1). Older CC reviews keep the legacy 5-value UI, legacy
+counts math, and legacy PDF rendering, entirely frozen. No coalesce layer
+between the two worlds: all future CC runs are on new site plans, and existing
+version chains with legacy triage are test artifacts, known to be brittle
+(see §8.3).
+
+---
+
+## 2. Goals
+
+- Let users adjudicate `uncertain` CC items by picking the actual verdict
+  (Pass / Fail / Warn / N/A) — and, symmetrically, correct any agent verdict.
+- Preserve the disposition workflow (`to-fix`, `formal-note` + note) that the
+  legacy UI carries and the formal PDF report renders. Verdict correction and
+  workflow acknowledgement are different user intents; keep both.
+- Converge the whole system on one convention: **`verdict_override` = verdict
+  axis (CC and CRC); `triage_status` = disposition axis (CC) or frozen legacy
+  values (old reviews).** No column whose meaning depends on review type +
+  date.
+- Reuse the interaction patterns CRC's rework already established and shipped:
+  per-agent-verdict button ordering, default-to-agent, lazy DB instantiation,
+  effectively-no-override semantics, Corrected chip, R5-style tolerance of
+  stale rows.
+- Keep the DB delta to one additive column + one value-scoped backfill.
+
+## 3. Non-goals
+
+- **Migrating or reinterpreting legacy CC triage data.** Pre-cutover reviews
+  render exactly as today. No backfill of `incorrect`/`na` rows, no read-time
+  mapping of them on the new side.
+- **Auto-inheritance of verdict overrides across versions.** Explicitly
+  deferred (§9). Dispositions keep the existing display-inheritance + confirm
+  flow. The door is held open with a one-line loader change, not schema.
+- **Bulk verdict overrides.** `BulkTriageLightbox` operates on dispositions
+  only on the new side. Overriding a verdict is a per-item judgment against
+  that item's evidence.
+- **Formal-review (simplified-schema) triage.** The `[sectionId]` page's
+  TriageBar usage is untouched; formal review has its own status semantics.
+- **Agent emit-schema changes.** Unlike the CRC rework, CC's agent status enum
+  (`pass` / `fail` / `warn` / `not-applicable` / `uncertain`) is unchanged. No
+  bureau PR.
+- **Audit fields** (`set_by_user_id` etc.) — same call as CRC rework Q7.
+- **Permissions narrowing** — same call as CRC rework Q20.
+
+---
+
+## 4. Design decisions (locked)
+
+| # | Decision | Choice | Rationale |
+|---|----------|--------|-----------|
+| D1 | Where the verdict override lives | New nullable `comment_triage.verdict_override` TEXT column | Disjoint from `triage_status` → rows are self-describing; ends the "same column, four interpretations" problem the CRC cutover papered over |
+| D2 | Where the disposition lives | Existing `triage_status`, value set narrowed for new writes to `new` / `to-fix` / `formal-note` | `to-fix`/`formal-note` semantics are unchanged from legacy; only the verdict-ish values (`incorrect`, `na`) retire |
+| D3 | CRC verdict storage | Unified onto `verdict_override` via backfill (§7.2) | Only 18 production rows; avoids a permanent two-convention split for every cross-cutting consumer (PDFs, analytics, IG) |
+| D4 | CC cutover mechanism | Date gate: `isCompletenessCheck && completed_at > CC_VERDICT_TRIAGE_CUTOVER_AT` | Mirrors CRC exactly — one gate pattern in the codebase; untriaged old reviews have no rows to key a value-based gate off |
+| D5 | Legacy values on the new side | Ignored — treated as no override / no disposition | CRC rework R5 precedent. Old CC version chains are test-only and known brittle; no coalesce code protecting untrusted data |
+| D6 | Cross-version delta math on the new side | Reads prior versions' `verdict_override` only | Self-healing one version deep; first post-cutover version of a legacy test chain may miscount Cleared — accepted (§8.3) |
+| D7 | `uncertain` as a user-pickable verdict | Revert-only: offered only on agent-uncertain rows, as the default | Matches CRC. Users adjudicate *away from* uncertain; forcing an item *to* uncertain isn't a determination |
+| D8 | Disposition row visibility | Shown when the **effective** verdict (override ?? agent) is `fail` or `warn` | Dispositions answer "what do we do about this finding"; moot for pass/N/A. Formal Note is plausible on warn, so warn is included |
+| D9 | Disposition retention when verdict changes | Retained inert, never deleted | CRC rework D12 philosophy: row+inert beats delete; reappears if verdict flips back to fail/warn |
+| D10 | Verdict lazy-write semantics | Identical to CRC D11/D12: agent-matching pick with no row + empty note = no write; row whose override matches agent verdict = effectively no override | Proven pattern, already tested in production CRC |
+| D11 | Note field | One shared `triage_note` for both axes | The note explains whichever action the user just took; two note fields is speculative complexity |
+| D12 | Verdict-override inheritance | None at launch; disposition keeps existing inherit + confirm flow | Each version's override is an affirmative act against that version's evidence. Deferring is schema-free (§9) |
+| D13 | Filter dropdown (new side) | Single dropdown: All / Has verdict override / No verdict override / To Fix / Formal Note | Each option is a predicate; single-pick dropdown keeps the existing UI footprint |
+| D14 | Bulk triage | Disposition axis only | D12-adjacent: verdicts are per-item judgments |
+| D15 | `triage_sub_status` | Unchanged — `escalate` / `will-fix` under `formal-note` | Load-bearing in the formal PDF report |
+
+---
+
+## 5. Data model
+
+### 5.1 Schema change (substation migration)
+
+```sql
+ALTER TABLE public.comment_triage ADD COLUMN verdict_override TEXT;
+
+COMMENT ON COLUMN public.comment_triage.verdict_override IS
+  'User-forced verdict for this comment. CC values: pass|fail|warn|not-applicable|uncertain. '
+  'CRC values: resolved|failed|uncertain. NULL = no override (agent verdict stands). '
+  'Orthogonal to triage_status, which carries the disposition axis (to-fix|formal-note).';
+
+-- CRC unification backfill (§7.2): COPY ONLY — deliberately no reset of
+-- triage_status here. The still-deployed cityhall build reads the CRC
+-- verdict from triage_status until the cityhall PR lands (§11); resetting at
+-- migration time would blank users' existing overrides in the old UI (its
+-- initialSelection() falls back to the agent verdict on 'new') and drop them
+-- from its Corrected counts for the whole deploy gap. The reset happens in
+-- the post-deploy pass (§11 step 3), after nothing reads triage_status as a
+-- verdict anymore. The value-based WHERE is safe with no date/review-type
+-- join: resolved/failed/uncertain are disjoint from every legacy CC triage
+-- value, so this can only match post-cutover CRC rows.
+UPDATE public.comment_triage
+SET verdict_override = triage_status
+WHERE triage_status IN ('resolved', 'failed', 'uncertain');
+```
+
+No CHECK constraint — consistent with `triage_status` (plain TEXT, values are
+a frontend/endpoint concern). No index: reads are already scoped by the
+existing `review_id` index.
+
+### 5.2 Column semantics after this ships
+
+| Column | Meaning | Written by |
+|---|---|---|
+| `verdict_override` | Verdict axis. CC: `pass`/`fail`/`warn`/`not-applicable`/`uncertain`†. CRC: `resolved`/`failed`/`uncertain`. NULL = agent verdict stands | New CC determination row; `CrcVerdictTriageBar` |
+| `triage_status` | Disposition axis: `new`/`to-fix`/`formal-note`. Frozen legacy values (`incorrect`, `na`) persist on old CC reviews and are ignored by new-side code. CRC verdict values persist only transiently — from the migration until the §11 step 3 repair-and-reset pass (the old UI reads them as verdicts through the deploy gap), or until a new-UI edit scrubs them — and never after the pass | New CC disposition row; legacy TriageBar (old reviews only) |
+| `triage_sub_status` | `escalate`/`will-fix` under `formal-note` | New CC disposition row; legacy TriageBar |
+| `triage_note` | Shared free-text note | Everything |
+
+† `uncertain` is only reachable as an explicit revert on agent-uncertain rows
+(D7): pick Fail, change your mind, pick Uncertain again → writes
+`verdict_override = 'uncertain'` (the row already exists, so lazy-write no
+longer applies — same as CRC today).
+
+### 5.3 Effective status (the one load-bearing definition)
+
+For every new-side consumer (banner, chips, deltas, filters, PDFs):
+
+```
+effectiveStatus(comment) = verdict_override ?? agent status (output_json.status)
+isOverridden(comment)    = verdict_override != null && verdict_override !== agent status
+```
+
+A row whose `verdict_override` equals the agent status is *effectively no
+override* (possible via the revert path) — identical to CRC rework §6.3.
+
+---
+
+## 6. Substation changes
+
+### 6.1 Migration
+
+§5.1. Ships first (see §11 rollout).
+
+### 6.2 `src/routes/comment-triage.ts`
+
+The PATCH body gains `verdict_override?: string | null` — and, more
+importantly, the endpoint's write semantics change from "pass-through full
+row" to **conditional include for every mutable field**:
+
+| Field state in body | Effect |
+|---|---|
+| Key absent | Column left unchanged |
+| Key present, non-null | Column written |
+| Key present, explicit `null` | Column cleared (`triage_sub_status` / `triage_note` / `verdict_override`) |
+
+Today the endpoint builds the upsert row unconditionally
+(`triage_sub_status: body.triage_sub_status ?? null`, etc.), which makes
+every writer forever responsible for echoing fields it doesn't own — or
+silently nulling them. Supabase upserts only update columns present in the
+payload, so building the row with conditional spreads eliminates the entire
+clobber class **server-side, for every writer**: `BulkTriageLightbox`
+bulk-marking N items To Fix (§7.10), the inherited-disposition confirm flow
+(§7.3), and any service-role caller are safe by construction, with no need to
+load and resend each row's current verdict.
+
+`triage_status` is no longer a required body field — the column's DB default
+(`'new'`) covers creates; `review_comment_id` + `review_id` remain required.
+No value validation — consistent with today. Clearing `verdict_override` via
+explicit `null` is permitted for symmetry but unused by the UI: the revert
+path writes the agent-matching value instead (effectively-no-override, D10).
+
+**The deploy-gap property (§11) follows directly from key-absence semantics:**
+old cityhall clients never mention `verdict_override`, so their writes during
+the migration→deploy gap cannot wipe a backfilled verdict — the gap-repair
+statement always has the stale-but-intact value to work with.
+
+### 6.3 `src/routes/completeness-check-pdf.ts` (react-pdf CC report)
+
+- Select `verdict_override` alongside the existing triage columns.
+- Gate on `CC_VERDICT_TRIAGE_CUTOVER_AT` (§7.1 — one instant, defined in both
+  repos; substation is the source of truth since it merges first). The
+  endpoint does **not** currently load what the gate needs: its reviews
+  select is `metadata, output_json, updated_at` and it never checks
+  `review_type`. Add `completed_at, review_type` to the select and gate on
+  `review_type` = completeness-check AND
+  `completed_at > CC_VERDICT_TRIAGE_CUTOVER_AT` — the exact predicate
+  cityhall's `usesNewCcTriage` uses, so the UI and the PDF can never disagree
+  about which era a review belongs to.
+- New side: counts derive from `effectiveStatus`; per-comment annotations
+  render from both axes (§10). Old side: existing rendering, untouched.
+- `src/types/database.types.ts` regenerated.
+
+---
+
+## 7. CityHall changes
+
+### 7.1 The cutover gate
+
+**One instant, two repos.** `CC_VERDICT_TRIAGE_CUTOVER_AT` is picked when the
+**substation PR is authored** — substation merges and deploys first, and its
+PDF endpoint gates on the same constant (§6.3), so the value must exist
+before cityhall's PR does. Choose an instant safely in the future: at (or
+just before) the planned cityhall deploy time. A future-dated constant is
+harmless on both sides — reviews completed before it render legacy-style
+everywhere, consistently. What is *not* harmless is drift: if the two repos'
+constants differ, a review completed between them renders new-style in the UI
+and legacy-style in the PDF (or vice versa) — mismatched counts on the same
+review. The checklist pins an equality check.
+
+In `[reviewId]/+page.svelte`, alongside the CRC gate:
+
+```ts
+// CC verdict-override cutover (see winston/workspaces/completeness-check/
+// verdict-override-refactor/DESIGN-SPEC.md). CC reviews completed strictly
+// after this instant render the two-axis determination/disposition panel.
+// Older runs keep the legacy 5-value TriageBar and legacy counts math.
+// MUST equal the constant in substation's completeness-check-pdf.ts (§6.3).
+const CC_VERDICT_TRIAGE_CUTOVER_AT = '<picked at substation-PR time>';
+const usesNewCcTriage = $derived(
+  isCompletenessCheck &&
+    data.review.completed_at != null &&
+    new Date(data.review.completed_at as string) > new Date(CC_VERDICT_TRIAGE_CUTOVER_AT)
+);
+```
+
+### 7.2 New `CcTriagePanel` component (sibling, not shared)
+
+Follows the CRC rework's sibling-component precedent (`CrcVerdictTriageBar`
+was deliberately not extracted from `TriageBar`): a new component, two rows +
+note, keeping `TriageBar` byte-identical for legacy renders.
+
+**Row 1 — "Your determination"** (verdict pick, CRC-style pills):
+
+| Agent verdict | Button set (default first) |
+|---|---|
+| `pass` | [Pass, Fail, Warn, N/A] |
+| `fail` | [Fail, Pass, Warn, N/A] |
+| `warn` | [Warn, Pass, Fail, N/A] |
+| `not-applicable` | [N/A, Pass, Fail, Warn] |
+| `uncertain` | [Uncertain, Pass, Fail, Warn, N/A] |
+
+Default selection = agent verdict. Lazy DB instantiation per D10. Colors
+follow the existing CC status palette (green pass, red fail, amber warn +
+uncertain, gray N/A).
+
+**The button set is a pure function of the agent verdict, fixed for the life
+of the row.** The user's determination changes which pill is highlighted —
+never which pills exist or their order. In particular, on an agent-uncertain
+row the Uncertain pill stays present and clickable after the user picks Pass
+(or anything else): clicking it back is the revert path that writes
+`verdict_override = 'uncertain'` (§5.2 †). D7's "revert-only" constrains
+which *rows* offer an Uncertain pill (agent-uncertain rows only), not how
+long the pill survives on those rows. This matches `CrcVerdictTriageBar`,
+where the option set derives from the `agentVerdict` prop alone.
+
+**Row 2 — disposition** (`To Fix` / `Formal Note`, with the
+escalate/will-fix sub-row under Formal Note), rendered only when
+`effectiveStatus ∈ {fail, warn}` (D8). Selecting a disposition writes
+`triage_status`; an existing disposition on a row whose verdict later flips to
+pass/N/A stays in the DB but doesn't render (D9).
+
+**Note textarea** — one shared note, same 1000ms-debounce machinery as the
+sibling components.
+
+**Optimistic state** holds both axes + note in one object for UI purposes,
+but each `postTriage` call sends **only the fields that interaction changes**
+— the endpoint's conditional-include semantics (§6.2) make partial writes
+safe, so the wire contract never depends on the client echoing the axis it
+doesn't own.
+
+### 7.3 `CommentTriagePanel.svelte`
+
+Gains a `ccVerdictTriage?: { agentVerdict: CcAgentVerdict } | null` prop,
+mirroring `crcVerdictTriage`. When set:
+
+- `VersionTimeline` still renders for has-history items (unchanged — it shows
+  agent statuses per version).
+- `CcTriagePanel` renders in place of `TriageBar`.
+- The inherited-triage seed (`inheritedTriage`, restored to prominence by
+  cityhall#571) applies to the **disposition axis only**: a prior version's
+  `to-fix`/`formal-note` seeds row 2 with the existing confirm-to-persist
+  flow. Prior `verdict_override` values do **not** seed row 1 (D12). Prior
+  legacy `incorrect`/`na` values are skipped entirely (D5).
+
+### 7.4 Wire types
+
+- `triage/client.ts`: `TriageWriteRequest`'s value fields all become
+  optional (`triageStatus?`, `triageSubStatus?`, `triageNote?`,
+  `verdictOverride?`); the payload includes only the keys the caller
+  provided, mirroring the endpoint's absent/null distinction (§6.2). The
+  cityhall `triage/+server.ts` proxy forwards the body verbatim — no change.
+- `types-simplified.ts`: `CommentTriage` gains `verdictOverride: string | null`;
+  `CommentHistoryEntry` gains `verdictOverride: string | null`.
+- `load-comment-history.ts`: the triage select adds `verdict_override`;
+  entries thread it through. **This is the one-line change that keeps
+  deferred inheritance schema-free** — history data carries overrides from
+  day one even though nothing reads them across versions yet.
+  `effectiveTriage` (the disposition-inheritance map) considers only
+  `to-fix`/`formal-note` on the new side.
+
+### 7.5 Counts banner + Corrected chip
+
+Generalize the `ccNewCrcOverrides` shape to CC's buckets. Per comment:
+agent bucket from `output_json.status`; effective bucket from
+`effectiveStatus`; `isOverridden` → Corrected chip + hatched
+override-out segments in the stacked bar, exactly the CRC §6.5 pattern with
+five buckets (pass / fail / warn / not-applicable / uncertain) instead of
+three. `ccTriageAdjustments` (the legacy incorrect/na fold) remains and
+applies only when `!usesNewCcTriage`.
+
+### 7.6 Version chips: Fixed / Regressed / Cleared
+
+New-side definitions, all in terms of `effectiveStatus` and prior versions'
+`verdict_override` (D6). Uncertain endpoints stay excluded from Fixed and
+Regressed per uncertain-status DESIGN-SPEC §8.4.
+
+- **Fixed**: prior effective `fail` → current effective `pass`/`warn`/`not-applicable`.
+  (Prior fails whose `verdict_override` was pass/warn/N-A weren't genuinely
+  failing, so they don't count — the override replaces the legacy
+  `incorrect`/`na` exclusion.)
+- **Regressed**: prior effective `pass`/`warn`/`not-applicable` → current
+  effective `fail`. Overriding the current fail removes it from the count, as
+  today.
+- **Cleared** (per-item chip): prior raw `fail` whose prior
+  `verdict_override ∈ {pass, warn, not-applicable}` — the human dismissed it
+  last round. Replaces the `prior.triageStatus === 'incorrect' || 'na'` check.
+
+Legacy `incorrect`/`na` on prior versions is invisible to all three on the new
+side (D5/D6).
+
+### 7.7 Tabs, filters, pills
+
+- **Status tabs**: unchanged (they bucket by *agent* status, and items stay in
+  their agent tab when overridden — CRC §6.6 precedent, avoids items jumping
+  tabs as you click).
+- **Triage filter dropdown** (new side): All / Has verdict override /
+  No verdict override / To Fix / Formal Note (D13). Legacy dropdown remains
+  for old reviews.
+- **List-row pills**: overridden items show an "overridden" treatment on
+  their status pill (CRC precedent) plus the disposition pill when set.
+  `triageLabel`/`triageColor` keep their legacy branches for old reviews'
+  pills — display compat, not a gate.
+
+### 7.8 `CrcVerdictTriageBar` + `ccNewCrcOverrides` (CRC unification)
+
+- `CrcVerdictTriageBar` writes the user's pick to `verdictOverride` and
+  **always sends `triage_status: 'new'`** — post-cutover CRC has no
+  disposition axis, so there is no current value worth preserving. Echoing
+  the row's stored `triage_status` back would be actively harmful: a stale
+  verdict value written to the row via the old UI during the deploy gap
+  would be perpetuated by every new-UI edit, permanently re-arming the
+  gap-repair statement's WHERE clause against that row (§11). Note this is a
+  deliberate key-present write, not an omission: under §6.2 the component
+  *could* leave `triage_status` untouched by omitting the key, but sending
+  `'new'` actively scrubs any stale gap value the moment a user edits the
+  row — don't "simplify" it to omission. Reads initial selection from
+  `triage.verdictOverride`.
+- `ccNewCrcOverrides` and the CRC Has/No-override filter read
+  `verdictOverride` instead of `triage_status` +
+  `NEW_CRC_VERDICT_VALUES`-set-membership (the set moves from "which values
+  are verdicts" to plain non-null + value validation).
+- The CRC date gate is untouched — it still selects which UI renders for
+  pre-cutover CRC reviews.
+
+### 7.9 `completion-check-pdf.ts` (client jsPDF export)
+
+Gated like everything else. New side annotations per §10; legacy branches
+(`incorrect`/`na`/`to-fix`/`formal-note`) kept for old reviews.
+
+### 7.10 `BulkTriageLightbox`
+
+New side: bulk actions offer dispositions (+ note) only (D14). Its writes
+send only `triage_status`/`triage_note` — safe by construction under §6.2's
+conditional include, with no need to load and resend each of the N items'
+current `verdict_override`. Legacy behavior unchanged for old reviews.
+
+---
+
+## 8. Coexistence & cutover boundary
+
+### 8.1 Value-space map
+
+After the backfill, every possible `comment_triage` row is unambiguous:
+
+| Row shape | Meaning | Read by |
+|---|---|---|
+| `verdict_override` non-null | Verdict override (CC or CRC per review type) | New-side code |
+| `triage_status ∈ {to-fix, formal-note}` | Disposition — same meaning both eras | New-side row 2 + legacy TriageBar |
+| `triage_status ∈ {incorrect, na}` | Legacy CC/pre-cutover-CRC verdict-ish triage | Legacy code only; inert on the new side (D5) |
+| `triage_status = 'new'`, `verdict_override` null | Note-only or untouched row | Both |
+
+### 8.2 Stale-write tolerance (R5 analog)
+
+Any unexpected value on the new side — a legacy value racing in around the
+cutover, a direct DB edit — is treated as no-override / no-disposition.
+Defensive set-membership checks at every new-side read site, mirroring CRC
+rework R5.
+
+### 8.3 Accepted gap: legacy test chains
+
+Existing CC version chains carry `incorrect`/`na` triage from the old UI. If
+one of those projects gets a post-cutover version, its first new-side render
+may under-count Cleared / over-count Regressed because prior-version legacy
+values are ignored (D5/D6). **Accepted**: all future CC runs target new site
+plans; the legacy chains are test artifacts, already known to be brittle, and
+the gap is self-healing one version deep.
+
+### 8.4 The `unclear` status
+
+The CRC rework's §10.3 open question. `unclear` survives only in
+`load-comment-history.ts`'s status mapper for very old review-v1 data; the
+2026-04+ CC schema uses `uncertain`. Resolution: `unclear` is **not**
+user-selectable and gets no button; if it appears on a history entry it
+renders as-is in the timeline. New-side CC reviews cannot produce it.
+
+---
+
+## 9. Deferred: verdict-override inheritance
+
+Not built now (D12), and deferring costs nothing structurally: inheritance in
+this system is a read-time computation over per-version rows (nothing about
+"inherited" is ever stored — "Confirm vN override" writes a fresh row for the
+current version). Because §7.4 threads `verdict_override` through the history
+loader from day one, adding inheritance later is a frontend-only diff:
+
+- **Soft display-inheritance** (recommended later shape): extend the
+  `inheritedTriage` derived to surface a prior version's override with a
+  confirm affordance. Cityhall-only.
+- **Materialized copy-forward** (workflow writes rows on new-version
+  completion): a substation/conductor change, still no migration.
+
+No backfill trap either way: manual per-version confirms produce exactly the
+rows inheritance-plus-confirm would have.
+
+---
+
+## 10. PDF annotation language (new side)
+
+Per comment, up to two annotation lines:
+
+- **Verdict override** (when `isOverridden`):
+  *"The Noetic agent marked this {Agent}; a human reviewer determined the
+  correct status is {Override}."* + note if present.
+- **Disposition** (when effective fail/warn and disposition set):
+  `to-fix` → *"Acknowledged by User to Fix."*; `formal-note` →
+  *"Formal Note ({Need to Escalate|Will Fix Later}): {note}"* — unchanged
+  legacy wording.
+
+Counts in both PDF renderers derive from `effectiveStatus`.
+
+---
+
+## 11. Rollout & sequencing
+
+1. **Substation PR deploys first**: migration (column + copy-only backfill,
+   §5.1 — the reset waits for step 3, because the old cityhall build reads
+   `triage_status` as the CRC verdict throughout the gap) + endpoint + PDF
+   changes. This PR is where
+   `CC_VERDICT_TRIAGE_CUTOVER_AT` is fixed (§7.1) — pick it at authoring
+   time, future-dated to the planned cityhall deploy. The new column is
+   invisible to the current cityhall build — zero-risk window for CC. For CRC
+   there is a known gap (step 3).
+2. **Cityhall PR deploys second**, defining `CC_VERDICT_TRIAGE_CUTOVER_AT` as
+   the **identical instant** already merged in substation (checklist pins the
+   equality). **Record the deploy instant** — step 3 needs it. If the deploy
+   slips past the constant, that's acceptable: reviews completed in the slip
+   window get legacy triage writes from the old build, and the new UI ignores
+   any legacy `incorrect`/`na` picks made there (D5) — prefer deploying
+   promptly over re-picking the constant.
+3. **Immediately after the cityhall deploy**, run the repair-and-reset pass
+   once:
+
+   ```sql
+   UPDATE public.comment_triage
+   SET verdict_override = triage_status,
+       triage_status = 'new'
+   WHERE triage_status IN ('resolved', 'failed', 'uncertain')
+     AND updated_at < '<cityhall deploy instant>';
+   ```
+
+   This one statement does two jobs:
+
+   - **Repairs gap edits**: rows a user edited through the **old** CRC UI
+     during the migration→deploy gap have the user's latest pick in
+     `triage_status` and a stale backfilled `verdict_override` (the
+     endpoint's omission semantics, §6.2, kept it intact rather than nulling
+     it); the copy brings the verdict axis current.
+   - **Finishes the backfill's deferred reset**: untouched backfilled rows
+     still carry the verdict copy in `triage_status` (§5.1 deliberately
+     leaves it, since the old UI reads it throughout the gap); for them the
+     copy is a no-op (`verdict_override` already equals `triage_status`) and
+     the reset scrubs the stale value. After this pass, `triage_status` holds
+     a verdict value **nowhere** — the §1 end-state claim becomes true here,
+     not at the migration.
+
+   **The time predicate is mandatory, not belt-and-suspenders.** A row edited
+   old-UI during the gap and then re-triaged through the *new* UI before this
+   statement runs carries the user's newest determination in
+   `verdict_override` and the superseded gap value in `triage_status`; without
+   the predicate, the statement would revert the newest pick to the gap value.
+   With it, such rows are skipped — correct, because the newer new-UI pick
+   wins, and their stale `triage_status` was already scrubbed by the new UI's
+   deliberate `'new'` write (§7.8). (These are actively-triaged rows —
+   double-digit daily writes on live CRC reviews — so the deploy→repair
+   window sees real traffic; run the statement promptly, but the predicate is
+   what makes it safe rather than the promptness.)
+
+   The pass converges: every row it touches leaves the WHERE clause's domain,
+   rows it skips were scrubbed by the new UI, and nothing re-enters the
+   domain post-deploy — the new UI always sends `'new'` (§7.8) and the legacy
+   TriageBar (pre-cutover reviews only) writes only 5-value statuses. A
+   second run matches nothing.
+
+Reverse-order deploy fails safely: cityhall writing `verdict_override` before
+the column exists would 500 on triage writes — hence the ordering, mirrored
+from CRC rework R1.
+
+---
+
+## 12. Risk register
+
+### R1 — Cross-repo deploy ordering + the CRC deploy gap
+As §11. Substation strictly first. Old-UI CRC writes during the
+migration→cityhall-deploy gap land in `triage_status`; the time-predicated
+repair-and-reset pass (§11 step 3) copies them across without touching rows
+the user has since re-triaged through the new UI. Three mechanisms make the
+pass safe, and all three are required: the endpoint's omission semantics
+(§6.2), the new UI's deliberate `triage_status: 'new'` writes (§7.8), and the
+pass's `updated_at` predicate. A naive re-run of the raw backfill would
+silently revert post-deploy user determinations on these actively-triaged
+rows. Note the reset deliberately does NOT live in the migration: the old
+cityhall build reads `triage_status` as the CRC verdict throughout the gap,
+so a migration-time reset would blank users' existing overrides in the old UI
+for the whole window (§5.1).
+
+### R2 — Axis clobbering on upsert
+Eliminated server-side by §6.2's conditional-include semantics: a write that
+doesn't mention a field cannot change it, so no writer — `CcTriagePanel`,
+`BulkTriageLightbox` (§7.10), the inherited-disposition confirm flow (§7.3),
+future service-role callers — ever needs to echo the axis it doesn't own.
+(The alternative, keeping the full-row pass-through and making every client
+responsible, would require enumerating and hardening each of those writers
+individually, forever — rejected.) Residual risk is a caller sending an
+explicit `null` unintentionally; the endpoint test pins the absent-vs-null
+distinction, and the cityhall client only produces explicit `null` for
+clearing notes/sub-status — never for `verdict_override`.
+
+### R3 — Disposition invisibly retained after verdict flip
+A user sets To Fix, then overrides the verdict to Pass; the disposition
+persists inert (D9) and reappears if the verdict returns to Fail. Low risk —
+matches CRC's effectively-no-override philosophy — but the spec makes it
+explicit so it isn't reported as a bug.
+
+### R4 — Legacy chains rendered on the new side
+§8.3. Accepted, documented, self-healing.
+
+### R5 — Stale/racy legacy values on the new side
+§8.2. Set-membership tolerance at every read site.
+
+### R6 — Hardcoded cutover date(s), now duplicated cross-repo
+Two gate constants (CRC + CC), and the CC one is defined in **two repos**
+(cityhall UI gate §7.1, substation PDF gate §6.3). Drift between the copies
+means the UI and PDF disagree about a review's era — mismatched counts on the
+same review. Mitigations: substation is the source of truth (merges first);
+cityhall's constant carries a MUST-equal comment pointing at it; the
+checklist pins an explicit equality check at cityhall-PR review time. Same
+accepted hardcoding tradeoff as CRC rework R6; all of it is a candidate for a
+future workflow-metadata flag if a third workflow ever needs a triage rework.
+
+### R7 — CRC behavior regression from the column move
+`CrcVerdictTriageBar`'s write path and `ccNewCrcOverrides`' read path both
+change. Mitigation: the existing CRC component tests move with the column;
+add a read-compat assertion that post-pass rows (non-null `verdict_override`,
+`triage_status = 'new'`) render identically to fresh rows, plus one for the
+transitional shape (stale verdict still in `triage_status` — the state of
+every backfilled row between the cityhall deploy and the §11 step 3 pass),
+which must render from `verdict_override` alone.
+
+---
+
+## 13. Implementation checklist
+
+**Substation PR**
+- [ ] Migration: `verdict_override` column + CRC copy-only backfill — no reset; old UI reads `triage_status` through the gap (§5.1)
+- [ ] `comment-triage.ts`: accept `verdict_override`; conditional-include write semantics for all mutable fields (absent = unchanged, explicit null = clear) (§6.2) — endpoint test pins the absent-vs-null distinction
+- [ ] Define `CC_VERDICT_TRIAGE_CUTOVER_AT` (source of truth; future-dated to planned cityhall deploy) (§7.1)
+- [ ] `completeness-check-pdf.ts`: add `completed_at, review_type` to the reviews select; gate + effective-status counts + two-axis annotations (§6.3)
+- [ ] Regenerate `database.types.ts`
+
+**Cityhall PR**
+- [ ] `CC_VERDICT_TRIAGE_CUTOVER_AT` gate (§7.1) — **verify byte-identical to substation's constant** (R6)
+- [ ] `CcTriagePanel.svelte` — verdict row + disposition row + note (§7.2)
+- [ ] `CommentTriagePanel.svelte`: `ccVerdictTriage` branch; disposition-only inheritance (§7.3)
+- [ ] `triage/client.ts`, `types-simplified.ts`, `load-comment-history.ts` (§7.4)
+- [ ] Banner/Corrected generalization; legacy `ccTriageAdjustments` gated legacy-only (§7.5)
+- [ ] Fixed/Regressed/Cleared new-side definitions (§7.6)
+- [ ] Filter dropdown + pills (§7.7)
+- [ ] `CrcVerdictTriageBar` + `ccNewCrcOverrides` → `verdict_override` (§7.8)
+- [ ] `completion-check-pdf.ts` gating (§7.9)
+- [ ] `BulkTriageLightbox` disposition-only on new side (§7.10)
+- [ ] Component tests: browser-mode tests following `CommentTriagePanel.svelte.test.ts`
+      (cityhall#571's pattern) — lazy-write, axis-clobber guard (R2), disposition
+      visibility on effective-status change, uncertain revert-only
+- [ ] Immediately post-deploy: run the time-predicated repair-and-reset pass (§11 step 3) with the recorded cityhall deploy instant — this is what completes the backfill; skipping it leaves stale verdicts in `triage_status` indefinitely
+
+**What does NOT change**
+- `TriageBar.svelte` (byte-identical; legacy renders only)
+- CC workflow YAML / emit schemas / bureau (no agent-side change)
+- Pre-cutover CC + pre-cutover CRC rendering, counts, PDFs
+- `[sectionId]` simplified-review triage page
+- CRC date gate + `coerceCrcStatusForDisplay` N/A coercion
+
+---
+
+## 14. References
+
+- [CRC comment-triage-rework DESIGN-SPEC](../../comment-resolution-check/crc-workflow/comment-triage-rework/DESIGN-SPEC.md) — the pattern this follows; §10 anticipated this spec
+- [CC uncertain-status DESIGN-SPEC](../uncertain-status/DESIGN-SPEC.md) — `uncertain` semantics, §8.4 delta-exclusion rule
+- [cityhall#571](https://github.com/noetic-inc/cityhall/pull/571) — always-visible triage bar; the inheritance/confirm flow this builds on
+- Production data point (2026-07-07): 18 of 2,493 `comment_triage` rows hold post-cutover CRC verdict values — the entire CRC backfill surface
