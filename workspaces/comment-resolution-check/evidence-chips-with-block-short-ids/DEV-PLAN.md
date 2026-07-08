@@ -88,16 +88,18 @@ Both stay. This plan builds on top.
 
 ```sql
 ALTER TABLE public.sheet_version
-  ADD COLUMN block_numbering_scheme TEXT NOT NULL DEFAULT 'legacy-category-order';
+  ADD COLUMN block_numbering_scheme TEXT NOT NULL
+    DEFAULT 'legacy-category-order'
+    CHECK (block_numbering_scheme IN ('legacy-category-order', 'short-id-ordered'));
 ```
 
 `ADD COLUMN … NOT NULL DEFAULT` populates all 1,147 existing rows in a
 single statement — no separate backfill.
 
-**TODO:** decide whether to add a CHECK constraint enumerating the two
-values, or leave it open for future schemes. Small trade-off — CHECK
-catches typos at write time; open leaves room for `'short-id-with-anchors'`
-etc. without a migration.
+**CHECK constraint (decided 2026-07-08):** enumerate the two values.
+Typo protection on the column whose only job is an integrity claim is
+worth it; a future scheme (`'short-id-with-anchors'` etc.) costs one
+trivial migration to extend the constraint.
 
 ### 3.2 Substation write side (amend PR #127)
 
@@ -272,11 +274,16 @@ stay behaviorally identical. Surveyor serves standalone diligence/local
 flows, not the review persistence path, so this is off the critical
 chain — but skipping it would leave short-id sheets rendering
 guide-mismatched numbering in every surveyor-produced workspace.
+(Verified 2026-07-08: surveyor numbers blocks *before* filtering
+boilerplate, same as conductor, so sparse numbering is preserved
+identically — the port is only the scheme branching + manifest, no
+numbering-behavior fix needed.)
 
 ### 3.4 Review workflows — emit `blockNumber` conditionally
 
-Applies to `review`, `completeness-check`, and `comment-resolution-check`
-workflows. The review agent already sees whatever blocks.md contains and
+Applies to the `comment-resolution-check` and `completeness-check`
+workflows (scope decided 2026-07-08 — see the TODO resolution at the end
+of this section). The review agent already sees whatever blocks.md contains and
 naturally cites `Block N` in its findings. We need the persisted output
 in `review_comments.output_json.evidenceLocations[].blockNumber` to
 carry a value **only when it's safe to deep-link.**
@@ -325,10 +332,16 @@ and to avoid conditional prompting complexity.
 - *(c) UI-side gate.* Simplest, but pollutes `review_comments` with
   meaningless `blockNumber` values on legacy sheets.
 
-**TODO:** confirm which review workflows need the post-processing edit.
-Definitely CRC. Probably also completeness-check. Regular review workflow
-may or may not, depending on whether its schema even has `blockNumber`
-today.
+**Scope (decided 2026-07-08): CRC + completeness-check; formal review
+deferred.** Completeness-check has the identical `evidenceLocations`
+shape (`completeness.schema.json`, no `additionalProperties: false`) and
+its own `build-review-comments.ts` + `enrich-findings.ts` (already
+passes findings through via spread), so including it is the same edit
+twice. The regular `review` workflow has no `evidenceLocations` at all —
+it uses `sheetReferences`/`documentReferences` with
+`additionalProperties: false`, a structurally different evidence model.
+Adding block support there is a schema redesign, not a field addition;
+it gets its own plan when we want it.
 
 ### 3.5 Cityhall — enhanced evidence-chip modal + URL wiring
 
@@ -424,8 +437,10 @@ and the "open sheet" button is the escape hatch for reading fine detail.
   specific block. Reference the "Block N" labels in `blocks.md` /
   `block-N.md` filenames.
 
-Same additions should be considered for the shared review + completeness-check
-schemas + prompts, depending on scope decision above.
+Same additions apply to the completeness-check schema + prompt
+(`completeness.schema.json` has the identical `evidenceLocations` shape).
+The formal `review` workflow is out of scope for this slice — decided
+2026-07-08, see §3.4.
 
 ### 3.7 Pipeline pass-through — verified 2026-07-03
 
@@ -493,8 +508,10 @@ actually surfaces the deep-link in the UI.
 
 ## 5. Open questions & TODOs
 
-- [ ] **CHECK constraint on `block_numbering_scheme`.** Enumerate the two
-      values, or leave open for future schemes? See §3.1.
+- [x] **CHECK constraint on `block_numbering_scheme`.** Decided
+      2026-07-08: enumerate the two values (see §3.1). A future scheme
+      costs one trivial migration; typo protection on the integrity
+      column is worth it.
 - [x] **Enforcement approach for §3.4.** Decided 2026-07-03: post-processing
       gate (option b). Agent always emits `blockNumber`; downstream
       scripts strip it for legacy sheets before persisting.
@@ -504,9 +521,13 @@ actually surfaces the deep-link in the UI.
       JSON→JSON with no Supabase access — and additionally validates
       `blockNumber` against the sheet's real `short_id` set to catch
       hallucinated-but-plausible integers.
-- [ ] **Scope for `review` and `completeness-check`.** Do we want
-      block-level deep-linking there too, or CRC-only for the first
-      slice? See §3.4 / §3.6.
+- [x] **Scope for `review` and `completeness-check`.** Decided
+      2026-07-08: CRC + completeness-check in this slice (identical
+      `evidenceLocations` shape, same edits twice); formal `review`
+      deferred — it has no `evidenceLocations` (uses
+      `sheetReferences`/`documentReferences` with
+      `additionalProperties: false`), so block support there is a schema
+      redesign. See §3.4 / §3.6.
 - [x] **`documentId` is a load-bearing key.** Decided 2026-07-06: block
       deep-links treat `documentId` as a required part of the lookup key
       everywhere it appears — the §3.4 gate (manifest match on
@@ -524,13 +545,22 @@ actually surfaces the deep-link in the UI.
       percentage-positioned bbox overlays. Loader must also start
       selecting `content_block.short_id` (absent from current query and
       from the generated DB types — regenerate).
-- [ ] **Beads bookkeeping.** Existing issues `noetic-yrn` (epic),
-      `noetic-w01` (Phase 1 writer, folded into PR #127), `noetic-gdp`
-      (Phase 2 NOT NULL/UNIQUE) still apply. New issues to file for the
-      pieces in this plan: sheet_version column migration, substation
-      writer amendment, conductor read-side branching, bureau/workflow
-      changes, cityhall URL.
-- [ ] **Version-aware sheet page URL — `noetic-aqy` (prereq for step 6).**
+- [x] **Beads bookkeeping.** Filed 2026-07-08. Implementation chain
+      (each `→` blocks the next, matching the §4 rollout):
+      `noetic-bzs` (§3.1 column migration + CHECK) → `noetic-8c9`
+      (§3.2 substation writer, extends PR #127) → `noetic-tlo`
+      (§3.3 conductor branching + block-manifest) → `noetic-ldq`
+      (§3.4 CRC + CC gate) → `noetic-xf7` (§3.6 bureau schemas +
+      prompts) → `noetic-p3z` (§3.5 cityhall modal + URL wiring;
+      also depends on `noetic-aqy` for the open-sheet button).
+      `noetic-vej` (§3.3 surveyor port) hangs off `noetic-tlo`,
+      off the critical path. The epic `noetic-yrn` no longer depends
+      on `noetic-aqy` directly (only `noetic-p3z` does), and its
+      description now points at this plan. Existing issues
+      `noetic-w01` (Phase 1 writer, folded into PR #127) and
+      `noetic-gdp` (Phase 2 NOT NULL/UNIQUE) still apply.
+- [ ] **Version-aware sheet page URL — `noetic-aqy` (prereq for step 7,
+      the "open sheet" button only).**
       Filed 2026-07-03 (audit finding). The sheet page always resolves the
       ACTIVE submission version and short_ids are recomputed per
       sheet_version, so block deep-links silently re-point after any
