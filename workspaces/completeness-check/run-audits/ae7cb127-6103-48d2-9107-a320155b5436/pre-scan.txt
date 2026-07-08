@@ -1,0 +1,92 @@
+
+=== run inputs (workflow/status.json) ===
+  submissionVersionId: 6b9b85ed-e992-4906-a222-b24ee836910c
+  jurisdiction: austin
+  standardNotesReferenceUrl: https://austin.widen.net/s/vxznrtmfwf/sp_consolidatedsiteplanapplication_notestemplates
+  priorReviewId: 54d5c002-4648-4fb0-b22d-d222cbbd02f9
+  checklistsDir: jurisdictions/austin/completeness-check/v2.7-trimmed
+  model: claude-haiku-4-5-20251001
+  departmentCode: cc
+  runs: 5
+  uncertainThreshold: 0.35
+  explainUncertain: True
+  uncertainExplanationModel: claude-sonnet-4-6
+  uncertainExplanationMaxWorkers: 10
+  checklistVersion: v2.7-trimmed
+  commentNumberingMap: pape-dawson-comment-num-mapping.tsv
+  maxWorkers: 35
+  enabledVisionSpecialists: generic-vision,inspect-drawing,measure-distance
+  runLabel: 2026_07_07_ROW_fix_take_1
+  setCurrent: False
+  projectId: 23301a8a-4cdb-4751-ac0c-93b97f0f5c12
+  reviewSchemaName: review
+  reviewPromptName: review
+  workflow status: in-progress  started: 2026-07-07T17:57:41.518Z
+
+=== steps (workflow/run-log.json) ===
+  [0] review                                   completed  2026-07-07T17:57:41.518Z -> 2026-07-07T18:11:19.795Z  items=70
+  [1] cross-run-consolidate-cc                 completed  2026-07-07T18:11:19.796Z -> 2026-07-07T18:11:20.391Z
+  [2] apply-forced-outcomes                    completed  2026-07-07T18:11:20.392Z -> 2026-07-07T18:11:21.066Z
+  [3] prepare-uncertain-explanation-inputs     completed  2026-07-07T18:11:21.068Z -> 2026-07-07T18:11:21.523Z
+  [4] explain-uncertain                        completed  2026-07-07T18:11:21.524Z -> 2026-07-07T18:14:24.379Z  items=16
+  [5] collect-uncertain-explanations           completed  2026-07-07T18:14:24.380Z -> 2026-07-07T18:14:24.951Z
+  [6] enrich-findings                          completed  2026-07-07T18:14:24.952Z -> 2026-07-07T18:14:25.459Z
+  [7] format-reports                           completed  2026-07-07T18:14:25.460Z -> 2026-07-07T18:17:06.989Z
+  [8] build-review-comments                    completed  2026-07-07T18:17:06.990Z -> 2026-07-07T18:17:07.575Z
+
+=== findings count per grouping x run ===
+  grouping         run-1   run-2   run-3   run-4   run-5
+  cc-1                33      33      33      33      33
+  cc-10                4       4       4       4       4
+  cc-13               37      37      37      37      37
+  cc-15               14      14      14      14      14
+  cc-19               22      22      22      22      22
+  cc-2                 6       6       6       6       6
+  cc-20                6       6       6       6       6
+  cc-21               10      10      10      10      10
+  cc-22               14      14      14      14      14
+  cc-23               11      11      11      11      11
+  cc-24                9       9       9       9       9
+  cc-3                11      11      11      11      11
+  cc-5                14      14      14      14      14
+  cc-6                 3       3       3       3       3
+
+=== checklist-ID format per cell (B=bare, P=grouping-prefixed, M=mixed) ===
+  grouping         run-1   run-2   run-3   run-4   run-5
+  cc-1                 B       B       B       B       B
+  cc-10                B       B       B       B       B
+  cc-13                B       B       B       B       B
+  cc-15                B       B       B       B       B
+  cc-19                B       B       B       B       B
+  cc-2                 B       B       B       B       B
+  cc-20                B       B       B       B       B
+  cc-21                B       B       B       B       B
+  cc-22                B       B       B       B       B
+  cc-23                B       B       B       B       B
+  cc-24                B       B       B       B       B
+  cc-3                 B       B       B       B       B
+  cc-5                 B       B       B       B       B
+  cc-6                 B       B       B       B       B
+
+=== consolidated-findings.json ===
+  items: 194  status: {'pass': 107, 'not-applicable': 61, 'warn': 6, 'uncertain': 16, 'fail': 4}
+  refs with 2+ colons (double-prefixed): 0
+  vote-missing distribution: {0: 194}
+  uncertain with >=1 missing vote: 0/16 (missing-driven uncertainty is the fragmentation signature)
+
+=== checklist item count (/Users/winston/noetic/bureau/jurisdictions/austin/completeness-check/v2.7-trimmed) ===
+  cc-1.md: 33
+  cc-10.md: 4
+  cc-13.md: 37
+  cc-15.md: 14
+  cc-19.md: 22
+  cc-2.md: 6
+  cc-20.md: 6
+  cc-21.md: 10
+  cc-22.md: 14
+  cc-23.md: 11
+  cc-24.md: 9
+  cc-3.md: 11
+  cc-5.md: 14
+  cc-6.md: 3
+  TOTAL checklist items: 194
