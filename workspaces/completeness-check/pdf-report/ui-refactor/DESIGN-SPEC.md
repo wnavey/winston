@@ -1,239 +1,232 @@
-# Spec: Porting the CC "Download Report" PDF to the RDS (diligence-report) Styling
+# Design Spec: Migrating the CC "Download Report" PDF to the RDS Renderer
 
 **Date:** 2026-07-08
-**Status:** Feasibility spec — no implementation yet
+**Status:** Approved direction — implementation spec
 
-## TL;DR verdict
+## Decision
 
-A pure **styling** port is feasible, but only if we keep the current rendering stack
-(`@react-pdf/renderer` in substation) and port the RDS *design language* (fonts, colors,
-type scale, cover/header/footer treatment) into the existing React-PDF components —
-**Option A**, ~2–4 days, zero functional change.
+The Report Design System (RDS) in `dsd/web/components/report-design-system/` and its
+Chromium-based print pipeline are the standard for all Noetic PDF output. The
+completeness-check "Download Report" PDF — currently rendered with `@react-pdf/renderer`
+in substation — migrates to that stack. Feature parity with the existing report is
+required; deltas from current behavior are listed explicitly in §7.
 
-Adopting the actual RDS component/renderer stack (**Option B**) is *not* a styling port —
-it's a rendering-stack migration. The RDS renderer is a local CLI built on esbuild + tsx +
-Playwright headless Chromium, and substation is a Vercel serverless function. Making that
-work in production requires real infra changes (serverless Chromium or pre-generation
-via sandbox) plus ~5 new RDS components to reach feature parity. Feasible, ~1.5–2.5 weeks,
-but it comes with functional changes that need sign-off (listed below).
+## 1. Why Chromium is part of this (context, once)
 
----
+The RDS is not a skin — it is HTML-emitting React components styled with real CSS
+(CSS Modules, `@page` paged-media rules, margin boxes for running headers/footers,
+`counter(page)`, `break-inside: avoid`, embedded Albert Sans/Lora). Only a browser
+engine can execute that CSS. The dsd renderer's final stage is Playwright loading the
+assembled HTML from `file://` and calling `page.pdf()` — Chromium used purely as a
+headless print engine (the automated equivalent of Cmd+P). No browser automation,
+navigation, or agent interaction is involved.
 
-## 1. Current state
+The CC report is the *easy* case for productionizing this: unlike SIRs (where an agent
+authors a bespoke `pages.tsx` per report), the CC report is **one fixed template + JSON
+data**. All authoring-time machinery (esbuild bundling, tsx, CSS Module compilation,
+font inlining) moves to substation's **build**; the only runtime work is
+`renderToStaticMarkup(template(data))` → HTML string → Chromium print.
 
-### 1.1 The existing CC PDF pipeline (on-demand, serverless)
+## 2. Current state (what we're replacing)
 
-| Layer | File | Role |
+| Layer | File | Fate |
 |---|---|---|
-| UI button | `cityhall/src/routes/(app)/project/[projectId]/review/[reviewId]/+page.svelte:2050` | `handleDownloadPdf()` (line 486) navigates to `…/completeness-check/pdf` |
-| Cityhall proxy | `cityhall/src/routes/(app)/project/[projectId]/review/[reviewId]/completeness-check/pdf/+server.ts` | Auth check, forwards to substation, streams PDF back |
-| Substation endpoint | `substation/src/routes/completeness-check-pdf.ts:125-288` | Fetches review + comments + **live triage** from Supabase, renders on demand |
-| Renderer | `substation/src/pdf/completeness-check-document.tsx` | `@react-pdf/renderer` (pure-JS Yoga layout — **no Chromium**) |
-| Theme | `substation/src/pdf/theme.ts` | Helvetica-only, Tailwind-ish gray ramp, status colors |
-| Components | `substation/src/pdf/components/` | logo-header, page-footer, status-icon, stacked-bar, uncertain-callout |
+| UI button + filename | `cityhall/src/routes/(app)/project/[projectId]/review/[reviewId]/+page.svelte:2050` (`handleDownloadPdf()` at :486) | **Unchanged** |
+| Cityhall proxy | `…/completeness-check/pdf/+server.ts` | **Unchanged** |
+| Substation endpoint (data fetch) | `substation/src/routes/completeness-check-pdf.ts:125-288` | **Kept** — data fetching, triage merge, cutover gate all stay; only the render call swaps |
+| React-PDF document | `substation/src/pdf/completeness-check-document.tsx` | **Replaced** by an RDS template |
+| React-PDF theme + components | `substation/src/pdf/theme.ts`, `src/pdf/components/*`, `src/pdf/noetic-document.tsx` | **Deleted** after cutover (with `@react-pdf/renderer` dep) |
+| Pure-text helpers | `src/pdf/components/uncertain-callout.ts`, triage annotation strings | **Ported as-is** (see §7.5) |
 
-Key properties of the current design:
+Preserved behavioral contract:
+- **On-demand generation with live data.** Triage state (`verdict_override`,
+  disposition, notes) is fetched at request time; the PDF always reflects the latest
+  human triage. This does not change.
+- **Cutover gate.** `CC_VERDICT_TRIAGE_CUTOVER_AT = '2026-07-07T21:00:00Z'` selects
+  legacy five-value vs. two-axis triage rendering and is mirrored byte-identically in
+  cityhall (`+page.svelte:106`). Ported exactly.
 
-- **On-demand rendering with live data.** Triage state (`verdict_override`, disposition,
-  notes) is fetched at download time — the PDF always reflects the latest human triage.
-- **Serverless-safe.** React-PDF is pure JS; runs fine in substation's Vercel function
-  (`substation/vercel.ts`: `dist/index.js`, maxDuration 800).
-- **Cutover gate.** `CC_VERDICT_TRIAGE_CUTOVER_AT = '2026-07-07T21:00:00Z'` is defined
-  byte-identically in substation (`completeness-check-pdf.ts:48`) and cityhall
-  (`+page.svelte:106`) and selects legacy five-value vs. new two-axis triage rendering.
-  Any port must preserve this exactly.
+## 3. Target architecture
 
-### 1.2 The new RDS PDF pipeline (local CLI, Chromium)
+```
+request → substation endpoint (auth, fetch review/comments/triage — unchanged)
+        → buildCcReportProps(data)                        (unchanged shape, §5)
+        → <CompletenessCheckReport {...props} />           (new RDS template)
+        → renderToStaticMarkup(...)                        (React, in-process)
+        → assembleReportHtml(markup, { pageRules, fonts }) (library extracted from dsd CLI)
+        → printPdf(html)                                   (playwright-core + @sparticuz/chromium)
+        → stream application/pdf                           (unchanged)
+```
 
-| Piece | Path |
+### 3.1 Runtime: Chromium inside substation's Vercel function
+
+Substation deploys as a Vercel Node function (`substation/vercel.ts`: `dist/index.js`,
+maxDuration 800). Chromium runs there via the standard serverless pattern:
+
+- **`@sparticuz/chromium`** (~50MB stripped Chromium built for AWS-Linux/Vercel) +
+  **`playwright-core`** (or `puppeteer-core`; pick whichever the extracted dsd library
+  standardizes on — recommend `playwright-core` to match the dsd CLI).
+- Launch args and executable path come from `@sparticuz/chromium`; local dev falls back
+  to the Playwright-installed Chromium (env switch, same pattern the community packages
+  document).
+- Expected latency: ~2–5s per download (cold Chromium launch + print of a 10–40 page
+  document; dsd renders 180-page SIRs in ~3s locally). Reuse the browser instance across
+  warm invocations.
+- **Function budget check (first implementation task):** confirm bundle size
+  (50MB Chromium layer + fonts) and memory (target 1.5–3GB) fit substation's plan.
+  If they don't, fallback is a dedicated render service (small always-on container with
+  dsd + full Playwright, `POST /render`) — same library code, different host. Decide
+  after a spike, not up front.
+
+### 3.2 Build-time (substation)
+
+- tsup/esbuild compiles the CC template + RDS components. Add CSS Modules handling to
+  the build (esbuild `css-modules` support — same approach the dsd CLI uses in stage 1)
+  and emit the combined CSS as a build artifact imported as a string.
+- Albert Sans + Lora TTFs inlined as base64 `@font-face` blocks at build time (reuse the
+  dsd renderer's font-embedding code).
+- The wordmark SVG and status icon SVGs inline via esbuild's `dataurl` loader (as in dsd).
+
+### 3.3 dsd changes: renderer libraryization
+
+Extract stages 2–4 of `dsd/web/scripts/render-report/cli.ts` into an importable module
+(new package, see §3.4), keeping the CLI as a thin wrapper:
+
+- `renderReportMarkup(element)` — `renderToStaticMarkup` + report-mode wrapper handling.
+- `assembleReportHtml(markup, opts)` — theme.css + report-theme.css + bundled CSS +
+  embedded fonts + generated named-`@page` margin-box rules (parsed from
+  `data-rds-page` attributes). Accept pre-inlined assets (no filesystem copying needed
+  for the CC case — all assets are build-time data URIs).
+- `printPdf(html, { browser })` — takes an injected browser/launch config so the same
+  code runs against full Playwright locally and `@sparticuz/chromium` on Vercel.
+
+The CLI's stage 1 (esbuild of an arbitrary `pages.tsx`) stays CLI-only; substation
+doesn't need it.
+
+### 3.4 dsd changes: packaging
+
+RDS is currently isolated by design ("no exports outside dsd"). That policy changes:
+publish **`@noetic/report-design-system`** (components + theme CSS + fonts) and
+**`@noetic/report-renderer`** (the extracted library) as private packages (GitHub
+Packages or the org's registry). This is a prerequisite and the first PR in the
+sequence; it also unblocks the CRC PDF ("moves to cloud in iter-3") and any future
+product-surface PDFs on the same stack. A git submodule is the fallback if package
+publishing is contentious, but packages are the recommendation — vendored copies are
+ruled out (drift defeats the point of standardizing).
+
+## 4. The CC report template in RDS vocabulary
+
+New file: `substation/src/pdf/completeness-check-report.tsx` — a report-mode component
+tree (`<ReportDocument>` root). Document structure, mirroring today's report:
+
+1. **Running chrome** (`ReportDocument`): `documentKicker` = site plan name (+ SP number
+   if available), `brand="Noetic"`. Page numbers and per-section footer labels come free
+   from the named-`@page` margin boxes.
+2. **Summary section** (`FlowingSection id="summary"`): pass-rate hero + status count
+   chips + stacked status bar, then the section results table with internal links to
+   each detail section.
+3. **One `FlowingSection` per CC section**, each with a **unique `id`** — a unique id
+   creates its own named `@page`, which forces a page break and gives a per-section
+   footer label. This reproduces today's one-detail-page-per-section behavior exactly
+   (note: this is the opposite of the SIR Part-grouping convention, deliberately).
+4. Within each section: findings grouped by status (fail → warn → uncertain → pass →
+   n/a), each group with a colored rail head, each finding with dot/title/triage
+   annotation/explanation/refs/resolution.
+
+### 4.1 Component mapping (existing RDS components)
+
+| CC feature | RDS component |
 |---|---|
-| Renderer CLI | `dsd/web/scripts/render-report/cli.ts` (4 stages: esbuild bundle → `renderToStaticMarkup` → self-contained HTML w/ base64 fonts → Playwright Chromium `page.pdf()`) |
-| Components | `dsd/web/components/report-design-system/` (CSS Modules + `theme.css` / `report-theme.css`) |
-| Skill wrapper | `claude-plugins/plugins/noetic-tools/skills/generate-report-pdf/render.sh` |
-| Reference doc | `dsd/web/components/report-design-system/CLAUDE.md` |
+| Per-section detail flow + footer labels + page numbers | `FlowingSection` + generated `@page` margin boxes |
+| Uncertain consensus callout | `Callout variant="data-gap"` with `buildUncertainCalloutText()` output |
+| Summary→section internal links | existing anchor mechanism (`sectionAnchorId`); Chromium preserves them as PDF GoTo annotations |
+| Site metadata block | `KeyValue layout="inline"` |
+| In-section hierarchy | `SectionHeading` / `SubHeading` |
 
-Key properties:
+### 4.2 New RDS components required (built in dsd, generic where sensible)
 
-- **REPORT mode** (flowing CSS paged media, `<ReportDocument>` / `<FlowingSection>`) is the
-  right mode for a CC report — it gives named `@page` margin boxes (running header/footer,
-  `counter(page)` page numbers, per-section footer labels) and native Chromium pagination.
-- **Design language:** Albert Sans + Lora (base64-embedded), RDS tokens
-  (`--rds-bright-marine: #0071BD`, `--rds-charcoal-blue: #3D4E59`, `--rds-ink-black: #0D1921`,
-  9-stop gray ramp), severity token set, restrained consulting-report chrome.
-- **Hard runtime requirements:** Node + esbuild + tsx + Playwright Chromium (~200MB),
-  temp-dir filesystem, and a checkout of `dsd/web` (RDS is not published as a package and
-  explicitly exports nothing outside dsd). **Designed for local/skill use, not deployment.**
-
----
-
-## 2. The fundamental mismatch
-
-The two systems differ on the axis that matters most:
-
-| | Current (substation) | RDS (dsd) |
-|---|---|---|
-| Layout engine | React-PDF / Yoga (pure JS) | Chromium print (CSS paged media) |
-| Runs in Vercel function | ✅ today | ❌ not without @sparticuz-style tricks |
-| Data freshness | Request-time (live triage) | Render-time (whenever you run the CLI) |
-| Component source | In-repo (`substation/src/pdf`) | Cross-repo (`dsd/web`, unpublished, CSS Modules) |
-| Styling primitives | `StyleSheet.create` objects | CSS Modules + `@page` rules |
-
-**Nothing style-related transfers mechanically.** React-PDF cannot consume CSS Modules or
-`@page` rules; RDS components cannot render under React-PDF. So "port the styling" means
-one of two very different projects:
-
----
-
-## 3. Option A — Restyle in place (recommended; the true "styling port")
-
-Keep `@react-pdf/renderer` and the entire request path unchanged. Rewrite
-`substation/src/pdf/theme.ts` + the document components to speak the RDS visual language:
-
-1. **Fonts.** Register Albert Sans + Lora TTFs via React-PDF `Font.register`, replacing
-   Helvetica. *Gotcha:* React-PDF doesn't handle variable fonts well — use static-weight
-   instances (Regular/Medium/SemiBold/Bold + italics), vendored into substation (fonts are
-   OFL-licensed; same families dsd embeds).
-2. **Color tokens.** Mirror `theme.css` values into `theme.ts`: bright-marine `#0071BD` as
-   the accent (rules, links, hero numbers), charcoal-blue `#3D4E59`, ink-black `#0D1921`
-   for headings, the `--rds-gray-*` ramp replacing the current Tailwind grays. Map CC
-   statuses onto the RDS severity palette (fail → `sev-significant` red, warn →
-   `sev-moderate` amber, uncertain → `sev-data-gap` gray-blue, pass → `sev-none` green,
-   n/a → gray).
-3. **Chrome.** Restyle `logo-header.tsx` / `page-footer.tsx` to match RDS running chrome:
-   document kicker top-left, "Noetic" wordmark top-right, footer label bottom-left,
-   `counter`-style page number bottom-right, hairline rules in `--rds-gray-300`. The
-   existing wordmark SVG paths can be kept.
-4. **Optional cover page.** RDS reports open with a full-bleed `ReportCover`. The CC report
-   currently opens directly on the summary page. Adding a cover is a (small) *content*
-   change — decide explicitly; parity says skip it or gate it.
-5. **Type scale & blocks.** Adopt RDS report-mode sizes/letterspacing for h1/h2/kickers,
-   restyle the section table, count chips, stacked bar, status rails, and finding blocks
-   to the RDS aesthetic (serif Lora for display headings, sans for body, restrained rules
-   instead of filled backgrounds where RDS does that).
-
-**Feature parity: 100% by construction** — same components, same data flow, same
-on-demand freshness, same internal links (React-PDF `Link`/anchors already work), same
-cutover-gate logic, same filename, no infra change.
-
-**Effort:** ~2–4 days including visual QA against a rendered SIR side-by-side.
-
-**Risks / costs:**
-- *Design drift:* tokens are manually mirrored from `theme.css`. Mitigate with a
-  `substation/src/pdf/rds-tokens.ts` file whose values are commented as a mirror of
-  `dsd/web/components/report-design-system/theme.css`, plus a lint-style note in both.
-- *Fidelity ceiling:* React-PDF can approximate but not pixel-match Chromium typography
-  (no `letter-spacing` in pt-perfect CSS terms, different line-breaking). Expect
-  "same family, obviously siblings," not identical.
-
-**Functional changes required: none.** (Cover page, if added, is the only content-visible
-delta and is optional.)
-
----
-
-## 4. Option B — Migrate to the real RDS renderer
-
-Author a CC report template as a REPORT-mode `pages.tsx`-style component tree and render
-through the dsd Chromium pipeline. This buys true shared styling (one design system, zero
-drift) but is a stack migration with three sub-decisions.
-
-### 4.1 Component parity gaps (new RDS components needed)
-
-The RDS report-mode vocabulary (FindingBlock, ConstraintMatrix, Callout, KeyValue,
-SnapshotTable, SectionHeading, MarkdownBody, SectionRef…) covers most of the CC report,
-but these CC features have **no RDS equivalent** and need new components in
-`dsd/web/components/report-design-system/`:
-
-| CC feature (current impl) | RDS gap → new component |
+| CC feature (current impl) | New component |
 |---|---|
-| Pass-rate hero % + status **count chips** (`countChip`/`countDot` styles) | `StatusSummary` (or reuse editorial `StatHero` pattern re-cut for report mode) |
-| **Stacked status bar** (`components/stacked-bar.tsx`) | Report-mode `StackedStatusBar` (editorial `StackedTimelineBar` exists but is editorial-scoped) |
-| **Section results table** with per-status colored counts, status icons, alternating rows, "Not applicable for Site Application" divider row, clickable row links | `SectionSummaryTable` — ConstraintMatrix is the closest cousin but has fixed columns/semantics |
-| **Status icons** (check/warning/dash SVGs) | `StatusIcon` |
-| **Status-grouped finding list** (colored rail group heads, per-item dot + title + annotation + explanation + refs + resolution) | `ChecklistFindingGroup`/`ChecklistFinding` — `FindingBlock` is severity-taxonomy (significant/moderate/note) and has an implication/nextStep shape that doesn't match CC's triage-annotation shape |
-| **CC status taxonomy** pass/fail/warn/uncertain/not-applicable | Extend `report-theme.css` severity tokens with a CC status token set (or map onto existing severities — mapping loses "pass=green ✓" vs "opportunity" distinction, so add tokens) |
+| Pass-rate hero % + status count chips (`countChip`/`countDot`) | `StatusSummary` |
+| Stacked status bar (`substation/src/pdf/components/stacked-bar.tsx`) | `StackedStatusBar` (report-mode; editorial `StackedTimelineBar` stays editorial-scoped) |
+| Section results table: per-status colored counts, status icons, alternating rows, "Not applicable for Site Application" divider row, clickable row links | `SectionSummaryTable` |
+| Check/warning/dash icons (`components/status-icon.tsx`) | `StatusIcon` |
+| Status-grouped finding list (colored rail group head; per-item dot, title, annotation, explanation, reference docs, resolution) | `ChecklistFindingGroup` / `ChecklistFinding` — deliberately distinct from `FindingBlock`, whose severity taxonomy and implication/nextStep shape don't fit checklist verdicts |
+| Status taxonomy pass/fail/warn/uncertain/not-applicable | New `--rds-status-*` token set in `report-theme.css` (§8, open question on hues), alongside — not replacing — the `--rds-sev-*` severity tokens |
 
-Straightforward mappings (no new components): uncertain callout → `Callout
-variant="data-gap"`; one-detail-page-per-section → one `FlowingSection` per section with a
-unique `id` (unique id ⇒ its own named `@page` ⇒ forced page break + per-section footer
-label — exactly CC's current behavior); summary→section internal links → existing anchor
-mechanism (`sectionAnchorId`, preserved as PDF GoTo annotations by Chromium); triage
-annotation text (legacy + two-axis) and `buildUncertainCalloutText` → port as-is as pure
-text helpers.
+These live in `dsd/web/components/report-design-system/` with CSS Modules, following
+existing conventions (print-unit typography, `break-inside: avoid` on finding blocks and
+table rows, SVG text with explicit `fontFamily`), and get sample coverage in
+`dsd/web/scripts/render-report/_samples/` so they render in the dsd preview like every
+other component.
 
-### 4.2 The runtime problem (pick one)
+## 5. Data model (unchanged)
 
-**B1 — Serverless Chromium in substation (recommended if B).**
-Keep on-demand generation. Key insight making this viable: unlike SIRs (agent-authored
-`pages.tsx` per report), the CC report is **one fixed template + JSON data** — so the
-esbuild/tsx stages of the dsd CLI can happen **at substation build time** (tsup compiles
-the RDS components + CSS Modules into the bundle; fonts inlined as base64 at build).
-Runtime then only needs: `renderToStaticMarkup(template(data))` → assemble HTML string →
-Chromium print. Chromium via `@sparticuz/chromium` + `playwright-core`/`puppeteer-core`
-(the standard Vercel pattern, ~50MB, fits Node functions; a 10–40 page CC report is far
-below SIR scale). Requires: refactoring the render pipeline's stages 2–4 into a library
-function (dsd change), packaging RDS components for consumption outside dsd (see 4.3),
-and a build-time CSS Modules plugin for tsup. Latency ~2–5s per download (cold Chromium
-launch) — acceptable for a download button.
+The template consumes the exact props shape the React-PDF document takes today
+(`CompletenessCheckReportProps`: `sitePlanName`, `siteAddress`, `completedAt`,
+`sections: CcSection[]`, `triageMap`, `usesNewCcTriage`). All fetching, bucketing,
+triage merging, and the cutover computation in `completeness-check-pdf.ts` stay as-is —
+the endpoint swaps only its final render call. This keeps the diff reviewable and makes
+the parity QA (§9) a pure rendering comparison.
 
-**B2 — Pre-generate + store.**
-Render at CC-workflow completion (in the Vercel Sandbox conductor already runs in — full
-Playwright works there) and store in Supabase storage; the button becomes a signed-URL
-download. **Functional change:** the PDF no longer reflects live triage. Triage edits
-(`verdict_override`, dispositions, notes) happen *after* the run completes, so this
-requires regeneration triggers on `comment_triage` writes (debounced), or the report is
-stale — a behavior regression users would notice. More moving parts than B1.
+## 6. Workstreams & sequencing
 
-**B3 — Dedicated render service.**
-A small always-on container (Fly/Railway/VM) with dsd checked out + Chromium, exposing
-`POST /render`. Cleanest technically, but it's new infra to own for one endpoint. Only
-worth it if RDS-rendered PDFs are about to be needed by more product surfaces (e.g. the
-CRC PDF, whose UI button says "PDF generation moves to cloud in iter-3" — if iter-3 lands
-a cloud render path anyway, align with that plan instead of building twice).
+| # | Workstream | Repo | Depends on |
+|---|---|---|---|
+| 1 | Spike: `@sparticuz/chromium` + `playwright-core` hello-world PDF from substation's deployed function; measure cold/warm latency, bundle size, memory | substation | — |
+| 2 | Renderer libraryization (`renderReportMarkup` / `assembleReportHtml` / `printPdf`) + CLI refactored onto it | dsd | — |
+| 3 | Publish `@noetic/report-design-system` + `@noetic/report-renderer` | dsd | 2 |
+| 4 | New RDS components + status tokens (§4.2), with samples | dsd | — (parallel with 2/3) |
+| 5 | CC template in substation + build wiring (CSS Modules, fonts) + endpoint swap behind `CC_PDF_RENDERER=rds\|react-pdf` env flag | substation | 1, 3, 4 |
+| 6 | Parity QA (§9), flip flag default, remove flag + delete React-PDF code path and dep | substation | 5 |
 
-### 4.3 Cross-repo packaging
+Estimated total: ~1.5–2.5 weeks. Workstream 1 is the risk-retirement step — do it first;
+if it fails substation's function budget, swap the host to a render service (§3.1
+fallback) without changing any library code.
 
-RDS today is "isolated by design — no exports outside dsd." Substation consuming it needs
-one of: publish `@noetic/report-design-system` (private npm/GitHub package — right answer,
-enables CRC + future reports), a git submodule, or a vendored copy (drift, defeats the
-purpose). This is a dsd-team decision and a prerequisite for any B variant.
+**CRC alignment:** the CRC download button is currently disabled with "PDF generation
+moves to cloud in iter-3" (`+page.svelte:2061`). Workstreams 2–4 are exactly the shared
+infrastructure that work needs; the CRC PDF should be built directly on this stack as a
+second template, never on React-PDF.
 
-### 4.4 Effort & functional changes
+## 7. Deltas from current behavior (explicit)
 
-**Effort:** ~1.5–2.5 weeks (5-ish new RDS components + CC status tokens, renderer
-libraryization in dsd, RDS packaging, substation integration with serverless Chromium,
-port of triage-annotation/cutover/uncertain logic, visual + data QA on pre- and
-post-cutover reviews).
+1. **Latency:** download goes from near-instant (React-PDF streams) to ~2–5s (Chromium
+   launch + print). Same order of magnitude; acceptable for a download button. Mitigate
+   with warm browser reuse.
+2. **Typography/layout will not be pixel-identical** — it will be *better* (real
+   paged-media layout, RDS type system), but any downstream consumer expecting exact
+   page counts or coordinates (none known) would notice.
+3. **New production dependency:** a Chromium binary in the function bundle. Ownership:
+   substation. Pin `@sparticuz/chromium` to the playwright-core-compatible version.
+4. **RDS repo policy:** RDS becomes an externally consumable package (was: isolated).
+5. **Not a delta — a hard invariant:** the cutover constant and every triage-annotation
+   string (legacy five-value and two-axis wording, D11 note-sharing rule) and
+   `buildUncertainCalloutText` port **byte-identically**. They are mirrored in
+   cityhall's UI; drift makes PDF and UI disagree about a review's triage era or
+   wording. Port the pure-text helpers by moving the files, not rewriting them.
+6. **Internal links, filename, auth path, on-demand freshness:** unchanged.
 
-**Functional changes to sign off on (user asked to be told):**
-1. **Rendering runtime** changes from pure-JS React-PDF to headless Chromium — new binary
-   dependency in production (B1), or a data-freshness model change (B2), or new infra (B3).
-2. **RDS repo policy change** — RDS must become consumable outside dsd (package/submodule).
-3. **dsd renderer refactor** — CLI stages must be callable as a library with a pre-bundled
-   template (skips runtime esbuild).
-4. **Latency profile** — download goes from ~instant (React-PDF streams) to ~2–5s (B1
-   Chromium launch + print). Same order of magnitude, but measurable.
-5. Not a change, but a hard requirement: the **cutover-gate constant and legacy/two-axis
-   annotation strings must be ported byte-identically** (they're mirrored in cityhall's UI;
-   any drift makes PDF and UI disagree about a review's triage era).
+## 8. Open questions
 
----
+1. **Cover page.** RDS convention opens with a full-bleed `ReportCover`; the CC report
+   currently opens on the summary page. Recommendation: **add the cover** (site plan
+   name as subject, review date, "Completeness Check Report" as title) — it's the RDS
+   standard and costs one page — but it is additive to parity, so flagging for sign-off.
+2. **Status colors.** Keep CC's exact green/red/amber/gray (matches cityhall's web UI)
+   or restate them in RDS's more muted editorial hues? Recommendation: define the new
+   `--rds-status-*` tokens with the **current UI-matching hues** so PDF and web UI agree,
+   and let RDS-wide palette harmonization happen later as a dsd design decision.
+3. **Package registry** for the private packages (GitHub Packages vs. existing org
+   registry) — whoever owns dsd CI decides in workstream 3.
 
-## 5. Recommendation
+## 9. Parity QA checklist (workstream 6 gate)
 
-- **If the goal is "make the CC report look like the new RDS reports": do Option A.**
-  It is the only version of this that is genuinely a UI-styling port-over — feature parity
-  is automatic, no functional changes, ~2–4 days, ships independently of dsd.
-- **Treat Option B as a separate, deliberate platform decision**, ideally bundled with the
-  already-planned CRC "PDF generation moves to cloud in iter-3" work — that's the natural
-  moment to pay for RDS packaging + a production render path once, for both report types.
-- A sensible sequence: ship A now for immediate visual coherence; fold CC into B when/if
-  the CRC cloud-PDF work lands the shared render infrastructure.
-
-## 6. Open questions
-
-1. Should the RDS-styled CC report gain a **cover page** (RDS convention) or keep opening
-   on the summary page (current parity)?
-2. Status→color mapping: keep CC's green/red/amber/gray exactly, or adopt RDS severity
-   hues (which read slightly more muted/editorial)? Affects UI-vs-PDF color consistency,
-   since cityhall's web UI uses the current palette.
-3. Is the CRC iter-3 cloud-PDF plan far enough along that Option B should just ride it?
+Render old vs. new for: (a) a post-cutover review with verdict overrides + dispositions
++ notes, (b) a pre-cutover review exercising all five legacy triage values, (c) a
+multi-run review with uncertain items (vote breakdowns, tentative verdicts, missing-run
+counts), (d) a review with all-N/A sections (divider row), (e) a review with unclear
+items (legacy status column). Verify: every status count, every annotation string
+byte-for-byte, section table links jump correctly, page footer labels/numbers, stacked
+bar proportions, reference docs + resolution lines, filename, and that both eras render
+correctly through the same endpoint.
