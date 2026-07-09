@@ -264,9 +264,18 @@ So step 4 (regen) and step 6 (flip) must happen together, atomically.
 - [x] Confirm conductor/bureau/cityhall code is in — all merged as of
       2026-07-09 (bureau #532 last); assume deployed at execution time.
       Remaining pre-flight: prod substation deploy includes #127 (§6).
-- [ ] Write the one-off regen script (imports `generateReadingGuide` /
+- [x] Write the one-off regen script (imports `generateReadingGuide` /
       `buildBlocksContext`, loops v4's 57 sheet_versions, applies steps 1-6
-      plus the §7 guards and the §10 snapshot).
+      plus the §7 guards and the §10 snapshot) — done 2026-07-09:
+      `substation/scripts/regen-reading-guides-v4.ts`.
+- [x] **EXECUTED 2026-07-09.** All 57 sheet_versions converted to
+      `short-id-ordered` (tally `{converted: 57}`, exit 0). Live-verified:
+      57/57 short-id-ordered, 0 null/short guides, 0 out-of-range block refs.
+      Artifacts (snapshots, run logs, rollback README) in
+      [`v4-reprocess-artifacts/`](./v4-reprocess-artifacts/). Canonical
+      rollback snapshot: `snapshot-preflip-2026-07-09T16-54-47Z.json`.
+      Downstream still pending: a fresh CRC/CC run over v4 (next session) to
+      surface the block numbers on evidence chips.
 - [x] Snapshot pre-flip guides — decided 2026-07-09: mandatory (§10).
 
 ---
