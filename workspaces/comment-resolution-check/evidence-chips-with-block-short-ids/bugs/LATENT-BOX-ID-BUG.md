@@ -137,6 +137,34 @@ All against sheet_version `fa11d91d-23d7-4d35-a65e-7cf6598938bc`
    meters; row 2 (desc: meter notice notes) sits on the UCM waiver
    summary table.
 
+## Timeline — the corruption predates the evidence-chip work
+
+A natural first question: did the
+[Lamar + Collier v4 partial reprocess](../Lamar-Collier-v4-partial-reprocess-plan.md)
+(executed 2026-07-09) re-run the two vision calls and introduce this? **No.**
+The mispaired rows date from v4's *original* processing, two months earlier;
+the evidence-chip work only made them visible.
+
+| Date | Event | Touched text↔bbox pairing? |
+|---|---|---|
+| 2026-05-04 | v3 processed (`process-file`) — sheet 6 blocks extracted; transcription order happened to match → coherent rows | created (correctly) |
+| **2026-05-11 23:13 UTC** | **v4 processed (`process-file`) — sheet 6's 21 `content_block` rows inserted (verified via `created_at`); transcription order deviated → mispaired rows** | **created (corrupted)** |
+| 2026-07-01 | Phase 1 `short_id` backfill — `ROW_NUMBER()` over existing bboxes | no (adds short_id keyed to bbox, which is the correct side) |
+| 2026-07-09 | Partial reprocess — regenerates `reading_guide` (1 LLM call/sheet, **no block discovery, no transcription**), flips scheme flag; all 447 blocks untouched by design (plan §3, §8) | no |
+| 2026-07-09 | CRC run `47eca23e` + chip modal — first consumer ever to draw a text-cited block's bbox | no — **surfaced it** |
+
+Two corollaries:
+
+- **v3 vs v4 is a per-run lottery, not a regression.** Both went through
+  the same pipeline; v4's sheet-6 transcription response came back
+  reordered, v3's didn't.
+- **The reprocess plan's §2 audit couldn't have caught this.** It
+  verified short_id coverage, uniqueness, and bbox non-nullness — all
+  properties of the bbox side, which is fine. Text↔bbox coherence was
+  never checked because nothing consumed it yet. Until the chip modal,
+  the only surface pairing text with a drawn bbox was the sheet page's
+  block sidebar, where the mismatch sat unnoticed.
+
 ## Root cause
 
 `substation/src/inngest/functions/process-file/sheet.ts` step
