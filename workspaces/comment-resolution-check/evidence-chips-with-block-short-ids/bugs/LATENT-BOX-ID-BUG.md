@@ -27,6 +27,45 @@ substation's `process-file` sheet pipeline: two independent LLM calls
 index** with nothing enforcing that the second call returned its array in
 the first call's order.
 
+## The bug in one diagram
+
+```
+                         sheet (thumbnail + PDF)
+                                   │
+              ┌────────────────────┴────────────────────┐
+              ▼                                          ▼
+   LLM CALL #1 — discovery                    LLM CALL #2 — transcription
+   "find the blocks"                          "here are N boxes, transcribe
+              │                                each; return in same order"
+              ▼                                          ▼
+   boxes, in DISCOVERY order                  texts, in THE MODEL'S OWN order
+   (arbitrary)                                (often visual reading order)
+                                                         │
+   [0] bbox A + category ◄───── zip by ─────► [0] text for block B   ✗
+   [1] bbox B + category ◄─── ARRAY INDEX ──► [1] text for block C   ✗
+   [2] bbox C + category ◄── (no key, no ───► [2] text for block A   ✗
+                              order check)
+              │
+              ▼
+   sort by bbox (y, x) → short_id = 1..N      ← deterministic, correct,
+              │                                  but the text is already
+              ▼                                  glued to the wrong box
+   content_block row:
+   { short_id ✓, bounding_box ✓, category ✓, description ✗, content ✗ }
+              │
+      ┌───────┴────────────────────┐
+      ▼                            ▼
+   blocks.md / agent            UI highlights (chip modal, ?block=)
+   reads short_id + text        draw the bbox for that short_id
+   → internally coherent,       → box belongs to a different block:
+     citation "correct"           WRONG REGION HIGHLIGHTED
+```
+
+The two LLM calls each produce a correct list; the corruption is the
+index-zip between them. Everything downstream — short_id numbering, the
+§3.4 validity gate, the modal's bbox lookup — operates deterministically
+and correctly on already-mispaired rows.
+
 ## Symptom (as observed)
 
 CRC run `47eca23e` on Lamar + Collier (project `23301a8a`, submission
