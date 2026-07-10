@@ -30,19 +30,26 @@ the first call's order.
 ## The bug in one diagram
 
 ```
-                         sheet (thumbnail + PDF)
-                                   │
-              ┌────────────────────┴────────────────────┐
-              ▼                                          ▼
-   VISION CALL #1 — discovery                 VISION CALL #2 — transcription
-   input: thumbnail JPEG                      input: full-page PDF + a text
-   "find the blocks"                          list of call #1's boxes (no
-              │                               crops): "transcribe each;
-              │                               return in same order"
-              ▼                                          ▼
-   boxes, in DISCOVERY order                  texts, in THE MODEL'S OWN order
-   (arbitrary)                                (often visual reading order)
-                                                         │
+   VISION CALL #1 — discovery
+   input: sheet thumbnail JPEG — "find the blocks"
+              │
+              ▼
+   boxes + categories, in DISCOVERY order (arbitrary)
+              │
+              ├───────────────────────────────────────────────┐
+              │  (serial dependency: call #2's prompt          │
+              │   embeds call #1's box list)                   │
+              │                                                ▼
+              │                     VISION CALL #2 — transcription
+              │                     input: full-page PDF + text list of
+              │                     call #1's boxes (no crops) —
+              │                     "transcribe each; return in same order"
+              │                                                │
+              │                                                ▼
+              │                     texts, in THE MODEL'S OWN order
+              │                     (often visual reading order)
+              │                                                │
+              ▼                                                ▼
    [0] bbox A + category ◄───── zip by ─────► [0] text for block B   ✗
    [1] bbox B + category ◄─── ARRAY INDEX ──► [1] text for block C   ✗
    [2] bbox C + category ◄── (no key, no ───► [2] text for block A   ✗
