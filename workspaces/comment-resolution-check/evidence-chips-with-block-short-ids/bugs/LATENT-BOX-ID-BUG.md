@@ -34,9 +34,11 @@ the first call's order.
                                    │
               ┌────────────────────┴────────────────────┐
               ▼                                          ▼
-   LLM CALL #1 — discovery                    LLM CALL #2 — transcription
-   "find the blocks"                          "here are N boxes, transcribe
-              │                                each; return in same order"
+   VISION CALL #1 — discovery                 VISION CALL #2 — transcription
+   input: thumbnail JPEG                      input: full-page PDF + a text
+   "find the blocks"                          list of call #1's boxes (no
+              │                               crops): "transcribe each;
+              │                               return in same order"
               ▼                                          ▼
    boxes, in DISCOVERY order                  texts, in THE MODEL'S OWN order
    (arbitrary)                                (often visual reading order)
