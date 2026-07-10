@@ -1,7 +1,9 @@
 # Figure Extraction Audit — generate-crc-guides gen 6 (Lamar + Collier v4) + Robustness Redesign
 
-**Status:** Draft v1
+**Status:** Draft v1.1
 **Date:** 2026-07-10
+
+> **Revision note (v1.1):** During the surgical-repair drafting that followed this audit, the `pdfimages` census surfaced a figure the audit's own vision sweep had missed: MCR page 33 carries **three** embedded figures, not two. The small "COURTYARD — SEE LANDSCAPE PLANS FOR DETAILS." callout screenshot is SP48's rightful figure (its comment is exactly about the missing courtyard landscape plan). Corrections: ground truth is **22** figures on kept parents (not 21); gen 6 recall is 10/22 (~45%); the SP48/SP47 entry in the finding table is not merely a misattribution — SP47's figure was filed under SP48 *and* SP48's own figure was missed. This strengthens the case for P1: the deterministic census out-recalled even the audit's dedicated multi-agent vision sweep.
 **Repos touched:** `claude-plugins` (generate-crc-guides skill: `references/figure-extraction.md`, `prompts/detect-and-bound-figures.md`, `scripts/verify-phase.py`, `pipeline.md`)
 **Repos NOT touched:** `conductor`, `bureau`, `cityhall`, `substation`
 **Audited artifact:** `comment-resolution-check/23301a8a-4cdb-4751-ac0c-93b97f0f5c12/cf1201c2-2e8b-4034-9a5e-a70b6317e39a/4/6/` (generation 6, MCR sha256 `aae036fc…`, 51 pages, 226 parsed comments, 196 kept parents)
@@ -58,6 +60,7 @@ The ground-truth pass was then cross-validated with a deterministic census: `pdf
 | 8 | PR5 | 24 | Screen capture of ~0.52-ac parkland area along Collier St (continuation; header on p23; comment says *"Please refer to the screen capture below"*) | Missed — page 24 reported 0 figures | PR-5 | `crc-PR.md` |
 | 9 | SP31 | 30 | Subchapter E "Figure 34: Examples of fully shielded light fixtures" strip (continuation; header on p29) | Missed | SP-31.2 (the item literally requires Figure 34 to be reproduced on the plan), SP-31.1 | `crc-SP-2.md` |
 | 10 | SP47 | 33 (top) | Site-plan screenshot, red circle around unidentified feature "5001" (continuation; header on p32; comment says *"identify the features shown below"*) | Misattributed → emitted as `figures/SP48/1.png` | SP-47 missing it; SP-48 shows the wrong figure | `crc-SP-3.md` |
+| 10b | SP48 | 33 | Small screenshot of the "COURTYARD — SEE LANDSCAPE PLANS FOR DETAILS." callout on the Site Plan Sheet (v1.1 addition — found by the `pdfimages` census; missed by both gen 6 and this audit's vision sweep) | Missed (SP47's figure occupied its slot) | SP-48 | `crc-SP-3.md` |
 | 11 | SP51 | 34 | Screenshot of the Sheet-16 parking table with red oval around the placeholder case number (continuation; header on p33) | Missed — page 34 reported 0 figures | SP-51 | `crc-SP-3.md` |
 
 Correctly extracted and attributed: TPW 9, TPW 12, TPW 15 (1 of 3), TPW 16 (`2.png`), DE 22, DE 30, DE 31, IW 1, SP2, SP50.
