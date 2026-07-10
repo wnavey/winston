@@ -183,6 +183,109 @@ reading order, as designed) — the text is already mispaired by the time
 numbering happens. Determinism in the numbering can't repair a corrupted
 text↔bbox join that precedes it.
 
+## Sample request / response (illustrative)
+
+Abridged to three of sheet 6's blocks, with real coordinates and content
+from the incident. Prompts are truncated; shapes match the code
+(`blockDiscoverySchema`, `batchBlockDetailsSchema`,
+`buildBatchBlockPrompt`).
+
+### Call #1 — `discoverContentBlocks` (layout discovery)
+
+Request (AI SDK `generateObject` → Gemini):
+
+```jsonc
+{
+  "model": "gemini-…",
+  "schema": "blockDiscoverySchema",
+  "messages": [{
+    "role": "user",
+    "content": [
+      { "type": "image", "image": "data:image/jpeg;base64,<sheet 6 thumbnail>" },
+      { "type": "text", "text": "You are analyzing a single page from a civil engineering site plan submission. Your task is to create a comprehensive breakout of all distinct content elements on this page. …" }
+    ]
+  }]
+}
+```
+
+Response — boxes + categories only, **no text**. `bounding_box` is
+`[ymin, xmin, ymax, xmax]` normalized 0–1000, in whatever order the
+model emitted (the "discovery order"):
+
+```jsonc
+{
+  "contentSections": [
+    { "category": "notes", "bounding_box": [261, 453, 456, 559] },  // ← METER NOTICE NOTES
+    { "category": "form",  "bounding_box": [262, 568, 537, 718] },  // ← POTABLE METER(S)
+    { "category": "form",  "bounding_box": [262, 727, 579, 858] }   // ← NP METERS column
+  ]
+}
+```
+
+This output is correct: each category matches what's inside its box.
+
+### Call #2 — `extractBlockDetails` (batch transcription)
+
+Request — the full-page PDF plus a **text** rendering of call #1's box
+list (`buildBatchBlockPrompt`); no crops are taken:
+
+```jsonc
+{
+  "model": "gemini-…",
+  "schema": "batchBlockDetailsSchema",
+  "messages": [{
+    "role": "user",
+    "content": [
+      { "type": "file", "data": "<sheet 6 PDF>", "mediaType": "application/pdf" },
+      { "type": "text", "text": "There are 21 content blocks on this page. For each block, analyze ONLY the content within its bounding box.\n\nBounding boxes (in [ymin, xmin, ymax, xmax] format, normalized to 0-1000):\nBlock 1: [261,453,456,559]\nBlock 2: [262,568,537,718]\nBlock 3: [262,727,579,858]\n\nReturn an array of 21 block details in the same order.\n\nFor each block: You are analyzing an individual section… ONLY LOOK WITHIN THE BOUNDING BOX. …" }
+    ]
+  }]
+}
+```
+
+Response — text only, **no box echoed back** (`updatedBounds` is in the
+schema but optional, and ignored by the merge even when present). On the
+bad run the array came back in the model's own order, not the listed
+order:
+
+```jsonc
+{
+  "blocks": [
+    { "sectionName": "Potable Meter(s)",              // ← belongs to Block 2's box
+      "description": "Details for potable meter(s) including address, source and use, meter type, size, max GPM, and service units…",
+      "content": "POTABLE METER(S)\nADDRESS: 1700 SOUTH LAMAR BLVD…\nMETER TYPE: COMPOUND\nSIZE: 4\" MAX GPM: 600…" },
+    { "sectionName": "Reclaimed Meter(s)",            // ← belongs to a box further down
+      "description": "Section intended for providing details on reclaimed meter(s)…",
+      "content": "RECLAIMED METER(S)\nADDRESS: …" },
+    { "sectionName": "Potable Backup to OWRS",        // ← belongs to yet another box
+      "description": "Details for potable backup to OWRS (NP Meters)…",
+      "content": "NP METERS…" }
+  ]
+}
+```
+
+Each element is a faithful transcription of *some* block — just not the
+block at the same position in call #1's list.
+
+### The merge — where the rows go bad
+
+`mergeBlockDetails` joins the two arrays positionally, so index 0 of the
+response above gets glued to index 0 of the discovery list:
+
+```jsonc
+// persisted content_block row (after (y,x) sort → short_id 9)
+{
+  "short_id": 9,
+  "category": "notes",                                  // from call #1 — matches the box ✓
+  "bounding_box": { "x": 0.453, "y": 0.261, "width": 0.106, "height": 0.195 },  // METER NOTICE NOTES ✓
+  "description": "Details for potable meter(s)…",       // from call #2, index-zipped ✗
+  "content": "POTABLE METER(S)\nADDRESS: 1700 SOUTH LAMAR BLVD…"                // ✗
+}
+```
+
+Nothing in either payload links a transcription to its box — the join
+key exists only as an unenforced instruction in call #2's prompt.
+
 ## Impact
 
 - **Wrong-region highlights** in the CRC evidence-chip modal and the
