@@ -1,0 +1,466 @@
+# Latent box↔text mispairing in `content_block` (wrong evidence-chip highlights)
+
+> **Status:** Diagnosed 2026-07-09. Root cause in substation's block
+> extraction; fix not yet implemented. Discovered via CRC run
+> `47eca23e-a010-4f87-ac3b-1cf6f4c481ae` (Lamar + Collier v4), finding
+> AW-RL-1. Filed alongside [`../DEV-PLAN.md`](../DEV-PLAN.md) because the
+> symptom presents as an evidence-chip bug — it isn't one.
+
+---
+
+## Summary
+
+On some sheets, `content_block` rows have their `description`/`content`
+paired with the **wrong** `bounding_box`. The bboxes themselves are
+accurate and the `short_id`s are correctly derived from them; the *text*
+riding on each row belongs to a different block. Every spatial consumer
+renders the corruption faithfully: the CRC evidence-chip modal highlights
+the wrong region, the sheet page's `?block=` deep-link highlights the
+wrong region, and the sheet page's block sidebar shows the wrong
+transcription when you click a block.
+
+The evidence-chip pipeline (agent citation → §3.4 gate → persistence →
+modal short_id lookup) worked end-to-end exactly as designed. The agent's
+citation was textually correct. This is upstream data corruption in
+substation's `process-file` sheet pipeline: two independent LLM calls
+(bbox discovery, batch transcription) are zipped together **by array
+index** with nothing enforcing that the second call returned its array in
+the first call's order.
+
+## The bug in one diagram
+
+```
+   VISION CALL #1 — discovery
+   input: sheet thumbnail JPEG — "find the blocks"
+              │
+              ▼
+   boxes + categories, in DISCOVERY order (arbitrary)
+              │
+              ├───────────────────────────────────────────────┐
+              │  (serial dependency: call #2's prompt          │
+              │   embeds call #1's box list)                   │
+              │                                                ▼
+              │                     VISION CALL #2 — transcription
+              │                     input: full-page PDF + text list of
+              │                     call #1's boxes (no crops) —
+              │                     "transcribe each; return in same order"
+              │                                                │
+              │                                                ▼
+              │                     texts, in THE MODEL'S OWN order
+              │                     (often visual reading order)
+              │                                                │
+              ▼                                                ▼
+   [0] bbox A + category ◄───── zip by ─────► [0] text for block B   ✗
+   [1] bbox B + category ◄─── ARRAY INDEX ──► [1] text for block C   ✗
+   [2] bbox C + category ◄── (no key, no ───► [2] text for block A   ✗
+                              order check)
+              │
+              ▼
+   sort by bbox (y, x) → short_id = 1..N      ← deterministic, correct,
+              │                                  but the text is already
+              ▼                                  glued to the wrong box
+   content_block row:
+   { short_id ✓, bounding_box ✓, category ✓, description ✗, content ✗ }
+              │
+      ┌───────┴────────────────────┐
+      ▼                            ▼
+   blocks.md / agent            UI highlights (chip modal, ?block=)
+   reads short_id + text        draw the bbox for that short_id
+   → internally coherent,       → box belongs to a different block:
+     citation "correct"           WRONG REGION HIGHLIGHTED
+```
+
+The two LLM calls each produce a correct list; the corruption is the
+index-zip between them. Everything downstream — short_id numbering, the
+§3.4 validity gate, the modal's bbox lookup — operates deterministically
+and correctly on already-mispaired rows.
+
+## Symptom (as observed)
+
+CRC run `47eca23e` on Lamar + Collier (project `23301a8a`, submission
+version `6b9b85ed`, plan set `908ffab5`), finding **AW-RL-1** ("potable
+meter info absent"), persisted `blockNumber: 9` on sheet 6. Chip click
+opens the modal with highlight + zoom — but the highlight lands on the
+**METER NOTICE NOTES** block, not the **POTABLE METER(S)** table the
+finding is about. On the sheet page, the potable table highlights under
+`?block=10`, the notes block under `?block=9`.
+
+First guess was an off-by-one in the chip pipeline or a hallucinated
+integer. Neither survives contact with the data.
+
+## Evidence chain
+
+All against sheet_version `fa11d91d-23d7-4d35-a65e-7cf6598938bc`
+(sheet 6 of plan_set_version `e9111f12`, the v4 submission, processed
+2026-05-11, `block_numbering_scheme = 'short-id-ordered'`).
+
+1. **The persisted citation is not a hallucination.** 3 of 5 CRC voters
+   (runs 1, 4, 5) independently cited Block 9, each describing the
+   potable meter table's content (first row filled: 4" compound,
+   600 MAX GPM, 30 service units; second row blank). Independent
+   convergence on the same number with matching content rules out a
+   one-off.
+
+2. **The cited row's text IS the potable table.** DB row `short_id = 9`:
+   description *"Details for potable meter(s) including address, source
+   and use, meter type, size, max GPM, and service units…"*. This is what
+   blocks.md labeled "Block 9", so the agent's citation is internally
+   correct.
+
+3. **But that row's bbox frames a different block.** Rendering the stored
+   bboxes onto the sheet 6 JPEG (5400×3600 thumbnail from storage):
+   - `short_id 9` bbox `{x:.453, y:.261, w:.106, h:.195}` exactly frames
+     **METER NOTICE NOTES** (the numbered 1–4 instructions block).
+   - `short_id 10` bbox `{x:.568, y:.262, w:.150, h:.275}` (described as
+     "reclaimed meter(s)") exactly frames **POTABLE METER(S)**.
+   The boxes are crisp, exact frames of *other* blocks — mispairing, not
+   sloppy vision.
+
+4. **`category` sides with the bbox; `description` doesn't.** Row 9 is
+   category `notes` (the notes block at its bbox) with a form-table
+   description; row 10 is `form` likewise. Category and bbox come from
+   the same extraction step; description/content come from a different
+   one. This is the fingerprint of the root cause.
+
+5. **The prior sheet_version is coherent.** v3's sheet 6
+   (`df3e6356-d05b-41d1-a0a6-cb543ff0078f`, 19 blocks) pairs the same
+   bboxes with the right text (its row at `{.453,.262}` is correctly
+   "notes providing instructions for completing meter information"; its
+   potable row is at `{.568,.26}`). So the corruption entered during the
+   v4 re-extraction, and it's nondeterministic per processing run.
+
+6. **Scope on this sheet:** ~half of the 21 v4 rows are provably
+   mispaired by cross-referencing v3's coherent pairs — e.g. row 14
+   (desc: demand data table) sits on the standard-construction-notes
+   bbox; row 7 (desc: construction notes) sits on the infrastructure
+   table; row 17 (desc: building water meter sizes) sits on reclaimed
+   meters; row 2 (desc: meter notice notes) sits on the UCM waiver
+   summary table.
+
+## Timeline — the corruption predates the evidence-chip work
+
+A natural first question: did the
+[Lamar + Collier v4 partial reprocess](../Lamar-Collier-v4-partial-reprocess-plan.md)
+(executed 2026-07-09) re-run the two vision calls and introduce this? **No.**
+The mispaired rows date from v4's *original* processing, two months earlier;
+the evidence-chip work only made them visible.
+
+| Date | Event | Touched text↔bbox pairing? |
+|---|---|---|
+| 2026-05-04 | v3 processed (`process-file`) — sheet 6 blocks extracted; transcription order happened to match → coherent rows | created (correctly) |
+| **2026-05-11 23:13 UTC** | **v4 processed (`process-file`) — sheet 6's 21 `content_block` rows inserted (verified via `created_at`); transcription order deviated → mispaired rows** | **created (corrupted)** |
+| 2026-07-01 | Phase 1 `short_id` backfill — `ROW_NUMBER()` over existing bboxes | no (adds short_id keyed to bbox, which is the correct side) |
+| 2026-07-09 | Partial reprocess — regenerates `reading_guide` (1 LLM call/sheet, **no block discovery, no transcription**), flips scheme flag; all 447 blocks untouched by design (plan §3, §8) | no |
+| 2026-07-09 | CRC run `47eca23e` + chip modal — first consumer ever to draw a text-cited block's bbox | no — **surfaced it** |
+
+Two corollaries:
+
+- **v3 vs v4 is a per-run lottery, not a regression.** Both went through
+  the same pipeline; v4's sheet-6 transcription response came back
+  reordered, v3's didn't.
+- **The reprocess plan's §2 audit couldn't have caught this.** It
+  verified short_id coverage, uniqueness, and bbox non-nullness — all
+  properties of the bbox side, which is fine. Text↔bbox coherence was
+  never checked because nothing consumed it yet. Until the chip modal,
+  the only surface pairing text with a drawn bbox was the sheet page's
+  block sidebar, where the mismatch sat unnoticed.
+
+## Root cause
+
+`substation/src/inngest/functions/process-file/sheet.ts` step
+`sheet-blocks`:
+
+```
+discoverContentBlocks(imgBase64)        // vision on thumbnail → bbox + category per block
+  → normalizeDiscoveredBlocks(raw)      // keeps discovery order
+  → buildBatchBlockPrompt(normalized)   // lists the bboxes, one line per block
+  → extractBlockDetails(pdfBase64, …)   // SECOND Gemini call → { blocks: [{description, content, …}] }
+  → mergeBlockDetails(normalized, details.blocks)   // ← THE BUG
+  → saveBlockDiscoveryResults(...)      // sorts by (y, x), assigns short_id = i + 1
+```
+
+`mergeBlockDetails` (`sheet.logic.ts:22-31`) zips the two arrays **by
+index**:
+
+```typescript
+return discoveredBlocks.map((block, i) => ({
+  ...block,
+  description: i < details.length ? details[i].description : '',
+  content: i < details.length ? details[i].content : '',
+}));
+```
+
+The only thing binding the transcription order to the bbox order is a
+sentence in `buildBatchBlockPrompt` (`sheet.logic.ts:60-74`): *"Return an
+array of N block details in the same order."* The bbox list is in
+discovery order (whatever the discovery model emitted — not reading
+order). When the transcription model instead walks the page in its own
+reading order — the natural failure mode for a vision model handed a
+full-page PDF — every description lands on the wrong block. Nothing
+validates the result: no key, no order check, not even a count mismatch
+guard beyond padding with empty strings.
+
+Irony: the response schema (`sheet.llm.ts:61-70`,
+`batchBlockDetailsSchema`) already has an optional
+`updatedBounds: [4 numbers]` per block that could anchor a positional
+join. `mergeBlockDetails` ignores it.
+
+Because `saveBlockDiscoveryResults` sorts by `(y, x)` *after* the merge,
+`short_id` ↔ `bounding_box` pairing is always correct (deterministic
+reading order, as designed) — the text is already mispaired by the time
+numbering happens. Determinism in the numbering can't repair a corrupted
+text↔bbox join that precedes it.
+
+## Sample request / response (illustrative)
+
+Abridged to three of sheet 6's blocks, with real coordinates and content
+from the incident. Prompts are truncated; shapes match the code
+(`blockDiscoverySchema`, `batchBlockDetailsSchema`,
+`buildBatchBlockPrompt`).
+
+### Call #1 — `discoverContentBlocks` (layout discovery)
+
+Request (AI SDK `generateObject` → Gemini):
+
+```jsonc
+{
+  "model": "gemini-…",
+  "schema": "blockDiscoverySchema",
+  "messages": [{
+    "role": "user",
+    "content": [
+      { "type": "image", "image": "data:image/jpeg;base64,<sheet 6 thumbnail>" },
+      { "type": "text", "text": "You are analyzing a single page from a civil engineering site plan submission. Your task is to create a comprehensive breakout of all distinct content elements on this page. …" }
+    ]
+  }]
+}
+```
+
+Response — boxes + categories only, **no text**. `bounding_box` is
+`[ymin, xmin, ymax, xmax]` normalized 0–1000, in whatever order the
+model emitted (the "discovery order"):
+
+```jsonc
+{
+  "contentSections": [
+    { "category": "notes", "bounding_box": [261, 453, 456, 559] },  // ← METER NOTICE NOTES
+    { "category": "form",  "bounding_box": [262, 568, 537, 718] },  // ← POTABLE METER(S)
+    { "category": "form",  "bounding_box": [262, 727, 579, 858] }   // ← NP METERS column
+  ]
+}
+```
+
+This output is correct: each category matches what's inside its box.
+
+### How call #1's response gets wired into call #2
+
+There is no structured handoff. `buildBatchBlockPrompt`
+(`sheet.logic.ts:60-74`) takes call #1's `contentSections` array and
+**flattens it into prose lines inside a single prompt string** — one
+`Block N: [bbox]` line per discovered block, in array order:
+
+```typescript
+const boxList = discoveredBlocks
+  .map((b, i) => `Block ${i + 1}: ${JSON.stringify(b.rawBoundingBox)}`)
+  .join('\n');
+```
+
+That string becomes the one `text` part of call #2's message. So the
+assembly is:
+
+```
+call #1 response                      call #2 request
+─────────────────                     ──────────────────────────────
+contentSections[0].bounding_box ───►  "Block 1: [261,453,456,559]"  ┐
+contentSections[1].bounding_box ───►  "Block 2: [262,568,537,718]"  ├─ lines pasted
+contentSections[2].bounding_box ───►  "Block 3: [262,727,579,858]"  ┘  into the middle
+                                                                       of one text part
+(category is NOT passed — it stays behind in the code,
+ waiting to be re-joined with the text response by index)
+```
+
+Note what's lost in translation: the "Block N" labels exist **only
+inside the prompt text**. The response schema has no `blockNumber`
+field, so the model has no way to say which block each transcription
+answers — order is the only channel, and it's unenforced.
+
+### Call #2 — `extractBlockDetails` (batch transcription)
+
+Request — the full-page PDF plus that assembled prompt string; no crops
+are taken. The `── from call #1 ──` markers below are annotations, not
+part of the payload:
+
+```jsonc
+{
+  "model": "gemini-…",
+  "schema": "batchBlockDetailsSchema",
+  "messages": [{
+    "role": "user",
+    "content": [
+      { "type": "file", "data": "<sheet 6 PDF>", "mediaType": "application/pdf" },
+      { "type": "text", "text":
+        "There are 21 content blocks on this page. For each block, analyze ONLY the content within its bounding box.\n\n" +
+        "Bounding boxes (in [ymin, xmin, ymax, xmax] format, normalized to 0-1000):\n" +
+        "Block 1: [261,453,456,559]\n" +   // ── from call #1: contentSections[0] ──
+        "Block 2: [262,568,537,718]\n" +   // ── from call #1: contentSections[1] ──
+        "Block 3: [262,727,579,858]\n" +   // ── from call #1: contentSections[2] ──
+        "\nReturn an array of 21 block details in the same order.\n\n" +
+        "For each block: You are analyzing an individual section… ONLY LOOK WITHIN THE BOUNDING BOX. …"
+      }
+    ]
+  }]
+}
+```
+
+Response — text only, **no box echoed back** (`updatedBounds` is in the
+schema but optional, and ignored by the merge even when present). On the
+bad run the array came back in the model's own order, not the listed
+order:
+
+```jsonc
+{
+  "blocks": [
+    { "sectionName": "Potable Meter(s)",              // ← belongs to Block 2's box
+      "description": "Details for potable meter(s) including address, source and use, meter type, size, max GPM, and service units…",
+      "content": "POTABLE METER(S)\nADDRESS: 1700 SOUTH LAMAR BLVD…\nMETER TYPE: COMPOUND\nSIZE: 4\" MAX GPM: 600…" },
+    { "sectionName": "Reclaimed Meter(s)",            // ← belongs to a box further down
+      "description": "Section intended for providing details on reclaimed meter(s)…",
+      "content": "RECLAIMED METER(S)\nADDRESS: …" },
+    { "sectionName": "Potable Backup to OWRS",        // ← belongs to yet another box
+      "description": "Details for potable backup to OWRS (NP Meters)…",
+      "content": "NP METERS…" }
+  ]
+}
+```
+
+Each element is a faithful transcription of *some* block — just not the
+block at the same position in call #1's list.
+
+### The merge — where the rows go bad
+
+`mergeBlockDetails` joins the two arrays positionally, so index 0 of the
+response above gets glued to index 0 of the discovery list:
+
+```jsonc
+// persisted content_block row (after (y,x) sort → short_id 9)
+{
+  "short_id": 9,
+  "category": "notes",                                  // from call #1 — matches the box ✓
+  "bounding_box": { "x": 0.453, "y": 0.261, "width": 0.106, "height": 0.195 },  // METER NOTICE NOTES ✓
+  "description": "Details for potable meter(s)…",       // from call #2, index-zipped ✗
+  "content": "POTABLE METER(S)\nADDRESS: 1700 SOUTH LAMAR BLVD…"                // ✗
+}
+```
+
+Nothing in either payload links a transcription to its box — the join
+key exists only as an unenforced instruction in call #2's prompt.
+
+## Impact
+
+- **Wrong-region highlights** in the CRC evidence-chip modal and the
+  sheet page's `?block=` deep-link — an authoritative-looking highlight
+  on the wrong block, the precise failure the DEV-PLAN's
+  `validBlockNumbers` gate was designed to prevent for *hallucinated*
+  integers. This variant sails through the gate because the cited
+  number is real and textually correct.
+- **Sheet page block sidebar** shows the wrong transcription on click for
+  affected sheets — this predates and is broader than the evidence-chip
+  feature.
+- **Agent-side review quality is mostly — not entirely — unaffected.**
+  The corruption is a *permutation*: every box appears once, every
+  transcription appears once, they're just zipped wrong. blocks.md pairs
+  short_id + description + content together (no bboxes), and that triple
+  is internally consistent, so citations, reading guides, and semantic
+  search (embeddings are computed from the text half) read coherent
+  text. The one text-side artifact the agent sees is the mismatched
+  `category` label in "Block N: {category}" headings — noise. On sheet 6
+  the full content reached the agent and AW-RL-1 was substantively
+  correct.
+- **⚠️ Except: the boilerplate filter can silently DROP substantive
+  text.** `isBoilerplateBlock` (conductor `project-downloader.ts:806`)
+  keys on **both halves** of the row: `category === 'seal' || 'other'`
+  → always filtered (spatial half, from call #1), plus description
+  heuristics (text half, from call #2). On a corrupted row, a
+  substantive transcription riding a `seal`/`other`-category row is
+  omitted from blocks.md entirely — invisible evidence loss that can
+  flip a real deficiency to pass/unclear with no trace. (The inverse —
+  boilerplate text leaking in under a substantive category — is mere
+  noise.) Sheet 6 escaped by luck: its only `seal` row, short_id 8, is a
+  fixed point of the permutation (the seal's box kept the seal's text).
+  Other scrambled sheets may not be. Cheap detector for this worst case:
+  rows with `category IN ('seal','other')` whose text doesn't read like
+  a seal/stamp.
+- **Future vision-tool-by-block integration** (deferred in DEV-PLAN)
+  would add a second agent-facing channel: cropping by a corrupted row's
+  bbox reads the wrong pixels as "evidence" for that block's text.
+- **Nondeterministic and silent.** A sheet is either fine or scrambled
+  depending on one LLM response's ordering; nothing logs or fails. Spot
+  checks of other chips in the same run looked "loosely correct" —
+  consistent with per-sheet lottery, not a systematic shift.
+
+## Fix directions (not yet implemented)
+
+1. **Key the join, don't trust the order.** Require the transcription
+   model to echo an identifier per item — the block index from the
+   prompt's list (`blockIndex: N`) and/or the bbox (`updatedBounds` is
+   already in the schema) — and join on it. Items echoing an unknown or
+   duplicate key → drop that block's text (empty description beats wrong
+   description) and log loudly.
+2. **Validate cheaply even without a key change:** category/description
+   coherence check, or count + IoU of `updatedBounds` vs the listed bbox
+   when present. Mismatch → retry once, then fail the step visibly
+   instead of persisting garbage.
+3. **Detection/repair pass for existing data.** The fingerprint from
+   evidence item 4 is cheap to scan at scale: category (discovery-side)
+   vs description semantics (transcription-side) disagreement flags
+   candidate sheets without any vision calls; confirmation is one
+   crop-and-compare vision call per flagged sheet (IG's
+   vision-classifier pattern fits). Affected sheet_versions need block
+   re-extraction (or at least text re-pairing); note `short_id`s can
+   shift if block count changes on re-extraction, which re-points any
+   already-persisted `blockNumber` citations against that sheet_version
+   — a repair should re-run extraction on the same sheet_version only if
+   block geometry is unchanged, else treat downstream citations as stale.
+
+## Prior art: navalbase does this correctly
+
+The redline-analysis pipeline in navalbase
+(`navalbase/src/navalbase/pdfanalyzer/visionmodel/`) has the same shape —
+two serial Gemini vision calls where call #2's prompt carries call #1's
+detections as a flattened text block — but it survives response
+reordering because the join is keyed, not positional. Three code sites,
+each the antidote to one missing piece in substation:
+
+1. **Call #1 assigns each item a durable integer `id`, and the id rides
+   into call #2's prompt.** `format_detection_for_reasoning`
+   (`prompts.py:520`) renders each detection as `Annotation {id}:` with
+   its type, transcription, *and* bounding box — richer anchors than
+   substation's bare `Block N: [bbox]` lines, and the label is an
+   explicit identifier rather than an implicit list position.
+
+2. **Call #2's response schema requires the model to echo the id.**
+   `build_reasoning_tool` (`schemas.py:324`) declares
+   `id: integer — "Annotation ID from the detection stage"` and lists it
+   in `required`. The model has a channel to say which detection each
+   reasoning entry answers. Substation's `batchBlockDetailsSchema` has
+   no such field.
+
+3. **The merge joins by id, with a logged positional fallback.**
+   `_merge_results` (`gemini.py:369`) builds a `reasoning_by_id` lookup
+   and matches detections to reasoning entries by key. If *no* ids match
+   at all, it logs a warning and only then falls back to positional
+   matching. Substation's `mergeBlockDetails` is that fallback path,
+   unconditionally and silently.
+
+Porting this pattern to `buildBatchBlockPrompt` /
+`batchBlockDetailsSchema` / `mergeBlockDetails` is fix direction 1 with
+a working in-house reference implementation.
+
+## Reproduction / verification recipe
+
+1. Pull the sheet's rows:
+   `SELECT short_id, category, left(description, 90), bounding_box FROM content_block WHERE sheet_version_id = 'fa11d91d-23d7-4d35-a65e-7cf6598938bc' ORDER BY short_id;`
+2. Download the sheet JPEG from the `submission-data` bucket
+   (`…/plan-sets/908ffab5…/pending/1778540484468/sheets/6.jpg`).
+3. Draw any row's bbox on the image and compare against its description.
+   Rows 2, 7, 9, 10, 14, 17 are unambiguous mismatches.
