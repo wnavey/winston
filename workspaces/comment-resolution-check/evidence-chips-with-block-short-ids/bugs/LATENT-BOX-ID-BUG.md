@@ -366,12 +366,33 @@ key exists only as an unenforced instruction in call #2's prompt.
 - **Sheet page block sidebar** shows the wrong transcription on click for
   affected sheets — this predates and is broader than the evidence-chip
   feature.
-- **Agent-side review quality is mostly unaffected**: blocks.md pairs
+- **Agent-side review quality is mostly — not entirely — unaffected.**
+  The corruption is a *permutation*: every box appears once, every
+  transcription appears once, they're just zipped wrong. blocks.md pairs
   short_id + description + content together (no bboxes), and that triple
-  is internally consistent. Citations, reading guides, and semantic
-  search read coherent text. The corruption only surfaces where a bbox
-  is drawn or a crop is taken from it (e.g. any future vision-tool
-  targeting by block bbox would read the wrong region).
+  is internally consistent, so citations, reading guides, and semantic
+  search (embeddings are computed from the text half) read coherent
+  text. The one text-side artifact the agent sees is the mismatched
+  `category` label in "Block N: {category}" headings — noise. On sheet 6
+  the full content reached the agent and AW-RL-1 was substantively
+  correct.
+- **⚠️ Except: the boilerplate filter can silently DROP substantive
+  text.** `isBoilerplateBlock` (conductor `project-downloader.ts:806`)
+  keys on **both halves** of the row: `category === 'seal' || 'other'`
+  → always filtered (spatial half, from call #1), plus description
+  heuristics (text half, from call #2). On a corrupted row, a
+  substantive transcription riding a `seal`/`other`-category row is
+  omitted from blocks.md entirely — invisible evidence loss that can
+  flip a real deficiency to pass/unclear with no trace. (The inverse —
+  boilerplate text leaking in under a substantive category — is mere
+  noise.) Sheet 6 escaped by luck: its only `seal` row, short_id 8, is a
+  fixed point of the permutation (the seal's box kept the seal's text).
+  Other scrambled sheets may not be. Cheap detector for this worst case:
+  rows with `category IN ('seal','other')` whose text doesn't read like
+  a seal/stamp.
+- **Future vision-tool-by-block integration** (deferred in DEV-PLAN)
+  would add a second agent-facing channel: cropping by a corrupted row's
+  bbox reads the wrong pixels as "evidence" for that block's text.
 - **Nondeterministic and silent.** A sheet is either fine or scrambled
   depending on one LLM response's ordering; nothing logs or fails. Spot
   checks of other chips in the same run looked "loosely correct" —
