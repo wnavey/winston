@@ -224,10 +224,43 @@ model emitted (the "discovery order"):
 
 This output is correct: each category matches what's inside its box.
 
+### How call #1's response gets wired into call #2
+
+There is no structured handoff. `buildBatchBlockPrompt`
+(`sheet.logic.ts:60-74`) takes call #1's `contentSections` array and
+**flattens it into prose lines inside a single prompt string** — one
+`Block N: [bbox]` line per discovered block, in array order:
+
+```typescript
+const boxList = discoveredBlocks
+  .map((b, i) => `Block ${i + 1}: ${JSON.stringify(b.rawBoundingBox)}`)
+  .join('\n');
+```
+
+That string becomes the one `text` part of call #2's message. So the
+assembly is:
+
+```
+call #1 response                      call #2 request
+─────────────────                     ──────────────────────────────
+contentSections[0].bounding_box ───►  "Block 1: [261,453,456,559]"  ┐
+contentSections[1].bounding_box ───►  "Block 2: [262,568,537,718]"  ├─ lines pasted
+contentSections[2].bounding_box ───►  "Block 3: [262,727,579,858]"  ┘  into the middle
+                                                                       of one text part
+(category is NOT passed — it stays behind in the code,
+ waiting to be re-joined with the text response by index)
+```
+
+Note what's lost in translation: the "Block N" labels exist **only
+inside the prompt text**. The response schema has no `blockNumber`
+field, so the model has no way to say which block each transcription
+answers — order is the only channel, and it's unenforced.
+
 ### Call #2 — `extractBlockDetails` (batch transcription)
 
-Request — the full-page PDF plus a **text** rendering of call #1's box
-list (`buildBatchBlockPrompt`); no crops are taken:
+Request — the full-page PDF plus that assembled prompt string; no crops
+are taken. The `── from call #1 ──` markers below are annotations, not
+part of the payload:
 
 ```jsonc
 {
@@ -237,7 +270,15 @@ list (`buildBatchBlockPrompt`); no crops are taken:
     "role": "user",
     "content": [
       { "type": "file", "data": "<sheet 6 PDF>", "mediaType": "application/pdf" },
-      { "type": "text", "text": "There are 21 content blocks on this page. For each block, analyze ONLY the content within its bounding box.\n\nBounding boxes (in [ymin, xmin, ymax, xmax] format, normalized to 0-1000):\nBlock 1: [261,453,456,559]\nBlock 2: [262,568,537,718]\nBlock 3: [262,727,579,858]\n\nReturn an array of 21 block details in the same order.\n\nFor each block: You are analyzing an individual section… ONLY LOOK WITHIN THE BOUNDING BOX. …" }
+      { "type": "text", "text":
+        "There are 21 content blocks on this page. For each block, analyze ONLY the content within its bounding box.\n\n" +
+        "Bounding boxes (in [ymin, xmin, ymax, xmax] format, normalized to 0-1000):\n" +
+        "Block 1: [261,453,456,559]\n" +   // ── from call #1: contentSections[0] ──
+        "Block 2: [262,568,537,718]\n" +   // ── from call #1: contentSections[1] ──
+        "Block 3: [262,727,579,858]\n" +   // ── from call #1: contentSections[2] ──
+        "\nReturn an array of 21 block details in the same order.\n\n" +
+        "For each block: You are analyzing an individual section… ONLY LOOK WITHIN THE BOUNDING BOX. …"
+      }
     ]
   }]
 }
