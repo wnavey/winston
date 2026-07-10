@@ -373,6 +373,40 @@ key exists only as an unenforced instruction in call #2's prompt.
    — a repair should re-run extraction on the same sheet_version only if
    block geometry is unchanged, else treat downstream citations as stale.
 
+## Prior art: navalbase does this correctly
+
+The redline-analysis pipeline in navalbase
+(`navalbase/src/navalbase/pdfanalyzer/visionmodel/`) has the same shape —
+two serial Gemini vision calls where call #2's prompt carries call #1's
+detections as a flattened text block — but it survives response
+reordering because the join is keyed, not positional. Three code sites,
+each the antidote to one missing piece in substation:
+
+1. **Call #1 assigns each item a durable integer `id`, and the id rides
+   into call #2's prompt.** `format_detection_for_reasoning`
+   (`prompts.py:520`) renders each detection as `Annotation {id}:` with
+   its type, transcription, *and* bounding box — richer anchors than
+   substation's bare `Block N: [bbox]` lines, and the label is an
+   explicit identifier rather than an implicit list position.
+
+2. **Call #2's response schema requires the model to echo the id.**
+   `build_reasoning_tool` (`schemas.py:324`) declares
+   `id: integer — "Annotation ID from the detection stage"` and lists it
+   in `required`. The model has a channel to say which detection each
+   reasoning entry answers. Substation's `batchBlockDetailsSchema` has
+   no such field.
+
+3. **The merge joins by id, with a logged positional fallback.**
+   `_merge_results` (`gemini.py:369`) builds a `reasoning_by_id` lookup
+   and matches detections to reasoning entries by key. If *no* ids match
+   at all, it logs a warning and only then falls back to positional
+   matching. Substation's `mergeBlockDetails` is that fallback path,
+   unconditionally and silently.
+
+Porting this pattern to `buildBatchBlockPrompt` /
+`batchBlockDetailsSchema` / `mergeBlockDetails` is fix direction 1 with
+a working in-house reference implementation.
+
 ## Reproduction / verification recipe
 
 1. Pull the sheet's rows:
