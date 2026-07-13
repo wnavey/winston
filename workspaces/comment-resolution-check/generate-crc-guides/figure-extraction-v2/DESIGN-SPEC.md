@@ -1,7 +1,13 @@
 # generate-crc-guides Phase 6 v2 — Census-First Figure Extraction (Implementation Spec)
 
-**Status:** Draft v1
-**Date:** 2026-07-11
+**Status:** Draft v2
+**Date:** 2026-07-13 (v1: 2026-07-11)
+
+> **Revision note (Draft v2, 2026-07-13).** An audit session verified v1 directly against the live Lamar+Collier MCR (`pdfimages -list` + PyMuPDF placement rects) and found four defects, two of which made the acceptance test unsatisfiable as written. All four are folded in below:
+> 1. **New 6a waive rule `header-banner`.** The page-1 header logo appears exactly once in the PDF (page 1 only, verified), so `repeated-logo` (≥ 3 pages) can never waive it and acceptance criterion 1 could not pass. Criterion 1 updated to name the new rule.
+> 2. **`pdfimages -list` cross-check now filters `type == image`.** The golden doc emits 34 rows (26 image + 8 smask); the unfiltered count guaranteed a false `completed_degraded` on the acceptance run.
+> 3. **6c candidate list gains the open comment at the top of the window.** Comments *starting* on the hosting/preceding page can miss the true parent when a figure run spans ≥ 3 pages — TPW-15 (header p7, fourth figure p9) is the in-spec counterexample.
+> 4. **6b gains clip detection + explicit smask compositing.** The p7 TPW-15 placement clips its embedded image (native aspect 0.589 vs placed 0.642), so raw extraction would show content not visible in the document; and `fitz.Pixmap(doc, xref)` does not composite smasks automatically (8 of 26 golden objects carry one).
 **Repos touched:** `claude-plugins` (skill `plugins/noetic-tools/skills/generate-crc-guides/` — references, prompts, scripts, schemas, pipeline.md, SKILL.md/working-dir.md)
 **Repos NOT touched:** `conductor`, `bureau`, `cityhall`, `substation` (CRC workflow consumes the same guide format; only guide *production* changes)
 **Prior art:** Audit spec **winston#162** (`../figure-extraction-audit/DESIGN-SPEC.md`) established the failure modes and the census-first direction. This spec operationalizes it into file-level changes. The gen-6 surgical repair (applied + uploaded 2026-07-10, see gen 6 `decisions.md` §Post-generation figure repair) serves as the golden reference output.
@@ -58,16 +64,22 @@ for page in doc:
 ```
 
 Deterministic waive rules applied in-script (recorded, never silently dropped):
-- `repeated-logo`: same digest placed on ≥ 3 pages (catches header seals/banners).
+- `repeated-logo`: same digest placed on ≥ 3 pages (catches per-page header seals/banners in other report generators).
+- `header-banner`: object placed on **page 1** whose rect top edge sits in the top 15% of the page **and** whose rect width spans ≥ 50% of the page width. This is what actually catches the report-header logo: on the Lamar+Collier MCR it appears exactly once — page 1 only, 614×131 pt placed at the very top, spanning the full 612 pt page width (verified via pdfimages + PyMuPDF) — so `repeated-logo` alone never fires on it. The **page-1 restriction is load-bearing, not cosmetic**: wide top-of-page continuation figures exist (TPW-15's p9 strip is 618 pt / 101% page width at 6% down — it passes both geometric tests) and are protected only by the page scope. Do not generalize this rule beyond page 1.
 - `below-size-floor`: rendered area < 0.5% of page area **and** < 120 px on both native axes (decorative rules, bullets). The SP48 courtyard callout is 235×156 — the floor must stay well below that; these thresholds give ~2× margin.
 
-Cross-check: `pdfimages -list` object count must equal the census count; mismatch → `completed_degraded` warning (belt-and-suspenders against PyMuPDF/poppler disagreement).
+Cross-check: `pdfimages -list` row count **filtered to `type == image`** must equal the census count; `smask` and `stencil` rows are excluded. The filter is mandatory, not defensive: the Lamar+Collier MCR emits 34 rows (26 image + 8 smask), so an unfiltered count is guaranteed to mismatch on the golden document itself. Mismatch after filtering → `completed_degraded` warning (belt-and-suspenders against PyMuPDF/poppler disagreement).
 
 Why PyMuPDF and not poppler alone: `pdfimages` gives page + dimensions but **not the placement rect**, and the rect is what lets the association prompt reason about "sits above the first comment header on the page." Poppler-only fallback (`pdfimages` + `pdftohtml -xml` for positions) is possible but two-tool and lossier; not worth it. (Q1 covers the dependency.)
 
 ### 6b — Extract
 
-`fitz` `Pixmap(doc, xref)` (or `pdfimages -png -f p -l p`) → `scratch/figures/raw/p{page}-{n}.png`, native resolution, smask-composited. **Deletes from the pipeline:** per-figure `pdftoppm` cropping, `bbox_pct` estimation, and the `imagemagick convert -crop` step (retire the `convert` Phase-0 dependency check once 6e is the only crop consumer — see Q5). Adjacent objects on the same page attributed to the same parent become sequential `N.png` under that parent (the TPW-15 p8 two-object standard detail is the precedent).
+`fitz` `Pixmap(doc, xref)` (or `pdfimages -png -f p -l p`) → `scratch/figures/raw/p{page}-{n}.png`, native resolution. Two correctness rules the naive extraction misses:
+
+- **Clip detection.** A placement can clip the embedded object (Word crops commonly survive PDF export as the full image plus a clip path), so raw extraction can include content that is *not visible in the document*. Per placement, compare the native pixel aspect (`width_px / height_px`) against the placement rect aspect; if they differ by more than 2%, render the placement rect from the page at 300 DPI instead of extracting the raw object, and record `clipped: true` on the census entry. The golden doc has exactly one such case — p7 (TPW-15), native aspect 0.589 vs placed 0.642 — and it is the "p7 crop equivalent" the acceptance test refers to.
+- **Smask compositing is explicit, not free.** `fitz.Pixmap(doc, xref)` returns the base image *without* its soft mask. Composite via the smask xref (`fitz.Pixmap(base_pixmap, fitz.Pixmap(doc, smask_xref))`) and convert CMYK/indexed colorspaces to RGB before writing the PNG. 8 of the golden doc's 26 objects carry smasks, so this path executes on the acceptance run — skipping it ships blank or mis-toned PNGs, not a rare edge case.
+
+**Deletes from the pipeline:** per-figure `pdftoppm` cropping, `bbox_pct` estimation, and the `imagemagick convert -crop` step (retire the `convert` Phase-0 dependency check once 6e is the only crop consumer — see Q5). Adjacent objects on the same page attributed to the same parent become sequential `N.png` under that parent (the TPW-15 p8 two-object standard detail is the precedent).
 
 ### 6c — Associate (answers "tweak the prompting for next-page figures")
 
@@ -76,7 +88,7 @@ New `prompts/associate-figure.md`, **replacing** `prompts/detect-and-bound-figur
 - The extracted figure PNG (native res).
 - Page number + placement rect (so "above the first header" is stated, not guessed).
 - `pdftotext -layout` text of the **hosting page and the preceding page**, with comment headers marked.
-- The ordered list of comments whose bodies *start* on either page (id, full body, kept/dropped status) — not just the hosting page's comments. This is the fix for RC1: the true parent is always in-context.
+- The ordered list of candidate comments (id, full body, kept/dropped status): every comment whose body *starts* on either page, **plus the comment open at the top of the window** — the last comment whose header precedes the hosting page in reading order, regardless of page distance. The starts-on-either-page set alone is not sufficient: when a figure run spans three or more pages the parent's header falls outside the window (TPW-15's header is on p7 but its fourth figure lands on p9, so the p8+p9 window contains no *start* of the true parent — yet the acceptance test requires attributing it). With the open-comment addition, the true parent is always in-context. This is the fix for RC1.
 
 Prompt rules (each one reverses a specific gen-6 failure):
 
@@ -107,7 +119,7 @@ The census cannot see vector-drawn figures (none exist in the Lamar+Collier MCR;
 | 3 | `prompts/detect-and-bound-figures.md` | **Deleted** (superseded). Its salvageable content (figure-type taxonomy, brief_label rules) moves to associate/describe prompts. |
 | 4 | `prompts/sweep-vector-figures.md` | **New.** 6e prompt: page-pair PNG + census rects in → confirmations + vector-figure candidates out. |
 | 5 | `references/figure-extraction.md` | **Rewritten** around 6a–6e. Inheritance section (figures are parent-scoped, sub-items inherit) survives unchanged. |
-| 6 | `references/schemas/figure-census.schema.json` | **New.** Census entries: `{object_id, page, xref, rect, width_px, height_px, digest, disposition: attributed\|waived\|uncertain, comment_id?, waive_reason?, crop_path?, described?, description?, type?, constraints?}`. |
+| 6 | `references/schemas/figure-census.schema.json` | **New.** Census entries: `{object_id, page, xref, rect, width_px, height_px, digest, clipped?, disposition: attributed\|waived\|uncertain, comment_id?, waive_reason?, crop_path?, described?, description?, type?, constraints?}`. |
 | 7 | `references/schemas/figures-index.schema.json` | **Reshaped.** Becomes the 6e sweep record (per-page coverage + vector-figure candidates); census entries live in figure-census.json. `bbox_pct` survives only for vector figures. |
 | 8 | `scripts/verify-phase.py` (`rules_phase_6`) | **Reconciliation gate** (hard fail): `attributed + waived + uncertain == census_count`; every `attributed` comment_id ∈ parsed comments; every attributed+described entry has its PNG on disk; every `uncertain` id appears in `hitl-prompts.json`; sweep coverage == total PDF pages (not kept pages). Degraded: pdfimages/PyMuPDF count mismatch. |
 | 9 | `scripts/verify-phase.py` (`rules_phase_12`) + `references/phase-contracts.md` §12 + `manifest.schema.json` | Manifest gains `figures_by_parent: {slug: count}`. Cross-gen diff extends beyond today's "total figures == 0 while baseline > 0" to **per-parent**: any parent with a figure in ≥ 1 prior gen but none now → `completed_degraded` with the parent named. |
@@ -125,8 +137,8 @@ Untouched: Phases 1–5.5 and 7–10 logic, decomposition contract, enrichment p
 Phase 6 is file-anchored, so v2 can run standalone against gen 6's inputs without re-running the pipeline: point 6a–6e at gen 6's `mcr.pdf` + `scratch/raw-comments.json` + kept-set artifacts in a scratch gen dir.
 
 Pass criteria (all against the repaired gen 6, which is ground truth):
-1. Census = 26 objects; 1 waived (`repeated-logo`, page-1 header); 0 below-size-floor false-waives (SP48's 235×156 must survive).
-2. Attribution exactly matches the repaired figure set: 23 figures → {TPW-9, TPW-10, TPW-12, TPW-15×4 (p7 crop equivalent + p8×2 + p9), TPW-16, TPW-17, DE-4, DE-6, DE-7*, DE-22, DE-23, DE-30, DE-31, IW-1, PR-5, SP-2, SP-31, SP-39*, SP-47, SP-48, SP-50, SP-51} — *DE-7 and SP-39 attributed to dropped parents and therefore not promoted, per the existing contract.
+1. Census = 26 objects; 1 waived (`header-banner`, the page-1 logo — it appears on page 1 only, so `repeated-logo` never fires on this document); 0 below-size-floor false-waives (SP48's 235×156 must survive); exactly 1 census entry marked `clipped` (p7, TPW-15).
+2. Attribution exactly matches the repaired figure set: 23 figures → {TPW-9, TPW-10, TPW-12, TPW-15×4 (p7 via the 6b clip rule + p8×2 + p9), TPW-16, TPW-17, DE-4, DE-6, DE-7*, DE-22, DE-23, DE-30, DE-31, IW-1, PR-5, SP-2, SP-31, SP-39*, SP-47, SP-48, SP-50, SP-51} — *DE-7 and SP-39 attributed to dropped parents and therefore not promoted, per the existing contract.
 3. Zero `uncertain` on this document (it has no genuinely ambiguous figures once cross-page context is provided) — if any appear, the associate prompt needs tightening before ship.
 4. Reconciliation gate passes; per-parent Phase-12 diff vs (repaired) gen 6 shows no losses.
 5. Sweep finds zero vector-figure candidates and confirms all census rects.
