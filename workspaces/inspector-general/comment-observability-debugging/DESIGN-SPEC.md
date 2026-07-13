@@ -1,6 +1,6 @@
 # Comment Observability & Debugging Page for CC and CRC in Inspector General
 
-**Status:** Draft v2
+**Status:** Draft v2.1
 **Date:** 2026-07-13
 **Repos touched:** `inspector-general` (post-processing, ingest, new debug route), `conductor` (D8 contract test; Phase 2: additive tool-call logging), `bureau` (Phase 2: script-tool attribution)
 **Repos NOT touched:** `cityhall`, `substation`, `winston` (except this spec)
@@ -24,6 +24,14 @@
 > - **Q11 (unattributed tool calls in the per-item view) and Q12 (slice-fetch transport)
 >   added.** Q8 enriched with verified sidecar data (all 538 vision records carry
 >   `checklistItemIds`).
+>
+> **Revision note (v2.1, 2026-07-13).** Will's answers folded in:
+> - **Q1 RESOLVED → D3 revised.** Derived transcripts move OUT of the run's `outputs_path`
+>   into the existing private `inspector-general` bucket under
+>   `ig-derived-review-outputs/{reviewId}/…` — no mixing IG-written objects into conductor's
+>   prefix. Bucket verified to already exist.
+> - **Q3 RESOLVED.** Backfill everything with an intact log; four named runs go first.
+> - **Q9 RESOLVED → D10.** Read-only debugging in v1; no annotation hooks.
 
 ## Problem
 
@@ -275,8 +283,9 @@ type TranscriptEvent =
       ts: number };
 ```
 
-4. Persist slices to storage under the run's own prefix:
-   `{outputs_path}/ig-derived/transcripts/{grouping}/{runIndex}.json`, and record an index
+4. Persist slices to the existing private `inspector-general` bucket under
+   `ig-derived-review-outputs/{reviewId}/transcripts/{grouping}/{runIndex}.json` (D3 —
+   keyed by the IG-native reviewId, not conductor's `outputs_path`), and record an index
    in `ig_review_runs.metadata.transcripts`:
 
 ```typescript
@@ -286,7 +295,7 @@ interface TranscriptIndex {
   slices: Array<{
     grouping: string;               // guide file minus .md, e.g. "crc-CA-1"
     runIndex: string;
-    storagePath: string;            // ".../ig-derived/transcripts/crc-CA-1/run-1.json"
+    storagePath: string;            // "ig-derived-review-outputs/{reviewId}/transcripts/crc-CA-1/run-1.json"
     events: number;
     toolCallsByItem: Record<string, number>;  // checklistItemId → attributed call count
     unattributedToolCalls: number;  // calls with no checklistItemIds (Q11)
@@ -297,14 +306,14 @@ interface TranscriptIndex {
 ```
 
    Derived data stays in storage because transcripts are large and read rarely; only the
-   index goes in the DB. (Q1) The index merges into the existing `metadata` object the same
+   index goes in the DB. The index merges into the existing `metadata` object the same
    way the run summary does.
 
 **Runtime constraints (v2).** Verified logs are 110–127 MB (F8). The step must stream-parse
 line-by-line — never buffer the whole file — and write slice JSONs incrementally; the kept
 message stream is ~10% of lines, so slice output is modest (~85 messages per cell). The step
 must be **idempotent**: re-running postprocess (routine for backfills) overwrites
-`ig-derived/transcripts/` and replaces `metadata.transcripts` wholesale.
+`ig-derived-review-outputs/{reviewId}/` and replaces `metadata.transcripts` wholesale.
 
 **Degraded behavior (v2).** If the log is absent from the run upload, or a `(guide file,
 runIndex)` cell expected from the findings files has no transcript lines, the slicer still
@@ -397,9 +406,11 @@ against it (it is — the envelope is tool-agnostic).
 - **D2.** Ingestion granularity is the (grouping, runIndex) session slice; the per-comment
   view is a projection (item finding + attributed tool calls + expandable full session), not
   a hard split of the transcript.
-- **D3.** Derived transcripts live in storage under the run's `outputs_path`
-  (`ig-derived/`), with only an index in `ig_review_runs.metadata` — no new large-blob
-  tables.
+- **D3 (revised v2.1, resolves Q1).** Derived transcripts live in the existing private
+  `inspector-general` bucket under `ig-derived-review-outputs/{reviewId}/…`, with only an
+  index in `ig_review_runs.metadata` — no new large-blob tables, and no IG-written objects
+  mixed into conductor's `workflow-runs` prefixes. (v1 proposed `{outputs_path}/ig-derived/`;
+  Will preferred separation and the bucket already exists, so separation is free.)
 - **D4.** Images are rendered by re-derivation (signed URLs to existing assets), not by
   persisting image bytes per call. Phase 2 pins resolved paths at call time to eliminate
   drift for future runs.
@@ -416,19 +427,20 @@ against it (it is — the envelope is tool-agnostic).
 - **D9 (v2).** Comment→slice resolution goes through the checklist item ID and the per-run
   findings files (F7), never through the ref's grouping string as a filename. One resolver
   for CC and CRC.
+- **D10 (v2.1, resolves Q9).** The debug page is **read-only** in v1 — no annotation hooks
+  into `ig_eval_annotations`. Revisit once the page has seen real debugging use.
 
 ## Open questions
 
-- **Q1.** Derived-transcript storage: `{outputs_path}/ig-derived/` in the `workflow-runs`
-  bucket (proposed) vs a dedicated `ig-derived` bucket? Same-prefix keeps run artifacts
-  colocated but mixes conductor-written and IG-written objects under one prefix — any
-  lifecycle/permissions reason to separate?
+- **Q1.** ~~Derived-transcript storage location?~~ **RESOLVED (v2.1) → D3 revised**:
+  `inspector-general` bucket, `ig-derived-review-outputs/{reviewId}/…`.
 - **Q2.** Is session-slice projection (D2) acceptable for v1, or do we want best-effort
   per-item segmentation markers (e.g. split on the agent's own "Evaluating CC-1-03" text)?
   Recommendation: projection only; segmentation heuristics rot.
-- **Q3.** Backfill scope: all completed CC/CRC runs, or the GT-evals backfill window
-  (`created_at >= 2026-07-05`)? Log parsing is cheap; recommendation: everything with an
-  intact `logs/` upload.
+- **Q3.** ~~Backfill scope?~~ **RESOLVED (v2.1)**: everything with an intact `logs/` upload
+  (parsing is cheap). Priority order — these four runs backfill first:
+  CRC `47eca23e-a010-4f87-ac3b-1cf6f4c481ae`, CRC `d1ff47e7-7c77-4a54-9d1c-4d6bae26046e`,
+  CC `b38e2619-91e4-4585-8e92-2fd32bbb9653`, CC `e5c5f7ab-c186-499d-908c-3d8fa5f86b6d`.
 - **Q4.** ~~Pin SDK-message logging contractually?~~ **RESOLVED (v2) → D8**: yes, tests
   only, small conductor PR, independent of Phase 2.
 - **Q5.** Thumbnail drift (F4): acceptable for old runs to render the *current* thumbnail
@@ -448,9 +460,7 @@ against it (it is — the envelope is tool-agnostic).
   `d1ff47e7` run carry populated `checklistItemIds`, so the itemIds+timestamp join has
   full coverage there; the question is only about disambiguating same-item calls across
   runIndexes.)
-- **Q9.** Does the debug page need annotation hooks (e.g. "this vision call misread the
-  sheet") wired into `ig_eval_annotations` in v1, or is read-only debugging enough to start?
-  Recommendation: read-only v1.
+- **Q9.** ~~Annotation hooks in v1?~~ **RESOLVED (v2.1) → D10**: read-only v1.
 - **Q10.** Signed-URL policy for images on the page: per-request short TTL (simplest) vs
   proxying bytes through IG (no expiring links in the DOM). Recommendation: short-TTL signed
   URLs, matching existing IG behavior.
@@ -460,8 +470,8 @@ against it (it is — the envelope is tool-agnostic).
   exactly the tool with the weakest attribution. Recommendation: render an "unattributed
   calls in this session" bucket on the per-item view (count comes from the index's
   `unattributedToolCalls`), in addition to the expand-full-session affordance.
-- **Q12 (v2).** Slice-fetch transport for the debug page: signed URL directly into
-  `workflow-runs`/`ig-derived/` vs an IG API endpoint (matching the existing
+- **Q12 (v2).** Slice-fetch transport for the debug page: signed URL directly into the
+  `inspector-general` bucket vs an IG API endpoint (matching the existing
   `/api/load`-style server-proxied pattern). Recommendation: IG API endpoint — keeps
   bucket-layout knowledge server-side and matches how the page already loads run data.
 
