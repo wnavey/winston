@@ -46,18 +46,7 @@ Paste this into a new terminal on this box. **Update the date and run number in
 `--run-label` to the actual execution date + run number before firing.**
 
 ```bash
-cd ~/noetic/conductor && npm run conduct -- \
-  --workflow=comment-resolution-check \
-  --jurisdiction=austin \
-  --project-id=23301a8a-4cdb-4751-ac0c-93b97f0f5c12 \
-  --submission-version-id=6b9b85ed-e992-4906-a222-b24ee836910c \
-  --crc-guides-submission-version-id=6b9b85ed-e992-4906-a222-b24ee836910c \
-  --crc-generation-number=6 \
-  --model=claude-haiku-4-5-20251001 \
-  --runs=5 \
-  --max-workers=35 \
-  --enrich-comments=false \
-  --run-label=2026-07-13-1-local-winston-test
+cd ~/noetic/conductor && npm run conduct -- --workflow=comment-resolution-check --jurisdiction=austin --project-id=23301a8a-4cdb-4751-ac0c-93b97f0f5c12 --submission-version-id=6b9b85ed-e992-4906-a222-b24ee836910c --crc-guides-submission-version-id=6b9b85ed-e992-4906-a222-b24ee836910c --crc-generation-number=6 --model=claude-haiku-4-5-20251001 --runs=5 --max-workers=35 --enrich-comments=false --run-label=2026-07-13-1-local-winston-test
 ```
 
 The conductor CLI parses `--workflow` as its own flag and collects every other
