@@ -1,6 +1,6 @@
 # Comment Observability & Debugging Page for CC and CRC in Inspector General
 
-**Status:** Draft v2.1
+**Status:** Draft v2.2
 **Date:** 2026-07-13
 **Repos touched:** `inspector-general` (post-processing, ingest, new debug route), `conductor` (D8 contract test; Phase 2: additive tool-call logging), `bureau` (Phase 2: script-tool attribution)
 **Repos NOT touched:** `cityhall`, `substation`, `winston` (except this spec)
@@ -32,6 +32,19 @@
 >   prefix. Bucket verified to already exist.
 > - **Q3 RESOLVED.** Backfill everything with an intact log; four named runs go first.
 > - **Q9 RESOLVED → D10.** Read-only debugging in v1; no annotation hooks.
+>
+> **Revision note (v2.2, 2026-07-13).** Scope clarification from Will:
+> - **Phase 2 is part of the MVP (new D11).** The phase split is a deployment boundary
+>   (retroactive IG-only vs conductor/bureau changes), NOT an MVP-vs-later line. The feature
+>   is not usable/complete until new runs carry per-item tool attribution — including
+>   `semantic-search-blocks` request/response attribution, which Will rates higher priority
+>   than v1 implied.
+> - **Phase 2 split into 2a/2b.** 2a = attribution quick wins (small, ships early, no
+>   ledger dependency); 2b = the unified tool-call ledger + rendered prompts + resolved
+>   image paths. Sequencing table updated.
+> - Caveat made explicit: attribution cannot be added to already-completed runs; the four
+>   priority backfill runs will always use the Q11 session-level bucket for unattributed
+>   tools.
 
 ## Problem
 
@@ -349,9 +362,30 @@ slice JSONs, and renders per-run: verdict header (from `perRunFindings`), tool-c
 (request args, response, image thumbnails inline), and expandable full transcript
 (thinking/text events).
 
-### Phase 2 — conductor/bureau alignment: one tool-call ledger
+### Phase 2 — conductor/bureau alignment: attribution + one tool-call ledger
 
-Additive changes so future runs don't need fuzzy joins, and so sidecars stand alone:
+**Phase 2 is part of the MVP (D11).** The Phase 1/2 split is a deployment boundary —
+Phase 1 is retroactive and IG-only, Phase 2 changes conductor/bureau and benefits runs
+created after its deploy — not an MVP-vs-later line. The feature is not considered usable/
+complete until new runs carry per-item attribution for **all** evidence-gathering tools,
+explicitly including `semantic-search-blocks` (whose request/response the Phase 1 transcript
+already captures per run, but whose calls land in the Q11 unattributed bucket without this).
+Note the hard limit: attribution cannot be added to already-completed runs — the four
+priority backfill runs (Q3) will always render unattributed calls at session level.
+
+Phase 2 ships as two independently deployable chunks, 2a first:
+
+**Phase 2a — attribution quick wins (small PRs, no ledger dependency):**
+
+1. Add `checklistItemIds` to the base `vision` tool schema and make it required in the
+   CC/CRC review prompts.
+2. Thread `RUN_INDEX`/`CHECKLIST_ITEM` env into `semantic-search-blocks` log entries — the
+   `inspect-drawing` pattern (`inspect-drawing.ts:404–435`) — and add the same as a tool
+   param surfaced to the agent so calls are attributed in the transcript itself, not just
+   the sidecar.
+3. Add `runIndex` to CRC `vision-log.jsonl` entries (resolves Q8's cherry-pick option).
+
+**Phase 2b — the unified tool-call ledger:**
 
 1. **Unified envelope.** Every tool call writes one JSON under
    `output/runs/{runIndex}/tool-calls/{callId}.json`:
@@ -376,17 +410,13 @@ interface ToolCallRecord {
 
    `vision-check`'s `CallMetadata` is ~80% of this already — generalize it rather than
    inventing new. Existing sidecars keep writing (back-compat) until IG cuts over.
-2. **Attribution params required.** Add `checklistItemIds` to the base `vision` tool schema;
-   make it required in the CC/CRC review prompts; thread `RUN_INDEX`/`CHECKLIST_ITEM` env
-   into `semantic-search-blocks` log entries (the `inspect-drawing` pattern,
-   `inspect-drawing.ts:404–435`).
-3. **Log the rendered vision prompt.** Today the literal prompt sent to Gemini is
+2. **Log the rendered vision prompt.** Today the literal prompt sent to Gemini is
    recoverable nowhere (vision-check logs only `promptSha256`; CRC logs the agent's `prompt`
    arg but not the composed prompt). One string field in the ledger fixes "see the request"
    in the strictest sense.
-4. **Record resolved image paths at call time** (`resolvedImages` above) so re-derivation
+3. **Record resolved image paths at call time** (`resolvedImages` above) so re-derivation
    drift (F4) is eliminated for new runs; old runs fall back to live resolution.
-5. **Unify the two `vision-log.jsonl` schemas** (CC gains `responseText`/`usage`/
+4. **Unify the two `vision-log.jsonl` schemas** (CC gains `responseText`/`usage`/
    `checklistItemIds` to match CRC) — or retire both in favor of the ledger once IG reads it.
 
 Deploy order note: ledger reads in IG must tolerate both worlds (records absent → fall back
@@ -429,6 +459,10 @@ against it (it is — the envelope is tool-agnostic).
   for CC and CRC.
 - **D10 (v2.1, resolves Q9).** The debug page is **read-only** in v1 — no annotation hooks
   into `ig_eval_annotations`. Revisit once the page has seen real debugging use.
+- **D11 (v2.2).** Phases 0–2 are ALL pre-MVP — the phase split is PR/deploy sequencing, not
+  scope tiers. "Usable/complete" requires per-item attribution on new runs for every
+  evidence-gathering tool (vision family AND `semantic-search-blocks`). Phase 2a
+  (attribution) is deliberately small so it can ship early, decoupled from the 2b ledger.
 
 ## Open questions
 
@@ -454,12 +488,11 @@ against it (it is — the envelope is tool-agnostic).
 - **Q7.** ~~Do large runs truncate the log?~~ **RESOLVED (v2) → F8**: verified complete at
   110–127 MB on the two largest recent CRC runs; degraded-behavior rule added to Phase 1a
   for any run whose log is nonetheless missing.
-- **Q8.** For CRC multi-run, `vision-log.jsonl` is flat (no `runIndex` in entries) — join
-  by `checklistItemIds` + timestamp within the slice window, or add `runIndex` to CRC
-  entries as an early Phase 2 cherry-pick? (v2 data point: all 538 vision records in the
-  `d1ff47e7` run carry populated `checklistItemIds`, so the itemIds+timestamp join has
-  full coverage there; the question is only about disambiguating same-item calls across
-  runIndexes.)
+- **Q8.** ~~CRC `vision-log.jsonl` lacks `runIndex` — fuzzy join or cherry-pick?~~
+  **RESOLVED (v2.2) → Phase 2a item 3**: add `runIndex` to CRC entries. Until 2a deploys
+  (and forever on old runs), join by `checklistItemIds` + timestamp within the slice window
+  — full coverage verified: all 538 vision records in `d1ff47e7` carry populated
+  `checklistItemIds`.
 - **Q9.** ~~Annotation hooks in v1?~~ **RESOLVED (v2.1) → D10**: read-only v1.
 - **Q10.** Signed-URL policy for images on the page: per-request short TTL (simplest) vs
   proxying bytes through IG (no expiring links in the DOM). Recommendation: short-TTL signed
@@ -477,13 +510,17 @@ against it (it is — the envelope is tool-agnostic).
 
 ## Sequencing summary
 
+All phases through 2b are **pre-MVP** (D11) — the rows below are PR/deploy sequencing, not
+scope tiers. Only Phase 3 is post-MVP.
+
 | Phase | Repo(s) | Retroactive? | Delivers |
 |---|---|---|---|
 | 0 | inspector-general (UI) | yes | per-run verdict/explanation cards on comment page |
 | 1 | inspector-general | yes | debug route: full transcripts, tool req/resp, rendered images |
 | D8 pin | conductor (test only) | n/a | contract test that Phase 1's source stays intact |
-| 2 | conductor + bureau | new runs | tool-call ledger, join keys, attribution, rendered prompts |
-| 3 | conductor (deferred) | — | vision tool convergence (own spec) |
+| 2a | conductor + bureau | new runs | per-item attribution: base `vision`, `semantic-search-blocks`, CRC vision-log `runIndex` |
+| 2b | conductor + bureau | new runs | unified tool-call ledger, `tool_use_id` join key, rendered prompts, resolved image paths |
+| 3 | conductor (deferred, post-MVP) | — | vision tool convergence (own spec) |
 
 ## Related specs
 
