@@ -1,9 +1,29 @@
 # Comment Observability & Debugging Page for CC and CRC in Inspector General
 
-**Status:** Draft v1
-**Date:** 2026-07-10
-**Repos touched:** `inspector-general` (post-processing, ingest, new debug route), `conductor` (Phase 2: additive tool-call logging), `bureau` (Phase 2: script-tool attribution)
+**Status:** Draft v2
+**Date:** 2026-07-13
+**Repos touched:** `inspector-general` (post-processing, ingest, new debug route), `conductor` (D8 contract test; Phase 2: additive tool-call logging), `bureau` (Phase 2: script-tool attribution)
 **Repos NOT touched:** `cityhall`, `substation`, `winston` (except this spec)
+
+> **Revision note (v2, 2026-07-13).** Audit session findings folded in:
+> - **CRC join corrected (new F7).** v1's comment→transcript join (`ref` grouping + `.md` →
+>   log `item`) is wrong for CRC: the log's `item` values are **split guide files**
+>   (`crc-CA-1.md`/`-2`/`-3`), and the ref's grouping (`crc-CA`) is the department — no
+>   `crc-CA.md` exists in the log. The join now resolves the checklist item to its split file
+>   via the per-run findings files already in the run output. Data-model section rewritten.
+> - **Q7 RESOLVED as verified fact (new F8).** Log completeness verified hands-on against the
+>   two largest recent CRC runs (127 MB / 110 MB): zero invalid lines, 120/120 agent cells
+>   present, exact tool_use↔tool_result pairing. Degraded-behavior rule added to Phase 1a.
+> - **Q4 RESOLVED → D8.** Conductor pins SDK-message logging with tests only (no runtime
+>   changes). Sequencing table updated.
+> - **Phase 1a hardened.** Slicing location confirmed (`on-workflow-completed`, gated
+>   `review_type IN ('completeness','crc')`); streaming-parse + idempotency requirements
+>   added (logs are 110–127 MB); `metadata.transcripts` index interface specified; CRC's
+>   `enrich-final-comment` agent step explicitly out of scope; "review agent step (CRC)"
+>   hedge removed — the CRC agent step is also named `review` (verified).
+> - **Q11 (unattributed tool calls in the per-item view) and Q12 (slice-fetch transport)
+>   added.** Q8 enriched with verified sidecar data (all 538 vision records carry
+>   `checklistItemIds`).
 
 ## Problem
 
@@ -54,7 +74,7 @@ some of that exists (see F5/F6 gaps).
 
 Caveat: the earlier `agent-sdk tool_use guard` work and this run's log confirm SDK messages
 are logged at the current production level, but this is **incidental, not contractual** —
-see Q4.
+pinned by D8 (contract test in conductor). CRC logs verified to the same standard — see F8.
 
 ### F2. Per-run findings are persisted twice and partially ingested already
 
@@ -127,6 +147,42 @@ message tagged `item` + `runIndex` — but no sidecar can stand alone, and the S
 for vision calls (powers Vision Tool Coverage Analytics) — proof the log-parsing approach
 works, but it is review-workflow-specific and extracts vision calls only.
 
+### F7. CRC groupings are split guide files — the ref's grouping is NOT the log's `item` (v2)
+
+Verified against CRC runs `d1ff47e7-7c77-4a54-9d1c-4d6bae26046e` and
+`47eca23e-a010-4f87-ac3b-1cf6f4c481ae` (both 5 runs × 24 guide files, 17 departments):
+
+- A comment's `sourceFindings[].ref` uses the **department** as its grouping half
+  (`"crc-CA:CA-07.2"`), but the log's `item` values are **split guide files** —
+  `crc-CA-1.md`, `crc-CA-2.md`, `crc-CA-3.md`. There is no `crc-CA.md` anywhere in the log,
+  so v1's `grouping + ".md"` join returns nothing for any split department. (For CC the v1
+  join happens to hold: CC refs like `cc-13:AW-01` match guide files `cc-13.md` exactly.)
+- The deterministic resolver is already in the run output: each
+  `output/runs/run-N/findings/<guide-file>.md.json` lists the `checklistItemId`s that guide
+  file evaluated (verified: `CA-07.2` appears only in `crc-CA-1.md.json`). Resolving item →
+  split file requires no guide download and matches the GT-evals revamp precedent of
+  matching CRC by bare atomic item ID (grouping casing/shape varies per guide generation).
+
+### F8. The logs are complete — verified at 110–127 MB (v2, resolves Q7)
+
+The full completeness battery was run against the two largest recent CRC runs plus the CC
+sample run:
+
+| Check | CRC `d1ff47e7` (127 MB) | CRC `47eca23e` (110 MB) |
+|---|---|---|
+| NDJSON lines / invalid | 103,288 / **0** | 74,605 / **0** |
+| Agent cells with assistant msgs | **120/120** (24 files × 5 runs) | **120/120** |
+| `tool_use` ↔ `tool_result` pairing | **3,664 = 3,664** | **3,292 = 3,292** |
+
+Full response text present in every `tool_result` (median ~3.7k chars, max ~63k). No upload
+cap or rotation observed at these sizes. Two implementation-relevant observations:
+
+- The `crc-WQ` run-3 cell in `47eca23e` that silently dropped its structured output (known
+  from the run audit) **has its complete transcript in the log** — the debug page can show
+  what happened inside dropped cells, which no other artifact can.
+- The assistant/user message stream is ~10% of log lines (`review|system` events dominate:
+  65,135 of 103,288 lines in `d1ff47e7`); per-cell slices are compact (~85 messages/cell).
+
 ## Goals
 
 - From `ground-truth-evals/{comment}`, reach a debug view that shows, **per voting run**:
@@ -156,16 +212,24 @@ works, but it is review-workflow-specific and extracts vision calls only.
 
 ### Data model: how a comment maps to its N agents
 
-An agent cell evaluates a **whole grouping file** (all checklist items in `cc-13.md` or
-`crc-tpw.md`) in one session, N times (one per `runIndex`). A comment maps to its agents via:
+An agent cell evaluates a **whole guide file** (all checklist items in `cc-13.md` or
+`crc-CA-1.md`) in one session, N times (one per `runIndex`). The ref's grouping half is
+**not** reliably the guide filename — CRC departments split across several files (F7) — so
+the join goes through the checklist item ID and the per-run findings files:
 
 ```
-review_comment → output_json.sourceFindings[].ref  ("cc-13:AW-01")
-             → grouping ("cc-13") + checklistItemId ("AW-01")
-             → N transcript slices keyed by (item="cc-13.md", runIndex, session_id)
+review_comment → output_json.sourceFindings[].ref   ("crc-CA:CA-07.2" / "cc-13:AW-01")
+             → checklistItemId ("CA-07.2")
+             → per-run findings files (output/runs/run-N/findings/<file>.md.json)
+               — the file whose findings contain that checklistItemId → guide file ("crc-CA-1.md")
+             → N transcript slices keyed by (item="crc-CA-1.md", runIndex, session_id)
 ```
 
-So the natural unit of ingestion is the **(grouping, runIndex) session slice**, and the
+The ref's department prefix narrows which findings files to scan but is never trusted as a
+filename. For CC the resolution collapses to the v1 shortcut (`cc-13` → `cc-13.md`), but the
+slicer uses the findings-file resolver uniformly — one code path, no per-workflow casing.
+
+So the natural unit of ingestion is the **(guide file, runIndex) session slice**, and the
 per-item view is a *projection* of that slice: the item's finding (from `perRunFindings`)
 plus the subset of tool calls attributed to that item, plus the option to expand the full
 session. Attempting hard per-item segmentation of the transcript is unreliable (agents
@@ -182,11 +246,15 @@ in the system.
 ### Phase 1 — transcript ingestion + debug page (IG-only, retroactive)
 
 **1a. New post-processing step: transcript slicing.** In `on-workflow-completed.ts` (and the
-backfill trigger path), after run-summary computation:
+backfill trigger path), after run-summary computation, gated on
+`review_type IN ('completeness', 'crc')`:
 
 1. Download `logs/<workflow>.log` from the run's `outputs_path`.
-2. Stream-parse the NDJSON; keep lines where `step == 'review'` (CC) / the review agent step
-   (CRC) and `message` is present; group by `(item, runIndex, session_id)`.
+2. Stream-parse the NDJSON; keep lines where `step == 'review'` (the agent step is named
+   `review` in both the CC and CRC workflows — verified) and `message` is present; group by
+   `(item, runIndex, session_id)`. CRC's second agent step (`enrich-final-comment`) is
+   **out of scope** — the ask is about the voting agents; its transcript is also in the log
+   if a future revision wants it.
 3. For each slice, emit a normalized `AgentTranscript` JSON:
 
 ```typescript
@@ -209,13 +277,44 @@ type TranscriptEvent =
 
 4. Persist slices to storage under the run's own prefix:
    `{outputs_path}/ig-derived/transcripts/{grouping}/{runIndex}.json`, and record an index
-   (slice list + per-item tool-call counts) in `ig_review_runs.metadata.transcripts`.
-   Derived data stays in storage because transcripts are large and read rarely; only the
-   index goes in the DB. (Q1)
+   in `ig_review_runs.metadata.transcripts`:
 
-This works for every past run because the log has always been uploaded. Backfill piggybacks
-on the existing `trigger-ig-postprocess.sh` / direct-Inngest path (note the known multi-ID
-limitation of the script — use the curl loop, per the GT-evals revamp).
+```typescript
+interface TranscriptIndex {
+  slicedAt: string;                 // ISO timestamp of the slicing pass
+  logLines: number;                 // total NDJSON lines seen
+  slices: Array<{
+    grouping: string;               // guide file minus .md, e.g. "crc-CA-1"
+    runIndex: string;
+    storagePath: string;            // ".../ig-derived/transcripts/crc-CA-1/run-1.json"
+    events: number;
+    toolCallsByItem: Record<string, number>;  // checklistItemId → attributed call count
+    unattributedToolCalls: number;  // calls with no checklistItemIds (Q11)
+  }>;
+  itemToGrouping: Record<string, string>;  // from per-run findings files (F7 resolver)
+  warnings: string[];               // e.g. "log missing", "cell crc-WQ/run-3 has no findings"
+}
+```
+
+   Derived data stays in storage because transcripts are large and read rarely; only the
+   index goes in the DB. (Q1) The index merges into the existing `metadata` object the same
+   way the run summary does.
+
+**Runtime constraints (v2).** Verified logs are 110–127 MB (F8). The step must stream-parse
+line-by-line — never buffer the whole file — and write slice JSONs incrementally; the kept
+message stream is ~10% of lines, so slice output is modest (~85 messages per cell). The step
+must be **idempotent**: re-running postprocess (routine for backfills) overwrites
+`ig-derived/transcripts/` and replaces `metadata.transcripts` wholesale.
+
+**Degraded behavior (v2).** If the log is absent from the run upload, or a `(guide file,
+runIndex)` cell expected from the findings files has no transcript lines, the slicer still
+writes the index with a `warnings` entry naming what is missing — the debug page renders
+what exists and badges the gaps. Never fail the whole postprocess over a missing log.
+
+This works for every past run because the log has always been uploaded (completeness
+verified in F8). Backfill piggybacks on the existing `trigger-ig-postprocess.sh` /
+direct-Inngest path (note the known multi-ID limitation of the script — use the curl loop,
+per the GT-evals revamp).
 
 **1b. Tool-call enrichment join.** Where sidecars add information beyond the transcript,
 join them in during slicing:
@@ -309,6 +408,14 @@ against it (it is — the envelope is tool-agnostic).
 - **D6.** CC and CRC share one ingestion path and one debug UI from day one; the formal
   review workflow is explicitly follow-up.
 - **D7.** Vision tool convergence is acknowledged tech debt, deferred to its own spec.
+- **D8 (v2, resolves Q4).** Conductor pins SDK-message logging contractually with **tests
+  only** — a unit/integration test that drives a minimal agent step (or a mocked SDK stream
+  through the real logging path) and asserts assistant/user messages, including `tool_use`
+  blocks with input and `tool_result` blocks with content, reach the workflow log at the
+  production log level. No runtime changes. Ships before or alongside Phase 1.
+- **D9 (v2).** Comment→slice resolution goes through the checklist item ID and the per-run
+  findings files (F7), never through the ref's grouping string as a filename. One resolver
+  for CC and CRC.
 
 ## Open questions
 
@@ -322,29 +429,41 @@ against it (it is — the envelope is tool-agnostic).
 - **Q3.** Backfill scope: all completed CC/CRC runs, or the GT-evals backfill window
   (`created_at >= 2026-07-05`)? Log parsing is cheap; recommendation: everything with an
   intact `logs/` upload.
-- **Q4.** SDK-message logging is load-bearing but incidental (F1). Should conductor pin it
-  contractually — a test asserting assistant/user messages with tool_use/tool_result reach
-  the workflow log at production level — before we build on it? Recommendation: yes, small
-  conductor PR, independent of Phase 2.
+- **Q4.** ~~Pin SDK-message logging contractually?~~ **RESOLVED (v2) → D8**: yes, tests
+  only, small conductor PR, independent of Phase 2.
 - **Q5.** Thumbnail drift (F4): acceptable for old runs to render the *current* thumbnail
   with a "re-derived, may differ" badge, or should the page cross-check
   `sheet_version.created_at` against the run window and warn?
 - **Q6.** `tool_use_id` capture: can the MCP tool handler see the SDK `tool_use_id` at call
   time (to write into the ledger), or does the join have to happen transcript-side (slicer
   stamps `toolUseId` onto ledger records by matching args+timestamps)? Needs a conductor
-  spike; determines how clean the Phase 2 join is.
-- **Q7.** The pino log for a 5-voter CC run is ~40k lines; are there runs where log size
-  hits an upload cap or rotation that truncates the message stream? Audit a few of the
-  largest runs before trusting the log as complete.
+  spike; determines how clean the Phase 2 join is. **Spike required before Phase 2 design
+  freeze; does not block Phase 1.**
+- **Q7.** ~~Do large runs truncate the log?~~ **RESOLVED (v2) → F8**: verified complete at
+  110–127 MB on the two largest recent CRC runs; degraded-behavior rule added to Phase 1a
+  for any run whose log is nonetheless missing.
 - **Q8.** For CRC multi-run, `vision-log.jsonl` is flat (no `runIndex` in entries) — join
   by `checklistItemIds` + timestamp within the slice window, or add `runIndex` to CRC
-  entries as an early Phase 2 cherry-pick?
+  entries as an early Phase 2 cherry-pick? (v2 data point: all 538 vision records in the
+  `d1ff47e7` run carry populated `checklistItemIds`, so the itemIds+timestamp join has
+  full coverage there; the question is only about disambiguating same-item calls across
+  runIndexes.)
 - **Q9.** Does the debug page need annotation hooks (e.g. "this vision call misread the
   sheet") wired into `ig_eval_annotations` in v1, or is read-only debugging enough to start?
   Recommendation: read-only v1.
 - **Q10.** Signed-URL policy for images on the page: per-request short TTL (simplest) vs
   proxying bytes through IG (no expiring links in the DOM). Recommendation: short-TTL signed
   URLs, matching existing IG behavior.
+- **Q11 (v2).** Per-item projection policy for **unattributed** tool calls: base `vision`
+  and most `semantic-search-blocks` calls carry no `checklistItemIds` (F5), so on old runs
+  the per-item view would silently omit them and look misleadingly sparse — worst for
+  exactly the tool with the weakest attribution. Recommendation: render an "unattributed
+  calls in this session" bucket on the per-item view (count comes from the index's
+  `unattributedToolCalls`), in addition to the expand-full-session affordance.
+- **Q12 (v2).** Slice-fetch transport for the debug page: signed URL directly into
+  `workflow-runs`/`ig-derived/` vs an IG API endpoint (matching the existing
+  `/api/load`-style server-proxied pattern). Recommendation: IG API endpoint — keeps
+  bucket-layout knowledge server-side and matches how the page already loads run data.
 
 ## Sequencing summary
 
@@ -352,7 +471,7 @@ against it (it is — the envelope is tool-agnostic).
 |---|---|---|---|
 | 0 | inspector-general (UI) | yes | per-run verdict/explanation cards on comment page |
 | 1 | inspector-general | yes | debug route: full transcripts, tool req/resp, rendered images |
-| Q4 pin | conductor (test only) | n/a | contract that Phase 1's source stays intact |
+| D8 pin | conductor (test only) | n/a | contract test that Phase 1's source stays intact |
 | 2 | conductor + bureau | new runs | tool-call ledger, join keys, attribution, rendered prompts |
 | 3 | conductor (deferred) | — | vision tool convergence (own spec) |
 
