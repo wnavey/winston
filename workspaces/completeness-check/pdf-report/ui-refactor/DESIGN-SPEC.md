@@ -1,7 +1,29 @@
 # Design Spec: Migrating the CC "Download Report" PDF to the RDS Renderer
 
 **Date:** 2026-07-08
-**Status:** Approved direction — implementation spec
+**Status:** IMPLEMENTED — v2.0, 2026-07-16. All six workstreams shipped and §9 parity QA
+passed on production data. The only remaining step is the cutover itself (setting
+`CC_PDF_RENDERER=rds` + `SUBSTATION_PDF_URL=https://substation-pdf.vercel.app` on the
+cityhall Vercel project) and, after a bake period, the workstream-6 deletion PR.
+See **§10 Implementation record** for every pivot made against this spec — read §10
+FIRST if you are reusing this scaffolding for another report (e.g. the CRC PDF; see
+§10.6).
+
+> **Revision note (v2.0, 2026-07-16):** Implementation record appended as §10. Material
+> pivots vs. the spec as written: the "second function entry in one Vercel project"
+> architecture (§3.1) is impossible under the `@vercel/hono` preset and became a second
+> Vercel project `substation-pdf` (§10.1); browser reuse across warm invocations —
+> assumed safe in §3.1 — is broken on Vercel Fluid and became launch-per-render
+> (§10.2); packages are `@noetic-inc/*`, not `@noetic/*` (§10.3); the cutover flag
+> moved from a substation render-call switch to a cityhall proxy base-URL switch
+> (§10.1); the endpoint's data assembly was extracted into a module shared by both
+> renderers rather than left inline (§10.4). §8's three open questions are all
+> resolved (§10.5).
+
+Shipped PRs: substation#155 (spike), dsd#333 (renderer library), dsd#334 (status
+components), dsd#335+#336 (packages + publish workflow), substation#158 (RDS endpoint +
+logic extraction), cityhall#592 (proxy flag + download UX). Packages published:
+`@noetic-inc/report-design-system@0.1.0`, `@noetic-inc/report-renderer@0.1.0`.
 
 ## Decision
 
@@ -344,3 +366,161 @@ items (legacy status column). Verify: every status count, every annotation strin
 byte-for-byte, section table links jump correctly, page footer labels/numbers, stacked
 bar proportions, reference docs + resolution lines, filename, and that both eras render
 correctly through the same endpoint.
+
+
+## 10. Implementation record (v2.0, 2026-07-16)
+
+Everything below is what actually shipped, where it deviated from the spec, and why.
+The spec's sections are left as written (they document the reasoning at decision time);
+this section is the delta log.
+
+### 10.1 Runtime pivot: a second Vercel PROJECT, not a second function
+
+§3.1's design — a second tsup entry (`dist/pdf.js`) declared in the `functions` map of
+the same Vercel project — is **impossible under the `@vercel/hono` framework preset**.
+Empirically (substation PR #155, four deploy experiments):
+
+- Extra `functions`-map entries are silently collapsed into the single app lambda
+  (`lambdaRuntimeStats {"nodejs":1}`); path rewrites land in the main app's auth
+  middleware.
+- ANY `api/` directory (the classic file-system-functions escape hatch, tried in three
+  shapes) crashes the preset's builder outright: `Cannot read properties of undefined
+  (reading 'readFile')` at buildStep.
+
+**What shipped instead:** a second Vercel project, **`substation-pdf`**, on the same
+substation repo. Its env sets `PDF_FUNCTION=1`, which flips tsup's app entry to
+`src/pdf-function.ts` (still emitted as `dist/index.js`, so the shared `vercel.ts`
+functions config applies unchanged). The main project builds `src/index.ts` exactly as
+before. `src/pdf-function.ts` mounts the render route at the IDENTICAL path + auth
+middleware as the main API, which makes the cutover a pure base-URL swap.
+
+Consequences:
+- The `CC_PDF_RENDERER=rds|react-pdf` flag (§6 workstream 5) moved from "substation
+  endpoint swaps its render call" to **cityhall's proxy picks the base URL**
+  (`SUBSTATION_PDF_URL` when `CC_PDF_RENDERER=rds`, else `SUBSTATION_URL`). Rollback =
+  unset the flag; the legacy renderer keeps running underneath.
+- §3.1's memory-provisioning argument is moot: the build warns `memory` config is
+  **ignored on Active CPU (Fluid) billing**. The isolation rationale (artifact size,
+  cold start, crash blast radius) fully stands.
+- Production URL: `https://substation-pdf.vercel.app`. Env needed there: `PDF_FUNCTION`,
+  `NPM_TOKEN`, `PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`.
+  (`SUBSTATION_SERVICE_API_KEY` is NOT needed — it only gates the diligence
+  service-route allowlist.)
+
+### 10.2 Chromium lifecycle: launch-per-render, never reuse
+
+§3.1 said "browser-instance reuse across warm invocations is safe here." **It is not.**
+On Vercel Fluid, Chromium's subprocesses are reaped/frozen between invocations while
+the JS-side `Browser.isConnected()` stays stale — producing a strict 200/500
+alternation on sequential requests. The shipped design (`substation
+src/pdf/rds-chromium.ts`): **launch per render, close in a finally**, plus the §7.1
+per-instance render serialization. This is cheap: `@sparticuz/chromium`'s extraction to
+`/tmp` persists per instance, so only the first launch pays ~3s; relaunches are
+~40–50ms. Measured on production: 194-comment review ≈ 14s cold end-to-end; warm
+renders sub-second server-side for small docs.
+
+Pinning: `playwright-core@1.61.1` ↔ `@sparticuz/chromium@149.0.0` (both Chromium 149).
+Keep these in lockstep when bumping.
+
+### 10.3 Packages: `@noetic-inc/*`, publish needs no PAT
+
+- GitHub Packages requires the npm scope to match the org login, so the packages are
+  **`@noetic-inc/report-design-system`** and **`@noetic-inc/report-renderer`** (the
+  spec's `@noetic/*` names would be rejected at publish).
+- Publishing (dsd `Publish RDS Packages` workflow, `workflow_dispatch` with one version
+  input stamping both packages in lockstep) uses the workflow's own `GITHUB_TOKEN` with
+  `permissions: packages: write` — **no PAT/secret needed to publish**. Consumers need
+  `read:packages` auth: substation carries a scoped `.npmrc` reading `NPM_TOKEN`
+  (repo Actions secret + env var on BOTH substation Vercel projects; locally
+  `gh auth refresh -s read:packages` then `NPM_TOKEN=$(gh auth token)`).
+- The design-system package ships a generated **`/assets` submodule** exporting every
+  CSS/font layer as strings (`themeCss`, `reportThemeCss`, `stylesCss`, `fontFaceCss`);
+  the renderer package's `renderReportPdf` defaults ALL assets (including `modulesCss`)
+  from it, so the consumer contract is literally `renderReportPdf(element, { browser })`.
+- Packaged-ESM gotcha: the bundle must stay free of CJS globals — the renderer's
+  fs-reading asset defaults live in a dsd-only module (`dsd-assets.ts`) precisely so
+  `__dirname` never reaches the package (it crashed the first consumer test).
+- Both package builds and the render CLI's stage-1 share ONE esbuild config module
+  (`dsd web/scripts/render-report/esbuild-config.ts`) per §3.4's anti-drift requirement.
+
+### 10.4 Substation shape: data assembly extracted, not inline
+
+The spec kept the endpoint's fetch logic in place and swapped only the render call
+(§5). Because two routes now exist (legacy React-PDF on the main project, RDS on
+substation-pdf), the data assembly was extracted move-only into
+`src/pdf/cc-report-data.ts`, shared by both — the two renderers cannot disagree about
+content by construction. The §7.5 move-only logic module landed as
+`src/pdf/cc-report-logic.ts`; the legacy React-PDF document imports from it, so there
+is one source of truth during the flag period. The RDS template is
+`src/pdf/completeness-check-report.tsx` (author in JSX, not `createElement` — several
+RDS components declare required `children`, which `createElement`'s typings reject as
+props-only).
+
+### 10.5 §8 open questions — resolved
+
+1. **Cover page: ADDED** (Will sign-off). `ReportCover` with title "Completeness Check
+   Report", subject = site plan name, issue date.
+2. **Status colors: UI-matching hues**, as new `--rds-status-*` tokens (color/`-bg`/
+   `-ink` per level) in `report-theme.css`, selected via `data-status` — a sibling of
+   `--rds-sev-*`, not a replacement. New RDS components (dsd#334): `StatusSummary`,
+   `StackedStatusBar`, `SectionSummaryTable`, `StatusIcon`,
+   `ChecklistFindingGroup`/`ChecklistFinding`, each with gallery samples.
+3. **Registry: GitHub Packages** under noetic-inc.
+
+Also resolved: the pass-rate hero computes over APPLICABLE items (N/A excluded from the
+denominator).
+
+### 10.6 §9 parity QA — executed and PASSED (2026-07-16)
+
+Method: render the same review through both production endpoints
+(`substation.noeticbuild.com` = legacy, `substation-pdf.vercel.app` = RDS) with
+`x-service-role-key` auth, then pypdf text-extraction diff of counts and annotation
+strings. Results:
+
+- **(a) post-cutover + overrides/notes** — `b38e2619` (9 overrides, 2 notes): all 4
+  effective override-annotation sentences byte-identical.
+- **(b) pre-cutover legacy 5-value** — `8b34b120` (11 incorrect/na triages): all 10
+  legacy annotation sentences byte-identical; fail→N/A fold buckets identically.
+- **(c) multi-run uncertain** — Lamar+Collier `e5c5f7ab` (194 comments, 19 uncertain):
+  both renders exactly 28 pages, counts 99/7/4/19/65 and every per-section row
+  identical, all 19 consensus callouts byte-identical.
+- **(e) legacy unclear** — `fc1a16b4`: Unclear chip/column/counts identical.
+- **(d) all-N/A sections** and the D9/D11 disposition wordings have no real production
+  data yet; covered by the template fixture smoke test (verdict-override bucketing +
+  annotation, D11 note placement, all-N/A divider + dimming all verified on synthetic
+  props).
+
+### 10.7 Remaining steps + follow-up ideas
+
+1. **Cutover** (Will): set `CC_PDF_RENDERER=rds` + `SUBSTATION_PDF_URL` on cityhall
+   prod, redeploy.
+2. **Deletion PR** after bake: `completeness-check-document.tsx`,
+   `components/stacked-bar.tsx`, `components/status-icon.tsx`, the legacy route + its
+   `index.ts` mount, and the flag branch in cityhall's proxy. Shared React-PDF infra
+   stays (submission report, resolution plan, SIR).
+3. Optional: a cron warmer against the pdf function to shave the 5–15s cold start;
+   deterministic seed for the ReportCover contour (currently `Math.random()` — breaks
+   byte-level golden testing).
+
+### 10.8 Reuse guide for the CRC PDF (next consumer)
+
+The CRC report ("PDF generation moves to cloud in iter-3", cityhall
+`+page.svelte` disabled button) should reuse ALL of this scaffolding — the work is one
+template + one route + one proxy path:
+
+1. **New RDS template** in substation (`src/pdf/comment-resolution-report.tsx` or
+   similar) composing the SAME packaged components — the `--rds-status-*` vocabulary
+   and `ChecklistFindingGroup`/`SectionSummaryTable` were deliberately built
+   checklist-generic. If CRC needs new components, add them to dsd's RDS with gallery
+   samples and cut a lockstep package version bump (build via `Publish RDS Packages`).
+2. **New route** mounted in the EXISTING `src/pdf-function.ts` app (same substation-pdf
+   project — no new Vercel project needed), rendering through the existing
+   `rds-chromium.ts` (launch-per-render + serialization come free).
+3. **Data assembly** as its own `cc-report-data.ts`-style module. If CRC ever needs a
+   legacy/flag period, mirror the shared-module pattern; if not, the single RDS route
+   suffices.
+4. **Cityhall**: enable the disabled CRC download button with the same fetch→blob +
+   spinner pattern, proxying to `SUBSTATION_PDF_URL` (the env var already exists after
+   CC cutover).
+5. Local dev renders: `PDF_CHROMIUM_PATH=<playwright chromium binary>` + fixture props
+   through `renderRdsPdfSerialized` — see substation#158's smoke-test approach.
