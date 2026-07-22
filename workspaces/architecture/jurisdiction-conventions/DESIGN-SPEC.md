@@ -1,10 +1,23 @@
 # Jurisdiction Conventions — Source of Truth
 
-**Status:** Draft v1
+**Status:** Draft v2
 **Date:** 2026-07-22
 **Supersedes:** winston#182 "Path B" (the deferred jurisdictions-table work). Inherits #182's D1 (canonical id = Bureau slug) and D8 (named-token labeling schemes) unchanged.
-**Repos touched:** `substation` (migration: 2 new tables + FK + seed; read-only jurisdictions API; sync endpoint; CRV PDF reads DB; delete inline dict), `cityhall` (reads substation API; delete `departments.ts` dept map + `SLUG_SCHEME` map; unverified-name indicator), `bureau` (per-jurisdiction `conventions.yaml` + linter check + sync Action; CRC workflow resolves dept names at run time), `claude-plugins` (generate-crc-guides + siblings read DB instead of TSVs; HITL bootstrap writes DB rows), `conductor` (final phase only: review-saver stops writing `jurisdiction_organization_id`)
+**Repos touched:** `substation` (migration: 2 new tables + FK + seed + `workflow_run` grants; read-only jurisdictions API; CRV PDF reads DB; delete inline dict), `cityhall` (reads substation API; delete `SLUG_SCHEME` map; live section-name resolution + unverified-name indicator), `bureau` (per-jurisdiction `conventions.yaml` + linter check + direct-write sync Action; CRC workflow resolves dept names at run time + writes `sectionPrefix`), `claude-plugins` (generate-crc-guides + siblings read DB instead of TSVs; HITL bootstrap writes DB rows; prefix-only H1s), `conductor` (final phase only: review-saver stops writing `jurisdiction_organization_id`)
 **Repos NOT touched:** `surveyor` (its slug-keyed `jurisdictions/<slug>.md` configs already work), `dsd` / Library-DB `jurisdictions` table (separate Supabase project, GTM lifecycle — explicit non-goal), `inspector-general`
+
+> **Revision note (v2, 2026-07-22).** Folds in the audit session (11 findings, all verified against code) and Will's decisions on each. Material changes:
+> - **D17 revised (audit F1, blocking):** the new tables are NOT service-role-only. Conductor has no service-role key since Sec Wave 9 (`conductor/src/shared/child-env.ts` hard-blocks it); workflow scripts authenticate as the `workflow_run` Postgres role. The migration adds `GRANT SELECT` + permissive `TO workflow_run` policies (the `organizations` precedent). Without this, D18's hard-fail would have killed every CRC run — the July 14–16 hybrid-search outage failure class.
+> - **Headline claim reworded (F2) + live resolution designed (F3):** name fixes are one DB row *because consumers resolve display names live via prefix at render time*, not because stored JSON gets patched. New D26–D28: `build-crc-review-comments.ts` writes a deterministic `sectionPrefix`; cityhall + CRV PDF resolve names from the registry; `prefixFromCommentId` is the legacy fallback; section slugs re-key onto prefix (kills the slug-lockstep migration problem).
+> - **D15 re-scoped (F4):** v1 deletions are `dept-prefix-dict.ts` + both `SLUG_SCHEME` maps only. `cityhall/src/lib/departments.ts` AND conductor's duplicate `DEPARTMENT_NAMES` (`review-saver.ts:29-56` — store #12, missing from v1's inventory) are review-run vocabulary, deferred per D22/Q4.
+> - **Phase 7 reordered (F5):** `reviews.jurisdiction_organization_id` is NOT NULL — drop the constraint *before* review-saver stops writing, else every review save fails in the interim.
+> - **Backward compat added (F6, D29):** existing bucket guides are NEVER regenerated. The workflow parser accepts both H1 formats, extracts the prefix only (filename fallback exists), and always resolves the name from the DB, ignoring embedded names.
+> - **Jurisdiction plumbing specified (F7, D30):** the CRC workflow derives the slug by querying `project.jurisdiction_slug` via its `projectId` input; NULL slug hard-fails at kickoff. The dead `jurisdiction` workflow input is removed.
+> - **Sync semantics completed (F8, D7 extended):** bureau wins both ways — bureau-origin rows absent from `conventions.yaml` are deleted on sync (renames don't strand stale rows).
+> - **D5 revised (F9, D32):** sync is a direct DB write from the bureau Action (existing `sync-bureau.yml` precedent — the service key already lives in bureau's Action secrets), not a substation endpoint. Sync failure fails the Action visibly + alerts. Resolves v1 Q3/Q6.
+> - **Registry membership is file-gated (F10, D33 — Will, 2026-07-22):** `conventions.yaml` presence IS the registry marker. Every real jurisdiction gets at least a minimal stub (`name` + `short_name`, PR-reviewed — names live in bureau, not frozen in a migration); pseudo-dirs (`federal`, `texas`, `txdot`) get no file and never become project-selectable. Replaces v1's "seed all 57 slugs" (D13 revised). Resolves v1 Q7 with no filter machinery.
+> - **CRV chain stated (F11, D34):** DB row → `applicableArea` → bare prefix; DB winning over `applicableArea` is intended (the DB is ratified + versioned, unlike the stale dict that caused the incident).
+> - Minor: NULL `submission_label_convention` silently falling back to "Submission {n}" is accepted (cosmetic labels — see D10 note); Phase 4's cutover requires Phase 3's API *deployed*, not merely started.
 
 ---
 
@@ -20,7 +33,7 @@ Worse, the cityhall UI and the Comment Response Review PDF **disagreed** for the
 
 Remediation took: claude-plugins#161 + substation#171 (both merged 2026-07-22), plus a prod DB patch across 5 reviews / 76 `review_comments` rows including a section-slug migration (cityhall derives section slugs from `sectionName`, so renaming a name orphans comments unless slugs move in lockstep).
 
-### The convention data is scattered across ≥11 stores
+### The convention data is scattered across ≥12 stores
 
 | # | Store | Holds | Failure mode |
 |---|---|---|---|
@@ -30,11 +43,12 @@ Remediation took: claude-plugins#161 + substation#171 (both merged 2026-07-22), 
 | 4 | `bureau/jurisdictions/<slug>/` | codes, review-guides, CC checklists, workflows | the de-facto slug registry (57 dirs); only Austin has a full profile |
 | 5 | `claude-plugins .../dept-prefixes/<slug>.tsv` | CRC dept prefix→name | the OWB source; corrected + per-jurisdiction as of #161, but still a repo file no runtime can query |
 | 6 | `substation/src/pdf/dept-prefix-dict.ts` | inlined copy of #5 for the CRV PDF | drifted for a month; sync-by-comment |
-| 7 | `cityhall/src/lib/departments.ts` | 23 lowercase dept codes → names for review-run display | a fourth independent dept-name map (different vocabulary — see D22) |
+| 7 | `cityhall/src/lib/departments.ts` | 26 lowercase dept codes → names for review-run display | a fourth independent dept-name map (different vocabulary — see D22) |
 | 8 | `cityhall` + `substation` `src/lib/jurisdiction.ts` | `SLUG_SCHEME` (austin → `U_ZERO_BASED`) + adapters | byte-identical duplicates; #182 D17 flags the drift footgun |
 | 9 | `claude-plugins .../atomic-mcr/references/taxonomy-austin.json` | comment-prefix → department → discipline, incl. 4 SPLIT depts | Austin-hardcoded in a skill reference |
 | 10 | `bureau .../mcr-convert/prompts/convert-mcr.md` | dept→discipline mapping (`aw→WWP`, `ev→EPTP/FWP`…) | hardcoded in prompt prose; likely stale |
 | 11 | `surveyor/jurisdictions/<slug>.md` | GIS/source tooling config | healthy (slug-keyed) but disconnected |
+| 12 | `conductor/src/shared/review-saver.ts:29-56` `DEPARTMENT_NAMES` | duplicate of #7's vocabulary; writes `reviews.department_name` at insert time | *(v2, audit F4)* fifth independent dept-name map; same review-run vocabulary as #7, deferred with it (D22/Q4) |
 
 ### The three review workflows key on different taxonomies
 
@@ -51,9 +65,10 @@ Names flow verbatim from these stores onto applicant-facing surfaces (`review_co
 ### Core model: registry/profile split with per-row provenance
 
 - The **`jurisdictions` row** (slug, names, status, labeling convention) is a *registry entry*. Registry entries can be created from either side — a DB-first row is legal (bare-bones "this jurisdiction exists").
+- **Bureau-side registry membership is file-gated** *(v2, D33)*: a bureau dir becomes a registry row iff it contains a `conventions.yaml` — even a minimal stub. A dir without one (`federal`, `texas`, `txdot`, and anything else that isn't a real project-selectable jurisdiction) never syncs into the registry. No separate marker file, no filter column: the file that holds the conventions is the flag.
 - The **conventions** (department rows, JSONB extras) are the *profile*. Every profile row carries provenance: `origin: 'bureau' | 'app'`, `verified`, `bureau_commit`.
 - **Bureau is canonical; the DB is a replica** (Option C). `bureau/jurisdictions/<slug>/conventions.yaml` is the PR-reviewed, human-ratified source. A dedicated sync upserts it into the DB on merge.
-- **Sync reconciles, bureau wins.** Sync supersedes any app-origin row with the same key `(jurisdiction_slug, prefix)` (flips `origin→'bureau'`, `verified→true`, stamps `bureau_commit`). Sync **never deletes** app-origin rows bureau doesn't know about — it flags them unreconciled (surfaced as a to-do, not silent drift).
+- **Sync reconciles, bureau wins — both ways** *(v2, D31)*. Sync supersedes any app-origin row with the same key `(jurisdiction_slug, prefix)` (flips `origin→'bureau'`, `verified→true`, stamps `bureau_commit`), and **deletes bureau-origin department rows absent from the synced payload** — a prefix renamed or removed in `conventions.yaml` must not strand a stale, `verified=true` row that runtime resolution would keep serving. Sync **never deletes** app-origin rows bureau doesn't know about — it flags them unreconciled (surfaced as a to-do, not silent drift). **Registry rows are also never deleted by sync** *(v2, D33)*: a removed `conventions.yaml` may leave projects FK-ing the slug — the row is flagged unreconciled instead.
 - **Invariant (the OWB lesson, structural):** anything applicant-facing that came from the app side is visibly *unverified* in internal UIs until bureau ratifies it — but it renders (the HITL operator supplied it deliberately; blocking renders would re-block game days).
 
 `status` gates *what can run*, not *whether the jurisdiction may exist*: `prospect` = registry row only (projects may point at it; CRC game days may run); `active` = bureau dir with regulations exists (formal review requires this by construction — it reads bureau review-guides).
@@ -94,11 +109,24 @@ CREATE TABLE jurisdiction_departments (
 ALTER TABLE project
   ADD CONSTRAINT project_jurisdiction_slug_fkey
   FOREIGN KEY (jurisdiction_slug) REFERENCES jurisdictions(slug);
+
+-- (v2, D26 — audit F1) Conductor workflow scripts authenticate as the
+-- workflow_run role (per-run JWT; no service-role key since Sec Wave 9).
+-- Jurisdiction data is non-tenant reference data — mirror the permissive
+-- `organizations` SELECT precedent (20260711000000 §7). Without these, the
+-- CRC runtime lookup is denied and D18's hard-fail kills every run (the
+-- 20260716000000 hybrid-search-outage failure class).
+GRANT SELECT ON TABLE jurisdictions, jurisdiction_departments TO workflow_run;
+
+CREATE POLICY "workflow_run: select jurisdictions"
+  ON jurisdictions FOR SELECT TO workflow_run USING (true);
+CREATE POLICY "workflow_run: select jurisdiction_departments"
+  ON jurisdiction_departments FOR SELECT TO workflow_run USING (true);
 ```
 
 Deliberately trimmed (retrofit when a consumer appears): `aliases`, `active`/soft-delete on department rows, a `disciplines` table (universal disciplines stay bureau-only in `workflows/train/disciplines.json`).
 
-**RLS:** both tables service-role only. No anon/authenticated policies. The substation API is the only browser-facing read path.
+**RLS** *(v2, revises v1 "service-role only")*: no anon/authenticated policies. Readable by `service_role` and (permissive SELECT, above) `workflow_run`. The substation API is the only browser-facing read path; skills read via Supabase MCP (service role); the bureau sync Action writes via service role.
 
 ### Rejected: a generic `jurisdiction_conventions` key-value table
 
@@ -106,11 +134,20 @@ A KV table gives rows without schema: per-row lifecycle but no typed columns, ev
 
 ### Bureau side: `conventions.yaml`
 
-One file per jurisdiction: `bureau/jurisdictions/<slug>/conventions.yaml`. Draft v1 schema:
+One file per jurisdiction: `bureau/jurisdictions/<slug>/conventions.yaml`. **Its presence is what registers the jurisdiction** (D33) — a minimal stub is a legal, complete file:
+
+```yaml
+# bureau/jurisdictions/cedar-park/conventions.yaml — minimal stub
+name: City of Cedar Park
+short_name: Cedar Park
+```
+
+`status` may optionally be set in the file (`status: active`, Austin only for now); it defaults to `prospect`. Full schema:
 
 ```yaml
 name: City of Austin
 short_name: Austin
+status: active
 submission_label_convention: U_ZERO_BASED
 departments:
   - prefix: OWB
@@ -129,13 +166,16 @@ conventions:            # → jurisdictions.conventions JSONB, verbatim
 ```
 
 - A **bureau linter check** (`bureau/tooling/`) validates the schema in CI — a malformed PR fails before sync ever sees it.
-- **Sync trigger:** GitHub Action in bureau, on merge-to-main touching `jurisdictions/*/conventions.yaml`, POSTs the parsed payload to a service-authed substation sync endpoint (write logic lives in one place — substation owns the DB). Push-on-merge, no polling.
+- **Sync mechanism** *(v2, D32 — revises v1's substation-endpoint design)*: a dedicated script in `bureau/tooling/` (alongside the existing `bun run sync` for `bureau_nodes`), invoked by a GitHub Action on merge-to-main touching `jurisdictions/*/conventions.yaml`, writing **directly to the app DB with the service-role key already present in bureau's Action secrets** (the exact pattern of the existing `.github/workflows/sync-bureau.yml`). Rationale: the v1 substation-endpoint indirection bought little — the service key already lives in bureau's Action environment — and a failed direct write **fails the Action visibly**, whereas a failed POST needs bespoke observability. Reconciliation logic (supersede app rows, delete absent bureau rows, flag unreconciled) lives in this script.
+- **Sync failure alerting is a requirement, not a recommendation** *(v2, promotes v1 Q6)*: the Action failing must notify (GH Action failure notification at minimum; BetterStack if wiring exists). A silent sync failure is silent drift reborn.
 - DB rows written by sync carry the bureau commit hash. **Manual edits to bureau-origin DB rows are prohibited** — the sync is one-way and will clobber them; that is the design.
+- Note: the existing `sync-bureau.yml` also triggers on `jurisdictions/**`, so both syncs fire on a `conventions.yaml` merge — harmless, but the implementer should expect it.
 
 ### Substation API (read-only, v1)
 
-- `GET /jurisdictions/:slug` → `{ slug, name, short_name, status, submission_label_convention, conventions, departments: [...] }`
-- `GET /jurisdictions` → registry list (for the project-viewer jurisdiction dropdown)
+- `GET /jurisdictions/:slug` → `{ slug, name, short_name, status, submission_label_convention, conventions, departments: [...] }` (department rows include `verified` — the unverified indicator rides for free)
+- `GET /jurisdictions` → registry list (for the project-viewer jurisdiction dropdown; **unfiltered in v1** — see D33)
+- **Auth** *(v2, resolves v1 Q3)*: identical to the existing cityhall→substation endpoints — cityhall SSR passes the user's session token as a Bearer header (`cityhall/src/lib/server/substation.ts` pattern); substation validates the session and reads the DB with its own server-side client, so the tables' RLS never sees the user token.
 - In-memory cache, ~60s TTL, no invalidation machinery (conventions change ~never at runtime).
 - No write endpoints in v1. Writes happen via bureau sync + skill HITL only.
 
@@ -146,18 +186,26 @@ conventions:            # → jurisdictions.conventions JSONB, verbatim
 | cityhall (UI + SSR) | substation API (deliberate precedent: no new direct-supabase reads for this data) |
 | substation CRV PDF renderer | in-process DB read |
 | claude-plugins skills | direct DB via Supabase MCP (operator tools, as today) |
-| conductor workflow scripts | direct DB via the run's Supabase token |
+| conductor workflow scripts | direct DB via the run's token — as the `workflow_run` role, admitted by the D26 policies |
 
 ### Runtime resolution replaces baked-in names
 
-- **CRC guides slim to prefix-only.** `generate-crc-guides` stops embedding department display names in guide H1s (H1 becomes `# CRC — {PREFIX} — {project} v{n}`). The CRC workflow (`enrich-findings.ts` via `header-parse.ts`) resolves `prefix → display_name` from `jurisdiction_departments` at run time; `build-crc-review-comments.ts` consumes the resolved name. A future name fix is **one DB row** (via one bureau PR) — no guide regeneration, no bucket patching, no `review_comments` migration.
-- **Run-time miss = hard-fail.** If the CRC workflow encounters a prefix with no DB row, it fails early at `fetch-crc-guides` with a clear error. No bare-prefix fallback — silent fallback is exactly the drift failure mode. Generation-time HITL means this should never fire; when it does, something is genuinely wrong.
+- **CRC guides slim to prefix-only.** `generate-crc-guides` stops embedding department display names in guide H1s (H1 becomes `# CRC — {PREFIX} — {project} v{n}`).
+- **The workflow parser tolerates both H1 formats and trusts neither's name** *(v2, D29 — audit F6)*. `header-parse.ts` already has a strict pattern, a loose pattern, and a filename fallback (`crc-owb.md` → `OWB`). The revised parser extracts **only the prefix** from either the legacy full-name H1 or the new prefix-only H1, and **always** resolves `prefix → display_name` from `jurisdiction_departments` — any name embedded in a legacy H1 is ignored. Consequences: **existing bucket guides (incl. the stale gen-6 H1s) are never regenerated and can never re-ship a stale name**, and Phase 5 (guide emission) and Phase 6 (workflow parsing) decouple completely.
+- **Deterministic `sectionPrefix` in the output** *(v2, D27 — audit F3)*. The prefix flows script-to-script with zero LLM involvement: guide filename → `enrich-findings.ts:311` (`departmentPrefix`, filename fallback) → `build-crc-review-comments.ts` (already holds `grouping.departmentPrefix`, type at line 82). The script now writes `sectionPrefix` into each section of `review_comments.output_json`, alongside `sectionName` (kept as a legacy/fallback value for old readers).
+- **Consumers resolve display names live** *(v2, D27)*. cityhall renders section names by joining `(project.jurisdiction_slug, sectionPrefix)` → `display_name` via the substation API at render time; the CRV PDF does the same via its in-process DB read. **This is what makes a future name fix genuinely one DB row** (via one bureau PR) — no guide regeneration, no bucket patching, and no `review_comments` patching, because the stored JSON no longer carries the authoritative name.
+- **Legacy rows** *(v2, D28)*: rows predating `sectionPrefix` fall back to deterministic comment-ID derivation — leading letters, uppercased ("TPW 1" → `TPW`, "AW-RL-1" → `AW`; already implemented as `prefixFromCommentId`, `substation/src/pdf/dept-prefix-dict.ts:44-47`, which survives the dict deletion as a pure helper). Those IDs are the city's own MCR comment IDs — the same vocabulary that keys the registry — not LLM output.
+- **Section slugs re-key onto prefix** *(v2, D27)*. cityhall currently slugifies `sectionName` to derive section slugs (the incident's slug-lockstep hazard). New sections key their slug on `sectionPrefix` instead — a display-name fix then changes nothing structural: no orphaned comments, no slug migration, ever.
+- **Run-time miss = hard-fail.** If the CRC workflow encounters a prefix with no DB row, it fails early at `fetch-crc-guides` (the prefix is available there from guide filenames) with a clear error. No bare-prefix fallback — silent fallback is exactly the drift failure mode. Generation-time HITL means this should never fire; when it does, something is genuinely wrong.
 - **Generation-time unknown prefix = HITL.** `generate-crc-guides` (and siblings) resolve prefixes against the DB. An unknown prefix pauses for HITL: the operator supplies the real name; the skill (a) INSERTs the row immediately (`origin='app'`, `verified=false`) so the run proceeds, and (b) drafts the bureau `conventions.yaml` PR that, once merged + synced, ratifies the row (`origin→'bureau'`, `verified→true`). The claude-plugins `dept-prefixes/<slug>.tsv` files (added in #161) are transitional and retire once skills read the DB.
-- **Unverified rendering:** applicant-facing PDFs render app-origin names normally, no marker. Internal UIs (cityhall) show an "unverified" indicator on names from `verified=false` rows.
+- **Unverified rendering:** applicant-facing PDFs render app-origin names normally, no marker. Internal UIs (cityhall) show an "unverified" indicator — the `verified` flag arrives in the same API response cityhall already fetches for live name resolution (D27), so this is a render conditional, not a new data path.
+- **CRV PDF resolution chain** *(v2, D34)*: DB row → `applicableArea` → bare prefix. The DB **intentionally overrides** `applicableArea`. Yes, override-by-lookup is the mechanism that shipped the incident — but the failure was the *stale unversioned dict*, not the override; the registry is PR-ratified and synced, so it outranks per-run data. Implementers must not "fix" the override, or per-run name inconsistency returns.
 
 ### Jurisdiction derivation for reviews
 
 Reviews **derive** jurisdiction from `project.jurisdiction_slug` at run-kickoff time. No `reviews.jurisdiction_slug` column.
+
+*(v2, D30 — audit F7)* Concretely for CRC: the workflow already receives `projectId`; it queries `project.jurisdiction_slug` directly (the `workflow_run` role has project SELECT scoped to the run's own project). **`project.jurisdiction_slug IS NOT NULL` is a hard precondition** — a NULL slug fails loudly at kickoff with a clear error, not downstream at `fetch-crc-guides`. The declared-but-unconsumed `jurisdiction` workflow input is removed. `generate-crc-guides` (generation side) likewise takes the project as input and resolves the slug from `project.jurisdiction_slug` rather than trusting an operator-typed slug.
 
 > **Assumption A1 (Will, 2026-07-22): a project never changes jurisdiction.** The spec deliberately does not support historical reviews carrying a different jurisdiction than their project. If this assumption ever breaks, revisit with a stamped column.
 
@@ -165,63 +213,77 @@ Reviews **derive** jurisdiction from `project.jurisdiction_slug` at run-kickoff 
 
 The jurisdiction-as-organization misuse ends: cityhall's project viewer switches to `project.jurisdiction_slug` + `jurisdictions.name/short_name`; conductor's review-saver stops writing `reviews.jurisdiction_organization_id`; readers migrate; the column drops; jurisdiction rows in `organizations` ("City of Austin", "City of Cedar Park") are soft-deleted. `organizations` returns to meaning *customer organizations* only.
 
+*(v2, D35 — audit F5)* **Order matters because the column is NOT NULL** (the Wave 9 migration even grants `workflow_run` a permissive `organizations` SELECT solely so review-saver can satisfy that insert — `20260711000000` §7). Sequence: (1) migration drops NOT NULL; (2) review-saver stops writing; (3) readers migrate to the registry; (4) the column drops and the now-purposeless `workflow_run` `organizations` policy/grant is revoked; (5) jurisdiction orgs soft-deleted.
+
 ---
 
 ## Decisions
 
-Numbered for audit reference. (Grill log with Will, 2026-07-22, three batches.)
+Numbered for audit reference. D1–D25 from v1 (grill log with Will, 2026-07-22, three batches); D26+ and in-place revisions from the v2 audit session (same day).
 
 - **D1.** Canonical jurisdiction id = Bureau slug; `jurisdictions.slug` is the natural PK (no uuid). *(inherits #182 D1)*
 - **D2.** This spec supersedes winston#182's Path B.
 - **D3.** Architecture = Option C: bureau-canonical `conventions.yaml`, one-way structured sync to typed app-DB tables. Not pure-DB (loses PR governance — the OWB lesson), not pure-files (serverless can't fs-read bureau).
 - **D4.** One `conventions.yaml` per jurisdiction (not multiple small files): one review unit, one linter schema, one sync unit. Holds slug→display names, dept prefix map, labeling token, JSONB extras.
-- **D5.** Dedicated sync (bureau GH Action on merge → substation service-authed endpoint), not the existing `bureau_nodes` replica (that's embedding-oriented content storage, not typed rows).
+- **D5.** *(revised v2 → see D32)* Dedicated sync on merge-to-main. v1's substation-endpoint design is replaced by a direct DB write from the bureau Action.
 - **D6.** DB rows carry `bureau_commit`; one-way sync; manual edits to bureau-origin rows prohibited.
-- **D7.** Registry/profile split with per-row provenance (`origin`, `verified`); sync supersedes matching app rows, never deletes, flags unreconciled.
+- **D7.** *(extended v2 → see D31)* Registry/profile split with per-row provenance (`origin`, `verified`); sync supersedes matching app rows, never deletes app-origin rows, flags unreconciled.
 - **D8.** `status ∈ {prospect, active}`. `prospect` = registry row only; `active` = bureau regulations exist. Status gates what runs, not existence. A `prospect` jurisdiction CAN run a CRC game day (CRC needs an MCR, not bureau codes); formal review requires `active` by construction.
 - **D9.** Two-table schema as specified. Departments are a normalized table (hot row-level lookups + per-row lifecycle); `jurisdictions.conventions` JSONB is the long-tail escape hatch; generic KV `jurisdiction_conventions` table rejected. Trimmed: no `aliases`, no `active` flag, no disciplines table (bureau-only), retrofit on demand.
-- **D10.** `submission_label_convention` column stores the named token (`'U_ZERO_BASED'`); adapters stay in code. *(inherits #182 D8; short column name chosen over `submission_iteration_label_convention`)*
+- **D10.** `submission_label_convention` column stores the named token (`'U_ZERO_BASED'`); adapters stay in code. *(inherits #182 D8; short column name chosen over `submission_iteration_label_convention`)* *(v2 note)*: a NULL token makes `citySubmissionLabel()` fall back silently to generic "Submission {n}" — accepted; labels are cosmetic, unlike department names.
 - **D11.** `discipline_codes TEXT[]` on department rows (SPLIT depts get multiple entries). Mapping recorded in DB now; consumers (`atomic-mcr` taxonomy, `convert-mcr` prompt — likely stale) migrate later.
 - **D12.** V1 convention set: display names, dept prefix→name, `comment_source` (mcr/redlines/both), dept→discipline, labeling token, JSONB extras. Out: portal metadata, surveyor configs, CC checklist-version pointers.
-- **D13.** `project.jurisdiction_slug` gets a real FK; registry seeded with all 57 bureau slugs (`prospect` except austin `active`). The registry becomes the ONLY slug allowlist — no more allowlists frozen in migrations.
+- **D13.** *(revised v2 — see D33)* `project.jurisdiction_slug` gets a real FK. The registry becomes the ONLY slug allowlist — no more allowlists frozen in migrations. Population: NOT a blanket 57-slug seed — the sync creates rows from bureau dirs bearing a `conventions.yaml` (D33), plus app-origin HITL rows. The Phase-1 migration seeds only the slugs already in use by prod projects (`SELECT DISTINCT jurisdiction_slug FROM project WHERE jurisdiction_slug IS NOT NULL` — austin, cedar-park, …) so the FK is valid before the first sync runs.
 - **D14.** Library DB `jurisdictions` untouched (separate Supabase project, GTM lifecycle). Non-goal.
-- **D15.** All inline dictionaries deleted: `substation/src/pdf/dept-prefix-dict.ts`, `cityhall/src/lib/departments.ts` (dept-name map — see D22 scope note), both `SLUG_SCHEME` maps. Replaced by runtime reads.
-- **D16.** cityhall reads via a new read-only substation API (`GET /jurisdictions/:slug`, `GET /jurisdictions`), not direct supabase. Substation PDF reads in-process; skills via Supabase MCP; conductor scripts via run token.
-- **D17.** RLS: service-role only on both tables; substation API is the sole browser-facing path. API caches in-memory, ~60s TTL.
+- **D15.** *(re-scoped v2 — audit F4)* V1 deletes exactly: `substation/src/pdf/dept-prefix-dict.ts` (the const map; the pure `prefixFromCommentId` helper survives per D28) and both `SLUG_SCHEME` maps. **`cityhall/src/lib/departments.ts` and conductor's `DEPARTMENT_NAMES` (`review-saver.ts:29-56`) are NOT deleted in v1** — they are review-run vocabulary (D22), deferred to Q4. v1's "all inline dictionaries deleted" wording caused a direct contradiction with D22.
+- **D16.** cityhall reads via a new read-only substation API (`GET /jurisdictions/:slug`, `GET /jurisdictions`), not direct supabase. Substation PDF reads in-process; skills via Supabase MCP; conductor scripts via run token (see D26). API auth = existing session-token Bearer pattern *(v2, resolves Q3)*.
+- **D17.** *(revised v2 → see D26)* RLS: no anon/authenticated policies; `service_role` + permissive `workflow_run` SELECT. Substation API is the sole browser-facing path. API caches in-memory, ~60s TTL.
 - **D18.** CRC guides carry prefix only; the CRC workflow resolves display names from the DB at run time. Run-time miss → hard-fail at `fetch-crc-guides`.
-- **D19.** Generation-time unknown prefix → HITL: immediate app-origin DB row (run proceeds) + auto-drafted bureau `conventions.yaml` PR (ratification). Applicant-facing surfaces render unverified names without a marker; internal UIs show one.
+- **D19.** Generation-time unknown prefix → HITL: immediate app-origin DB row (run proceeds) + auto-drafted bureau `conventions.yaml` PR (ratification). Applicant-facing surfaces render unverified names without a marker; internal UIs show one (data path: the D27 API join — `verified` rides the same response).
 - **D20.** Bureau linter validates `conventions.yaml` schema in CI.
 - **D21.** Seeding: Austin's `conventions.yaml` drafted by merging the corrected `austin.tsv`, substation's dict, and the unverified extras (`EV`, `F`, `LDE`, `IW`, `RW`, `AW`, `AWPE`, `AD`) — the seed PR review is where Will ratifies those (they were deliberately excluded from claude-plugins#161 as unverified).
-- **D22.** V1 `jurisdiction_departments` = **city comment-prefix vocabulary only** (CRC/MCR). cityhall's `departments.ts` review-run display map is a *different vocabulary* (Noetic review-run `department_code`s) and migrates in a later phase, possibly keyed via `discipline_codes`. Do not conflate the two in one table without designing it.
-- **D23.** Reviews derive jurisdiction from project at kickoff; no `reviews.jurisdiction_slug`. Assumption A1: projects never change jurisdiction.
-- **D24.** Organizations deprecation is the final phase (in-spec, not deferred out).
+- **D22.** V1 `jurisdiction_departments` = **city comment-prefix vocabulary only** (CRC/MCR). cityhall's `departments.ts` review-run display map is a *different vocabulary* (Noetic review-run `department_code`s) and migrates in a later phase, possibly keyed via `discipline_codes`. Do not conflate the two in one table without designing it. *(v2)*: conductor's `DEPARTMENT_NAMES` duplicate is part of the same deferral.
+- **D23.** Reviews derive jurisdiction from project at kickoff; no `reviews.jurisdiction_slug`. Assumption A1: projects never change jurisdiction. *(v2: concrete mechanics in D30)*
+- **D24.** Organizations deprecation is the final phase (in-spec, not deferred out). *(v2: ordered sequence in D35)*
 - **D25.** Acceptance scenario: **cedar-park CRC game day** — bootstrap HITL → conventions exist → CRC workflow + cityhall UI + CRV PDF all render correct names with zero code changes. (A Dunaway project already has `jurisdiction_slug='cedar-park'`.)
+- **D26.** *(v2, audit F1 — revises D17)* Both tables get `GRANT SELECT` + permissive `USING (true)` SELECT policies `TO workflow_run` (the `organizations` precedent, `20260711000000` §7). Conductor has no service-role key (Sec Wave 9; `child-env.ts` `REMOVED_ENV_VARS`); without these policies the runtime lookup is denied and D18's hard-fail becomes a total CRC outage — the `20260716000000` hybrid-search failure class.
+- **D27.** *(v2, audit F2/F3)* Live name resolution: `build-crc-review-comments.ts` writes a deterministic `sectionPrefix` per section (prefix already in hand as `grouping.departmentPrefix` from `enrich-findings.ts:311`; zero LLM involvement); cityhall + CRV PDF resolve `(jurisdiction_slug, sectionPrefix) → display_name` from the registry at render time; `sectionName` still written as legacy fallback; **section slugs key on `sectionPrefix`**, decoupling display names from comment grouping permanently. The "one DB row fix" claim is true *because of this*, and only for surfaces that resolve live.
+- **D28.** *(v2)* Legacy rows without `sectionPrefix` derive the prefix from comment IDs (leading letters, uppercased — `prefixFromCommentId`, which is retained as a pure helper). Those IDs originate from the city's own MCR, in the registry's key vocabulary; casing variance is handled by the uppercase.
+- **D29.** *(v2, audit F6)* The CRC workflow parser accepts both H1 formats (legacy full-name and new prefix-only), extracts **only the prefix** (filename fallback), and always resolves the display name from the DB, ignoring any embedded name. **Existing bucket guides are never regenerated**; stale gen-6 H1 names become inert.
+- **D30.** *(v2, audit F7)* The CRC workflow queries `project.jurisdiction_slug` via its `projectId` input (`workflow_run` has scoped project SELECT). NULL slug → hard-fail at kickoff. The dead `jurisdiction` workflow input is removed. `generate-crc-guides` resolves the slug from the project the same way.
+- **D31.** *(v2, audit F8 — extends D7)* Bureau wins both ways: sync deletes bureau-origin rows absent from the synced `conventions.yaml` payload (modifications = updates, removals = deletes). App-origin rows remain delete-exempt + flagged.
+- **D32.** *(v2, audit F9 — revises D5)* Sync = direct DB write from a `bureau/tooling/` script run by the merge-to-main Action with the service-role key already in bureau's Action secrets (the `sync-bureau.yml` precedent). No substation sync endpoint. Sync failure fails the Action visibly **and alerts** (requirement, promoted from v1 Q6).
+- **D33.** *(v2, audit F10 + Will — resolves v1 Q7, revises D13)* **`conventions.yaml` presence = registry membership.** Every real jurisdiction dir gets at least a minimal stub (`name` + `short_name`; optional `status`, default `prospect`); the sync creates/updates registry rows only for dirs bearing the file. Pseudo-dirs (`federal`, `texas`, `txdot`) get no file and never appear in the registry or the project-viewer dropdown — no filter machinery needed, and jurisdiction display names are PR-ratified in bureau instead of frozen in a seed migration (the audit's title-casing concern resolves itself: the stub-file PR is where `TxDOT`-class names would have been hand-authored anyway, if such a dir ever earns a file). Sync never deletes registry rows (projects may FK them — see D31 note); a removed file flags the row unreconciled. `GET /jurisdictions` ships unfiltered in v1 (it now only contains real jurisdictions).
+- **D34.** *(v2, audit F11)* CRV PDF resolution chain: registry row → `applicableArea` → bare prefix. The registry intentionally overrides `applicableArea` (it is ratified + versioned; the incident's cause was the stale *unversioned* dict, not override-by-lookup). Do not "fix" the override.
+- **D35.** *(v2, audit F5)* Phase 7 sequence: drop NOT NULL on `reviews.jurisdiction_organization_id` → review-saver stops writing → readers migrate → drop column + revoke the `workflow_run` `organizations` policy → soft-delete jurisdiction orgs.
 
 ## Phases
 
-1. **Migration** (substation): create tables, seed 57 registry rows + Austin profile, add FK.
-2. **Bureau**: `conventions.yaml` (Austin), linter check, sync Action + substation sync endpoint.
-3. **Substation**: jurisdictions API; CRV PDF resolves from DB; delete `dept-prefix-dict.ts`.
-4. **Cityhall**: read API; delete `departments.ts` dept map + `SLUG_SCHEME`; unverified indicator.
-5. **Skills** (claude-plugins): generate-crc-guides + siblings read DB; HITL writes rows + drafts bureau PR; retire `dept-prefixes/*.tsv`.
-6. **CRC workflow** (bureau): prefix-only guides; runtime resolution; hard-fail on miss.
-7. **Organizations deprecation**: viewer on registry, review-saver stops writing, drop `reviews.jurisdiction_organization_id`, soft-delete jurisdiction orgs.
+1. **Migration** (substation): create tables, seed only the in-use slugs (D13) so the FK is valid, add FK, add `workflow_run` grants/policies (D26).
+2. **Bureau**: Austin's full `conventions.yaml` + minimal stubs for every real jurisdiction dir (names PR-ratified here, D33; `federal`/`texas`/`txdot` get none), linter check, direct-write sync script + Action + failure alerting (D32). First sync populates the registry.
+3. **Substation**: jurisdictions API (session-token auth); CRV PDF resolves from DB (chain per D34, legacy fallback per D28); delete the `dept-prefix-dict.ts` const map.
+4. **Cityhall**: read API; delete `SLUG_SCHEME`; live section-name resolution keyed on `sectionPrefix` with comment-ID fallback (D27/D28); slug re-key; unverified indicator; project-viewer jurisdiction display + dropdown. **`departments.ts` is NOT deleted (D15/D22).** Cutover requires Phase 3's API *deployed*, not merely merged — until then the viewer keeps the legacy `jurisdiction_organization_id` path.
+5. **Skills** (claude-plugins): generate-crc-guides + siblings read DB; resolve slug from project (D30); emit prefix-only H1s; HITL writes rows + drafts bureau PR; retire `dept-prefixes/*.tsv`.
+6. **CRC workflow** (bureau): both-format prefix-only parser (D29); runtime DB resolution; write `sectionPrefix` (D27); hard-fail on miss (D18); derive slug from project, NULL → kickoff hard-fail (D30). No guide regeneration.
+7. **Organizations deprecation** (ordered per D35): drop NOT NULL → review-saver stops writing → readers migrate → drop `reviews.jurisdiction_organization_id` + revoke `workflow_run` organizations policy → soft-delete jurisdiction orgs.
 
-Phases 3–6 parallelize once 1–2 land. Phase ordering constraint: 1 → 2 → (3|4|5|6) → 7.
+Phases 3–6 parallelize once 1–2 land (D29 decouples 5 from 6; D28's comment-ID fallback lets Phase 4 ship live resolution before Phase 6 writes `sectionPrefix`). Phase ordering constraint: 1 → 2 → (3|4|5|6) → 7, with Phase 4's cutover additionally gated on Phase 3's deploy.
 
 ## Open Questions
 
-- **Q1.** Exact Austin department list ratification (the 8 unverified prefixes) — resolved in the Phase-2 seed PR review, but flagging: if any of those 8 is wrong, it ships. Auditors: sanity-check the names in the seed PR against the MCR PDFs in `crc-guides` bucket / Austin's published org structure.
+- **Q1.** Exact Austin department list ratification (the 8 unverified prefixes) **and the stub-file jurisdiction names (D33)** — both resolved in the Phase-2 bureau PR review, but flagging: if any of those names is wrong, it ships. Auditors: sanity-check the prefixes against the MCR PDFs in the `crc-guides` bucket / Austin's published org structure, and the jurisdiction names against the obvious authorities.
 - **Q2.** `conventions.yaml` v1 key naming (draft above) — auditors: check the YAML shape round-trips cleanly to both tables and that `conventions:` extras can't collide with top-level keys.
-- **Q3.** Substation sync endpoint auth mechanism (service key header vs. Inngest event) and API route naming — implementation detail, decide in Phase 2/3 PRs.
-- **Q4.** Review-run department vocabulary (D22 deferral): design for migrating `departments.ts` / `reviews.department_code` display onto the registry. Deliberately out of v1.
-- **Q5.** generate-crc-guides' Phase-0 `jurisdiction` preflight block (added in claude-plugins#161 today) — extend to record registry `status` + row counts when skills move to DB reads (Phase 5).
-- **Q6.** Sync failure observability: does the bureau Action alert (BetterStack?) when the substation sync endpoint rejects a payload? Recommend: yes, minimal — a failed sync is silent drift reborn.
-- **Q7.** Whether `GET /jurisdictions` list endpoint should filter by `status` for the project-viewer dropdown (probably yes — `prospect` rows are assignable, so probably no filter; confirm UX in Phase 4).
+- **Q3.** ~~Substation sync endpoint auth mechanism~~ *(resolved v2: no sync endpoint — D32; read-API auth = session-token pattern — D16)*
+- **Q4.** Review-run department vocabulary (D22 deferral): design for migrating `departments.ts` + conductor's `DEPARTMENT_NAMES` / `reviews.department_code` display onto the registry. Deliberately out of v1.
+- **Q5.** generate-crc-guides' Phase-0 `jurisdiction` preflight block (added in claude-plugins#161) — extend to record registry `status` + row counts when skills move to DB reads (Phase 5).
+- **Q6.** ~~Sync failure observability~~ *(resolved v2: promoted to a requirement — D32)*
+- **Q7.** ~~`GET /jurisdictions` status filter~~ *(resolved v2: unfiltered in v1 — D33)*
 
 ## Prior art / references
 
 - winston#182 — `workspaces/comment-resolution-check/jurisdiction-correction-and-submission-labeling/DESIGN-SPEC.md` (P2 problem statement, D1, D8, D17, Path A migration `20260720203333`).
+- winston#184 — this spec's Draft v1 PR; the v2 audit session's findings are folded in above.
 - claude-plugins#161 (merged 2026-07-22) — per-jurisdiction `dept-prefixes/<slug>.tsv` + HITL bootstrap; transitional, retired by Phase 5.
-- substation#171 (merged 2026-07-22) — CRV PDF dict corrections; the dict itself deleted in Phase 3.
-- The 2026-07-22 DB patch: 5 CRC reviews / 76 `review_comments` rows, name + section-slug migration (the incident this spec prevents from recurring).
+- substation#171 (merged 2026-07-22) — CRV PDF dict corrections; the dict's const map deleted in Phase 3 (`prefixFromCommentId` helper survives, D28).
+- `substation/supabase/migrations/20260711000000_workflow_run_role_and_rls.sql` — the `workflow_run` role + the permissive `organizations` precedent D26 mirrors; `20260716000000` — the silent-permission-gap outage D26 prevents recurring.
+- The 2026-07-22 DB patch: 5 CRC reviews / 76 `review_comments` rows, name + section-slug migration (the incident this spec prevents from recurring — structurally, via D27's live resolution + prefix-keyed slugs).
