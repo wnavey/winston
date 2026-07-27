@@ -67,6 +67,23 @@ Hard counts over the full window `13:29:00 → 16:35:00` on hostname `4001fb8b-d
 
 4. **The timeout leaves the DB row orphaned.** Substation's `catch` (`workflow-run.ts:198-215`) and `onFailure` (`:38-46`) **only stop the sandbox** — neither touches `workflow_runs`. Conductor *would* call `markFailed()` (`workflow-run-tracker.ts:163-192`) but it was SIGKILLed with the sandbox, so the row stays `in_progress` / `error=null` indefinitely. `markFailed` is also wrapped in try/catch that never throws (`:143-157`), by design.
 
+### Where the logs survive — the upload boundary
+
+Conductor's logs have three homes with very different durability. The uploader ships the `output/`, **`logs/`**, and `workflow/` workspace dirs to the run's storage bucket (`conductor/src/shared/storage-uploader.ts:43`) — and `logs/` is exactly where pino writes `conductor.log` + `conductor-error.log` (`conductor/src/shared/logger.ts`). Critically, that upload runs from `engine.ts:487`, which the code comments **"always, even on step failure"**: a step returning an error breaks the step loop (`engine.ts:471-477`) but still falls through to the upload. So the durability axis is **not** success-vs-failure — it is **whether conductor's own process reached line 487 before it died**:
+
+| scenario | reaches `engine.ts:487` upload? | logs in Supabase storage? | Better Stack? |
+|---|---|---|---|
+| Workflow succeeds | ✅ | ✅ (`output/` + `logs/` + `workflow/`) | ✅ |
+| Step **fails gracefully** (conductor exits its own loop) | ✅ | ✅ | ✅ |
+| Conductor **hard-killed mid-run** — SIGKILL from `sandbox.stop()`, OOM, or the sandbox 300m cap | ❌ never reached | ❌ storage empty, `outputs_path` null | ⚠️ only what already streamed |
+
+**This run is row 3.** The hang → substation's `sandbox.stop()` SIGKILLed conductor mid-step → line 487 was never reached → storage empty, `outputs_path` null. Better Stack was the only survivor. Two caveats make even that imperfect for row 3:
+
+- `flushLogs()` only runs on conductor's own exit paths (`conductor/src/index.ts:356/387/392/399`). **A SIGKILL bypasses all of them**, so the final buffered `@logtail/pino` batch is lost — which is why the Better Stack trail cuts off dead at 13:31:43 with no shutdown line.
+- The sandbox is `persistent: false` (`setup.ts:29`), so the local `logs/*.log` files are discarded on stop — no post-mortem retrieval from the box.
+
+The observability remediations below (R3/R4/R6, and the new R13 log-durability cluster) matter precisely because **the hard-kill path is the same path that loses the logs** — the runs we most need to diagnose are the ones that leave the least behind.
+
 ### Why 65 specifically: the concurrency was past the box's ceiling
 
 The Vercel sandbox is provisioned with **`resources: { vcpus: 4 }`** and `runtime: node24`, `timeout: 300m`, `persistent: false` (`substation/src/inngest/lib/sandbox/setup.ts:22-30`). Vercel allocates ~2 GB RAM per vCPU, so ≈**8 GB** total (exact ratio to be confirmed — Q3). Every conductor agent is an Agent SDK `query()` that **spawns a Claude Code subprocess plus its MCP stdio servers** (`runner.ts:184-186, 269-295`). 65 concurrent agents ≈ 65 node processes + 65 child process trees + their MCP servers on 4 vCPUs / ~8 GB — roughly **16 agents/vCPU**.
@@ -109,6 +126,27 @@ A hung/stalled parallel step has **no per-agent timeout** to break it and **no o
 - **R5. Orchestration heartbeat.** Emit a periodic line from the orchestrator — `event=orchestration.heartbeat` with `{running, completed, failed, queued, oldestAgentAgeMs}` every ~30–60 s during parallel steps. A single stall would then be obvious within a minute instead of invisible for 3 hours. *Highest diagnostic ROI for the effort.*
 - **R6. Agent-subprocess visibility + dead-child detection.** Today only the orchestrator logs; the 65 agent subprocesses ship nothing, so a stall is a black box. Surface per-agent lifecycle (`agent.completed`/`agent.failed`/progress), and ensure a silently-killed child (OOM) causes its `query()` promise to **reject**, not hang — otherwise R1's timeout is the only safety net.
 
+### P1b — Log durability under resource pressure (the "we have no logs" problem)
+
+The runs we most need to diagnose (hard-kills) are the ones that upload nothing (row 3 of the boundary table). The design principle: **the only durable logging is logging that leaves the box *continuously*, to a system that outlives the box.** "Flush harder at the very end" cannot help a process that gets torn down — which is exactly why Better Stack (a streaming out-of-box sink) held the trail while storage (an end-of-run push) held nothing. The remediations follow from matching a mechanism to each death mode:
+
+- **R13a. Periodic in-run log flush to storage (conductor).** A timer (~every 60 s) upserts `logs/conductor.log` + `conductor-error.log` to the run's bucket during the run, not just at `engine.ts:487`. Gives Supabase-storage parity with the Better Stack trail, independent of end-of-run upload *and* independent of the (interactively-authenticated) Better Stack MCP connector — so a headless/cron session can still self-serve logs. Degrades gracefully: a hard kill loses only the last interval. Cheap, self-contained, no substation changes.
+- **R13b. Substation harvests logs before it kills the box.** The 3h death is **not** a surprise resource death — substation *initiates* it. On the `waitForEvent` timeout (and in the `catch`), before `sandbox.stop()`, run one command in the sandbox to upload `logs/` to storage (or read the files out via the SDK and persist them). This rescues the common "box is starved/blocked but still responsive" case — which is plausibly Friday's, since the orchestrator streamed cleanly until the moment work began and only *then* went quiet. **Required because `sandbox.stop()` is a hard control-plane session teardown** (`@vercel/sandbox` `session.stop()` → `stopSession`) with no in-box SIGTERM grace, so conductor's own `flushLogs()`/upload never gets to run. Pairs naturally with R3 (mark row failed in the same pre-teardown window).
+- **R13c. Shrink the logtail buffer window.** Reduce `@logtail/pino` batch size / flush interval so a SIGKILL loses less of the in-flight buffer. Cheap; tradeoff is more network chatter.
+- **R13d. (stretch) SIGTERM-with-grace before teardown.** Substation sends the detached conductor command `kill('SIGTERM')` and waits a few seconds before `stop()`; conductor installs a SIGTERM handler that flushes + uploads. Only helps when the box is responsive — the same regime R13b covers with less coupling (R13b doesn't depend on conductor being healthy enough to run a signal handler), so treat this as optional.
+
+**Recommendation:** R13a + R13b are the primary pair (continuous self-shipping + a guaranteed pre-teardown harvest); R13c is a cheap rider; R13d is deferred. **None of these remove the irreducible floor** (see below) — that job belongs to R1/R2/R7.
+
+#### The irreducible floor — and why it's narrow
+
+There is a real limit: a box that dies **faster than a single batch can leave it** (near-instant catastrophic OOM, or a kernel-level teardown) can only ever surface what already streamed out. No in-box heroics change that. But this floor is narrower than "resource-constrained runs just lose their logs":
+
+1. Most resource deaths are *gradual* (thrash/creep), where continuous shippers (Better Stack, R13a) keep exporting until the box is too sick to run the timer — capturing the **onset**, which is the diagnostically valuable part. Note Friday's logs are complete up to 13:31:43, the exact moment things went wrong; the missing 3 h is mostly (suspected) silence, not lost signal.
+2. Continuous shippers only lose to the box under CPU/OOM starvation — which is itself caused by oversaturation. So the highest-leverage "keep the logs" fix is **don't let the box get that sick**: R1 (per-agent timeout → graceful failure → normal upload) and R2/R7 (concurrency within headroom). Prevention converts row 3 of the table into row 2.
+3. The truly-zero-logs case then collapses to "instant catastrophic death before any export," which for these workflows is rare and, if it recurs, is a signal to prevent (cap concurrency / size the box), not to instrument.
+
+**So: no, "we have no logs" should not be an accepted outcome for the common (gradual) resource-pressure deaths — R13a/R13b make those self-documenting. Yes, there is a narrow floor for instantaneous catastrophic death, and the honest answer there is prevention, not capture.**
+
 ### P2 — Structural / follow-up
 
 - **R7. Right-size concurrency to the box.** Either scale sandbox `vcpus` up when a high `maxWorkers` is requested, make conductor concurrency a function of available memory, or shard agents across multiple sandboxes. Depends on Q4/Q5.
@@ -119,9 +157,9 @@ A hung/stalled parallel step has **no per-agent timeout** to break it and **no o
 
 - **R10.** Root `CLAUDE.md`: reconcile the "up to 30 workers" claim with the enforced ceiling (R2); add a one-liner on the 4-vCPU sandbox and the concurrency/memory relationship.
 - **R11.** Conductor `CLAUDE.md`: document the per-agent timeout (R1) and the `maxWorkers` clamp (R2) once shipped, under a "Danger Zones"-style note.
-- **R12.** Add a **"Diagnosing a hung cloud run" runbook** (this topic dir or conductor docs) capturing the recipe used here: find the row in `workflow_runs`; the durable log trail is Better Stack source `Reviewer` (`1654842`); correlate by sandbox hostname (`JSONExtract(raw,'hostname',...)`) over `s3Cluster(primary, t490582_reviewer_s3)` (>30 min old) vs `remote(t490582_reviewer_logs)` (last ~30 min); watch for `agent.started` with no matching `agent.completed`.
+- **R12.** Add a **"Diagnosing a hung cloud run" runbook** (this topic dir or conductor docs) capturing the recipe used here: find the row in `workflow_runs`; the durable log trail is Better Stack source `Reviewer` (`1654842`); correlate by sandbox hostname (`JSONExtract(raw,'hostname',...)`) over `s3Cluster(primary, t490582_reviewer_s3)` (>30 min old) vs `remote(t490582_reviewer_logs)` (last ~30 min); watch for `agent.started` with no matching `agent.completed`. **Prerequisite to record:** Better Stack access in this investigation was via the interactively-authenticated Better Stack **MCP connector** (`mcp__…_Betterstack__query`, credentials held connector-side, not in the repo) — a headless/cron session won't have it. Once R13a ships, the same logs are self-servable from the run's storage bucket without the connector, which is the more portable path the runbook should prefer.
 
-**Suggested sequencing:** R1 + R2 first (they'd have prevented the loss outright), then R3/R5 (turn future stalls from invisible to obvious), then R4/R6, then P2. R1 and R3 are independently valuable and can ship in parallel across the two repos.
+**Suggested sequencing:** R1 + R2 first (they'd have prevented the loss outright), then R3 + R13b together (one substation pre-teardown window: mark the row failed *and* harvest logs) and R5/R13a (turn future stalls from invisible + self-documenting), then R4/R6/R13c, then P2. R1 and the substation cluster (R3/R13b) are independently valuable and can ship in parallel across the two repos.
 
 ## Open questions — "why did *zero* of 65 succeed?" (investigate hardest)
 
@@ -136,6 +174,7 @@ The concurrency level is a convincing **trigger**, but the **mechanism** of zero
 - **Q3. Is the 3h Better Stack silence "no work happened" or "logs not shipped"?** The logtail transport is async/buffered; under starvation it may simply stop flushing. Add sandbox-side resource sampling to disambiguate. Also confirm the exact Vercel RAM-per-vCPU ratio for a 4-vCPU box.
 - **Q4. Where is the cliff between 39 (works, ~72 min) and 65 (hangs)?** Sweep 40 / 50 / 60 with metrics to fix the safe ceiling for R2/R7.
 - **Q5. Scale up or shard out?** For genuinely large runs, is the answer more vCPUs per sandbox, or multiple sandboxes each under the per-box ceiling? Informs R7.
+- **Q6. Was the box still *responsive* at the 3h mark?** This decides whether R13b (harvest-before-kill) actually rescues logs or whether the box was already dead. Can't be answered retroactively (sandbox gone), but the R5 heartbeat answers it directly on the next stall: heartbeats still streaming during a stall ⇒ orchestrator alive, agents hung (R13b works, and R1 is the fix); heartbeats also stop ⇒ orchestrator starved too (lean on R13a's earlier flushes + R2/R7 prevention). Also disambiguates Q1/Q3.
 
 ### Proposed repro / investigation plan
 
