@@ -1,7 +1,7 @@
 # Jurisdiction Conventions — Source of Truth
 
-**Status:** Draft v2
-**Date:** 2026-07-22
+**Status:** Draft v2 — implementation in progress (see [Implementation Status](#implementation-status))
+**Date:** 2026-07-22 (impl status updated 2026-07-27)
 **Supersedes:** winston#182 "Path B" (the deferred jurisdictions-table work). Inherits #182's D1 (canonical id = Bureau slug) and D8 (named-token labeling schemes) unchanged.
 **Repos touched:** `substation` (migration: 2 new tables + FK + seed + `workflow_run` grants; read-only jurisdictions API; CRV PDF reads DB; delete inline dict), `cityhall` (reads substation API; delete `SLUG_SCHEME` map; live section-name resolution + unverified-name indicator), `bureau` (per-jurisdiction `conventions.yaml` + linter check + direct-write sync Action; CRC workflow resolves dept names at run time + writes `sectionPrefix`), `claude-plugins` (generate-crc-guides + siblings read DB instead of TSVs; HITL bootstrap writes DB rows; prefix-only H1s), `conductor` (final phase only: review-saver stops writing `jurisdiction_organization_id`)
 **Repos NOT touched:** `surveyor` (its slug-keyed `jurisdictions/<slug>.md` configs already work), `dsd` / Library-DB `jurisdictions` table (separate Supabase project, GTM lifecycle — explicit non-goal), `inspector-general`
@@ -268,6 +268,46 @@ Numbered for audit reference. D1–D25 from v1 (grill log with Will, 2026-07-22,
 7. **Organizations deprecation** (ordered per D35): drop NOT NULL → review-saver stops writing → readers migrate → drop `reviews.jurisdiction_organization_id` + revoke `workflow_run` organizations policy → soft-delete jurisdiction orgs.
 
 Phases 3–6 parallelize once 1–2 land (D29 decouples 5 from 6; D28's comment-ID fallback lets Phase 4 ship live resolution before Phase 6 writes `sectionPrefix`). Phase ordering constraint: 1 → 2 → (3|4|5|6) → 7, with Phase 4's cutover additionally gated on Phase 3's deploy.
+
+## Implementation Status
+
+*(As of 2026-07-27. Implementation session, Will + Claude. Each shipped phase is a merged PR; author-only on prod-DB migrations — Will applied them.)*
+
+| Phase | Repo | PR | State |
+|---|---|---|---|
+| 1. Migration (2 tables + FK + `workflow_run` grants + seed in-use slugs) | substation | **#175** | ✅ merged + **applied to prod** |
+| 2. `conventions.yaml` (austin full + cedar-park stub) + linter (in CI) + direct-write sync Action | bureau | **#710** | ✅ merged + **first sync ran** — registry live |
+| 3. Read-only jurisdictions API + CRV PDF DB resolution + delete `dept-prefix-dict` const map | substation | **#176** | ✅ merged + **deployed** |
+| 4a. Live CRC section-name resolution + unverified indicator (read path) | cityhall | **#595** | ✅ merged |
+| 4b. Delete `SLUG_SCHEME` + jurisdiction dropdown + project-viewer display switch | cityhall (+ small substation) | — | ⬜ **open** |
+| 5. Skills read DB, prefix-only H1s, HITL writes DB row + drafts bureau PR, retire TSVs | claude-plugins | — | ⬜ **open** |
+| 6. CRC workflow: both-format prefix-only parser (D29), runtime DB resolution, write `sectionPrefix`, hard-fail on miss, slug-from-project + remove dead input | bureau | **#766** | ✅ merged |
+| 7. Organizations deprecation (ordered per D35) | substation + conductor + cityhall | — | ⬜ **open** (last, riskiest) |
+
+**Prod state after Phases 1–2:** `jurisdictions` has `austin` (`status=active`, `U_ZERO_BASED`, 18 department rows, `conventions` JSONB populated) + `cedar-park` (stub, `status=prospect`, 0 departments). All 18 austin `jurisdiction_departments` rows are `origin=bureau`, `verified=true`, stamped with the sync commit. The 6 formerly-unverified extras (`EV/F/LDE/IW/RW/AWPE`) were ratified in the #710 review and synced as `verified=true`.
+
+**Net effect today:** the applicant-facing incident ("One Water Bureau") is **structurally fixed for Austin, end-to-end** — the CRV PDF (Phase 3), the cityhall CRC UI (Phase 4a), and the CRC workflow output (Phase 6) all resolve department names live from the registry and ignore any name baked into a guide. Existing bucket guides are never regenerated.
+
+### Open items (for the next session)
+
+- **Phase 5 — generation-side skills (claude-plugins).** `generate-crc-guides` + `parse-crc-comment-response-pdf` should read `jurisdiction_departments` (via Supabase MCP) instead of the per-jurisdiction TSVs; emit prefix-only H1s (`# CRC — {PREFIX} — …`); and on an unknown prefix, HITL **INSERTs an app-origin DB row** (`origin='app'`, `verified=false`) so the run proceeds *and* drafts the bureau `conventions.yaml` PR that ratifies it. Retire the transitional `dept-prefixes/<slug>.tsv` files (claude-plugins#161). Extend the Phase-0 preflight to record registry status/row-counts (Q5).
+- **Phase 4b — cityhall plumbing** (deferred from Phase 4 by decomposition, Will's call — see note below). Delete `SLUG_SCHEME`; source the `submission_label_convention` token from the registry (`TOKEN_ADAPTERS` stays in code, D10); add a jurisdiction `<select>` to the create + settings forms; switch the project-viewer jurisdiction **display** name from the `reviews.jurisdiction_organization_id → organizations.name` join to `project.jurisdiction_slug → jurisdictions.name/short_name`. **Blocker to know:** substation's `createProjectBody` / `updateProjectBody` (`src/schemas/projects.ts`) do NOT accept `jurisdiction_slug` — the dropdown write needs that added (+ FK-backed validation) as a small substation change, so 4b is not purely cityhall.
+- **Phase 7 — organizations deprecation** (ordered per D35): drop NOT NULL on `reviews.jurisdiction_organization_id` → review-saver stops writing it → migrate readers → drop the column + revoke the `workflow_run` organizations policy → soft-delete the jurisdiction org rows. Riskiest; save for last.
+
+### Key implementation findings & gotchas
+
+- **⚠️ Phase-6 hard-fail ↔ Phase-5 onboarding interaction (the load-bearing gotcha).** Phase 6 makes the CRC workflow **hard-fail** at `fetch-crc-guides` if any guide's department prefix has no `jurisdiction_departments` row (D18). Today the **only** writer to that table is the Phase-2 bureau `conventions.yaml` sync — `generate-crc-guides` writes a **TSV, not a DB row**. Consequence: a CRC run for **austin works** (registry populated), but a run for a **brand-new jurisdiction hard-fails** until either Phase 5 lands (HITL writes the app-origin DB row) *or* someone lands a `conventions.yaml` dept roster for it first. This is by design (no silent bare-prefix fallback), but it means **Phase 5 (or a manual `conventions.yaml` PR) is a prerequisite for onboarding any new jurisdiction's CRC run.**
+- **`generate-crc-guides` names are now inert for display.** It still embeds names from the (corrected, #161) TSV into guide H1s, but Phase 6's D29 parser extracts only the prefix and ignores the embedded name; Phases 3/4a/6 all resolve from the DB. So the TSV can no longer ship a wrong name to applicants — it's cosmetic until Phase 5 retires it. The remaining reasons for Phase 5 are onboarding-to-DB (above), drift elimination, and prefix-only H1 cleanliness.
+- **`sectionPrefix` persistence verified.** CRC is `output_schema='legacy'`; conductor's review-saver stores `reviewData` **wholesale** for legacy (`review-saver.ts:499-500`), so the new `sectionPrefix` field persists to `reviews.output_json.sections[]`, and review-saver only reads `sectionName` (for slugs). `validate-output.ts` does not strict-check section shape. So nothing drops or rejects `sectionPrefix`. Once a fresh CRC run happens post-#766, cityhall (4a) prefers `section.sectionPrefix`; older reviews keep working via 4a's `sectionCode`-derivation fallback.
+- **D34 behavior change to eyeball.** Registry wins over the baked-in name (intended anti-drift). Real example: an existing section titled `"AW Utility Development Services"` now renders as the registry's `"Austin Water"`. Confirm the registry names read well in the UI; if any is off, the fix is a one-line `austin/conventions.yaml` edit + re-sync.
+- **Phase 4a scope notes.** The unverified indicator renders on the CRC review-overview group headers only (not the section-detail heading, which is a single derived string — deferred, low value). The project-viewer display switch was moved to 4b (grouped with the identity plumbing). Verification was unit-tests + Will's manual eyeball (cityhall app not runnable in-session).
+- **Phase 3 API contract.** The jurisdictions endpoints follow substation's Stripe-style envelope (`{ data, has_more }` / `{ id, object, created_at, snake_case }`) with a **documented natural-key exception** (`id` = slug / prefix, unprefixed) added to `substation/docs/api-design.md`. This is the wire contract cityhall (4a, and 4b) build against.
+- **Minor spec deltas found during impl (none change the design):** the "57-element allowlist" in migration `20260720203333` is a *backfill array literal*, not a column CHECK — so `project.jurisdiction_slug` had **zero** validity enforcement before Phase 1's FK. Bureau has **60** slug dirs, not 57. The real CRC H1 already embeds the prefix in parens (`{NAME} ({PREFIX})`), so the strict parser matched it pre-change. `bun run sync` in bureau is austin-hardcoded to `bureau_nodes`, so the conventions sync is genuinely new code (new script + new `sync-conventions.yml` Action), not a trigger tweak. Only `parse-crc-comment-response-pdf` (not `generate-crc-guides-from-redlines` or `atomic-mcr`) reads the shared dept-prefix TSVs.
+- **Tooling notes for implementers.** Bureau CI's biome is scoped to `tooling/` and there is **no `tsc`/lint gate for the `workflows/` scripts** (they run in the conductor sandbox with deps installed there); Phase 6 added the CRC `header-parse` self-contained test to the CI "workflow script tests" step. Bureau's `conventions.yaml` linter + sync use built-in `Bun.YAML` (no `js-yaml` dep). Substation prod migrations are applied manually by Will (migration-tracking table is fragile after manual applies) — keep migrations author-only.
+
+### Acceptance scenario (D25) — not yet run
+
+The **cedar-park CRC game day** (D25) still requires **Phase 5**: cedar-park is a registry stub with **zero department rows**, so a CRC run for it would hard-fail today. The path to green: Phase 5's HITL bootstrap onboards cedar-park's dept roster (app-origin DB rows) during `generate-crc-guides`, *or* a cedar-park `conventions.yaml` dept roster lands + syncs first. Then the CRC workflow + cityhall UI + CRV PDF should render correct names with no further code changes.
 
 ## Open Questions
 
