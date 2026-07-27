@@ -1,7 +1,9 @@
 # Hard Cap on `maxWorkers` for Completeness-Check and Comment-Resolution-Check
 
-**Status:** Draft v1
+**Status:** Draft v2
 **Date:** 2026-07-27
+
+> **Revision note (v2, 2026-07-27):** the open cap decision is **resolved — cap = 40** (Option A), per Will. Blocks the `maxWorkers: 65` disaster while still admitting the documented, twice-proven 39. No `workflow.yaml` description retuning needed. All `CAP` references below are now concretely **40**.
 **Repos touched:** `bureau` (declare a `max` on the `maxWorkers` input of the CC + CRC `workflow.yaml`), `conductor` (teach the input schema + `validateInputs` to enforce `max`), `substation` (pre-sandbox guard so an over-cap run fails before we pay for a sandbox)
 **Repos NOT touched:** `cityhall`, `radar`, `quarry`, `navalbase`
 
@@ -22,14 +24,9 @@ Enforced at two layers, cheapest-first:
 1. **Substation pre-sandbox guard (the cost-saver).** Fail at dispatch, before `setUpSandbox`, so an over-cap run **never creates a sandbox** — no clone, no `npm install`, no agents, no spend.
 2. **Conductor `validateInputs` (the correctness backstop).** A schema-declared `max` on the input, enforced for every execution path (cloud, local CLI, direct API) — fail-closed even if the substation guard is bypassed or a new caller appears.
 
-### Open decision — is the cap 35 or 40? (needs Will's call)
+### Cap value — decided: **40** (Option A)
 
-The request was **35**. One tension to resolve first: the CC/CRC `workflow.yaml` descriptions **explicitly recommend `runs=3 → maxWorkers=39`**, and **two 39-worker runs have completed successfully** (CRC, runs=5, avg 72 min — see winston#188's comparative table). A hard cap of 35 would **reject a documented, known-good configuration.**
-
-- **Option A — cap = 40.** Blocks the 65 disaster, still admits the documented/known-good 39. Zero doc churn. *Recommended* — it draws the line between "proven" and "never validated" rather than below a proven value.
-- **Option B — cap = 35 (as requested).** Slightly more conservative, but requires also **retuning the two `workflow.yaml` descriptions** to stop recommending 39 (lower the `runs=3` guidance to ≤35), or the docs will contradict the guard.
-
-Either way the mechanism is identical; only the constant and the doc edits differ. This spec is written to a symbolic `CAP` (= 40 pending decision).
+The request was 35, but the CC/CRC `workflow.yaml` descriptions **explicitly recommend `runs=3 → maxWorkers=39`**, and **two 39-worker runs have completed successfully** (CRC, runs=5, avg 72 min — see winston#188's comparative table). A hard cap of 35 would have rejected a documented, known-good configuration. **Cap is therefore 40** — it draws the line between "proven" (≤39) and "never validated" (65 hung), needs no `workflow.yaml` description retuning, and still blocks the failure this guardrail exists to prevent. (Rejected alternative: 35 + retuning both YAML descriptions to stop recommending 39.)
 
 ## Design
 
@@ -45,7 +42,7 @@ maxWorkers:
   default: 13
   max: 40          # hard ceiling — a 4-vCPU sandbox cannot sustain more; see winston#188
   description: |
-    ... (if CAP=35, drop the "runs=3 → maxWorkers=39" guidance here) ...
+    ... (existing description unchanged — the "runs=3 → maxWorkers=39" guidance stays valid under a 40 cap) ...
 ```
 
 ### Change 2 — `conductor`: teach the schema + validator to enforce `max`
@@ -84,6 +81,6 @@ if (cap !== undefined && Number.isFinite(requested) && requested > cap) {
 
 ## Test plan
 
-- Conductor unit: `validateInputs` rejects `maxWorkers = CAP+1`, accepts `CAP`, accepts default when omitted; error message names the input and the cap.
-- Substation unit: the guard throws `NonRetriableError` for `{workflowName: 'comment-resolution-check', inputs:{maxWorkers: CAP+1}}` and is a no-op at `CAP` and for uncapped workflows.
+- Conductor unit: `validateInputs` rejects `maxWorkers = 41`, accepts `40` (and the proven `39`), accepts default when omitted; error message names the input and the cap.
+- Substation unit: the guard throws `NonRetriableError` for `{workflowName: 'comment-resolution-check', inputs:{maxWorkers: 41}}` and is a no-op at `40` and for uncapped workflows.
 - Manual (no new cloud run needed): re-validate against the recorded 2026-07-24 payload — `maxWorkers: 65` must now fail at the substation guard before any sandbox spend.
