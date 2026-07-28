@@ -144,6 +144,71 @@
   .q .rec{font-size:12.5px;color:var(--opp);margin-top:4px}.q .rec b{font-family:var(--mono);font-size:10px;letter-spacing:.05em}
   .foot{margin-top:40px;padding-top:18px;border-top:1px solid var(--divider);color:var(--muted);font-size:12px;font-family:var(--mono)}
   .two-col-quote{font-style:italic;color:var(--p700);font-family:var(--serif);font-size:15px}
+
+  /* ===== system-today diagram primitives ===== */
+  /* actor/repo chips — consistent color code across every diagram */
+  .rc{display:inline-block;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:2px 8px;border-radius:5px;vertical-align:middle;white-space:nowrap;border:1px solid}
+  .r-ch{background:#eef4fb;color:#2456a8;border-color:#c3d8f2}        /* cityhall */
+  .r-sub{background:#f3eefb;color:#6b3fa0;border-color:#dcccf0}       /* substation */
+  .r-fa{background:#e9f7f2;color:#0f7a5f;border-color:#bfe8db}        /* field-agent */
+  .r-inn{background:#fdf0e6;color:#b5590d;border-color:#f2d3b3}       /* inngest */
+  .r-db{background:#eaeef2;color:#2d4559;border-color:#c7d2dd}        /* supabase DB */
+  .r-store{background:#e6eef3;color:#35526b;border-color:#bcd0dd}     /* supabase storage */
+  .r-ai{background:#fbeee7;color:var(--ember);border-color:#f0cba8}  /* LLM (gemini/claude) */
+  .r-user{background:#eefaf0;color:#15803d;border-color:#bbf7d0}     /* client/user */
+
+  .legend{display:flex;flex-wrap:wrap;gap:8px 14px;background:#fff;border:1px solid var(--divider);border-radius:10px;padding:12px 16px;margin:16px 0;font-size:12px;align-items:center}
+  .legend .rc{margin-right:5px}
+
+  /* numbered sequence with a left rail */
+  .seq{position:relative;margin:16px 0;padding-left:8px}
+  .seq .st{position:relative;display:flex;gap:12px;padding:0 0 14px 0}
+  .seq .st:last-child{padding-bottom:0}
+  .seq .st::before{content:"";position:absolute;left:13px;top:26px;bottom:-2px;width:2px;background:var(--p200)}
+  .seq .st:last-child::before{display:none}
+  .seq .st .num{flex:0 0 28px;height:28px;border-radius:50%;background:var(--p600);color:#fff;font-family:var(--mono);font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;z-index:1}
+  .seq .st .body{flex:1;background:#fff;border:1px solid var(--divider);border-radius:8px;padding:9px 13px;font-size:13px;margin-top:-1px}
+  .seq .st .body .h{font-weight:600;color:var(--p900);margin-bottom:2px}
+  .seq .st .body .d{color:var(--ink);font-size:12.5px}
+  .seq .st .body .d code{font-size:11.5px}
+  .seq .st.branch .num{background:var(--ember)}
+  .seq .st.branch .body{border-left:3px solid var(--ember)}
+
+  /* chevron pipeline (horizontal, wraps) */
+  .chev{display:flex;flex-wrap:wrap;gap:6px;align-items:stretch;margin:14px 0}
+  .chev .c{flex:1 1 130px;min-width:120px;background:#fff;border:1px solid var(--divider);border-radius:8px;padding:9px 11px;font-size:12px;position:relative}
+  .chev .c .ph{font-family:var(--mono);font-size:9.5px;color:var(--ember);font-weight:700;letter-spacing:.05em;display:block;margin-bottom:2px}
+  .chev .c .t{font-weight:600;color:var(--p900);font-size:12.5px}
+  .chev .c .s{color:var(--muted);font-size:11px;display:block;margin-top:1px}
+  .chev .sep{display:flex;align-items:center;color:var(--p400);font-weight:700;font-size:16px}
+
+  /* ER / data-model boxes */
+  .er{display:grid;gap:12px;margin:16px 0}
+  .entity{background:#fff;border:1px solid var(--divider);border-radius:9px;overflow:hidden}
+  .entity .eh{background:var(--p700);color:#fff;padding:7px 12px;font-family:var(--mono);font-size:12px;font-weight:600;display:flex;justify-content:space-between;align-items:center}
+  .entity .eh .kk{font-size:9.5px;font-weight:400;opacity:.75;text-transform:uppercase;letter-spacing:.06em}
+  .entity .ef{padding:8px 12px;font-size:12px;display:flex;flex-wrap:wrap;gap:4px 10px}
+  .entity .ef span{color:var(--ink)}
+  .entity .ef b{font-family:var(--mono);font-size:11px;color:var(--p700)}
+  .entity.diligence .eh{background:#0f7a5f}
+  .entity.doc .eh{background:var(--p600)}
+  .fk{text-align:center;color:var(--p500);font-family:var(--mono);font-size:11px;margin:-4px 0}
+  .fk b{color:var(--p800)}
+  .er-note{font-size:11.5px;color:var(--muted);font-family:var(--mono)}
+
+  /* two-lane branch */
+  .branchbox{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0}
+  @media(max-width:760px){.branchbox{grid-template-columns:1fr}}
+  .branchbox .lane{border:1px solid var(--divider);border-radius:9px;background:#fff;padding:12px 14px}
+  .branchbox .lane.real{border-top:4px solid var(--ember)}
+  .branchbox .lane.dummy{border-top:4px solid var(--p400)}
+  .branchbox .lane .lh{font-weight:700;font-size:13px;margin-bottom:4px}
+  .branchbox .lane .flag{font-family:var(--mono);font-size:10.5px;background:var(--p50);border:1px solid var(--p200);border-radius:4px;padding:1px 6px;color:var(--p700)}
+  .branchbox .lane ul{font-size:12px;margin:6px 0 0}
+
+  .diag{background:#fbfcfd;border:1px solid var(--divider);border-radius:12px;padding:18px 20px;margin:18px 0}
+  .diag > h4{margin:0 0 4px;font-size:15px;color:var(--p900)}
+  .diag > .cap{color:var(--muted);font-size:12.5px;margin:0 0 8px}
 </style>
 </head>
 <body>
@@ -159,6 +224,7 @@
   <button data-tab="jason" class="active"><span class="n">01</span>Jason's Vision</button>
   <button data-tab="sal"><span class="n">02</span>Sal's Vision</button>
   <button data-tab="synth"><span class="n">03</span>Synthesis &amp; Roadmap</button>
+  <button data-tab="today"><span class="n">04</span>System Today</button>
 </nav>
 
 <main>
@@ -416,6 +482,145 @@
   <div class="foot">Companion to DESIGN-SPEC.md · winston#192 · spawns 8 child specs (run-sync-bridge, intake-productization, sir-delivery-and-web-viewer, report-chat, staff-review-collaboration, internal-run-observability, findings-normalization, rich-sir-viewer).</div>
 </section>
 
+<!-- ============================ SYSTEM TODAY ============================ -->
+<section class="panel" id="today">
+  <h2><span class="eyebrow">Perspective 04 — what already runs</span>System Today: the intake → run → deliver pipeline that exists</h2>
+  <p class="lede">Everything below is <strong>shipped and verified against prod</strong> (per the <code>feasibility-intake-chat</code> and <code>field-agent</code> winston workspaces). This is the headless <code>full-feasibility-run</code> path — the one gated behind the flags — not Jason's interactive Mac-Mini workflow. It's the persistence + delivery plumbing the roadmap <em>reuses</em>.</p>
+
+  <div class="legend">
+    <span><span class="rc r-user">client</span></span>
+    <span><span class="rc r-ch">cityhall</span> SvelteKit UI + chat API</span>
+    <span><span class="rc r-sub">substation</span> Hono REST</span>
+    <span><span class="rc r-inn">inngest</span> event bus</span>
+    <span><span class="rc r-fa">field-agent</span> laptop worker</span>
+    <span><span class="rc r-ai">LLM</span> Gemini / Claude</span>
+    <span><span class="rc r-db">DB</span> Supabase Postgres</span>
+    <span><span class="rc r-store">storage</span> Supabase bucket</span>
+  </div>
+
+  <div class="callout"><span class="lab">Two feature flags gate the whole thing</span> <code>feasibility-intake</code> turns the chat surface on. <code>full-feasibility-run-enabled</code> (default <strong>false</strong>) decides whether a triggered run invokes the <em>real</em> diligence skill or a fast dummy renderer — a safety net against accidental token spend. Missing/unset = <code>false</code> at every layer.</div>
+
+  <h3>The end-to-end path in one strip</h3>
+  <div class="chev">
+    <div class="c"><span class="ph">A</span><span class="t">Intake chat</span><span class="s">gather site + use + docs</span></div>
+    <div class="sep">→</div>
+    <div class="c"><span class="ph">B</span><span class="t">Analyze inputs</span><span class="s">Gemini extracts PDFs</span></div>
+    <div class="sep">→</div>
+    <div class="c"><span class="ph">C</span><span class="t">Store in Supabase</span><span class="s">sections + docs</span></div>
+    <div class="sep">→</div>
+    <div class="c"><span class="ph">D</span><span class="t">Trigger run</span><span class="s">insert row + event</span></div>
+    <div class="sep">→</div>
+    <div class="c"><span class="ph">E</span><span class="t">field-agent runs skill</span><span class="s">6-phase pipeline</span></div>
+    <div class="sep">→</div>
+    <div class="c"><span class="ph">F</span><span class="t">Upload + sign</span><span class="s">PDFs → download URLs</span></div>
+  </div>
+
+  <!-- ===== DATA MODEL ===== -->
+  <div class="diag">
+    <h4>① Data model — how a feasibility intake lives under a project</h4>
+    <p class="cap">Intake layers onto the existing <code>project → submission → conversation</code> tables; nothing bespoke. The diligence run anchors to the <code>feasibility_intake</code> document_version that triggered it.</p>
+    <div class="er">
+      <div class="entity"><div class="eh">project <span class="kk">pk id</span></div><div class="ef"><span><b>id</b></span><span>org / owner via <code>project_access</code></span></div></div>
+      <div class="fk">│ 1 ── ∞ &nbsp; <b>project_id</b></div>
+      <div class="entity"><div class="eh">submission <span class="kk">type = 'feasibility'</span></div><div class="ef"><span><b>id</b></span><span><b>project_id</b></span><span>name · description</span></div></div>
+      <div class="fk">│ 1 ── ∞ &nbsp; <b>project_id</b> (type='intake')</div>
+      <div class="entity"><div class="eh">conversations <span class="kk">type = 'intake'</span></div><div class="ef"><span><b>id</b></span><span><b>project_id</b></span></div></div>
+      <div class="fk">│ 1 ── ∞ &nbsp; <b>conversation_id</b></div>
+      <div class="entity"><div class="eh">chat_message <span class="kk">transcript + RCM cards</span></div><div class="ef"><span><b>id</b></span><span><b>conversation_id</b></span><span>content</span><span><b>rcm_payload</b> jsonb</span><span>visible_to_user</span></div></div>
+      <div class="fk">│ ∞ ── ∞ &nbsp;via <b>chat_message_attachment</b> junction</div>
+      <div class="entity doc"><div class="eh">document_version <span class="kk">the file bytes</span></div><div class="ef"><span><b>id</b></span><span>storage_path</span><span>file_name</span><span>processing_state</span></div></div>
+      <div class="fk">│ belongs to</div>
+      <div class="entity doc"><div class="eh">document <span class="kk">kind ∈ {feasibility_intake, intake_attachment}</span></div><div class="ef"><span><b>feasibility_intake</b> → sentinel <code>inline://feasibility-intake</code> (the notes doc)</span><span><b>intake_attachment</b> → each uploaded PDF</span></div></div>
+    </div>
+    <div class="branchbox">
+      <div class="lane"><div class="lh">document_section <span class="rc r-db">right panel</span></div><p style="font-size:12px;margin:4px 0">The captured facts. <code>description</code> = tier label (Tier 1/2/3). <code>source</code> jsonb tags provenance:</p><p style="font-size:11.5px;margin:0"><code>chat</code> · <code>preset</code> · <code>user_edit</code> · <code>pdf_extract</code></p></div>
+      <div class="lane real"><div class="lh">diligence_runs → diligence_artifacts <span class="rc r-db">the run</span></div><p style="font-size:12px;margin:4px 0"><code>diligence_runs</code> anchors to <b>document_version_id</b> (must be <code>feasibility_intake</code>), + <b>conversation_id</b>, <b>project_id</b>, <b>triggered_by_user_id</b>. Status <code>queued→running→completed/failed/cancelled</code>.</p></div>
+    </div>
+  </div>
+
+  <!-- ===== A: INTAKE CHAT ===== -->
+  <div class="diag">
+    <h4>② Intake chat — the conversation loop</h4>
+    <p class="cap"><span class="rc r-ch">cityhall</span> composer + <code>/api/chat/intake</code>. Model is Haiku 4.5 (Sonnet behind <code>intake-chat-use-sonnet</code>), <code>stepCountIs(5)</code>, with three agent tools. Right panel + cards update over Supabase Realtime.</p>
+    <div class="seq">
+      <div class="st"><div class="num">1</div><div class="body"><div class="h"><span class="rc r-user">client</span> types / drops PDFs into the composer</div><div class="d">Persist-user-message-on-entry so mid-stream RCM cards sort after it.</div></div></div>
+      <div class="st"><div class="num">2</div><div class="body"><div class="h"><span class="rc r-ch">chat API</span> streams the agent reply with 3 tools</div><div class="d"><code>updateIntakeNotes</code> → writes <code>document_section</code> rows · <code>askClarifyingQuestion</code> → emits a clarifying-question card · <code>requestDiligenceRun</code> → fires the run (diagram ④)</div></div></div>
+      <div class="st"><div class="num">3</div><div class="body"><div class="h"><span class="rc r-ch">RCM cards</span> render inline in the chat</div><div class="d"><code>extracting_file</code> (spinner→check) · <code>tier_1_info_complete</code> (with "Start research" CTA) · <code>diligence_running_job</code> (live status)</div></div></div>
+      <div class="st"><div class="num">4</div><div class="body"><div class="h"><span class="rc r-db">Realtime</span> → <code>invalidateAll()</code></div><div class="d">Right-panel tier sections + chat cards update in place, no refresh.</div></div></div>
+    </div>
+  </div>
+
+  <!-- ===== B/C: UPLOAD + EXTRACTION ===== -->
+  <div class="diag">
+    <h4>③ Analyze file inputs → store in Supabase (upload + extraction)</h4>
+    <p class="cap">Drag a PDF → it lands in storage → on Send, an Inngest fan-out reads it with Gemini and populates the tier sections. Trigger is at <strong>chat-send, not upload-finish</strong> (only commit work the user committed to).</p>
+    <div class="seq">
+      <div class="st"><div class="num">1</div><div class="body"><div class="h"><span class="rc r-ch">upload</span> <code>prepare-upload</code> → signed Storage PUT → <code>commit-upload</code></div><div class="d">With <code>document_kind='intake_attachment'</code> → creates <code>document</code> + <code>document_version</code>, and <strong>skips</strong> the engineering-drawing <code>process-file</code> pipeline. Chip = ready, carries <code>document_version_id</code>.</div></div></div>
+      <div class="st"><div class="num">2</div><div class="body"><div class="h"><span class="rc r-ch">Send</span> → <code>POST /api/chat/intake</code></div><div class="d">Persist user <code>chat_message</code> → insert <code>chat_message_attachment</code> links → insert one <code>extracting_file</code> RCM per file (state=processing) → call substation.</div></div></div>
+      <div class="st"><div class="num">3</div><div class="body"><div class="h"><span class="rc r-sub">substation</span> <code>/feasibility-intake/extract</code></div><div class="d">Validates ownership on both the source PDF <em>and</em> the intake doc (both in this project) → fans out <b>N Inngest events</b>, one per file.</div></div></div>
+      <div class="st"><div class="num">4</div><div class="body"><div class="h"><span class="rc r-inn">inngest</span> <code>extract-feasibility-intake</code> (one run per file)</div><div class="d">Load document_version → download PDF → <span class="rc r-ai">Gemini 3.1 Pro</span> <code>generateObject</code> against a tiered Zod schema (<strong>whole PDF, one call</strong> — cross-page synthesis matters).</div></div></div>
+      <div class="st"><div class="num">5</div><div class="body"><div class="h"><span class="rc r-db">upsert</span> <code>document_section</code> (skip-on-conflict by title)</div><div class="d">Existing user-typed sections preserved; only new titles inserted. Writes <code>source={kind:'pdf_extract', document_version_id, file_name}</code>.</div></div></div>
+      <div class="st"><div class="num">6</div><div class="body"><div class="h"><span class="rc r-ch">flip cards</span> → Realtime → panel updates</div><div class="d"><code>extracting_file</code> RCM → done (green check). If Tier 1 now newly complete, insert <code>tier_1_info_complete</code> RCM. "from X.pdf" source pill on extracted sections.</div></div></div>
+    </div>
+  </div>
+
+  <!-- ===== D: TRIGGER ===== -->
+  <div class="diag">
+    <h4>④ Trigger the diligence run</h4>
+    <p class="cap">The <code>requestDiligenceRun</code> tool (input is <code>z.object({})</code> — fully contextual) reads the flag and calls substation with the user's JWT (so <code>triggered_by_user_id</code> is populated). Idempotent once-per-conversation at the app layer.</p>
+    <div class="seq">
+      <div class="st"><div class="num">1</div><div class="body"><div class="h"><span class="rc r-ch">cityhall</span> reads <code>full-feasibility-run-enabled</code></div><div class="d">Then <code>POST /api/projects/:projectId/diligence</code> with <code>{ document_version_id, conversation_id, full_run }</code> + user JWT.</div></div></div>
+      <div class="st"><div class="num">2</div><div class="body"><div class="h"><span class="rc r-sub">substation</span> validates + inserts</div><div class="d">Confirms the document_version belongs to the project <em>and</em> <code>document.kind='feasibility_intake'</code> → generates <code>diligence_run_id</code> (<code>crypto.randomUUID()</code>) → INSERT <code>diligence_runs</code> (status=queued).</div></div></div>
+      <div class="st"><div class="num">3</div><div class="body"><div class="h"><span class="rc r-inn">inngest</span> <code>diligence/requested</code> fired</div><div class="d">Payload is minimal: <code>{ diligence_run_id, full_run }</code>. The worker looks up everything else by DB join. Returns the row to cityhall.</div></div></div>
+      <div class="st"><div class="num">4</div><div class="body"><div class="h"><span class="rc r-ch">cityhall</span> inserts the <code>diligence_running_job</code> RCM</div><div class="d">Card renders in chat and opens its <em>own</em> narrow Realtime subscription on <code>diligence_runs</code> filtered by id — status flips visible in place.</div></div></div>
+    </div>
+  </div>
+
+  <!-- ===== E: FIELD-AGENT EXECUTION ===== -->
+  <div class="diag">
+    <h4>⑤ field-agent runs the skill</h4>
+    <p class="cap">field-agent is a standalone <strong>laptop</strong> process (a 4th app in the prod Inngest env) that dials out over <strong>Inngest Connect</strong> (outbound websocket). The 30–60 min skill session can't live inside an Inngest step, so the function <strong>acks and hands off</strong> to an in-process runner; status is tracked purely via <code>diligence_runs</code> + Realtime.</p>
+    <div class="seq">
+      <div class="st"><div class="num">1</div><div class="body"><div class="h"><span class="rc r-fa">field-agent</span> consumes <code>diligence/requested</code></div><div class="d">Ack → mark <code>running</code> → hand off to the in-process runner (semaphore, concurrency 1). The Inngest fn returns immediately.</div></div></div>
+      <div class="st branch"><div class="num">⑃</div><div class="body"><div class="h">Branch on <code>full_run</code></div>
+        <div class="branchbox">
+          <div class="lane real"><div class="lh">full_run = true <span class="flag">real skill</span></div><ul><li><code>@anthropic-ai/claude-agent-sdk@0.2.74</code> <code>query()</code></li><li>loads <code>noetic-tools</code> plugin, <code>bypassPermissions</code></li><li><code>cwd = field-agent/workspace/&lt;runId&gt;</code>, <code>maxTurns 400</code></li><li><code>env</code> = default-deny allowlist (no secret leak)</li><li>minimal kickoff: intake facts + paths + one autonomy directive → skill self-orchestrates</li></ul></div>
+          <div class="lane dummy"><div class="lh">full_run = false <span class="flag">dummy</span></div><ul><li>2-A.1 in-Inngest steps</li><li>render SIR from real intake + placeholder appendix via <code>noetic-pdf</code></li><li>a few seconds, no token spend</li><li>same upload/insert loop (⑥)</li></ul></div>
+        </div>
+      </div></div>
+      <div class="st"><div class="num">2</div><div class="body"><div class="h"><span class="rc r-ai">Claude</span> orchestrates the 6-phase pipeline (filesystem is the substrate)</div>
+        <div class="chev" style="margin:8px 0 0">
+          <div class="c"><span class="ph">Phase 0</span><span class="t">Jurisdiction</span><span class="s">feasibility-guide bootstrap</span></div>
+          <div class="c"><span class="ph">Phase 1</span><span class="t">Vision</span><span class="s">Gemini+Opus (skip if no PDFs)</span></div>
+          <div class="c"><span class="ph">Phase 2</span><span class="t">Research</span><span class="s">8 parallel · incl. surveyor</span></div>
+          <div class="c"><span class="ph">Phase 3</span><span class="t">Disciplines</span><span class="s">10 parallel subagents</span></div>
+          <div class="c"><span class="ph">Phase 4</span><span class="t">Synthesis</span><span class="s">issue matrix · gap buckets</span></div>
+          <div class="c"><span class="ph">Phase 5</span><span class="t">Render</span><span class="s">tsx→noetic-pdf→scrub→verify</span></div>
+        </div>
+      </div></div>
+      <div class="st"><div class="num">3</div><div class="body"><div class="h"><span class="rc r-fa">runner</span> collects deliverables + writes <code>run-summary.json</code></div><div class="d">Reads <code>workdir/sir/deliverable/{site-intelligence-report,research-appendix}.pdf</code> (SIR required — throws if missing). Captures session id, cost, turns, tool-use histogram.</div></div></div>
+    </div>
+    <div class="callout ember" style="margin-top:12px"><span class="lab">The crux for the roadmap</span> This runner is <strong>headless</strong> — the kickoff includes an autonomy directive ("never pause; record unknowns as data-gaps"), so it <em>drops the human gates</em> Jason insists on. That's exactly why P0 syncs the interactive on-disk run into these same tables rather than switching Jason onto this path (Synthesis → decision 1).</div>
+  </div>
+
+  <!-- ===== F: UPLOAD + URLS ===== -->
+  <div class="diag">
+    <h4>⑥ Upload the result → produce download URLs</h4>
+    <p class="cap">Identical for both branches (only the <em>source</em> of the PDF buffers differs). Handoff is <strong>Supabase-only</strong> — no laptop copy kept — with signed URLs minted fresh on every read.</p>
+    <div class="seq">
+      <div class="st"><div class="num">1</div><div class="body"><div class="h"><span class="rc r-fa">upload.ts</span> → <span class="rc r-store">storage</span></div><div class="d">Both PDFs → bucket <code>submission-data</code>, path <code>diligence/&lt;run-id&gt;/</code>.</div></div></div>
+      <div class="st"><div class="num">2</div><div class="body"><div class="h"><span class="rc r-fa">insert.ts</span> → <span class="rc r-db">diligence_artifacts</span></div><div class="d">Upsert on <code>(diligence_run_id, kind)</code>. Kinds: <code>site_intelligence_report</code>, <code>research_appendix</code>, <code>supporting_document_copy</code>. Stores <code>storage_path</code>, <code>file_name</code>, <code>content_type</code>, <code>file_size</code>, <code>page_count</code>.</div></div></div>
+      <div class="st"><div class="num">3</div><div class="body"><div class="h"><span class="rc r-fa">runner</span> marks the run <code>completed</code></div><div class="d"><code>onFailure</code> flips to <code>failed</code> after retries. Realtime pushes the terminal status to the chat card + the status page.</div></div></div>
+      <div class="st"><div class="num">4</div><div class="body"><div class="h"><span class="rc r-sub">GET</span> <code>/api/projects/:projectId/diligence/:diligenceRunId</code></div><div class="d">Returns the row + joined artifacts, each with a fresh <strong>72-hour signed URL</strong> (minted at read time; null if signing fails).</div></div></div>
+      <div class="st"><div class="num">5</div><div class="body"><div class="h"><span class="rc r-ch">status page</span> <code>/project/[id]/diligence-runs/[runId]</code></div><div class="d">Renders <strong>View / Download</strong> links from the signed URLs. This is where the SIR + appendix PDFs are surfaced today.</div></div></div>
+    </div>
+  </div>
+
+  <div class="callout"><span class="lab">What this means for the spec</span> Diagrams ①–⑥ are all <strong>existing assets</strong>. P0's run-sync bridge writes into the ① tables + ⑥ storage layout; P1's delivery viewer reads the ⑥ artifacts. The gap the roadmap fills is (a) the interactive-run → these-tables bridge, and (b) a richer viewer than the raw PDF link at ⑥.5.</div>
+
+  <div class="foot">Sources: winston <code>workspaces/feasibility-intake-chat/README.md</code> · <code>workspaces/field-agent/{implementation-plan,diligence-report-skill-execution}.md</code> · cityhall <code>docs/feasibility-research-runner.md</code>. Verified against prod 2026-06-02/03.</div>
+</section>
+
 </main>
 
 <script>
@@ -429,7 +634,7 @@
   }
   btns.forEach(b=>b.addEventListener('click',()=>show(b.dataset.tab)));
   const initial=location.hash.slice(1);
-  if(['jason','sal','synth'].includes(initial)) show(initial);
+  if(['jason','sal','synth','today'].includes(initial)) show(initial);
 </script>
 </body>
 </html>
