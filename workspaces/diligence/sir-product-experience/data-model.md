@@ -1,10 +1,12 @@
 # SIR Data Model — `site_intelligence_report` entity + migration off `submission`
 
-**Status:** Draft v1
+**Status:** Draft v2
 **Date:** 2026-07-28
 **Type:** Implementable spec — table creation + data migration. This is the **first build step** of the SIR product effort (companion to the north-star `DESIGN-SPEC.md`, winston#192). Concrete enough to execute.
 **Repos touched:** `substation` (the migration + the `project`/intake/`diligence_runs` API + shared-DB schema), `cityhall` (intake bootstrap, intake route, reads, type regen)
 **Repos NOT touched (by design):** `conductor`, `surveyor`, `bureau`, `quarry`, `navalbase`, `radar` — verified they don't depend on the columns we're reclassifying (see §2.3).
+
+> **Revision note (v2, 2026-07-28):** Folded in the RLS / access-control research. New **§3.5** (verified RLS model + a verbatim policy template for the new table, cloned from `submission`/`diligence_runs`) and **§3.6** (the holding-org re-home mechanics + two hard constraints). New decisions **D7** (RLS template) and **D8** (holding org must be a *separate, non-`noetic`-slug* org; prospect projects created via service account; conversion must clean up stray `project_access`). §2.3 + Q2 updated with the "RLS-safe" confirmation for the `project` columns. No structural change to the table or migration plan — this is the access-control layer that was previously an open check.
 
 > **One-line goal:** Give the Site Intelligence Report its own first-class entity — `site_intelligence_report` — instead of shoehorning it onto `submission` (which drags in plan-set / resubmittal machinery SIRs never use), and move the authoritative subject-location (address, parcel, jurisdiction) down onto that entity so one `project` can hold many SIRs at many addresses.
 
@@ -57,6 +59,8 @@ Full audit in the research sweep. Summary:
 - **Latent bug (out of scope, noted):** `substation/src/routes/projects.ts` `POST /projects` **silently drops `jurisdiction_slug`** that cityhall sends — today it's populated only by the backfill migration.
 
 **Consequence for scope:** we do **not** touch the `project` columns in a breaking way. They keep serving the site-plan/CRC world unchanged. We only *add* the authoritative location to the new SIR entity. "Demotion" is a conceptual reclassification, not a migration.
+
+**RLS-safe confirmation (v2):** a follow-up audit confirmed **no RLS policy, DB function, trigger, `NOT NULL`, or `CHECK` constraint** references `project.site_address` or `project.jurisdiction_slug`. `site_address` is a bare nullable `TEXT` (`baseline.sql:384`); `jurisdiction_slug` is nullable with column comment *"NULL until known"* (`20260720203333_*.sql:20,27`) plus an FK to `jurisdictions(slug)` (`20260724000000_*.sql:127-131`) but no null constraint. Both are safe to treat as optional hints, confirmed.
 
 ---
 
@@ -135,6 +139,49 @@ create index on public.diligence_runs (site_intelligence_report_id);
 
 `site_intelligence_report.conversation_id` → the existing intake `conversation`. This is the load-bearing reuse hook: **everything already built for the intake chat** (composer, `document_section` tier capture, Gemini extraction, RCM cards, realtime) works unchanged — we just re-parent the *entity* the conversation belongs to from a synthetic feasibility `submission` to the SIR. `conversation_id` is **nullable** because a `manual_publish` SIR (run in Claude Code, published via the bridge) has no intake chat.
 
+### 3.5 RLS / access control (verified)
+
+The whole DB uses a **three-legged** project-access model defined in `substation/supabase/migrations/00000000000000_baseline.sql`. Every project-child table gates SELECT on `user_can_see_project(project_id, uid)` and writes on `get_user_project_access_level(project_id, uid) IN ('write','admin')`. `user_can_see_project` (`baseline.sql:171-194`) returns true if **any** of:
+
+1. `is_noetic_admin(uid)` — owner/admin of the org whose slug is literally `'noetic'` (global superuser);
+2. **leg 1** — the user is a member of the project's **owner org** (`project.owner_organization_id` live-joined to `organization_members`) — this also grants implicit `write` (`baseline.sql:271-273`);
+3. **leg 2** — a direct per-user grant in `project_access`;
+4. **leg 3** — a per-org grant in `project_access` + the user is a member of that org.
+
+`site_intelligence_report` is a **direct child of `project`** (has a `project_id` column, no join hops) — same topology as `submission` and `diligence_runs`. So its RLS is a verbatim clone of that shape (template: `submission` `baseline.sql:1607-1622` / `diligence_runs` `20260529180000_diligence_runs.sql:82-105`):
+
+```sql
+ALTER TABLE public.site_intelligence_report ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view SIRs for accessible projects"
+  ON public.site_intelligence_report FOR SELECT TO authenticated
+  USING (public.user_can_see_project(project_id, auth.uid()));
+
+CREATE POLICY "Users with write access can insert SIRs"
+  ON public.site_intelligence_report FOR INSERT TO authenticated
+  WITH CHECK (public.get_user_project_access_level(project_id, auth.uid()) IN ('write','admin'));
+
+CREATE POLICY "Users with write access can update SIRs"
+  ON public.site_intelligence_report FOR UPDATE TO authenticated
+  USING (public.get_user_project_access_level(project_id, auth.uid()) IN ('write','admin'))
+  WITH CHECK (public.get_user_project_access_level(project_id, auth.uid()) IN ('write','admin'));
+
+CREATE POLICY "Users with admin access can delete SIRs"
+  ON public.site_intelligence_report FOR DELETE TO authenticated
+  USING (public.get_user_project_access_level(project_id, auth.uid()) = 'admin');
+```
+
+field-agent / the publish step write rows via the **service role**, which bypasses RLS entirely (same as `diligence_runs` today) — so prospect-project writes don't need a user with `project_access`.
+
+### 3.6 The holding-org re-home — validated, with two hard constraints
+
+The prospect model (see north-star §5): un-converted / free SIRs live under a **Noetic-owned holding org**; on conversion we repoint `project.owner_organization_id` to the customer's org. The audit confirms this works and is clean — **but** two constraints must hold or it silently fails to isolate:
+
+- **✅ Re-home is a single write.** Visibility leg 1 is a *live* join to `project.owner_organization_id`; no child row denormalizes the org. So `UPDATE project SET owner_organization_id = <customer org>` **immediately** re-scopes the project + all children (SIRs, runs, docs) in one statement — no child backfill. (Do it via service role / noetic-admin, since `UPDATE project` itself needs write access.)
+- **⚠️ Constraint A — the holding org MUST be a separate, non-`noetic`-slug org.** `is_noetic_admin` keys on `organizations.slug = 'noetic'`. If the holding org *is* the `noetic` org, its owners/admins are global superusers on **every** project forever — so a re-home to a customer would **not** revoke their access. Make the holding org a distinct org with its own slug (and add staff to it as `member` role if needed), so holding-org visibility comes only from leg-1 owner-org membership and thus actually drops when `owner_organization_id` is repointed.
+- **⚠️ Constraint B — conversion must clean up stray `project_access` grants.** A `grant_project_creator_access` trigger (`baseline.sql:306-325`) auto-inserts an **`admin`** `project_access` row for `auth.uid()` on every project INSERT — and that grant **survives a re-home**. So whoever created the prospect project keeps admin unless conversion deletes it. Mitigation: **create prospect projects via a service account** (the trigger's `IF auth.uid() IS NOT NULL` guard then skips it), and have the conversion routine sweep leftover `project_access` rows. Confirm which path the publish step / field-agent uses.
+- Note: `owner_organization_id` FK is `ON DELETE RESTRICT` (`baseline.sql:387`) — the holding org can't be deleted while any project still points at it. Operationally fine.
+
 ---
 
 ## 4. Data migration
@@ -182,11 +229,13 @@ The migration is additive (new table + new nullable column). Cutover is a code c
 - **D4 — `status` stays coarse** (`draft/requested/in_progress/delivered/archived`) for now. The granular HITL lifecycle (hitl1_review, report_draft, hitl3_review, …) from the north-star spec lands with the `staff-review-collaboration` child spec, not here — don't bake an unfinished state machine into the table.
 - **D5 — `project` columns untouched.** `site_address`/`jurisdiction_slug` stay as-is, reclassified conceptually as optional site-plan-scoped hints. No breaking migration on them (sweep verdict §2.3).
 - **D6 — SIR→site-plan conversion linkage deferred.** Add when it first happens (nullable link column or join table).
+- **D7 — RLS = verbatim clone of the `submission`/`diligence_runs` project-child policy** (§3.5). SELECT via `user_can_see_project`, writes via `get_user_project_access_level(...) IN ('write','admin')`, DELETE admin-only; enable RLS; add to `supabase_realtime`. No new access function needed — the three-legged model already covers it.
+- **D8 — Holding org is a separate, non-`noetic`-slug org; prospect projects are created by a service account.** (§3.6) Required for the re-home to actually isolate: keeps holding-org staff off the `is_noetic_admin` superuser path, and avoids the `grant_project_creator_access` trigger minting a surviving admin grant. Conversion must also sweep stray `project_access` rows.
 
 ## 7. Open questions
 
 - **Q1 — Historical conversation pairing.** If we ever do option B, how to pair the 77 feasibility submissions to their intake conversations with no FK? (Proposed: via the shared `feasibility_intake` document, or created-at proximity.) Moot under the recommended option A.
-- **Q2 — Requestor / prospect identity.** Where does "this SIR was requested by contact X at prospective-org Y" live — on the SIR, the project, or a lightweight lead record under the holding org? Deferred to the `intake-productization` / delivery spec; not needed for this migration. (Ties to the holding-org model in the north-star spec.)
+- **Q2 — Requestor / prospect identity.** Where does "this SIR was requested by contact X at prospective-org Y" live — on the SIR, the project, or a lightweight lead record under the holding org? Deferred to the `intake-productization` / delivery spec; not needed for this migration. The holding-org *mechanics* are now validated (§3.6) and the model is captured in north-star §5; what's still open is only where the requestor *contact* details live.
 - **Q3 — Tighten `diligence_runs.site_intelligence_report_id` to NOT NULL later?** Starts nullable for the additive migration; once all runs originate from an SIR, consider requiring it.
 - **Q4 — Do we also want an explicit `project.kind`?** Current answer: no (D-level in the north-star spec — type lives on the work product, project stays neutral). Revisit only if list/query pain appears.
 
