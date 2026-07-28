@@ -1,9 +1,11 @@
 # SIR Product Experience — North Star & Roadmap
 
-**Status:** Draft v1
+**Status:** Draft v1 (§5 revised 2026-07-28)
 **Date:** 2026-07-27
 **Author:** Will (with Jason's product briefing + Sal's viewer prototype as inputs)
 **Type:** Program-level north-star spec. Deliberately high-altitude. Spawns child specs (see §12); does not itself specify tables, endpoints, or components to implementation depth.
+
+> **Revision note (2026-07-28):** §5 domain model updated for the `data-model.md` child spec — the SIR engagement is now a first-class **`site_intelligence_report`** entity (not a `submission type='feasibility'`), `project` is an address-agnostic initiative container, and the prospect **holding-org** model + its access-control constraints are captured. Everything else is unchanged from v1.
 
 **Repos touched (eventually):** `cityhall` (all client/staff UI + chat APIs), `substation` (persistence, run/artifact tables, Inngest, storage, email), `claude-plugins` (`diligence-report` skill — new sync/emit steps + MCP surface), `field-agent` (headless runner convergence, later phases)
 **Repos NOT touched:** `conductor`, `bureau`, `quarry`, `navalbase`, `radar`, `inspector-general` (IG stays the debugging tool; this product lives in the main app — see §2.3)
@@ -150,8 +152,9 @@ Sal's dual-audience toggle is the *client ↔ internal-evidence* flip within the
 
 The SIR object and its lifecycle. Field names are illustrative, not final (child specs formalize against the existing `diligence_runs`/`diligence_artifacts` schema):
 
-- **SIR engagement** = a `submission` of type `feasibility` under a `project` (already the model, §2.1). One project may hold several SIRs over time.
-- **SIR run** = a `diligence_run` (`dlr_…`, exists). Carries the lifecycle state (§6), the assigned regulatory specialist, the assigned tech lead, and links to artifacts + review threads.
+- **Container / customer** = a `project` owned by an `organization` (`project.owner_organization_id`, NOT NULL). **`project` is a neutral, address-agnostic *initiative* container** (e.g. `ExtraStorage — 2026-Q4-expansion`) that can hold N SIRs at N addresses. Un-converted / free prospect SIRs live under a **Noetic-owned holding org** (a *separate, non-`noetic`-slug* org — see data-model §3.6); conversion to a paying customer = repoint `owner_organization_id` (one write re-scopes the project + all children). Requestor-contact details TBD (data-model Q2).
+- **SIR engagement** = a **`site_intelligence_report`** row (NEW — *not* a `submission`; see the `data-model.md` spec) under a `project`, linked 1:1 to its intake `conversation_id`, carrying the authoritative subject location (address/parcel/jurisdiction). One project holds many.
+- **SIR run** = a `diligence_run` (`dlr_…`, exists) anchored to its `site_intelligence_report` (new FK). Carries the lifecycle state (§6), the assigned regulatory specialist, the assigned tech lead, and links to artifacts + review threads.
 - **Artifacts** = `diligence_artifacts` rows (exist; extend kinds). Split by audience:
   - *Client-facing:* the SIR PDF, the Word doc, the web-renderable `pages.tsx`/HTML, supporting documents.
   - *Internal-only:* phase1–3 markdown, synthesis (issue-matrix, recovery-log, regulatory-briefing, scrub-log), `run-manifest*.json`, `location-resolution/mcp-calls.jsonl`, surveyor `run-status.json` + `research-findings.jsonl`, HITL ledger, cost/token telemetry.
