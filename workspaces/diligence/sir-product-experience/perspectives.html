@@ -1,0 +1,640 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SIR Product — Three Perspectives</title>
+<style>
+  :root{
+    --p50:#f0f5f9;--p100:#dce8f1;--p200:#b9d2e5;--p300:#8cb4d1;--p400:#6397b8;
+    --p500:#517e9e;--p600:#3f6582;--p700:#35526b;--p800:#2d4559;--p900:#273b4b;--p950:#182530;
+    --bg:#f9f9f9;--card:#ffffff;--divider:#dfdfdf;--ink:#1f2937;--muted:#6b7280;--ember:#bb4d00;
+    --sig:#b91c1c;--sigbg:#fef2f2;--mod:#b45309;--modbg:#fffbeb;--opp:#15803d;--oppbg:#f0fdf4;
+    --note:#3f6582;--notebg:#f0f5f9;--gap:#6b7280;--gapbg:#f3f4f6;
+    --sans:'Lexend',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+    --serif:'Lora',Georgia,'Times New Roman',serif;
+    --mono:'Fira Code','SF Mono',ui-monospace,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.55;font-size:15px}
+  .contour{background-image:repeating-linear-gradient(115deg,var(--p200) 0 1px,transparent 1px 22px);opacity:1}
+  header.masthead{background:linear-gradient(135deg,var(--p800),var(--p600));color:#fff;padding:34px 32px 30px;position:relative;overflow:hidden}
+  header.masthead::after{content:"";position:absolute;inset:0;background-image:repeating-linear-gradient(115deg,rgba(255,255,255,.06) 0 1px,transparent 1px 26px);pointer-events:none}
+  header.masthead .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--p200)}
+  header.masthead h1{font-family:var(--serif);font-weight:600;margin:.35em 0 .2em;font-size:30px;position:relative}
+  header.masthead p{margin:0;color:var(--p100);max-width:820px;font-size:15px}
+  header.masthead .meta{margin-top:14px;font-size:12.5px;color:var(--p200);font-family:var(--mono)}
+  header.masthead .meta a{color:#fff}
+
+  nav.tabs{position:sticky;top:0;z-index:20;display:flex;gap:2px;background:var(--p950);padding:0 20px;box-shadow:0 2px 8px rgba(0,0,0,.12)}
+  nav.tabs button{appearance:none;border:0;background:transparent;color:var(--p200);font-family:var(--sans);font-size:14.5px;font-weight:500;padding:14px 20px;cursor:pointer;border-bottom:3px solid transparent;transition:all .15s}
+  nav.tabs button .n{font-family:var(--mono);font-size:11px;opacity:.7;margin-right:7px}
+  nav.tabs button:hover{color:#fff;background:rgba(255,255,255,.04)}
+  nav.tabs button.active{color:#fff;border-bottom-color:var(--ember);background:rgba(255,255,255,.06)}
+
+  main{max-width:1080px;margin:0 auto;padding:34px 28px 80px}
+  .panel{display:none;animation:fade .25s ease}
+  .panel.active{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+  h2{font-family:var(--serif);font-weight:600;font-size:23px;margin:38px 0 6px;color:var(--p900)}
+  h2:first-child{margin-top:4px}
+  h2 .eyebrow{display:block;font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--p500);font-weight:400;margin-bottom:3px}
+  h3{font-size:16px;font-weight:600;margin:26px 0 8px;color:var(--p800)}
+  p{margin:.55em 0}
+  .lede{font-size:16.5px;color:var(--p800);border-left:3px solid var(--ember);padding-left:16px;margin:14px 0 20px}
+  ul{margin:.4em 0;padding-left:22px}li{margin:.28em 0}
+  .card{background:var(--card);border:1px solid var(--divider);border-radius:10px;padding:20px 22px;box-shadow:0 1px 2px rgba(0,0,0,.03);margin:16px 0}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+  @media(max-width:860px){.grid2,.grid3{grid-template-columns:1fr}}
+  code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px solid var(--p100);border-radius:4px;padding:1px 5px;color:var(--p800)}
+  .tag{display:inline-block;font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;padding:2px 8px;border-radius:20px;font-weight:600;vertical-align:middle}
+  .t-sig{background:var(--sigbg);color:var(--sig);border:1px solid #fecaca}
+  .t-mod{background:var(--modbg);color:var(--mod);border:1px solid #fde68a}
+  .t-opp{background:var(--oppbg);color:var(--opp);border:1px solid #bbf7d0}
+  .t-note{background:var(--notebg);color:var(--note);border:1px solid var(--p200)}
+  .t-gap{background:var(--gapbg);color:var(--gap);border:1px solid #e5e7eb}
+  .pill{display:inline-block;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;background:var(--p100);color:var(--p700)}
+  .callout{background:var(--p50);border:1px solid var(--p200);border-left:4px solid var(--p500);border-radius:8px;padding:14px 18px;margin:16px 0}
+  .callout.ember{background:#fdf6f0;border-color:#f0cba8;border-left-color:var(--ember)}
+  .callout .lab{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--p600);font-weight:600}
+  .callout.ember .lab{color:var(--ember)}
+
+  /* flow diagram */
+  .flow{display:flex;flex-wrap:wrap;align-items:stretch;gap:0;margin:16px 0}
+  .flow .step{flex:1;min-width:120px;background:#fff;border:1px solid var(--divider);border-radius:8px;padding:10px 12px;font-size:12.5px;position:relative;text-align:center}
+  .flow .step .who{display:block;font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:3px}
+  .flow .arrow{display:flex;align-items:center;color:var(--p400);font-size:18px;padding:0 6px}
+  .flow .pain{border-color:#fecaca;background:var(--sigbg)}
+
+  /* layout mock */
+  .mock{border:1px solid var(--divider);border-radius:10px;overflow:hidden;background:#fff;margin:16px 0}
+  .mock .bar{background:var(--p800);color:#fff;padding:8px 14px;font-size:12px;font-family:var(--mono);display:flex;justify-content:space-between;align-items:center}
+  .mock .bar .toggle{background:var(--p600);border-radius:20px;padding:3px 4px;display:flex;gap:2px}
+  .mock .bar .toggle span{padding:2px 10px;border-radius:20px;font-size:10.5px}
+  .mock .bar .toggle .on{background:#fff;color:var(--p800);font-weight:600}
+  .mock .body{display:flex;min-height:280px}
+  .mock .map{flex:0 0 60%;background:linear-gradient(135deg,#e8eef2,#dce8f1);position:relative;border-right:1px solid var(--divider)}
+  .mock .map .parcel{position:absolute;left:28%;top:30%;width:44%;height:40%;border:2px solid var(--ember);background:rgba(187,77,0,.06);border-radius:4px}
+  .mock .map .pin{position:absolute;width:22px;height:22px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+  .mock .map .pin b{transform:rotate(45deg);display:block;color:#fff;font-size:11px;text-align:center;line-height:18px;font-weight:700}
+  .mock .map .cap{position:absolute;bottom:8px;left:10px;font-size:10px;color:var(--p600);font-family:var(--mono);background:rgba(255,255,255,.7);padding:2px 6px;border-radius:4px}
+  .mock .map .seg{position:absolute;bottom:8px;right:10px;font-size:10px;font-family:var(--mono);background:#fff;border:1px solid var(--divider);border-radius:6px;padding:3px 6px;color:var(--p700)}
+  .mock .rail{flex:1;padding:12px 14px;overflow:hidden}
+  .mock .rail .rtabs{display:flex;gap:8px;font-size:11px;color:var(--muted);border-bottom:1px solid var(--divider);padding-bottom:8px;margin-bottom:10px;flex-wrap:wrap}
+  .mock .rail .rtabs .on{color:var(--p700);font-weight:700;border-bottom:2px solid var(--p500);padding-bottom:6px;margin-bottom:-9px}
+  .mock .verdict{font-family:var(--serif);font-size:14px;color:var(--p900);font-weight:600;margin-bottom:8px}
+
+  /* finding block anatomy */
+  .fb{border:1px solid var(--divider);border-left:4px solid var(--sig);border-radius:8px;padding:14px 16px;background:#fff}
+  .fb .top{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:6px}
+  .fb .disc{font-family:var(--mono);font-size:11px;color:var(--muted)}
+  .fb .exp{margin-left:auto;font-weight:700;color:var(--p800)}
+  .fb h4{margin:2px 0 4px;font-size:15px}
+  .fb .sub{color:var(--muted);font-size:13px;margin-bottom:8px}
+  .fb .ev{font-size:13px;margin:3px 0}
+  .conf{font-family:var(--mono);font-size:10px;font-weight:700;padding:0 4px;border-radius:3px}
+  .cv{background:var(--oppbg);color:var(--opp)}.cp{background:var(--modbg);color:var(--mod)}.ci{background:var(--gapbg);color:var(--gap)}
+  .fb .impl{font-size:12.5px;margin-top:8px;padding-top:8px;border-top:1px dashed var(--divider)}
+  .fb .impl b{font-family:var(--mono);font-size:10px;letter-spacing:.05em;color:var(--p600)}
+  .fb .internal{margin-top:8px;background:var(--p50);border:1px dashed var(--p300);border-radius:6px;padding:8px 10px;font-size:12px}
+  .fb .internal .lab{font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--p600)}
+  .prov{font-family:var(--mono);font-size:10.5px;background:var(--p100);color:var(--p700);padding:1px 6px;border-radius:4px;margin:1px 2px;display:inline-block}
+
+  /* report list mock */
+  .rl{border:1px solid var(--divider);border-radius:10px;overflow:hidden;margin:16px 0}
+  .rl .row{display:flex;align-items:center;gap:14px;padding:13px 16px;border-top:1px solid var(--divider);background:#fff;font-size:13.5px}
+  .rl .row:first-child{border-top:0}
+  .rl .row .addr{font-weight:600;color:var(--p900)}
+  .rl .row .use{color:var(--muted);font-size:12px}
+  .rl .row .sevstrip{margin-left:auto;display:flex;height:8px;border-radius:4px;overflow:hidden;width:120px;border:1px solid var(--divider)}
+  .rl .row .sevstrip i{display:block;height:100%}
+  .st{font-size:11px;font-weight:700;padding:3px 11px;border-radius:20px;text-transform:uppercase;letter-spacing:.04em}
+  .st-draft{background:var(--gapbg);color:var(--gap)}
+  .st-prog{background:var(--modbg);color:var(--mod)}
+  .st-deliv{background:var(--oppbg);color:var(--opp)}
+
+  /* state machine */
+  .sm{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:14px 0}
+  .sm .s{border:1px solid var(--p300);background:var(--p50);border-radius:20px;padding:6px 13px;font-size:12px;font-weight:600;color:var(--p800)}
+  .sm .s .who{display:block;font-size:9.5px;font-family:var(--mono);color:var(--muted);font-weight:400;text-transform:uppercase}
+  .sm .s.client{border-color:#bbf7d0;background:var(--oppbg)}
+  .sm .s.cc{border-color:var(--ember);background:#fdf6f0}
+  .sm .s.spec{border-color:#fde68a;background:var(--modbg)}
+  .sm .a{color:var(--p400);font-weight:700}
+
+  /* surfaces */
+  .surf{border-top:4px solid var(--p500);border-radius:10px;background:#fff;border:1px solid var(--divider);border-top-width:4px;padding:16px 18px}
+  .surf h4{margin:2px 0 8px;font-size:15px;color:var(--p900)}
+  .surf .aud{font-family:var(--mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:8px}
+  .surf ul{font-size:13px}
+
+  /* roadmap */
+  table.rm{width:100%;border-collapse:collapse;margin:16px 0;font-size:13px;background:#fff;border:1px solid var(--divider);border-radius:10px;overflow:hidden}
+  table.rm th{background:var(--p700);color:#fff;text-align:left;padding:9px 12px;font-size:11.5px;letter-spacing:.05em;text-transform:uppercase;font-weight:600}
+  table.rm td{padding:9px 12px;border-top:1px solid var(--divider);vertical-align:top}
+  table.rm tr:nth-child(even) td{background:#fbfcfd}
+  table.rm .ph{font-family:var(--mono);font-weight:700;color:var(--ember)}
+  .badge-new{font-family:var(--mono);font-size:10px;background:var(--sigbg);color:var(--sig);padding:1px 6px;border-radius:4px;border:1px solid #fecaca}
+  .badge-have{font-family:var(--mono);font-size:10px;background:var(--oppbg);color:var(--opp);padding:1px 6px;border-radius:4px;border:1px solid #bbf7d0}
+
+  .q{background:#fff;border:1px solid var(--divider);border-left:4px solid var(--ember);border-radius:8px;padding:12px 16px;margin:10px 0}
+  .q .qn{font-family:var(--mono);font-weight:700;color:var(--ember);font-size:12px}
+  .q .rec{font-size:12.5px;color:var(--opp);margin-top:4px}.q .rec b{font-family:var(--mono);font-size:10px;letter-spacing:.05em}
+  .foot{margin-top:40px;padding-top:18px;border-top:1px solid var(--divider);color:var(--muted);font-size:12px;font-family:var(--mono)}
+  .two-col-quote{font-style:italic;color:var(--p700);font-family:var(--serif);font-size:15px}
+
+  /* ===== system-today diagram primitives ===== */
+  /* actor/repo chips — consistent color code across every diagram */
+  .rc{display:inline-block;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:2px 8px;border-radius:5px;vertical-align:middle;white-space:nowrap;border:1px solid}
+  .r-ch{background:#eef4fb;color:#2456a8;border-color:#c3d8f2}        /* cityhall */
+  .r-sub{background:#f3eefb;color:#6b3fa0;border-color:#dcccf0}       /* substation */
+  .r-fa{background:#e9f7f2;color:#0f7a5f;border-color:#bfe8db}        /* field-agent */
+  .r-inn{background:#fdf0e6;color:#b5590d;border-color:#f2d3b3}       /* inngest */
+  .r-db{background:#eaeef2;color:#2d4559;border-color:#c7d2dd}        /* supabase DB */
+  .r-store{background:#e6eef3;color:#35526b;border-color:#bcd0dd}     /* supabase storage */
+  .r-ai{background:#fbeee7;color:var(--ember);border-color:#f0cba8}  /* LLM (gemini/claude) */
+  .r-user{background:#eefaf0;color:#15803d;border-color:#bbf7d0}     /* client/user */
+
+  .legend{display:flex;flex-wrap:wrap;gap:8px 14px;background:#fff;border:1px solid var(--divider);border-radius:10px;padding:12px 16px;margin:16px 0;font-size:12px;align-items:center}
+  .legend .rc{margin-right:5px}
+
+  /* numbered sequence with a left rail */
+  .seq{position:relative;margin:16px 0;padding-left:8px}
+  .seq .st{position:relative;display:flex;gap:12px;padding:0 0 14px 0}
+  .seq .st:last-child{padding-bottom:0}
+  .seq .st::before{content:"";position:absolute;left:13px;top:26px;bottom:-2px;width:2px;background:var(--p200)}
+  .seq .st:last-child::before{display:none}
+  .seq .st .num{flex:0 0 28px;height:28px;border-radius:50%;background:var(--p600);color:#fff;font-family:var(--mono);font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;z-index:1}
+  .seq .st .body{flex:1;background:#fff;border:1px solid var(--divider);border-radius:8px;padding:9px 13px;font-size:13px;margin-top:-1px}
+  .seq .st .body .h{font-weight:600;color:var(--p900);margin-bottom:2px}
+  .seq .st .body .d{color:var(--ink);font-size:12.5px}
+  .seq .st .body .d code{font-size:11.5px}
+  .seq .st.branch .num{background:var(--ember)}
+  .seq .st.branch .body{border-left:3px solid var(--ember)}
+
+  /* chevron pipeline (horizontal, wraps) */
+  .chev{display:flex;flex-wrap:wrap;gap:6px;align-items:stretch;margin:14px 0}
+  .chev .c{flex:1 1 130px;min-width:120px;background:#fff;border:1px solid var(--divider);border-radius:8px;padding:9px 11px;font-size:12px;position:relative}
+  .chev .c .ph{font-family:var(--mono);font-size:9.5px;color:var(--ember);font-weight:700;letter-spacing:.05em;display:block;margin-bottom:2px}
+  .chev .c .t{font-weight:600;color:var(--p900);font-size:12.5px}
+  .chev .c .s{color:var(--muted);font-size:11px;display:block;margin-top:1px}
+  .chev .sep{display:flex;align-items:center;color:var(--p400);font-weight:700;font-size:16px}
+
+  /* ER / data-model boxes */
+  .er{display:grid;gap:12px;margin:16px 0}
+  .entity{background:#fff;border:1px solid var(--divider);border-radius:9px;overflow:hidden}
+  .entity .eh{background:var(--p700);color:#fff;padding:7px 12px;font-family:var(--mono);font-size:12px;font-weight:600;display:flex;justify-content:space-between;align-items:center}
+  .entity .eh .kk{font-size:9.5px;font-weight:400;opacity:.75;text-transform:uppercase;letter-spacing:.06em}
+  .entity .ef{padding:8px 12px;font-size:12px;display:flex;flex-wrap:wrap;gap:4px 10px}
+  .entity .ef span{color:var(--ink)}
+  .entity .ef b{font-family:var(--mono);font-size:11px;color:var(--p700)}
+  .entity.diligence .eh{background:#0f7a5f}
+  .entity.doc .eh{background:var(--p600)}
+  .fk{text-align:center;color:var(--p500);font-family:var(--mono);font-size:11px;margin:-4px 0}
+  .fk b{color:var(--p800)}
+  .er-note{font-size:11.5px;color:var(--muted);font-family:var(--mono)}
+
+  /* two-lane branch */
+  .branchbox{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0}
+  @media(max-width:760px){.branchbox{grid-template-columns:1fr}}
+  .branchbox .lane{border:1px solid var(--divider);border-radius:9px;background:#fff;padding:12px 14px}
+  .branchbox .lane.real{border-top:4px solid var(--ember)}
+  .branchbox .lane.dummy{border-top:4px solid var(--p400)}
+  .branchbox .lane .lh{font-weight:700;font-size:13px;margin-bottom:4px}
+  .branchbox .lane .flag{font-family:var(--mono);font-size:10.5px;background:var(--p50);border:1px solid var(--p200);border-radius:4px;padding:1px 6px;color:var(--p700)}
+  .branchbox .lane ul{font-size:12px;margin:6px 0 0}
+
+  .diag{background:#fbfcfd;border:1px solid var(--divider);border-radius:12px;padding:18px 20px;margin:18px 0}
+  .diag > h4{margin:0 0 4px;font-size:15px;color:var(--p900)}
+  .diag > .cap{color:var(--muted);font-size:12.5px;margin:0 0 8px}
+</style>
+</head>
+<body>
+
+<header class="masthead">
+  <div class="kicker">Noetic · Site Intelligence Report</div>
+  <h1>Productizing the SIR — Three Perspectives</h1>
+  <p>The same effort seen through three lenses: Jason's product vision (workflow &amp; scale), Sal's viewer vision (interaction &amp; feel), and the synthesized picture with verified current-state and a place to start. Companion to <code>DESIGN-SPEC.md</code> (winston#192).</p>
+  <div class="meta">Draft v1 · 2026-07-27 · click a tab ↓</div>
+</header>
+
+<nav class="tabs">
+  <button data-tab="jason" class="active"><span class="n">01</span>Jason's Vision</button>
+  <button data-tab="sal"><span class="n">02</span>Sal's Vision</button>
+  <button data-tab="synth"><span class="n">03</span>Synthesis &amp; Roadmap</button>
+  <button data-tab="today"><span class="n">04</span>System Today</button>
+</nav>
+
+<main>
+
+<!-- ============================ JASON ============================ -->
+<section class="panel active" id="jason">
+  <h2><span class="eyebrow">Perspective 01 — the product owner</span>Jason's Vision: scale the workflow, keep the skill</h2>
+  <p class="lede">"We're going to need to run four, five, ten of these a week. Right now we do one or two, and they're a lot of manual effort. I don't want to replace the skill or the human-in-the-loop steps — I want to build better <em>interfaces</em> around them."</p>
+
+  <h3>The core ask, in one breath</h3>
+  <p>Keep the interactive <code>diligence-report</code> Claude Code skill exactly as the engine (its flexibility is load-bearing). Attack the friction that lives at the <strong>interfaces</strong> — the hand-offs between people and tools — because that's what breaks at 10×. Two interface fronts, plus a delivery mechanism.</p>
+
+  <h3>Today's workflow is a chain of manual byte-shuffling</h3>
+  <div class="flow">
+    <div class="step pain"><span class="who">Client</span>emails address + use + PDFs</div>
+    <div class="arrow">→</div>
+    <div class="step pain"><span class="who">Will/Jason</span>drag PDFs to Mac Mini, start Claude Code</div>
+    <div class="arrow">→</div>
+    <div class="step"><span class="who">Skill</span>HITL1 facts → PDF</div>
+    <div class="arrow">→</div>
+    <div class="step pain"><span class="who">Sal</span>Google Doc notes + screenshots, over Slack</div>
+    <div class="arrow">→</div>
+    <div class="step pain"><span class="who">Will/Jason</span>copy-paste back into Claude Code</div>
+  </div>
+  <div class="flow">
+    <div class="step"><span class="who">Skill</span>deep research (HITL2 in-CC)</div>
+    <div class="arrow">→</div>
+    <div class="step"><span class="who">Skill</span>writes report → PDF + Word</div>
+    <div class="arrow">→</div>
+    <div class="step pain"><span class="who">Jason</span>assemble Google Drive folder</div>
+    <div class="arrow">→</div>
+    <div class="step pain"><span class="who">Sal</span>HITL3 review → another Google Doc</div>
+    <div class="arrow">→</div>
+    <div class="step pain"><span class="who">Heidi</span>email a Drive link to client</div>
+  </div>
+  <div class="callout ember"><span class="lab">The pain</span> Every red box is a human moving bytes between Claude Code, Google Docs, Slack, and Google Drive by hand. Survivable at 1–2/week; collapses at 10.</div>
+
+  <h3>Front 1 — Client ↔ Noetic (intake + delivery)</h3>
+  <div class="grid2">
+    <div class="card">
+      <strong>Intake</strong> <span class="pill">mostly exists</span>
+      <p>A chatbot-style intake: client drops PDFs, agent confirms it has a site definition (parcel/address), intended use, and any non-desk-research attachments (PUD, concept plan). Then it's queued. Staff (Heidi) can also do intake on a client's behalf.</p>
+    </div>
+    <div class="card">
+      <strong>Delivery UI</strong> <span class="pill">high priority</span>
+      <p>Client logs in (or opens a secure link) and sees their reports with status. Web view of the report (infinite scroll, magazine-style site pages), download PDF/Word, and chat about the report.</p>
+    </div>
+  </div>
+
+  <h4>Mock — the client's report list</h4>
+  <div class="rl">
+    <div class="row"><span><span class="addr">715 W Sunrise Blvd</span> · Fort Lauderdale FL<br><span class="use">3-bay quick-lube</span></span><span class="sevstrip"><i style="background:var(--sig);width:15%"></i><i style="background:var(--mod);width:57%"></i><i style="background:var(--opp);width:13%"></i><i style="background:var(--gap);width:15%"></i></span><span class="st st-deliv">Delivered</span></div>
+    <div class="row"><span><span class="addr">0 Highway 27, Morrison Ranch</span> · Haines City FL<br><span class="use">61-ac raw-land retail</span></span><span class="sevstrip"><i style="background:var(--sig);width:28%"></i><i style="background:var(--mod);width:31%"></i><i style="background:var(--opp);width:24%"></i><i style="background:var(--gap);width:17%"></i></span><span class="st st-prog">In&nbsp;Progress</span></div>
+    <div class="row"><span><span class="addr">NWQ US-290 &amp; Canonade Dr</span> · Hays County TX<br><span class="use">Whataburger pad — intake incomplete</span></span><span style="margin-left:auto"></span><span class="st st-draft">Draft</span></div>
+  </div>
+  <p style="font-size:13px;color:var(--muted)"><strong>Draft</strong> = their court (finish uploading &amp; hit send). <strong>In progress</strong> = our court. <strong>Delivered</strong> = viewable/downloadable/chattable.</p>
+
+  <h4>Report chat — priorities are explicit</h4>
+  <div class="grid3">
+    <div class="card" style="border-top:3px solid var(--opp)"><strong>Now</strong><p style="font-size:13px">View + download. Kills the Google Drive step.</p></div>
+    <div class="card" style="border-top:3px solid var(--mod)"><strong>Next</strong><p style="font-size:13px">Chat over report <em>contents only</em> — like dropping the PDF into a chatbot. Per-user chat scope.</p></div>
+    <div class="card" style="border-top:3px solid var(--gap)"><strong>Much later</strong><p style="font-size:13px">Chat with live research tools (re-check GIS, neighbors). Needs a run environment — phase 3–4.</p></div>
+  </div>
+
+  <h3>Front 2 — Tech-lead ↔ Regulatory-specialist collaboration</h3>
+  <p>Replace the Google-Doc/Slack/copy-paste loop with a DB-backed review surface on the main app. Assign a run to Sal or Garrett; they validate facts (HITL1) and review the draft (HITL3) with <strong>threaded comments + pasted screenshots</strong>; the tech lead threads replies; when locked, <strong>the agent reads the feedback straight from the database via MCP</strong> — no copy-paste.</p>
+
+  <div class="card">
+    <strong>The review loop Jason described</strong>
+    <div class="sm" style="margin-top:10px">
+      <span class="s cc">agent produces HITL1 facts<span class="who">tech lead / CC</span></span><span class="a">→</span>
+      <span class="s spec">specialist comments + images<span class="who">Sal / Garrett</span></span><span class="a">→</span>
+      <span class="s spec">submits review<span class="who">specialist</span></span><span class="a">→</span>
+      <span class="s cc">tech lead threads replies / locks<span class="who">Will / Jason</span></span><span class="a">↺ or →</span>
+      <span class="s cc">agent reads via MCP, proceeds<span class="who">in Claude Code</span></span>
+    </div>
+    <p style="font-size:12.5px;color:var(--muted);margin-bottom:0">Comments stay in <em>draft</em> until submitted. Specialist chooses at submit-time whether they want to see it again. Transitions are manual — the app gives visibility + notifications; humans pull the trigger. HITL2 (unblocking county-clerk CAPTCHAs, GIS debugging, paid pulls) stays entirely in Claude Code — no UI needed.</p>
+  </div>
+
+  <h3>Delivery mechanism &amp; where it lives</h3>
+  <ul>
+    <li><strong>Secure obscurity URL is the default</strong> — no login required; link good for ~1–2 months; then require an account for history. Logged-in users see all their reports; chats are per-user scoped.</li>
+    <li><strong>On the main app (app.noeticbuild.com)</strong>, not Inspector General — this is a customer-facing commitment that must stay polished and up, unlike IG (the debugging tool).</li>
+    <li>Auto "your report is ready" email; default delivery is still Heidi/Jason emailing a link — but a Noetic link, not a Drive link.</li>
+  </ul>
+  <div class="callout"><span class="lab">Jason's own open question</span> He was genuinely torn on whether the <em>client interface</em> or the <em>specialist-collaboration interface</em> is higher priority. Both are "big steps." (See Synthesis → Q3.)</div>
+</section>
+
+<!-- ============================ SAL ============================ -->
+<section class="panel" id="sal">
+  <h2><span class="eyebrow">Perspective 02 — the designer</span>Sal's Vision: the report as a map-centric, dual-audience web experience</h2>
+  <p class="lede">Today the SIR ships as a 150–300 page PDF: linear, table-heavy, one audience at a time. Sal's prototype reimagines it as <strong>one screen where the map and the report are fused</strong>, the report is navigational instead of linear, and a single toggle flips the same view between the client report and the Noetic-internal evidence layer.</p>
+
+  <div class="callout"><span class="lab">What this input is authoritative on</span> Information architecture, the interaction model, the component system, and the <em>feel</em>. <strong>Not</strong> authoritative on scope, priority, or exact data-schema field names — it's a running prototype (vanilla JS + CDN), a spec to build against, not source to lift.</div>
+
+  <h3>The centerpiece — the SIR Viewer</h3>
+  <div class="mock">
+    <div class="bar"><span>◱ Site Intelligence Report · 715 W Sunrise Blvd · SIR-2026-0720-FTL</span>
+      <span class="toggle"><span class="on">Client</span><span>Noetic internal</span></span>
+    </div>
+    <div class="body">
+      <div class="map">
+        <div class="parcel"></div>
+        <div class="pin" style="left:34%;top:34%;background:var(--sig)"><b>1</b></div>
+        <div class="pin" style="left:58%;top:44%;background:var(--mod)"><b>4</b></div>
+        <div class="pin" style="left:44%;top:60%;background:var(--opp)"><b>8</b></div>
+        <div class="cap">parcel · flood AE · wetlands · buildable envelope</div>
+        <div class="seg">2D · 2.5D · 3D</div>
+      </div>
+      <div class="rail">
+        <div class="rtabs"><span class="on">Overview</span><span>Findings</span><span>Punch-list</span><span>Data gaps</span><span>Full report</span></div>
+        <div class="verdict">BOTTOM LINE: Buildable, but the AE-zone frontage drives the whole cost case.</div>
+        <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap">
+          <span class="tag t-sig">7 significant</span><span class="tag t-mod">27 moderate</span><span class="tag t-opp">6 opportunity</span><span class="tag t-gap">2 data gap</span>
+        </div>
+        <div style="font-size:12px;color:var(--muted)">Top Risks as full blocks ↓ · Moderate/Opportunity as compact rows · exhaustive set in Findings tab</div>
+      </div>
+    </div>
+  </div>
+  <p style="font-size:12.5px;color:var(--muted)"><em>Map ≈ 62% left · report rail ≈ 38% right. Hover a finding → its pin highlights; click a pin → rail scrolls to the finding &amp; map flies to it. The map and report are never out of sync.</em></p>
+
+  <h3>The load-bearing design bets</h3>
+  <div class="grid2">
+    <div class="card"><strong>1 · The report is anchored by the site.</strong> The map isn't a widget beside the report — it <em>is</em> the left half, and every spatial finding lives on it. Biggest departure from the PDF.</div>
+    <div class="card"><strong>2 · One view, two audiences, one toggle.</strong> Client ↔ internal <em>adapts the same layout</em> (reveals an evidence layer inline), never a second page. Mode is always visually obvious.</div>
+    <div class="card"><strong>3 · The Finding Block is the atom.</strong> Dozens compose the whole report. Get it pixel-right and the rest falls into place. (anatomy below)</div>
+    <div class="card"><strong>4 · Exec-summary-forward.</strong> 47 findings as full cards is unreadable → verdict + severity dashboard, then Top Risks full, then Moderate/Opportunity as one-line rows. Progressive disclosure.</div>
+    <div class="card"><strong>5 · DATA GAP &amp; "not applicable" are first-class.</strong> Clean intentional styling, never a red error look. A trust decision: report honestly what couldn't be verified.</div>
+    <div class="card"><strong>6 · Native to the app.</strong> Steel-blue ramp, Lexend, Lora on report surfaces, the topographic-contour motif. Feels like it already lives in cityhall.</div>
+  </div>
+
+  <h4>Anatomy of the Finding Block (client vs internal)</h4>
+  <div class="grid2">
+    <div>
+      <div class="fb">
+        <div class="top"><span class="tag t-sig">Significant</span><span class="disc">Floodplain &amp; Waterway</span><span class="exp">$$$</span></div>
+        <h4>Frontage sits in FEMA Zone AE</h4>
+        <div class="sub">BFE encumbers the western ~40% of the buildable area.</div>
+        <div class="ev">• AE zone confirmed on FIRM panel 12011C0392H <span class="conf cv">V</span></div>
+        <div class="ev">• Finished-floor likely +2 ft freeboard <span class="conf cp">P</span></div>
+        <div class="impl"><b>IMPLICATION</b> — fill/compensatory storage adds cost. <br><b>NEXT STEP</b> — order a LOMR feasibility check pre-LOI.</div>
+      </div>
+      <p style="text-align:center;font-size:11px;color:var(--muted);font-family:var(--mono)">CLIENT VIEW</p>
+    </div>
+    <div>
+      <div class="fb">
+        <div class="top"><span class="tag t-sig">Significant</span><span class="disc">Floodplain &amp; Waterway</span><span class="exp">$$$</span></div>
+        <h4>Frontage sits in FEMA Zone AE</h4>
+        <div class="sub">BFE encumbers the western ~40% of the buildable area.</div>
+        <div class="ev">• AE zone confirmed on FIRM panel 12011C0392H <span class="conf cv">V</span></div>
+        <div class="internal">
+          <span class="lab">Evidence &amp; provenance</span><br>
+          <span class="prov">fema_flood_lookup</span><span class="prov">broward_gis_parcel</span><span class="prov">firm_panel_12011C0392H</span>
+          <div style="margin-top:5px;color:var(--muted)">Confidence: primary FEMA source + county GIS corroboration. No conflict.</div>
+        </div>
+      </div>
+      <p style="text-align:center;font-size:11px;color:var(--muted);font-family:var(--mono)">NOETIC-INTERNAL VIEW (same block, evidence layer revealed)</p>
+    </div>
+  </div>
+  <p style="font-size:12.5px"><span class="conf cv">V</span> Verified (primary source) · <span class="conf cp">P</span> Partially verified (secondary) · <span class="conf ci">I</span> Inferred from context. Severity vocabulary: <span class="tag t-sig">significant</span> <span class="tag t-mod">moderate</span> <span class="tag t-opp">opportunity</span> <span class="tag t-note">note</span> <span class="tag t-gap">data-gap</span>.</p>
+
+  <h3>Information architecture — four connected screens (one SPA)</h3>
+  <div class="flow">
+    <div class="step"><span class="who">#/projects</span>Report cards + severity strips</div>
+    <div class="arrow">→</div>
+    <div class="step"><span class="who">#/project/:id</span>Overview + "Open SIR" button</div>
+    <div class="arrow">→</div>
+    <div class="step"><span class="who">/sir</span>The viewer — map + rail</div>
+    <div class="arrow">→</div>
+    <div class="step"><span class="who">/sir/:discipline</span>Drill-in — dims other pins</div>
+  </div>
+  <p style="font-size:13px"><strong>Ten disciplines</strong> (constant order): Zoning &amp; Land Use · Site Design · Transportation · Floodplain · Environmental · Drainage · Environmental Protection · Water &amp; Wastewater · Fire · Parkland. &nbsp; <strong>Five parts</strong>: I Exec Summary · II Site &amp; Regulatory Overview · III Discipline Findings · IV Market &amp; Next Steps · V Research Appendix (≈⅔ of the PDF — this is the internal layer behind the toggle).</p>
+
+  <h3>What Sal flags must change to make it real</h3>
+  <div class="grid2">
+    <div class="card" style="border-left:4px solid var(--sig)"><strong>CSP is the #1 landmine.</strong> Prototype's CDN scripts, Google fonts, and map tiles are all external hosts — blocked by cityhall's CSP. Must bundle locally + self-host/allowlist tiles.</div>
+    <div class="card" style="border-left:4px solid var(--sig)"><strong>Real GIS is the biggest fidelity gap.</strong> All prototype geometry is hand-authored placeholder. Needs real parcel/FEMA/wetlands/buildable/frontage/utility layers from the pipeline.</div>
+    <div class="card" style="border-left:4px solid var(--mod)"><strong>Real framework + data.</strong> Rebuild in SvelteKit/UnoCSS with real components; replace inline JS objects with pipeline output; formalize the schema as the API contract.</div>
+    <div class="card" style="border-left:4px solid var(--mod)"><strong>Client/internal = permissions.</strong> Gate the evidence layer behind Noetic-staff entitlement — never ship the Research Appendix in a client bundle by accident.</div>
+  </div>
+</section>
+
+<!-- ============================ SYNTH ============================ -->
+<section class="panel" id="synth">
+  <h2><span class="eyebrow">Perspective 03 — the engineer</span>Synthesis, verified current state &amp; where to start</h2>
+  <p class="lede">One app, one SIR object, three surfaces gated by entitlement. Jason gives the <strong>workflow &amp; scope</strong>; Sal gives the <strong>client/internal viewer</strong>. The codebase — checked today — says both under-describe how much already exists, and reveals the one hard prerequisite neither names.</p>
+
+  <h3>How the two visions fit together</h3>
+  <div class="grid3">
+    <div class="surf">
+      <div class="aud">Client entitlement</div>
+      <h4>Client surface</h4>
+      <ul><li>Intake / request / track (Jason)</li><li>Web viewer + PDF/Word (Jason)</li><li>Report chat (Jason)</li><li>The rich map viewer (Sal)</li></ul>
+    </div>
+    <div class="surf">
+      <div class="aud">Noetic-staff entitlement</div>
+      <h4>Staff collaboration</h4>
+      <ul><li>Assign specialist (Jason)</li><li>HITL1 fact threads + images (Jason)</li><li>HITL3 report review (Jason)</li><li>Agent reads via MCP (Jason)</li></ul>
+    </div>
+    <div class="surf">
+      <div class="aud">Noetic-staff entitlement</div>
+      <h4>Internal "under the covers"</h4>
+      <ul><li>Run telemetry / cost (Jason)</li><li>Which APIs/MCP tools ran (Jason)</li><li>Surveyor health, docs pulled &amp; why (Jason)</li><li>Per-finding evidence layer (Sal's toggle)</li></ul>
+    </div>
+  </div>
+  <p style="font-size:12.5px;color:var(--muted)">Sal's dual-audience toggle is the client ↔ internal-evidence flip <em>within the viewer</em>; surfaces 2 &amp; 3 are the broader staff tooling Jason described that the toggle is one door into.</p>
+
+  <h3>Verified current state — more is built than either input assumes</h3>
+  <div class="grid2">
+    <div class="card"><span class="badge-have">SHIPPED</span> <strong>Intake chat</strong><p style="font-size:13px">Feasibility-intake is live: project→submission→intake-conversation, PDF drop → Gemini extraction → tier sections, and 3 agent tools including a real <code>requestDiligenceRun</code>.</p></div>
+    <div class="card"><span class="badge-have">EXISTS</span> <strong>Persistence tables + status page</strong><p style="font-size:13px">substation already has <code>diligence_runs</code> / <code>diligence_artifacts</code> + storage + realtime, and a run-status page. <code>maplibre-gl</code> is already a cityhall dep. Auth = RLS + <code>is_noetic_admin</code> (the entitlement Sal needs).</p></div>
+    <div class="card"><span class="badge-new">NET-NEW</span> <strong>Nothing syncs to Supabase</strong><p style="font-size:13px">The interactive skill writes <em>only to local disk</em>. A run-sync bridge (disk → the existing tables) is the P0 unblocker.</p></div>
+    <div class="card"><span class="badge-new">NET-NEW</span> <strong>No structured findings JSON</strong><p style="font-size:13px">Findings exist only as markdown prose + hand-authored JSX in <code>pages.tsx</code>. Everything richer than "render the document" needs a new normalization layer.</p></div>
+  </div>
+
+  <div class="callout ember"><span class="lab">The two load-bearing decisions</span>
+    <strong>1 · The app is a persistence + collaboration layer around an interactive Claude Code engine.</strong> Keep the skill (Jason's hard constraint); sync runs to the DB; the agent reads/writes review threads via MCP. Two existing skill-runners — interactive (has HITL, disk-only) and field-agent headless (has persistence, drops gates) — must be married.<br><br>
+    <strong>2 · The findings-normalization layer is the pivot.</strong> Document-grade delivery needs none of it and ships first. Sal's map viewer needs it (plus real GIS) and ships later. Emit <code>findings.json</code> from the pipeline (write the same data already going into JSX).
+  </div>
+
+  <h3>The SIR lifecycle — where the ball is</h3>
+  <div class="sm">
+    <span class="s client">draft<span class="who">client editing</span></span><span class="a">→</span>
+    <span class="s client">requested<span class="who">in queue</span></span><span class="a">→</span>
+    <span class="s cc">research → HITL1<span class="who">tech lead / CC</span></span><span class="a">→</span>
+    <span class="s spec">hitl1 review<span class="who">specialist</span></span><span class="a">→</span>
+    <span class="s cc">locked<span class="who">tech lead</span></span><span class="a">→</span>
+    <span class="s cc">deep research → draft<span class="who">CC · HITL2 in-CC</span></span><span class="a">→</span>
+    <span class="s spec">hitl3 review<span class="who">specialist</span></span><span class="a">↺→</span>
+    <span class="s cc">finalize<span class="who">tech lead</span></span><span class="a">→</span>
+    <span class="s client">delivered<span class="who">client views/chats</span></span>
+  </div>
+
+  <h3>The roadmap — momentum first</h3>
+  <table class="rm">
+    <tr><th>Phase</th><th>Deliverable</th><th>Why here</th><th>Pipeline work?</th></tr>
+    <tr><td class="ph">P0</td><td><strong>Run-sync bridge</strong> — disk → Supabase (reuse existing tables)</td><td>Unblocks everything; nothing's in the DB today</td><td><span class="badge-new">yes</span></td></tr>
+    <tr><td class="ph">P1</td><td><strong>Delivery MVP</strong> — web viewer, PDF/Word download, secure link, "ready" email, request list</td><td>Jason's #1; kills the Drive step; no findings layer</td><td>no</td></tr>
+    <tr><td class="ph">P2</td><td><strong>Report chat</strong> — contents-only Q&amp;A, per-user history</td><td>High client value; AI infra present</td><td>no</td></tr>
+    <tr><td class="ph">P3</td><td><strong>Staff review collaboration</strong> — HITL1+HITL3 DB threads, MCP read</td><td>Kills the Slack/Doc loop; de-risks the human side</td><td><span class="badge-new">yes</span></td></tr>
+    <tr><td class="ph">P4</td><td><strong>Internal observability</strong> — telemetry/provenance/surveyor health</td><td>Cheap once P0 syncs internal artifacts</td><td>no</td></tr>
+    <tr><td class="ph">P5</td><td><strong>Findings normalization</strong> — pipeline emits <code>findings.json</code></td><td>Prerequisite for the rich viewer</td><td><span class="badge-new">yes — key emit</span></td></tr>
+    <tr><td class="ph">P6</td><td><strong>Rich map viewer</strong> (Sal) + real GIS</td><td>The wow; most expensive; both prereqs met</td><td><span class="badge-new">yes</span></td></tr>
+    <tr><td class="ph">P7+</td><td>field-agent interactive convergence · research-on-demand chat · mobile · section-anchored comments</td><td>Explicitly deferred by Jason</td><td>—</td></tr>
+  </table>
+
+  <h3>Places to start thinking about</h3>
+  <div class="callout"><span class="lab">Recommended first slice</span> <strong>P0 + a thin slice of P1:</strong> sync one real finalized run into Supabase and render its existing HTML in an authenticated web view with PDF/Word download. That single vertical replaces the Google-Drive delivery end-to-end for one report, proves the sync bridge, and is demoable in the first push.</div>
+
+  <div class="q"><span class="qn">Q1 — Run persistence</span> Sync bridge from interactive on-disk runs, vs evolve field-agent to be interactive-aware. <div class="rec"><b>REC:</b> sync bridge now, field-agent convergence as P7.</div></div>
+  <div class="q"><span class="qn">Q2 — Findings JSON source</span> Emit from the pipeline (write the same data already going into JSX) vs reverse-engineer from the PDF in the app. <div class="rec"><b>REC:</b> emit from pipeline.</div></div>
+  <div class="q"><span class="qn">Q3 — First surface (Jason's own open question)</span> Delivery-first vs collaboration-first. <div class="rec"><b>REC:</b> delivery-first (his stated #1, cheapest, worst friction) — but genuinely his call.</div></div>
+  <div class="q"><span class="qn">Q4–Q7</span> Long-term runner home · web-render fidelity (pre-render HTML at sync time?) · obscurity-URL security envelope · keep a linear "Full report" view. <div class="rec">See DESIGN-SPEC §11 for all seven with recommendations.</div></div>
+
+  <div class="foot">Companion to DESIGN-SPEC.md · winston#192 · spawns 8 child specs (run-sync-bridge, intake-productization, sir-delivery-and-web-viewer, report-chat, staff-review-collaboration, internal-run-observability, findings-normalization, rich-sir-viewer).</div>
+</section>
+
+<!-- ============================ SYSTEM TODAY ============================ -->
+<section class="panel" id="today">
+  <h2><span class="eyebrow">Perspective 04 — what already runs</span>System Today: the intake → run → deliver pipeline that exists</h2>
+  <p class="lede">Everything below is <strong>shipped and verified against prod</strong> (per the <code>feasibility-intake-chat</code> and <code>field-agent</code> winston workspaces). This is the headless <code>full-feasibility-run</code> path — the one gated behind the flags — not Jason's interactive Mac-Mini workflow. It's the persistence + delivery plumbing the roadmap <em>reuses</em>.</p>
+
+  <div class="legend">
+    <span><span class="rc r-user">client</span></span>
+    <span><span class="rc r-ch">cityhall</span> SvelteKit UI + chat API</span>
+    <span><span class="rc r-sub">substation</span> Hono REST</span>
+    <span><span class="rc r-inn">inngest</span> event bus</span>
+    <span><span class="rc r-fa">field-agent</span> laptop worker</span>
+    <span><span class="rc r-ai">LLM</span> Gemini / Claude</span>
+    <span><span class="rc r-db">DB</span> Supabase Postgres</span>
+    <span><span class="rc r-store">storage</span> Supabase bucket</span>
+  </div>
+
+  <div class="callout"><span class="lab">Two feature flags gate the whole thing</span> <code>feasibility-intake</code> turns the chat surface on. <code>full-feasibility-run-enabled</code> (default <strong>false</strong>) decides whether a triggered run invokes the <em>real</em> diligence skill or a fast dummy renderer — a safety net against accidental token spend. Missing/unset = <code>false</code> at every layer.</div>
+
+  <h3>The end-to-end path in one strip</h3>
+  <div class="chev">
+    <div class="c"><span class="ph">A</span><span class="t">Intake chat</span><span class="s">gather site + use + docs</span></div>
+    <div class="sep">→</div>
+    <div class="c"><span class="ph">B</span><span class="t">Analyze inputs</span><span class="s">Gemini extracts PDFs</span></div>
+    <div class="sep">→</div>
+    <div class="c"><span class="ph">C</span><span class="t">Store in Supabase</span><span class="s">sections + docs</span></div>
+    <div class="sep">→</div>
+    <div class="c"><span class="ph">D</span><span class="t">Trigger run</span><span class="s">insert row + event</span></div>
+    <div class="sep">→</div>
+    <div class="c"><span class="ph">E</span><span class="t">field-agent runs skill</span><span class="s">6-phase pipeline</span></div>
+    <div class="sep">→</div>
+    <div class="c"><span class="ph">F</span><span class="t">Upload + sign</span><span class="s">PDFs → download URLs</span></div>
+  </div>
+
+  <!-- ===== DATA MODEL ===== -->
+  <div class="diag">
+    <h4>① Data model — how a feasibility intake lives under a project</h4>
+    <p class="cap">Intake layers onto the existing <code>project → submission → conversation</code> tables; nothing bespoke. The diligence run anchors to the <code>feasibility_intake</code> document_version that triggered it.</p>
+    <div class="er">
+      <div class="entity"><div class="eh">project <span class="kk">pk id</span></div><div class="ef"><span><b>id</b></span><span>org / owner via <code>project_access</code></span></div></div>
+      <div class="fk">│ 1 ── ∞ &nbsp; <b>project_id</b></div>
+      <div class="entity"><div class="eh">submission <span class="kk">type = 'feasibility'</span></div><div class="ef"><span><b>id</b></span><span><b>project_id</b></span><span>name · description</span></div></div>
+      <div class="fk">│ 1 ── ∞ &nbsp; <b>project_id</b> (type='intake')</div>
+      <div class="entity"><div class="eh">conversations <span class="kk">type = 'intake'</span></div><div class="ef"><span><b>id</b></span><span><b>project_id</b></span></div></div>
+      <div class="fk">│ 1 ── ∞ &nbsp; <b>conversation_id</b></div>
+      <div class="entity"><div class="eh">chat_message <span class="kk">transcript + RCM cards</span></div><div class="ef"><span><b>id</b></span><span><b>conversation_id</b></span><span>content</span><span><b>rcm_payload</b> jsonb</span><span>visible_to_user</span></div></div>
+      <div class="fk">│ ∞ ── ∞ &nbsp;via <b>chat_message_attachment</b> junction</div>
+      <div class="entity doc"><div class="eh">document_version <span class="kk">the file bytes</span></div><div class="ef"><span><b>id</b></span><span>storage_path</span><span>file_name</span><span>processing_state</span></div></div>
+      <div class="fk">│ belongs to</div>
+      <div class="entity doc"><div class="eh">document <span class="kk">kind ∈ {feasibility_intake, intake_attachment}</span></div><div class="ef"><span><b>feasibility_intake</b> → sentinel <code>inline://feasibility-intake</code> (the notes doc)</span><span><b>intake_attachment</b> → each uploaded PDF</span></div></div>
+    </div>
+    <div class="branchbox">
+      <div class="lane"><div class="lh">document_section <span class="rc r-db">right panel</span></div><p style="font-size:12px;margin:4px 0">The captured facts. <code>description</code> = tier label (Tier 1/2/3). <code>source</code> jsonb tags provenance:</p><p style="font-size:11.5px;margin:0"><code>chat</code> · <code>preset</code> · <code>user_edit</code> · <code>pdf_extract</code></p></div>
+      <div class="lane real"><div class="lh">diligence_runs → diligence_artifacts <span class="rc r-db">the run</span></div><p style="font-size:12px;margin:4px 0"><code>diligence_runs</code> anchors to <b>document_version_id</b> (must be <code>feasibility_intake</code>), + <b>conversation_id</b>, <b>project_id</b>, <b>triggered_by_user_id</b>. Status <code>queued→running→completed/failed/cancelled</code>.</p></div>
+    </div>
+  </div>
+
+  <!-- ===== A: INTAKE CHAT ===== -->
+  <div class="diag">
+    <h4>② Intake chat — the conversation loop</h4>
+    <p class="cap"><span class="rc r-ch">cityhall</span> composer + <code>/api/chat/intake</code>. Model is Haiku 4.5 (Sonnet behind <code>intake-chat-use-sonnet</code>), <code>stepCountIs(5)</code>, with three agent tools. Right panel + cards update over Supabase Realtime.</p>
+    <div class="seq">
+      <div class="st"><div class="num">1</div><div class="body"><div class="h"><span class="rc r-user">client</span> types / drops PDFs into the composer</div><div class="d">Persist-user-message-on-entry so mid-stream RCM cards sort after it.</div></div></div>
+      <div class="st"><div class="num">2</div><div class="body"><div class="h"><span class="rc r-ch">chat API</span> streams the agent reply with 3 tools</div><div class="d"><code>updateIntakeNotes</code> → writes <code>document_section</code> rows · <code>askClarifyingQuestion</code> → emits a clarifying-question card · <code>requestDiligenceRun</code> → fires the run (diagram ④)</div></div></div>
+      <div class="st"><div class="num">3</div><div class="body"><div class="h"><span class="rc r-ch">RCM cards</span> render inline in the chat</div><div class="d"><code>extracting_file</code> (spinner→check) · <code>tier_1_info_complete</code> (with "Start research" CTA) · <code>diligence_running_job</code> (live status)</div></div></div>
+      <div class="st"><div class="num">4</div><div class="body"><div class="h"><span class="rc r-db">Realtime</span> → <code>invalidateAll()</code></div><div class="d">Right-panel tier sections + chat cards update in place, no refresh.</div></div></div>
+    </div>
+  </div>
+
+  <!-- ===== B/C: UPLOAD + EXTRACTION ===== -->
+  <div class="diag">
+    <h4>③ Analyze file inputs → store in Supabase (upload + extraction)</h4>
+    <p class="cap">Drag a PDF → it lands in storage → on Send, an Inngest fan-out reads it with Gemini and populates the tier sections. Trigger is at <strong>chat-send, not upload-finish</strong> (only commit work the user committed to).</p>
+    <div class="seq">
+      <div class="st"><div class="num">1</div><div class="body"><div class="h"><span class="rc r-ch">upload</span> <code>prepare-upload</code> → signed Storage PUT → <code>commit-upload</code></div><div class="d">With <code>document_kind='intake_attachment'</code> → creates <code>document</code> + <code>document_version</code>, and <strong>skips</strong> the engineering-drawing <code>process-file</code> pipeline. Chip = ready, carries <code>document_version_id</code>.</div></div></div>
+      <div class="st"><div class="num">2</div><div class="body"><div class="h"><span class="rc r-ch">Send</span> → <code>POST /api/chat/intake</code></div><div class="d">Persist user <code>chat_message</code> → insert <code>chat_message_attachment</code> links → insert one <code>extracting_file</code> RCM per file (state=processing) → call substation.</div></div></div>
+      <div class="st"><div class="num">3</div><div class="body"><div class="h"><span class="rc r-sub">substation</span> <code>/feasibility-intake/extract</code></div><div class="d">Validates ownership on both the source PDF <em>and</em> the intake doc (both in this project) → fans out <b>N Inngest events</b>, one per file.</div></div></div>
+      <div class="st"><div class="num">4</div><div class="body"><div class="h"><span class="rc r-inn">inngest</span> <code>extract-feasibility-intake</code> (one run per file)</div><div class="d">Load document_version → download PDF → <span class="rc r-ai">Gemini 3.1 Pro</span> <code>generateObject</code> against a tiered Zod schema (<strong>whole PDF, one call</strong> — cross-page synthesis matters).</div></div></div>
+      <div class="st"><div class="num">5</div><div class="body"><div class="h"><span class="rc r-db">upsert</span> <code>document_section</code> (skip-on-conflict by title)</div><div class="d">Existing user-typed sections preserved; only new titles inserted. Writes <code>source={kind:'pdf_extract', document_version_id, file_name}</code>.</div></div></div>
+      <div class="st"><div class="num">6</div><div class="body"><div class="h"><span class="rc r-ch">flip cards</span> → Realtime → panel updates</div><div class="d"><code>extracting_file</code> RCM → done (green check). If Tier 1 now newly complete, insert <code>tier_1_info_complete</code> RCM. "from X.pdf" source pill on extracted sections.</div></div></div>
+    </div>
+  </div>
+
+  <!-- ===== D: TRIGGER ===== -->
+  <div class="diag">
+    <h4>④ Trigger the diligence run</h4>
+    <p class="cap">The <code>requestDiligenceRun</code> tool (input is <code>z.object({})</code> — fully contextual) reads the flag and calls substation with the user's JWT (so <code>triggered_by_user_id</code> is populated). Idempotent once-per-conversation at the app layer.</p>
+    <div class="seq">
+      <div class="st"><div class="num">1</div><div class="body"><div class="h"><span class="rc r-ch">cityhall</span> reads <code>full-feasibility-run-enabled</code></div><div class="d">Then <code>POST /api/projects/:projectId/diligence</code> with <code>{ document_version_id, conversation_id, full_run }</code> + user JWT.</div></div></div>
+      <div class="st"><div class="num">2</div><div class="body"><div class="h"><span class="rc r-sub">substation</span> validates + inserts</div><div class="d">Confirms the document_version belongs to the project <em>and</em> <code>document.kind='feasibility_intake'</code> → generates <code>diligence_run_id</code> (<code>crypto.randomUUID()</code>) → INSERT <code>diligence_runs</code> (status=queued).</div></div></div>
+      <div class="st"><div class="num">3</div><div class="body"><div class="h"><span class="rc r-inn">inngest</span> <code>diligence/requested</code> fired</div><div class="d">Payload is minimal: <code>{ diligence_run_id, full_run }</code>. The worker looks up everything else by DB join. Returns the row to cityhall.</div></div></div>
+      <div class="st"><div class="num">4</div><div class="body"><div class="h"><span class="rc r-ch">cityhall</span> inserts the <code>diligence_running_job</code> RCM</div><div class="d">Card renders in chat and opens its <em>own</em> narrow Realtime subscription on <code>diligence_runs</code> filtered by id — status flips visible in place.</div></div></div>
+    </div>
+  </div>
+
+  <!-- ===== E: FIELD-AGENT EXECUTION ===== -->
+  <div class="diag">
+    <h4>⑤ field-agent runs the skill</h4>
+    <p class="cap">field-agent is a standalone <strong>laptop</strong> process (a 4th app in the prod Inngest env) that dials out over <strong>Inngest Connect</strong> (outbound websocket). The 30–60 min skill session can't live inside an Inngest step, so the function <strong>acks and hands off</strong> to an in-process runner; status is tracked purely via <code>diligence_runs</code> + Realtime.</p>
+    <div class="seq">
+      <div class="st"><div class="num">1</div><div class="body"><div class="h"><span class="rc r-fa">field-agent</span> consumes <code>diligence/requested</code></div><div class="d">Ack → mark <code>running</code> → hand off to the in-process runner (semaphore, concurrency 1). The Inngest fn returns immediately.</div></div></div>
+      <div class="st branch"><div class="num">⑃</div><div class="body"><div class="h">Branch on <code>full_run</code></div>
+        <div class="branchbox">
+          <div class="lane real"><div class="lh">full_run = true <span class="flag">real skill</span></div><ul><li><code>@anthropic-ai/claude-agent-sdk@0.2.74</code> <code>query()</code></li><li>loads <code>noetic-tools</code> plugin, <code>bypassPermissions</code></li><li><code>cwd = field-agent/workspace/&lt;runId&gt;</code>, <code>maxTurns 400</code></li><li><code>env</code> = default-deny allowlist (no secret leak)</li><li>minimal kickoff: intake facts + paths + one autonomy directive → skill self-orchestrates</li></ul></div>
+          <div class="lane dummy"><div class="lh">full_run = false <span class="flag">dummy</span></div><ul><li>2-A.1 in-Inngest steps</li><li>render SIR from real intake + placeholder appendix via <code>noetic-pdf</code></li><li>a few seconds, no token spend</li><li>same upload/insert loop (⑥)</li></ul></div>
+        </div>
+      </div></div>
+      <div class="st"><div class="num">2</div><div class="body"><div class="h"><span class="rc r-ai">Claude</span> orchestrates the 6-phase pipeline (filesystem is the substrate)</div>
+        <div class="chev" style="margin:8px 0 0">
+          <div class="c"><span class="ph">Phase 0</span><span class="t">Jurisdiction</span><span class="s">feasibility-guide bootstrap</span></div>
+          <div class="c"><span class="ph">Phase 1</span><span class="t">Vision</span><span class="s">Gemini+Opus (skip if no PDFs)</span></div>
+          <div class="c"><span class="ph">Phase 2</span><span class="t">Research</span><span class="s">8 parallel · incl. surveyor</span></div>
+          <div class="c"><span class="ph">Phase 3</span><span class="t">Disciplines</span><span class="s">10 parallel subagents</span></div>
+          <div class="c"><span class="ph">Phase 4</span><span class="t">Synthesis</span><span class="s">issue matrix · gap buckets</span></div>
+          <div class="c"><span class="ph">Phase 5</span><span class="t">Render</span><span class="s">tsx→noetic-pdf→scrub→verify</span></div>
+        </div>
+      </div></div>
+      <div class="st"><div class="num">3</div><div class="body"><div class="h"><span class="rc r-fa">runner</span> collects deliverables + writes <code>run-summary.json</code></div><div class="d">Reads <code>workdir/sir/deliverable/{site-intelligence-report,research-appendix}.pdf</code> (SIR required — throws if missing). Captures session id, cost, turns, tool-use histogram.</div></div></div>
+    </div>
+    <div class="callout ember" style="margin-top:12px"><span class="lab">The crux for the roadmap</span> This runner is <strong>headless</strong> — the kickoff includes an autonomy directive ("never pause; record unknowns as data-gaps"), so it <em>drops the human gates</em> Jason insists on. That's exactly why P0 syncs the interactive on-disk run into these same tables rather than switching Jason onto this path (Synthesis → decision 1).</div>
+  </div>
+
+  <!-- ===== F: UPLOAD + URLS ===== -->
+  <div class="diag">
+    <h4>⑥ Upload the result → produce download URLs</h4>
+    <p class="cap">Identical for both branches (only the <em>source</em> of the PDF buffers differs). Handoff is <strong>Supabase-only</strong> — no laptop copy kept — with signed URLs minted fresh on every read.</p>
+    <div class="seq">
+      <div class="st"><div class="num">1</div><div class="body"><div class="h"><span class="rc r-fa">upload.ts</span> → <span class="rc r-store">storage</span></div><div class="d">Both PDFs → bucket <code>submission-data</code>, path <code>diligence/&lt;run-id&gt;/</code>.</div></div></div>
+      <div class="st"><div class="num">2</div><div class="body"><div class="h"><span class="rc r-fa">insert.ts</span> → <span class="rc r-db">diligence_artifacts</span></div><div class="d">Upsert on <code>(diligence_run_id, kind)</code>. Kinds: <code>site_intelligence_report</code>, <code>research_appendix</code>, <code>supporting_document_copy</code>. Stores <code>storage_path</code>, <code>file_name</code>, <code>content_type</code>, <code>file_size</code>, <code>page_count</code>.</div></div></div>
+      <div class="st"><div class="num">3</div><div class="body"><div class="h"><span class="rc r-fa">runner</span> marks the run <code>completed</code></div><div class="d"><code>onFailure</code> flips to <code>failed</code> after retries. Realtime pushes the terminal status to the chat card + the status page.</div></div></div>
+      <div class="st"><div class="num">4</div><div class="body"><div class="h"><span class="rc r-sub">GET</span> <code>/api/projects/:projectId/diligence/:diligenceRunId</code></div><div class="d">Returns the row + joined artifacts, each with a fresh <strong>72-hour signed URL</strong> (minted at read time; null if signing fails).</div></div></div>
+      <div class="st"><div class="num">5</div><div class="body"><div class="h"><span class="rc r-ch">status page</span> <code>/project/[id]/diligence-runs/[runId]</code></div><div class="d">Renders <strong>View / Download</strong> links from the signed URLs. This is where the SIR + appendix PDFs are surfaced today.</div></div></div>
+    </div>
+  </div>
+
+  <div class="callout"><span class="lab">What this means for the spec</span> Diagrams ①–⑥ are all <strong>existing assets</strong>. P0's run-sync bridge writes into the ① tables + ⑥ storage layout; P1's delivery viewer reads the ⑥ artifacts. The gap the roadmap fills is (a) the interactive-run → these-tables bridge, and (b) a richer viewer than the raw PDF link at ⑥.5.</div>
+
+  <div class="foot">Sources: winston <code>workspaces/feasibility-intake-chat/README.md</code> · <code>workspaces/field-agent/{implementation-plan,diligence-report-skill-execution}.md</code> · cityhall <code>docs/feasibility-research-runner.md</code>. Verified against prod 2026-06-02/03.</div>
+</section>
+
+</main>
+
+<script>
+  const btns=document.querySelectorAll('nav.tabs button');
+  const panels=document.querySelectorAll('.panel');
+  function show(id){
+    btns.forEach(b=>b.classList.toggle('active',b.dataset.tab===id));
+    panels.forEach(p=>p.classList.toggle('active',p.id===id));
+    if(location.hash.slice(1)!==id) history.replaceState(null,'','#'+id);
+    window.scrollTo({top:0,behavior:'smooth'});
+  }
+  btns.forEach(b=>b.addEventListener('click',()=>show(b.dataset.tab)));
+  const initial=location.hash.slice(1);
+  if(['jason','sal','synth','today'].includes(initial)) show(initial);
+</script>
+</body>
+</html>
