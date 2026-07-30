@@ -1,0 +1,552 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SIR Data Model — Today · Rework · Future</title>
+<style>
+  :root{
+    --p50:#f0f5f9;--p100:#dce8f1;--p200:#b9d2e5;--p300:#8cb4d1;--p400:#6397b8;
+    --p500:#517e9e;--p600:#3f6582;--p700:#35526b;--p800:#2d4559;--p900:#273b4b;--p950:#182530;
+    --bg:#f9f9f9;--card:#ffffff;--divider:#dfdfdf;--ink:#1f2937;--muted:#6b7280;--ember:#bb4d00;
+    --new:#15803d;--newbg:#f0fdf4;--newbd:#bbf7d0;
+    --chg:#b45309;--chgbg:#fffbeb;--chgbd:#fde68a;
+    --ret:#b91c1c;--retbg:#fef2f2;--retbd:#fecaca;
+    --sans:'Lexend',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+    --serif:'Lora',Georgia,'Times New Roman',serif;
+    --mono:'Fira Code','SF Mono',ui-monospace,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.55;font-size:15px}
+  header.masthead{background:linear-gradient(135deg,var(--p800),var(--p600));color:#fff;padding:34px 32px 30px;position:relative;overflow:hidden}
+  header.masthead::after{content:"";position:absolute;inset:0;background-image:repeating-linear-gradient(115deg,rgba(255,255,255,.06) 0 1px,transparent 1px 26px);pointer-events:none}
+  header.masthead .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--p200)}
+  header.masthead h1{font-family:var(--serif);font-weight:600;margin:.35em 0 .2em;font-size:29px;position:relative}
+  header.masthead p{margin:0;color:var(--p100);max-width:880px;font-size:15px}
+  header.masthead .meta{margin-top:14px;font-size:12.5px;color:var(--p200);font-family:var(--mono)}
+
+  nav.tabs{position:sticky;top:0;z-index:20;display:flex;gap:2px;background:var(--p950);padding:0 20px;box-shadow:0 2px 8px rgba(0,0,0,.12);flex-wrap:wrap}
+  nav.tabs button{appearance:none;border:0;background:transparent;color:var(--p200);font-family:var(--sans);font-size:14px;font-weight:500;padding:14px 18px;cursor:pointer;border-bottom:3px solid transparent;transition:all .15s}
+  nav.tabs button .n{font-family:var(--mono);font-size:11px;opacity:.7;margin-right:7px}
+  nav.tabs button:hover{color:#fff;background:rgba(255,255,255,.04)}
+  nav.tabs button.active{color:#fff;border-bottom-color:var(--ember);background:rgba(255,255,255,.06)}
+
+  main{max-width:1140px;margin:0 auto;padding:30px 26px 90px}
+  .panel{display:none;animation:fade .25s ease}
+  .panel.active{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+  h2{font-family:var(--serif);font-weight:600;font-size:23px;margin:34px 0 6px;color:var(--p900)}
+  h2:first-child{margin-top:4px}
+  h2 .eyebrow{display:block;font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--p500);font-weight:400;margin-bottom:3px}
+  h3{font-size:16px;font-weight:600;margin:28px 0 8px;color:var(--p800);display:flex;align-items:center;gap:9px}
+  h3 .hn{font-family:var(--mono);font-size:12px;color:#fff;background:var(--p600);border-radius:5px;padding:2px 8px}
+  h4{font-size:14px;font-weight:600;margin:18px 0 6px;color:var(--p800)}
+  p{margin:.55em 0}
+  .lede{font-size:16px;color:var(--p800);border-left:3px solid var(--ember);padding-left:16px;margin:14px 0 20px}
+  ul{margin:.4em 0;padding-left:22px}li{margin:.28em 0}
+  code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px solid var(--p100);border-radius:4px;padding:1px 5px;color:var(--p800)}
+  .callout{background:var(--p50);border:1px solid var(--p200);border-left:4px solid var(--p500);border-radius:8px;padding:13px 17px;margin:16px 0}
+  .callout.ember{background:#fdf6f0;border-color:#f0cba8;border-left-color:var(--ember)}
+  .callout.new{background:var(--newbg);border-color:var(--newbd);border-left-color:var(--new)}
+  .callout .lab{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--p600);font-weight:600;display:block;margin-bottom:3px}
+  .callout.ember .lab{color:var(--ember)} .callout.new .lab{color:var(--new)}
+
+  /* ===== legend ===== */
+  .legend{display:flex;flex-wrap:wrap;gap:9px 16px;background:#fff;border:1px solid var(--divider);border-radius:10px;padding:12px 16px;margin:16px 0;font-size:12px;align-items:center}
+  .legend .k{display:inline-flex;align-items:center;gap:6px}
+  .swatch{width:26px;height:14px;border-radius:3px;display:inline-block;border:1px solid rgba(0,0,0,.15)}
+  .sw-ex{background:var(--p700)} .sw-nw{background:var(--new)} .sw-ch{background:var(--chg)} .sw-rt{background:#9ca3af}
+
+  /* ===== ER / UML entity boxes ===== */
+  .erd{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start;margin:16px 0;background:#fbfcfd;border:1px solid var(--divider);border-radius:12px;padding:18px}
+  .ent{border:1px solid var(--divider);border-radius:9px;overflow:hidden;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.05);min-width:236px;flex:0 1 auto}
+  .ent .eh{padding:7px 12px;color:#fff;display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+  .ent .eh .en{font-family:var(--mono);font-size:12.5px;font-weight:700;letter-spacing:.02em}
+  .ent .eh .stereo{font-size:9.5px;font-family:var(--mono);opacity:.85;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}
+  .ent.exist .eh{background:var(--p700)}
+  .ent.newt .eh{background:var(--new)}
+  .ent.changed .eh{background:var(--chg)}
+  .ent.retired .eh{background:#9ca3af}
+  .ent.retired{opacity:.72}
+  .ent .row{display:flex;align-items:center;gap:7px;padding:4px 11px;font-size:11.5px;border-top:1px solid #eef1f4}
+  .ent .row:first-of-type{border-top:0}
+  .ent .row .nm{font-family:var(--mono);font-size:11.5px;color:var(--p900);font-weight:600}
+  .ent .row .ty{font-family:var(--mono);font-size:10px;color:var(--muted);margin-left:auto;white-space:nowrap}
+  .ent .row.hi{background:#fff9f2}
+  .ent .row.strk .nm{text-decoration:line-through;color:var(--muted)}
+  .b{font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.04em;padding:1px 4px;border-radius:3px;text-transform:uppercase;white-space:nowrap}
+  .b-pk{background:#fef3c7;color:#92600a;border:1px solid #fde68a}
+  .b-fk{background:#e0edfb;color:#2456a8;border:1px solid #c3d8f2}
+  .b-nn{background:#eef1f4;color:#4b5563;border:1px solid #d7dde3}
+  .b-new{background:var(--newbg);color:var(--new);border:1px solid var(--newbd)}
+  .ent .note{padding:5px 11px;font-size:10px;color:var(--muted);font-style:italic;border-top:1px dashed #e5e9ee;background:#fbfcfd}
+
+  /* relationships panel — crow's-foot text notation */
+  .rels{background:#fff;border:1px solid var(--divider);border-radius:10px;padding:12px 16px;margin:14px 0;font-family:var(--mono);font-size:12px;line-height:1.9}
+  .rels .rl{display:block;color:var(--p800)}
+  .rels .rl b{color:var(--ember)}
+  .rels .cf{color:var(--p500);font-weight:700}
+  .rels .cmt{color:var(--muted);font-style:normal;font-family:var(--sans);font-size:11.5px}
+  .rels .tag-new{color:var(--new);font-weight:700}
+  .rels .tag-ret{color:var(--ret);font-weight:700}
+  .rels-h{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--p600);font-weight:700;margin-bottom:6px}
+
+  /* numbered walkthrough rail */
+  .seq{position:relative;margin:14px 0}
+  .seq .st{position:relative;display:flex;gap:12px;padding:0 0 13px 0}
+  .seq .st:last-child{padding-bottom:0}
+  .seq .st::before{content:"";position:absolute;left:13px;top:26px;bottom:-2px;width:2px;background:var(--p200)}
+  .seq .st:last-child::before{display:none}
+  .seq .st .num{flex:0 0 28px;height:28px;border-radius:50%;background:var(--p600);color:#fff;font-family:var(--mono);font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;z-index:1}
+  .seq .st.newstep .num{background:var(--new)}
+  .seq .st .body{flex:1;background:#fff;border:1px solid var(--divider);border-radius:8px;padding:9px 13px;font-size:12.5px;margin-top:-1px}
+  .seq .st .body .h{font-weight:600;color:var(--p900);margin-bottom:2px}
+  .seq .st .body .d{color:var(--ink);font-size:12px}
+  .seq .st .body code{font-size:11px}
+
+  /* actor chips */
+  .rc{display:inline-block;font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;padding:1px 6px;border-radius:5px;border:1px solid;vertical-align:middle;white-space:nowrap}
+  .r-ch{background:#eef4fb;color:#2456a8;border-color:#c3d8f2}
+  .r-sub{background:#f3eefb;color:#6b3fa0;border-color:#dcccf0}
+  .r-fa{background:#e9f7f2;color:#0f7a5f;border-color:#bfe8db}
+  .r-db{background:#eaeef2;color:#2d4559;border-color:#c7d2dd}
+  .r-store{background:#e6eef3;color:#35526b;border-color:#bcd0dd}
+  .r-user{background:#eefaf0;color:#15803d;border-color:#bbf7d0}
+  .r-mcp{background:#fdf0e6;color:#b5590d;border-color:#f2d3b3}
+
+  .flow-cap{font-size:12px;color:var(--muted);margin:2px 0 4px}
+  .storage{background:#eef3f7;border:1px dashed var(--p300);border-radius:8px;padding:9px 13px;font-family:var(--mono);font-size:12px;color:var(--p800);margin:12px 0}
+  .storage b{color:var(--ember)}
+
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:820px){.grid2{grid-template-columns:1fr}.erd{padding:12px}}
+  .card{background:var(--card);border:1px solid var(--divider);border-radius:9px;padding:14px 16px}
+  .card.keep{border-top:3px solid var(--new)} .card.change{border-top:3px solid var(--chg)} .card.drop{border-top:3px solid var(--ret)}
+  .card strong{display:block;margin-bottom:4px;font-size:13.5px}
+  .card ul{font-size:12.5px;margin:2px 0}
+
+  /* state machine */
+  .sm{display:flex;flex-wrap:wrap;gap:7px;align-items:center;margin:14px 0}
+  .sm .s{border:1px solid var(--p300);background:var(--p50);border-radius:20px;padding:5px 12px;font-size:11.5px;font-weight:600;color:var(--p800);font-family:var(--mono)}
+  .sm .s .who{display:block;font-size:9px;font-family:var(--mono);color:var(--muted);font-weight:400;text-transform:uppercase;letter-spacing:.03em}
+  .sm .s.client{border-color:var(--newbd);background:var(--newbg)}
+  .sm .s.cc{border-color:#f0cba8;background:#fdf6f0}
+  .sm .s.spec{border-color:var(--chgbd);background:var(--chgbg)}
+  .sm .a{color:var(--p400);font-weight:700}
+
+  .foot{margin-top:44px;padding-top:18px;border-top:1px solid var(--divider);color:var(--muted);font-size:12px;font-family:var(--mono)}
+  .xref{font-size:12px;color:var(--p600);background:var(--p50);border:1px solid var(--p100);border-radius:6px;padding:8px 12px;margin:10px 0}
+</style>
+</head>
+<body>
+
+<header class="masthead">
+  <div class="kicker">Noetic · Site Intelligence Report · Data Model</div>
+  <h1>SIR Data Model — Today, the Rework, and the Future</h1>
+  <p>A visual companion to <code>data-model.md</code> and <code>DESIGN-SPEC.md</code> (winston#192). Three sections: <strong>①</strong> the diligence data model as it exists today and how the two core flows wire through it, <strong>②</strong> the same world rebuilt on the <code>site_intelligence_report</code> rework, and <strong>③</strong> where the model goes as the rest of the SIR-product child specs land.</p>
+  <div class="meta">Draft v1 · 2026-07-30 · UML/ER + flow diagrams · click a tab ↓</div>
+</header>
+
+<nav class="tabs">
+  <button data-tab="today" class="active"><span class="n">01</span>Today</button>
+  <button data-tab="rework"><span class="n">02</span>The Rework</button>
+  <button data-tab="future"><span class="n">03</span>The Future</button>
+</nav>
+
+<main>
+
+<!-- ================= LEGEND (shared) ================= -->
+<div class="legend">
+  <span class="k"><span class="swatch sw-ex"></span> existing table</span>
+  <span class="k"><span class="swatch sw-nw"></span> net-new table</span>
+  <span class="k"><span class="swatch sw-ch"></span> existing table, new column</span>
+  <span class="k"><span class="swatch sw-rt"></span> retired</span>
+  <span class="k"><span class="b b-pk">PK</span> primary key</span>
+  <span class="k"><span class="b b-fk">FK</span> foreign key</span>
+  <span class="k"><span class="b b-nn">NN</span> not null</span>
+  <span class="k"><span class="cf" style="font-family:var(--mono);color:var(--p500);font-weight:700">‖──&lt;</span> one-to-many</span>
+</div>
+
+<!-- =========================================================== -->
+<!-- ============================ 1 · TODAY ==================== -->
+<!-- =========================================================== -->
+<section class="panel active" id="today">
+  <h2><span class="eyebrow">Section 1 — the world as it exists</span>Today: SIRs shoehorned onto <code>submission</code></h2>
+  <p class="lede">An SIR today is a <code>submission</code> row with <code>submission_type='feasibility'</code>, existing only to anchor the intake URL. The intake conversation, the diligence run, and every artifact hang off a mix of <code>project</code>, that placeholder submission, the intake <code>conversation</code>, and the <code>document</code> that holds the captured facts. Below: the pertinent tables, then the two flows that exercise them.</p>
+
+  <!-- ER -->
+  <h3><span class="hn">ER</span>Diligence-pertinent tables today</h3>
+  <div class="erd">
+    <div class="ent exist">
+      <div class="eh"><span class="en">organization</span><span class="stereo">tenant</span></div>
+      <div class="row"><span class="b b-pk">PK</span><span class="nm">id</span></div>
+      <div class="row"><span class="nm">slug</span><span class="ty">'noetic' = superuser</span></div>
+      <div class="row"><span class="nm">name</span></div>
+    </div>
+    <div class="ent exist">
+      <div class="eh"><span class="en">project</span><span class="stereo">initiative + place</span></div>
+      <div class="row"><span class="b b-pk">PK</span><span class="nm">id</span></div>
+      <div class="row"><span class="b b-fk">FK</span><span class="b b-nn">NN</span><span class="nm">owner_organization_id</span><span class="ty">→ organization</span></div>
+      <div class="row hi"><span class="nm">site_address</span><span class="ty">text · nullable</span></div>
+      <div class="row hi"><span class="nm">jurisdiction_slug</span><span class="ty">FK jurisdictions</span></div>
+      <div class="note">address + jurisdiction welded to the container → 1 project = 1 place</div>
+    </div>
+    <div class="ent exist">
+      <div class="eh"><span class="en">submission</span><span class="stereo">type='feasibility'</span></div>
+      <div class="row"><span class="b b-pk">PK</span><span class="nm">id</span></div>
+      <div class="row"><span class="b b-fk">FK</span><span class="nm">project_id</span><span class="ty">→ project</span></div>
+      <div class="row"><span class="nm">submission_type</span><span class="ty">'feasibility'</span></div>
+      <div class="note">routing placeholder only — no version / plan_set children used</div>
+    </div>
+    <div class="ent exist">
+      <div class="eh"><span class="en">conversations</span><span class="stereo">type='intake'</span></div>
+      <div class="row"><span class="b b-pk">PK</span><span class="nm">id</span></div>
+      <div class="row"><span class="b b-fk">FK</span><span class="nm">project_id</span><span class="ty">→ project</span></div>
+      <div class="row"><span class="nm">type</span><span class="ty">'intake'</span></div>
+      <div class="note">FKs <b>project</b>, NOT submission — routes around the placeholder</div>
+    </div>
+    <div class="ent exist">
+      <div class="eh"><span class="en">chat_message</span><span class="stereo">transcript + RCM</span></div>
+      <div class="row"><span class="b b-pk">PK</span><span class="nm">id</span></div>
+      <div class="row"><span class="b b-fk">FK</span><span class="nm">conversation_id</span></div>
+      <div class="row"><span class="nm">content · rcm_payload</span><span class="ty">jsonb</span></div>
+    </div>
+    <div class="ent exist">
+      <div class="eh"><span class="en">document</span><span class="stereo">kind ∈ {intake…}</span></div>
+      <div class="row"><span class="b b-pk">PK</span><span class="nm">id</span></div>
+      <div class="row"><span class="b b-fk">FK</span><span class="nm">project_id</span></div>
+      <div class="row"><span class="nm">kind</span><span class="ty">feasibility_intake · intake_attachment</span></div>
+      <div class="note">feasibility_intake = sentinel <code>inline://feasibility-intake</code></div>
+    </div>
+    <div class="ent exist">
+      <div class="eh"><span class="en">document_version</span><span class="stereo">the bytes</span></div>
+      <div class="row"><span class="b b-pk">PK</span><span class="nm">id</span></div>
+      <div class="row"><span class="b b-fk">FK</span><span class="nm">document_id</span></div>
+      <div class="row"><span class="nm">storage_path · file_name</span></div>
+    </div>
+    <div class="ent exist">
+      <div class="eh"><span class="en">document_section</span><span class="stereo">captured facts</span></div>
+      <div class="row"><span class="b b-pk">PK</span><span class="nm">id</span></div>
+      <div class="row"><span class="b b-fk">FK</span><span class="nm">document_version_id</span></div>
+      <div class="row"><span class="nm">title · description</span><span class="ty">tier label</span></div>
+      <div class="row"><span class="nm">source</span><span class="ty">jsonb · provenance</span></div>
+    </div>
+    <div class="ent exist">
+      <div class="eh"><span class="en">diligence_runs</span><span class="stereo">the run · dlr_…</span></div>
+      <div class="row"><span class="b b-pk">PK</span><span class="nm">id</span></div>
+      <div class="row hi"><span class="b b-fk">FK</span><span class="nm">document_version_id</span><span class="ty">must be feasibility_intake</span></div>
+      <div class="row"><span class="b b-fk">FK</span><span class="nm">conversation_id</span></div>
+      <div class="row"><span class="b b-fk">FK</span><span class="nm">project_id</span></div>
+      <div class="row"><span class="nm">triggered_by_user_id · status</span></div>
+      <div class="note">no submission FK — anchored on the intake document_version</div>
+    </div>
+    <div class="ent exist">
+      <div class="eh"><span class="en">diligence_artifacts</span><span class="stereo">deliverables</span></div>
+      <div class="row"><span class="b b-pk">PK</span><span class="nm">id</span></div>
+      <div class="row"><span class="b b-fk">FK</span><span class="nm">diligence_run_id</span></div>
+      <div class="row"><span class="nm">kind</span><span class="ty">sir · appendix · supporting_doc</span></div>
+      <div class="row"><span class="nm">storage_path · page_count</span></div>
+    </div>
+    <div class="ent exist">
+      <div class="eh"><span class="en">project_access</span><span class="stereo">RLS grants</span></div>
+      <div class="row"><span class="b b-fk">FK</span><span class="nm">project_id · user_id / org_id</span></div>
+      <div class="row"><span class="nm">access_level</span><span class="ty">read · write · admin</span></div>
+      <div class="note">gates every project child via <code>user_can_see_project()</code></div>
+    </div>
+  </div>
+
+  <div class="rels">
+    <div class="rels-h">Relationships (crow's foot)</div>
+    <span class="rl">organization <span class="cf">‖──&lt;</span> project <span class="cmt">— project.owner_organization_id (NN); org membership ⇒ implicit write</span></span>
+    <span class="rl">project <span class="cf">‖──&lt;</span> submission <span class="cmt">— one project, many feasibility submissions (churn); placeholder only</span></span>
+    <span class="rl">project <span class="cf">‖──&lt;</span> conversations <span class="cmt">— intake conversation FKs project, not submission</span></span>
+    <span class="rl">conversations <span class="cf">‖──&lt;</span> chat_message <span class="cf">‖──&lt;</span> chat_message_attachment <span class="cf">&gt;──‖</span> document_version</span>
+    <span class="rl">document <span class="cf">‖──&lt;</span> document_version <span class="cf">‖──&lt;</span> document_section <span class="cmt">— tier facts live under the feasibility_intake doc</span></span>
+    <span class="rl">document_version <span class="cf">‖──&lt;</span> diligence_runs <span class="cf">‖──&lt;</span> diligence_artifacts <span class="cmt">— run anchored on the intake doc_version</span></span>
+    <span class="rl">project <span class="cf">‖──&lt;</span> project_access <span class="cmt">— three-legged RLS: is_noetic_admin ∪ owner-org ∪ direct/org grant</span></span>
+  </div>
+
+  <!-- FLOW 1 -->
+  <h3><span class="hn">1</span>Flow — create the intake chat, state requirements, upload files</h3>
+  <p class="flow-cap">What gets written when a client (or staff on their behalf) starts an intake and drops PDFs.</p>
+  <div class="seq">
+    <div class="st"><div class="num">1</div><div class="body"><div class="h"><span class="rc r-ch">cityhall</span> bootstrap on project open</div><div class="d">Creates a <code>submission</code> (<code>type='feasibility'</code>) as a <b>routing placeholder</b> + a <code>conversations</code> row (<code>type='intake'</code>, FK <code>project_id</code>). Also creates the sentinel <code>document</code> (<code>kind='feasibility_intake'</code>, <code>inline://feasibility-intake</code>) + its <code>document_version</code> to hold the facts.</div></div></div>
+    <div class="st"><div class="num">2</div><div class="body"><div class="h"><span class="rc r-user">client</span> types requirements → <span class="rc r-ch">/api/chat/intake</span></div><div class="d">Each turn persists a <code>chat_message</code>. The agent's <code>updateIntakeNotes</code> tool writes/updates <code>document_section</code> rows (Tier 1 site details / Tier 2 planned use / Tier 3 docs), <code>source={kind:'chat'|'user_edit'}</code>.</div></div></div>
+    <div class="st"><div class="num">3</div><div class="body"><div class="h"><span class="rc r-user">client</span> drops a PDF → upload commits</div><div class="d"><code>prepare-upload</code> → signed Storage PUT → <code>commit-upload</code> creates <code>document</code> (<code>kind='intake_attachment'</code>) + <code>document_version</code>. On Send, a <code>chat_message_attachment</code> junction links the file to the message.</div></div></div>
+    <div class="st"><div class="num">4</div><div class="body"><div class="h"><span class="rc r-sub">substation</span> → <span class="rc r-db">Gemini extract</span> → <code>document_section</code></div><div class="d">Inngest fan-out reads each PDF with Gemini, upserts <code>document_section</code> rows (skip-on-conflict by title), <code>source={kind:'pdf_extract', document_version_id}</code>. Realtime flips the RCM cards and refreshes the right panel.</div></div></div>
+  </div>
+  <div class="callout ember"><span class="lab">Shoehorn #1</span> The <code>submission type='feasibility'</code> row does nothing but anchor the URL <code>/project/[id]/submission/[submissionId]/intake/[conversationId]</code>. None of its real children (<code>submission_version</code>, <code>submission_plan_set</code>) are ever created for an SIR.</div>
+
+  <!-- FLOW 2 -->
+  <h3><span class="hn">2</span>Flow — kick off the run, upload resources, surface in the UI</h3>
+  <p class="flow-cap">What happens from "Start research" through the deliverable appearing on the status page.</p>
+  <div class="seq">
+    <div class="st"><div class="num">1</div><div class="body"><div class="h"><span class="rc r-ch">cityhall</span> <code>requestDiligenceRun</code> → <span class="rc r-sub">substation</span></div><div class="d"><code>POST /api/projects/:projectId/diligence</code> with <code>{document_version_id, conversation_id, full_run}</code> + user JWT. Substation validates the doc_version belongs to the project <em>and</em> <code>document.kind='feasibility_intake'</code>.</div></div></div>
+    <div class="st"><div class="num">2</div><div class="body"><div class="h"><span class="rc r-db">INSERT</span> <code>diligence_runs</code> (status=queued)</div><div class="d">Anchored on <code>document_version_id</code> + <code>conversation_id</code> + <code>project_id</code> + <code>triggered_by_user_id</code>. Fires Inngest <code>diligence/requested {diligence_run_id, full_run}</code>.</div></div></div>
+    <div class="st"><div class="num">3</div><div class="body"><div class="h"><span class="rc r-fa">field-agent</span> runs the 6-phase skill</div><div class="d">Consumes the event, marks <code>running</code>, invokes the <code>diligence-report</code> skill via the agent SDK. Produces the SIR + research appendix PDFs (+ supporting docs) on its local workdir.</div></div></div>
+    <div class="st"><div class="num">4</div><div class="body"><div class="h"><span class="rc r-store">upload</span> → bucket <code>submission-data</code></div><div class="d">PDFs → <code>diligence/&lt;run-id&gt;/</code>. Then upsert <code>diligence_artifacts</code> on <code>(diligence_run_id, kind)</code> — kinds <code>site_intelligence_report</code>, <code>research_appendix</code>, <code>supporting_document_copy</code>. Run flips to <code>completed</code>.</div></div></div>
+    <div class="st"><div class="num">5</div><div class="body"><div class="h"><span class="rc r-ch">UI</span> status page renders View / Download</div><div class="d"><code>GET /api/projects/:projectId/diligence/:diligenceRunId</code> returns the row + joined artifacts, each with a fresh <b>72-hour signed URL</b>. Page: <code>/project/[id]/diligence-runs/[runId]</code>. This is where the SIR PDFs are surfaced today.</div></div></div>
+  </div>
+  <div class="storage"><b>Storage today:</b> bucket <code>submission-data</code> · path <code>diligence/&lt;run-id&gt;/{site-intelligence-report,research-appendix}.pdf</code> · signed URLs minted at read time (72h)</div>
+  <div class="callout ember"><span class="lab">Shoehorn #2 — the two gaps</span> (a) The <b>authoritative subject location</b> is resolved <em>inside</em> the run (Phase 0) but has nowhere to live on an entity — <code>project.site_address</code> is a vestigial hint (6/23 populated). (b) The <b>interactive</b> Claude Code runs (the real client SIRs) write <em>only to local disk</em> — only 11 <code>diligence_runs</code> have ever been persisted. Everything above is the headless field-agent path.</div>
+</section>
+
+<!-- =========================================================== -->
+<!-- ========================= 2 · THE REWORK ================== -->
+<!-- =========================================================== -->
+<section class="panel" id="rework">
+  <h2><span class="eyebrow">Section 2 — the same world, rebuilt</span>The Rework: a first-class <code>site_intelligence_report</code> entity</h2>
+  <p class="lede">Per <code>data-model.md</code> (Draft v2): give the SIR its own entity carrying its own subject location, make <code>project</code> a neutral address-agnostic initiative container, and retire the <code>submission type='feasibility'</code> placeholder. <strong>Everything about the intake chat, documents, runs, artifacts and storage is unchanged</strong> — only the entity the conversation and run hang off of moves.</p>
+
+  <!-- ER -->
+  <h3><span class="hn">ER</span>Diligence-pertinent tables after the rework</h3>
+  <div class="erd">
+    <div class="ent exist">
+      <div class="eh"><span class="en">organization</span><span class="stereo">tenant + holding org</span></div>
+      <div class="row"><span class="b b-pk">PK</span><span class="nm">id</span></div>
+      <div class="row"><span class="nm">slug</span><span class="ty">holding org ≠ 'noetic'</span></div>
+      <div class="note">prospect SIRs live under a separate non-'noetic' holding org (D8)</div>
+    </div>
+    <div class="ent exist">
+      <div class="eh"><span class="en">project</span><span class="stereo">initiative container</span></div>
+      <div class="row"><span class="b b-pk">PK</span><span class="nm">id</span></div>
+      <div class="row"><span class="b b-fk">FK</span><span class="b b-nn">NN</span><span class="nm">owner_organization_id</span></div>
+      <div class="row"><span class="nm">site_address</span><span class="ty">now: site-plan hint only</span></div>
+      <div class="note">address-AGNOSTIC — columns untouched, reclassified as hints (D5)</div>
+    </div>
+    <div class="ent newt">
+      <div class="eh"><span class="en">site_intelligence_report</span><span class="stereo">NEW · the SIR engagement</span></div>
+      <div class="row"><span class="b b-pk">PK</span><span class="nm">id</span></div>
+      <div class="row"><span class="b b-fk">FK</span><span class="b b-nn">NN</span><span class="nm">project_id</span><span class="ty">→ project</span></div>
+      <div class="row hi"><span class="b b-fk">FK</span><span class="nm">conversation_id</span><span class="ty">→ conversations · 1:1 · nullable</span></div>
+      <div class="row"><span class="nm">requested_address · intended_use</span></div>
+      <div class="row hi"><span class="nm">resolved_address · parcel_id</span><span class="ty">AUTHORITATIVE loc</span></div>
+      <div class="row"><span class="nm">latitude · longitude</span></div>
+      <div class="row"><span class="nm">jurisdiction_slug</span><span class="ty">no FK (D3)</span></div>
+      <div class="row"><span class="nm">origin</span><span class="ty">app_intake · manual_publish</span></div>
+      <div class="row"><span class="nm">status</span><span class="ty">draft…delivered…archived</span></div>
+      <div class="note">subject location lives HERE; 1 project holds many SIRs @ many addresses</div>
+    </div>
+    <div class="ent retired">
+      <div class="eh"><span class="en">submission (feasibility)</span><span class="stereo">RETIRED</span></div>
+      <div class="row strk"><span class="nm">type='feasibility'</span></div>
+      <div class="note">placeholder retired once no path creates/reads it (D2 cutover)</div>
+    </div>
+    <div class="ent exist">
+      <div class="eh"><span class="en">submission (site_plan)</span><span class="stereo">UNCHANGED</span></div>
+      <div class="row"><span class="b b-pk">PK</span><span class="nm">id</span></div>
+      <div class="row"><span class="b b-fk">FK</span><span class="nm">project_id</span></div>
+      <div class="note">site-plan world keeps its own address + plan-set machinery</div>
+    </div>
+    <div class="ent exist">
+      <div class="eh"><span class="en">conversations</span><span class="stereo">re-parented to SIR</span></div>
+      <div class="row"><span class="b b-pk">PK</span><span class="nm">id</span></div>
+      <div class="row"><span class="b b-fk">FK</span><span class="nm">project_id</span></div>
+      <div class="note">still FKs project; conceptually owned by the SIR via sir.conversation_id</div>
+    </div>
+    <div class="ent exist">
+      <div class="eh"><span class="en">document / _version / _section</span><span class="stereo">UNCHANGED</span></div>
+      <div class="row"><span class="nm">feasibility_intake · intake_attachment</span></div>
+      <div class="note">all intake capture + Gemini extraction machinery works as-is</div>
+    </div>
+    <div class="ent changed">
+      <div class="eh"><span class="en">diligence_runs</span><span class="stereo">+ new FK column</span></div>
+      <div class="row"><span class="b b-pk">PK</span><span class="nm">id</span></div>
+      <div class="row hi"><span class="b b-fk">FK</span><span class="b b-new">NEW</span><span class="nm">site_intelligence_report_id</span><span class="ty">nullable → SIR</span></div>
+      <div class="row"><span class="nm">conversation_id · document_version_id · project_id</span><span class="ty">kept for continuity</span></div>
+      <div class="row"><span class="nm">status</span></div>
+      <div class="note">SIR ‖──&lt; runs (iterations v1/v2); "current" = latest completed</div>
+    </div>
+    <div class="ent exist">
+      <div class="eh"><span class="en">diligence_artifacts</span><span class="stereo">UNCHANGED</span></div>
+      <div class="row"><span class="b b-fk">FK</span><span class="nm">diligence_run_id</span></div>
+      <div class="row"><span class="nm">kind · storage_path</span></div>
+    </div>
+    <div class="ent exist">
+      <div class="eh"><span class="en">project_access</span><span class="stereo">RLS — cloned to SIR</span></div>
+      <div class="row"><span class="nm">access_level</span><span class="ty">read · write · admin</span></div>
+      <div class="note">SIR RLS = verbatim clone of submission/diligence_runs policy (D7)</div>
+    </div>
+  </div>
+
+  <div class="rels">
+    <div class="rels-h">Relationships — what changed</div>
+    <span class="rl">project <span class="cf">‖──&lt;</span> site_intelligence_report <span class="tag-new">[NEW]</span> <span class="cmt">— one initiative, many SIRs at many addresses</span></span>
+    <span class="rl">site_intelligence_report <span class="cf">‖──‖</span> conversations <span class="tag-new">[NEW, 1:1]</span> <span class="cmt">— via sir.conversation_id (nullable for manual_publish)</span></span>
+    <span class="rl">site_intelligence_report <span class="cf">‖──&lt;</span> diligence_runs <span class="tag-new">[NEW FK]</span> <span class="cmt">— runs.site_intelligence_report_id, nullable then tighten (Q3)</span></span>
+    <span class="rl">project <span class="cf">‖──&lt;</span> submission(feasibility) <span class="tag-ret">[RETIRED]</span> <span class="cmt">— cutover; ~77 churn rows soft-archived then deleted last</span></span>
+    <span class="rl">project <span class="cf">‖──&lt;</span> submission(site_plan) <span class="cmt">— UNCHANGED</span></span>
+    <span class="rl">diligence_runs <span class="cf">‖──&lt;</span> diligence_artifacts · document* chain <span class="cmt">— UNCHANGED</span></span>
+    <span class="rl">organization <span class="cf">‖──&lt;</span> project <span class="cmt">— re-home = one UPDATE of owner_organization_id re-scopes all children (D8)</span></span>
+  </div>
+
+  <!-- FLOWS rewired -->
+  <div class="grid2">
+    <div>
+      <h3><span class="hn">1</span>Intake — rewired</h3>
+      <div class="seq">
+        <div class="st newstep"><div class="num">1</div><div class="body"><div class="h"><span class="rc r-ch">cityhall</span> bootstrap creates a <b>site_intelligence_report</b></div><div class="d">Instead of a feasibility <code>submission</code>: INSERT <code>site_intelligence_report</code> (<code>origin='app_intake'</code>, <code>status='draft'</code>) + <code>conversations</code>, then set <code>sir.conversation_id</code>. Route becomes <code>/project/[id]/sir/[sirId]/intake/[conversationId]</code>.</div></div></div>
+        <div class="st"><div class="num">2</div><div class="body"><div class="h"><span class="rc r-user">client</span> chats + uploads</div><div class="d"><b>Identical</b> to today — <code>chat_message</code>, <code>updateIntakeNotes</code> → <code>document_section</code>, <code>intake_attachment</code> upload, Gemini extraction. Nothing in this machinery changes.</div></div></div>
+        <div class="st"><div class="num">3</div><div class="body"><div class="h">Send flips <code>draft → requested</code></div><div class="d"><code>sir.status</code> carries the lifecycle; the SIR appears in the client request list.</div></div></div>
+      </div>
+    </div>
+    <div>
+      <h3><span class="hn">2</span>Run + delivery — rewired</h3>
+      <div class="seq">
+        <div class="st newstep"><div class="num">1</div><div class="body"><div class="h"><span class="rc r-ch">trigger</span> anchors on the SIR</div><div class="d"><code>requestDiligenceRun</code> resolves the SIR; substation validates against it and sets <code>diligence_runs.site_intelligence_report_id</code> on INSERT (still keeps the legacy FKs).</div></div></div>
+        <div class="st"><div class="num">2</div><div class="body"><div class="h"><span class="rc r-fa">run</span> + <span class="rc r-store">upload</span> — unchanged</div><div class="d">Same 6-phase skill, same <code>submission-data/diligence/&lt;run-id&gt;/</code> storage, same <code>diligence_artifacts</code> upsert.</div></div></div>
+        <div class="st newstep"><div class="num">3</div><div class="body"><div class="h">Phase 0 location → the SIR</div><div class="d">Resolved address / parcel / lat-lon / jurisdiction now write back to <code>site_intelligence_report</code> — the authoritative home the run's result previously had nowhere to land.</div></div></div>
+        <div class="st newstep"><div class="num">4</div><div class="body"><div class="h"><span class="rc r-ch">UI</span> lists SIRs, not submissions</div><div class="d">The status page reads runs via <code>site_intelligence_report_id</code>; the "current deliverable" = latest completed run's artifacts. <code>manual_publish</code> SIRs (from interactive on-disk runs) show alongside <code>app_intake</code> ones.</div></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid2" style="margin-top:6px">
+    <div class="card keep"><strong>Stays identical</strong><ul><li>Intake chat, composer, RCM cards, realtime</li><li><code>document / document_version / document_section</code></li><li>Gemini extraction fan-out</li><li><code>diligence_runs</code> → <code>diligence_artifacts</code> + storage layout</li><li>72h signed-URL delivery</li></ul></div>
+    <div class="card change"><strong>Changes</strong><ul><li>NEW <code>site_intelligence_report</code> table (+ RLS clone, realtime)</li><li>NEW <code>diligence_runs.site_intelligence_report_id</code></li><li>Intake bootstrap + route re-nest under <code>/sir/</code></li><li>Trigger + reads anchor on the SIR</li><li>Phase 0 writes location back to the SIR</li></ul></div>
+  </div>
+  <div class="card drop" style="margin-top:6px"><strong>Goes away (clean cutover, D2)</strong> — the <code>submission type='feasibility'</code> placeholder. Targeted-migrate only the 11 persisted runs into SIRs; soft-archive the ~77 churn rows, delete last after verification. Additive migration is fully reversible up to that final delete.</div>
+  <div class="xref">Grounding: <code>data-model.md</code> §3 (target model), §3.5 (RLS clone), §3.6 (holding-org re-home + constraints A/B), §4 (migration), §6 decisions D1–D8.</div>
+</section>
+
+<!-- =========================================================== -->
+<!-- ========================= 3 · THE FUTURE ================== -->
+<!-- =========================================================== -->
+<section class="panel" id="future">
+  <h2><span class="eyebrow">Section 3 — where the model goes</span>The Future: the SIR entity as the spine of the product</h2>
+  <p class="lede">With the rework in place, the child specs (<code>DESIGN-SPEC.md</code> §12) hang net-new tables off the two anchors — <code>site_intelligence_report</code> and <code>diligence_runs</code>. The interactive Claude Code session and the web app become two clients of the <strong>same</strong> run record: the session writes artifacts + reads review threads via MCP; the app reads artifacts + writes review threads + delivers. Everything below is additive to Section 2.</p>
+
+  <!-- ER future -->
+  <h3><span class="hn">ER</span>The model as the child specs land</h3>
+  <div class="erd">
+    <div class="ent exist">
+      <div class="eh"><span class="en">organization</span><span class="stereo">customer / holding</span></div>
+      <div class="row"><span class="nm">slug · name</span></div>
+      <div class="note">prospect→customer conversion = re-home owner_organization_id</div>
+    </div>
+    <div class="ent exist">
+      <div class="eh"><span class="en">project</span><span class="stereo">initiative container</span></div>
+      <div class="row"><span class="b b-pk">PK</span><span class="nm">id</span></div>
+      <div class="row"><span class="nm">owner_organization_id</span></div>
+    </div>
+    <div class="ent newt">
+      <div class="eh"><span class="en">site_intelligence_report</span><span class="stereo">the spine</span></div>
+      <div class="row"><span class="b b-pk">PK</span><span class="nm">id</span></div>
+      <div class="row"><span class="nm">project_id · conversation_id</span></div>
+      <div class="row"><span class="nm">resolved_address · parcel_id · lat/lon</span></div>
+      <div class="row"><span class="nm">assigned_specialist · assigned_tech_lead</span><span class="ty">P3</span></div>
+      <div class="row"><span class="nm">status</span><span class="ty">granular lifecycle (P3)</span></div>
+    </div>
+    <div class="ent changed">
+      <div class="eh"><span class="en">diligence_runs</span><span class="stereo">iterations</span></div>
+      <div class="row"><span class="nm">site_intelligence_report_id</span></div>
+      <div class="row"><span class="nm">lifecycle_state</span><span class="ty">§6 state machine</span></div>
+    </div>
+    <div class="ent changed">
+      <div class="eh"><span class="en">diligence_artifacts</span><span class="stereo">+ audience split</span></div>
+      <div class="row"><span class="nm">kind</span><span class="ty">client-facing vs internal-only</span></div>
+      <div class="row"><span class="b b-new">NEW kinds</span><span class="nm">run_manifest · mcp_calls · surveyor_status · web_html</span></div>
+      <div class="note">P0 sync bridge lands internal artifacts here too (P4)</div>
+    </div>
+    <div class="ent newt">
+      <div class="eh"><span class="en">finding</span><span class="stereo">NEW · P5</span></div>
+      <div class="row"><span class="b b-pk">PK</span><span class="nm">id</span></div>
+      <div class="row"><span class="b b-fk">FK</span><span class="nm">diligence_run_id</span></div>
+      <div class="row"><span class="nm">discipline · severity · topic</span></div>
+      <div class="row"><span class="nm">citation · finding · implication · next_step</span></div>
+      <div class="row"><span class="nm">confidence</span><span class="ty">V / P / I</span></div>
+      <div class="row"><span class="nm">provenance[]</span><span class="ty">jsonb · tool calls</span></div>
+      <div class="row"><span class="nm">geo</span><span class="ty">jsonb · map pin (P6)</span></div>
+      <div class="note">emitted by the pipeline at Phase 5 (findings.json) — the pivot</div>
+    </div>
+    <div class="ent newt">
+      <div class="eh"><span class="en">review_thread</span><span class="stereo">NEW · P3</span></div>
+      <div class="row"><span class="b b-pk">PK</span><span class="nm">id</span></div>
+      <div class="row"><span class="b b-fk">FK</span><span class="nm">diligence_run_id</span></div>
+      <div class="row"><span class="nm">stage</span><span class="ty">hitl1_facts · hitl3_report</span></div>
+      <div class="row"><span class="nm">anchor</span><span class="ty">run · fact · finding · section</span></div>
+      <div class="row"><span class="nm">status</span><span class="ty">draft · submitted · locked</span></div>
+    </div>
+    <div class="ent newt">
+      <div class="eh"><span class="en">review_comment</span><span class="stereo">NEW · P3</span></div>
+      <div class="row"><span class="b b-fk">FK</span><span class="nm">thread_id · author_id</span></div>
+      <div class="row"><span class="nm">body · images[]</span><span class="ty">pasted screenshots</span></div>
+      <div class="row"><span class="nm">parent_comment_id</span><span class="ty">threaded replies</span></div>
+      <div class="note">agent reads locked threads via <span class="rc r-mcp">MCP</span> — no copy-paste</div>
+    </div>
+    <div class="ent newt">
+      <div class="eh"><span class="en">sir_share</span><span class="stereo">NEW · P1</span></div>
+      <div class="row"><span class="b b-fk">FK</span><span class="nm">site_intelligence_report_id</span></div>
+      <div class="row"><span class="nm">token</span><span class="ty">obscurity URL</span></div>
+      <div class="row"><span class="nm">expires_at</span><span class="ty">~1–2 months</span></div>
+      <div class="note">default delivery = no-login time-limited link (Q6)</div>
+    </div>
+    <div class="ent newt">
+      <div class="eh"><span class="en">report_chat</span><span class="stereo">NEW · P2</span></div>
+      <div class="row"><span class="b b-fk">FK</span><span class="nm">site_intelligence_report_id · user_id</span></div>
+      <div class="row"><span class="nm">messages[]</span><span class="ty">contents-only Q&amp;A</span></div>
+      <div class="note">per-user-scoped history</div>
+    </div>
+    <div class="ent exist">
+      <div class="eh"><span class="en">project_access + is_noetic_admin</span><span class="stereo">entitlement</span></div>
+      <div class="row"><span class="nm">gates</span><span class="ty">client · staff · internal surfaces</span></div>
+      <div class="note">internal evidence layer is a PERMISSION, never a UI toggle</div>
+    </div>
+  </div>
+
+  <div class="rels">
+    <div class="rels-h">New relationships (all additive)</div>
+    <span class="rl">site_intelligence_report <span class="cf">‖──&lt;</span> diligence_runs <span class="cf">‖──&lt;</span> finding <span class="tag-new">[P5]</span> <span class="cmt">— normalized Finding-Block atom, map/dashboard/matrix source</span></span>
+    <span class="rl">diligence_runs <span class="cf">‖──&lt;</span> review_thread <span class="cf">‖──&lt;</span> review_comment <span class="tag-new">[P3]</span> <span class="cmt">— HITL1/HITL3 loop; agent reads via MCP</span></span>
+    <span class="rl">review_thread <span class="cf">──?</span> finding / document_section <span class="cmt">— optional anchor to a specific fact or finding</span></span>
+    <span class="rl">site_intelligence_report <span class="cf">‖──&lt;</span> sir_share <span class="tag-new">[P1]</span> <span class="cmt">— obscurity-URL delivery records</span></span>
+    <span class="rl">site_intelligence_report <span class="cf">‖──&lt;</span> report_chat <span class="tag-new">[P2]</span> <span class="cmt">— per-user contents-only chat</span></span>
+    <span class="rl">diligence_runs <span class="cf">‖──&lt;</span> diligence_artifacts(internal) <span class="tag-new">[P4]</span> <span class="cmt">— manifest / mcp-calls / surveyor-status synced for observability</span></span>
+  </div>
+
+  <!-- how surfaces read -->
+  <h3>How the three surfaces read the same object</h3>
+  <div class="grid2">
+    <div class="card keep"><strong><span class="rc r-user">Client</span> surface</strong><ul><li>reads client-facing <code>diligence_artifacts</code> (PDF/Word/web HTML)</li><li>reads <code>finding</code> (P5) → map + dashboard (P6)</li><li>writes <code>report_chat</code> (P2)</li><li>entered via <code>sir_share</code> token or login</li></ul></div>
+    <div class="card change"><strong><span class="rc r-ch">Staff</span> collaboration + <span class="rc r-mcp">internal</span></strong><ul><li>reads/writes <code>review_thread</code> + <code>review_comment</code> (P3)</li><li>reads internal <code>diligence_artifacts</code>: manifest, mcp-calls, surveyor health (P4)</li><li>reads <code>finding.provenance[]</code> = the evidence layer</li><li>gated by <code>is_noetic_admin</code> / <code>project_access</code></li></ul></div>
+  </div>
+  <div class="callout new"><span class="lab">The synchronization point</span> The interactive Claude Code session and the web app are two clients of the same Supabase run record. Session: writes artifacts + <code>finding</code> rows, reads locked <code>review_thread</code>s via <span class="rc r-mcp">MCP</span>. App: reads artifacts + findings, writes review threads, delivers via <code>sir_share</code>. The DB is the spine (DESIGN-SPEC §3.1).</div>
+
+  <!-- lifecycle -->
+  <h3>Lifecycle the entity carries (DESIGN-SPEC §6)</h3>
+  <div class="sm">
+    <span class="s client">draft<span class="who">client editing</span></span><span class="a">→</span>
+    <span class="s client">requested<span class="who">in queue</span></span><span class="a">→</span>
+    <span class="s cc">research_hitl1<span class="who">tech lead / CC</span></span><span class="a">→</span>
+    <span class="s spec">hitl1_review<span class="who">specialist</span></span><span class="a">→</span>
+    <span class="s cc">locked<span class="who">tech lead</span></span><span class="a">→</span>
+    <span class="s cc">research_deep → draft<span class="who">CC · HITL2 in-CC</span></span><span class="a">→</span>
+    <span class="s spec">hitl3_review<span class="who">specialist</span></span><span class="a">↺→</span>
+    <span class="s cc">finalize<span class="who">tech lead</span></span><span class="a">→</span>
+    <span class="s client">delivered<span class="who">client views/chats</span></span>
+  </div>
+  <p style="font-size:12px;color:var(--muted)">Coarse today (<code>data-model.md</code> D4 keeps <code>status</code> to <code>draft/requested/in_progress/delivered/archived</code>); the granular machine above lands with the <code>staff-review-collaboration</code> child spec — deliberately not baked into the table yet.</p>
+
+  <div class="xref">Grounding: <code>DESIGN-SPEC.md</code> §5 (domain model), §6 (lifecycle), §8–9c (surfaces B/C/D/E), §10 roadmap P0–P7, §12 child specs. Net-new tables (<code>finding</code>, <code>review_thread</code>, <code>review_comment</code>, <code>sir_share</code>, <code>report_chat</code>) are illustrative shapes — each child spec formalizes its own.</div>
+
+  <div class="foot">winston · workspaces/diligence/sir-product-experience/ · companions: DESIGN-SPEC.md (#192) · data-model.md · perspectives.html</div>
+</section>
+
+</main>
+
+<script>
+  const btns=document.querySelectorAll('nav.tabs button');
+  const panels=document.querySelectorAll('.panel');
+  function show(id){
+    btns.forEach(b=>b.classList.toggle('active',b.dataset.tab===id));
+    panels.forEach(p=>p.classList.toggle('active',p.id===id));
+    if(location.hash.slice(1)!==id) history.replaceState(null,'','#'+id);
+    window.scrollTo({top:0,behavior:'smooth'});
+  }
+  btns.forEach(b=>b.addEventListener('click',()=>show(b.dataset.tab)));
+  const initial=location.hash.slice(1);
+  if(['today','rework','future'].includes(initial)) show(initial);
+</script>
+</body>
+</html>
