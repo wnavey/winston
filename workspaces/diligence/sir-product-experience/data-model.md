@@ -1,26 +1,35 @@
-# SIR Data Model — `site_intelligence_report` entity + migration off `submission`
+# SIR Data Model — `site_intelligence_report` + `sir_artifact` (human-kickoff, local runs)
 
-**Status:** Draft v2
-**Date:** 2026-07-28
-**Type:** Implementable spec — table creation + data migration. This is the **first build step** of the SIR product effort (companion to the north-star `DESIGN-SPEC.md`, winston#192). Concrete enough to execute.
-**Repos touched:** `substation` (the migration + the `project`/intake/`diligence_runs` API + shared-DB schema), `cityhall` (intake bootstrap, intake route, reads, type regen)
-**Repos NOT touched (by design):** `conductor`, `surveyor`, `bureau`, `quarry`, `navalbase`, `radar` — verified they don't depend on the columns we're reclassifying (see §2.3).
+**Status:** Draft v3
+**Date:** 2026-07-30
+**Type:** Implementable spec — table creation. The **first build step** of the SIR product effort (companion to the north-star `DESIGN-SPEC.md`, winston#192). Concrete enough to execute.
+**Repos touched:** `substation` (the migration + a publish endpoint + shared-DB schema), `cityhall` (the SIR list/detail read UI, type regen)
+**Repos NOT touched (by design):** `conductor`, `surveyor`, `bureau`, `quarry`, `navalbase`, `radar`, and — new in v3 — `field-agent` (out of the near-term picture entirely).
 
-> **Revision note (v2, 2026-07-28):** Folded in the RLS / access-control research. New **§3.5** (verified RLS model + a verbatim policy template for the new table, cloned from `submission`/`diligence_runs`) and **§3.6** (the holding-org re-home mechanics + two hard constraints). New decisions **D7** (RLS template) and **D8** (holding org must be a *separate, non-`noetic`-slug* org; prospect projects created via service account; conversion must clean up stray `project_access`). §2.3 + Q2 updated with the "RLS-safe" confirmation for the `project` columns. No structural change to the table or migration plan — this is the access-control layer that was previously an open check.
+> **Revision note (v3, 2026-07-30):** Major reshaping to match the **near-term operating model**: SIRs are **kicked off by a human on their local machine** (Claude Code running the `diligence-report` skill), **not** via the in-app intake chat, and **not** via `field-agent` / Inngest. On completion the local run **publishes** the deliverable to Supabase DB + storage, where it gets a home in the app UI. Consequences, all folded in below:
+> - **Dropped the `diligence_runs` reuse (was v2's plan).** It's an async run-tracking table (`queued`→`running` status, `conversation_id` + `document_version_id` FKs) built for app-triggered, worker-executed cloud runs. In the local-run world half its columns go permanently null — it fails a 1:1-reuse test. The run collapses into the SIR entity. (New **D2**, **D9**.)
+> - **Dropped `conversation_id` from the SIR** and the whole intake-chat reuse (`conversations`, `chat_message`, `document`/`document_version`/`document_section`, Gemini extraction). None of it is on the near-term SIR path. (New **D10**.)
+> - **New second table `sir_artifact`** (fresh, not a re-anchored `diligence_artifacts`) carrying **flat versioning**: a `version` integer + a `versioning_label`, with `site_intelligence_report.current_version` naming the one version the customer sees. Supports "preserve v0 & v1, compare, restart, customer-sees-final-only" without a third table. (New **D8**, **D11**.)
+> - **`origin` enum and the coarse `status` enum removed** — there is one origin (a local publish) and no app-side lifecycle to track under completion-only publishing. (Revises v2 **D4**.)
+> - **Holding-org / prospect re-home (v2 §3.6, D8) moved out of near-term scope** → it exists to isolate *self-serve prospect intake*, which the human-kickoff model removes. Now a Future concern (north-star §5 / catalog G1). (New **D12**.)
+>
+> Unchanged from v2: the `project`-as-neutral-container thesis (§1), the verified current-state facts (§2), no-FK on `jurisdiction_slug` (D3), `project` columns left untouched (D5), SIR→site-plan linkage deferred (D6).
 
-> **One-line goal:** Give the Site Intelligence Report its own first-class entity — `site_intelligence_report` — instead of shoehorning it onto `submission` (which drags in plan-set / resubmittal machinery SIRs never use), and move the authoritative subject-location (address, parcel, jurisdiction) down onto that entity so one `project` can hold many SIRs at many addresses.
+> **One-line goal:** Give the Site Intelligence Report its own first-class entity — `site_intelligence_report` — with its subject location and a flat-versioned set of output files (`sir_artifact`), populated by a **local `diligence-report` run that publishes on completion**. No `submission` shoehorn, no intake-chat dependency, no `field-agent`.
 
 ---
 
 ## 1. Problem
 
-SIRs are currently modeled as `submission` rows with `submission_type = 'feasibility'` under a `project`. This is a shoehorn on two axes:
+SIRs are currently modeled as `submission` rows with `submission_type = 'feasibility'` under a `project`, wired to an in-app intake chat that triggers a `field-agent` worker via Inngest. Two things are wrong for where the product is actually going:
 
-1. **`submission` is the wrong shape.** Its entire value is its children — `submission_version` (U0/U1 city resubmittal cycles), `submission_document`, `submission_plan_set` → `plan_set_version`. That's the site-plan review machinery. An SIR has none of it: no city resubmittals, no plan sets. **The SIR path already routes *around* `submission`** — the intake `conversation` FKs `project` (not submission), and `diligence_runs` FK `project + conversation + document_version` (not submission). The `submission type='feasibility'` row is a **routing placeholder** that exists only to anchor the intake URL. (Verified §2.2.)
+1. **`submission` is the wrong shape.** Its entire value is its children — `submission_version` (U0/U1 city resubmittal cycles), `submission_document`, `submission_plan_set` → `plan_set_version`. That's site-plan review machinery. An SIR has none of it. The `submission type='feasibility'` row is a **routing placeholder** that exists only to anchor the intake URL. (Verified §2.2.)
 
-2. **`project` conflates "an initiative" with "a place."** `project.site_address` + `project.jurisdiction_slug` assume one project = one address + one jurisdiction. But an SIR's subject location is resolved *per run* (Phase 0 of the diligence skill), and a real customer initiative (e.g. `ExtraStorage — 2026-Q4-expansion`) legitimately wants **N SIRs across N addresses/jurisdictions** under one project. Address welded to the container breaks that.
+2. **The whole intake-chat + `field-agent` kickoff path is not the near-term operating model.** In the near term, an SIR is **kicked off by a Noetic staffer on their laptop** — they run the `diligence-report` skill in Claude Code, and on completion it publishes the deliverable to Supabase. There is no self-serve intake chat, no Inngest event, no laptop worker flipping a run row through `queued`→`running`. So the machinery v2 planned to reuse (`diligence_runs` for run-tracking, `conversations`/`document_version` for intake) has **nothing to attach to** — reusing it means carrying permanently-null columns.
 
-We want: `project` becomes a neutral, address-agnostic **initiative container**; SIRs become their own entity carrying their own subject location and reusing the already-built intake chat via `conversation_id`.
+3. **`project` conflates "an initiative" with "a place."** `project.site_address` + `project.jurisdiction_slug` assume one project = one address + one jurisdiction. But an SIR's subject location is resolved *per run* (Phase 0 of the diligence skill), and a real initiative wants **N SIRs across N addresses**. Address welded to the container breaks that.
+
+We want: `project` becomes a neutral, address-agnostic **initiative container**; an SIR becomes its own entity carrying its own subject location and a **flat-versioned set of output files**, written by a local run at completion time.
 
 ---
 
@@ -31,72 +40,63 @@ We want: `project` becomes a neutral, address-agnostic **initiative container**;
 | metric | count | implication |
 |---|---|---|
 | `project` | 23 | small |
-| `submission` where `type='feasibility'` | 77 | mostly intake/dev churn (see runs ↓) |
+| `submission` where `type='feasibility'` | 77 | mostly intake/dev churn |
 | `submission` where `type='site_plan'` | 23 | the real site-plan world |
 | `conversations` where `type='intake'` | 79 | ≈ 1:1 with feasibility submissions |
 | `diligence_runs` total / completed | 11 / 8 | **only 11 runs ever persisted** — real client SIRs were run in Claude Code and never hit the DB |
 | `project` with non-null `site_address` | **6 / 23** | address is **already vestigial** at project level |
 | `project` with non-null `jurisdiction_slug` | 16 / 23 | populated by backfill, not the app |
 
-**Takeaway:** the historical feasibility rows are overwhelmingly early-stage churn, not precious deliverables → a **clean cutover** is viable (§4), no heroic back-migration required.
+**Takeaway:** the historical feasibility rows + the 11 `diligence_runs` are early-stage churn from the app-intake/`field-agent` experiment, not precious deliverables → a **clean additive build** is viable (§4). The real client SIRs already run locally in Claude Code — which is exactly the model v3 formalizes.
 
 ### 2.2 Schema facts (from generated types + migrations)
 
-- `project`: `id`, `name`, `owner_organization_id` (**NOT NULL** → `organizations`), `jurisdiction_slug` (nullable, FK → `jurisdictions(slug)` via `20260724000000_jurisdiction_conventions.sql`), `site_address` (nullable TEXT, **no FK/index/policy/function**), timestamps.
-- `conversations`: FK **`project_id` only** (`conversations_project_id_fkey`). Columns `type`, `user_id`, `title`. **No FK to `submission`.**
-- `submission`: `id`, `project_id`, `submission_type`, `name?`, `description?`. Children: `submission_version`, `submission_document`, `submission_plan_set`.
-- `diligence_runs` (substation): FK `document_version_id` (the `feasibility_intake` doc), `conversation_id`, `project_id`, `triggered_by_user_id`; status enum; **no `submission` FK**. → `diligence_artifacts` (kinds `site_intelligence_report` / `research_appendix` / `supporting_document_copy`).
-- `document` kinds for intake: `feasibility_intake` (sentinel `storage_path='inline://feasibility-intake'`, holds the `document_section` rows) + `intake_attachment`.
+- `project`: `id`, `name`, `owner_organization_id` (**NOT NULL** → `organizations`), `jurisdiction_slug` (nullable, FK → `jurisdictions(slug)`), `site_address` (nullable TEXT, **no FK/index/policy/function**), timestamps.
+- `submission`: `id`, `project_id`, `submission_type`, … Children: `submission_version`, `submission_document`, `submission_plan_set`.
+- `diligence_runs` (substation): FK `document_version_id`, `conversation_id`, `project_id`, `triggered_by_user_id`; status enum (`queued`→`running`→`completed`/`failed`); → `diligence_artifacts`.
 - **No RLS policy or DB function references `site_address` or `jurisdiction_slug`.**
 
-### 2.3 The `site_address` / `jurisdiction_slug` usage sweep (verdict: CHEAP→MODERATE)
+### 2.3 The `site_address` / `jurisdiction_slug` usage sweep (verdict: safe to leave alone)
 
-Full audit in the research sweep. Summary:
+- **`site_address`** — 0 authoritative uses, ~15 convenience (display, PDF filename, guarded markdown lines). Already effectively a hint.
+- **`jurisdiction_slug`** — 0 hard-authoritative; ~3 "degrades-if-null" paths, **all in the site-plan/CRC world** (CRV + comment-resolution PDF labeling, CRC dept-name map). Plus the FK to `jurisdictions(slug)`.
+- **The review engines (conductor + surveyor) do NOT read `project.jurisdiction_slug`** — they take jurisdiction as a workflow input.
+- **RLS-safe confirmation:** no RLS policy, DB function, trigger, `NOT NULL`, or `CHECK` references either column. Both are safe to treat as optional site-plan-scoped hints.
 
-- **`site_address`** — 0 authoritative uses, 15 convenience (display, PDF filename, `?? null`/`|| 'N/A'`-guarded markdown lines) across cityhall + substation + conductor + surveyor. **Trivially a hint already.**
-- **`jurisdiction_slug`** — 0 hard-authoritative; ~3 "degrades-if-null" paths, **all in the site-plan/CRC world**: CRV + comment-resolution PDF labeling (`substation/src/pdf/crv-report-data.ts`, `comment-resolution-data.ts` → `citySubmissionLabel`/`perVersionLabelMap`) and the CRC dept-name map (`cityhall/src/lib/server/jurisdictions.ts` `fetchCrcDeptMapForReview`). Plus the FK to `jurisdictions(slug)`.
-- **The review engines (conductor + surveyor) do NOT read `project.jurisdiction_slug`** — they take jurisdiction as a workflow input. So no review/SIR/grounding path breaks.
-- **Latent bug (out of scope, noted):** `substation/src/routes/projects.ts` `POST /projects` **silently drops `jurisdiction_slug`** that cityhall sends — today it's populated only by the backfill migration.
-
-**Consequence for scope:** we do **not** touch the `project` columns in a breaking way. They keep serving the site-plan/CRC world unchanged. We only *add* the authoritative location to the new SIR entity. "Demotion" is a conceptual reclassification, not a migration.
-
-**RLS-safe confirmation (v2):** a follow-up audit confirmed **no RLS policy, DB function, trigger, `NOT NULL`, or `CHECK` constraint** references `project.site_address` or `project.jurisdiction_slug`. `site_address` is a bare nullable `TEXT` (`baseline.sql:384`); `jurisdiction_slug` is nullable with column comment *"NULL until known"* (`20260720203333_*.sql:20,27`) plus an FK to `jurisdictions(slug)` (`20260724000000_*.sql:127-131`) but no null constraint. Both are safe to treat as optional hints, confirmed.
+**Consequence for scope:** we do **not** touch the `project` columns. They keep serving the site-plan/CRC world unchanged. We only *add* the two new SIR tables.
 
 ---
 
 ## 3. Target model
 
-### 3.1 The three levels
+### 3.1 The levels
 
 ```
-organization        e.g. "ExtraStorage Containers"   (tenant/customer; + a Noetic-owned holding org for walk-in prospects)
-  └─ project         e.g. "2026-Q4-expansion"         (initiative container — address-AGNOSTIC, owned by org)
-       ├─ site_intelligence_report   1234 Main St     (NEW — subject location lives HERE; 1:1 → intake conversation)
-       │     ├─ conversation (intake chat)            (reused as-is)
-       │     └─ diligence_runs → diligence_artifacts  (v1, v2 iterations on that subject)
-       ├─ site_intelligence_report   77 River Rd      (different address, same initiative)
-       └─ submission (site_plan)                       (UNCHANGED — its own address + plan-set machinery)
+organization        e.g. "ExtraStorage Containers"   (tenant/customer)
+  └─ project         e.g. "2026-Q4-expansion"         (initiative container — address-AGNOSTIC)
+       ├─ site_intelligence_report   1234 Main St     (NEW — subject location lives HERE)
+       │     └─ sir_artifact   v0 {report.pdf, appendix.pdf}      (NEW — flat-versioned output files)
+       │        sir_artifact   v1 {report.pdf, appendix.pdf}      (a revised version; both preserved)
+       ├─ site_intelligence_report   77 River Rd       (different address, same initiative)
+       └─ submission (site_plan)                        (UNCHANGED — its own address + plan-set machinery)
 ```
 
 - Site plans stay on `submission`.
-- SIRs move to `site_intelligence_report` (name chosen to match the published product).
-- `project` stays neutral; `site_address`/`jurisdiction_slug` remain as **optional display hints** (untouched — still serve site plans).
-- SIR→site-plan conversion linkage: **deliberately deferred** — a nullable link column or tiny join table added the day it first happens (YAGNI).
+- SIRs move to `site_intelligence_report` (name matches the published product).
+- Each SIR carries a **flat-versioned** set of output files in `sir_artifact`. `site_intelligence_report.current_version` names the single version the customer sees.
+- `project` stays neutral; `site_address`/`jurisdiction_slug` remain as **optional site-plan hints** (untouched).
 
 ### 3.2 New table: `site_intelligence_report`
 
-Reference DDL (final column set to be finalized in review — this is the shape):
+The stable entity: one row per SIR (subject property + engagement). The subject location lives here because it doesn't change across versions.
 
 ```sql
 create table public.site_intelligence_report (
   id uuid primary key default gen_random_uuid(),
+  project_id uuid not null references public.project(id),
 
-  -- container + reuse hooks
-  project_id      uuid not null references public.project(id),
-  conversation_id uuid references public.conversations(id),   -- the intake chat (1:1). NULL for manual/CC-published runs.
-
-  -- subject property — AUTHORITATIVE location lives here, not on project
-  requested_address text,          -- what the client typed at intake (rough / pre-resolution)
+  -- subject property — AUTHORITATIVE location, stable across versions
+  input_address     text,          -- rough address the operator seeded the run with (pre-resolution)
   intended_use      text,          -- "seven brew coffee shop", "61-ac raw-land retail", …
   resolved_address  text,          -- canonical, from run Phase 0 (location-resolution)
   parcel_id         text,
@@ -104,51 +104,71 @@ create table public.site_intelligence_report (
   longitude         double precision,
   jurisdiction_slug text,          -- resolved jurisdiction. NO FK — see D3.
 
-  -- provenance + lifecycle (coarse for now — see D4)
-  origin  text not null default 'app_intake'
-    check (origin in ('app_intake','manual_publish')),
-  status  text not null default 'draft'
-    check (status in ('draft','requested','in_progress','delivered','archived')),
+  -- deliverable pointer + provenance
+  current_version int  not null default 0,   -- the version the customer sees (→ sir_artifact.version)
+  created_by      uuid references auth.users(id),  -- the staffer who published it (set by the publish step)
 
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
-
 create index on public.site_intelligence_report (project_id);
-create index on public.site_intelligence_report (conversation_id);
-create index on public.site_intelligence_report (status);
 ```
 
-Plus: `updated_at` auto-bump trigger; RLS mirroring `project`/`submission` (project-access based); add to `supabase_realtime` for live status in the app.
+Notes:
+- **No `status`/`origin` enums.** Under completion-only publishing (D7) there is no app-side lifecycle to track and exactly one origin (a local publish). A coarse status (e.g. `archived`) is a one-line add the day the internal dashboard (catalog F1) needs it — deferred (D4).
+- `current_version` is a plain integer, not an FK — the flat-versioning choice (D8) means there is no `sir_version` row to point at. It defaults to `0` (the first published version).
+- Plus: `updated_at` auto-bump trigger; RLS (§3.5); add to `supabase_realtime` for live status in the app.
 
-### 3.3 Re-anchor `diligence_runs` onto the SIR
+### 3.3 New table: `sir_artifact`
 
-Add a nullable FK (backfill, then consider tightening later):
+One row per output **file**, tagged with a `version` integer and a version-level `versioning_label`. A version is just a bucket of files sharing the same `version` number.
 
 ```sql
-alter table public.diligence_runs
-  add column site_intelligence_report_id uuid references public.site_intelligence_report(id);
-create index on public.diligence_runs (site_intelligence_report_id);
+create table public.sir_artifact (
+  id uuid primary key default gen_random_uuid(),
+  site_intelligence_report_id uuid not null
+    references public.site_intelligence_report(id) on delete cascade,
+
+  version          int  not null,                 -- 0, 1, 2…
+  versioning_label text,                           -- version-level note, e.g. "fixed detention-pond table"
+                                                   --   (see D11 — written identically to every row of a version)
+
+  kind   text not null check (kind in ('report','research_appendix','supporting_document')),  -- content ROLE
+  format text not null check (format in ('pdf','docx','html')),                                -- file TYPE
+
+  storage_bucket text not null default 'sir-artifacts',
+  storage_path   text not null,                    -- e.g. sir/<sir_id>/v1/site-intelligence-report.pdf
+  file_name      text,                             -- friendly download name
+  mime_type      text,
+  byte_size      bigint,
+
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+
+  unique (site_intelligence_report_id, version, kind, format)
+);
+create index on public.sir_artifact (site_intelligence_report_id);
+create index on public.sir_artifact (site_intelligence_report_id, version);
 ```
 
-- A `site_intelligence_report` has **many** `diligence_runs` (iterations v1/v2; the "current deliverable" = latest completed run's `diligence_artifacts`).
-- Keep the existing `conversation_id` / `document_version_id` / `project_id` columns on `diligence_runs` for continuity; the new column is the primary SIR anchor.
-- The publish step from the north-star P0 (interactive on-disk run → Supabase) writes a `site_intelligence_report` (origin `manual_publish`) + its `diligence_runs`/`diligence_artifacts`.
+Notes:
+- **`kind` × `format` split** (D8): `kind` is the content role, `format` is the file type. The `unique (sir_id, version, kind, format)` lets one report exist as `pdf` + later `docx` + `html` without collision, and makes the publish step an idempotent upsert per `(version, kind, format)`. Near term we write at least `('report','pdf')`, plus `('research_appendix','pdf')` if the appendix ships as a separate file.
+- **`on delete cascade`** — an artifact is worthless without its SIR.
+- **Fresh table, not a re-anchored `diligence_artifacts`** — the old table's parent FK (`diligence_run_id`) and storage conventions belong to the abandoned `field-agent` path; a clean table avoids inheriting that baggage (D2).
 
-### 3.4 Intake conversation reuse
+### 3.4 How versioning works (flat model)
 
-`site_intelligence_report.conversation_id` → the existing intake `conversation`. This is the load-bearing reuse hook: **everything already built for the intake chat** (composer, `document_section` tier capture, Gemini extraction, RCM cards, realtime) works unchanged — we just re-parent the *entity* the conversation belongs to from a synthetic feasibility `submission` to the SIR. `conversation_id` is **nullable** because a `manual_publish` SIR (run in Claude Code, published via the bridge) has no intake chat.
+- **Customer read** (the only door a client gets): `SELECT * FROM sir_artifact WHERE site_intelligence_report_id = :id AND version = (SELECT current_version FROM site_intelligence_report WHERE id = :id)`. The customer sees exactly one version and is unaware others exist.
+- **Internal read** (staff): all versions — `SELECT DISTINCT version, versioning_label FROM sir_artifact WHERE site_intelligence_report_id = :id ORDER BY version`, then the files per version. This is the compare surface.
+- **Publish a first version:** insert the SIR (`current_version = 0`), upload files, insert `sir_artifact` rows at `version = 0`.
+- **Publish a revised version** (e.g. after human review — "chat with Claude, tweak the PDF"): compute `next = max(version) + 1`, upload the new files at `version = next` with a `versioning_label`, **leave the prior version's rows intact** (v0 and v1 both preserved), then `UPDATE site_intelligence_report SET current_version = :next` **only when** that version becomes the customer-facing final.
+- **Restart from a previous version:** just publish a new `version` number; lineage isn't persisted in the flat model (the operator knows what they branched from). If displayed lineage / per-version provenance becomes a need, that's the promote-to-`sir_version` trigger (D11).
 
-### 3.5 RLS / access control (verified)
+### 3.5 RLS / access control
 
-The whole DB uses a **three-legged** project-access model defined in `substation/supabase/migrations/00000000000000_baseline.sql`. Every project-child table gates SELECT on `user_can_see_project(project_id, uid)` and writes on `get_user_project_access_level(project_id, uid) IN ('write','admin')`. `user_can_see_project` (`baseline.sql:171-194`) returns true if **any** of:
+The DB uses a three-legged project-access model (`substation/supabase/migrations/00000000000000_baseline.sql`). Every project-child table gates SELECT on `user_can_see_project(project_id, uid)` and writes on `get_user_project_access_level(project_id, uid) IN ('write','admin')`.
 
-1. `is_noetic_admin(uid)` — owner/admin of the org whose slug is literally `'noetic'` (global superuser);
-2. **leg 1** — the user is a member of the project's **owner org** (`project.owner_organization_id` live-joined to `organization_members`) — this also grants implicit `write` (`baseline.sql:271-273`);
-3. **leg 2** — a direct per-user grant in `project_access`;
-4. **leg 3** — a per-org grant in `project_access` + the user is a member of that org.
-
-`site_intelligence_report` is a **direct child of `project`** (has a `project_id` column, no join hops) — same topology as `submission` and `diligence_runs`. So its RLS is a verbatim clone of that shape (template: `submission` `baseline.sql:1607-1622` / `diligence_runs` `20260529180000_diligence_runs.sql:82-105`):
+**`site_intelligence_report`** is a direct child of `project` (has `project_id`) — same topology as `submission`. RLS is a verbatim clone of that shape:
 
 ```sql
 ALTER TABLE public.site_intelligence_report ENABLE ROW LEVEL SECURITY;
@@ -171,79 +191,83 @@ CREATE POLICY "Users with admin access can delete SIRs"
   USING (public.get_user_project_access_level(project_id, auth.uid()) = 'admin');
 ```
 
-field-agent / the publish step write rows via the **service role**, which bypasses RLS entirely (same as `diligence_runs` today) — so prospect-project writes don't need a user with `project_access`.
+**`sir_artifact`** has no `project_id` of its own — it reaches the project through its parent SIR. Gate SELECT via a subquery to the parent (writes are service-role, which bypasses RLS):
 
-### 3.6 The holding-org re-home — validated, with two hard constraints
+```sql
+ALTER TABLE public.sir_artifact ENABLE ROW LEVEL SECURITY;
 
-The prospect model (see north-star §5): un-converted / free SIRs live under a **Noetic-owned holding org**; on conversion we repoint `project.owner_organization_id` to the customer's org. The audit confirms this works and is clean — **but** two constraints must hold or it silently fails to isolate:
+CREATE POLICY "Users can view SIR artifacts for accessible projects"
+  ON public.sir_artifact FOR SELECT TO authenticated
+  USING (public.user_can_see_project(
+    (SELECT project_id FROM public.site_intelligence_report
+      WHERE id = sir_artifact.site_intelligence_report_id),
+    auth.uid()));
+```
 
-- **✅ Re-home is a single write.** Visibility leg 1 is a *live* join to `project.owner_organization_id`; no child row denormalizes the org. So `UPDATE project SET owner_organization_id = <customer org>` **immediately** re-scopes the project + all children (SIRs, runs, docs) in one statement — no child backfill. (Do it via service role / noetic-admin, since `UPDATE project` itself needs write access.)
-- **⚠️ Constraint A — the holding org MUST be a separate, non-`noetic`-slug org.** `is_noetic_admin` keys on `organizations.slug = 'noetic'`. If the holding org *is* the `noetic` org, its owners/admins are global superusers on **every** project forever — so a re-home to a customer would **not** revoke their access. Make the holding org a distinct org with its own slug (and add staff to it as `member` role if needed), so holding-org visibility comes only from leg-1 owner-org membership and thus actually drops when `owner_organization_id` is repointed.
-- **⚠️ Constraint B — conversion must clean up stray `project_access` grants.** A `grant_project_creator_access` trigger (`baseline.sql:306-325`) auto-inserts an **`admin`** `project_access` row for `auth.uid()` on every project INSERT — and that grant **survives a re-home**. So whoever created the prospect project keeps admin unless conversion deletes it. Mitigation: **create prospect projects via a service account** (the trigger's `IF auth.uid() IS NOT NULL` guard then skips it), and have the conversion routine sweep leftover `project_access` rows. Confirm which path the publish step / field-agent uses.
-- Note: `owner_organization_id` FK is `ON DELETE RESTRICT` (`baseline.sql:387`) — the holding org can't be deleted while any project still points at it. Operationally fine.
+- **The publish step writes via the service role** (bypasses RLS) — so a local run doesn't need a user with `project_access`. It supplies `created_by` explicitly.
+- **RLS gates whether you can see the SIR at all. It does NOT enforce the customer-vs-internal "which versions" distinction** — that's an application/entitlement concern (catalog G2), deferred. Near-term all readers are Noetic staff and see every version.
 
 ---
 
 ## 4. Data migration
 
-Given §2.1 (11 runs ever, 6/23 projects with address → the historical feasibility rows are churn), the recommended path is a **clean cutover**, not a full 1:1 back-migration.
+The entire change is **additive** — two new tables, zero alterations to existing tables. Given §2.1 (11 runs / 77 feasibility rows, all churn from the abandoned app-intake/`field-agent` experiment), the recommended path is a **clean build, no back-migration**:
 
-### Recommended: clean cutover (D2 = option A)
-
-1. **Create the table** (§3.2) + the `diligence_runs.site_intelligence_report_id` column (§3.3). Additive, zero risk.
-2. **Cut the app over going forward** (§5): intake bootstrap creates a `site_intelligence_report` (+ conversation) instead of a `submission type='feasibility'`; the publish step (P0) creates `manual_publish` SIRs.
-3. **Targeted migration of only what's worth keeping** — the runs that actually persisted. For each of the **11 `diligence_runs`**: create a `site_intelligence_report` from its `project_id` + `conversation_id` + intake `document_version`, set `site_intelligence_report_id` on the run, carry any resolved location we have. (8 completed; 11 total — trivial volume, do it deterministically by run.)
-4. **Archive the churn.** The remaining ~77 feasibility `submission` rows with no persisted run are dev/test intake churn. Options: soft-archive (leave in place, ignored by the new UI) or hard-delete after a verification window. Recommend **soft-archive first, delete after the app cutover is verified.**
-5. **Retire the vestigial feasibility submission** once no code path creates or reads `submission type='feasibility'`.
-
-### Alternative: full 1:1 migration (D2 = option B)
-
-Create a `site_intelligence_report` for every one of the 77 feasibility submissions, best-effort pairing each to an intake conversation. **Wrinkle (Q1):** there is **no FK** between `submission` and `conversations` — both only FK `project`. When a project has multiple feasibility submissions + conversations, pairing must be heuristic (created-at proximity, or via the shared `feasibility_intake` document). Given the churn, this heroics isn't worth it → **recommend option A.**
+1. **Create the two tables** (§3.2, §3.3) + RLS + realtime + `updated_at` triggers. Additive, zero risk.
+2. **The publish step** (from the north-star P0 bridge) writes new SIRs going forward: a local `diligence-report` run, on completion, creates the `site_intelligence_report` (if new) + uploads files + inserts `sir_artifact` rows.
+3. **Legacy left in place.** The 77 feasibility `submission` rows, 11 `diligence_runs`, and their `diligence_artifacts` are dev/test churn — leave them untouched (the new UI simply ignores them). Optional: a one-time backfill of the ≤8 completed runs into SIRs + `version=0` artifacts, but they're churn — **recommend skipping**.
+4. **Retire the vestigial feasibility submission + the old diligence_runs/artifacts tables later**, in their own migration, once nothing reads them and the app cutover is verified. That's the only destructive step and it happens last.
 
 ### Reversibility
 
-The migration is additive (new table + new nullable column). Cutover is a code change. Deletion of old feasibility submissions is the only destructive step and happens **last, after verification**, in its own migration — so the whole thing is reversible up to that point.
+Everything here is additive (two new tables). Retirement of the legacy tables is a separate, later, opt-in migration — so the whole thing is reversible up to that point.
 
 ---
 
 ## 5. Downstream code changes (high level — DB spec, so summarized)
 
-- **cityhall**
-  - Intake bootstrap (`src/routes/(app)/project/[projectId]/+page.server.ts`) creates a `site_intelligence_report` + `conversation` instead of a feasibility `submission`.
-  - Intake route `/project/[id]/submission/[submissionId]/intake/[conversationId]` → re-nest under the SIR (e.g. `/project/[id]/sir/[sirId]/intake/[conversationId]`).
-  - `requestDiligenceRun` / diligence trigger: anchor on `site_intelligence_report_id`.
-  - Reads that assume a feasibility `submission`; regen DB types.
 - **substation**
-  - Migration files (all live in `substation/supabase/migrations/`).
-  - Diligence trigger route validates against the SIR entity; `diligence_runs` insert sets `site_intelligence_report_id`.
-  - Publish-step endpoint (P0) creates `manual_publish` SIRs.
-- **No changes** to conductor/surveyor/bureau or the site-plan `submission` / CRV / CRC jurisdiction-labeling paths.
+  - The migration files (`substation/supabase/migrations/`) for the two tables + RLS + realtime.
+  - A **publish endpoint** (service-role backed) the local run calls on completion: upsert the SIR, compute the next `version`, mint storage upload targets in the `sir-artifacts` bucket, insert `sir_artifact` rows, set/advance `current_version`. (The run→endpoint auth/credential mechanics belong to the P0 publish-step spec — this spec only fixes the schema it writes.)
+- **cityhall**
+  - **SIR list** under a project (the near-term home for catalog F1's "view all SIRs").
+  - **SIR detail page**: shows the `current_version` artifacts with 72h signed URLs (View / Download); for internal staff, a version switcher over all `sir_artifact` versions with their `versioning_label`s.
+  - DB type regen.
+- **No changes** to conductor / surveyor / bureau, the site-plan `submission` / CRV / CRC paths, **or the intake-chat code** — the intake path is simply not on the near-term SIR flow (neither extended nor required; left dormant).
+- **No `field-agent`, no Inngest event, no `requestDiligenceRun` tool** in the near-term SIR flow.
 
 ---
 
 ## 6. Decisions
 
-- **D1 — Entity name is `site_intelligence_report`** (matches the published product), not `feasibility_engagement`.
-- **D2 — Migration = clean cutover** (option A §4): stand up the table, cut the app over, targeted-migrate only the 11 persisted runs, soft-archive then delete the ~77 churn rows. Rationale: the data is early-stage churn; a full back-migration fights a non-FK pairing problem for no real value.
-- **D3 — No FK on `site_intelligence_report.jurisdiction_slug`.** SIRs run in arbitrary jurisdictions, many not yet in the `jurisdictions` registry (the skill generates feasibility-guides on first encounter). An FK to `jurisdictions(slug)` — as `project` has — would block SIRs in novel jurisdictions. Keep it free-text/nullable.
-- **D4 — `status` stays coarse** (`draft/requested/in_progress/delivered/archived`) for now. The granular HITL lifecycle (hitl1_review, report_draft, hitl3_review, …) from the north-star spec lands with the `staff-review-collaboration` child spec, not here — don't bake an unfinished state machine into the table.
-- **D5 — `project` columns untouched.** `site_address`/`jurisdiction_slug` stay as-is, reclassified conceptually as optional site-plan-scoped hints. No breaking migration on them (sweep verdict §2.3).
-- **D6 — SIR→site-plan conversion linkage deferred.** Add when it first happens (nullable link column or join table).
-- **D7 — RLS = verbatim clone of the `submission`/`diligence_runs` project-child policy** (§3.5). SELECT via `user_can_see_project`, writes via `get_user_project_access_level(...) IN ('write','admin')`, DELETE admin-only; enable RLS; add to `supabase_realtime`. No new access function needed — the three-legged model already covers it.
-- **D8 — Holding org is a separate, non-`noetic`-slug org; prospect projects are created by a service account.** (§3.6) Required for the re-home to actually isolate: keeps holding-org staff off the `is_noetic_admin` superuser path, and avoids the `grant_project_creator_access` trigger minting a surviving admin grant. Conversion must also sweep stray `project_access` rows.
+- **D1 — Entity name is `site_intelligence_report`** (matches the published product).
+- **D2 — Drop the `diligence_runs` reuse; the run collapses into the SIR.** `diligence_runs` is an async run-tracking table for app-triggered, worker-executed cloud runs; in the local-run world its `conversation_id` / `document_version_id` FKs and `queued`→`running` status go permanently null. Reusing it fails a 1:1 test. A local run's only DB footprint is a completion-time publish, which the SIR row + `sir_artifact` rows fully capture. (See also D9.)
+- **D3 — No FK on `jurisdiction_slug`.** SIRs run in arbitrary jurisdictions, many not yet in the `jurisdictions` registry. An FK would block novel jurisdictions. Free-text/nullable.
+- **D4 — No `status`/`origin` fields near-term.** Completion-only publishing means no app-side lifecycle to model and a single origin. A coarse status (`active`/`archived`) is a trivial add when the internal dashboard (catalog F1) needs it.
+- **D5 — `project` columns untouched.** `site_address`/`jurisdiction_slug` stay as-is, reclassified as optional site-plan-scoped hints (sweep verdict §2.3).
+- **D6 — SIR→site-plan conversion linkage deferred.** Add a nullable link column or join table when it first happens.
+- **D7 — Publishing is completion-only.** A `site_intelligence_report` row is born when a local run finishes and publishes; there is no pre-registered `in_progress` row (the run is off-app). If the app later needs to show in-flight local runs, the run process can pre-insert a row — a small additive change, not modeled now.
+- **D8 — Second table is a fresh `sir_artifact` with flat versioning** (`version` int + `versioning_label`; `kind`×`format` split; `current_version` on the SIR), **not** a re-anchored `diligence_artifacts` and **not** a `sir_version` table. Covers preserve-both-versions / compare / restart / customer-sees-final in two tables.
+- **D9 — RLS:** `site_intelligence_report` = verbatim clone of the `submission` project-child policy; `sir_artifact` = SELECT gated via a subquery to its parent SIR's project; writes are service-role at publish. Enable RLS on both; add both to `supabase_realtime`.
+- **D10 — No intake-chat dependency.** The near-term SIR flow does not use `conversations` / `chat_message` / `document`*/ `document_section` / Gemini extraction. Those stay for whatever else uses them; SIRs don't touch them.
+- **D11 — `versioning_label` lives on `sir_artifact`, accepting one controlled cost:** a label is a version-level fact but is stored once per file row of a version (report + appendix + future formats), so the publish step (the sole writer) must write it identically to every row of a version; reads take any row (`DISTINCT`). **Promote to a `sir_version` table** the day a *second* per-version attribute appears (`created_by`-per-version, `production_method`, `parent_version_id`/lineage) or a label must be editable without rewriting files. Clean upgrade: create `sir_version` with one row per distinct `(sir, version)`, swap the int for an FK.
+- **D12 — Holding-org / prospect re-home is out of near-term scope** (was v2 §3.6 / D8). It exists to isolate self-serve prospect intake, which the human-kickoff model removes. Near-term SIRs are published by staff into a chosen project/org. Re-home mechanics move to the Future catalog (G1) / north-star §5.
 
 ## 7. Open questions
 
-- **Q1 — Historical conversation pairing.** If we ever do option B, how to pair the 77 feasibility submissions to their intake conversations with no FK? (Proposed: via the shared `feasibility_intake` document, or created-at proximity.) Moot under the recommended option A.
-- **Q2 — Requestor / prospect identity.** Where does "this SIR was requested by contact X at prospective-org Y" live — on the SIR, the project, or a lightweight lead record under the holding org? Deferred to the `intake-productization` / delivery spec; not needed for this migration. The holding-org *mechanics* are now validated (§3.6) and the model is captured in north-star §5; what's still open is only where the requestor *contact* details live.
-- **Q3 — Tighten `diligence_runs.site_intelligence_report_id` to NOT NULL later?** Starts nullable for the additive migration; once all runs originate from an SIR, consider requiring it.
-- **Q4 — Do we also want an explicit `project.kind`?** Current answer: no (D-level in the north-star spec — type lives on the work product, project stays neutral). Revisit only if list/query pain appears.
+- **Q1 — Where does the publish step's `created_by` come from?** The local run publishes via service role; it must be told *which* staff user to stamp. (Proposed: the operator's user id passed into the publish call. Belongs to the P0 publish-step spec.)
+- **Q2 — Does an SIR ever need a human-facing `title`/`name`** distinct from `resolved_address`? Deferred until the SIR list UI (F1) says so; `resolved_address` + `intended_use` are enough near-term.
+- **Q3 — When does `versioning_label` outgrow the flat column?** Track whether staff want a second per-version attribute; if so, execute the D11 promotion to `sir_version`.
+- **Q4 — Retire the legacy feasibility/`diligence_runs`/`diligence_artifacts` tables when?** After the app cutover is verified; sequence the destructive migration then.
 
 ## 8. Scope boundaries (explicitly deferred)
 
-- The granular HITL lifecycle state machine (→ `staff-review-collaboration`).
-- Requestor/prospect identity + the holding-org auto-creation mechanics (→ `intake-productization`).
+- The intake-chat / self-serve-prospect kickoff path (not the near-term model; would be re-introduced by an `intake-productization` spec if the product wants it back).
+- The `field-agent` / Inngest cloud-run execution path.
+- The internal versioning UI beyond storing versions (compare view, lineage display) → promote to `sir_version` (D11) when it lands.
+- Holding-org / prospect→customer conversion mechanics (→ Future G1 / north-star §5).
 - SIR→site-plan conversion linkage (→ when first needed).
-- Any change to the site-plan `submission` model, or the CRV/CRC `jurisdiction_slug` labeling paths.
-- The `substation POST /projects` `jurisdiction_slug` drop bug (noted §2.3; separate fix).
-- The client-facing viewer/delivery (→ `sir-delivery-and-web-viewer`, needs P0 publish first).
+- Any change to the site-plan `submission` model or the CRV/CRC `jurisdiction_slug` labeling paths.
+- The client-facing viewer/delivery (→ `sir-delivery-and-web-viewer`, needs the P0 publish first).
+</content>
+</invoke>
