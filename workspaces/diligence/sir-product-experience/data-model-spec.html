@@ -5,138 +5,186 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>SIR Data Model — Today · Rework · Future</title>
 <style>
-  :root{
-    --p50:#f0f5f9;--p100:#dce8f1;--p200:#b9d2e5;--p300:#8cb4d1;--p400:#6397b8;
-    --p500:#517e9e;--p600:#3f6582;--p700:#35526b;--p800:#2d4559;--p900:#273b4b;--p950:#182530;
-    --bg:#f9f9f9;--card:#ffffff;--divider:#dfdfdf;--ink:#1f2937;--muted:#6b7280;--ember:#bb4d00;
-    --new:#15803d;--newbg:#f0fdf4;--newbd:#bbf7d0;
-    --chg:#b45309;--chgbg:#fffbeb;--chgbd:#fde68a;
-    --ret:#b91c1c;--retbg:#fef2f2;--retbd:#fecaca;
-    --sans:'Lexend',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
-    --serif:'Lora',Georgia,'Times New Roman',serif;
-    --mono:'Fira Code','SF Mono',ui-monospace,Menlo,Consolas,monospace;
-  }
-  *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.55;font-size:15px}
-  header.masthead{background:linear-gradient(135deg,var(--p800),var(--p600));color:#fff;padding:34px 32px 30px;position:relative;overflow:hidden}
-  header.masthead::after{content:"";position:absolute;inset:0;background-image:repeating-linear-gradient(115deg,rgba(255,255,255,.06) 0 1px,transparent 1px 26px);pointer-events:none}
-  header.masthead .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--p200)}
-  header.masthead h1{font-family:var(--serif);font-weight:600;margin:.35em 0 .2em;font-size:29px;position:relative}
-  header.masthead p{margin:0;color:var(--p100);max-width:880px;font-size:15px}
-  header.masthead .meta{margin-top:14px;font-size:12.5px;color:var(--p200);font-family:var(--mono)}
+/* ============================================================
+   spec-kit v1  —  winston HTML spec design system
+   Inline the ENTIRE contents of this file into the spec's style block.
+   Canonical source: ~/.claude/skills/winston-spec/assets/spec-kit.css
+   When you change this file, bump the version above and in COMPONENTS.md.
+   ============================================================ */
 
-  nav.tabs{position:sticky;top:0;z-index:20;display:flex;gap:2px;background:var(--p950);padding:0 20px;box-shadow:0 2px 8px rgba(0,0,0,.12);flex-wrap:wrap}
-  nav.tabs button{appearance:none;border:0;background:transparent;color:var(--p200);font-family:var(--sans);font-size:14px;font-weight:500;padding:14px 18px;cursor:pointer;border-bottom:3px solid transparent;transition:all .15s}
-  nav.tabs button .n{font-family:var(--mono);font-size:11px;opacity:.7;margin-right:7px}
-  nav.tabs button:hover{color:#fff;background:rgba(255,255,255,.04)}
-  nav.tabs button.active{color:#fff;border-bottom-color:var(--ember);background:rgba(255,255,255,.06)}
+:root{
+  /* steel-blue ramp (matches cityhall / Noetic report surfaces) */
+  --p50:#f0f5f9;--p100:#dce8f1;--p200:#b9d2e5;--p300:#8cb4d1;--p400:#6397b8;
+  --p500:#517e9e;--p600:#3f6582;--p700:#35526b;--p800:#2d4559;--p900:#273b4b;--p950:#182530;
+  --bg:#f9f9f9;--card:#ffffff;--divider:#dfdfdf;--ink:#1f2937;--muted:#6b7280;--ember:#bb4d00;
+  /* semantic: new / changed / retired */
+  --new:#15803d;--newbg:#f0fdf4;--newbd:#bbf7d0;
+  --chg:#b45309;--chgbg:#fffbeb;--chgbd:#fde68a;
+  --ret:#b91c1c;--retbg:#fef2f2;--retbd:#fecaca;
+  --sans:'Lexend',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  --serif:'Lora',Georgia,'Times New Roman',serif;
+  --mono:'Fira Code','SF Mono',ui-monospace,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.55;font-size:15px}
 
-  main{max-width:1140px;margin:0 auto;padding:30px 26px 90px}
-  .panel{display:none;animation:fade .25s ease}
-  .panel.active{display:block}
-  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+/* ---------- masthead ---------- */
+header.masthead{background:linear-gradient(135deg,var(--p800),var(--p600));color:#fff;padding:34px 32px 30px;position:relative;overflow:hidden}
+header.masthead::after{content:"";position:absolute;inset:0;background-image:repeating-linear-gradient(115deg,rgba(255,255,255,.06) 0 1px,transparent 1px 26px);pointer-events:none}
+header.masthead .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--p200)}
+header.masthead h1{font-family:var(--serif);font-weight:600;margin:.35em 0 .2em;font-size:29px;position:relative}
+header.masthead p{margin:0;color:var(--p100);max-width:880px;font-size:15px}
+header.masthead .meta{margin-top:14px;font-size:12.5px;color:var(--p200);font-family:var(--mono)}
 
-  h2{font-family:var(--serif);font-weight:600;font-size:23px;margin:34px 0 6px;color:var(--p900)}
-  h2:first-child{margin-top:4px}
-  h2 .eyebrow{display:block;font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--p500);font-weight:400;margin-bottom:3px}
-  h3{font-size:16px;font-weight:600;margin:28px 0 8px;color:var(--p800);display:flex;align-items:center;gap:9px}
-  h3 .hn{font-family:var(--mono);font-size:12px;color:#fff;background:var(--p600);border-radius:5px;padding:2px 8px}
-  h4{font-size:14px;font-weight:600;margin:18px 0 6px;color:var(--p800)}
-  p{margin:.55em 0}
-  .lede{font-size:16px;color:var(--p800);border-left:3px solid var(--ember);padding-left:16px;margin:14px 0 20px}
-  ul{margin:.4em 0;padding-left:22px}li{margin:.28em 0}
-  code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px solid var(--p100);border-radius:4px;padding:1px 5px;color:var(--p800)}
-  .callout{background:var(--p50);border:1px solid var(--p200);border-left:4px solid var(--p500);border-radius:8px;padding:13px 17px;margin:16px 0}
-  .callout.ember{background:#fdf6f0;border-color:#f0cba8;border-left-color:var(--ember)}
-  .callout.new{background:var(--newbg);border-color:var(--newbd);border-left-color:var(--new)}
-  .callout .lab{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--p600);font-weight:600;display:block;margin-bottom:3px}
-  .callout.ember .lab{color:var(--ember)} .callout.new .lab{color:var(--new)}
+/* ---------- tabs ---------- */
+nav.tabs{position:sticky;top:0;z-index:20;display:flex;gap:2px;background:var(--p950);padding:0 20px;box-shadow:0 2px 8px rgba(0,0,0,.12);flex-wrap:wrap}
+nav.tabs button{appearance:none;border:0;background:transparent;color:var(--p200);font-family:var(--sans);font-size:14px;font-weight:500;padding:14px 18px;cursor:pointer;border-bottom:3px solid transparent;transition:all .15s}
+nav.tabs button .n{font-family:var(--mono);font-size:11px;opacity:.7;margin-right:7px}
+nav.tabs button:hover{color:#fff;background:rgba(255,255,255,.04)}
+nav.tabs button.active{color:#fff;border-bottom-color:var(--ember);background:rgba(255,255,255,.06)}
 
-  /* ===== legend ===== */
-  .legend{display:flex;flex-wrap:wrap;gap:9px 16px;background:#fff;border:1px solid var(--divider);border-radius:10px;padding:12px 16px;margin:16px 0;font-size:12px;align-items:center}
-  .legend .k{display:inline-flex;align-items:center;gap:6px}
-  .swatch{width:26px;height:14px;border-radius:3px;display:inline-block;border:1px solid rgba(0,0,0,.15)}
-  .sw-ex{background:var(--p700)} .sw-nw{background:var(--new)} .sw-ch{background:var(--chg)} .sw-rt{background:#9ca3af}
+/* ---------- layout ---------- */
+main{max-width:1140px;margin:0 auto;padding:30px 26px 90px}
+.panel{display:none;animation:fade .25s ease}
+.panel.active{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 
-  /* ===== ER / UML entity boxes ===== */
-  .erd{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start;margin:16px 0;background:#fbfcfd;border:1px solid var(--divider);border-radius:12px;padding:18px}
-  .ent{border:1px solid var(--divider);border-radius:9px;overflow:hidden;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.05);min-width:236px;flex:0 1 auto}
-  .ent .eh{padding:7px 12px;color:#fff;display:flex;justify-content:space-between;align-items:baseline;gap:10px}
-  .ent .eh .en{font-family:var(--mono);font-size:12.5px;font-weight:700;letter-spacing:.02em}
-  .ent .eh .stereo{font-size:9.5px;font-family:var(--mono);opacity:.85;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}
-  .ent.exist .eh{background:var(--p700)}
-  .ent.newt .eh{background:var(--new)}
-  .ent.changed .eh{background:var(--chg)}
-  .ent.retired .eh{background:#9ca3af}
-  .ent.retired{opacity:.72}
-  .ent .row{display:flex;align-items:center;gap:7px;padding:4px 11px;font-size:11.5px;border-top:1px solid #eef1f4}
-  .ent .row:first-of-type{border-top:0}
-  .ent .row .nm{font-family:var(--mono);font-size:11.5px;color:var(--p900);font-weight:600}
-  .ent .row .ty{font-family:var(--mono);font-size:10px;color:var(--muted);margin-left:auto;white-space:nowrap}
-  .ent .row.hi{background:#fff9f2}
-  .ent .row.strk .nm{text-decoration:line-through;color:var(--muted)}
-  .b{font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.04em;padding:1px 4px;border-radius:3px;text-transform:uppercase;white-space:nowrap}
-  .b-pk{background:#fef3c7;color:#92600a;border:1px solid #fde68a}
-  .b-fk{background:#e0edfb;color:#2456a8;border:1px solid #c3d8f2}
-  .b-nn{background:#eef1f4;color:#4b5563;border:1px solid #d7dde3}
-  .b-new{background:var(--newbg);color:var(--new);border:1px solid var(--newbd)}
-  .ent .note{padding:5px 11px;font-size:10px;color:var(--muted);font-style:italic;border-top:1px dashed #e5e9ee;background:#fbfcfd}
+h2{font-family:var(--serif);font-weight:600;font-size:23px;margin:34px 0 6px;color:var(--p900)}
+h2:first-child{margin-top:4px}
+h2 .eyebrow{display:block;font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--p500);font-weight:400;margin-bottom:3px}
+h3{font-size:16px;font-weight:600;margin:28px 0 8px;color:var(--p800);display:flex;align-items:center;gap:9px}
+h3 .hn{font-family:var(--mono);font-size:12px;color:#fff;background:var(--p600);border-radius:5px;padding:2px 8px}
+h4{font-size:14px;font-weight:600;margin:18px 0 6px;color:var(--p800)}
+p{margin:.55em 0}
+.lede{font-size:16px;color:var(--p800);border-left:3px solid var(--ember);padding-left:16px;margin:14px 0 20px}
+ul{margin:.4em 0;padding-left:22px}li{margin:.28em 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px solid var(--p100);border-radius:4px;padding:1px 5px;color:var(--p800)}
 
-  /* relationships panel — crow's-foot text notation */
-  .rels{background:#fff;border:1px solid var(--divider);border-radius:10px;padding:12px 16px;margin:14px 0;font-family:var(--mono);font-size:12px;line-height:1.9}
-  .rels .rl{display:block;color:var(--p800)}
-  .rels .rl b{color:var(--ember)}
-  .rels .cf{color:var(--p500);font-weight:700}
-  .rels .cmt{color:var(--muted);font-style:normal;font-family:var(--sans);font-size:11.5px}
-  .rels .tag-new{color:var(--new);font-weight:700}
-  .rels .tag-ret{color:var(--ret);font-weight:700}
-  .rels-h{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--p600);font-weight:700;margin-bottom:6px}
+/* ---------- callout ---------- */
+.callout{background:var(--p50);border:1px solid var(--p200);border-left:4px solid var(--p500);border-radius:8px;padding:13px 17px;margin:16px 0}
+.callout.ember{background:#fdf6f0;border-color:#f0cba8;border-left-color:var(--ember)}
+.callout.new{background:var(--newbg);border-color:var(--newbd);border-left-color:var(--new)}
+.callout .lab{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--p600);font-weight:600;display:block;margin-bottom:3px}
+.callout.ember .lab{color:var(--ember)} .callout.new .lab{color:var(--new)}
 
-  /* numbered walkthrough rail */
-  .seq{position:relative;margin:14px 0}
-  .seq .st{position:relative;display:flex;gap:12px;padding:0 0 13px 0}
-  .seq .st:last-child{padding-bottom:0}
-  .seq .st::before{content:"";position:absolute;left:13px;top:26px;bottom:-2px;width:2px;background:var(--p200)}
-  .seq .st:last-child::before{display:none}
-  .seq .st .num{flex:0 0 28px;height:28px;border-radius:50%;background:var(--p600);color:#fff;font-family:var(--mono);font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;z-index:1}
-  .seq .st.newstep .num{background:var(--new)}
-  .seq .st .body{flex:1;background:#fff;border:1px solid var(--divider);border-radius:8px;padding:9px 13px;font-size:12.5px;margin-top:-1px}
-  .seq .st .body .h{font-weight:600;color:var(--p900);margin-bottom:2px}
-  .seq .st .body .d{color:var(--ink);font-size:12px}
-  .seq .st .body code{font-size:11px}
+/* ---------- legend ---------- */
+.legend{display:flex;flex-wrap:wrap;gap:9px 16px;background:#fff;border:1px solid var(--divider);border-radius:10px;padding:12px 16px;margin:16px 0;font-size:12px;align-items:center}
+.legend .k{display:inline-flex;align-items:center;gap:6px}
+.swatch{width:26px;height:14px;border-radius:3px;display:inline-block;border:1px solid rgba(0,0,0,.15)}
 
-  /* actor chips */
-  .rc{display:inline-block;font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;padding:1px 6px;border-radius:5px;border:1px solid;vertical-align:middle;white-space:nowrap}
-  .r-ch{background:#eef4fb;color:#2456a8;border-color:#c3d8f2}
-  .r-sub{background:#f3eefb;color:#6b3fa0;border-color:#dcccf0}
-  .r-fa{background:#e9f7f2;color:#0f7a5f;border-color:#bfe8db}
-  .r-db{background:#eaeef2;color:#2d4559;border-color:#c7d2dd}
-  .r-store{background:#e6eef3;color:#35526b;border-color:#bcd0dd}
-  .r-user{background:#eefaf0;color:#15803d;border-color:#bbf7d0}
-  .r-mcp{background:#fdf0e6;color:#b5590d;border-color:#f2d3b3}
+/* ---------- shared field badges (used by entity rows + legend) ---------- */
+.b{font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.04em;padding:1px 4px;border-radius:3px;text-transform:uppercase;white-space:nowrap}
+.b-pk{background:#fef3c7;color:#92600a;border:1px solid #fde68a}
+.b-fk{background:#e0edfb;color:#2456a8;border:1px solid #c3d8f2}
+.b-nn{background:#eef1f4;color:#4b5563;border:1px solid #d7dde3}
+.b-new{background:var(--newbg);color:var(--new);border:1px solid var(--newbd)}
 
-  .flow-cap{font-size:12px;color:var(--muted);margin:2px 0 4px}
-  .storage{background:#eef3f7;border:1px dashed var(--p300);border-radius:8px;padding:9px 13px;font-family:var(--mono);font-size:12px;color:var(--p800);margin:12px 0}
-  .storage b{color:var(--ember)}
+/* ============================================================
+   ER / UML entity boxes
+   ============================================================ */
+.erd{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start;margin:16px 0;background:#fbfcfd;border:1px solid var(--divider);border-radius:12px;padding:18px}
+.ent{border:1px solid var(--divider);border-radius:9px;overflow:hidden;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.05);min-width:236px;flex:0 1 auto}
+.ent .eh{padding:7px 12px;color:#fff;display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.ent .eh .en{font-family:var(--mono);font-size:12.5px;font-weight:700;letter-spacing:.02em}
+.ent .eh .stereo{font-size:9.5px;font-family:var(--mono);opacity:.85;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}
+.ent.exist .eh{background:var(--p700)}
+.ent.newt .eh{background:var(--new)}
+.ent.changed .eh{background:var(--chg)}
+.ent.retired .eh{background:#9ca3af}
+.ent.retired{opacity:.72}
+.ent .row{display:flex;align-items:center;gap:7px;padding:4px 11px;font-size:11.5px;border-top:1px solid #eef1f4}
+.ent .row:first-of-type{border-top:0}
+.ent .row .nm{font-family:var(--mono);font-size:11.5px;color:var(--p900);font-weight:600}
+.ent .row .ty{font-family:var(--mono);font-size:10px;color:var(--muted);margin-left:auto;white-space:nowrap}
+.ent .row.hi{background:#fff9f2}
+.ent .row.strk .nm{text-decoration:line-through;color:var(--muted)}
+.ent .note{padding:5px 11px;font-size:10px;color:var(--muted);font-style:italic;border-top:1px dashed #e5e9ee;background:#fbfcfd}
 
-  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-  @media(max-width:820px){.grid2{grid-template-columns:1fr}.erd{padding:12px}}
-  .card{background:var(--card);border:1px solid var(--divider);border-radius:9px;padding:14px 16px}
-  .card.keep{border-top:3px solid var(--new)} .card.change{border-top:3px solid var(--chg)} .card.drop{border-top:3px solid var(--ret)}
-  .card strong{display:block;margin-bottom:4px;font-size:13.5px}
-  .card ul{font-size:12.5px;margin:2px 0}
+/* relationships panel — crow's-foot text notation */
+.rels{background:#fff;border:1px solid var(--divider);border-radius:10px;padding:12px 16px;margin:14px 0;font-family:var(--mono);font-size:12px;line-height:1.9}
+.rels .rl{display:block;color:var(--p800)}
+.rels .rl b{color:var(--ember)}
+.rels .cf{color:var(--p500);font-weight:700}
+.rels .cmt{color:var(--muted);font-style:normal;font-family:var(--sans);font-size:11.5px}
+.rels .tag-new{color:var(--new);font-weight:700}
+.rels .tag-ret{color:var(--ret);font-weight:700}
+.rels-h{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--p600);font-weight:700;margin-bottom:6px}
 
-  /* state machine */
-  .sm{display:flex;flex-wrap:wrap;gap:7px;align-items:center;margin:14px 0}
-  .sm .s{border:1px solid var(--p300);background:var(--p50);border-radius:20px;padding:5px 12px;font-size:11.5px;font-weight:600;color:var(--p800);font-family:var(--mono)}
-  .sm .s .who{display:block;font-size:9px;font-family:var(--mono);color:var(--muted);font-weight:400;text-transform:uppercase;letter-spacing:.03em}
-  .sm .s.client{border-color:var(--newbd);background:var(--newbg)}
-  .sm .s.cc{border-color:#f0cba8;background:#fdf6f0}
-  .sm .s.spec{border-color:var(--chgbd);background:var(--chgbg)}
-  .sm .a{color:var(--p400);font-weight:700}
+/* ============================================================
+   Use-case scene  (an action + its boxes-and-arrows diagram)
+   ============================================================ */
+.uc{margin:16px 0 22px;border:1px solid var(--divider);border-radius:12px;overflow:hidden;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.uc .uch{display:flex;align-items:center;gap:13px;padding:11px 16px;background:linear-gradient(135deg,var(--p700),var(--p600));color:#fff}
+.uc .uch .ucn{flex:0 0 30px;height:30px;border-radius:50%;background:rgba(255,255,255,.2);font-family:var(--mono);font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.uc .uch .uctxt{flex:1}
+.uc .uch .actor{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--p100);display:block;margin-bottom:1px}
+.uc .uch .uct{font-weight:600;font-size:15.5px;font-family:var(--serif)}
+.uc .ucsub{padding:9px 16px;font-size:12.5px;color:var(--p800);background:var(--p50);border-bottom:1px solid var(--p100)}
+.uc .ucdiag{padding:20px 16px 14px}
+.ucnote{padding:2px 16px 14px;font-size:11.5px;color:var(--muted)}
+.ucnote b{color:var(--p700);font-family:var(--mono);font-size:10.5px}
 
-  .foot{margin-top:44px;padding-top:18px;border-top:1px solid var(--divider);color:var(--muted);font-size:12px;font-family:var(--mono)}
-  .xref{font-size:12px;color:var(--p600);background:var(--p50);border:1px solid var(--p100);border-radius:6px;padding:8px 12px;margin:10px 0}
+/* ============================================================
+   Boxes-and-arrows flow
+   Robustness rules baked in:
+   - .dfg WRAPS (flex-wrap:wrap) so long chains never clip / never
+     need horizontal scroll. Arrows reflow with the nodes.
+   - .node is a flex COLUMN: the op-badge is an in-flow header row
+     (never position:absolute), and .nt / .nf are block-level, so a
+     table name and its fields can never smush onto one line.
+   ============================================================ */
+.dfg{display:flex;flex-wrap:wrap;align-items:stretch;gap:8px 0;margin:0}
+.node{flex:0 0 auto;width:156px;background:#fff;border:1.5px solid var(--p300);border-radius:8px;padding:9px 11px;display:flex;flex-direction:column;gap:3px}
+.node .op{align-self:flex-start;font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:1px 6px;border-radius:3px;border:1px solid;color:#fff;margin-bottom:2px}
+.node .nt{display:block;font-family:var(--mono);font-weight:700;font-size:12px;color:var(--p900);line-height:1.3;word-break:break-word}
+.node .nf{display:block;font-family:var(--mono);font-size:10px;color:var(--muted);line-height:1.45;word-break:break-word}
+.node.created{border-color:var(--new);background:var(--newbg)} .node.created .op{background:var(--new);border-color:var(--new)}
+.node.read{border-color:var(--p400);background:#eef4fb} .node.read .op{background:var(--p500);border-color:var(--p500)}
+.node.event{border-color:var(--ember);background:#fdf6f0} .node.event .op{background:var(--ember);border-color:var(--ember)}
+.node.store{border-style:dashed;border-color:var(--p500);background:#eef3f7} .node.store .op{background:var(--p700);border-color:var(--p700)}
+.edge{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:70px;max-width:104px;padding:0 4px}
+.edge .el{font-size:9px;color:var(--p600);font-family:var(--mono);text-align:center;line-height:1.3;margin-bottom:2px}
+.edge .ar{color:var(--p400);font-size:20px;font-weight:700;line-height:1}
+
+/* ============================================================
+   Card grid  (keep / change / drop comparisons)
+   ============================================================ */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:820px){.grid2{grid-template-columns:1fr}.erd{padding:12px}}
+.card{background:var(--card);border:1px solid var(--divider);border-radius:9px;padding:14px 16px}
+.card.keep{border-top:3px solid var(--new)} .card.change{border-top:3px solid var(--chg)} .card.drop{border-top:3px solid var(--ret)}
+.card strong{display:block;margin-bottom:4px;font-size:13.5px}
+.card ul{font-size:12.5px;margin:2px 0}
+
+/* ============================================================
+   Lifecycle / state machine
+   ============================================================ */
+.sm{display:flex;flex-wrap:wrap;gap:7px;align-items:center;margin:14px 0}
+.sm .s{border:1px solid var(--p300);background:var(--p50);border-radius:20px;padding:5px 12px;font-size:11.5px;font-weight:600;color:var(--p800);font-family:var(--mono)}
+.sm .s .who{display:block;font-size:9px;font-family:var(--mono);color:var(--muted);font-weight:400;text-transform:uppercase;letter-spacing:.03em}
+.sm .s.client{border-color:var(--newbd);background:var(--newbg)}
+.sm .s.cc{border-color:#f0cba8;background:#fdf6f0}
+.sm .s.spec{border-color:var(--chgbd);background:var(--chgbg)}
+.sm .a{color:var(--p400);font-weight:700}
+
+/* ============================================================
+   Misc: storage strip, cross-reference box
+   ============================================================ */
+.storage{background:#eef3f7;border:1px dashed var(--p300);border-radius:8px;padding:9px 13px;font-family:var(--mono);font-size:12px;color:var(--p800);margin:12px 0}
+.storage b{color:var(--ember)}
+.xref{font-size:12px;color:var(--p600);background:var(--p50);border:1px solid var(--p100);border-radius:6px;padding:8px 12px;margin:10px 0}
+.foot{margin-top:44px;padding-top:18px;border-top:1px solid var(--divider);color:var(--muted);font-size:12px;font-family:var(--mono)}
+
+/* actor / repo chips (optional, for inline actor tags in prose) */
+.rc{display:inline-block;font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;padding:1px 6px;border-radius:5px;border:1px solid;vertical-align:middle;white-space:nowrap}
+.r-ch{background:#eef4fb;color:#2456a8;border-color:#c3d8f2}
+.r-sub{background:#f3eefb;color:#6b3fa0;border-color:#dcccf0}
+.r-fa{background:#e9f7f2;color:#0f7a5f;border-color:#bfe8db}
+.r-db{background:#eaeef2;color:#2d4559;border-color:#c7d2dd}
+.r-store{background:#e6eef3;color:#35526b;border-color:#bcd0dd}
+.r-user{background:#eefaf0;color:#15803d;border-color:#bbf7d0}
+.r-mcp{background:#fdf0e6;color:#b5590d;border-color:#f2d3b3}
+
 </style>
 </head>
 <body>
@@ -150,6 +198,7 @@
 
 <nav class="tabs">
   <button data-tab="today" class="active"><span class="n">01</span>Today</button>
+  <button data-tab="walk"><span class="n">01·</span>Walkthrough</button>
   <button data-tab="rework"><span class="n">02</span>The Rework</button>
   <button data-tab="future"><span class="n">03</span>The Future</button>
 </nav>
@@ -158,10 +207,10 @@
 
 <!-- ================= LEGEND (shared) ================= -->
 <div class="legend">
-  <span class="k"><span class="swatch sw-ex"></span> existing table</span>
-  <span class="k"><span class="swatch sw-nw"></span> net-new table</span>
-  <span class="k"><span class="swatch sw-ch"></span> existing table, new column</span>
-  <span class="k"><span class="swatch sw-rt"></span> retired</span>
+  <span class="k"><span class="swatch" style="background:var(--p700)"></span> existing table</span>
+  <span class="k"><span class="swatch" style="background:var(--new)"></span> net-new table</span>
+  <span class="k"><span class="swatch" style="background:var(--chg)"></span> existing table, new column</span>
+  <span class="k"><span class="swatch" style="background:#9ca3af"></span> retired</span>
   <span class="k"><span class="b b-pk">PK</span> primary key</span>
   <span class="k"><span class="b b-fk">FK</span> foreign key</span>
   <span class="k"><span class="b b-nn">NN</span> not null</span>
@@ -290,6 +339,137 @@
   </div>
   <div class="storage"><b>Storage today:</b> bucket <code>submission-data</code> · path <code>diligence/&lt;run-id&gt;/{site-intelligence-report,research-appendix}.pdf</code> · signed URLs minted at read time (72h)</div>
   <div class="callout ember"><span class="lab">Shoehorn #2 — the two gaps</span> (a) The <b>authoritative subject location</b> is resolved <em>inside</em> the run (Phase 0) but has nowhere to live on an entity — <code>project.site_address</code> is a vestigial hint (6/23 populated). (b) The <b>interactive</b> Claude Code runs (the real client SIRs) write <em>only to local disk</em> — only 11 <code>diligence_runs</code> have ever been persisted. Everything above is the headless field-agent path.</div>
+</section>
+
+<!-- =========================================================== -->
+<!-- ==================== 1b · TODAY WALKTHROUGH =============== -->
+<!-- =========================================================== -->
+<section class="panel" id="walk">
+  <h2><span class="eyebrow">Section 1 — use-case walkthrough</span>Today, step by step: what each action writes</h2>
+  <p class="lede">The same "today" model as tab 01, but told as a sequence of user actions. Each scene is one thing a person (or the system) does, followed by the exact records that get created, read, or updated — and how they wire together. Read the arrows left→right.</p>
+
+  <div class="legend">
+    <span class="k"><span class="swatch" style="background:var(--new)"></span> record created (INSERT / UPSERT)</span>
+    <span class="k"><span class="swatch" style="background:var(--p500)"></span> record read</span>
+    <span class="k"><span class="swatch" style="background:var(--p700);border-style:dashed"></span> object storage</span>
+    <span class="k"><span class="swatch" style="background:var(--ember)"></span> async event / worker</span>
+  </div>
+
+  <!-- SCENE 1 -->
+  <div class="uc">
+    <div class="uch"><div class="ucn">1</div><div class="uctxt"><span class="actor">client / staff · in cityhall</span><span class="uct">User creates an SIR in a project → the intake chat is created</span></div></div>
+    <div class="ucsub">Opening intake on a project bootstraps the placeholder submission, the intake conversation, and a sentinel document that will hold the captured facts.</div>
+    <div class="ucdiag"><div class="dfg">
+      <div class="node read"><span class="op">read</span><span class="nt">project</span><span class="nf">the initiative container</span></div>
+      <div class="edge"><span class="el">① open<br>intake</span><span class="ar">→</span></div>
+      <div class="node created"><span class="op">insert</span><span class="nt">submission</span><span class="nf">type='feasibility'<br>routing placeholder</span></div>
+      <div class="edge"><span class="el">② also under<br>project</span><span class="ar">→</span></div>
+      <div class="node created"><span class="op">insert</span><span class="nt">conversations</span><span class="nf">type='intake'<br>FK project_id</span></div>
+      <div class="edge"><span class="el">③ facts<br>doc</span><span class="ar">→</span></div>
+      <div class="node created"><span class="op">insert</span><span class="nt">document</span><span class="nf">kind='feasibility_intake'<br>inline://…</span></div>
+      <div class="edge"><span class="el">belongs<br>to</span><span class="ar">→</span></div>
+      <div class="node created"><span class="op">insert</span><span class="nt">document_version</span><span class="nf">holds the sections</span></div>
+    </div></div>
+    <div class="ucnote"><b>note</b> — <code>submission</code> and <code>conversations</code> are <em>both</em> children of <code>project</code>; the conversation does <b>not</b> FK the submission. The submission exists only to anchor the URL <code>/project/[id]/submission/[submissionId]/intake/[conversationId]</code>.</div>
+  </div>
+
+  <!-- SCENE 2 -->
+  <div class="uc">
+    <div class="uch"><div class="ucn">2</div><div class="uctxt"><span class="actor">client · types into the composer</span><span class="uct">User chats about their requirements</span></div></div>
+    <div class="ucsub">Each turn persists a message; the agent's <code>updateIntakeNotes</code> tool captures site details / planned use / documents as tiered fact rows.</div>
+    <div class="ucdiag"><div class="dfg">
+      <div class="node read"><span class="op">read</span><span class="nt">conversations</span><span class="nf">the intake chat</span></div>
+      <div class="edge"><span class="el">① POST<br>/api/chat/intake</span><span class="ar">→</span></div>
+      <div class="node created"><span class="op">insert</span><span class="nt">chat_message</span><span class="nf">user + agent turns<br>rcm_payload jsonb</span></div>
+      <div class="edge"><span class="el">② tool<br>updateIntakeNotes</span><span class="ar">→</span></div>
+      <div class="node created"><span class="op">upsert</span><span class="nt">document_section</span><span class="nf">Tier 1/2/3 rows<br>source={kind:'chat'}</span></div>
+    </div></div>
+    <div class="ucnote"><b>note</b> — sections hang off the <code>feasibility_intake</code> <code>document_version</code> from scene 1. Realtime pushes new rows into the right-hand panel with no refresh.</div>
+  </div>
+
+  <!-- SCENE 3 -->
+  <div class="uc">
+    <div class="uch"><div class="ucn">3</div><div class="uctxt"><span class="actor">client · drag-drop + Send</span><span class="uct">User uploads a file</span></div></div>
+    <div class="ucsub">The PDF lands in storage, becomes its own attachment document, is linked to the message, then substation extracts facts from it with Gemini.</div>
+    <div class="ucdiag"><div class="dfg">
+      <div class="node store"><span class="op">put</span><span class="nt">storage</span><span class="nf">signed PUT<br>(prepare-upload)</span></div>
+      <div class="edge"><span class="el">① commit-<br>upload</span><span class="ar">→</span></div>
+      <div class="node created"><span class="op">insert</span><span class="nt">document</span><span class="nf">kind='intake_attachment'</span></div>
+      <div class="edge"><span class="el">+ its</span><span class="ar">→</span></div>
+      <div class="node created"><span class="op">insert</span><span class="nt">document_version</span><span class="nf">the PDF bytes</span></div>
+      <div class="edge"><span class="el">② on Send:<br>link to msg</span><span class="ar">→</span></div>
+      <div class="node created"><span class="op">insert</span><span class="nt">chat_message_<br>attachment</span><span class="nf">junction: message<br>↔ document_version</span></div>
+      <div class="edge"><span class="el">③ substation<br>→ Gemini</span><span class="ar">→</span></div>
+      <div class="node created"><span class="op">upsert</span><span class="nt">document_section</span><span class="nf">source=pdf_extract<br>skip-on-conflict</span></div>
+    </div></div>
+    <div class="ucnote"><b>note</b> — extraction is triggered at <em>chat-send</em>, not upload-finish (only commit work the user committed to). Existing user-typed sections are preserved; only new titles are inserted.</div>
+  </div>
+
+  <!-- SCENE 4 -->
+  <div class="uc">
+    <div class="uch"><div class="ucn">4</div><div class="uctxt"><span class="actor">client · "Start research" / agent tool</span><span class="uct">User says "go"</span></div></div>
+    <div class="ucsub">The <code>requestDiligenceRun</code> tool posts to substation with the user's JWT; substation validates ownership, inserts the run row, and fires the Inngest event.</div>
+    <div class="ucdiag"><div class="dfg">
+      <div class="node read"><span class="op">read</span><span class="nt">requestDiligenceRun</span><span class="nf">agent tool · in chat</span></div>
+      <div class="edge"><span class="el">① POST /diligence<br>+ user JWT</span><span class="ar">→</span></div>
+      <div class="node read"><span class="op">validate</span><span class="nt">substation</span><span class="nf">doc_version.kind =<br>'feasibility_intake' ∈ project</span></div>
+      <div class="edge"><span class="el">② insert</span><span class="ar">→</span></div>
+      <div class="node created"><span class="op">insert</span><span class="nt">diligence_runs</span><span class="nf">status=queued · FK<br>document_version_id +<br>conversation_id + project_id</span></div>
+      <div class="edge"><span class="el">③ fire</span><span class="ar">→</span></div>
+      <div class="node event"><span class="op">fire</span><span class="nt">inngest event</span><span class="nf">diligence/requested<br>{run_id, full_run}</span></div>
+    </div></div>
+    <div class="ucnote"><b>note</b> — posting with the user's JWT is what populates <code>triggered_by_user_id</code>. The run row anchors on the intake <code>document_version</code> — there is no submission FK.</div>
+  </div>
+
+  <!-- SCENE 5 -->
+  <div class="uc">
+    <div class="uch"><div class="ucn">5</div><div class="uctxt"><span class="actor">field-agent · laptop worker</span><span class="uct">field-agent consumes the Inngest event</span></div></div>
+    <div class="ucsub">A laptop-side worker dials out over Inngest Connect, acks the event, flips the run to running, and hands off to the in-process skill runner.</div>
+    <div class="ucdiag"><div class="dfg">
+      <div class="node event"><span class="op">read</span><span class="nt">inngest event</span><span class="nf">diligence/requested</span></div>
+      <div class="edge"><span class="el">① Inngest Connect<br>(outbound ws)</span><span class="ar">→</span></div>
+      <div class="node event"><span class="op">worker</span><span class="nt">field-agent</span><span class="nf">acks · concurrency 1</span></div>
+      <div class="edge"><span class="el">② mark<br>running</span><span class="ar">→</span></div>
+      <div class="node created"><span class="op">update</span><span class="nt">diligence_runs</span><span class="nf">status=running</span></div>
+      <div class="edge"><span class="el">③ invoke</span><span class="ar">→</span></div>
+      <div class="node event"><span class="op">run</span><span class="nt">diligence-report skill</span><span class="nf">via claude-agent-sdk</span></div>
+    </div></div>
+    <div class="ucnote"><b>note</b> — the 30–60 min skill session can't live inside an Inngest step, so the function acks and hands off; status is tracked purely via <code>diligence_runs</code> + Realtime.</div>
+  </div>
+
+  <!-- SCENE 6 -->
+  <div class="uc">
+    <div class="uch"><div class="ucn">6</div><div class="uctxt"><span class="actor">field-agent · skill runner</span><span class="uct">The diligence report executes, completes, and uploads files</span></div></div>
+    <div class="ucsub">The 6-phase skill produces the PDFs; the runner uploads them to storage, records an artifact row per kind, then marks the run completed.</div>
+    <div class="ucdiag"><div class="dfg">
+      <div class="node event"><span class="op">run</span><span class="nt">6-phase skill</span><span class="nf">produces SIR + appendix</span></div>
+      <div class="edge"><span class="el">① upload<br>PDFs</span><span class="ar">→</span></div>
+      <div class="node store"><span class="op">put</span><span class="nt">storage</span><span class="nf">bucket submission-data<br>diligence/&lt;run-id&gt;/</span></div>
+      <div class="edge"><span class="el">② upsert per<br>artifact</span><span class="ar">→</span></div>
+      <div class="node created"><span class="op">upsert</span><span class="nt">diligence_artifacts</span><span class="nf">kinds: sir · appendix ·<br>supporting_doc · on (run_id, kind)</span></div>
+      <div class="edge"><span class="el">③ terminal<br>status</span><span class="ar">→</span></div>
+      <div class="node created"><span class="op">update</span><span class="nt">diligence_runs</span><span class="nf">status=completed<br>(or failed)</span></div>
+    </div></div>
+    <div class="ucnote"><b>note</b> — handoff is Supabase-only (no laptop copy kept). Realtime pushes the terminal status to the chat card and the status page.</div>
+  </div>
+
+  <!-- SCENE 7 -->
+  <div class="uc">
+    <div class="uch"><div class="ucn">7</div><div class="uctxt"><span class="actor">client / staff · in cityhall</span><span class="uct">User navigates to the completed diligence report</span></div></div>
+    <div class="ucsub">The status page fetches the run + its artifacts; substation mints a fresh 72-hour signed URL per artifact at read time for View / Download.</div>
+    <div class="ucdiag"><div class="dfg">
+      <div class="node read"><span class="op">read</span><span class="nt">status page</span><span class="nf">/project/[id]/<br>diligence-runs/[runId]</span></div>
+      <div class="edge"><span class="el">① GET<br>/diligence/:id</span><span class="ar">→</span></div>
+      <div class="node read"><span class="op">read</span><span class="nt">diligence_runs</span><span class="nf">the run row</span></div>
+      <div class="edge"><span class="el">join</span><span class="ar">→</span></div>
+      <div class="node read"><span class="op">read</span><span class="nt">diligence_artifacts</span><span class="nf">by diligence_run_id</span></div>
+      <div class="edge"><span class="el">② mint<br>signed URL</span><span class="ar">→</span></div>
+      <div class="node store"><span class="op">read</span><span class="nt">storage</span><span class="nf">72h signed URLs<br>View / Download</span></div>
+    </div></div>
+    <div class="ucnote"><b>note</b> — this is where the SIR + appendix PDFs are surfaced today. Everything client-facing beyond "here is the PDF link" is what the rework + future sections build toward.</div>
+  </div>
+
+  <div class="xref">Same facts as tab <b>01 Today</b> — this view just sequences them by user action. Grounding: <code>perspectives.html</code> diagrams ①–⑥ + <code>data-model.md</code> §2.</div>
 </section>
 
 <!-- =========================================================== -->
@@ -546,7 +726,7 @@
   }
   btns.forEach(b=>b.addEventListener('click',()=>show(b.dataset.tab)));
   const initial=location.hash.slice(1);
-  if(['today','rework','future'].includes(initial)) show(initial);
+  if(['today','walk','rework','future'].includes(initial)) show(initial);
 </script>
 </body>
 </html>
