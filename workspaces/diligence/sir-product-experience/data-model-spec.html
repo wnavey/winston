@@ -6,7 +6,7 @@
 <title>SIR Data Model — Today · Rework · Future</title>
 <style>
 /* ============================================================
-   spec-kit v1  —  winston HTML spec design system
+   spec-kit v2  —  winston HTML spec design system
    Inline the ENTIRE contents of this file into the spec's style block.
    Canonical source: ~/.claude/skills/winston-spec/assets/spec-kit.css
    When you change this file, bump the version above and in COMPONENTS.md.
@@ -99,6 +99,15 @@ code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px s
 .ent .row.hi{background:#fff9f2}
 .ent .row.strk .nm{text-decoration:line-through;color:var(--muted)}
 .ent .note{padding:5px 11px;font-size:10px;color:var(--muted);font-style:italic;border-top:1px dashed #e5e9ee;background:#fbfcfd}
+/* diff rows — show a table modification (column added / removed), git-style.
+   Put a "+"/"−" marker in a .gut span at the start of the row. */
+.ent .row .gut{flex:0 0 10px;width:10px;text-align:center;font-family:var(--mono);font-size:11px;font-weight:700;color:var(--muted)}
+.ent .row.add{background:var(--newbg);box-shadow:inset 3px 0 0 var(--new)}
+.ent .row.add .gut{color:var(--new)}
+.ent .row.add .nm{color:#166534}
+.ent .row.del{background:var(--retbg);box-shadow:inset 3px 0 0 var(--ret)}
+.ent .row.del .gut{color:var(--ret)}
+.ent .row.del .nm{color:var(--ret);text-decoration:line-through}
 
 /* relationships panel — crow's-foot text notation */
 .rels{background:#fff;border:1px solid var(--divider);border-radius:10px;padding:12px 16px;margin:14px 0;font-family:var(--mono);font-size:12px;line-height:1.9}
@@ -486,7 +495,46 @@ code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px s
   </div>
   <div class="card drop" style="margin-top:6px"><strong>Goes away (clean cutover, D2)</strong> — the <code>submission type='feasibility'</code> placeholder. Targeted-migrate only the 11 persisted runs into SIRs; soft-archive the ~77 churn rows, delete last after verification. Additive migration is fully reversible up to that final delete.</div>
 
-  <div class="xref">Grounding: <code>data-model.md</code> §3 (target model), §3.5 (RLS clone), §3.6 (holding-org re-home + constraints A/B), §4 (migration), §6 decisions D1–D8.</div>
+  <h3><span class="hn">DDL</span>Data model changes — one table added, one modified</h3>
+  <p style="font-size:12.5px;color:var(--muted);margin-top:-2px">The entire migration is additive. <span style="color:var(--new);font-weight:600">Green <code>+</code></span> marks a column being added; the green header marks a wholly-new table.</p>
+  <div class="erd">
+    <div class="ent newt">
+      <div class="eh"><span class="en">site_intelligence_report</span><span class="stereo">NEW TABLE</span></div>
+      <div class="row"><span class="b b-pk">PK</span><span class="nm">id</span><span class="ty">uuid · default gen_random_uuid()</span></div>
+      <div class="row"><span class="b b-fk">FK</span><span class="b b-nn">NN</span><span class="nm">project_id</span><span class="ty">uuid → project</span></div>
+      <div class="row"><span class="b b-fk">FK</span><span class="nm">conversation_id</span><span class="ty">uuid → conversations · 1:1 · null</span></div>
+      <div class="row"><span class="nm">requested_address</span><span class="ty">text · what client typed</span></div>
+      <div class="row"><span class="nm">intended_use</span><span class="ty">text</span></div>
+      <div class="row hi"><span class="nm">resolved_address</span><span class="ty">text · from Phase 0</span></div>
+      <div class="row hi"><span class="nm">parcel_id</span><span class="ty">text</span></div>
+      <div class="row hi"><span class="nm">latitude</span><span class="ty">double precision</span></div>
+      <div class="row hi"><span class="nm">longitude</span><span class="ty">double precision</span></div>
+      <div class="row"><span class="nm">jurisdiction_slug</span><span class="ty">text · NO fk (D3)</span></div>
+      <div class="row"><span class="b b-nn">NN</span><span class="nm">origin</span><span class="ty">'app_intake' | 'manual_publish'</span></div>
+      <div class="row"><span class="b b-nn">NN</span><span class="nm">status</span><span class="ty">'draft'…'delivered'…'archived'</span></div>
+      <div class="row"><span class="b b-nn">NN</span><span class="nm">created_at</span><span class="ty">timestamptz</span></div>
+      <div class="row"><span class="b b-nn">NN</span><span class="nm">updated_at</span><span class="ty">timestamptz</span></div>
+      <div class="note">+ indexes on (project_id), (conversation_id), (status) · updated_at trigger · RLS = verbatim clone of submission/diligence_runs (D7) · added to supabase_realtime</div>
+    </div>
+    <div class="ent changed">
+      <div class="eh"><span class="en">diligence_runs</span><span class="stereo">MODIFIED · 1 column added</span></div>
+      <div class="row"><span class="gut"></span><span class="b b-pk">PK</span><span class="nm">id</span><span class="ty">uuid · dlr_…</span></div>
+      <div class="row add"><span class="gut">+</span><span class="b b-fk">FK</span><span class="b b-new">NEW</span><span class="nm">site_intelligence_report_id</span><span class="ty">uuid · nullable → site_intelligence_report</span></div>
+      <div class="row"><span class="gut"></span><span class="b b-fk">FK</span><span class="nm">document_version_id</span><span class="ty">uuid · kept</span></div>
+      <div class="row"><span class="gut"></span><span class="b b-fk">FK</span><span class="nm">conversation_id</span><span class="ty">uuid · kept</span></div>
+      <div class="row"><span class="gut"></span><span class="b b-fk">FK</span><span class="nm">project_id</span><span class="ty">uuid · kept</span></div>
+      <div class="row"><span class="gut"></span><span class="nm">triggered_by_user_id</span><span class="ty">uuid</span></div>
+      <div class="row"><span class="gut"></span><span class="nm">status</span><span class="ty">queued→running→completed…</span></div>
+      <div class="row"><span class="gut"></span><span class="nm">created_at · updated_at</span><span class="ty">timestamptz</span></div>
+      <div class="note">only one column added; existing FKs retained for continuity + one index on the new column. Tighten to NOT NULL once all runs originate from an SIR (D-model Q3).</div>
+    </div>
+  </div>
+  <div class="rels">
+    <div class="rels-h">Relationship the new column creates</div>
+    <span class="rl">site_intelligence_report <span class="cf">‖──&lt;</span> diligence_runs <span class="tag-new">[NEW FK]</span> <span class="cmt">— one SIR, many runs (iterations v1/v2); "current deliverable" = latest completed run</span></span>
+  </div>
+
+  <div class="xref">Grounding: <code>data-model.md</code> §3.2 (DDL for the new table), §3.3 (the <code>diligence_runs</code> column), §3.5 (RLS clone), §3.6 (holding-org re-home + constraints A/B), §4 (migration), §6 decisions D1–D8.</div>
 
 </section>
 
