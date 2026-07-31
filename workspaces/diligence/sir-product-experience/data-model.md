@@ -221,9 +221,22 @@ The entire change is **additive** — two new tables, zero alterations to existi
 3. **Legacy left in place.** The 77 feasibility `submission` rows, 11 `diligence_runs`, and their `diligence_artifacts` are dev/test churn — leave them untouched (the new UI simply ignores them). Optional: a one-time backfill of the ≤8 completed runs into SIRs + `version=0` artifacts, but they're churn — **recommend skipping**.
 4. **Retire the vestigial feasibility submission + the old diligence_runs/artifacts tables later**, in their own migration, once nothing reads them and the app cutover is verified. That's the only destructive step and it happens last.
 
+### 4.1 Migration checklist (what the one additive migration file must create)
+
+A single migration in `substation/supabase/migrations/`, no `alter`/`drop` on any existing table:
+
+1. `create table public.site_intelligence_report` (§3.2 DDL verbatim) + `create index … (project_id)`.
+2. `create table public.sir_artifact` (§3.3 DDL verbatim) + its two indexes + the `unique (site_intelligence_report_id, version, kind, format)` constraint.
+3. **`updated_at` auto-bump triggers** on both tables — mirror the existing `BEFORE UPDATE` trigger convention used by sibling project-child tables (see `baseline.sql`); **reuse the shared trigger function, don't invent one**.
+4. **Enable RLS + create the policies** exactly as in §3.5 (four on the SIR, one SELECT on `sir_artifact`).
+5. **Realtime:** `alter publication supabase_realtime add table public.site_intelligence_report, public.sir_artifact;`
+6. **Storage:** create a **private** `sir-artifacts` bucket. No per-user storage RLS needed — writes are service-role at publish and reads are server-minted 72h signed URLs (both bypass storage RLS). This can live in the same migration or a bucket-setup step, per the repo's convention.
+
+Then: regenerate DB types (cityhall + substation) so `site_intelligence_report` / `sir_artifact` are typed.
+
 ### Reversibility
 
-Everything here is additive (two new tables). Retirement of the legacy tables is a separate, later, opt-in migration — so the whole thing is reversible up to that point.
+Everything here is additive (two new tables + one bucket). Retirement of the legacy tables is a separate, later, opt-in migration — so the whole thing is reversible up to that point.
 
 ---
 
@@ -272,5 +285,3 @@ Everything here is additive (two new tables). Retirement of the legacy tables is
 - SIR→site-plan conversion linkage (→ when first needed).
 - Any change to the site-plan `submission` model or the CRV/CRC `jurisdiction_slug` labeling paths.
 - The client-facing viewer/delivery (→ `sir-delivery-and-web-viewer`, needs the P0 publish first).
-</content>
-</invoke>
