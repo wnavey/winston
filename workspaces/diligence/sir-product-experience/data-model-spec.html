@@ -218,8 +218,8 @@ code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px s
 <header class="masthead">
   <div class="kicker">Noetic · Site Intelligence Report · Data Model</div>
   <h1>SIR Data Model — Today, the Rework, and the Future</h1>
-  <p>A visual companion to <code>data-model.md</code> and <code>DESIGN-SPEC.md</code> (winston#192). Three sections: <strong>①</strong> the diligence data model as it exists today and how the two core flows wire through it, <strong>②</strong> the same world rebuilt on the <code>site_intelligence_report</code> rework, and <strong>③</strong> where the model goes as the rest of the SIR-product child specs land.</p>
-  <div class="meta">Draft v1 · 2026-07-30 · UML/ER + flow diagrams · click a tab ↓</div>
+  <p>A visual companion to <code>data-model.md</code> and <code>DESIGN-SPEC.md</code> (winston#192). Three sections: <strong>①</strong> the diligence data model as it exists today and how the app-intake + field-agent flow wires through it, <strong>②</strong> the near-term rework — SIRs <em>kicked off by a human on a laptop</em>, publishing to two new tables, and <strong>③</strong> where the model goes as the rest of the SIR-product child specs land.</p>
+  <div class="meta">Draft v3 · 2026-07-30 · UML/ER + flow diagrams · click a tab ↓</div>
 </header>
 
 <nav class="tabs">
@@ -378,180 +378,125 @@ code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px s
 <!-- ========================= 2 · THE REWORK ================== -->
 <!-- =========================================================== -->
 <section class="panel" id="rework">
-  <h2><span class="eyebrow">Section 2 — the same world, rebuilt</span>The Rework: a first-class <code>site_intelligence_report</code> entity</h2>
-  <p class="lede">Per <code>data-model.md</code> (Draft v2): give the SIR its own entity carrying its own subject location, make <code>project</code> a neutral address-agnostic initiative container, and retire the <code>submission type='feasibility'</code> placeholder. <strong>Everything about the intake chat, documents, runs, artifacts and storage is unchanged</strong> — only the entity the conversation and run hang off of moves.</p>
+  <h2><span class="eyebrow">Section 2 — the near-term rework</span>The Rework: human-kickoff local runs → <code>site_intelligence_report</code> + <code>sir_artifact</code></h2>
+  <p class="lede">Per <code>data-model.md</code> (Draft v3): in the near term an SIR is <strong>kicked off by a Noetic staffer on their laptop</strong> — they run the <code>diligence-report</code> skill in Claude Code, and on completion it <strong>publishes</strong> the deliverable to two new tables + storage, where it gets a home in the app. <strong>No intake chat, no Inngest, no <code>field-agent</code>, no <code>diligence_runs</code>.</strong> The run's only DB footprint is the completion-time publish.</p>
+
+  <div class="callout ember"><span class="lab">what section 1 had that this removes</span> The entire app-intake + field-agent path is gone from the near-term SIR flow: the <code>submission type='feasibility'</code> placeholder, the intake <code>conversations</code> / <code>chat_message</code> / <code>document_section</code> capture, the <code>requestDiligenceRun</code> tool + Inngest event, the <code>field-agent</code> laptop worker, and the <code>diligence_runs</code> run-tracking table. Today's scenes 2–5 collapse away entirely; scenes 1, 6, 7 become the four scenes below.</div>
 
   <div class="legend">
-    <span class="k"><span class="swatch" style="background:var(--new)"></span> record created / written (incl. the new entity)</span>
+    <span class="k"><span class="swatch" style="background:var(--new)"></span> record created / written</span>
     <span class="k"><span class="swatch" style="background:var(--p500)"></span> record read</span>
     <span class="k"><span class="swatch" style="background:var(--p700);border-style:dashed"></span> object storage</span>
-    <span class="k"><span class="swatch" style="background:var(--ember)"></span> async event / worker</span>
+    <span class="k"><span class="swatch" style="background:#fff;border:1.5px solid var(--p300)"></span> local activity — no DB</span>
   </div>
-  <p style="font-size:12.5px;color:var(--muted);margin-top:-4px">Same seven actions as Section 1 — flip between the tabs to see what moves. Scenes <b>2, 3, 6</b> are byte-for-byte unchanged; scenes <b>1, 4, 5, 7</b> change to route through the new <code>site_intelligence_report</code> entity.</p>
 
   <!-- SCENE 1 -->
   <div class="uc">
-    <div class="uch"><div class="ucn">1</div><div class="uctxt"><span class="actor">client / staff · in cityhall · CHANGED</span><span class="uct">User creates an SIR in a project → the intake chat is created</span></div></div>
-    <div class="ucsub">Bootstrap now inserts a first-class <code>site_intelligence_report</code> (not a feasibility <code>submission</code>) and links the intake conversation to it 1:1.</div>
+    <div class="uch"><div class="ucn">1</div><div class="uctxt"><span class="actor">noetic staff · on a laptop</span><span class="uct">A human kicks off the diligence-report run locally</span></div></div>
+    <div class="ucsub">The staffer runs the <code>diligence-report</code> skill in Claude Code with a target address + intended use. This is pure local activity — <strong>zero DB writes until completion</strong> (decision D7, completion-only).</div>
     <div class="ucdiag"><div class="dfg">
-      <div class="node read"><span class="op">read</span><span class="nt">project</span><span class="nf">address-agnostic<br>initiative container</span></div>
-      <div class="edge"><span class="el">① create<br>the SIR</span><span class="ar">→</span></div>
-      <div class="node created"><span class="op">insert</span><span class="nt">site_intelligence_<br>report ★new</span><span class="nf">origin='app_intake'<br>status='draft'</span></div>
-      <div class="edge"><span class="el">② intake<br>chat</span><span class="ar">→</span></div>
-      <div class="node created"><span class="op">insert</span><span class="nt">conversations</span><span class="nf">type='intake'<br>FK project_id</span></div>
-      <div class="edge"><span class="el">③ link<br>1:1</span><span class="ar">→</span></div>
-      <div class="node created"><span class="op">update</span><span class="nt">site_intelligence_<br>report</span><span class="nf">conversation_id ← ↑</span></div>
-      <div class="edge"><span class="el">④ facts<br>doc</span><span class="ar">→</span></div>
-      <div class="node created"><span class="op">insert</span><span class="nt">document_version</span><span class="nf">kind='feasibility_intake'<br>sentinel</span></div>
+      <div class="node"><span class="op" style="background:var(--p500);border-color:var(--p500)">pick</span><span class="nt">operator</span><span class="nf">chooses project +<br>address + intended use</span></div>
+      <div class="edge"><span class="el">① run<br>skill</span><span class="ar">→</span></div>
+      <div class="node"><span class="op" style="background:var(--p500);border-color:var(--p500)">local</span><span class="nt">diligence-report<br>skill</span><span class="nf">Claude Code · laptop<br>6-phase run</span></div>
+      <div class="edge"><span class="el">Phase 0<br>resolves</span><span class="ar">→</span></div>
+      <div class="node"><span class="op" style="background:var(--p500);border-color:var(--p500)">local</span><span class="nt">location +<br>report</span><span class="nf">held on disk until<br>publish (scene 2)</span></div>
     </div></div>
-    <div class="ucnote"><b>changed</b> — the <code>submission type='feasibility'</code> placeholder is gone. The conversation still FKs <code>project</code> but is owned by the SIR via <code>sir.conversation_id</code>. Route: <code>/project/[id]/sir/[sirId]/intake/[conversationId]</code>.</div>
+    <div class="ucnote"><b>changed</b> — no app bootstrap, no placeholder <code>submission</code>, no intake <code>conversation</code>, no Inngest event. The run lives entirely on the laptop; the app learns nothing until scene 2.</div>
   </div>
 
   <!-- SCENE 2 -->
   <div class="uc">
-    <div class="uch"><div class="ucn">2</div><div class="uctxt"><span class="actor">client · types into the composer · UNCHANGED</span><span class="uct">User chats about their requirements</span></div></div>
-    <div class="ucsub">Identical to today — the intake chat machinery is untouched by the rework.</div>
+    <div class="uch"><div class="ucn">2</div><div class="uctxt"><span class="actor">local run · publish step · CHANGED (was scene 6)</span><span class="uct">On completion, the run publishes v0 to Supabase</span></div></div>
+    <div class="ucsub">The finished run calls the publish endpoint (service-role): it inserts the <code>site_intelligence_report</code> (<code>title</code>/<code>description</code> + optional location, <code>current_version=0</code>), uploads the PDFs to the <code>sir-artifacts</code> bucket, and inserts one <code>sir_artifact</code> row per file at <code>version=0</code>.</div>
     <div class="ucdiag"><div class="dfg">
-      <div class="node read"><span class="op">read</span><span class="nt">conversations</span><span class="nf">the intake chat</span></div>
-      <div class="edge"><span class="el">① POST<br>/api/chat/intake</span><span class="ar">→</span></div>
-      <div class="node created"><span class="op">insert</span><span class="nt">chat_message</span><span class="nf">user + agent turns</span></div>
-      <div class="edge"><span class="el">② tool<br>updateIntakeNotes</span><span class="ar">→</span></div>
-      <div class="node created"><span class="op">upsert</span><span class="nt">document_section</span><span class="nf">Tier 1/2/3 rows<br>source={kind:'chat'}</span></div>
+      <div class="node"><span class="op" style="background:var(--p500);border-color:var(--p500)">local</span><span class="nt">6-phase run<br>(complete)</span><span class="nf">produces SIR +<br>appendix PDFs</span></div>
+      <div class="edge"><span class="el">① insert<br>the SIR</span><span class="ar">→</span></div>
+      <div class="node created"><span class="op">insert</span><span class="nt">site_intelligence_<br>report ★new</span><span class="nf">title · description · location<br>current_version=0 · created_by</span></div>
+      <div class="edge"><span class="el">② upload<br>PDFs</span><span class="ar">→</span></div>
+      <div class="node store"><span class="op">put</span><span class="nt">storage</span><span class="nf">bucket sir-artifacts<br>sir/&lt;id&gt;/v0/</span></div>
+      <div class="edge"><span class="el">③ one row<br>per file</span><span class="ar">→</span></div>
+      <div class="node created"><span class="op">insert</span><span class="nt">sir_artifact ★new</span><span class="nf">version=0<br>{report·pdf, appendix·pdf}</span></div>
     </div></div>
-    <div class="ucnote"><b>unchanged</b> — sections still hang off the <code>feasibility_intake</code> <code>document_version</code>. No rework touches this path.</div>
+    <div class="ucnote"><b>changed</b> — writes via the <b>service role</b> (bypasses RLS), stamping <code>created_by</code> with the operating staffer (data-model Q1). This single publish is the run's <em>entire</em> DB footprint — no queued/running lifecycle exists to track.</div>
   </div>
 
   <!-- SCENE 3 -->
   <div class="uc">
-    <div class="uch"><div class="ucn">3</div><div class="uctxt"><span class="actor">client · drag-drop + Send · UNCHANGED</span><span class="uct">User uploads a file</span></div></div>
-    <div class="ucsub">Identical to today — attachment document, junction link, and Gemini extraction are all unchanged.</div>
+    <div class="uch"><div class="ucn">3</div><div class="uctxt"><span class="actor">noetic staff · after human review · NEW</span><span class="uct">Apply review feedback → publish a revised version (v1)</span></div></div>
+    <div class="ucsub">Human review turns up fixes (often small — formatting). The staffer chats with Claude to tweak the PDF, then publishes it as <code>version=1</code> with a <code>versioning_label</code>. <strong>v0 is left intact</strong> so both can be compared; <code>current_version</code> only advances when v1 is blessed as the final.</div>
     <div class="ucdiag"><div class="dfg">
-      <div class="node store"><span class="op">put</span><span class="nt">storage</span><span class="nf">signed PUT</span></div>
-      <div class="edge"><span class="el">① commit</span><span class="ar">→</span></div>
-      <div class="node created"><span class="op">insert</span><span class="nt">document</span><span class="nf">kind='intake_attachment'</span></div>
-      <div class="edge"><span class="el">+ its</span><span class="ar">→</span></div>
-      <div class="node created"><span class="op">insert</span><span class="nt">document_version</span><span class="nf">the PDF bytes</span></div>
-      <div class="edge"><span class="el">② link to<br>message</span><span class="ar">→</span></div>
-      <div class="node created"><span class="op">insert</span><span class="nt">chat_message_<br>attachment</span><span class="nf">junction</span></div>
-      <div class="edge"><span class="el">③ Gemini</span><span class="ar">→</span></div>
-      <div class="node created"><span class="op">upsert</span><span class="nt">document_section</span><span class="nf">source=pdf_extract</span></div>
+      <div class="node"><span class="op" style="background:var(--p500);border-color:var(--p500)">local</span><span class="nt">chat → tweak<br>the PDF</span><span class="nf">"chat_edit" · not a<br>full re-run</span></div>
+      <div class="edge"><span class="el">① upload<br>v1 files</span><span class="ar">→</span></div>
+      <div class="node store"><span class="op">put</span><span class="nt">storage</span><span class="nf">sir/&lt;id&gt;/v1/</span></div>
+      <div class="edge"><span class="el">② new rows<br>version=1</span><span class="ar">→</span></div>
+      <div class="node created"><span class="op">insert</span><span class="nt">sir_artifact</span><span class="nf">version=1 · versioning_label<br>"fixed pond table"<br>(v0 rows untouched)</span></div>
+      <div class="edge"><span class="el">③ when<br>final</span><span class="ar">→</span></div>
+      <div class="node created"><span class="op">update</span><span class="nt">site_intelligence_<br>report</span><span class="nf">current_version = 1</span></div>
     </div></div>
-    <div class="ucnote"><b>unchanged</b> — no rework touches upload or extraction.</div>
+    <div class="ucnote"><b>new</b> — flat versioning (D8/D11): both v0 and v1 persist as <code>sir_artifact</code> rows keyed by <code>version</code>. "Restart from a previous version" = just publish a new <code>version</code> number. The customer only ever sees <code>current_version</code>.</div>
   </div>
 
   <!-- SCENE 4 -->
   <div class="uc">
-    <div class="uch"><div class="ucn">4</div><div class="uctxt"><span class="actor">client · "Start research" / agent tool · CHANGED</span><span class="uct">User says "go"</span></div></div>
-    <div class="ucsub">The trigger now resolves the SIR and anchors the run on it via the new <code>site_intelligence_report_id</code> column.</div>
-    <div class="ucdiag"><div class="dfg">
-      <div class="node read"><span class="op">read</span><span class="nt">requestDiligenceRun</span><span class="nf">agent tool · in chat</span></div>
-      <div class="edge"><span class="el">① POST /diligence<br>+ user JWT</span><span class="ar">→</span></div>
-      <div class="node read"><span class="op">validate</span><span class="nt">substation</span><span class="nf">resolves the SIR<br>for this conversation</span></div>
-      <div class="edge"><span class="el">② insert</span><span class="ar">→</span></div>
-      <div class="node created"><span class="op">insert</span><span class="nt">diligence_runs</span><span class="nf">site_intelligence_report_id<br>← SIR ★new col<br>(legacy FKs kept)</span></div>
-      <div class="edge"><span class="el">③ fire</span><span class="ar">→</span></div>
-      <div class="node event"><span class="op">fire</span><span class="nt">inngest event</span><span class="nf">diligence/requested</span></div>
-    </div></div>
-    <div class="ucnote"><b>changed</b> — <code>diligence_runs</code> gains <code>site_intelligence_report_id</code> (nullable at first, tighten later — data-model Q3); <code>conversation_id</code> / <code>document_version_id</code> / <code>project_id</code> stay for continuity.</div>
-  </div>
-
-  <!-- SCENE 5 -->
-  <div class="uc">
-    <div class="uch"><div class="ucn">5</div><div class="uctxt"><span class="actor">field-agent · laptop worker · CHANGED</span><span class="uct">field-agent consumes the Inngest event</span></div></div>
-    <div class="ucsub">Same handoff as today, but Phase 0's resolved location finally has a home — it writes back to the SIR.</div>
-    <div class="ucdiag"><div class="dfg">
-      <div class="node event"><span class="op">read</span><span class="nt">inngest event</span><span class="nf">diligence/requested</span></div>
-      <div class="edge"><span class="el">① Inngest<br>Connect</span><span class="ar">→</span></div>
-      <div class="node event"><span class="op">worker</span><span class="nt">field-agent</span><span class="nf">acks · concurrency 1</span></div>
-      <div class="edge"><span class="el">② mark<br>running</span><span class="ar">→</span></div>
-      <div class="node created"><span class="op">update</span><span class="nt">diligence_runs</span><span class="nf">status=running</span></div>
-      <div class="edge"><span class="el">③ Phase 0<br>location</span><span class="ar">→</span></div>
-      <div class="node created"><span class="op">update</span><span class="nt">site_intelligence_<br>report</span><span class="nf">resolved_address · parcel_id<br>lat/lon · jurisdiction_slug</span></div>
-    </div></div>
-    <div class="ucnote"><b>changed</b> — the subject location resolved <em>inside</em> the run lands on an entity; previously it had nowhere authoritative to go (<code>project.site_address</code> was a vestigial hint, 6/23 populated).</div>
-  </div>
-
-  <!-- SCENE 6 -->
-  <div class="uc">
-    <div class="uch"><div class="ucn">6</div><div class="uctxt"><span class="actor">field-agent · skill runner · UNCHANGED</span><span class="uct">The diligence report executes, completes, and uploads files</span></div></div>
-    <div class="ucsub">Identical to today — same 6-phase skill, same storage path, same <code>diligence_artifacts</code>.</div>
-    <div class="ucdiag"><div class="dfg">
-      <div class="node event"><span class="op">run</span><span class="nt">6-phase skill</span><span class="nf">produces SIR + appendix</span></div>
-      <div class="edge"><span class="el">① upload</span><span class="ar">→</span></div>
-      <div class="node store"><span class="op">put</span><span class="nt">storage</span><span class="nf">submission-data<br>diligence/&lt;run-id&gt;/</span></div>
-      <div class="edge"><span class="el">② upsert</span><span class="ar">→</span></div>
-      <div class="node created"><span class="op">upsert</span><span class="nt">diligence_artifacts</span><span class="nf">sir · appendix ·<br>supporting_doc</span></div>
-      <div class="edge"><span class="el">③ status</span><span class="ar">→</span></div>
-      <div class="node created"><span class="op">update</span><span class="nt">diligence_runs</span><span class="nf">status=completed</span></div>
-    </div></div>
-    <div class="ucnote"><b>unchanged</b> — the run + artifact + storage plumbing is exactly as today.</div>
-  </div>
-
-  <!-- SCENE 7 -->
-  <div class="uc">
-    <div class="uch"><div class="ucn">7</div><div class="uctxt"><span class="actor">client / staff · in cityhall · CHANGED</span><span class="uct">User navigates to the completed diligence report</span></div></div>
-    <div class="ucsub">The UI now lists SIRs (not feasibility submissions); runs are fetched via the SIR, and <code>manual_publish</code> SIRs appear alongside <code>app_intake</code> ones.</div>
+    <div class="uch"><div class="ucn">4</div><div class="uctxt"><span class="actor">customer / staff · in the app · CHANGED (was scene 7)</span><span class="uct">User navigates to the SIR in the app</span></div></div>
+    <div class="ucsub">The app lists SIRs under a project and renders the detail page. A <strong>customer</strong> read is scoped to <code>current_version</code> only (unaware of versioning); <strong>internal staff</strong> get a version switcher over every <code>sir_artifact</code> version.</div>
     <div class="ucdiag"><div class="dfg">
       <div class="node read"><span class="op">read</span><span class="nt">SIR page</span><span class="nf">/project/[id]/<br>sir/[sirId]</span></div>
-      <div class="edge"><span class="el">① its<br>runs</span><span class="ar">→</span></div>
-      <div class="node read"><span class="op">read</span><span class="nt">site_intelligence_<br>report</span><span class="nf">engagement + location</span></div>
-      <div class="edge"><span class="el">② by SIR<br>id</span><span class="ar">→</span></div>
-      <div class="node read"><span class="op">read</span><span class="nt">diligence_runs</span><span class="nf">latest completed<br>= current deliverable</span></div>
-      <div class="edge"><span class="el">join</span><span class="ar">→</span></div>
-      <div class="node read"><span class="op">read</span><span class="nt">diligence_artifacts</span><span class="nf">by run id</span></div>
+      <div class="edge"><span class="el">① the<br>SIR</span><span class="ar">→</span></div>
+      <div class="node read"><span class="op">read</span><span class="nt">site_intelligence_<br>report</span><span class="nf">location +<br>current_version</span></div>
+      <div class="edge"><span class="el">② its<br>files</span><span class="ar">→</span></div>
+      <div class="node read"><span class="op">read</span><span class="nt">sir_artifact</span><span class="nf">customer: version=current<br>staff: all versions</span></div>
       <div class="edge"><span class="el">③ sign</span><span class="ar">→</span></div>
-      <div class="node store"><span class="op">read</span><span class="nt">storage</span><span class="nf">72h signed URLs</span></div>
+      <div class="node store"><span class="op">read</span><span class="nt">storage</span><span class="nf">72h signed URLs<br>View / Download</span></div>
     </div></div>
-    <div class="ucnote"><b>changed</b> — one SIR has many runs (iterations v1/v2); the "current deliverable" is the latest completed run's artifacts. Interactive on-disk runs published as <code>origin='manual_publish'</code> SIRs surface here too.</div>
+    <div class="ucnote"><b>changed</b> — the "which versions can I see" split (customer vs staff) is an application/entitlement concern (catalog G2), not RLS. RLS only gates whether you can see the SIR at all. Near-term all readers are staff.</div>
   </div>
 
-  <h3>What the rework moves — at a glance</h3>
+  <h3>What the rework does — at a glance</h3>
   <div class="grid2">
-    <div class="card keep"><strong>Stays identical (scenes 2, 3, 6)</strong><ul><li>Intake chat, composer, RCM cards, realtime</li><li><code>document / document_version / document_section</code></li><li>Gemini extraction fan-out</li><li><code>diligence_runs</code> → <code>diligence_artifacts</code> + storage layout</li><li>72h signed-URL delivery</li></ul></div>
-    <div class="card change"><strong>Changes (scenes 1, 4, 5, 7)</strong><ul><li>NEW <code>site_intelligence_report</code> table (+ RLS clone, realtime)</li><li>NEW <code>diligence_runs.site_intelligence_report_id</code></li><li>Intake bootstrap + route re-nest under <code>/sir/</code></li><li>Trigger + reads anchor on the SIR</li><li>Phase 0 writes resolved location back to the SIR</li></ul></div>
+    <div class="card drop"><strong>Removed from the SIR path</strong><ul><li><code>submission type='feasibility'</code> placeholder</li><li>Intake chat: <code>conversations</code> / <code>chat_message</code> / <code>document_section</code> + Gemini extraction</li><li><code>requestDiligenceRun</code> tool + Inngest event</li><li><code>field-agent</code> laptop worker</li><li><code>diligence_runs</code> run-tracking table (fails 1:1 reuse — D2)</li></ul></div>
+    <div class="card keep"><strong>New / net structure</strong><ul><li>NEW <code>site_intelligence_report</code> (<code>title</code>/<code>description</code> + optional location + <code>current_version</code>)</li><li>NEW <code>sir_artifact</code> (flat-versioned files: <code>version</code> + <code>versioning_label</code>, <code>kind</code>×<code>format</code>)</li><li>Local run → service-role <b>publish</b> on completion</li><li>App SIR list + detail (version switcher for staff)</li><li>RLS clones + realtime on both tables</li></ul></div>
   </div>
-  <div class="card drop" style="margin-top:6px"><strong>Goes away (clean cutover, D2)</strong> — the <code>submission type='feasibility'</code> placeholder. Targeted-migrate only the 11 persisted runs into SIRs; soft-archive the ~77 churn rows, delete last after verification. Additive migration is fully reversible up to that final delete.</div>
+  <div class="card change" style="margin-top:6px"><strong>Deferred (not near-term)</strong> — the intake-chat / self-serve-prospect path; the holding-org / prospect→customer re-home (was v2 §3.6, now Future G1); a <code>sir_version</code> table + compare/lineage UI (promote from the flat model when a 2nd per-version attribute appears — D11); a coarse <code>status</code> field (add when the internal dashboard F1 needs it — D4).</div>
 
-  <h3><span class="hn">DDL</span>Data model changes — one table added, one modified</h3>
-  <p style="font-size:12.5px;color:var(--muted);margin-top:-2px">The entire migration is additive. <span style="color:var(--new);font-weight:600">Green <code>+</code></span> marks a column being added; the green header marks a wholly-new table.</p>
+  <h3><span class="hn">DDL</span>Data model changes — two new tables, zero alterations</h3>
+  <p style="font-size:12.5px;color:var(--muted);margin-top:-2px">The entire migration is additive — two wholly-new tables (green headers). No existing table is touched.</p>
   <div class="erd">
     <div class="ent newt">
       <div class="eh"><span class="en">site_intelligence_report</span><span class="stereo">NEW TABLE</span></div>
-      <div class="row"><span class="b b-pk">PK</span><span class="nm">id</span><span class="ty">uuid · default gen_random_uuid()</span></div>
+      <div class="row"><span class="b b-pk">PK</span><span class="nm">id</span><span class="ty">uuid · gen_random_uuid()</span></div>
       <div class="row"><span class="b b-fk">FK</span><span class="b b-nn">NN</span><span class="nm">project_id</span><span class="ty">uuid → project</span></div>
-      <div class="row"><span class="b b-fk">FK</span><span class="nm">conversation_id</span><span class="ty">uuid → conversations · 1:1 · null</span></div>
-      <div class="row"><span class="nm">requested_address</span><span class="ty">text · what client typed</span></div>
-      <div class="row"><span class="nm">intended_use</span><span class="ty">text</span></div>
-      <div class="row hi"><span class="nm">resolved_address</span><span class="ty">text · from Phase 0</span></div>
-      <div class="row hi"><span class="nm">parcel_id</span><span class="ty">text</span></div>
-      <div class="row hi"><span class="nm">latitude</span><span class="ty">double precision</span></div>
-      <div class="row hi"><span class="nm">longitude</span><span class="ty">double precision</span></div>
-      <div class="row"><span class="nm">jurisdiction_slug</span><span class="ty">text · NO fk (D3)</span></div>
-      <div class="row"><span class="b b-nn">NN</span><span class="nm">origin</span><span class="ty">'app_intake' | 'manual_publish'</span></div>
-      <div class="row"><span class="b b-nn">NN</span><span class="nm">status</span><span class="ty">'draft'…'delivered'…'archived'</span></div>
-      <div class="row"><span class="b b-nn">NN</span><span class="nm">created_at</span><span class="ty">timestamptz</span></div>
-      <div class="row"><span class="b b-nn">NN</span><span class="nm">updated_at</span><span class="ty">timestamptz</span></div>
-      <div class="note">+ indexes on (project_id), (conversation_id), (status) · updated_at trigger · RLS = verbatim clone of submission/diligence_runs (D7) · added to supabase_realtime</div>
+      <div class="row"><span class="nm">title</span><span class="ty">text · optional</span></div>
+      <div class="row"><span class="nm">description</span><span class="ty">text · optional</span></div>
+      <div class="row hi"><span class="nm">address</span><span class="ty">text · optional</span></div>
+      <div class="row hi"><span class="nm">latitude · longitude</span><span class="ty">double precision · optional</span></div>
+      <div class="row hi"><span class="nm">parcel_ids</span><span class="ty">text[] · optional</span></div>
+      <div class="row hi"><span class="b b-nn">NN</span><span class="nm">current_version</span><span class="ty">int · default 0 · customer-facing</span></div>
+      <div class="row"><span class="b b-fk">FK</span><span class="nm">created_by</span><span class="ty">uuid → auth.users · set by publish</span></div>
+      <div class="row"><span class="b b-nn">NN</span><span class="nm">created_at · updated_at</span><span class="ty">timestamptz</span></div>
+      <div class="note">light container — optional address / lat-lon / parcel_ids[], no jurisdiction or intended-use (D3) · no status/origin enums (D4) · index (project_id) · updated_at trigger · RLS = verbatim clone of submission (D9) · added to supabase_realtime</div>
     </div>
-    <div class="ent changed">
-      <div class="eh"><span class="en">diligence_runs</span><span class="stereo">MODIFIED · 1 column added</span></div>
-      <div class="row"><span class="gut"></span><span class="b b-pk">PK</span><span class="nm">id</span><span class="ty">uuid · dlr_…</span></div>
-      <div class="row add"><span class="gut">+</span><span class="b b-fk">FK</span><span class="b b-new">NEW</span><span class="nm">site_intelligence_report_id</span><span class="ty">uuid · nullable → site_intelligence_report</span></div>
-      <div class="row"><span class="gut"></span><span class="b b-fk">FK</span><span class="nm">document_version_id</span><span class="ty">uuid · kept</span></div>
-      <div class="row"><span class="gut"></span><span class="b b-fk">FK</span><span class="nm">conversation_id</span><span class="ty">uuid · kept</span></div>
-      <div class="row"><span class="gut"></span><span class="b b-fk">FK</span><span class="nm">project_id</span><span class="ty">uuid · kept</span></div>
-      <div class="row"><span class="gut"></span><span class="nm">triggered_by_user_id</span><span class="ty">uuid</span></div>
-      <div class="row"><span class="gut"></span><span class="nm">status</span><span class="ty">queued→running→completed…</span></div>
-      <div class="row"><span class="gut"></span><span class="nm">created_at · updated_at</span><span class="ty">timestamptz</span></div>
-      <div class="note">only one column added; existing FKs retained for continuity + one index on the new column. Tighten to NOT NULL once all runs originate from an SIR (D-model Q3).</div>
+    <div class="ent newt">
+      <div class="eh"><span class="en">sir_artifact</span><span class="stereo">NEW TABLE</span></div>
+      <div class="row"><span class="b b-pk">PK</span><span class="nm">id</span><span class="ty">uuid</span></div>
+      <div class="row"><span class="b b-fk">FK</span><span class="b b-nn">NN</span><span class="nm">site_intelligence_report_id</span><span class="ty">uuid → SIR · on delete cascade</span></div>
+      <div class="row hi"><span class="b b-nn">NN</span><span class="nm">version</span><span class="ty">int · 0,1,2…</span></div>
+      <div class="row hi"><span class="nm">versioning_label</span><span class="ty">text · version-level note (D11)</span></div>
+      <div class="row"><span class="b b-nn">NN</span><span class="nm">kind</span><span class="ty">report | research_appendix | supporting_document</span></div>
+      <div class="row"><span class="b b-nn">NN</span><span class="nm">format</span><span class="ty">pdf | docx | html</span></div>
+      <div class="row"><span class="b b-nn">NN</span><span class="nm">storage_bucket · storage_path</span><span class="ty">text</span></div>
+      <div class="row"><span class="nm">file_name · mime_type · byte_size</span><span class="ty">text · text · bigint</span></div>
+      <div class="row"><span class="b b-nn">NN</span><span class="nm">created_at · updated_at</span><span class="ty">timestamptz</span></div>
+      <div class="note">unique (sir_id, version, kind, format) · indexes (sir_id), (sir_id, version) · RLS SELECT via parent-SIR project subquery (D9) · writes = service-role at publish</div>
     </div>
   </div>
   <div class="rels">
-    <div class="rels-h">Relationship the new column creates</div>
-    <span class="rl">site_intelligence_report <span class="cf">‖──&lt;</span> diligence_runs <span class="tag-new">[NEW FK]</span> <span class="cmt">— one SIR, many runs (iterations v1/v2); "current deliverable" = latest completed run</span></span>
+    <div class="rels-h">Relationships</div>
+    <span class="rl">project <span class="cf">‖──&lt;</span> site_intelligence_report <span class="tag-new">[NEW]</span> <span class="cmt">— one initiative, many SIRs at many addresses</span></span>
+    <span class="rl">site_intelligence_report <span class="cf">‖──&lt;</span> sir_artifact <span class="tag-new">[NEW]</span> <span class="cmt">— one SIR, many files across many versions; current_version names the customer-facing one</span></span>
   </div>
 
-  <div class="xref">Grounding: <code>data-model.md</code> §3.2 (DDL for the new table), §3.3 (the <code>diligence_runs</code> column), §3.5 (RLS clone), §3.6 (holding-org re-home + constraints A/B), §4 (migration), §6 decisions D1–D8.</div>
+  <div class="xref">Grounding: <code>data-model.md</code> §3.2 (SIR DDL), §3.3 (<code>sir_artifact</code> DDL), §3.4 (flat-versioning reads/writes), §3.5 (RLS), §4 (additive migration), §6 decisions D1–D12.</div>
 
 </section>
 
