@@ -12,11 +12,11 @@
 > - **New second table `sir_artifact`** (fresh, not a re-anchored `diligence_artifacts`) carrying **flat versioning**: a `version` integer + a `versioning_label`, with `site_intelligence_report.current_version` naming the one version the customer sees. Supports "preserve v0 & v1, compare, restart, customer-sees-final-only" without a third table. (New **D8**, **D11**.)
 > - **`origin` enum and the coarse `status` enum removed** — there is one origin (a local publish) and no app-side lifecycle to track under completion-only publishing. (Revises v2 **D4**.)
 > - **Holding-org / prospect re-home (v2 §3.6, D8) moved out of near-term scope** → it exists to isolate *self-serve prospect intake*, which the human-kickoff model removes. Now a Future concern (north-star §5 / catalog G1). (New **D12**.)
-> - **Field simplification (2026-07-31, same PR):** removed all structured subject-location columns from the SIR (`input_address`, `resolved_address`, `parcel_id`, `latitude`, `longitude`, `jurisdiction_slug`, `intended_use`); the SIR is now a **thin container** with optional `title` + `description`. Structured location lives in the report content until a use case needs it queryable. (Repurposes **D3**.)
+> - **Field simplification (2026-07-31, same PR):** the SIR is now a **light container** — optional `title` + `description` plus a small optional subject-location set (`address`, `latitude`, `longitude`, `parcel_ids text[]`). Dropped from the earlier shape: the `input_address`/`resolved_address` split (→ a single `address`), `jurisdiction_slug`, and `intended_use`. (Repurposes **D3**.)
 >
 > Unchanged from v2: the `project`-as-neutral-container thesis (§1), the verified current-state facts (§2), `project` columns left untouched (D5), SIR→site-plan linkage deferred (D6).
 
-> **One-line goal:** Give the Site Intelligence Report its own first-class entity — `site_intelligence_report` — a thin container (`title` + `description`) with a flat-versioned set of output files (`sir_artifact`), populated by a **local `diligence-report` run that publishes on completion**. No `submission` shoehorn, no intake-chat dependency, no `field-agent`.
+> **One-line goal:** Give the Site Intelligence Report its own first-class entity — `site_intelligence_report` — a light container (`title`/`description` + optional location) with a flat-versioned set of output files (`sir_artifact`), populated by a **local `diligence-report` run that publishes on completion**. No `submission` shoehorn, no intake-chat dependency, no `field-agent`.
 
 ---
 
@@ -30,7 +30,7 @@ SIRs are currently modeled as `submission` rows with `submission_type = 'feasibi
 
 3. **`project` conflates "an initiative" with "a place."** `project.site_address` + `project.jurisdiction_slug` assume one project = one address + one jurisdiction. But an SIR's subject location is resolved *per run* (Phase 0 of the diligence skill), and a real initiative wants **N SIRs across N addresses**. Address welded to the container breaks that.
 
-We want: `project` becomes a neutral, address-agnostic **initiative container**; an SIR becomes its own lightweight entity (`title` + `description`) carrying a **flat-versioned set of output files**, written by a local run at completion time.
+We want: `project` becomes a neutral, address-agnostic **initiative container**; an SIR becomes its own lightweight entity (`title`/`description` + optional location) carrying a **flat-versioned set of output files**, written by a local run at completion time.
 
 ---
 
@@ -75,7 +75,7 @@ We want: `project` becomes a neutral, address-agnostic **initiative container**;
 ```
 organization        e.g. "ExtraStorage Containers"   (tenant/customer)
   └─ project         e.g. "2026-Q4-expansion"         (initiative container — address-AGNOSTIC)
-       ├─ site_intelligence_report   title:"1234 Main St feasibility"  (NEW — thin container: title + description)
+       ├─ site_intelligence_report   title:"1234 Main St feasibility"  (NEW — light container: title/description + optional location)
        │     └─ sir_artifact   v0 {report.pdf, appendix.pdf}      (NEW — flat-versioned output files)
        │        sir_artifact   v1 {report.pdf, appendix.pdf}      (a revised version; both preserved)
        ├─ site_intelligence_report   title:"77 River Rd retail"     (another SIR, same initiative)
@@ -89,7 +89,7 @@ organization        e.g. "ExtraStorage Containers"   (tenant/customer)
 
 ### 3.2 New table: `site_intelligence_report`
 
-The stable entity: one row per SIR — a **thin container** of optional descriptive metadata (`title` + `description`) plus the `current_version` pointer. The deliverable itself lives in `sir_artifact`.
+The stable entity: one row per SIR — a **light container** of optional descriptive metadata (`title` + `description`) and optional subject location (`address`, `latitude`/`longitude`, `parcel_ids`) plus the `current_version` pointer. The deliverable itself lives in `sir_artifact`.
 
 ```sql
 create table public.site_intelligence_report (
@@ -99,6 +99,12 @@ create table public.site_intelligence_report (
   -- descriptive metadata (both optional)
   title       text,          -- human label for the SIR
   description text,          -- free-text description
+
+  -- subject location (all optional — light, for display / map-pin / parcel lookup)
+  address    text,
+  latitude   double precision,
+  longitude  double precision,
+  parcel_ids text[],         -- 0..n parcels (combined-parcel scenarios); native array, queryable via = ANY / @>
 
   -- deliverable pointer + provenance
   current_version int  not null default 0,   -- the version the customer sees (→ sir_artifact.version)
@@ -111,7 +117,7 @@ create index on public.site_intelligence_report (project_id);
 ```
 
 Notes:
-- **No structured subject-location columns** (D3). Address / parcel / lat-lon / jurisdiction / intended-use were removed; location lives in the report content until a use case needs it queryable.
+- **Light optional subject location** (D3): `address`, `latitude`, `longitude`, `parcel_ids text[]` — all nullable, for display / map-pin / parcel lookup. Still omitted: `jurisdiction_slug` and `intended_use` (add if a use case needs them). `parcel_ids` is a native array (a property can span multiple parcels), preferred over a CSV string for queryability.
 - **No `status`/`origin` enums.** Under completion-only publishing (D7) there is no app-side lifecycle to track and exactly one origin (a local publish). A coarse status (e.g. `archived`) is a one-line add the day the internal dashboard (catalog F1) needs it — deferred (D4).
 - `current_version` is a plain integer, not an FK — the flat-versioning choice (D8) means there is no `sir_version` row to point at. It defaults to `0` (the first published version).
 - Plus: `updated_at` auto-bump trigger; RLS (§3.5); add to `supabase_realtime` for live status in the app.
@@ -239,7 +245,7 @@ Everything here is additive (two new tables). Retirement of the legacy tables is
 
 - **D1 — Entity name is `site_intelligence_report`** (matches the published product).
 - **D2 — Drop the `diligence_runs` reuse; the run collapses into the SIR.** `diligence_runs` is an async run-tracking table for app-triggered, worker-executed cloud runs; in the local-run world its `conversation_id` / `document_version_id` FKs and `queued`→`running` status go permanently null. Reusing it fails a 1:1 test. A local run's only DB footprint is a completion-time publish, which the SIR row + `sir_artifact` rows fully capture. (See also D9.)
-- **D3 — The SIR stores no structured subject-location columns.** Removed `input_address` / `resolved_address` / `parcel_id` / `latitude` / `longitude` / `jurisdiction_slug` / `intended_use`; the SIR is a thin container (`title` + `description`). Location is captured in the report artifacts. Add structured columns back — and decide the old `jurisdiction_slug`-FK question then (SIRs run in un-onboarded jurisdictions, so it would stay free-text) — only when a use case needs to query on them.
+- **D3 — Light, optional subject-location columns; no jurisdiction / intended-use.** The SIR carries nullable `address`, `latitude`, `longitude`, and `parcel_ids text[]` for display / map-pinning / parcel lookup — but NOT `jurisdiction_slug` or `intended_use` (add those when a use case needs them; a jurisdiction column would stay free-text since SIRs run in un-onboarded jurisdictions). `parcel_ids` is a native Postgres array (a property can span multiple parcels), preferred over a CSV string for queryability.
 - **D4 — No `status`/`origin` fields near-term.** Completion-only publishing means no app-side lifecycle to model and a single origin. A coarse status (`active`/`archived`) is a trivial add when the internal dashboard (catalog F1) needs it.
 - **D5 — `project` columns untouched.** `site_address`/`jurisdiction_slug` stay as-is, reclassified as optional site-plan-scoped hints (sweep verdict §2.3).
 - **D6 — SIR→site-plan conversion linkage deferred.** Add a nullable link column or join table when it first happens.

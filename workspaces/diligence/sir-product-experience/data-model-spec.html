@@ -407,11 +407,11 @@ code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px s
   <!-- SCENE 2 -->
   <div class="uc">
     <div class="uch"><div class="ucn">2</div><div class="uctxt"><span class="actor">local run · publish step · CHANGED (was scene 6)</span><span class="uct">On completion, the run publishes v0 to Supabase</span></div></div>
-    <div class="ucsub">The finished run calls the publish endpoint (service-role): it inserts the <code>site_intelligence_report</code> (<code>title</code>/<code>description</code>, <code>current_version=0</code>), uploads the PDFs to the <code>sir-artifacts</code> bucket, and inserts one <code>sir_artifact</code> row per file at <code>version=0</code>.</div>
+    <div class="ucsub">The finished run calls the publish endpoint (service-role): it inserts the <code>site_intelligence_report</code> (<code>title</code>/<code>description</code> + optional location, <code>current_version=0</code>), uploads the PDFs to the <code>sir-artifacts</code> bucket, and inserts one <code>sir_artifact</code> row per file at <code>version=0</code>.</div>
     <div class="ucdiag"><div class="dfg">
       <div class="node"><span class="op" style="background:var(--p500);border-color:var(--p500)">local</span><span class="nt">6-phase run<br>(complete)</span><span class="nf">produces SIR +<br>appendix PDFs</span></div>
       <div class="edge"><span class="el">① insert<br>the SIR</span><span class="ar">→</span></div>
-      <div class="node created"><span class="op">insert</span><span class="nt">site_intelligence_<br>report ★new</span><span class="nf">title · description<br>current_version=0 · created_by</span></div>
+      <div class="node created"><span class="op">insert</span><span class="nt">site_intelligence_<br>report ★new</span><span class="nf">title · description · location<br>current_version=0 · created_by</span></div>
       <div class="edge"><span class="el">② upload<br>PDFs</span><span class="ar">→</span></div>
       <div class="node store"><span class="op">put</span><span class="nt">storage</span><span class="nf">bucket sir-artifacts<br>sir/&lt;id&gt;/v0/</span></div>
       <div class="edge"><span class="el">③ one row<br>per file</span><span class="ar">→</span></div>
@@ -455,7 +455,7 @@ code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px s
   <h3>What the rework does — at a glance</h3>
   <div class="grid2">
     <div class="card drop"><strong>Removed from the SIR path</strong><ul><li><code>submission type='feasibility'</code> placeholder</li><li>Intake chat: <code>conversations</code> / <code>chat_message</code> / <code>document_section</code> + Gemini extraction</li><li><code>requestDiligenceRun</code> tool + Inngest event</li><li><code>field-agent</code> laptop worker</li><li><code>diligence_runs</code> run-tracking table (fails 1:1 reuse — D2)</li></ul></div>
-    <div class="card keep"><strong>New / net structure</strong><ul><li>NEW <code>site_intelligence_report</code> (<code>title</code>/<code>description</code> + <code>current_version</code>)</li><li>NEW <code>sir_artifact</code> (flat-versioned files: <code>version</code> + <code>versioning_label</code>, <code>kind</code>×<code>format</code>)</li><li>Local run → service-role <b>publish</b> on completion</li><li>App SIR list + detail (version switcher for staff)</li><li>RLS clones + realtime on both tables</li></ul></div>
+    <div class="card keep"><strong>New / net structure</strong><ul><li>NEW <code>site_intelligence_report</code> (<code>title</code>/<code>description</code> + optional location + <code>current_version</code>)</li><li>NEW <code>sir_artifact</code> (flat-versioned files: <code>version</code> + <code>versioning_label</code>, <code>kind</code>×<code>format</code>)</li><li>Local run → service-role <b>publish</b> on completion</li><li>App SIR list + detail (version switcher for staff)</li><li>RLS clones + realtime on both tables</li></ul></div>
   </div>
   <div class="card change" style="margin-top:6px"><strong>Deferred (not near-term)</strong> — the intake-chat / self-serve-prospect path; the holding-org / prospect→customer re-home (was v2 §3.6, now Future G1); a <code>sir_version</code> table + compare/lineage UI (promote from the flat model when a 2nd per-version attribute appears — D11); a coarse <code>status</code> field (add when the internal dashboard F1 needs it — D4).</div>
 
@@ -468,10 +468,13 @@ code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px s
       <div class="row"><span class="b b-fk">FK</span><span class="b b-nn">NN</span><span class="nm">project_id</span><span class="ty">uuid → project</span></div>
       <div class="row"><span class="nm">title</span><span class="ty">text · optional</span></div>
       <div class="row"><span class="nm">description</span><span class="ty">text · optional</span></div>
+      <div class="row hi"><span class="nm">address</span><span class="ty">text · optional</span></div>
+      <div class="row hi"><span class="nm">latitude · longitude</span><span class="ty">double precision · optional</span></div>
+      <div class="row hi"><span class="nm">parcel_ids</span><span class="ty">text[] · optional</span></div>
       <div class="row hi"><span class="b b-nn">NN</span><span class="nm">current_version</span><span class="ty">int · default 0 · customer-facing</span></div>
       <div class="row"><span class="b b-fk">FK</span><span class="nm">created_by</span><span class="ty">uuid → auth.users · set by publish</span></div>
       <div class="row"><span class="b b-nn">NN</span><span class="nm">created_at · updated_at</span><span class="ty">timestamptz</span></div>
-      <div class="note">thin container — no subject-location columns (D3) · no status/origin enums (D4) · index (project_id) · updated_at trigger · RLS = verbatim clone of submission (D9) · added to supabase_realtime</div>
+      <div class="note">light container — optional address / lat-lon / parcel_ids[], no jurisdiction or intended-use (D3) · no status/origin enums (D4) · index (project_id) · updated_at trigger · RLS = verbatim clone of submission (D9) · added to supabase_realtime</div>
     </div>
     <div class="ent newt">
       <div class="eh"><span class="en">sir_artifact</span><span class="stereo">NEW TABLE</span></div>
