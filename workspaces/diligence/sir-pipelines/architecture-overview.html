@@ -1,0 +1,636 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SIR Pipelines — Architecture Overview</title>
+<style>
+/* ============================================================
+   spec-kit v3  —  winston HTML spec design system
+   Inlined verbatim from ~/.claude/skills/winston-spec/assets/spec-kit.css
+   ============================================================ */
+
+:root{
+  /* steel-blue ramp (matches cityhall / Noetic report surfaces) */
+  --p50:#f0f5f9;--p100:#dce8f1;--p200:#b9d2e5;--p300:#8cb4d1;--p400:#6397b8;
+  --p500:#517e9e;--p600:#3f6582;--p700:#35526b;--p800:#2d4559;--p900:#273b4b;--p950:#182530;
+  --bg:#f9f9f9;--card:#ffffff;--divider:#dfdfdf;--ink:#1f2937;--muted:#6b7280;--ember:#bb4d00;
+  /* semantic: new / changed / retired */
+  --new:#15803d;--newbg:#f0fdf4;--newbd:#bbf7d0;
+  --chg:#b45309;--chgbg:#fffbeb;--chgbd:#fde68a;
+  --ret:#b91c1c;--retbg:#fef2f2;--retbd:#fecaca;
+  --sans:'Lexend',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  --serif:'Lora',Georgia,'Times New Roman',serif;
+  --mono:'Fira Code','SF Mono',ui-monospace,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.55;font-size:15px}
+
+/* ---------- masthead ---------- */
+header.masthead{background:linear-gradient(135deg,var(--p800),var(--p600));color:#fff;padding:34px 32px 30px;position:relative;overflow:hidden}
+header.masthead::after{content:"";position:absolute;inset:0;background-image:repeating-linear-gradient(115deg,rgba(255,255,255,.06) 0 1px,transparent 1px 26px);pointer-events:none}
+header.masthead .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--p200)}
+header.masthead h1{font-family:var(--serif);font-weight:600;margin:.35em 0 .2em;font-size:29px;position:relative}
+header.masthead p{margin:0;color:var(--p100);max-width:880px;font-size:15px}
+header.masthead .meta{margin-top:14px;font-size:12.5px;color:var(--p200);font-family:var(--mono)}
+
+/* ---------- tabs ---------- */
+nav.tabs{position:sticky;top:0;z-index:20;display:flex;gap:2px;background:var(--p950);padding:0 20px;box-shadow:0 2px 8px rgba(0,0,0,.12);flex-wrap:wrap}
+nav.tabs button{appearance:none;border:0;background:transparent;color:var(--p200);font-family:var(--sans);font-size:14px;font-weight:500;padding:14px 18px;cursor:pointer;border-bottom:3px solid transparent;transition:all .15s}
+nav.tabs button .n{font-family:var(--mono);font-size:11px;opacity:.7;margin-right:7px}
+nav.tabs button:hover{color:#fff;background:rgba(255,255,255,.04)}
+nav.tabs button.active{color:#fff;border-bottom-color:var(--ember);background:rgba(255,255,255,.06)}
+
+/* ---------- layout ---------- */
+main{max-width:1140px;margin:0 auto;padding:30px 26px 90px}
+.panel{display:none;animation:fade .25s ease}
+.panel.active{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+h2{font-family:var(--serif);font-weight:600;font-size:23px;margin:34px 0 6px;color:var(--p900)}
+h2:first-child{margin-top:4px}
+h2 .eyebrow{display:block;font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--p500);font-weight:400;margin-bottom:3px}
+h3{font-size:16px;font-weight:600;margin:28px 0 8px;color:var(--p800);display:flex;align-items:center;gap:9px}
+h3 .hn{font-family:var(--mono);font-size:12px;color:#fff;background:var(--p600);border-radius:5px;padding:2px 8px}
+h4{font-size:14px;font-weight:600;margin:18px 0 6px;color:var(--p800)}
+p{margin:.55em 0}
+.lede{font-size:16px;color:var(--p800);border-left:3px solid var(--ember);padding-left:16px;margin:14px 0 20px}
+ul{margin:.4em 0;padding-left:22px}li{margin:.28em 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px solid var(--p100);border-radius:4px;padding:1px 5px;color:var(--p800)}
+
+/* ---------- callout ---------- */
+.callout{background:var(--p50);border:1px solid var(--p200);border-left:4px solid var(--p500);border-radius:8px;padding:13px 17px;margin:16px 0}
+.callout.ember{background:#fdf6f0;border-color:#f0cba8;border-left-color:var(--ember)}
+.callout.new{background:var(--newbg);border-color:var(--newbd);border-left-color:var(--new)}
+.callout .lab{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--p600);font-weight:600;display:block;margin-bottom:3px}
+.callout.ember .lab{color:var(--ember)} .callout.new .lab{color:var(--new)}
+
+/* ---------- legend ---------- */
+.legend{display:flex;flex-wrap:wrap;gap:9px 16px;background:#fff;border:1px solid var(--divider);border-radius:10px;padding:12px 16px;margin:16px 0;font-size:12px;align-items:center}
+.legend .k{display:inline-flex;align-items:center;gap:6px}
+.swatch{width:26px;height:14px;border-radius:3px;display:inline-block;border:1px solid rgba(0,0,0,.15)}
+
+/* ---------- shared field badges (used by entity rows + legend) ---------- */
+.b{font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.04em;padding:1px 4px;border-radius:3px;text-transform:uppercase;white-space:nowrap}
+.b-pk{background:#fef3c7;color:#92600a;border:1px solid #fde68a}
+.b-fk{background:#e0edfb;color:#2456a8;border:1px solid #c3d8f2}
+.b-nn{background:#eef1f4;color:#4b5563;border:1px solid #d7dde3}
+.b-new{background:var(--newbg);color:var(--new);border:1px solid var(--newbd)}
+
+/* ============================================================
+   ER / UML entity boxes
+   ============================================================ */
+.erd{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start;margin:16px 0;background:#fbfcfd;border:1px solid var(--divider);border-radius:12px;padding:18px}
+.ent{border:1px solid var(--divider);border-radius:9px;overflow:hidden;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.05);min-width:236px;flex:0 1 auto}
+.ent .eh{padding:7px 12px;color:#fff;display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.ent .eh .en{font-family:var(--mono);font-size:12.5px;font-weight:700;letter-spacing:.02em}
+.ent .eh .stereo{font-size:9.5px;font-family:var(--mono);opacity:.85;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}
+.ent.exist .eh{background:var(--p700)}
+.ent.newt .eh{background:var(--new)}
+.ent.changed .eh{background:var(--chg)}
+.ent.retired .eh{background:#9ca3af}
+.ent.retired{opacity:.72}
+.ent .row{display:flex;align-items:center;gap:7px;padding:4px 11px;font-size:11.5px;border-top:1px solid #eef1f4}
+.ent .row:first-of-type{border-top:0}
+.ent .row .nm{font-family:var(--mono);font-size:11.5px;color:var(--p900);font-weight:600}
+.ent .row .ty{font-family:var(--mono);font-size:10px;color:var(--muted);margin-left:auto;white-space:nowrap}
+.ent .row.hi{background:#fff9f2}
+.ent .row.strk .nm{text-decoration:line-through;color:var(--muted)}
+.ent .note{padding:5px 11px;font-size:10px;color:var(--muted);font-style:italic;border-top:1px dashed #e5e9ee;background:#fbfcfd}
+/* diff rows — show a table modification (column added / removed), git-style.
+   Put a "+"/"−" marker in a .gut span at the start of the row. */
+.ent .row .gut{flex:0 0 10px;width:10px;text-align:center;font-family:var(--mono);font-size:11px;font-weight:700;color:var(--muted)}
+.ent .row.add{background:var(--newbg);box-shadow:inset 3px 0 0 var(--new)}
+.ent .row.add .gut{color:var(--new)}
+.ent .row.add .nm{color:#166534}
+.ent .row.del{background:var(--retbg);box-shadow:inset 3px 0 0 var(--ret)}
+.ent .row.del .gut{color:var(--ret)}
+.ent .row.del .nm{color:var(--ret);text-decoration:line-through}
+
+/* relationships panel — crow's-foot text notation */
+.rels{background:#fff;border:1px solid var(--divider);border-radius:10px;padding:12px 16px;margin:14px 0;font-family:var(--mono);font-size:12px;line-height:1.9}
+.rels .rl{display:block;color:var(--p800)}
+.rels .rl b{color:var(--ember)}
+.rels .cf{color:var(--p500);font-weight:700}
+.rels .cmt{color:var(--muted);font-style:normal;font-family:var(--sans);font-size:11.5px}
+.rels .tag-new{color:var(--new);font-weight:700}
+.rels .tag-ret{color:var(--ret);font-weight:700}
+.rels-h{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--p600);font-weight:700;margin-bottom:6px}
+
+/* ============================================================
+   Use-case scene  (an action + its boxes-and-arrows diagram)
+   ============================================================ */
+.uc{margin:16px 0 22px;border:1px solid var(--divider);border-radius:12px;overflow:hidden;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.uc .uch{display:flex;align-items:center;gap:13px;padding:11px 16px;background:linear-gradient(135deg,var(--p700),var(--p600));color:#fff}
+.uc .uch .ucn{flex:0 0 30px;height:30px;border-radius:50%;background:rgba(255,255,255,.2);font-family:var(--mono);font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.uc .uch .uctxt{flex:1}
+.uc .uch .actor{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--p100);display:block;margin-bottom:1px}
+.uc .uch .uct{font-weight:600;font-size:15.5px;font-family:var(--serif)}
+.uc .ucsub{padding:9px 16px;font-size:12.5px;color:var(--p800);background:var(--p50);border-bottom:1px solid var(--p100)}
+.uc .ucdiag{padding:20px 16px 14px}
+.ucnote{padding:2px 16px 14px;font-size:11.5px;color:var(--muted)}
+.ucnote b{color:var(--p700);font-family:var(--mono);font-size:10.5px}
+
+/* ============================================================
+   Boxes-and-arrows flow
+   ============================================================ */
+.dfg{display:flex;flex-wrap:wrap;align-items:stretch;gap:8px 0;margin:0}
+.node{flex:0 0 auto;width:156px;background:#fff;border:1.5px solid var(--p300);border-radius:8px;padding:9px 11px;display:flex;flex-direction:column;gap:3px}
+.node .op{align-self:flex-start;font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:1px 6px;border-radius:3px;border:1px solid;color:#fff;margin-bottom:2px}
+.node .nt{display:block;font-family:var(--mono);font-weight:700;font-size:12px;color:var(--p900);line-height:1.3;word-break:break-word}
+.node .nf{display:block;font-family:var(--mono);font-size:10px;color:var(--muted);line-height:1.45;word-break:break-word}
+.node.created{border-color:var(--new);background:var(--newbg)} .node.created .op{background:var(--new);border-color:var(--new)}
+.node.read{border-color:var(--p400);background:#eef4fb} .node.read .op{background:var(--p500);border-color:var(--p500)}
+.node.event{border-color:var(--ember);background:#fdf6f0} .node.event .op{background:var(--ember);border-color:var(--ember)}
+.node.store{border-style:dashed;border-color:var(--p500);background:#eef3f7} .node.store .op{background:var(--p700);border-color:var(--p700)}
+.edge{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:70px;max-width:104px;padding:0 4px}
+.edge .el{font-size:9px;color:var(--p600);font-family:var(--mono);text-align:center;line-height:1.3;margin-bottom:2px}
+.edge .ar{color:var(--p400);font-size:20px;font-weight:700;line-height:1}
+
+/* ============================================================
+   Card grid  (keep / change / drop comparisons)
+   ============================================================ */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:820px){.grid2{grid-template-columns:1fr}.erd{padding:12px}}
+.card{background:var(--card);border:1px solid var(--divider);border-radius:9px;padding:14px 16px}
+.card.keep{border-top:3px solid var(--new)} .card.change{border-top:3px solid var(--chg)} .card.drop{border-top:3px solid var(--ret)}
+.card strong{display:block;margin-bottom:4px;font-size:13.5px}
+.card ul{font-size:12.5px;margin:2px 0}
+
+/* ============================================================
+   Lifecycle / state machine
+   ============================================================ */
+.sm{display:flex;flex-wrap:wrap;gap:7px;align-items:center;margin:14px 0}
+.sm .s{border:1px solid var(--p300);background:var(--p50);border-radius:20px;padding:5px 12px;font-size:11.5px;font-weight:600;color:var(--p800);font-family:var(--mono)}
+.sm .s .who{display:block;font-size:9px;font-family:var(--mono);color:var(--muted);font-weight:400;text-transform:uppercase;letter-spacing:.03em}
+.sm .s.client{border-color:var(--newbd);background:var(--newbg)}
+.sm .s.cc{border-color:#f0cba8;background:#fdf6f0}
+.sm .s.spec{border-color:var(--chgbd);background:var(--chgbg)}
+.sm .a{color:var(--p400);font-weight:700}
+
+/* ============================================================
+   Use-case catalog — grouped list of candidate use cases
+   ============================================================ */
+.catgrp{border:1px solid var(--divider);border-radius:10px;overflow:hidden;margin:14px 0;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.catgrp .cath{background:var(--p700);color:#fff;padding:8px 14px;font-family:var(--serif);font-weight:600;font-size:14.5px;display:flex;align-items:center;gap:10px}
+.catgrp .cath .cgl{font-family:var(--mono);font-size:12px;font-weight:700;background:rgba(255,255,255,.2);border-radius:5px;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;flex:0 0 22px}
+.uci{display:flex;gap:9px;align-items:baseline;padding:7px 13px;border-top:1px solid #eef1f4;font-size:13px}
+.uci .uid{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--p600);flex:0 0 26px}
+.uci .utxt{flex:1;color:var(--ink);line-height:1.45}
+.uci .utxt b{color:var(--p900)}
+.uci .star{color:var(--ember);font-weight:700;font-size:12px;flex:0 0 auto;letter-spacing:-1px}
+.uci.later{opacity:.66}
+.utag{font-family:var(--mono);font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;text-transform:uppercase;letter-spacing:.03em;white-space:nowrap;flex:0 0 auto}
+.utag.t-orig{background:#e0edfb;color:#2456a8;border:1px solid #c3d8f2}
+.utag.t-add{background:var(--newbg);color:var(--new);border:1px solid var(--newbd)}
+
+/* ============================================================
+   Misc: storage strip, cross-reference box
+   ============================================================ */
+.storage{background:#eef3f7;border:1px dashed var(--p300);border-radius:8px;padding:9px 13px;font-family:var(--mono);font-size:12px;color:var(--p800);margin:12px 0}
+.storage b{color:var(--ember)}
+.xref{font-size:12px;color:var(--p600);background:var(--p50);border:1px solid var(--p100);border-radius:6px;padding:8px 12px;margin:10px 0}
+.foot{margin-top:44px;padding-top:18px;border-top:1px solid var(--divider);color:var(--muted);font-size:12px;font-family:var(--mono)}
+
+/* actor / repo chips (optional, for inline actor tags in prose) */
+.rc{display:inline-block;font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;padding:1px 6px;border-radius:5px;border:1px solid;vertical-align:middle;white-space:nowrap}
+.r-ch{background:#eef4fb;color:#2456a8;border-color:#c3d8f2}
+.r-sub{background:#f3eefb;color:#6b3fa0;border-color:#dcccf0}
+.r-fa{background:#e9f7f2;color:#0f7a5f;border-color:#bfe8db}
+.r-db{background:#eaeef2;color:#2d4559;border-color:#c7d2dd}
+.r-store{background:#e6eef3;color:#35526b;border-color:#bcd0dd}
+.r-user{background:#eefaf0;color:#15803d;border-color:#bbf7d0}
+.r-mcp{background:#fdf0e6;color:#b5590d;border-color:#f2d3b3}
+
+/* one-off: neutral compare-card header chip (kit-token colours only) */
+.cmp{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:1px 6px;border-radius:4px;border:1px solid;margin-left:6px;vertical-align:middle}
+.cmp-old{background:var(--p50);color:var(--p700);border-color:var(--p200)}
+.cmp-new{background:var(--newbg);color:var(--new);border-color:var(--newbd)}
+</style>
+</head>
+<body>
+
+<header class="masthead">
+  <div class="kicker">DILIGENCE · SIR PIPELINES</div>
+  <h1>SIR Pipelines — Architecture Overview</h1>
+  <p>Two ways to produce a Site Intelligence Report: the <b>production <code>diligence-report</code> skill</b> that
+  serves customers today, and the <b>new bureau SIR pipeline</b> Jason has been building to replace it. This is an
+  orientation map — how each works, how complete the new one is, how it uses the Mayor, and what is committed to a
+  repo vs. still living as workspace WIP.</p>
+  <div class="meta">Draft v1 · 2026-07-31 · exploratory · click a tab ↓</div>
+</header>
+
+<nav class="tabs">
+  <button data-tab="overview" class="active"><span class="n">01</span>High-Level Comparison</button>
+  <button data-tab="skill"><span class="n">02</span>Deep Dive · diligence-report skill</button>
+  <button data-tab="pipeline"><span class="n">03</span>Deep Dive · SIR pipeline</button>
+</nav>
+
+<main>
+
+<!-- ========================================================= -->
+<!-- TAB 1 — HIGH LEVEL COMPARISON                             -->
+<!-- ========================================================= -->
+<section class="panel active" id="overview">
+  <h2><span class="eyebrow">Tab 1</span>The two systems at a glance</h2>
+  <p class="lede">Same deliverable, same 10 disciplines, same rendering stack — but a different <em>shape</em>. The
+  skill is one long orchestrator session; the pipeline is a chain of small, resumable, individually-verified steps.
+  The new pipeline is not a branch of the skill — it is a ground-up rebuild that intends to retire it.</p>
+
+  <div class="callout new">
+    <span class="lab">the one-line answer</span>
+    The new "SIR pipeline" is <b>real, merged code in the <code>bureau</code> repo</b> (on <code>main</code>, 121
+    files) that has already run <b>end-to-end once</b> to a delivered 307-page PDF. The temp dir Jason shared is his
+    <b>planning workspace</b> (READMEs, PLAN/FACTS, session logs) — <b>not</b> the pipeline itself. Almost nothing of
+    substance is stranded in the temp dir; the engine is in the repo.
+  </div>
+
+  <h3><span class="hn">1</span>Side-by-side on the dimensions that matter</h3>
+
+  <h4>Form &amp; where it lives</h4>
+  <div class="grid2">
+    <div class="card"><strong>diligence-report skill<span class="cmp cmp-old">existing</span></strong>
+      <ul>
+        <li>A single Claude Code <b>skill</b> — one big <code>SKILL.md</code> orchestrator + ~34 prompt files + 26 reference docs.</li>
+        <li>Lives in <code>claude-plugins/plugins/noetic-tools/skills/diligence-report/</code>.</li>
+        <li>Invoked directly (Skill tool / interactive session, or the <code>field-agent</code> headless runner).</li>
+      </ul>
+    </div>
+    <div class="card"><strong>SIR bureau pipeline<span class="cmp cmp-new">new</span></strong>
+      <ul>
+        <li>A declarative <code>pipeline.yaml</code> (19 steps, §1–§7) + per-step prompts + per-step check scripts.</li>
+        <li>Lives in <code>bureau/pipelines/sir/</code> (bureau is its own nested git repo).</li>
+        <li>Driven step-by-step by <code>pipelines/lib/pipeline_runner.py</code>, executed by a Claude Code session.</li>
+      </ul>
+    </div>
+  </div>
+
+  <h4>Execution model &amp; resumability</h4>
+  <div class="grid2">
+    <div class="card"><strong>diligence-report skill<span class="cmp cmp-old">existing</span></strong>
+      <ul>
+        <li>One long orchestrator thread runs Phases 0→5, fanning out sub-agents at Phase 2 and Phase 3.</li>
+        <li>State is the working directory; no formal step lineage or per-step re-run contract.</li>
+        <li>HITL pauses (2.5, 4.5) are gates <em>inside</em> the orchestration.</li>
+      </ul>
+    </div>
+    <div class="card"><strong>SIR bureau pipeline<span class="cmp cmp-new">new</span></strong>
+      <ul>
+        <li>Each step runs on its own, writes an on-disk folder + <code>_health.json</code>, and is independently re-runnable.</li>
+        <li><code>requires:</code> lineage enforced; <code>verify</code> re-checks a step against its own outputs.</li>
+        <li>HITL1 (3.2) and HITL2 (4.4) are <b>first-class checkpoint steps</b> only a human <code>--decision</code> closes.</li>
+      </ul>
+    </div>
+  </div>
+
+  <h4>Billing &amp; models</h4>
+  <div class="grid2">
+    <div class="card"><strong>diligence-report skill<span class="cmp cmp-old">existing</span></strong>
+      <ul>
+        <li><b>Metered</b> — Opus 4.7 + Gemini 3.1 Pro via the AI gateway (real-dollar spend).</li>
+        <li>Sub-agent models are <em>not</em> pinned in-prompt (a documented hazard).</li>
+      </ul>
+    </div>
+    <div class="card"><strong>SIR bureau pipeline<span class="cmp cmp-new">new</span></strong>
+      <ul>
+        <li><b>Subscription-first</b> — Opus for judgment, Sonnet for chores; model named explicitly at every spawn.</li>
+        <li>The only metered exceptions: 2.1 plan-extraction still uses Gemini dual-vision (a parked question), and surveyor's declared mixed use.</li>
+      </ul>
+    </div>
+  </div>
+
+  <h4>Provenance &amp; verification</h4>
+  <div class="grid2">
+    <div class="card"><strong>diligence-report skill<span class="cmp cmp-old">existing</span></strong>
+      <ul>
+        <li>A large scrub-pass (~100 KB, 26+ numbered checks) enforces output hygiene at the end.</li>
+        <li>Corrections handled ad hoc; rules accreted reactively from an incident log.</li>
+      </ul>
+    </div>
+    <div class="card"><strong>SIR bureau pipeline<span class="cmp cmp-new">new</span></strong>
+      <ul>
+        <li>Per-step <code>check_*.py</code> scripts + <code>_health.json</code> verdicts; a <code>verify</code> gate per step.</li>
+        <li>Corrections are <b>patch-never-wipe</b>: <code>_superseded-*</code> snapshots + a <code>corrections[]</code> ledger + a diff audit trail.</li>
+        <li>Adversarial review is <b>build-phase scaffolding</b> (one Fable reviewer per newly-built step), not a runtime layer.</li>
+      </ul>
+    </div>
+  </div>
+
+  <h4>Maturity</h4>
+  <div class="grid2">
+    <div class="card keep"><strong>diligence-report skill<span class="cmp cmp-old">existing</span></strong>
+      <ul>
+        <li><b>Production.</b> This is what generates customer SIRs right now.</li>
+        <li>Actively hardened through end of July 2026 (latest PR #171).</li>
+        <li>Bloated and reactive, but battle-tested across many real runs.</li>
+      </ul>
+    </div>
+    <div class="card change"><strong>SIR bureau pipeline<span class="cmp cmp-new">new</span></strong>
+      <ul>
+        <li><b>Pilot.</b> Ran end-to-end <em>once</em> (Circle-K / Odessa TX) → 307-page PDF + DOCX.</li>
+        <li>§5 proven on a real render; §1–§4 verified against the pilot's artifacts but <b>not re-run step-by-step</b>.</li>
+        <li>Revision (6.1) and Learnback (7.x) not built yet.</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3><span class="hn">2</span>Where the Mayor fits — and where it doesn't</h3>
+  <p>The <b>Mayor</b> is a fleet-orchestration harness for <em>building and running</em> the pipeline — not a runtime
+  component and not a customer surface. A <code>/mayor</code> session points at the workspace, spawns fresh Opus
+  sessions to do the work, watches them, and briefs Jason. The pipeline steps themselves are executed by
+  <code>pipeline_runner.py</code>. The skill uses no Mayor at all.</p>
+
+  <div class="uc">
+    <div class="uch"><div class="ucn">M</div><div class="uctxt">
+      <span class="actor">Mayor session · dev/ops harness</span>
+      <span class="uct">How a pipeline step actually gets built or run</span>
+    </div></div>
+    <div class="ucsub">The Mayor orchestrates; a spawned Opus session does the work; the runner executes one step and stops at its gate.</div>
+    <div class="ucdiag"><div class="dfg">
+      <div class="node read"><span class="op">mayor</span><span class="nt">/mayor session</span><span class="nf">plans · briefs Jason<br>owns decisions</span></div>
+      <div class="edge"><span class="el">① claude --bg<br>--model opus</span><span class="ar">→</span></div>
+      <div class="node event"><span class="op">spawn</span><span class="nt">Opus session</span><span class="nf">one build/run task<br>mayor-fleet watch</span></div>
+      <div class="edge"><span class="el">② run --step</span><span class="ar">→</span></div>
+      <div class="node read"><span class="op">run</span><span class="nt">pipeline_runner.py</span><span class="nf">executes one step<br>on its model tier</span></div>
+      <div class="edge"><span class="el">③ writes</span><span class="ar">→</span></div>
+      <div class="node store"><span class="op">put</span><span class="nt">run tree</span><span class="nf">step folder +<br>_health.json</span></div>
+      <div class="edge"><span class="el">④ stops at</span><span class="ar">→</span></div>
+      <div class="node event"><span class="op">gate</span><span class="nt">HITL / cost gate</span><span class="nf">human --decision<br>closes it</span></div>
+    </div></div>
+    <div class="ucnote"><b>key</b> — the Mayor is above the pipeline (it builds &amp; drives it). The eventual product app wraps the <em>runner</em>, not the Mayor. Both SIR and review pipelines are built this way; the skill is not.</div>
+  </div>
+
+  <h3><span class="hn">3</span>What is committed vs. workspace WIP</h3>
+  <div class="grid2">
+    <div class="card keep"><strong>Committed to repos (durable)</strong>
+      <ul>
+        <li><code>bureau/pipelines/sir/</code> — the whole pipeline, on <code>main</code> (~121 files).</li>
+        <li><code>bureau/pipelines/review/</code> — the sibling "New Review" pipeline, on <code>main</code> (~60 files).</li>
+        <li><code>bureau/docs/pipelines/sir.md</code> — the human-authored pipeline spec.</li>
+        <li>Shared <code>pipelines/lib/pipeline_runner.py</code> + <code>sir/lib/*</code> render library.</li>
+      </ul>
+    </div>
+    <div class="card change"><strong>Workspace / local only (not the engine)</strong>
+      <ul>
+        <li><code>tmp/sir-jason-pipelines/active/July 2026 - SIR Pipeline/</code> — README, PLAN, FACTS, session logs (Mayor's memory).</li>
+        <li><code>~/noetic/working/sir/circle-k/…/</code> — the pilot <b>run output</b> (local disk, uncommitted by design).</li>
+        <li>A handful of open follow-up items still on feature branches / worktrees (tracked in PLAN "Owed").</li>
+      </ul>
+    </div>
+  </div>
+  <div class="callout ember">
+    <span class="lab">nuance worth flagging</span>
+    Jason's snapshot <code>PLAN.md</code> reads "nothing merged" — that was true mid-morning 2026-07-30. On the live
+    <code>bureau</code> checkout it is <b>all merged to main</b>. Because <code>bureau</code> is a nested, gitignored
+    repo, a <code>git</code> check from the <code>noetic</code> root shows none of it — you must run git <em>inside</em>
+    <code>bureau/</code>.
+  </div>
+
+  <div class="xref">Grounding: Jason's <code>active/July 2026 - SIR Pipeline/{README,PLAN,FACTS}.md</code> + session logs; live <code>bureau/pipelines/{sir,review}/</code> and <code>bureau/docs/pipelines/sir.md</code>; production skill at <code>claude-plugins/plugins/noetic-tools/skills/diligence-report/</code>.</div>
+</section>
+
+<!-- ========================================================= -->
+<!-- TAB 2 — DEEP DIVE: diligence-report skill                  -->
+<!-- ========================================================= -->
+<section class="panel" id="skill">
+  <h2><span class="eyebrow">Tab 2</span>Deep dive — the <code>diligence-report</code> skill</h2>
+  <p class="lede">The production engine. One orchestrating skill that walks a property through Phases 0–5 (plus
+  edit/learn-back tails), fanning out to sub-agents at two points, and rendering a single dual-format SIR. It works —
+  and it has accumulated a lot of cruft doing so.</p>
+
+  <div class="storage"><b>Location:</b> <code>claude-plugins/plugins/noetic-tools/skills/diligence-report/</code> · <b>Output:</b> <code>$NOETIC_DILIGENCE_DIR/sir/deliverable/</code></div>
+
+  <h3><span class="hn">1</span>The phase pipeline</h3>
+  <p>Phases run in one orchestrator thread. Blue = analysis/read work; green = a produced artifact; ember = a
+  fan-out or a mandatory human gate.</p>
+  <div class="dfg">
+    <div class="node read"><span class="op">phase 0</span><span class="nt">Jurisdiction &amp; Orientation</span><span class="nf">parcel triple · access trace<br>BLOCKING readiness gate</span></div>
+    <div class="edge"><span class="ar">→</span></div>
+    <div class="node read"><span class="op">phase 1</span><span class="nt">Vision Extraction</span><span class="nf">Gemini 3.1 + Opus 4.7<br>skip if no PDFs</span></div>
+    <div class="edge"><span class="ar">→</span></div>
+    <div class="node event"><span class="op">phase 2</span><span class="nt">Research ×9</span><span class="nf">9 parallel subagents<br>+ surveyor CLI</span></div>
+    <div class="edge"><span class="ar">→</span></div>
+    <div class="node event"><span class="op">HITL1</span><span class="nt">2.5 Checkpoint</span><span class="nf">confirm regulatory<br>frame · human pause</span></div>
+    <div class="edge"><span class="ar">→</span></div>
+    <div class="node event"><span class="op">phase 3</span><span class="nt">Disciplines ×10</span><span class="nf">10 parallel subagents<br>each loads its guide</span></div>
+    <div class="edge"><span class="ar">→</span></div>
+    <div class="node read"><span class="op">phase 4</span><span class="nt">Synthesis + Gap Recovery</span><span class="nf">issue matrix ·<br>regulatory briefing</span></div>
+    <div class="edge"><span class="ar">→</span></div>
+    <div class="node event"><span class="op">HITL2</span><span class="nt">4.5 Checkpoint</span><span class="nf">absolute-stop<br>gap readout</span></div>
+    <div class="edge"><span class="ar">→</span></div>
+    <div class="node created"><span class="op">phase 5</span><span class="nt">Render</span><span class="nf">single PDF (RDS) →<br>scrub → DOCX + rollup</span></div>
+    <div class="edge"><span class="ar">→</span></div>
+    <div class="node created"><span class="op">6 / 7</span><span class="nt">Edit &amp; Learn-back</span><span class="nf">operator feedback ·<br>route corrections back</span></div>
+  </div>
+
+  <h3><span class="hn">2</span>Orchestration &amp; models</h3>
+  <ul>
+    <li><b>One orchestrator</b> threads a shared <code>RUN_ID</code> and a RAM-budgeted browser-slot discipline into every browser-eligible sub-agent.</li>
+    <li><b>Two fan-out points:</b> Phase 2 (9 research sub-agents, incl. a surveyor Claude-subprocess CLI) and Phase 3 (10 discipline sub-agents).</li>
+    <li><b>Models:</b> Gemini 3.1 Pro + Opus 4.7 for Phase 1 vision; <code>claude-opus-4-7</code> elsewhere. Sub-agent models are <em>not</em> pinned in-prompt.</li>
+  </ul>
+
+  <h3><span class="hn">3</span>The 10 canonical disciplines</h3>
+  <p>Fixed slugs, each with a display label, a stub prompt inheriting <code>discipline-common.md</code>, and a
+  per-jurisdiction feasibility-guide in Bureau. Slugs are internal-only — scrub Check 7 forbids leaking them into the
+  deliverable.</p>
+  <div class="legend">
+    <span class="k"><b>el</b> Environmental</span><span class="k"><b>eptp</b> Env. Protection</span>
+    <span class="k"><b>fire</b> Fire</span><span class="k"><b>fwp</b> Floodplain</span>
+    <span class="k"><b>park</b> Parkland</span><span class="k"><b>sde</b> Drainage</span>
+    <span class="k"><b>sduf</b> Site Design</span><span class="k"><b>ta</b> Transportation</span>
+    <span class="k"><b>wwp</b> Water &amp; Wastewater</span><span class="k"><b>zlu</b> Zoning</span>
+  </div>
+  <div class="callout ember"><span class="lab">known wart</span> A documented <code>el</code>/<code>eptp</code> naming inversion (SIR-era <code>el</code> guides are environmental; canon says EL = Electrical) — parked to cutover because renaming breaks the in-production skill, and there is zero electrical content in any guide today.</div>
+
+  <h3><span class="hn">4</span>Output</h3>
+  <p>One deliverable, dual-format: <code>site-intelligence-report.pdf</code> (~180–340 pp) + <code>.docx</code>, both
+  from one <code>pages.tsx</code> rendered in RDS Report mode — exec summary + structured body (+ §10 Concept Plan
+  Review if a plan was supplied) + an in-document Research Appendix. The separate appendix PDF is retired.</p>
+
+  <h3><span class="hn">5</span>Signs of cruft / bloat</h3>
+  <div class="grid2">
+    <div class="card drop"><strong>Oversized reference docs</strong>
+      <ul>
+        <li><code>scrub-pass.md</code> ≈ <b>100 KB</b>, 26+ numbered checks — the single biggest bloat signal.</li>
+        <li><code>deliverables.md</code> 57 KB · <code>sir-style-guide.md</code> 57 KB · <code>phase4-synthesis.md</code> 42 KB · <code>run-manifest.md</code> 40 KB.</li>
+      </ul>
+    </div>
+    <div class="card drop"><strong>Reactive scar tissue</strong>
+      <ul>
+        <li>~34 prompts + 26 references; SKILL.md restates the same gates three times.</li>
+        <li>Rules cite <code>incident-log.md #N</code> — accreted from individual run failures, not designed.</li>
+        <li>Retired-feature notes inline ("React-PDF retired", version stamps); the local feasibility-guides dir is a near-empty vestige (real guides live in Bureau).</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3><span class="hn">6</span>Coupling / shared dependencies</h3>
+  <p>
+    <span class="rc r-sub">parcel-geo-location-resolution</span> Phase 0 subject location &nbsp;
+    <span class="rc r-sub">surveyor</span> Phase 2 records + clerk pulls &nbsp;
+    <span class="rc r-store">dsd / RDS</span> render (PDF + DOCX) &nbsp;
+    <span class="rc r-db">Bureau</span> feasibility-guides + jurisdiction stack &nbsp;
+    <span class="rc r-mcp">_shared-research</span> browser-discipline · visual-walk · access-trace
+  </p>
+  <div class="callout"><span class="lab">shared, not owned</span> <code>_shared-research/</code> (a sibling dir) and the sibling skills <code>diligence-replay-phase-5</code>, <code>audit-diligence-run</code>, <code>county-clerk-paid-pull-session</code>, <code>surveyor-review</code> all couple to this skill — so any cutover has to re-point or retire them, not just delete the skill.</div>
+</section>
+
+<!-- ========================================================= -->
+<!-- TAB 3 — DEEP DIVE: SIR bureau pipeline                     -->
+<!-- ========================================================= -->
+<section class="panel" id="pipeline">
+  <h2><span class="eyebrow">Tab 3</span>Deep dive — the new SIR bureau pipeline</h2>
+  <p class="lede">A ground-up rebuild of the same job as a declarative, resumable, individually-verified step chain in
+  the <code>bureau</code> repo. Subscription-billed, driven step-at-a-time by a shared runner, stopping at two
+  first-class human gates. §1–§5 are built and merged; §6–§7 are not.</p>
+
+  <div class="storage"><b>Location:</b> <code>bureau/pipelines/sir/</code> · <b>Runner:</b> <code>pipelines/lib/pipeline_runner.py</code> · <b>Spec doc:</b> <code>bureau/docs/pipelines/sir.md</code> · <b>Pilot run:</b> <code>~/noetic/working/sir/circle-k/university-w-odessa-tx/2026-07-20-075843</code></div>
+
+  <h3><span class="hn">1</span>The step chain (§1 → §5, then §6–§7 to come)</h3>
+  <p>Each step writes its own folder + <code>_health.json</code> and is re-runnable. Ember nodes are the two mandatory
+  human gates; the dashed node is the packaged deliverable.</p>
+
+  <h4>§1 Intake &amp; Site &nbsp;·&nbsp; §2 Plan Extraction</h4>
+  <div class="dfg">
+    <div class="node read"><span class="op">1.1</span><span class="nt">Input Capture</span><span class="nf">Sonnet · verbatim<br>provenance root</span></div>
+    <div class="edge"><span class="ar">→</span></div>
+    <div class="node read"><span class="op">1.2</span><span class="nt">Site &amp; Jurisdiction</span><span class="nf">Opus · parcel triple ·<br>visual walk → seed</span></div>
+    <div class="edge"><span class="ar">→</span></div>
+    <div class="node read"><span class="op">2.1</span><span class="nt">Plan Extraction</span><span class="nf">Gemini + Opus vision<br>+ reconcile · skip if none</span></div>
+  </div>
+
+  <h4>§3 Research</h4>
+  <div class="dfg">
+    <div class="node read"><span class="op">3.1</span><span class="nt">Pre-Gate Audit</span><span class="nf">readiness check<br>before the gate</span></div>
+    <div class="edge"><span class="ar">→</span></div>
+    <div class="node event"><span class="op">HITL1</span><span class="nt">3.2 Regulatory Orientation</span><span class="nf">human --decision<br>confirms the frame</span></div>
+    <div class="edge"><span class="ar">→</span></div>
+    <div class="node read"><span class="op">3.3</span><span class="nt">Surveyor</span><span class="nf">delegated agent ·<br>records + clerk docs</span></div>
+    <div class="edge"><span class="ar">→</span></div>
+    <div class="node event"><span class="op">3.4</span><span class="nt">Research + Site</span><span class="nf">fan-out ·<br>free-tier pulls</span></div>
+  </div>
+
+  <h4>§4 Analysis</h4>
+  <div class="dfg">
+    <div class="node event"><span class="op">4.1</span><span class="nt">Disciplines ×10</span><span class="nf">fan-out · shared<br>geometry sidecar</span></div>
+    <div class="edge"><span class="ar">→</span></div>
+    <div class="node read"><span class="op">4.2</span><span class="nt">Synthesis + Gap Recovery</span><span class="nf">bounded loop ·<br>recorded instruments</span></div>
+    <div class="edge"><span class="ar">→</span></div>
+    <div class="node read"><span class="op">4.3</span><span class="nt">Pre-Gate Audit</span><span class="nf">single full sweep<br>before the gate</span></div>
+    <div class="edge"><span class="ar">→</span></div>
+    <div class="node event"><span class="op">HITL2</span><span class="nt">4.4 Acquisition Gate</span><span class="nf">CTO brief ·<br>human --decision</span></div>
+  </div>
+
+  <h4>§5 Deliverable (strict order)</h4>
+  <div class="dfg">
+    <div class="node read"><span class="op">5.1</span><span class="nt">Compose</span><span class="nf">authors Parts<br>(now fans out)</span></div>
+    <div class="edge"><span class="ar">→</span></div>
+    <div class="node read"><span class="op">5.2</span><span class="nt">Content Scrub</span><span class="nf">full-intent sweep<br>(tiering killed)</span></div>
+    <div class="edge"><span class="ar">→</span></div>
+    <div class="node created"><span class="op">5.3</span><span class="nt">Render PDF</span><span class="nf">RDS report<br>+ page map</span></div>
+    <div class="edge"><span class="ar">→</span></div>
+    <div class="node read"><span class="op">5.4</span><span class="nt">Layout Scrub</span><span class="nf">per-page visual<br>walk + fixes</span></div>
+    <div class="edge"><span class="ar">→</span></div>
+    <div class="node created"><span class="op">5.5</span><span class="nt">Render DOCX</span><span class="nf">Word · live TOC</span></div>
+    <div class="edge"><span class="ar">→</span></div>
+    <div class="node read"><span class="op">5.6</span><span class="nt">Rollup</span><span class="nf">page/section<br>accounting</span></div>
+    <div class="edge"><span class="ar">→</span></div>
+    <div class="node store"><span class="op">5.7</span><span class="nt">Package</span><span class="nf">PDF + DOCX +<br>supporting docs</span></div>
+  </div>
+
+  <h3><span class="hn">2</span>How a step executes — the runner</h3>
+  <p>Steps are declared in <code>pipeline.yaml</code> (conductor's <code>workflow.yaml</code> vocabulary +
+  <code>runner: claude-session</code> and per-step <code>hitl:</code>). Conductor sandboxes cannot pause for a human,
+  so these deliberately run outside conductor.</p>
+  <ul>
+    <li><b>Step kinds:</b> <code>script</code> · <code>agent</code> · <code>checkpoint</code> (only a human <code>--decision</code> closes a checkpoint).</li>
+    <li><b>Commands:</b> <code>validate | list | run --step &lt;id&gt; | verify | checkpoint</code>. <code>run</code> executes one step's entrypoint on one <code>model:</code> tier and stops at its gate.</li>
+    <li><b>Lineage:</b> <code>requires:</code> is enforced; a <code>cost_band</code> triggers a soft cost check-in; <code>skip_when</code> supports exactly one predicate (<code>empty_array</code>).</li>
+    <li><b>Where it runs:</b> <code>~/noetic/working/sir/{customer}/{project}/{ts}/</code>, subscription tokens.</li>
+  </ul>
+  <div class="callout new"><span class="lab">the design win</span> Because state is on disk and every step is re-runnable + verifiable, a correction is a targeted re-run — not a full re-generation. The pilot's entire §5 was re-run as a controlled experiment over the same §1–§4 artifacts, and every prior render was preserved under <code>_superseded-*</code>.</div>
+
+  <h3><span class="hn">3</span>Completeness — what's built, run, and left</h3>
+  <div class="legend">
+    <span class="k"><span class="swatch" style="background:var(--new)"></span> built &amp; proven on the pilot</span>
+    <span class="k"><span class="swatch" style="background:var(--chg)"></span> built, verified vs. artifacts, not re-run step-by-step</span>
+    <span class="k"><span class="swatch" style="background:var(--ret)"></span> not built yet</span>
+  </div>
+  <div class="grid2">
+    <div class="card keep"><strong>Built &amp; proven (§5)</strong>
+      <ul>
+        <li>5.1 → 5.7 all verify-green on a real render.</li>
+        <li>Pilot deliverable: <b>307 pp / 9.74 MB PDF</b> + DOCX + 5 supporting instruments + client README.</li>
+        <li>Page arc across the workstream: 412 → 311 → 307.</li>
+      </ul>
+    </div>
+    <div class="card change"><strong>Built, not re-exercised (§1–§4)</strong>
+      <ul>
+        <li>Every step exists and is merged; new upstream gates (retention, geometry sidecar, defect batch) were verified against the <em>pilot's existing</em> outputs.</li>
+        <li>The cheap rehearsal (<code>verify --step 3.3/3.4/4.1/4.2</code>) is owed <b>before</b> the next live SIR.</li>
+        <li>The next real SIR (Riverton WY) is the first true end-to-end re-exercise of §1–§4.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="grid2">
+    <div class="card drop"><strong>Not built (§6)</strong>
+      <ul>
+        <li><b>6.1 Revision</b> — the only step still <code>status: planned</code> in the yaml. Handles operator feedback after delivery.</li>
+      </ul>
+    </div>
+    <div class="card drop"><strong>Not built (§7)</strong>
+      <ul>
+        <li><b>7.x Learnback</b> — exists only as prose in <code>sir.md</code> (7.1–7.3), not as runnable steps. Routes corrections back into surveyor / Bureau guides.</li>
+        <li>First candidate to carry the reserved "cite-don't-retype / fact-ledger" architecture.</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3><span class="hn">4</span>What the pipeline gets right that the skill doesn't</h3>
+  <div class="grid2">
+    <div class="card keep"><strong>Provenance is mechanical</strong>
+      <ul>
+        <li>Patch-never-wipe: <code>_superseded-*</code> + <code>corrections[]</code> + a diff audit trail; the client never sees the sausage-making.</li>
+        <li>Per-step <code>check_*.py</code> + <code>_health.json</code> catch classes of defect a final scrub can't.</li>
+      </ul>
+    </div>
+    <div class="card keep"><strong>Resumable &amp; cheap to iterate</strong>
+      <ul>
+        <li>Re-run one step, not the whole run; per-step timing is stamped in <code>state/events.jsonl</code>.</li>
+        <li>Subscription-billed — the pilot ran at <code>metered_usd: 0</code> (except the parked Gemini 2.1 and surveyor exceptions).</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3><span class="hn">5</span>Known debt &amp; open threads (from the PLAN)</h3>
+  <ul>
+    <li><b>Length is the headline defect:</b> the pilot appendix ran ~3.26× both reference reports — a "write each fact once / point-don't-quote" problem, and the reserved fact-ledger follow-up is aimed straight at it.</li>
+    <li><b>Efficiency target unmet:</b> §1–§5 ≈ 8.2 h against a 2 h goal; the fix is fanning out the serial steps (5.1 compose, 5.4 layout scrub), sequenced after the format work.</li>
+    <li><b>A few RDS / check-script defects</b> recorded not fixed (rollup double-count, layout sampling floor, no PDF bookmarks).</li>
+    <li><b>Cutover checklist</b> (Jason's): migrate <code>parcel-geo</code> + <code>_shared-research</code> into the pipeline, <code>el</code>/<code>eptp</code> rename + real electrical guides, surveyor → its own sub-pipeline, then retire the skill.</li>
+  </ul>
+
+  <div class="callout"><span class="lab">relationship to "New Review"</span> The sibling <code>bureau/pipelines/review/</code> reuses this pipeline's §1.2/§3.1/§3.2/§3.3/§3.4 front-end (two files are literal symlinks into <code>sir/</code>) and imports <code>sir/lib/</code> for rendering. Improvements to the shared runner/lib and the front-end steps benefit both.</div>
+
+  <div class="foot">architecture-overview.html · spec-kit v3 · exploratory companion to a forthcoming DESIGN-SPEC.md · sources: bureau/docs/pipelines/sir.md, live bureau/pipelines/{sir,review}/, Jason's SIR-Pipeline workspace, production diligence-report skill.</div>
+</section>
+
+</main>
+
+<script>
+  const btns=document.querySelectorAll('nav.tabs button');
+  const panels=document.querySelectorAll('.panel');
+  const IDS=['overview','skill','pipeline']; /* KEEP IN SYNC with the data-tab / panel ids above */
+  function show(id){
+    btns.forEach(b=>b.classList.toggle('active',b.dataset.tab===id));
+    panels.forEach(p=>p.classList.toggle('active',p.id===id));
+    if(location.hash.slice(1)!==id) history.replaceState(null,'','#'+id);
+    window.scrollTo({top:0,behavior:'smooth'});
+  }
+  btns.forEach(b=>b.addEventListener('click',()=>show(b.dataset.tab)));
+  const initial=location.hash.slice(1);
+  if(IDS.includes(initial)) show(initial);
+</script>
+</body>
+</html>
