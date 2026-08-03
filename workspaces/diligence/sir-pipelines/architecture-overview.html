@@ -280,6 +280,16 @@ pre.cb .k{color:#9ecbff}
 pre.cb .s{color:#a5d6a4}
 @media(max-width:640px){dl.rgrid{grid-template-columns:1fr;gap:2px 0}dl.rgrid dt{margin-top:8px}}
 .seqcap .nb{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;background:var(--p600);color:#fff;font-size:9px;font-weight:700;font-family:var(--mono)}
+/* per-API-call sub-sections inside a returns-reference item */
+.acintro{font-size:12.5px;color:var(--ink);margin:0 0 4px}
+.apicall{border-left:2px solid var(--p200);padding:1px 0 2px 13px;margin:12px 0}
+.apicall .ach{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px;margin-bottom:2px}
+.apicall .ach .step{font-family:var(--mono);font-size:8.5px;font-weight:700;color:#fff;background:var(--p500);border-radius:4px;padding:1px 6px;letter-spacing:.03em;white-space:nowrap;flex:0 0 auto}
+.apicall .ach .nm{font-family:var(--serif);font-weight:600;font-size:13px;color:var(--p900)}
+.apicall .ach .xport{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;padding:1px 6px;border-radius:4px;white-space:nowrap}
+.apicall .ach .xport.mcp{background:#f3eefb;color:#6b3fa0;border:1px solid #dcccf0}
+.apicall .ach .xport.http{background:#e9f7f2;color:#0f7a5f;border:1px solid #bfe8db}
+.apicall dl.rgrid{grid-template-columns:70px 1fr;gap:6px 12px;margin-top:5px}
 </style>
 </head>
 <body>
@@ -762,7 +772,7 @@ pre.cb .s{color:#a5d6a4}
 <line x1="593" y1="52" x2="593" y2="826" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
 <rect x="520" y="6" width="146" height="46" rx="8" fill="#6b3fa0"/>
 <text x="593" y="26" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12.5" font-weight="700" fill="#fff">parcel-geo</text>
-<text x="593" y="42" text-anchor="middle" font-size="9" fill="#ffffff" opacity="0.82">location skill · MCP</text>
+<text x="593" y="42" text-anchor="middle" font-size="9" fill="#ffffff" opacity="0.82">…-location-resolution</text>
 <line x1="765" y1="52" x2="765" y2="826" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
 <rect x="692" y="6" width="146" height="46" rx="8" fill="#3f6582"/>
 <text x="765" y="26" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12.5" font-weight="700" fill="#fff">det. scripts</text>
@@ -876,20 +886,75 @@ pre.cb .s{color:#a5d6a4}
         </dl></div>
       </details>
 
-      <details class="ret"><summary><span class="num">3</span><span class="ttl">parcel-geo skill</span><span class="ra">⇢</span> rings · geometry-summary · triple</summary>
-        <div class="rbody"><dl class="rgrid">
-          <dt>API</dt><dd>Drives the <b>Surveyor MCP server</b> plus keyless services: the <b>US Census geographies</b> geocoder (<code>geocoding.geo.census.gov/geocoder/geographies/coordinates</code>, pin → county → surveyor slug), the county <b>ArcGIS parcel FeatureServer</b> (here LOJIC <code>OpenDataPVA/MapServer/1</code> point-in-polygon + envelope, plus the PVA appraisal search), an adjoiner spatial query, and the <b>ESRI World_Imagery export</b> for the stroked boundary overlay (<code>render_boundary_overlay.py</code>, step 5). <b>No generic-geocoder fallback</b> — an unresolvable jurisdiction STOPs.</dd>
-          <dt>Returns</dt><dd><code>parcel-rings.geojson</code> (FeatureCollection; per-parcel <code>parcel_id · address · acres · role</code> + Polygon coords), <code>geometry-summary.json</code> (<code>parcels[]{ bbox_ft · ring_area_acres · centroid_lonlat · centroid_inside_ring }</code>, <code>pin_inside_ring</code>, <code>bbox_wgs84</code>, <code>warnings[]</code>), and <code>location-resolution.md</code> with its <code>**Status:**</code> line + canonical county parcel ID and source layer.</dd>
-          <dt>Example</dt><dd><pre class="cb">{ "parcels": [
-    { "parcel_id": "061801400000", "bbox_ft": [224, 230],
-      "ring_area_acres": 1.02, "centroid_inside_ring": true },
-    { "parcel_id": "061801410000", "bbox_ft": [583, 216],
-      "ring_area_acres": 2.61, "centroid_inside_ring": true } ],
-  "pin_lonlat": [-85.6371661, 38.1853413],
-  "pin_inside_ring": false,          <span class="cm">// assemblage tripwire</span>
-  "warnings": ["geocode pin falls OUTSIDE every resolved parcel ring
-    — the address pin is on the adjacent Wawa parcel"] }</pre></dd>
-        </dl></div>
+      <details class="ret"><summary><span class="num">3</span><span class="ttl">parcel-geo-location-resolution</span><span class="ra">⇢</span> location triple · rings · geometry</summary>
+        <div class="rbody">
+          <p class="acintro"><code>parcel-geo</code> was shorthand — the skill's real name is <code>parcel-geo-location-resolution</code>, and it is <b>not one call</b>: it runs an ordered pipeline of discrete calls. Some drive the <b>Surveyor MCP server</b> (tool prefix <code>louisville_</code>); others are keyless HTTP (<code>curl</code>) to the Census geocoder and ESRI imagery. There is <b>no generic-geocoder fallback</b> — an unresolvable jurisdiction STOPs. In the pilot the operator pin landed on the adjacent <b>Wawa</b>; calls 3–4 are what recovered the two vacant subject pads.</p>
+
+          <div class="apicall">
+            <div class="ach"><span class="step">Call 1 · Step 1</span><span class="nm">Jurisdiction detection</span><span class="xport http">keyless HTTP</span></div>
+            <dl class="rgrid">
+              <dt>Calls</dt><dd><code>geocoding.geo.census.gov/geocoder/geographies/coordinates?x=&lt;lon&gt;&amp;y=&lt;lat&gt;&amp;benchmark=Public_AR_Current&amp;vintage=Current_Current</code> (US Census, <code>curl</code>).</dd>
+              <dt>Returns</dt><dd><code>.result.geographies.Counties[0].NAME</code> + state/county FIPS — mapped to the surveyor slug. (A coordinate query has no <code>addressMatches[]</code>.)</dd>
+              <dt>Example</dt><dd>pin <code>(-85.6372, 38.1853)</code> → <b>Jefferson County, KY</b> → slug <code>louisville-ky</code>. <span style="color:var(--muted)">(narrated in <code>location-resolution.md</code>; no raw artifact persisted)</span></dd>
+            </dl>
+          </div>
+
+          <div class="apicall">
+            <div class="ach"><span class="step">Call 2 · Step 2</span><span class="nm">Point → parcel (LOJIC)</span><span class="xport mcp">surveyor MCP</span></div>
+            <dl class="rgrid">
+              <dt>Calls</dt><dd><code>louisville_property_profile</code> (family <code>louisville-gis</code>) — a LOJIC point-in-polygon at <code>lon/lat</code> — over the parcels layer <code>OpenDataPVA/MapServer/1</code>.</dd>
+              <dt>Returns</dt><dd>per-layer feature sets: <code>zoning</code> (<code>ZONING_CODE</code>), <code>form-district</code> (<code>DISTRICT_ABBR</code>), <code>subdivision</code> (<code>PLAT</code>/<code>SUBDIV_NAME</code>/<code>DOCKET</code>), <code>plan-certain</code>, <code>council-district</code>, <code>fire-district</code>. Header: <code>layersQueried</code>/<code>layersWithData</code>.</dd>
+              <dt>Example</dt><dd><pre class="cb"><span class="cm">// _pin-profile.json — layersQueried: 17, layersWithData: 7</span>
+"PARCELID": "061801390000",     <span class="cm">// ← the Wawa, not the vacant land</span>
+"ZONING_CODE": "C1", "DISTRICT_ABBR": "SMC",
+"PLAT": "65041", "SUBDIV_NAME": "BOWMAN CONSULTING GROUP LTD MINOR PLAT",
+"DOCKET": "24-MPLAT-0014", "PLANCERT_DOCNO": "20-ZONE-0006",
+"COUNDIST": 2, "JCFDNUM": "F60"</pre></dd>
+            </dl>
+          </div>
+
+          <div class="apicall">
+            <div class="ach"><span class="step">Call 3 · Step 2</span><span class="nm">PVA appraisal lookup</span><span class="xport mcp">surveyor MCP</span></div>
+            <dl class="rgrid">
+              <dt>Calls</dt><dd><code>louisville_appraisal_search</code> then <code>louisville_appraisal_detail</code> by LRSN (family <code>louisville-cad</code>, the PVA assessor).</dd>
+              <dt>Returns</dt><dd><code>{ ParcelID · Owner · Address · AssessedValueTotal · Acres · LRSN · Neighborhood }</code> — confirms what the pin's parcel actually <em>is</em>.</dd>
+              <dt>Example</dt><dd>ID <code>061801390000</code> → owner <code>HUTTON LOUISVILLE BARDSTOWN KY ST LL</code>, <code>4310 Bardstown Rd</code>, <b>3.86 ac</b>, AV <b>$5.12M</b> — the improved Wawa, i.e. the pin is off the vacant land.</dd>
+            </dl>
+          </div>
+
+          <div class="apicall">
+            <div class="ach"><span class="step">Call 4 · Step 4a</span><span class="nm">Assemblage / adjoiner envelope sweep</span><span class="xport http">keyless HTTP</span></div>
+            <dl class="rgrid">
+              <dt>Calls</dt><dd>raw ArcGIS envelope query on <code>OpenDataPVA/MapServer/1</code> — <code>geometryType=esriGeometryEnvelope&amp;spatialRel=esriSpatialRelIntersects&amp;outSR=4326&amp;returnGeometry=true&amp;f=json</code>.</dd>
+              <dt>Returns</dt><dd><code>features[]{ attributes:{PARCELID, LRSN}, geometry:{rings} }</code>, <code>spatialReference.wkid: 4326</code> — the assemblage trio + WGS84 rings in one shot.</dd>
+              <dt>Example</dt><dd><pre class="cb"><span class="cm">// _plat-trio.arcgis.json — spatialReference.wkid: 4326</span>
+"features": [
+  { "attributes": { "PARCELID": "061801390000", "LRSN": 2009361 },  <span class="cm">// Wawa (improved)</span>
+    "geometry": { "rings": [[[-85.6366, 38.1849], ... ]] } },
+  { "attributes": { "PARCELID": "061801410000", "LRSN": 2009363 } },  <span class="cm">// 2.61 ac pad</span>
+  { "attributes": { "PARCELID": "061801400000", "LRSN": 2009362 } } ] <span class="cm">// 1.02 ac pad</span></pre>
+              <span style="color:var(--muted)">Per-parcel confirmation of the two pads then uses <code>louisville_parcel_lookup</code> (PARCELID → geometry + centroid) + <code>louisville_parcel_class</code>.</span></dd>
+            </dl>
+          </div>
+
+          <div class="apicall">
+            <div class="ach"><span class="step">Call 5 · Step 5</span><span class="nm">ESRI World Imagery → geometry summary</span><span class="xport http">keyless HTTP</span></div>
+            <dl class="rgrid">
+              <dt>Calls</dt><dd><code>render_boundary_overlay.py</code> → <code>server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/export</code> (EPSG:3857, 4096&nbsp;px cap, retries intermittent 500s).</dd>
+              <dt>Returns</dt><dd><code>subject-boundary-overlay.png</code> (rings + pin stroked) and <code>geometry-summary.json</code> — per-parcel <code>{ bbox_ft · ring_area_acres · centroid_inside_ring }</code> plus the load-bearing <code>pin_inside_ring</code> + <code>warnings[]</code>.</dd>
+              <dt>Example</dt><dd><pre class="cb"><span class="cm">// geometry-summary.json</span>
+"parcels": [ { "parcel_id": "061801400000", "ring_area_acres": 1.02,
+               "centroid_inside_ring": true },
+             { "parcel_id": "061801410000", "ring_area_acres": 2.61,
+               "centroid_inside_ring": true } ],
+"pin_inside_ring": false,
+"warnings": ["geocode pin falls OUTSIDE every resolved parcel ring
+  — the pin is on the adjacent Wawa parcel"]</pre></dd>
+            </dl>
+          </div>
+
+          <p class="acintro" style="margin-top:12px"><b>Outputs →</b> <code>parcel-rings.geojson</code> · <code>geometry-summary.json</code> · <code>location-resolution.md</code> (its <code>**Status:**</code> line + canonical parcel ID + source layer). <b>MCP tools driven (Louisville):</b> <code>louisville_property_profile</code> · <code>louisville_parcel_lookup</code> · <code>louisville_appraisal_search</code>/<code>_detail</code> · <code>louisville_parcel_class</code> — families <code>louisville-gis</code> (LOJIC) &amp; <code>louisville-cad</code> (PVA).</p>
+        </div>
       </details>
 
       <details class="ret"><summary><span class="num">4</span><span class="ttl">parcel_dimensions.py</span><span class="ra">⇢</span> union bbox · oriented rect · area</summary>
