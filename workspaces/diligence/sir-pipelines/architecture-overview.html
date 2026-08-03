@@ -898,7 +898,12 @@ dl.rgrid dd.pe{background:#fdf6f0;border-left:2px solid var(--ember);padding:6px
               <dt class="pe">In plain English</dt><dd class="pe">Takes the operator's <b>bare pin</b> &#8212; a lat/lon with <em>no</em> jurisdiction attached &#8212; and asks the US Census which county the coordinate falls in, so the pipeline knows which county's surveyor toolset to load. Here the pin resolved to <b>Jefferson County, KY</b> &#8594; slug <code>louisville-ky</code>.</dd>
               <dt>Calls</dt><dd><code>geocoding.geo.census.gov/geocoder/geographies/coordinates?x=&lt;lon&gt;&amp;y=&lt;lat&gt;&amp;benchmark=Public_AR_Current&amp;vintage=Current_Current</code> (US Census, <code>curl</code>).</dd>
               <dt>Returns</dt><dd><code>.result.geographies.Counties[0].NAME</code> + state/county FIPS &#8212; mapped to the surveyor slug. (A coordinate query has no <code>addressMatches[]</code>.)</dd>
-              <dt>Example</dt><dd>the two operator inputs were a pin <code>(-85.6372, 38.1853)</code> and a flyer address <code>4310 Bardstown Rd</code> (which turns out to be the <em>Wawa's</em> arterial address); the Census coordinate query on the pin returns <code>Counties[0].NAME = "Jefferson County"</code> &#8594; slug <code>louisville-ky</code>. <span style="color:var(--muted)">(narrated in <code>location-resolution.md</code>; the raw call is logged, no Census artifact persisted)</span></dd>
+              <dt>Request &#8594; response</dt><dd><span style="color:var(--muted)">real, keyless &#8212; the two operator inputs were the pin and a flyer address <code>4310 Bardstown Rd</code> (the Wawa's arterial address):</span><pre class="cb">$ curl "https://geocoding.geo.census.gov/geocoder/geographies/coordinates\
+?x=-85.6371661&amp;y=38.1853413&amp;benchmark=Public_AR_Current&amp;vintage=Current_Current&amp;format=json"
+
+{ "result": { "geographies": { "Counties": [
+  { "NAME": "Jefferson County", "STATE": "21", "COUNTY": "111", "GEOID": "21111" } ] } } }
+<span class="cm">// &#8594; surveyor slug louisville-ky</span></pre></dd>
             </dl>
           </div>
 
@@ -908,15 +913,22 @@ dl.rgrid dd.pe{background:#fdf6f0;border-left:2px solid var(--ember);padding:6px
               <dt class="pe">In plain English</dt><dd class="pe">Takes the pin plus the now-known Louisville jurisdiction and determines <b>which parcel sits under the point</b> &#8212; its <code>PARCELID</code> and its zoning/district context &#8212; by dropping the coordinate through 17 stacked LOJIC map layers. It came back with the <b>Wawa</b> parcel: the first hard signal the pin was on the wrong land.</dd>
               <dt>Calls</dt><dd><code>louisville_property_profile</code> (family <code>louisville-gis</code>) &#8212; a LOJIC point-in-polygon at <code>lon/lat</code> over <code>OpenDataPVA/MapServer/1</code>.</dd>
               <dt>Returns</dt><dd>per-layer feature sets (<code>layersQueried</code>/<code>layersWithData</code> header): zoning, form district, recorded subdivision, plan-certain, council + fire district &#8212; and the <code>PARCELID</code> under the point.</dd>
-              <dt>Example</dt><dd><pre class="cb"><span class="cm">// _pin-profile.json &#183; point (-85.6372, 38.1853) &#183; layersQueried 17 &#183; layersWithData 7</span>
+              <dt>Request &#8594; response</dt><dd><pre class="cb"><span class="cm">// surveyor MCP tool call</span>
+louisville_property_profile { "lon": -85.6371661, "lat": 38.1853413 }
+
+<span class="cm">// response (from _pin-profile.json) &#8212; 7 of 17 LOJIC layers had data:</span>
 zoning        { "ZONING_CODE": "C1", "ZONING_NAME": "COMMERCIAL" }
-form-district { "DISTRICT": "SUBURBAN MARKETPLACE CORRIDOR", "DISTRICT_ABBR": "SMC" }
+form-district { "DISTRICT_ABBR": "SMC", "DISTRICT": "SUBURBAN MARKETPLACE CORRIDOR" }
 subdivision   { "PLAT": "65041", "SUBDIV_NAME": "BOWMAN CONSULTING GROUP LTD MINOR PLAT",
                 "SUBDIV_YEAR": 2024, "DOCKET": "24-MPLAT-0014" }
 plan-certain  { "PLANCERT_DOCNO": "20-ZONE-0006" }
 council-dist  { "COUNDIST": 2, "COUN_NAME": "BARBARA SHANKLIN" }
 fire-district { "JCFD_DIST": "FERN CREEK", "JCFDNUM": "F60" }
-<span class="cm">// point-in-polygon PARCELID = 061801390000   &#8592; the Wawa, not the vacant land</span></pre></dd>
+
+<span class="cm">// the PARCELID itself comes from the LOJIC parcels layer &#8212; equivalent raw curl:</span>
+$ curl "https://gis.lojic.org/maps/rest/services/LojicSolutions/OpenDataPVA/MapServer/1/query\
+?geometry=-85.6371661,38.1853413&amp;geometryType=esriGeometryPoint&amp;inSR=4326&amp;outFields=PARCELID,LRSN&amp;f=json"
+{ "features": [ { "attributes": { "PARCELID": "061801390000", "LRSN": 2009361 } } ] }  <span class="cm">// the Wawa</span></pre></dd>
             </dl>
           </div>
 
@@ -926,11 +938,16 @@ fire-district { "JCFD_DIST": "FERN CREEK", "JCFDNUM": "F60" }
               <dt class="pe">In plain English</dt><dd class="pe">Takes the <code>PARCELID</code> from call 2 and asks the county assessor (PVA) <b>what that parcel actually is</b> &#8212; owner, address, acreage, assessed value. The answer &#8212; Hutton's improved Wawa, 3.86 ac, $5.12M &#8212; confirms the pin's parcel is developed, so the real subject (vacant land) must be found elsewhere.</dd>
               <dt>Calls</dt><dd><code>louisville_appraisal_search</code> then <code>louisville_appraisal_detail</code> by LRSN (family <code>louisville-cad</code>, the PVA assessor).</dd>
               <dt>Returns</dt><dd><code>{ ParcelID &#183; Owner &#183; Address &#183; Acres &#183; AssessedValueTotal &#183; LRSN &#183; Neighborhood }</code>.</dd>
-              <dt>Example</dt><dd><pre class="cb"><span class="cm">// louisville_appraisal_detail &#8212; PARCELID 061801390000</span>
-"Owner": "HUTTON LOUISVILLE BARDSTOWN KY ST LL",
-"Address": "4310 Bardstown Rd",  "Acres": 3.86,
-"AssessedValueTotal": 5122800
-<span class="cm">// &#8594; improved Wawa; the pin's parcel is an adjoiner, not the subject</span></pre></dd>
+              <dt>Request &#8594; response</dt><dd><pre class="cb"><span class="cm">// surveyor MCP tool call (PVA = jeffersonpva.ky.gov, a gated site the tool</span>
+<span class="cm">//  scrapes &#8212; there is no clean REST endpoint, hence the MCP wrapper)</span>
+louisville_appraisal_search { "query": "061801390000", "searchType": "parcel" }
+
+<span class="cm">// response &#8212; the free "core" fields:</span>
+{ "lrsn": 2009361,
+  "core": { "owner": "HUTTON LOUISVILLE BARDSTOWN KY ST LL",
+            "parcelId": "061801390000", "address": "4310 Bardstown Rd",
+            "acres": 3.86, "assessedValueTotal": 5122800 } }
+<span class="cm">// then louisville_appraisal_detail { "lrsn": 2009361 } returns the same core &#8594; improved Wawa</span></pre></dd>
             </dl>
           </div>
 
@@ -940,12 +957,17 @@ fire-district { "JCFD_DIST": "FERN CREEK", "JCFDNUM": "F60" }
               <dt class="pe">In plain English</dt><dd class="pe">Takes a bounding <b>envelope</b> around the pin and pulls back <b>every parcel it touches, with boundaries, in one query</b> &#8212; the move that recovers the real subject. Three consecutive-LRSN Hutton parcels come back from the same 2024 plat; PVA then splits them into the improved Wawa (adjoiner) and the two vacant pads (the subject set).</dd>
               <dt>Calls</dt><dd>raw ArcGIS envelope query on <code>OpenDataPVA/MapServer/1</code> &#8212; <code>geometryType=esriGeometryEnvelope&amp;spatialRel=esriSpatialRelIntersects&amp;outSR=4326&amp;returnGeometry=true</code>.</dd>
               <dt>Returns</dt><dd><code>features[]{ attributes:{PARCELID, LRSN}, geometry:{rings} }</code>, <code>spatialReference.wkid: 4326</code>.</dd>
-              <dt>Example</dt><dd><pre class="cb"><span class="cm">// _plat-trio.arcgis.json &#183; 3 consecutive-LRSN parcels &#183; wkid 4326</span>
-{ "PARCELID": "061801390000", "LRSN": 2009361 }  <span class="cm">// Wawa &#183; improved &#183; AV $5.12M &#8594; adjoiner</span>
-{ "PARCELID": "061801400000", "LRSN": 2009362 }  <span class="cm">// 4401 Fegenbush Ln &#183; 1.02 ac &#8594; SUBJECT pad</span>
-{ "PARCELID": "061801410000", "LRSN": 2009363 }  <span class="cm">// 4403 Fegenbush Ln &#183; 2.61 ac &#8594; SUBJECT (primary)</span>
-<span class="cm">// all HUTTON-owned, created together by the 2024 Bowman minor plat (Plat 65041)</span></pre>
-              <span style="color:var(--muted)">The rejected Wawa is recorded in <code>adjoining-parcels.json</code> with its reason; per-pad confirmation uses <code>louisville_parcel_lookup</code> + <code>louisville_parcel_class</code>.</span></dd>
+              <dt>Request &#8594; response</dt><dd><pre class="cb">$ curl "https://gis.lojic.org/maps/rest/services/LojicSolutions/OpenDataPVA/MapServer/1/query\
+?geometry=-85.6387,38.1841,-85.6353,38.1862&amp;geometryType=esriGeometryEnvelope\
+&amp;inSR=4326&amp;outFields=PARCELID,LRSN&amp;returnGeometry=true&amp;outSR=4326&amp;f=json"
+
+<span class="cm">// returns every parcel in the envelope; the skill keeps the consecutive-LRSN Hutton trio:</span>
+{ "features": [
+  { "attributes": { "PARCELID": "061801390000", "LRSN": 2009361 } },  <span class="cm">// Wawa &#8594; adjoiner</span>
+  { "attributes": { "PARCELID": "061801400000", "LRSN": 2009362 } },  <span class="cm">// 1.02 ac &#8594; SUBJECT pad</span>
+  { "attributes": { "PARCELID": "061801410000", "LRSN": 2009363 } } ] <span class="cm">// 2.61 ac &#8594; SUBJECT (primary)</span>
+}  <span class="cm">// persisted with rings as _plat-trio.arcgis.json (all HUTTON-owned, 2024 Bowman plat)</span></pre>
+              <span style="color:var(--muted)">The rejected Wawa is recorded in <code>adjoining-parcels.json</code>; per-pad confirmation uses <code>louisville_parcel_lookup</code> + <code>louisville_parcel_class</code> (PVA <code>New_AllParcels</code> FeatureServer).</span></dd>
             </dl>
           </div>
 
@@ -955,14 +977,16 @@ fire-district { "JCFD_DIST": "FERN CREEK", "JCFDNUM": "F60" }
               <dt class="pe">In plain English</dt><dd class="pe">Takes the two resolved subject rings and a satellite basemap and produces <b>the frame every later visual read uses</b> &#8212; a stroked boundary overlay &#8212; plus the mechanical geometry facts: each pad's acreage and whether the pin/centroid fall inside. This is where the "pin is on someone else's land" tripwire is stamped as a fact.</dd>
               <dt>Calls</dt><dd><code>render_boundary_overlay.py</code> &#8594; <code>server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/export</code> (EPSG:3857, 4096&nbsp;px cap, retries 500s).</dd>
               <dt>Returns</dt><dd><code>subject-boundary-overlay.png</code> + <code>geometry-summary.json</code> &#8212; per-parcel <code>{ bbox_ft &#183; ring_area_acres &#183; centroid_inside_ring }</code>, <code>pin_inside_ring</code>, <code>warnings[]</code>.</dd>
-              <dt>Example</dt><dd><pre class="cb"><span class="cm">// geometry-summary.json</span>
-"parcels": [ { "parcel_id": "061801400000", "bbox_ft": [224,230],
-               "ring_area_acres": 1.02, "centroid_inside_ring": true },
-             { "parcel_id": "061801410000", "bbox_ft": [583,216],
-               "ring_area_acres": 2.61, "centroid_inside_ring": true } ],
+              <dt>Request &#8594; response</dt><dd><pre class="cb"><span class="cm">// render_boundary_overlay.py fetches ONE keyless basemap frame (Web Mercator):</span>
+$ curl "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/export\
+?bbox=&lt;xmin,ymin,xmax,ymax in EPSG:3857&gt;&amp;bboxSR=3857&amp;imageSR=3857&amp;size=&lt;w,h&gt;&amp;format=png&amp;f=image" -o basemap.png
+
+<span class="cm">// returns image/png bytes (not JSON). The script strokes the rings + pin over it</span>
+<span class="cm">// &#8594; subject-boundary-overlay.png, and emits geometry-summary.json:</span>
+"parcels": [ { "parcel_id": "061801400000", "ring_area_acres": 1.02, "centroid_inside_ring": true },
+             { "parcel_id": "061801410000", "ring_area_acres": 2.61, "centroid_inside_ring": true } ],
 "pin_inside_ring": false,
-"warnings": ["geocode pin falls OUTSIDE every resolved parcel ring
-  &#8212; the pin is on someone else's property; do not caption from pin-centered imagery"]</pre></dd>
+"warnings": ["geocode pin falls OUTSIDE every resolved parcel ring &#8212; do not caption from pin-centered imagery"]</pre></dd>
             </dl>
           </div>
 
