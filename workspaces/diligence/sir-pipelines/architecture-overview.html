@@ -958,7 +958,7 @@ louisville_appraisal_search { "query": "061801390000", "searchType": "parcel" }
               <dt class="pe">In plain English</dt><dd class="pe">Takes a bounding <b>envelope</b> around the pin and pulls back <b>every parcel it touches, with boundaries, in one query</b> &#8212; the move that recovers the real subject. Three consecutive-LRSN Hutton parcels come back from the same 2024 plat; PVA then splits them into the improved Wawa (adjoiner) and the two vacant pads (the subject set).</dd>
               <dt>Calls</dt><dd>raw ArcGIS envelope query on <code>OpenDataPVA/MapServer/1</code> &#8212; <code>geometryType=esriGeometryEnvelope&amp;spatialRel=esriSpatialRelIntersects&amp;outSR=4326&amp;returnGeometry=true</code>.</dd>
               <dt>Returns</dt><dd><code>features[]{ attributes:{PARCELID, LRSN}, geometry:{rings} }</code>, <code>spatialReference.wkid: 4326</code>.</dd>
-              <dt>Request &#8594; response</dt><dd><pre class="cb">$ curl "https://gis.lojic.org/maps/rest/services/LojicSolutions/OpenDataPVA/MapServer/1/query\
+              <dt>Request &#8594; response</dt><dd><span style="color:var(--muted)">the endpoint, method and kept trio are real; the <code>bbox</code> below is <em>illustrative</em> &#8212; Step 4a's exact envelope was not logged this run (no <code>location-resolution-mcp-calls.jsonl</code>), so it is reconstructed from <code>geometry-summary.json</code>'s resolved <code>bbox_wgs84</code>:</span><pre class="cb">$ curl "https://gis.lojic.org/maps/rest/services/LojicSolutions/OpenDataPVA/MapServer/1/query\
 ?geometry=-85.6387,38.1841,-85.6353,38.1862&amp;geometryType=esriGeometryEnvelope\
 &amp;inSR=4326&amp;outFields=PARCELID,LRSN&amp;returnGeometry=true&amp;outSR=4326&amp;f=json"
 
