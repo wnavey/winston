@@ -254,6 +254,31 @@ dl.sdmeta dd code{font-size:11.5px}
 .seqcap .ln{display:inline-block;width:28px;border-top:2px solid var(--p600)}
 .seqcap .ln.ret{border-top:2px dashed var(--muted)}
 .seqcap .stop{color:var(--ret);font-weight:700}
+
+/* ============================================================
+   Returns reference — collapsible per-call API/shape/example
+   ============================================================ */
+.rrxh{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--p600);font-weight:700;margin:16px 0 7px;display:flex;align-items:center;gap:9px}
+.rrxh .hint{font-family:var(--sans);font-weight:400;letter-spacing:0;text-transform:none;color:var(--muted);font-size:11.5px}
+details.ret{border:1px solid var(--divider);border-radius:9px;background:#fff;margin:7px 0;overflow:hidden}
+details.ret > summary{list-style:none;cursor:pointer;padding:9px 13px;display:flex;align-items:center;gap:10px;font-size:12.5px;background:var(--p50);border-left:3px solid var(--p400)}
+details.ret[open] > summary{border-bottom:1px solid var(--divider)}
+details.ret > summary::-webkit-details-marker{display:none}
+details.ret > summary::before{content:"▸";font-family:var(--mono);color:var(--p500);font-size:11px;flex:0 0 auto}
+details.ret[open] > summary::before{content:"▾"}
+details.ret > summary .num{font-family:var(--mono);font-size:10.5px;font-weight:700;color:#fff;background:var(--p600);border-radius:5px;padding:1px 7px;flex:0 0 auto}
+details.ret > summary .ttl{font-family:var(--mono);font-weight:700;color:var(--p900)}
+details.ret > summary .ra{color:var(--ember);font-weight:700;margin:0 2px}
+details.ret .rbody{padding:12px 15px}
+dl.rgrid{display:grid;grid-template-columns:92px 1fr;gap:9px 14px;margin:0;font-size:12.5px}
+dl.rgrid dt{font-family:var(--mono);font-size:9.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--p600);font-weight:700;padding-top:3px}
+dl.rgrid dd{margin:0;line-height:1.5;color:var(--ink)}
+dl.rgrid dd code{font-size:11.5px}
+pre.cb{margin:7px 0 0;background:var(--p950);color:#e6edf3;border-radius:7px;padding:11px 13px;overflow-x:auto;font-family:var(--mono);font-size:11px;line-height:1.5;white-space:pre;-webkit-text-size-adjust:100%}
+pre.cb .cm{color:#7d95a6}
+pre.cb .k{color:#9ecbff}
+pre.cb .s{color:#a5d6a4}
+@media(max-width:640px){dl.rgrid{grid-template-columns:1fr;gap:2px 0}dl.rgrid dt{margin-top:8px}}
 </style>
 </head>
 <body>
@@ -799,6 +824,118 @@ dl.sdmeta dd code{font-size:11.5px}
 </svg>
       </div>
       <div class="seqcap"><b>step 1.2 sequence</b><span class="k"><span class="ln"></span> call</span><span class="k"><span class="ln ret"></span> return</span><span class="k">↻ local / deterministic step</span><span class="k"><span class="stop">red</span> hard-stop guard</span></div>
+
+      <div class="rrxh">what each call returns <span class="hint">— the API it hits, the shape it hands back, and real example data from the pilot <code>hutton / car-wash-louisville-ky</code> run</span></div>
+
+      <details class="ret"><summary><span class="num">1</span><span class="ttl">preflight.sh</span><span class="ra">⇢</span> readiness verdict</summary>
+        <div class="rbody"><dl class="rgrid">
+          <dt>API</dt><dd><code>preflight.py</code> shells out to the diligence skill's <code>scripts/preflight.sh &lt;jurisdiction&gt; --sync</code> (600&nbsp;s). That script <code>git fetch</code>es <code>bureau</code> + <code>surveyor</code> and reads <b><code>origin/main</code></b>, never the local checkout — presence via <code>git ls-tree</code> (bureau needs ≥10 feasibility guides; surveyor a config), the surveyor <b>canary golden</b> (<code>coverage.floor_met</code>), and the <b>Prospector readiness DB</b> as a non-authoritative freshness layer. Fails <em>closed</em> if a remote is unreachable.</dd>
+          <dt>Returns</dt><dd><code>readiness{ verdict · exit_code · feasibility_guides · checked_at · db_readiness · workstreams[] · stale_workstreams[] · sources_floor_met · override }</code> + <code>repo_heads{ bureau · surveyor }</code> short SHAs (pin the exact guide revisions read). Verdicts: <code>READY</code>(0) &amp; <code>MAINTENANCE-DUE</code>(40) pass; <code>STALE</code>(10) · <code>NOT-ONBOARDED</code>(20) · <code>AUTHORITY-UNKNOWN</code>(30) ⇒ record &amp; STOP.</dd>
+          <dt>Example</dt><dd><pre class="cb">"readiness": {
+  "verdict": "READY",
+  "exit_code": 0,
+  "feasibility_guides": 10,
+  "checked_at": "2026-08-01T13:38:40+00:00",
+  "db_readiness": "UNVERIFIED",
+  "workstreams": [],
+  "stale_workstreams": [],
+  "sources_floor_met": null,
+  "override": null
+},
+"repo_heads": { "bureau": "1c06b6522ea4", "surveyor": "c74a2b2cb478" }</pre></dd>
+        </dl></div>
+      </details>
+
+      <details class="ret"><summary><span class="num">2</span><span class="ttl">bureau_profiles.py</span><span class="ra">⇢</span> bureau_slug per member</summary>
+        <div class="rbody"><dl class="rgrid">
+          <dt>API</dt><dd>No network — a local disk lookup under <code>bureau/jurisdictions/&lt;slug&gt;/</code>. The rule: <b>bureau slug = surveyor slug minus the trailing state</b> (<code>louisville-ky</code> → <code>louisville</code>), accepted only if the directory actually exists (a wrong guess stays <code>null</code> rather than bootstrapping a phantom). <code>--member "role=Name=slug"</code> resolves each stack member; <code>--check jurisdiction.json</code> re-verifies the written artifact and fails <code>unresolved</code> if a member whose profile exists on disk was left <code>null</code>.</dd>
+          <dt>Returns</dt><dd><code>stack[]</code> (<code>role · name · bureau_slug · surveyor_slug</code> — copied into <code>jurisdiction.json</code>) + a richer <code>detail[]</code> (<code>profile_path · feasibility_guides · has_codes · tried[]</code>). The <code>--check</code> verdict <code>resolved</code>&nbsp;/&nbsp;<code>partial</code>&nbsp;/&nbsp;<code>none-on-disk</code> becomes <code>checks.bureau_profiles</code>; <code>partial</code> degrades the step and names the unprofiled members.</dd>
+          <dt>Example</dt><dd><pre class="cb">"stack": [
+  { "role": "governing",
+    "name": "Louisville/Jefferson County Metro Government",
+    "bureau_slug": "louisville", "surveyor_slug": "louisville-ky" },
+  { "role": "county", "name": "Jefferson County",
+    "bureau_slug": "louisville", "surveyor_slug": "louisville-ky" },
+  { "role": "special-district",
+    "name": "Fern Creek Fire Protection District (F60)",
+    "bureau_slug": null, "surveyor_slug": null }   <span class="cm">// unprofiled</span>
+]</pre></dd>
+        </dl></div>
+      </details>
+
+      <details class="ret"><summary><span class="num">3</span><span class="ttl">parcel-geo skill</span><span class="ra">⇢</span> rings · geometry-summary · triple</summary>
+        <div class="rbody"><dl class="rgrid">
+          <dt>API</dt><dd>Drives the <b>Surveyor MCP server</b> plus keyless services: the <b>US Census geographies</b> geocoder (<code>geocoding.geo.census.gov/geocoder/geographies/coordinates</code>, pin → county → surveyor slug), the county <b>ArcGIS parcel FeatureServer</b> (here LOJIC <code>OpenDataPVA/MapServer/1</code> point-in-polygon + envelope, plus the PVA appraisal search), an adjoiner spatial query, and the <b>ESRI World_Imagery export</b> for the stroked boundary overlay (<code>render_boundary_overlay.py</code>, step 5). <b>No generic-geocoder fallback</b> — an unresolvable jurisdiction STOPs.</dd>
+          <dt>Returns</dt><dd><code>parcel-rings.geojson</code> (FeatureCollection; per-parcel <code>parcel_id · address · acres · role</code> + Polygon coords), <code>geometry-summary.json</code> (<code>parcels[]{ bbox_ft · ring_area_acres · centroid_lonlat · centroid_inside_ring }</code>, <code>pin_inside_ring</code>, <code>bbox_wgs84</code>, <code>warnings[]</code>), and <code>location-resolution.md</code> with its <code>**Status:**</code> line + canonical county parcel ID and source layer.</dd>
+          <dt>Example</dt><dd><pre class="cb">{ "parcels": [
+    { "parcel_id": "061801400000", "bbox_ft": [224, 230],
+      "ring_area_acres": 1.02, "centroid_inside_ring": true },
+    { "parcel_id": "061801410000", "bbox_ft": [583, 216],
+      "ring_area_acres": 2.61, "centroid_inside_ring": true } ],
+  "pin_lonlat": [-85.6371661, 38.1853413],
+  "pin_inside_ring": false,          <span class="cm">// assemblage tripwire</span>
+  "warnings": ["geocode pin falls OUTSIDE every resolved parcel ring
+    — the address pin is on the adjacent Wawa parcel"] }</pre></dd>
+        </dl></div>
+      </details>
+
+      <details class="ret"><summary><span class="num">4</span><span class="ttl">parcel_dimensions.py</span><span class="ra">⇢</span> union bbox · oriented rect · area</summary>
+        <div class="rbody"><dl class="rgrid">
+          <dt>API</dt><dd>No network — geometry over the rings, projecting degrees→feet through <code>lib/geodesy.LocalFrame</code> (a WGS84 local tangent plane pinned at the rings' centroid; the run's single shared conversion, also used by 4.1). Computes each parcel's bbox + signed-shoelace area, the axis-aligned <code>union_bbox</code>, the <code>union_oriented</code> minimum-area rectangle (rotating calipers + long-axis azimuth), <code>ring_area_acres_total</code>, and a <code>naive_sum_would_have_said</code> diagnostic that exposes the never-add-bounding-boxes error.</dd>
+          <dt>Returns</dt><dd><code>parcels[]</code>, <code>union_bbox{ ew_ft · ns_ft }</code>, <code>union_oriented{ long_ft · short_ft · long_axis_azimuth_deg }</code>, <code>ring_area_acres_total</code> (the resolved acreage — area is the one additive quantity), <code>naive_sum_would_have_said</code> (diagnostic, never quotable), and the full <code>projection</code> block. The seed's lot-shape sentence quotes the oriented pair, not the bbox.</dd>
+          <dt>Example</dt><dd><pre class="cb">{ "union_bbox":     { "ew_ft": 583, "ns_ft": 438 },
+  "union_oriented": { "long_ft": 576, "short_ft": 426,
+                      "long_axis_azimuth_deg": 91.9 },
+  "ring_area_acres_total": 3.63,
+  "naive_sum_would_have_said": { "ew_ft": 807, "ns_ft": 446,
+      "note": "rings overlap on both axes — never quote these" },
+  "projection": { "kind": "local tangent plane, WGS84 ellipsoidal",
+                  "ft_per_deg_lat": 364173.18,
+                  "ft_per_deg_lon": 287437.70,
+                  "bearing_datum": "true north" } }</pre></dd>
+        </dl></div>
+      </details>
+
+      <details class="ret"><summary><span class="num">5</span><span class="ttl">_access_trace.py</span><span class="ra">⇢</span> access-trace.json · constraint points</summary>
+        <div class="rbody"><dl class="rgrid">
+          <dt>API</dt><dd>The <b>Overpass API</b> (OpenStreetMap) — <code>overpass-api.de</code> then <code>overpass.kumi.systems</code> as failover — POSTed via <code>curl</code> with query <code>way(around:400,lat,lon)["highway"];out geom;</code> (a 400&nbsp;m radius). <b>Keyless, zero-LLM</b>: pure geometry over OSM topology. Non-blocking failure is never silent — exit <code>10</code> (Overpass down) / <code>20</code> (rings unreadable) still writes a schema-valid <code>degraded:&lt;reason&gt;</code> file, which forces the step to <code>degraded</code>.</dd>
+          <dt>Returns</dt><dd><code>status</code>, <code>frontages[]</code>, <code>access_points[]</code> (with <code>approach_directions[]</code>), and <code>constraints[]</code> — each <code>kind</code> ∈ <code>name_split_severance · stub_dead_end · barrier_restriction · divided_carriageway</code> with a computed <code>vantage_*</code> (lat/lon/bearing). The sidecar <code>_constraint-points.txt</code> (7-col pipe: <code>lat|lon|heading|name|dist|kind|id</code>) is what the walk's <code>--extra-points</code> consumes to shoot a frame at each constraint.</dd>
+          <dt>Example</dt><dd><pre class="cb">{ "status": "ok", "query_radius_m": 400,
+  "frontages": [ { "id": "f1", "name": "fegenbush lane",
+      "bearing_deg": 274.03, "min_dist_m": 19.57,
+      "osm_way_ids": [464382740] } ],
+  "access_points": [ { "id": "a1", "frontage_id": "f1",
+      "kind": "osm_service_way",
+      "approach_directions": ["northbound","southbound"] } ],
+  "constraints": [ { "id": "c1", "kind": "name_split_severance",
+      "label": "fegenbush lane severance", "severity": "high",
+      "vantage_bearing_deg": 123.28,
+      "vantage_setback_actual_m": 26.69 } ] }
+
+<span class="cm"># _constraint-points.txt  lat|lon|heading|name|dist|kind|id</span>
+38.1869477|-85.6374597|123.28|fegenbush lane severance|26.69|constraint|c1</pre></dd>
+        </dl></div>
+      </details>
+
+      <details class="ret"><summary><span class="num">6</span><span class="ttl">visual walk</span><span class="ra">⇢</span> imagery · _capture-manifest.json</summary>
+        <div class="rbody"><dl class="rgrid">
+          <dt>API</dt><dd>All keyless, all headless. <b><code>agent-browser</code></b> (Chromium) drives Google Maps aerials, Google Earth 3D obliques (4 yaws), and the Google Street View series; <b><code>curl</code></b> pulls Esri Wayback historical aerials (WMTS) and USGS ground elevation (<code>epqs.nationalmap.gov</code>). Street View's served-panorama truth is un-embedded via <code>GeoPhotoService</code>. <code>--extra-points</code> injects the trace's constraint vantages (severity-ranked) into the SV series. Every frame passes an integrity gate + the agent's own visual QA read.</dd>
+          <dt>Returns</dt><dd><code>imagery/</code> — assemblage + per-parcel aerials, 4 obliques, the SV series (incl. <code>sv-NN-constraint-&lt;id&gt;</code> vantages), wayback — plus <code>_capture-manifest.json</code> (per-frame <code>path · kind · date · width · height · stddev</code>, <code>delivered_counts</code>, <code>total_usable_captures</code>, <code>failed_captures[]</code>) and <code>streetview/_frame-map.json</code> (served-panorama snap distance + <code>label_reliable</code>).</dd>
+          <dt>Example</dt><dd><pre class="cb">{ "site_anchor": [38.184861, -85.636991],
+  "bbox_diag_m": 275, "ground_elev_m": 159,
+  "address": "4403 Fegenbush Ln, Louisville, KY 40228",
+  "earth_oblique": ["earth-oblique-0.png", "...90", "...180", "...270"],
+  "streetview": ["sv-01-toward-111deg.png",
+                 "sv-11-constraint-c1-123.28deg.png"],
+  "wayback": [ { "date": "2014-06-11", "width": 1170, "stddev": 32.5 } ],
+  "delivered_counts": { "parcel_aerial": 2, "earth_oblique": 4,
+                        "streetview": 13, "wayback": 5 },
+  "total_usable_captures": 25,
+  "failed_captures": [ { "path": "sv-04-toward-206deg.png",
+      "reason": "synthetic placeholder — flat frame, stddev 5.39" } ] }</pre></dd>
+        </dl></div>
+      </details>
+
       <dl class="sdmeta">
         <dt>Prompt</dt><dd><code>prompts/1.2-site-jurisdiction.md</code></dd>
         <dt>Python</dt><dd><b>helpers:</b> <code>preflight.py</code> (delegates to the diligence skill's <code>preflight.sh</code>, parses the jurisdiction-readiness verdict) · <code>parcel_dimensions.py</code> (union bbox + oriented minimum-area rectangle over every ring vertex, so lot dimensions are computed not hand-authored) · <code>bureau_profiles.py</code> (resolves each stack member's <code>bureau_slug</code> from disk; <code>--check</code> is its verifier half). <b>shared lib:</b> <code>lib/geodesy.py</code> (the run's single WGS84 degrees→feet <code>LocalFrame</code>).</dd>
