@@ -1239,6 +1239,212 @@ $ curl "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapSe
     </div>
   </div>
 
+  <!-- ========================================================= -->
+  <!-- §5.0 — THE INPUT CONTRACT (what composition consumes)      -->
+  <!-- ========================================================= -->
+  <style>
+  /* scoped to the §5-inputs card */
+  #s-5.0 .iotbl{width:100%;border-collapse:collapse;margin:10px 0 4px;font-size:12px}
+  #s-5.0 .iotbl th{text-align:left;font-family:var(--mono);font-size:9px;letter-spacing:.05em;text-transform:uppercase;color:var(--p600);font-weight:700;border-bottom:2px solid var(--p200);padding:5px 9px 4px}
+  #s-5.0 .iotbl td{border-bottom:1px solid #eef1f4;padding:6px 9px;vertical-align:top;line-height:1.45}
+  #s-5.0 .iotbl td:first-child{white-space:nowrap}
+  #s-5.0 .iotbl tr:hover td{background:#fbfcfd}
+  #s-5.0 .iotbl code{font-size:11px}
+  #s-5.0 .kind{font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.03em;padding:1px 5px;border-radius:3px;text-transform:uppercase;white-space:nowrap;border:1px solid}
+  #s-5.0 .kind.str{background:var(--newbg);color:var(--new);border-color:var(--newbd)}
+  #s-5.0 .kind.uns{background:#eef4fb;color:#2456a8;border-color:#c3d8f2}
+  #s-5.0 .kind.bin{background:#f3eefb;color:#6b3fa0;border-color:#dcccf0}
+  #s-5.0 .kind.ext{background:#fdf0e6;color:#b5590d;border-color:#f2d3b3}
+  </style>
+
+  <div class="sd-group">§5 · Inputs — the composition input contract</div>
+
+  <div class="stepdetail" id="s-5.0">
+    <div class="sdh"><span class="sid">5.0</span><span class="sttl">What §5 consumes — the settled record, on disk</span><span class="kb mdl">reference</span><span class="kb" style="background:rgba(255,255,255,.16);color:#fff">no new facts past here</span></div>
+    <div class="sdb">
+      <p>By the 4.4 gate the run has stopped gathering. Everything §5 does — compose, scrub, render, package — is
+      <b>transformation of a record that is already complete and already on disk.</b> 5.1's own prompt states it twice:
+      <em>"there is no new fact in this deliverable"</em> and <em>"a fact you cannot trace is a fact you do not write."</em>
+      So the honest way to read §5 is: <b>what exactly is the record 5.1 opens, and is it self-sufficient?</b> This card is
+      the inventory. Everything below is a real path in the pilot run
+      <code>working/sir/hutton/car-wash-louisville-ky/2026-08-01-083311/</code>.</p>
+
+      <div class="callout ember">
+        <span class="lab">the one load-bearing artifact</span>
+        <code>output/4.2-synthesis/synthesis-index.json</code> is <b>the contract</b> — the single structured file that
+        every other §5 step keys against. It is <b>DERIVED</b> from 4.2's markdown by <code>check_synthesis.py&nbsp;--write-index</code>,
+        never hand-authored, so its <code>D&lt;n&gt;</code> / <code>I&lt;n&gt;</code> / <code>G&lt;n&gt;</code> / <code>R&lt;n&gt;</code>
+        ids and severities cannot drift from the prose they summarise. 5.1's instruction is literally <em>"read the seam
+        first and read it whole, then reach into the prose behind an entry you are composing."</em> Two-tier reading: the
+        index says <b>what must be covered</b>; the markdown behind it is <b>the substance you re-render.</b>
+      </div>
+
+      <h4>The record, by producing step — six bundles 5.1 opens</h4>
+      <p>Blue-headed boxes are read as source; the green box is the seam. A <span class="kind str">json</span> row is
+      machine-structured; <span class="kind uns">md</span> is prose written for a human to re-render;
+      <span class="kind bin">img/pdf</span> is a binary asset.</p>
+
+      <div class="erd">
+        <div class="ent newt" style="min-width:280px">
+          <div class="eh"><span class="en">4.2-synthesis</span><span class="stereo">THE SEAM — required</span></div>
+          <div class="row hi"><span class="nm">synthesis-index.json</span><span class="ty">json · schema</span></div>
+          <div class="row"><span class="nm">issue-matrix.md</span><span class="ty">md</span></div>
+          <div class="row"><span class="nm">regulatory-briefing.md</span><span class="ty">md</span></div>
+          <div class="row"><span class="nm">recovery-log.md</span><span class="ty">md</span></div>
+          <div class="row"><span class="nm">acquisition-list.md</span><span class="ty">md</span></div>
+          <div class="row"><span class="nm">superseded/</span><span class="ty">dir · md</span></div>
+          <div class="note">the contract + the prose behind each entry; <code>superseded/</code> outranks the upstream original</div>
+        </div>
+
+        <div class="ent exist" style="min-width:260px">
+          <div class="eh"><span class="en">4.1-disciplines</span><span class="stereo">analysis + appendix source</span></div>
+          <div class="row"><span class="nm">premises.md</span><span class="ty">md · open postures</span></div>
+          <div class="row"><span class="nm">findings-index.json</span><span class="ty">json</span></div>
+          <div class="row"><span class="nm">{zlu,sduf,ta,sde,fwp,<br>wwp,fire,el,eptp,park}.md</span><span class="ty">md ×10</span></div>
+          <div class="row"><span class="nm">site-geometry.json</span><span class="ty">json</span></div>
+          <div class="note">the ten discipline files are appendix Parts; <code>site-geometry.json</code> is the ONE reconciliation reference</div>
+        </div>
+
+        <div class="ent exist" style="min-width:250px">
+          <div class="eh"><span class="en">3.4-research-site</span><span class="stereo">appendix source</span></div>
+          <div class="row"><span class="nm">environmental.md, transportation.md,<br>restrictive-covenants.md, programs.md,<br>zoning-pathway.md, submarket.md, …</span><span class="ty">md ×9</span></div>
+          <div class="row"><span class="nm">retained-records-manifest.json</span><span class="ty">json</span></div>
+          <div class="row strk"><span class="nm">portal-recipes.md</span><span class="ty">excluded</span></div>
+          <div class="note">the other half of the appendix; <code>portal-recipes.md</code> is the standing exclusion (access log, not site facts)</div>
+        </div>
+
+        <div class="ent exist" style="min-width:250px">
+          <div class="eh"><span class="en">1.2-site-jurisdiction</span><span class="stereo">figures + orientation</span></div>
+          <div class="row"><span class="nm">seed-site-data.md</span><span class="ty">md</span></div>
+          <div class="row"><span class="nm">parcel-geometry.json</span><span class="ty">json</span></div>
+          <div class="row"><span class="nm">jurisdiction.json</span><span class="ty">json</span></div>
+          <div class="row hi"><span class="nm">imagery/ (visual walk)</span><span class="ty">png → figures/</span></div>
+          <div class="note">imagery becomes the Site Orientation block; the confirmed frontage/cardinals every directional sentence must agree with</div>
+        </div>
+
+        <div class="ent exist" style="min-width:250px">
+          <div class="eh"><span class="en">2.1-plan-extraction</span><span class="stereo">the applicant's document</span></div>
+          <div class="row"><span class="nm">extraction.md</span><span class="ty">md</span></div>
+          <div class="row"><span class="nm">plan-extraction.json</span><span class="ty">json</span></div>
+          <div class="row"><span class="nm">source PDFs</span><span class="ty">pdf</span></div>
+          <div class="note">what the plan STATES (with drawing refs) → the discrepancies + The Proposal block. A 2.1 disagreement is a data gap, never a fact</div>
+        </div>
+
+        <div class="ent changed" style="min-width:250px">
+          <div class="eh"><span class="en">state/</span><span class="stereo">authorization + health</span></div>
+          <div class="row hi"><span class="nm">hitl/gate-4.4.json</span><span class="ty">json · green light</span></div>
+          <div class="row"><span class="nm">hitl/ledger.md</span><span class="ty">md · conditions</span></div>
+          <div class="row"><span class="nm">*/_health.json</span><span class="ty">json ×N</span></div>
+          <div class="note">the operator's <code>--decision</code> + any condition attached to it (a composition premise); every <code>degraded</code> a step recorded must be disclosed</div>
+        </div>
+      </div>
+
+      <h4>The structured spine — the schemas that exist (and where)</h4>
+      <p>Not everything 5.1 reads is structured, and that split is deliberate. The structured files are the
+      <b>machine-checkable skeleton</b> — coverage, ids, severities, dispositions, geometry — the things
+      <code>check_compose.py</code> asserts the deliverable did not silently drop. The markdown is the
+      <b>substance a human re-writes at report altitude.</b> Every schema below lives in
+      <code>bureau/pipelines/sir/schemas/</code>.</p>
+
+      <table class="iotbl">
+        <thead><tr><th>artifact</th><th>kind</th><th>schema</th><th>what 5.1 takes from it · pilot example</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>synthesis-index.json</code></td>
+            <td><span class="kind str">structured</span></td>
+            <td><code>schemas/synthesis-index.json</code></td>
+            <td>the coverage contract: <code>discrepancies[]</code> (1 — D1 <em>"marketed 1.56 ac vs recorded 2.608 ac"</em>), <code>issues[]</code> (21; 7 <code>significant</code> incl. I1 <em>"car-wash by-right conflict in C-1"</em>, 3 <code>opportunity</code>), <code>gaps[]</code> (17; 12 <code>human-gated</code> incl. G1 <em>"no engineered concept plan"</em>), <code>reconciliation[]</code>, <code>briefing{binds[6],does_not_bind,approval_path,open_questions}</code>, <code>totals</code>. Every D/I/G/R the report carries is keyed here.</td>
+          </tr>
+          <tr>
+            <td><code>site-geometry.json</code><br><code>parcel-geometry.json</code></td>
+            <td><span class="kind str">structured</span></td>
+            <td><code>schemas/site-geometry.json</code><br><code>schemas/parcel-geometry.json</code></td>
+            <td>the one polygon-derived reference every figure reconciles to — edge lengths, bearings, setback envelopes. Pilot: parcel <code>061801410000</code> = 2.608 ac. Directional prose and the boundary overlay both join on this.</td>
+          </tr>
+          <tr>
+            <td><code>findings-index.json</code></td>
+            <td><span class="kind str">structured</span></td>
+            <td><code>schemas/discipline-findings.json</code></td>
+            <td>a finding's provenance back to its owning 4.1 discipline — the target-read key when a seam entry's basis needs its original words + citation.</td>
+          </tr>
+          <tr>
+            <td><code>jurisdiction.json</code> · <code>plan-extraction.json</code></td>
+            <td><span class="kind str">structured</span></td>
+            <td><code>schemas/jurisdiction.json</code><br><code>schemas/plan-extraction.json</code></td>
+            <td>the regulatory frame (AHJ, codes in force) and the structured read of the applicant's document that the discrepancy prose points at.</td>
+          </tr>
+          <tr>
+            <td><code>gate-4.4.json</code></td>
+            <td><span class="kind str">structured</span></td>
+            <td><span style="color:var(--muted)">state contract</span></td>
+            <td>the authorization itself: <code>decision:&nbsp;"confirmed"</code>, <code>decided_by:&nbsp;"Will&nbsp;Navey"</code>, and any operator condition. 5.1 refuses to write without it.</td>
+          </tr>
+          <tr>
+            <td>the <code>*.md</code> bodies<br>(matrix, briefing, 10 disciplines, 9 research)</td>
+            <td><span class="kind uns">unstructured</span></td>
+            <td><span style="color:var(--muted)">prose — no schema</span></td>
+            <td>the human-altitude substance: the basis 5.1 re-writes for §1–§11 and the source text the appendix Parts reproduce. ~1.14&nbsp;MB across 19 files on the pilot — deliberately NOT structured, because a report is prose and structuring it would only invite re-analysis 5.1 is forbidden to do.</td>
+          </tr>
+          <tr>
+            <td><code>imagery/</code>, source PDFs</td>
+            <td><span class="kind bin">binary</span></td>
+            <td><span style="color:var(--muted)">assets</span></td>
+            <td>the visual-walk PNGs (→ Site Orientation) and the applicant's plan (→ The Proposal). Pilot placed 3 figures: <code>site-aerial.png</code>, <code>site-boundary-overlay.png</code>, <code>proposal-flyer.png</code>.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="callout">
+        <span class="lab">one input is NOT in the run tree — and that is on purpose</span>
+        The <b>v9 format spec</b> is not a run artifact and is not forked into <code>bureau</code>. 5.1 reads it live from
+        <code>$NOETIC_SKILLS_DIR/…/diligence-report/</code> — <code>references/deliverables.md</code> (§-structure, page
+        budgets), <code>references/sir-style-guide.md</code> (tone Rules 1–9), the <code>.report.tsx.template</code> scaffold,
+        the two <code>phase5-*-pages.md</code> image prompts, and the RDS component <code>CLAUDE.md</code> via
+        <span class="pill skill">generate-report-pdf</span>. <code>check_compose.py</code> <b>hard-fails if those files are
+        missing</b> — precisely so a composition is never <em>"written from memory of a format."</em> So the render is
+        format-code + run-data, kept in separate homes on purpose.
+      </div>
+
+      <h4>Does composition lean on the orchestrator's memory? No — and that is the whole design.</h4>
+      <p>This is the sharpest way the pipeline departs from the production <span class="pill cli">diligence-report</span>
+      skill. The skill threads Phases 0→5 through <b>one long orchestrator context</b> — the composer at the end has
+      "seen" everything that came before, and that living memory is load-bearing (and lossy: the serial appendix pass
+      literally ran out of context mid-step and needed an operator <code>/compact</code>). The pipeline inverts it:</p>
+      <ul>
+        <li>5.1 is an <b>agent step</b> — <code>pipeline_runner.py</code> prints the spec (<code>5.1-compose.md</code>) and
+        spawns a <b>fresh Task agent</b> whose entire world is that spec + the run dir. There is no upstream conversation to inherit.</li>
+        <li>The prompt makes it a rule: <em>"You never self-authorize past your own step"</em> and <em>"read the seam first
+        and read it whole."</em> State is the disk, not the thread.</li>
+        <li>The appendix fan-out hardens it further: each of the ~19 Part workers is handed a <b>byte-verbatim persisted
+        brief</b> (<code>_spawn/part-&lt;L&gt;-brief.md</code>) — 4.1's rule that <em>"an unpersisted wrapper is the one
+        part of a spawn nobody can audit."</em> Nothing an orchestrator merely <em>remembers</em> can leak into a worker; if
+        it is not written to the brief, the worker never sees it.</li>
+      </ul>
+      <p>The <b>only</b> orchestrator-held state that matters is what the composing agent itself builds <em>within</em> 5.1
+      — the fixed Part roster and the body it writes while workers run — and that is regenerated deterministically from
+      <code>appendix_fanout.py roster</code>, not carried in from §1–§4.</p>
+
+      <div class="callout new">
+        <span class="lab">so — could a brand-new session compose just as well from only the §1–§4 outputs?</span>
+        <b>Yes for the run data — and it was proven.</b> The pilot's <em>entire §5 was re-run cold</em> as a controlled
+        experiment over the same §1–§4 artifacts, and produced an equivalent deliverable (prior renders preserved under
+        <code>_superseded-*</code>). A cold composer that reads <code>synthesis-index.json</code> whole and reaches into the
+        prose behind each entry has, by construction, everything a warm one had — because 4.2 was <em>required</em> to
+        write it all down and the seam is <em>derived</em> so it cannot lie about the markdown.
+        <br><br>
+        <b>Two honest caveats, and both are deliberate boundaries, not gaps:</b>
+        <br>① <em>"only the produced artifacts"</em> is not quite the whole input — a cold session also needs the
+        <b>pipeline code</b> (the 5.1 prompt, <code>appendix_fanout.py</code>, <code>check_compose.py</code>) and the
+        <b>external v9 format spec</b> at <code>$NOETIC_SKILLS_DIR</code>. Given <code>{run tree + pipeline repo + skills
+        dir}</code> it performs identically; that triple <em>is</em> the contract.
+        <br>② The one thing a cold start cannot recover is an operator instruction that was <b>spoken but never written to
+        <code>state/hitl/</code></b>. That is exactly why the 4.4 gate persists <code>gate-4.4.json</code> +
+        <code>ledger.md</code>: to force every condition onto disk. An unrecorded verbal condition is the sole failure mode
+        — and the pipeline's answer to it is "record it at the gate," not "keep it in the orchestrator's head."
+      </div>
+    </div>
+  </div>
+
   <div class="sd-group">§5 — Deliverable (strict order: 5.1 → 5.2 → 5.3 → 5.4 → re-run 5.3 → 5.5 → 5.6 → 5.7 → 5.8)</div>
 
   <div class="stepdetail" id="s-5.1">
