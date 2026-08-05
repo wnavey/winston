@@ -8,7 +8,7 @@
 
 > **One-line goal:** A Noetic admin viewing a delivered SIR sees a **"Generate / Regenerate shareable URL"** button (Noetic-org only) that mints a random, time-bound URL and copies it to the clipboard. Pasting that URL into any browser — no login, no account — resolves to the **exact same SIR report view** the admin sees, until the link expires.
 
-> **Revision note (2026-08-05, same PR):** Added **§8.1 Token-scoped API surface** — how any client-initiated call from the no-login page (future AI chat, lazy loads, signed-URL refresh) authenticates via the share token as a bearer credential against distinct, minimal, token-gated endpoints that share core data logic with the session endpoints but never reuse their session auth (**D9 new**). Added **`Referrer-Policy: no-referrer`** hardening to §6. Both surfaced by review of how the public page talks to the backend.
+> **Revision note (2026-08-05, same PR):** Added **§8.1 Token-scoped API surface** — how any client-initiated call from the no-login page (future AI chat, lazy loads, signed-URL refresh) authenticates via the share token as a bearer credential against distinct, minimal, token-gated endpoints that share core data logic with the session endpoints but never reuse their session auth (**D9 new**). Added **`Referrer-Policy: no-referrer`** hardening to §6. Both surfaced by review of how the public page talks to the backend. Also clarified §9 (MVP shares the **render** component; the shared-core *data* rule of D9 applies at the API layer when interactive/token endpoints land — no data-layer refactor for MVP) and added a §8 **security guardrail** that every `/share/*` route is anonymous by construction and must self-guard with token validation.
 
 ---
 
@@ -244,6 +244,8 @@ export const load = async ({ params, setHeaders }) => {
 
 **`authGuard` edit** (`hooks.server.ts:101-108`): add `!event.url.pathname.startsWith('/share')` to the anonymous allowlist alongside `/auth`, `/terms`, `/privacy`, `/mocks`. That single line is the whole "let anonymous users reach it" change.
 
+> **Security guardrail — `/share/*` is anonymous by construction.** Because the allowlist matches on the `/share` **prefix**, *every* route ever created under `/share/*` is reachable with no session. That is exactly what the token routes need, but it means any future route added under `/share/` silently ships as an unauthenticated endpoint. **Rule: nothing goes under `/share/*` without validating the share token server-side (§8.1).** Anything that should require a login must live *outside* `/share`. Treat a new `/share/*` route the way you'd treat a new public endpoint — token validation is mandatory, not optional.
+
 ### Unwinding the login dependencies (the audit ask, itemized)
 | Login dependency of the logged-in view | How the public path unwinds it |
 |---|---|
@@ -286,6 +288,8 @@ To guarantee the recipient sees the **exact** logged-in UI (and to avoid two dri
 - **Public route** (`share/sir/[token]/+page.svelte`): standalone shell + `<SirReportView {sir} {artifacts} />`.
 
 One component ⇒ pixel-parity by construction; future report-view changes land in both places automatically.
+
+**Scope of sharing in MVP (reconciling with D9).** MVP shares the **render layer** — this one `SirReportView` component — across the logged-in and public routes; that is the whole "exact-same-UI" guarantee. It does **not** yet extract a shared *data-load* helper: the two loads (`sir/[sirId]/+page.ts` user-RLS vs `share/sir/[token]/+page.server.ts` service-role) differ only by which client they use and are ~10 lines each, so duplicating them is cheaper than abstracting. D9's "compute in a shared core" rule is about the **API layer** and bites when the first interactive/token endpoint lands (e.g. chat) — at that point a shared `loadSirBundle(client, sirId)` (or SIR-content service) is warranted so the session and token edges can't drift. For MVP, shared render + two thin loads is the correct amount of sharing; no data-layer refactor is required now.
 
 ---
 
