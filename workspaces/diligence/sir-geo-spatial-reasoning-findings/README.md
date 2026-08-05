@@ -4,6 +4,8 @@
 
 **Source artifact:** `sir_artifact` `55a2720c-c809-40fd-b589-6525cc48e3bb` (v1, "Fixed page 11 aerial image"), report `caac753c-128b-4311-8d10-2480be0268eb`, stored at `sir-artifacts/sir/caac753c-128b-4311-8d10-2480be0268eb/v1/site-intelligence-report.pdf` (118 pp, 11.3 MB).
 
+**Visual companion:** [`sir-geo-spatial-reasoning-findings.html`](sir-geo-spatial-reasoning-findings.html) — a tabbed sibling (styled after `sir-pipelines/architecture-overview.html`) that draws a **sequence diagram for every finding below**, showing which data and artifacts the discipline agent pulls and the exact moment it reasons its way to the conclusion it writes. The flagship R4 diagram shows the operator concept plan and the county-clerk-pulled drainage-easement image converging on the ~1.56-ac buildable result.
+
 ---
 
 ## Coverage at a glance — how much of the SIR is geo-spatial
