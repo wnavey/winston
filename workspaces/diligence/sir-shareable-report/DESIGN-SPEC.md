@@ -1,6 +1,6 @@
 # Shareable Site Intelligence Reports — time-bound, no-login public view (cityhall + substation)
 
-**Status:** Draft v2.3
+**Status:** Draft v2.4
 **Date:** 2026-08-05
 **Type:** Implementable spec. This is the **anonymous-delivery** slice of the north-star `../sir-product-experience/DESIGN-SPEC.md` (winston#192) **Surface B1 — "Secure delivery: time-limited obscurity URL (default, no login)"** (§8/§3.2, and the "Delivery" domain object at §5:163). It builds directly on the already-shipped read path `../sir-product-viewing/DESIGN-SPEC.md` — that spec put the logged-in SIR detail view at `project/[projectId]/sir/[sirId]`; **this spec makes that same view reachable without an account** via a random, expiring URL that a Noetic admin generates and copies.
 **Repos touched:** `cityhall` (new public share route outside `(app)`; one `authGuard` allowlist edit; extract the SIR render into a shared component; new `+page.server.ts` on the logged-in SIR route for the generate/regenerate action + admin button). `substation` (ONE additive migration — a `sir_share_link` table, RLS-locked to service-role; **no** anon policy, **no** storage policy). The migration is *specified here, applied separately* (operator-gated), matching #203/#viewing discipline.
@@ -8,11 +8,13 @@
 
 > **One-line goal:** A Noetic admin viewing a delivered SIR sees a **"Generate / Regenerate shareable URL"** button (Noetic-org only) that mints a random, time-bound URL and copies it to the clipboard. Pasting that URL into any browser — no login, no account — resolves to the **exact same SIR report view** the admin sees, until the link expires.
 
+> **Revision note (Draft v2.4, 2026-08-05 — cache hardening + token-residual disclosure; same PR #212).** Resolves audit item #5. The public route and the §8.2 artifact proxy now set `Cache-Control: no-store` (stronger than cityhall's global `no-cache`) and are explicitly never prerendered (D16), so Revoke/expiry can't be defeated by a cached page or a cached 302 (a stale signed URL). Adds an explicit **accepted-residual** note (§6): the token lives in the URL path, so it appears in our access logs + browser history despite `Referrer-Policy: no-referrer` — acceptable for an unguessable, short-lived, revocable link, with `sha256`-at-rest (D3) as the future hardening.
+>
 > **Revision note (Draft v2.3, 2026-08-05 — drop the feature flag; global kill = mass-revoke SQL; same PR #212).** Resolves audit item #4 (Q4 = Option A). There is **no** feature flag: per-customer control is **Revoke** (D13) / expiry / **Regenerate**, and the global "kill everything" is a one-line break-glass `UPDATE sir_share_link SET revoked_at = now() WHERE revoked_at IS NULL AND superseded_at IS NULL;`. Removing the flag also removes its entire failure surface (async eval, no fail-open, percentage-rollout non-determinism). D12 is rewritten from "Vercel flag" to "no flag / mass-revoke SQL"; all flag gates in §4/§7/§8/§8.2/§10/§11 are deleted.
 >
 > **Revision note (Draft v2.2, 2026-08-05 — logged-in viewer parity + atomic mutations; same PR #212).**
 > - **Logged-in in-app PDF viewer bumped to 4h too (D14/§2.6/§9).** The report-PDF preview now signs at `SIR_REPORT_PDF_TTL` on *both* routes, so the in-app viewer no longer breaks on a long read; other artifacts and all download links keep 1h.
-> - **Share-link mutations made atomic (D15/§5).** Regenerate and the access counter move to `SECURITY DEFINER` RPCs — `mint_sir_share_link` (advisory-locked supersede+insert) and `increment_sir_share_link_access` (single UPDATE) — mirroring `download_tokens`. Fixes the audit's non-atomic supersede+insert race (v2.1's "re-inserts idempotently" was wrong — a raced second insert would 500 on the partial unique index) and the `access_count` read-modify-write lost update. *(Audit items #1 and #3 folded here; #4 (feature flag) resolved in v2.3; #2 (`now()` filter) and #5 (cache/token-in-path) still open.)*
+> - **Share-link mutations made atomic (D15/§5).** Regenerate and the access counter move to `SECURITY DEFINER` RPCs — `mint_sir_share_link` (advisory-locked supersede+insert) and `increment_sir_share_link_access` (single UPDATE) — mirroring `download_tokens`. Fixes the audit's non-atomic supersede+insert race (v2.1's "re-inserts idempotently" was wrong — a raced second insert would 500 on the partial unique index) and the `access_count` read-modify-write lost update. *(Audit items #1 and #3 folded here; #4 (feature flag) resolved in v2.3; #5 (cache/token-in-path) resolved in v2.4; #2 (`now()` filter) still open.)*
 >
 > **Revision note (Draft v2.1, 2026-08-05 — inline-PDF viewer carve-out; same PR #212).** Splits the artifact byte-path by *access mode* instead of routing all bytes uniformly through the §8.2 proxy:
 > - **Inline report-PDF preview is signed once at load, not proxied (D14).** `PdfPageViewer` drives pdf.js, which issues HTTP **Range requests** against a single URL for the whole scroll session; routing those through the per-click re-mint proxy (§8.2) would re-validate + re-sign on every chunk and break range continuity. So the public load signs the **report PDF** once with a **4-hour** TTL (`SIR_REPORT_PDF_TTL = 14400s`) and hands that stable URL to the viewer. **Downloads** (report DOCX, research appendix, supporting documents, and the report-PDF *download* link) keep the §8.2 per-click proxy and its instant revoke.
@@ -222,6 +224,8 @@ The URL token is the **only** credential ("security through obscurity"), so its 
 - **The inline report-PDF preview is the one exception — signed once at load, 4-hour TTL (D14).** pdf.js issues HTTP Range requests against a single stable URL for the whole scroll session, so it cannot be driven through the per-click proxy. The public load signs the report PDF once (`SIR_REPORT_PDF_TTL = 14400s / 4h`) and embeds that URL **for the inline viewer only**. Consequence: revoke/expiry for the *inline PDF bytes* is page-load-granular — a preview URL embedded before a Revoke serves bytes until its ≤4h TTL lapses. A bounded, accepted tradeoff for an already-secret, already-time-bound link. When the TTL lapses mid-scroll the next Range request 403s and the viewer shows a refresh banner (§9, D14); a refresh re-validates the token. Downloads retain instant revoke.
 - **Crawler hygiene.** The public route emits `<meta name="robots" content="noindex,nofollow">` and an `X-Robots-Tag: noindex` header. The URL is unguessable regardless, but this prevents accidental indexing if a recipient's tooling leaks the URL into a crawlable surface.
 - **Referrer suppression.** The public route sets `Referrer-Policy: no-referrer` so the token-bearing URL is never leaked in the `Referer` header when the browser fetches artifact bytes from Supabase Storage (or any off-origin resource). Combined with carrying the token in a header/body rather than a query string on any future POST (§8.1), this keeps the token out of third-party and proxy logs.
+- **No-store + never-prerendered (D16).** The public route and the §8.2 proxy set `Cache-Control: no-store` (stronger than cityhall's global `no-cache`) and are never prerendered, so no CDN/browser/proxy ever holds a cached copy — a **Revoke** or expiry takes effect on the very next request, and a stale 302 can't leak an already-signed URL. (Verified: cityhall's global handler already sets `no-cache` on non-`/_app/` responses; `no-store` here is the strict upgrade, and `prerender=false` keeps the token gate on the request path.)
+- **Accepted residual: the token is in the URL path (D16).** `Referrer-Policy: no-referrer` keeps it out of third-party `Referer` headers, but the full URL — token included — still lands in our own server access logs and the recipient's browser history. Because the token is stored verbatim (D3), anyone who can read those could reconstruct a working link until it expires. This is an **accepted** risk for a deliberately low-assurance, unguessable, short-lived (30-day), revocable link; the `sha256(token)`-at-rest option (D3) remains the documented hardening if we ever decide logs must not contain a usable credential.
 - **Non-confirmation on failure.** Malformed/unknown token → **404** (never "wrong token"); expired/superseded/revoked → a friendly **"expired"** page (reveals only that a link once existed — acceptable, D5). Neither path discloses the SIR's existence to a random guesser.
 - **Observability.** Each successful resolve bumps `access_count` + `last_accessed_at` (service-role update) — cheap abuse/interest signal, and the hook for a future "who's viewed this" admin readout. No PII on the recipient is collected in MVP.
 
@@ -251,8 +255,14 @@ The URL token is the **only** credential ("security through obscurity"), so its 
 import { error } from '@sveltejs/kit';
 import { supabaseAdmin } from '$lib/server/supabase-admin';
 
+export const prerender = false;   // D16: never prerender — the token gate + no-store MUST run per request
+
 export const load = async ({ params, setHeaders }) => {
-  setHeaders({ 'X-Robots-Tag': 'noindex, nofollow', 'Referrer-Policy': 'no-referrer' });
+  setHeaders({
+    'X-Robots-Tag': 'noindex, nofollow',
+    'Referrer-Policy': 'no-referrer',
+    'Cache-Control': 'no-store',    // D16: stronger than the global no-cache; Revoke/expiry stays airtight
+  });
 
   const { data: link } = await supabaseAdmin
     .from('sir_share_link')
@@ -349,7 +359,8 @@ The **artifact re-mint proxy (§8.2) is the first *shipping* instance of this pa
 **New route:** `cityhall/src/routes/share/sir/[token]/artifact/[artifactId]/+server.ts` — a `GET` that:
 
 ```ts
-export const GET = async ({ params }) => {
+export const GET = async ({ params, setHeaders }) => {
+  setHeaders({ 'Cache-Control': 'no-store' });                         // D16: never cache the 302 → no stale signed URL
   // 1. Re-validate the token FRESH (exists / not superseded / not revoked / not expired) — §8.1 step 2
   const { data: link } = await supabaseAdmin.from('sir_share_link')
     .select('site_intelligence_report_id, superseded_at, revoked_at, expires_at')
@@ -402,8 +413,8 @@ One component ⇒ pixel-parity by construction; future report-view changes land 
 |---|---|---|
 | Allowlist `/share` for anonymous | `src/hooks.server.ts:101-108` | one `startsWith` clause |
 | Extract shared report view | `src/lib/.../SirReportView.svelte` (new) ← move body out of `sir/[sirId]/+page.svelte` | refactor, no behavior change |
-| Public share route | `src/routes/share/sir/[token]/{+page.server.ts,+page.svelte}` (new) | service-role load: metadata + **one 4h-signed inline report-PDF URL** + standalone shell (§8, D14) |
-| Artifact re-mint proxy | `src/routes/share/sir/[token]/artifact/[artifactId]/+server.ts` (new) | token-gated GET → short-TTL signed URL → 302, for **downloads only** (§8.2, D10) |
+| Public share route | `src/routes/share/sir/[token]/{+page.server.ts,+page.svelte}` (new) | service-role load: metadata + **one 4h-signed inline report-PDF URL** + standalone shell; `Cache-Control: no-store` + `prerender=false` (§8, D14, D16) |
+| Artifact re-mint proxy | `src/routes/share/sir/[token]/artifact/[artifactId]/+server.ts` (new) | token-gated GET → short-TTL signed URL → 302, for **downloads only**; `no-store` (§8.2, D10, D16) |
 | Shared render component | `src/lib/.../SirReportView.svelte` — props `{ sir, artifacts, artifactHref, reportPreviewUrl }`, no version UI | refactor (§9, D11, D14) |
 | Inline-viewer expiry banner | `src/lib/ui/pdf/PdfPageViewer.svelte` | try/catch page render → "refresh to keep viewing" overlay + Refresh (§9, D14); benefits both routes |
 | Admin generate/regenerate/**revoke** | `src/routes/(app)/project/[projectId]/sir/[sirId]/+page.server.ts` (new) | server load (`shareLink` state) + `generateShare` **+ `revokeShare`** actions, `is_noetic_admin`-gated (§7, D13) |
@@ -458,6 +469,7 @@ No new npm deps. Reuses: `supabaseAdmin` (`review/[reviewId]` precedent), the `i
 - **D13 — Ship Revoke in MVP** (`revoked_at` + a `revokeShare` action + Revoke button) for surgical single-link unshare, alongside Regenerate (supersede) and the D12 mass-revoke break-glass. *(grill Q10.)*
 - **D14 — Inline report-PDF preview is signed once at load (4h TTL), not proxied.** pdf.js issues HTTP Range requests against a single stable URL, so the per-click proxy (D10) can't drive it. The public load signs the report PDF once (`SIR_REPORT_PDF_TTL = 14400s / 4h`) and hands it to `PdfPageViewer` via `reportPreviewUrl`; downloads keep the D10 proxy. **Both the public and the logged-in routes sign the report-PDF preview at 4h** (the logged-in `+page.ts` bumped from its prior 1h, §2.6/§9) for a consistent, session-proof viewer. **Tradeoff:** inline-PDF revoke is page-load-granular (≤4h window), accepted for an obscurity link; downloads stay instant-revoke. When the TTL lapses mid-scroll the next Range request 403s and the shared viewer shows a "refresh to keep viewing" banner + Refresh button that re-validates the token; the banner benefits the logged-in route too. Expiry is a **duration** (`expiresIn` seconds → UTC `exp`), timezone-independent and region-independent; only the displayed "expires \<date\>" is formatted in America/Chicago (§6). **Both routes** sign the preview at 4h — the logged-in `+page.ts` bumped from 1h (§2.6/§9). *(follow-up to grill Q7 / D10, 2026-08-05.)*
 - **D15 — Share-link mutations are atomic via `SECURITY DEFINER` RPCs** (`mint_sir_share_link`, `increment_sir_share_link_access`, §5), mirroring `download_tokens`' `increment_download_count` house style. Mint takes a per-SIR advisory lock so concurrent Regenerate clicks serialize — no partial-unique-index 500 (replacing v2.1's incorrect "re-inserts idempotently"); the access counter is a single atomic UPDATE (no read-modify-write lost update). Two raw PostgREST calls would be non-atomic. *(audit item #3, 2026-08-05.)*
+- **D16 — Public surfaces are `Cache-Control: no-store` + never-prerendered; token-in-URL is an accepted residual.** The share route and the §8.2 proxy set `no-store` (a strict upgrade over cityhall's global `no-cache`) and never prerender, so Revoke/expiry is airtight against CDN/browser/proxy caching and no stale 302 leaks a signed URL. The token appearing in server access logs + browser history is **accepted** (unguessable, short-lived, revocable, D3-verbatim); `sha256`-at-rest (D3) is the future hardening should the threat model change. *(audit item #5, 2026-08-05.)*
 
 ## 14. Open questions (for Will)
 - **Q6 — Landing/branding of the public page.** Minimal Noetic-branded header only, or a fuller "shared with you by Noetic" framing (logo, one-line context, contact CTA)? Affects the standalone shell (§8) copy only, not the mechanism. *(Only remaining open question; Q1/Q2/Q3/Q4/Q5 from Draft v1 are resolved — see the Revision note and D3/D4/D5/D10/D11/D13.)*
