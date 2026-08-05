@@ -1,6 +1,6 @@
 # Shareable Site Intelligence Reports — time-bound, no-login public view (cityhall + substation)
 
-**Status:** Draft v2.2
+**Status:** Draft v2.3
 **Date:** 2026-08-05
 **Type:** Implementable spec. This is the **anonymous-delivery** slice of the north-star `../sir-product-experience/DESIGN-SPEC.md` (winston#192) **Surface B1 — "Secure delivery: time-limited obscurity URL (default, no login)"** (§8/§3.2, and the "Delivery" domain object at §5:163). It builds directly on the already-shipped read path `../sir-product-viewing/DESIGN-SPEC.md` — that spec put the logged-in SIR detail view at `project/[projectId]/sir/[sirId]`; **this spec makes that same view reachable without an account** via a random, expiring URL that a Noetic admin generates and copies.
 **Repos touched:** `cityhall` (new public share route outside `(app)`; one `authGuard` allowlist edit; extract the SIR render into a shared component; new `+page.server.ts` on the logged-in SIR route for the generate/regenerate action + admin button). `substation` (ONE additive migration — a `sir_share_link` table, RLS-locked to service-role; **no** anon policy, **no** storage policy). The migration is *specified here, applied separately* (operator-gated), matching #203/#viewing discipline.
@@ -8,9 +8,11 @@
 
 > **One-line goal:** A Noetic admin viewing a delivered SIR sees a **"Generate / Regenerate shareable URL"** button (Noetic-org only) that mints a random, time-bound URL and copies it to the clipboard. Pasting that URL into any browser — no login, no account — resolves to the **exact same SIR report view** the admin sees, until the link expires.
 
+> **Revision note (Draft v2.3, 2026-08-05 — drop the feature flag; global kill = mass-revoke SQL; same PR #212).** Resolves audit item #4 (Q4 = Option A). There is **no** feature flag: per-customer control is **Revoke** (D13) / expiry / **Regenerate**, and the global "kill everything" is a one-line break-glass `UPDATE sir_share_link SET revoked_at = now() WHERE revoked_at IS NULL AND superseded_at IS NULL;`. Removing the flag also removes its entire failure surface (async eval, no fail-open, percentage-rollout non-determinism). D12 is rewritten from "Vercel flag" to "no flag / mass-revoke SQL"; all flag gates in §4/§7/§8/§8.2/§10/§11 are deleted.
+>
 > **Revision note (Draft v2.2, 2026-08-05 — logged-in viewer parity + atomic mutations; same PR #212).**
 > - **Logged-in in-app PDF viewer bumped to 4h too (D14/§2.6/§9).** The report-PDF preview now signs at `SIR_REPORT_PDF_TTL` on *both* routes, so the in-app viewer no longer breaks on a long read; other artifacts and all download links keep 1h.
-> - **Share-link mutations made atomic (D15/§5).** Regenerate and the access counter move to `SECURITY DEFINER` RPCs — `mint_sir_share_link` (advisory-locked supersede+insert) and `increment_sir_share_link_access` (single UPDATE) — mirroring `download_tokens`. Fixes the audit's non-atomic supersede+insert race (v2.1's "re-inserts idempotently" was wrong — a raced second insert would 500 on the partial unique index) and the `access_count` read-modify-write lost update. *(Audit items #1 and #3 now folded; #2 (`now()` filter), #4 (feature flag), #5 (cache/token-in-path) still open.)*
+> - **Share-link mutations made atomic (D15/§5).** Regenerate and the access counter move to `SECURITY DEFINER` RPCs — `mint_sir_share_link` (advisory-locked supersede+insert) and `increment_sir_share_link_access` (single UPDATE) — mirroring `download_tokens`. Fixes the audit's non-atomic supersede+insert race (v2.1's "re-inserts idempotently" was wrong — a raced second insert would 500 on the partial unique index) and the `access_count` read-modify-write lost update. *(Audit items #1 and #3 folded here; #4 (feature flag) resolved in v2.3; #2 (`now()` filter) and #5 (cache/token-in-path) still open.)*
 >
 > **Revision note (Draft v2.1, 2026-08-05 — inline-PDF viewer carve-out; same PR #212).** Splits the artifact byte-path by *access mode* instead of routing all bytes uniformly through the §8.2 proxy:
 > - **Inline report-PDF preview is signed once at load, not proxied (D14).** `PdfPageViewer` drives pdf.js, which issues HTTP **Range requests** against a single URL for the whole scroll session; routing those through the per-click re-mint proxy (§8.2) would re-validate + re-sign on every chunk and break range continuity. So the public load signs the **report PDF** once with a **4-hour** TTL (`SIR_REPORT_PDF_TTL = 14400s`) and hands that stable URL to the viewer. **Downloads** (report DOCX, research appendix, supporting documents, and the report-PDF *download* link) keep the §8.2 per-click proxy and its instant revoke.
@@ -21,7 +23,7 @@
 > - **§8.1 Token-scoped API surface (new, D9).** How any client-initiated call from the no-login page authenticates via the share token as a bearer credential against distinct, minimal, token-gated endpoints that share core data logic with the session endpoints but never reuse their session auth. Rule of thumb for one-endpoint-two-modes vs. split.
 > - **§8.2 Artifact re-mint proxy endpoint (new, D10 — grill Q7).** Artifact links point at a token-gated cityhall GET that re-validates the token and mints a **short-TTL** signed URL **per click**, instead of embedding a 1 h signed URL in the page at load. Fixes the "click a stale link 2 h later → raw Supabase error" UX and keeps **Revoke** meaningful for the file bytes (enforced on every click). This is the first *shipping* §8.1 endpoint.
 > - **Versioning is internal-only (D11 — grill Q8).** The public/shared view surfaces **no** `version` / `versioning_label` and no version switcher; version is an admin-only concept in the logged-in view (intent). Reverses v1's framing of D8/Q5.
-> - **Feature flag + global kill-switch (D12 — grill Q9).** A Vercel flag gates the admin button **and** the public route load; flag-off instantly stops *all* links resolving. Per-link **Revoke** (D13) is the surgical control.
+> - **Feature flag + global kill-switch (D12 — grill Q9).** A Vercel flag gates the admin button **and** the public route load; flag-off instantly stops *all* links resolving. Per-link **Revoke** (D13) is the surgical control. **(Superseded in v2.3 — no flag; global kill = mass-revoke SQL. See D12.)**
 > - **Grill resolutions:** Q1 build = spec-on-shelf (another session builds); TTL = **30 days**; token stored **verbatim**; **pure no-login** (no lead-capture gate); **one live link per SIR**; **ship Revoke** in MVP; anon payload (title/description/address/coords/parcel + current-version artifacts) confirmed acceptable. Former open questions Q1/Q3/Q4/Q5 are now decided; only Q6 (public-page branding) remains.
 > - Added **`Referrer-Policy: no-referrer`** (§6) and a **`/share/*` anonymous-by-construction** security guardrail (§8). Clarified §9 (MVP shares the **render** component only).
 
@@ -107,19 +109,19 @@ We want to mirror that logged-in view exactly, and expose it through a **"securi
 ADMIN (logged in, Noetic org)                    RECIPIENT (no account)
 ─────────────────────────────                    ──────────────────────
 project/[projectId]/sir/[sirId]                  GET /share/sir/<token>
-  +page.svelte {#if isNoeticAdmin && flag}         │
+  +page.svelte {#if isNoeticAdmin}                 │
   [ Generate / Regenerate / Revoke ]──action─┐     │  (outside (app);
                                              │     │   /share allowlisted
   +page.server.ts (action)                   │     │   in authGuard;
-   1. is_noetic_admin RPC gate ◀─────────────┘     │   flag gates the LOAD)
+   1. is_noetic_admin RPC gate ◀─────────────┘     │   anonymous + tokened)
    2. supabaseAdmin: supersede/insert/revoke       ▼
       sir_share_link { token, sir_id,     +page.server.ts  (SERVER-ONLY, service role)
-        expires_at }                       1. flag on? (D12 kill-switch) else 404
-   3. return absolute URL                  2. from('sir_share_link').eq('token',…) ── validate:
+        expires_at }
+   3. return absolute URL                  1. from('sir_share_link').eq('token',…) ── validate:
         │                                     exists? not superseded/revoked? not expired?
-        ▼                                  3. read SIR METADATA; sign report PDF once @4h
+        ▼                                  2. read SIR METADATA; sign report PDF once @4h
    navigator.clipboard.writeText(url)         (D14); no other signed URLs; no version (D11)
-                                           4. return { sir, artifacts, reportPreviewUrl }
+                                           3. return { sir, artifacts, reportPreviewUrl }
    ┌───────────────────────────────────┐        │
    │  <SirReportView sir artifacts     │  ◀──────┘  public wrapper (standalone shell,
    │   artifactHref reportPreviewUrl/> │            noindex, no-referrer, "expired" branch)
@@ -213,7 +215,7 @@ The URL token is the **only** credential ("security through obscurity"), so its 
 - **At-rest form (D3, recommended: store the token verbatim).** Store the token as-is (as `download_tokens` does), keyed by unique index. This enables **Copy-without-regenerate** (§3.1) and matches house style. *Hardening alternative (considered, declined — grill Q4):* store only `sha256(token)` and reconstruct the URL solely at mint time — defends against a DB/log leak, at the cost of the "Copy existing" affordance (every share becomes a regenerate). Given the link is already low-assurance and short-lived, verbatim storage is the decision; the hash option remains a documented future hardening if the threat model changes.
 - **Expiry (enforced server-side, every load + every §8.2 click).** Default lifetime **`SIR_SHARE_TTL_DAYS = 30`** (within Jason's "~1–2 months", on the safer end — decided at 30, grill Q6). `expires_at = now() + interval`. Both the page load and the artifact proxy reject `expires_at <= now()` regardless of what the generator wrote — no client-trusted expiry.
   - **Expiry is a duration, not a wall-clock/timezone value.** The share-link `expires_at` is a Postgres `timestamptz` (stored/compared in UTC via `now()`), and every Supabase signed URL (the 30-day link's checks *and* the 4h `SIR_REPORT_PDF_TTL`) is minted with an `expiresIn` **seconds** offset → an absolute Unix `exp` claim. **No local timezone enters enforcement**, and it is **independent of the Supabase project's deployed region** (`now()` is UTC everywhere). Timezone matters only for **display** — the human-readable "expires \<date\>" shown to the admin (and the recipient) should be formatted in **America/Chicago (CST/CDT)** for the team's convenience; that is a formatting choice on already-UTC data, never a change to how expiry is computed or checked.
-- **Rotation / revocation.** Regenerate supersedes the prior token immediately (old URL → "expired" page). A `revoked_at` column + explicit **Revoke** action kills a link without minting a replacement (D13 — shipped in MVP). Beyond per-link Revoke, the D12 feature flag is a global kill-switch (all links at once). One live link per SIR (partial unique index, §5).
+- **Rotation / revocation.** Regenerate supersedes the prior token immediately (old URL → "expired" page). A `revoked_at` column + explicit **Revoke** action kills a link without minting a replacement (D13 — shipped in MVP). Beyond per-link Revoke, the global kill-switch (all links at once) is a one-line mass-revoke SQL — **there is no feature flag** (D12): `UPDATE sir_share_link SET revoked_at = now() WHERE revoked_at IS NULL AND superseded_at IS NULL;`. One live link per SIR (partial unique index, §5).
 - **Scope minimization.** A token grants read of **exactly one SIR's current-version artifacts + its public metadata** (title, description, address, coordinates, parcel ids) — nothing else. No project, no sibling SIRs, no submissions, no other versions. The public load never queries by `project_id`; it pivots strictly `token → site_intelligence_report_id`.
 - **No internal-data leak.** `sir_artifact` holds only client-facing kinds (§2.4); internal manifests/telemetry are not in that table, so "share the whole current version" cannot expose them. The shared render component (§9) shows only what `{ sir, artifacts }` carries.
 - **Download bytes are minted per click, short-TTL, never embedded at load (D10, §8.2).** *Download* links (report DOCX, research appendix, supporting documents, and the report-PDF download) point at a token-gated cityhall proxy (`/share/sir/<token>/artifact/<artifactId>`) that re-validates the token and mints a fresh **short-TTL** signed URL on each click, then 302-redirects. So a download URL is never left sitting in the page, revoke/expiry is enforced **on every click** (a leaked download URL is dead in seconds, and revoking the link kills download access immediately — not up to an hour later), and there is no "stale link → raw Supabase error" failure on downloads.
@@ -232,9 +234,9 @@ The URL token is the **only** credential ("security through obscurity"), so its 
 - **`load`** (service-role, but only surfaces data to Noetic admins): if `locals` resolves a Noetic admin (reuse the `is_noetic_admin` RPC gate), `supabaseAdmin.from('sir_share_link').select('token, expires_at, created_at').eq('site_intelligence_report_id', sirId).is('superseded_at', null).is('revoked_at', null).gt('expires_at', 'now()')` → return `shareLink` (the live one, or null). Non-admins get `shareLink: undefined`. This feeds the button's state (§3.1).
 - **`actions.generateShare`** — (1) gate with the `is_noetic_admin` RPC (precedent `masquerade/+page.server.ts:22-24`), `error(403)` otherwise; (2) `supabaseAdmin.rpc('mint_sir_share_link', { p_sir: sirId, p_token: randomToken(), p_created_by: user.id, p_ttl: `${SIR_SHARE_TTL_DAYS} days` })` — the atomic supersede-then-insert (§5, D15), returning the new row; (3) return `{ url: `${origin}/share/sir/${token}`, expiresAt: row.expires_at }`. Handles both first-generate and regenerate (they're the same mint; the label differs client-side on whether a live link already existed).
 - **`actions.revokeShare` (D13)** — same `is_noetic_admin` gate; `supabaseAdmin` sets `revoked_at = now()` on the live row for this SIR (no replacement). The link stops resolving immediately (§8 load + §8.2 proxy both check `revoked_at`).
-- Both actions no-op safely if the D12 flag is off (the button isn't shown, and the server actions are gated regardless).
+- Both actions are `is_noetic_admin`-gated server-side regardless of client button state.
 
-**`sir/[sirId]/+page.svelte`** — add, inside `{#if data.isNoeticAdmin}` *and* when `sirSharingEnabled` (D12), a small control block:
+**`sir/[sirId]/+page.svelte`** — add, inside `{#if data.isNoeticAdmin}`, a small control block:
 - No live link → **"Generate shareable URL"** button.
 - Live link → **"Shareable link active · expires \<date>"** + **Copy** (re-copies `data.shareLink` URL) + **Regenerate** + **Revoke** buttons.
 - On a successful `generateShare` (via `use:enhance`), `await navigator.clipboard.writeText(result.url)` (idiom from `StandardNoteDiff.svelte:49`) and flash "Copied!". The button block sits above the shared `<SirReportView>` (§9); the report body itself is unchanged.
@@ -251,8 +253,6 @@ import { supabaseAdmin } from '$lib/server/supabase-admin';
 
 export const load = async ({ params, setHeaders }) => {
   setHeaders({ 'X-Robots-Tag': 'noindex, nofollow', 'Referrer-Policy': 'no-referrer' });
-
-  if (!(await sirSharingEnabled())) error(404, 'Not found');            // D12 kill-switch: flag gates the LOAD
 
   const { data: link } = await supabaseAdmin
     .from('sir_share_link')
@@ -350,7 +350,6 @@ The **artifact re-mint proxy (§8.2) is the first *shipping* instance of this pa
 
 ```ts
 export const GET = async ({ params }) => {
-  if (!(await sirSharingEnabled())) error(404);                        // D12 kill-switch
   // 1. Re-validate the token FRESH (exists / not superseded / not revoked / not expired) — §8.1 step 2
   const { data: link } = await supabaseAdmin.from('sir_share_link')
     .select('site_intelligence_report_id, superseded_at, revoked_at, expires_at')
@@ -403,14 +402,13 @@ One component ⇒ pixel-parity by construction; future report-view changes land 
 |---|---|---|
 | Allowlist `/share` for anonymous | `src/hooks.server.ts:101-108` | one `startsWith` clause |
 | Extract shared report view | `src/lib/.../SirReportView.svelte` (new) ← move body out of `sir/[sirId]/+page.svelte` | refactor, no behavior change |
-| Public share route | `src/routes/share/sir/[token]/{+page.server.ts,+page.svelte}` (new) | service-role load: metadata + **one 4h-signed inline report-PDF URL** (flag-gated) + standalone shell (§8, D14) |
+| Public share route | `src/routes/share/sir/[token]/{+page.server.ts,+page.svelte}` (new) | service-role load: metadata + **one 4h-signed inline report-PDF URL** + standalone shell (§8, D14) |
 | Artifact re-mint proxy | `src/routes/share/sir/[token]/artifact/[artifactId]/+server.ts` (new) | token-gated GET → short-TTL signed URL → 302, for **downloads only** (§8.2, D10) |
 | Shared render component | `src/lib/.../SirReportView.svelte` — props `{ sir, artifacts, artifactHref, reportPreviewUrl }`, no version UI | refactor (§9, D11, D14) |
 | Inline-viewer expiry banner | `src/lib/ui/pdf/PdfPageViewer.svelte` | try/catch page render → "refresh to keep viewing" overlay + Refresh (§9, D14); benefits both routes |
 | Admin generate/regenerate/**revoke** | `src/routes/(app)/project/[projectId]/sir/[sirId]/+page.server.ts` (new) | server load (`shareLink` state) + `generateShare` **+ `revokeShare`** actions, `is_noetic_admin`-gated (§7, D13) |
 | Admin button + clipboard + revoke | `sir/[sirId]/+page.svelte` | `{#if data.isNoeticAdmin}` block; `navigator.clipboard.writeText`; Revoke button |
 | Bump logged-in preview TTL | `sir/[sirId]/+page.ts` | sign report PDF at 4h (`createSignedUrl(path, 14400)`, up from 3600) for viewer parity (§9, D14); other artifacts stay 1h |
-| Feature flag (button + public load) | `src/lib/flags.ts` — new `sirSharingEnabled` (`defineFlag`, Vercel) | D12 kill-switch; gates the public route **load**, not just the button |
 | Regenerated DB types | `src/lib/types/database.ts` | add `sir_share_link` (post-migration) |
 
 **substation**
@@ -432,7 +430,7 @@ No new npm deps. Reuses: `supabaseAdmin` (`review/[reviewId]` precedent), the `i
 - **Concurrent recipient loads bumping `access_count`** → the `increment_sir_share_link_access` RPC is a single atomic UPDATE (§5, D15), so parallel views don't lose counts to a read-modify-write race.
 - **Clock skew on expiry** → expiry is evaluated in Postgres (`now()`) on read, single source of truth.
 - **`latitude`/`longitude`/`parcel_ids` null** → header omits them (they're already nullable in the logged-in view).
-- **Sharing globally disabled mid-flight (flag off, D12)** → the public route load and the §8.2 proxy both 404; existing links stop resolving immediately. Per-link Revoke (D13) is the surgical equivalent for a single link.
+- **Need to kill all sharing at once (D12)** → there is no feature flag; run the break-glass `UPDATE sir_share_link SET revoked_at = now() WHERE revoked_at IS NULL AND superseded_at IS NULL;` — every live link stops resolving on its next load/§8.2 click (both check `revoked_at`). Per-link Revoke (D13) is the surgical single-link equivalent.
 
 ## 12. Non-goals (explicitly deferred)
 - **No client accounts / "log in to see history"** (#192 §5's "then require an account for history") — that's the authenticated-delivery half; this spec is the no-login half only.
@@ -456,8 +454,8 @@ No new npm deps. Reuses: `supabaseAdmin` (`review/[reviewId]` precedent), the `i
 - **D9 — Client-initiated public calls use the share token as a bearer credential against distinct, minimal, token-gated endpoints that *share core data logic* with the session endpoints but never reuse their session auth** (§8.1). Authenticate/authorize **at the edge**, per mode (session→RLS vs token→service-role scoped to one SIR); **compute in a shared internal function.** The browser never calls substation directly — cityhall validates the token and calls downstream with its own service credentials. MVP needs no such endpoint; the pattern is fixed now for future interactivity (chat, lazy loads, signed-URL refresh). *Rule of thumb:* a single endpoint with a two-mode auth guard is tolerable only for a trivial, read-only endpoint whose authorization reduces to the identical single-SIR scope check with no field-visibility, abuse-surface, or side-effect differences; the moment any of those diverge (writes, LLM cost, stripped fields, RLS-vs-service-role enforcement split), split into distinct edges over a shared core.
 - **D10 — Download bytes served via a token-gated re-mint proxy** (`share/sir/[token]/artifact/[artifactId]/+server.ts`, §8.2), not signed URLs embedded at load. Each click re-validates the token, proves the artifact belongs to that token's SIR + current version, mints a ~120 s signed URL, and 302-redirects. Fixes stale-link UX and keeps Revoke effective for downloaded file bytes. **Scope: downloads only** — the inline report-PDF preview is signed at load per D14. *(grill Q7.)*
 - **D11 — Versioning is internal-only.** The shared/public view surfaces no `version`/`versioning_label` and no switcher; the customer never sees version. Logged-in version display is admin-only intent (tracked outside this spec). *(grill Q8.)*
-- **D12 — Vercel feature flag `sirSharingEnabled` gates the admin button AND the public route load + §8.2 proxy.** Flag-off is a global kill-switch (all links stop resolving instantly); it must gate the load, not merely hide the button. *(grill Q9.)*
-- **D13 — Ship Revoke in MVP** (`revoked_at` + a `revokeShare` action + Revoke button) for surgical single-link unshare, alongside Regenerate (supersede) and the D12 global flag. *(grill Q10.)*
+- **D12 — No feature flag; the global kill-switch is a mass-revoke SQL (Option A).** Per-customer control is Revoke (D13) / expiry / Regenerate. To disable *all* sharing at once, run `UPDATE sir_share_link SET revoked_at = now() WHERE revoked_at IS NULL AND superseded_at IS NULL;` (every live link dies on its next load/§8.2 click). A Vercel flag was specified (through v2.2) and dropped in v2.3 — it put an async, request-context-bound, percentage-rollout-capable hard gate on *every* anonymous resolution (audit item #4) for a capability a one-line SQL already covers. If a code-path kill is ever needed (e.g. a route vuln), redeploy without the route. *(grill Q9 reversed; Q4 / audit item #4, 2026-08-05.)*
+- **D13 — Ship Revoke in MVP** (`revoked_at` + a `revokeShare` action + Revoke button) for surgical single-link unshare, alongside Regenerate (supersede) and the D12 mass-revoke break-glass. *(grill Q10.)*
 - **D14 — Inline report-PDF preview is signed once at load (4h TTL), not proxied.** pdf.js issues HTTP Range requests against a single stable URL, so the per-click proxy (D10) can't drive it. The public load signs the report PDF once (`SIR_REPORT_PDF_TTL = 14400s / 4h`) and hands it to `PdfPageViewer` via `reportPreviewUrl`; downloads keep the D10 proxy. **Both the public and the logged-in routes sign the report-PDF preview at 4h** (the logged-in `+page.ts` bumped from its prior 1h, §2.6/§9) for a consistent, session-proof viewer. **Tradeoff:** inline-PDF revoke is page-load-granular (≤4h window), accepted for an obscurity link; downloads stay instant-revoke. When the TTL lapses mid-scroll the next Range request 403s and the shared viewer shows a "refresh to keep viewing" banner + Refresh button that re-validates the token; the banner benefits the logged-in route too. Expiry is a **duration** (`expiresIn` seconds → UTC `exp`), timezone-independent and region-independent; only the displayed "expires \<date\>" is formatted in America/Chicago (§6). **Both routes** sign the preview at 4h — the logged-in `+page.ts` bumped from 1h (§2.6/§9). *(follow-up to grill Q7 / D10, 2026-08-05.)*
 - **D15 — Share-link mutations are atomic via `SECURITY DEFINER` RPCs** (`mint_sir_share_link`, `increment_sir_share_link_access`, §5), mirroring `download_tokens`' `increment_download_count` house style. Mint takes a per-SIR advisory lock so concurrent Regenerate clicks serialize — no partial-unique-index 500 (replacing v2.1's incorrect "re-inserts idempotently"); the access counter is a single atomic UPDATE (no read-modify-write lost update). Two raw PostgREST calls would be non-atomic. *(audit item #3, 2026-08-05.)*
 
