@@ -8,6 +8,8 @@
 
 > **One-line goal:** A Noetic admin viewing a delivered SIR sees a **"Generate / Regenerate shareable URL"** button (Noetic-org only) that mints a random, time-bound URL and copies it to the clipboard. Pasting that URL into any browser — no login, no account — resolves to the **exact same SIR report view** the admin sees, until the link expires.
 
+> **Revision note (2026-08-05, same PR):** Added **§8.1 Token-scoped API surface** — how any client-initiated call from the no-login page (future AI chat, lazy loads, signed-URL refresh) authenticates via the share token as a bearer credential against distinct, minimal, token-gated endpoints that share core data logic with the session endpoints but never reuse their session auth (**D9 new**). Added **`Referrer-Policy: no-referrer`** hardening to §6. Both surfaced by review of how the public page talks to the backend.
+
 ---
 
 ## 1. Problem
@@ -171,6 +173,7 @@ The URL token is the **only** credential ("security through obscurity"), so its 
 - **No internal-data leak.** `sir_artifact` holds only client-facing kinds (§2.4); internal manifests/telemetry are not in that table, so "share the whole current version" cannot expose them. The shared render component (§9) shows only what `{ sir, artifacts }` carries.
 - **Signed-URL TTL is independent and short.** Storage URLs are minted **per page load** at **3600s** (app convention). They outlive a page view but not the share link, and are re-minted on refresh — so link expiry, not the signed URL, is the real boundary.
 - **Crawler hygiene.** The public route emits `<meta name="robots" content="noindex,nofollow">` and an `X-Robots-Tag: noindex` header. The URL is unguessable regardless, but this prevents accidental indexing if a recipient's tooling leaks the URL into a crawlable surface.
+- **Referrer suppression.** The public route sets `Referrer-Policy: no-referrer` so the token-bearing URL is never leaked in the `Referer` header when the browser fetches artifact bytes from Supabase Storage (or any off-origin resource). Combined with carrying the token in a header/body rather than a query string on any future POST (§8.1), this keeps the token out of third-party and proxy logs.
 - **Non-confirmation on failure.** Malformed/unknown token → **404** (never "wrong token"); expired/superseded/revoked → a friendly **"expired"** page (reveals only that a link once existed — acceptable, D5). Neither path discloses the SIR's existence to a random guesser.
 - **Observability.** Each successful resolve bumps `access_count` + `last_accessed_at` (service-role update) — cheap abuse/interest signal, and the hook for a future "who's viewed this" admin readout. No PII on the recipient is collected in MVP.
 
@@ -251,6 +254,29 @@ export const load = async ({ params, setHeaders }) => {
 | `createSignedUrl` gated by `sir-artifacts` storage RLS | Service-role signing **bypasses** storage RLS ⇒ **no storage policy needed** (§2.3). |
 | `data.isNoeticAdmin` + `(app)` chrome/nav | Standalone shell; the admin button lives only in the logged-in wrapper, not in the shared component. |
 
+### 8.1 Token-scoped API surface — client-side & future interactive calls (e.g. AI chat)
+
+The MVP page is effectively static: the SIR data is fetched server-side and **serialized into the HTML on first paint** (the §8 load), so rendering needs **zero** client→backend data calls, and the only browser→Supabase traffic is fetching artifact bytes over signed URLs. (Even SvelteKit's own `__data.json` refetch on client-side re-entry re-hits *this same route*, whose path still carries the token, so it re-validates for free.)
+
+But this is a live web app, and future interactivity — AI chat, lazy "load more documents", refreshing an expired signed URL — will make **client-initiated** calls that need a credential. The visitor has no session, so **the share token is the bearer credential for the public surface.** We fix the pattern now, even though MVP needs no custom client call, so it isn't invented ad hoc later.
+
+**Every backend endpoint the public page calls MUST:**
+1. **Receive the token** — from the route path, or a header/body for POSTs (prefer header/body over query string so it stays out of access logs).
+2. **Re-validate it server-side** (exists / not expired / not superseded / not revoked) via the service-role client — the *same* check the page load runs. Never trust that the page already validated.
+3. **Derive the target SIR from the token, never from client input.** The browser cannot name a project or SIR; cityhall resolves `token → site_intelligence_report_id` and scopes the whole operation to it. This blocks a token-holder from pivoting to any other SIR/project (confused-deputy).
+4. **Stay minimal and single-SIR:** read-oriented, only client-facing fields, no cross-SIR/cross-project reach, no account-state mutation.
+
+**Distinct edges, shared core; cityhall is the gateway.** These are **separate, opt-in, token-gated endpoints** — we never route a token-holder into the existing session-authenticated API (the shared-vs-distinct reasoning is D9). The browser **never calls substation directly**: it calls a cityhall token endpoint, cityhall validates the token, then cityhall calls substation/Supabase with *its own* service credentials. The token stops at cityhall's server and is exchanged there for a privileged downstream call.
+
+**Worked example — future AI chat:**
+```
+POST /share/sir/<token>/chat   { message }
+  → cityhall server: re-validate <token>; derive SIR from it (not from the body)
+  → load that SIR's content as context; call the model with cityhall's service creds
+  → stream reply, scoped to that one SIR
+```
+Distinct from today's logged-in `/api/chat` (which authenticates on `locals.user`). Because anyone with the link can drive model spend, **this endpoint is where the public limits live** — per-token rate limiting and a per-token cost ceiling. (Chat itself is deferred, §12; only the auth pattern is reserved here.)
+
 ---
 
 ## 9. Shared render component — `SirReportView.svelte`
@@ -311,6 +337,7 @@ No new npm deps. Reuses: `supabaseAdmin` (`review/[reviewId]` precedent), the `i
 - **D6 — Exact-UI parity via a shared `SirReportView` component** consumed by both the logged-in and public routes.
 - **D7 — The `sir_share_link` migration is specified here, applied separately (operator-gated), substation-first**, then the cityhall PR.
 - **D8 — Recipient always sees `current_version`** (live read), not a frozen snapshot (revisit Q5).
+- **D9 — Client-initiated public calls use the share token as a bearer credential against distinct, minimal, token-gated endpoints that *share core data logic* with the session endpoints but never reuse their session auth** (§8.1). Authenticate/authorize **at the edge**, per mode (session→RLS vs token→service-role scoped to one SIR); **compute in a shared internal function.** The browser never calls substation directly — cityhall validates the token and calls downstream with its own service credentials. MVP needs no such endpoint; the pattern is fixed now for future interactivity (chat, lazy loads, signed-URL refresh). *Rule of thumb:* a single endpoint with a two-mode auth guard is tolerable only for a trivial, read-only endpoint whose authorization reduces to the identical single-SIR scope check with no field-visibility, abuse-surface, or side-effect differences; the moment any of those diverge (writes, LLM cost, stripped fields, RLS-vs-service-role enforcement split), split into distinct edges over a shared core.
 
 ## 14. Open questions (for Will)
 - **Q1 — Link lifetime.** Default committed at **30 days** (D4). Jason floated "~1–2 months." Confirm 30, or prefer 60? (Trivially a constant.)
