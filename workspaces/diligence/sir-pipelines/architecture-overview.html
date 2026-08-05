@@ -721,6 +721,93 @@ dl.rgrid dd.pe{background:#fdf6f0;border-left:2px solid var(--ember);padding:6px
   the machine-readable seam a downstream step consumes is <em>derived</em> from the markdown, never hand-authored beside
   it, because two copies of the same findings drift and the drift always favours the summary.</div>
 
+  <!-- ========================================================= -->
+  <!-- STEP TIMING — worked example                              -->
+  <!-- ========================================================= -->
+  <style>
+    .timing-wrap{margin:16px 0 8px}
+    table.timetbl{border-collapse:collapse;width:100%;font-size:12.5px;background:#fff;border:1px solid var(--divider);border-radius:10px;overflow:hidden}
+    table.timetbl th,table.timetbl td{padding:6px 10px;text-align:left;border-bottom:1px solid #eef1f4;vertical-align:top}
+    table.timetbl thead th{font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--p600);background:var(--p50);border-bottom:2px solid var(--p200)}
+    table.timetbl td.sid,table.timetbl td.num{font-family:var(--mono);white-space:nowrap}
+    table.timetbl td.num{text-align:right}
+    table.timetbl tr.gate td{background:#fbfcfd}
+    table.timetbl tr.gate td.sid{color:var(--chg)}
+    table.timetbl .divergent{color:var(--ember);font-weight:600}
+    table.timetbl tfoot td{font-family:var(--mono);font-weight:700;background:var(--p50);border-top:2px solid var(--p200)}
+    .twhy{font-size:11px;color:var(--muted)}
+    .tag-h{font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:1px 5px;border-radius:3px;background:var(--chgbg);color:var(--chg);border:1px solid var(--chgbd);white-space:nowrap}
+  </style>
+  <h3 id="s-timing"><span class="hn">6a</span>Step timing — a worked example</h3>
+  <p>Every executing step already stamps its own start and end into the append-only event ledger at
+  <code>state/events.jsonl</code>: <code>run</code> writes <code>step.recorded&nbsp;status=running</code> before it hands
+  off, and <code>verify</code> writes <code>status=complete</code> (or <code>failed</code>) after the outputs are
+  asserted. So <b>per-step latency is a read-time derivation over data we already emit</b> — no new instrumentation, no
+  sidecar, one appended JSON line per transition. The method: pair each step's <code>running</code> with its
+  <em>next</em> event for that same step, and sum those segments. Two things fall out for free:</p>
+  <ul>
+    <li><b>Between-step idle is excluded.</b> The gap from one step's <code>complete</code> to the next step's
+    <code>running</code> — an operator reading a readout, going to lunch, or picking the run back up after the weekend —
+    lands <em>between</em> pairs and is never counted against any step.</li>
+    <li><b>Gate human-wait is structurally separated.</b> The two hard stops (3.2, 4.4) plus the publish gate (5.8) are
+    <span class="kb k-check" style="border-color:var(--divider)">checkpoint</span> steps that emit
+    <code>awaiting-decision</code>, never <code>running</code> — so pairing skips them, and their operator wait is read
+    off <code>presented_at → decided_at</code> instead. Human decision time never inflates agent time.</li>
+  </ul>
+
+  <p>Below is the real event ledger of the pilot Hutton car-wash run
+  (<code>working/sir/hutton/car-wash-louisville-ky/2026-08-01-083311</code>), decoded by that rule. <b>Active</b> is the
+  summed <code>running</code>→next-event window; <b>Elapsed</b> is first-<code>running</code>→last-terminal (shown only
+  where it diverges from Active, which is the tell that a step was suspended across a gate loop).</p>
+
+  <div class="timing-wrap">
+  <table class="timetbl">
+    <thead><tr><th>Step</th><th>Kind</th><th class="num">Active</th><th class="num">Elapsed</th><th>What the timing shows</th></tr></thead>
+    <tbody>
+      <tr><td class="sid">1.1</td><td>agent</td><td class="num">1m 56s</td><td class="num">—</td><td>Input capture. Clerical, fast.</td></tr>
+      <tr><td class="sid">1.2</td><td>agent</td><td class="num">26m 56s</td><td class="num">—</td><td>Site &amp; jurisdiction (opus). The heaviest §1 reasoning step.</td></tr>
+      <tr><td class="sid">2.1</td><td>agent</td><td class="num">12m 47s</td><td class="num">—</td><td>Plan extraction. Ran <b>two days later</b> — see the idle note below.</td></tr>
+      <tr><td class="sid">3.1</td><td>agent</td><td class="num">11m 2s</td><td class="num">—</td><td>Pre-gate audit; caught &amp; corrected the 1.2 Bardstown Rd locator before the gate.</td></tr>
+      <tr class="gate"><td class="sid">3.2</td><td><span class="tag-h">checkpoint</span></td><td class="num">30m 23s</td><td class="num">—</td><td><b>Human wait</b>, not compute — frame <em>confirmed</em>. Excluded from agent time.</td></tr>
+      <tr><td class="sid">3.3</td><td>agent</td><td class="num">2h 10m</td><td class="num">—</td><td>Surveyor / records. Longest active window — and partly <em>co-driven</em> (see blind spot #1).</td></tr>
+      <tr><td class="sid">3.4</td><td>agent</td><td class="num">1h 34m</td><td class="num">—</td><td>Research + site fan-out.</td></tr>
+      <tr><td class="sid">4.1</td><td>agent</td><td class="num">35m 27s</td><td class="num">—</td><td>Disciplines.</td></tr>
+      <tr><td class="sid">4.2</td><td>agent</td><td class="num">29m 50s</td><td class="num divergent">18h 22m</td><td>Synthesis. First pass 30m; suspended overnight, then <b>invalidated by the 4.4 gate</b> and re-worked — the correction passes carry <em>no</em> <code>running</code> marker (blind spot #2), so Active undercounts here.</td></tr>
+      <tr><td class="sid">4.3</td><td>agent</td><td class="num">14m 48s</td><td class="num divergent">4h 59m</td><td>Pre-gate audit; re-run after the 4.4 correction.</td></tr>
+      <tr class="gate"><td class="sid">4.4</td><td><span class="tag-h">checkpoint</span></td><td class="num">4h 25m</td><td class="num">—</td><td><b>Human wait</b> across <em>two</em> presentations: <em>corrected</em> (co-drove LOJIC at the gate, 4h 18m — invalidated 4.2/4.3) then <em>confirmed</em> (6m).</td></tr>
+      <tr><td class="sid">5.1</td><td>agent</td><td class="num">46m 37s</td><td class="num">—</td><td>Compose — the single most expensive §5 agent step.</td></tr>
+      <tr><td class="sid">5.2</td><td>agent</td><td class="num">11m 9s</td><td class="num">—</td><td>Content scrub.</td></tr>
+      <tr><td class="sid">5.3</td><td>script</td><td class="num">22m 14s</td><td class="num divergent">37m 28s</td><td>Render PDF — <b>9 run attempts</b> (two RDS component crashes, then the 5.4→5.3 re-render). The retry span is the signal.</td></tr>
+      <tr><td class="sid">5.4</td><td>agent</td><td class="num">22m 51s</td><td class="num">—</td><td>Layout scrub (one <code>_health.json</code> contract miss, then clean).</td></tr>
+      <tr><td class="sid">5.5</td><td>script</td><td class="num">29s</td><td class="num">—</td><td>Render DOCX.</td></tr>
+      <tr><td class="sid">5.6</td><td>script</td><td class="num">~0s</td><td class="num divergent">21m 24s</td><td>Rollup — failed twice on the <code>gates-undecided</code> health check, then a <b>hand override</b> (no <code>running</code>) — Active reads ~0, the 21m was operator remediation.</td></tr>
+      <tr><td class="sid">5.7</td><td>script</td><td class="num">&lt;1s</td><td class="num">—</td><td>Package. Instant.</td></tr>
+      <tr class="gate"><td class="sid">5.8</td><td><span class="tag-h">checkpoint</span></td><td class="num">6m 54s</td><td class="num">—</td><td><b>Human wait</b> — publish gate, <em>confirmed</em> (SIR uploaded).</td></tr>
+    </tbody>
+    <tfoot>
+      <tr><td colspan="2">Agent-active (sum)</td><td class="num">7h 40m</td><td class="num"></td><td class="twhy">actual step execution — the number an SLA should track</td></tr>
+      <tr><td colspan="2">Human-wait at gates</td><td class="num">5h 2m</td><td class="num"></td><td class="twhy">3.2 + 4.4 (both waits) + 5.8, read from presented→decided</td></tr>
+      <tr><td colspan="2">Idle / between-step</td><td class="num">63h 9m</td><td class="num"></td><td class="twhy"><b>48h 42m</b> of it is the Fri→Sun gap between 1.2 and 2.1</td></tr>
+      <tr><td colspan="2">Run wall clock</td><td class="num">75h 51m</td><td class="num"></td><td class="twhy">first event → last event, Fri 13:33 → Mon 17:25 UTC</td></tr>
+    </tfoot>
+  </table>
+  </div>
+
+  <div class="callout new"><span class="lab">the headline</span> A run whose wall clock reads <b>3 days, 9 hours</b>
+  contained under <b>8 hours</b> of actual step execution. Naive wall-clock timing would have declared this a 75-hour
+  pipeline; the ledger already carries everything needed to say it was ~7h 40m of work, ~5h of operator decisions, and
+  the rest a weekend. That reconciles with the §1–§5 ≈ 8.2 h efficiency figure this doc tracks against the 2 h goal —
+  the derivation needs zero pipeline changes to produce it.</div>
+
+  <div class="callout ember"><span class="lab">two blind spots the free method keeps</span> The ledger is
+  "good enough" today for triage, but two categories of time hide <em>inside</em> a step and cannot be separated from two
+  events alone. <b>(1) Co-driven work.</b> 3.3's 2h 10m and any gate-time co-driving (4.4's LOJIC pull) are wall-time of
+  the active window — they mix agent compute with an operator working alongside it. <b>(2) Un-instrumented remediation.</b>
+  A post-gate <code>step.corrected</code> pass or a hand override (4.2's re-work, 5.6's 21m) does <em>not</em> emit
+  <code>running</code>, so Active undercounts exactly the steps a human had to rescue. Closing either one needs one added
+  event — an end-of-work stamp at last-subagent-return, and a <code>running</code> on correction passes — and is only
+  worth doing if per-step precision starts to matter more than run-level triage.</div>
+
   <div class="sd-group">§1 — Intake &amp; Site</div>
 
   <div class="stepdetail" id="s-1.1">
