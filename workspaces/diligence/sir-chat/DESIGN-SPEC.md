@@ -2,12 +2,12 @@
 
 **Status:** Draft v2
 **Date:** 2026-08-06 (v2: 2026-08-06)
-**Repos touched:** `cityhall` (chat route, reset route, SIR-page UI + loader gate, shared availability helper, inline system prompt), `substation` (one additive migration: `conversations` columns + CHECK + index; **and** the one-off DOCX→text backfill script)
-**Repos NOT touched:** `navalbase` (v2: no longer touched — backfill moved to substation), `bureau` (SIR pipeline unchanged for MVP — no text artifact emitted at publish time yet), `conductor`, `surveyor`, `dsd`/RDS
+**Repos touched:** `cityhall` (chat route, reset route, SIR-page UI + loader gate, shared availability helper, inline system prompt), `substation` (one additive migration: `conversations` columns + CHECK + index), `claude-plugins` (the `upload-sir` skill's `scripts/publish.ts` — DOCX→text extraction in the publish path **and** a one-off `backfill-text` subcommand for existing SIRs)
+**Repos NOT touched:** `navalbase` (v2: no longer touched), `bureau` (SIR render pipeline unchanged), `conductor`, `surveyor`, `dsd`/RDS
 
 > **Revision note (v2, 2026-08-06)** — folds in an audit pass. Material changes:
 > - **Extraction source swapped: PDF→PyMuPDF ⟶ DOCX→`mammoth.extractRawText`** (revises D8/D9/D10, Q-C). The SIR body is authored as `pages.tsx` (RDS component tree) and the ~100-page appendix is already clean markdown (`research-appendix.md`) — but neither is in storage for existing SIRs; only the `report` PDF and DOCX are `sir_artifact`s. The DOCX is a structured document (headings/tables/reading order intact), renders from the same `pages.tsx` (so it contains body + appendix, matching D8's scope), and beats PyMuPDF-on-a-Chromium-PDF for a table-heavy diligence doc at lower effort. `mammoth` is already a substation dependency (`^1.12.0`, used in `feasibility-intake-extraction/extract-text.ts`).
-> - **Backfill moves navalbase (Python) → substation (TypeScript)** (revises D10). Reuses the existing mammoth code path and co-locates with the migration. **navalbase drops out of repos-touched.**
+> - **Extraction lives in the `upload-sir` skill's `scripts/publish.ts`** (revises D10; moved off both navalbase *and* substation). `publish.ts` already runs under `bun` (auto-installs npm deps on import, so `import mammoth from 'mammoth'` needs no `node_modules`) and already upserts `sir_artifact` rows + uploads to the `sir-artifacts` bucket. Extracting text there means **every future published SIR auto-gets its text artifact at publish time — publish-time wiring is now MVP, not a deferred fast-follow** (a one-off script never could auto-run on future publishes). The already-published SIRs are covered by a `backfill-text` subcommand in the same script. **navalbase drops out; substation is back to migration-only.**
 > - **`pages.tsx`-serialize + `research-appendix.md` concat** is recorded as the highest-fidelity source, but is now explicitly tied to the **future vision-on-figures phase** (not a near-term markdown-at-publish fast-follow) — it's the only source where per-figure vision + inline captions are clean. See Scope boundaries.
 > - **DB-canonical model history** (reverses D26; supersedes the v1 D25 "FE-sent history" shape). Mirror intake exactly: persist user msg at POST entry, rebuild history from `chat_message` ordered by `created_at`, prepend the non-persisted `<sirContent>` turn, keep the `dropTrailingAssistantMessages` guard. This preserves the "persisted transcript == what the model saw" equivalence and means the D2 future-tools path needs no rewrite. FE-sent `useChat` history becomes display-only + a persist-failure fallback.
 > - **Conversation is now version-keyed** (revises D14/D15/D17/D18, Q28). Adds nullable `conversations.sir_version int`, set to `current_version` at creation; active-conversation lookup keys on `(user_id, site_intelligence_report_id, sir_version = current_version, type='sir')`. A republish starts a fresh thread against the new version instead of replaying an old thread against newer injected text. Aligns with the already-per-version text artifact.
@@ -63,9 +63,9 @@ User sends a question → POST /api/chat/sir  (x-sir-id, x-conversation-id)
 
 Reset button → POST /api/chat/sir/reset → insert fresh conversation + greeting
 
-Offline (substation, one-off TS script): for each existing SIR version,
-  download report DOCX → mammoth.extractRawText → write report_extracted_text md
-  → upload to sir-artifacts bucket + insert sir_artifact row
+Publish time (upload-sir publish.ts, every future SIR) + backfill-text (one-off, existing SIRs):
+  report DOCX bytes → mammoth.extractRawText → report_extracted_text md
+  → upload to sir-artifacts bucket + upsert sir_artifact row (same loops as the DOCX)
 ```
 
 ### The `<sirContent>` injection model (mirrors intake's live-state block)
@@ -91,8 +91,8 @@ Text artifact (the `<sirContent>` source):
 - **D6 (Q6):** The extracted text is a **new `sir_artifact` row** (versioned like every other artifact), not a column on `site_intelligence_report` or a new table.
 - **D7 (Q7):** `kind = 'report_extracted_text'`, `format = 'md'`, sibling to the `kind='report'` PDF, in the `sir-artifacts` bucket.
 - **D8 (Q8):** Dump scope = the combined SIR + Research Appendix (what the `report` PDF/DOCX contains). **No** SIR-body-only split. The `report` DOCX renders from the same `pages.tsx` that embeds `research-appendix.md`, so DOCX text == PDF content == this combined scope.
-- **D9 (Q9) — v2 REVISED:** Extraction tool = **`mammoth.extractRawText` on the `report` DOCX** (`format='docx'`), not PyMuPDF on the PDF. Rationale: the DOCX is a structured document (headings/tables/reading order preserved), which beats Chromium-PDF glyph extraction for a table-dense diligence doc; `mammoth` is already a substation dependency (`^1.12.0`, `feasibility-intake-extraction/extract-text.ts`); and the DOCX is the highest-fidelity source that actually exists **in storage** for the already-published SIRs (the `pages.tsx`/`research-appendix.md` intermediates are not uploaded). Output = the markdown/plaintext mammoth returns, stored as the `report_extracted_text` artifact.
-- **D10 (Q10) — v2 REVISED:** For MVP, extraction is a **manual backfill script over existing SIRs, written in TypeScript and living in substation** (was: navalbase/Python). It reuses the existing mammoth code path and sits next to the migration. Wiring extraction into the publish pipeline (bureau) remains a fast-follow, not MVP.
+- **D9 (Q9) — v2 REVISED:** Extraction tool = **`mammoth.extractRawText` on the `report` DOCX** (`format='docx'`), not PyMuPDF on the PDF. Rationale: the DOCX is a structured document (headings/tables/reading order preserved), which beats Chromium-PDF glyph extraction for a table-dense diligence doc; and the DOCX is the highest-fidelity source that actually exists **in storage** for the already-published SIRs (the `pages.tsx`/`research-appendix.md` intermediates are not uploaded). Output = the plaintext/markdown mammoth returns, stored as the `report_extracted_text` artifact.
+- **D10 (Q10) — v2 REVISED (extraction is publish-time, in the `upload-sir` skill):** Extraction lives in **`claude-plugins`'s `upload-sir` skill (`scripts/publish.ts`)**, NOT navalbase (v1) or substation (v2 first pass). Two reasons this is the right home: (a) `publish.ts` is *already* the code that uploads the DOCX and inserts its `sir_artifact` row, so the text artifact is emitted from the same buffer in the same idempotent upsert+upload loops — near-zero new infra; (b) because it's in the **publish path**, every future SIR auto-gets its text artifact at publish time — this **makes publish-time wiring MVP** rather than a deferred fast-follow. `bun` auto-installs `mammoth` on import (no `node_modules`); extraction adds only a few seconds. Existing already-published SIRs are handled by a one-off **`backfill-text` subcommand** in the same script (finds DOCX artifacts lacking a `report_extracted_text` sibling → runs the identical extraction). Dependency: assumes the publish includes the `report` DOCX; if absent, no text artifact is written and chat stays disabled for that SIR (D11).
 - **D11 (Q11 / Q40 / Q48):** No text artifact for `current_version` → chat disabled for that SIR. Empty/near-empty mammoth output (e.g. an unreadable DOCX) → don't write the artifact (same as "no artifact"). Each SIR **version** needs its own `report_extracted_text`; republishing without one disables chat on the new version until re-run.
 
 Data model / persistence:
@@ -133,7 +133,7 @@ UI:
 - **D37 (Q50):** FE surface = a docked panel/drawer on the existing `/project/{id}/sir/{sirId}` page (not a new route). UI is iterable later.
 
 Sequencing:
-- **D38 (Q49):** Deploy/enable order: **(1)** substation migration → **(2)** cityhall route + UI (ships *disabled* everywhere, since no text artifacts exist yet — gating on artifact presence makes this safe) → **(3)** run the substation DOCX→mammoth backfill (v2) to light up existing SIRs.
+- **D38 (Q49) — v2 REVISED:** Deploy/enable order: **(1)** substation migration → **(2)** cityhall route + UI (ships *disabled* everywhere, since no text artifacts exist yet — gating on artifact presence makes this safe) → **(3)** ship the `upload-sir` `publish.ts` extraction step (covers all *future* publishes) → **(4)** run `upload-sir` `backfill-text` to light up the existing SIRs.
 
 ---
 
@@ -178,20 +178,24 @@ Confirm too that `chat_message.conversation_id` carries `ON DELETE CASCADE` so t
 
 ---
 
-## The backfill script (substation, TypeScript — v2)
+## Extraction in `upload-sir` (`claude-plugins/.../upload-sir/scripts/publish.ts`)
 
-A one-off command (TypeScript in substation, out of the request path — reuses the existing `mammoth` dependency and sits next to the migration):
+Extraction lives in the SIR publish script — the same `bun`-run, service-role script that already uploads the DOCX and writes its `sir_artifact` row. Two entry points, one implementation:
 
-1. Query `sir_artifact` for `kind='report', format='docx'` rows lacking a sibling `kind='report_extracted_text'` at the same `(site_intelligence_report_id, version)`.
-2. Download each report DOCX from the `sir-artifacts` bucket (service-role client — this is an offline job).
-3. `mammoth.extractRawText({ buffer })` → text string (same call as `feasibility-intake-extraction/extract-text.ts`).
-4. If empty/near-empty → skip (D11, fail closed — do not write).
-5. Upload the md to `sir-artifacts` (parallel path/version to the report) and insert a `sir_artifact` row (`kind='report_extracted_text'`, `format='md'`, `version` = the report's version, `versioning_label` copied).
-6. Idempotent: re-running skips versions that already have the text artifact.
+**(a) Publish path (every future SIR, automatic).** Inside the existing `publish` command, after the artifact list is resolved:
 
-**Fallback:** if a published SIR has a `report` PDF but no DOCX for a given version, that version can't be backfilled via mammoth — log and skip (chat stays disabled for it, per D11). All currently-published SIRs render both PDF and DOCX, so this is an edge case; if it recurs, the publish-time path (below) supersedes the need.
+1. Find the resolved artifact with `kind='report', format='docx'`. (If none → skip; chat stays disabled for this SIR, D11.)
+2. `mammoth.extractRawText({ buffer })` on its bytes → text string. (`bun` auto-installs `mammoth` on import — no `node_modules`.)
+3. If empty/near-empty → skip (D11, fail closed).
+4. Append a synthetic artifact `{ kind:'report_extracted_text', format:'md', version = the DOCX's version, versioning_label copied, storagePath = DOCX path with `.md` }` to the list — it flows through the **existing** `sir_artifact` upsert (keyed `(sir,version,kind,format,file_name)`) and the **existing** storage-upload loop untouched.
 
-Images are intentionally discarded for MVP (D4) — `mammoth.extractRawText` drops them. The future vision-on-figures phase does not extend this script; it moves the source to `pages.tsx` (see Scope boundaries), which is the only source with discrete figure files + captions.
+**(b) `backfill-text` subcommand (one-off, existing SIRs).** A new subcommand on the same script:
+
+1. Query `sir_artifact` for `kind='report', format='docx'` rows lacking a `kind='report_extracted_text'` sibling at the same `(site_intelligence_report_id, version)`.
+2. Download each DOCX from `sir-artifacts`, run the identical steps 2–4 above.
+3. Idempotent (the upsert key heals re-runs); re-running skips versions that already have the text artifact.
+
+Images are intentionally discarded for MVP (D4) — `mammoth.extractRawText` drops them. The future vision-on-figures phase does not extend this script; it moves the source to `pages.tsx` (see Scope boundaries), the only source with discrete figure files + captions.
 
 ---
 
@@ -201,7 +205,7 @@ Images are intentionally discarded for MVP (D4) — `mammoth.extractRawText` dro
 - **Tools / retrieval / bureau search** (D2) — v1 is pure dumped-text Q&A; route is built to accept tools later.
 - **Image understanding** (D4) — vision-describe-figures → inject text, later phase. **This phase is what earns the `pages.tsx` serializer** (below): figures are discrete PNGs (`5.1-compose/figures/*.png`) referenced by RDS `FigureWithNotesPage`/`FigureGridPage` with captions/notes as props, so vision can run per-figure with the caption as grounding context and inject the description inline at the right position — clean only from the component tree, not from a rendered PDF/DOCX where images are baked into pages.
 - **`pages.tsx`-serialize source swap (publish-time)** — the highest-fidelity source is a component-aware serialization of `pages.tsx` (body) concatenated with `research-appendix.md` (already clean markdown), emitted at compose/render time in bureau and uploaded as the `report_extracted_text` artifact. Deferred and **bundled with the image-understanding phase** (they share the same tree walk). Until then, DOCX→mammoth (D9) is the source for both backfill and — when wired — publish time. Note DOCX→mammoth at publish time is itself a valid fast-follow that needs no serializer; the serializer is only required once figures/vision are in scope.
-- **Wiring extraction into the publish pipeline** — fast-follow after MVP backfill; initially just runs the same DOCX→mammoth step at publish (bureau or substation), no serializer needed.
+- ~~**Wiring extraction into the publish pipeline**~~ — **no longer deferred (v2): extraction lives in `upload-sir`'s publish path (D10), so every future SIR is covered at publish time.**
 - **Stale-version notification** (Q28) — a nice-to-have system message telling a user their open thread predates a newly published version. **v2 downgrades this from a correctness fix to optional UX**: D17's version-keyed lookup already prevents cross-version replay by starting a fresh thread. Deferred.
 - **Multi-conversation-per-SIR UI** — the data model already supports it (D17); only the loader + a thread-list UI are needed later, no migration.
 - **Rolling cache breakpoints on long histories** and **per-user rate limiting** — cost-tuning knobs for later. (The 1h prompt cache itself is now IN scope — D32/D34, v2.)
@@ -220,7 +224,7 @@ Images are intentionally discarded for MVP (D4) — `mammoth.extractRawText` dro
 ## How to audit this spec
 
 Verify against:
-- **Codebase:** intake chat loop (`cityhall/src/routes/api/chat/intake/+server.ts` — `streamText` at `:607`, DB-canonical history rebuild at `:457`, persist-at-entry at `:308`, `dropTrailingAssistantMessages` guard at `:493`, model string at `:604`); the SIR page route + loader (`.../sir/[sirId]/+page.server.ts` + `+page.ts` — the auth model is RLS via the project-scoped `sirs` list, `.find` miss = 404 = membership guard); `mammoth.extractRawText` usage in `substation/.../feasibility-intake-extraction/extract-text.ts`; that no SIR chat route/tables exist today.
+- **Codebase:** intake chat loop (`cityhall/src/routes/api/chat/intake/+server.ts` — `streamText` at `:607`, DB-canonical history rebuild at `:457`, persist-at-entry at `:308`, `dropTrailingAssistantMessages` guard at `:493`, model string at `:604`); the SIR page route + loader (`.../sir/[sirId]/+page.server.ts` + `+page.ts` — the auth model is RLS via the project-scoped `sirs` list, `.find` miss = 404 = membership guard); the `upload-sir` publish script (`claude-plugins/.../upload-sir/scripts/publish.ts` — `bun`-run, auto-installs deps on import, already upserts `sir_artifact` + uploads to `sir-artifacts` at the `publish` command; `mammoth` precedent in `substation/.../feasibility-intake-extraction/extract-text.ts`); that no SIR chat route/tables exist today.
 - **DB (Noetic App `mgxqsrjutswbciyrltwd`):** `conversations`/`chat_message`/`sir_artifact`/`site_intelligence_report` columns as cited; that `kind='report'` has both `pdf` and `docx` formats (v2 extracts from `docx`); the 5 published SIRs.
 - **Facts:** the ~70–75K-token measured content size; that `bureau/pipelines/sir` renders `pages.tsx → PDF and DOCX` and that `5.1-compose` emits `pages.tsx` + a clean `research-appendix.md`, neither uploaded as an artifact.
 - **v2 cache spike:** reproducible via a ~50K-token cached block through the gateway (`providerOptions.anthropic.cacheControl = { type:'ephemeral', ttl:'1h' }`) — call 1 shows `cache_creation.ephemeral_1h_input_tokens > 0`, call 2 shows `cache_read_input_tokens` for the full block.
