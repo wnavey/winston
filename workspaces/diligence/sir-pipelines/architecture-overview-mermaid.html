@@ -1,0 +1,1767 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SIR Pipelines — Architecture Overview</title>
+<style>
+/* ============================================================
+   spec-kit v3  —  winston HTML spec design system
+   Inlined verbatim from ~/.claude/skills/winston-spec/assets/spec-kit.css
+   ============================================================ */
+
+:root{
+  /* steel-blue ramp (matches cityhall / Noetic report surfaces) */
+  --p50:#f0f5f9;--p100:#dce8f1;--p200:#b9d2e5;--p300:#8cb4d1;--p400:#6397b8;
+  --p500:#517e9e;--p600:#3f6582;--p700:#35526b;--p800:#2d4559;--p900:#273b4b;--p950:#182530;
+  --bg:#f9f9f9;--card:#ffffff;--divider:#dfdfdf;--ink:#1f2937;--muted:#6b7280;--ember:#bb4d00;
+  /* semantic: new / changed / retired */
+  --new:#15803d;--newbg:#f0fdf4;--newbd:#bbf7d0;
+  --chg:#b45309;--chgbg:#fffbeb;--chgbd:#fde68a;
+  --ret:#b91c1c;--retbg:#fef2f2;--retbd:#fecaca;
+  --sans:'Lexend',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  --serif:'Lora',Georgia,'Times New Roman',serif;
+  --mono:'Fira Code','SF Mono',ui-monospace,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.55;font-size:15px}
+
+/* ---------- masthead ---------- */
+header.masthead{background:linear-gradient(135deg,var(--p800),var(--p600));color:#fff;padding:34px 32px 30px;position:relative;overflow:hidden}
+header.masthead::after{content:"";position:absolute;inset:0;background-image:repeating-linear-gradient(115deg,rgba(255,255,255,.06) 0 1px,transparent 1px 26px);pointer-events:none}
+header.masthead .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--p200)}
+header.masthead h1{font-family:var(--serif);font-weight:600;margin:.35em 0 .2em;font-size:29px;position:relative}
+header.masthead p{margin:0;color:var(--p100);max-width:880px;font-size:15px}
+header.masthead .meta{margin-top:14px;font-size:12.5px;color:var(--p200);font-family:var(--mono)}
+
+/* ---------- tabs ---------- */
+nav.tabs{position:sticky;top:0;z-index:20;display:flex;gap:2px;background:var(--p950);padding:0 20px;box-shadow:0 2px 8px rgba(0,0,0,.12);flex-wrap:wrap}
+nav.tabs button{appearance:none;border:0;background:transparent;color:var(--p200);font-family:var(--sans);font-size:14px;font-weight:500;padding:14px 18px;cursor:pointer;border-bottom:3px solid transparent;transition:all .15s}
+nav.tabs button .n{font-family:var(--mono);font-size:11px;opacity:.7;margin-right:7px}
+nav.tabs button:hover{color:#fff;background:rgba(255,255,255,.04)}
+nav.tabs button.active{color:#fff;border-bottom-color:var(--ember);background:rgba(255,255,255,.06)}
+
+/* ---------- layout ---------- */
+main{max-width:1140px;margin:0 auto;padding:30px 26px 90px}
+.panel{display:none;animation:fade .25s ease}
+.panel.active{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+h2{font-family:var(--serif);font-weight:600;font-size:23px;margin:34px 0 6px;color:var(--p900)}
+h2:first-child{margin-top:4px}
+h2 .eyebrow{display:block;font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--p500);font-weight:400;margin-bottom:3px}
+h3{font-size:16px;font-weight:600;margin:28px 0 8px;color:var(--p800);display:flex;align-items:center;gap:9px}
+h3 .hn{font-family:var(--mono);font-size:12px;color:#fff;background:var(--p600);border-radius:5px;padding:2px 8px}
+h4{font-size:14px;font-weight:600;margin:18px 0 6px;color:var(--p800)}
+p{margin:.55em 0}
+.lede{font-size:16px;color:var(--p800);border-left:3px solid var(--ember);padding-left:16px;margin:14px 0 20px}
+ul{margin:.4em 0;padding-left:22px}li{margin:.28em 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px solid var(--p100);border-radius:4px;padding:1px 5px;color:var(--p800)}
+
+/* ---------- callout ---------- */
+.callout{background:var(--p50);border:1px solid var(--p200);border-left:4px solid var(--p500);border-radius:8px;padding:13px 17px;margin:16px 0}
+.callout.ember{background:#fdf6f0;border-color:#f0cba8;border-left-color:var(--ember)}
+.callout.new{background:var(--newbg);border-color:var(--newbd);border-left-color:var(--new)}
+.callout .lab{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--p600);font-weight:600;display:block;margin-bottom:3px}
+.callout.ember .lab{color:var(--ember)} .callout.new .lab{color:var(--new)}
+
+/* ---------- legend ---------- */
+.legend{display:flex;flex-wrap:wrap;gap:9px 16px;background:#fff;border:1px solid var(--divider);border-radius:10px;padding:12px 16px;margin:16px 0;font-size:12px;align-items:center}
+.legend .k{display:inline-flex;align-items:center;gap:6px}
+.swatch{width:26px;height:14px;border-radius:3px;display:inline-block;border:1px solid rgba(0,0,0,.15)}
+
+/* ---------- shared field badges (used by entity rows + legend) ---------- */
+.b{font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.04em;padding:1px 4px;border-radius:3px;text-transform:uppercase;white-space:nowrap}
+.b-pk{background:#fef3c7;color:#92600a;border:1px solid #fde68a}
+.b-fk{background:#e0edfb;color:#2456a8;border:1px solid #c3d8f2}
+.b-nn{background:#eef1f4;color:#4b5563;border:1px solid #d7dde3}
+.b-new{background:var(--newbg);color:var(--new);border:1px solid var(--newbd)}
+
+/* ============================================================
+   ER / UML entity boxes
+   ============================================================ */
+.erd{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start;margin:16px 0;background:#fbfcfd;border:1px solid var(--divider);border-radius:12px;padding:18px}
+.ent{border:1px solid var(--divider);border-radius:9px;overflow:hidden;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.05);min-width:236px;flex:0 1 auto}
+.ent .eh{padding:7px 12px;color:#fff;display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.ent .eh .en{font-family:var(--mono);font-size:12.5px;font-weight:700;letter-spacing:.02em}
+.ent .eh .stereo{font-size:9.5px;font-family:var(--mono);opacity:.85;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}
+.ent.exist .eh{background:var(--p700)}
+.ent.newt .eh{background:var(--new)}
+.ent.changed .eh{background:var(--chg)}
+.ent.retired .eh{background:#9ca3af}
+.ent.retired{opacity:.72}
+.ent .row{display:flex;align-items:center;gap:7px;padding:4px 11px;font-size:11.5px;border-top:1px solid #eef1f4}
+.ent .row:first-of-type{border-top:0}
+.ent .row .nm{font-family:var(--mono);font-size:11.5px;color:var(--p900);font-weight:600}
+.ent .row .ty{font-family:var(--mono);font-size:10px;color:var(--muted);margin-left:auto;white-space:nowrap}
+.ent .row.hi{background:#fff9f2}
+.ent .row.strk .nm{text-decoration:line-through;color:var(--muted)}
+.ent .note{padding:5px 11px;font-size:10px;color:var(--muted);font-style:italic;border-top:1px dashed #e5e9ee;background:#fbfcfd}
+/* diff rows — show a table modification (column added / removed), git-style.
+   Put a "+"/"−" marker in a .gut span at the start of the row. */
+.ent .row .gut{flex:0 0 10px;width:10px;text-align:center;font-family:var(--mono);font-size:11px;font-weight:700;color:var(--muted)}
+.ent .row.add{background:var(--newbg);box-shadow:inset 3px 0 0 var(--new)}
+.ent .row.add .gut{color:var(--new)}
+.ent .row.add .nm{color:#166534}
+.ent .row.del{background:var(--retbg);box-shadow:inset 3px 0 0 var(--ret)}
+.ent .row.del .gut{color:var(--ret)}
+.ent .row.del .nm{color:var(--ret);text-decoration:line-through}
+
+/* relationships panel — crow's-foot text notation */
+.rels{background:#fff;border:1px solid var(--divider);border-radius:10px;padding:12px 16px;margin:14px 0;font-family:var(--mono);font-size:12px;line-height:1.9}
+.rels .rl{display:block;color:var(--p800)}
+.rels .rl b{color:var(--ember)}
+.rels .cf{color:var(--p500);font-weight:700}
+.rels .cmt{color:var(--muted);font-style:normal;font-family:var(--sans);font-size:11.5px}
+.rels .tag-new{color:var(--new);font-weight:700}
+.rels .tag-ret{color:var(--ret);font-weight:700}
+.rels-h{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--p600);font-weight:700;margin-bottom:6px}
+
+/* ============================================================
+   Use-case scene  (an action + its boxes-and-arrows diagram)
+   ============================================================ */
+.uc{margin:16px 0 22px;border:1px solid var(--divider);border-radius:12px;overflow:hidden;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.uc .uch{display:flex;align-items:center;gap:13px;padding:11px 16px;background:linear-gradient(135deg,var(--p700),var(--p600));color:#fff}
+.uc .uch .ucn{flex:0 0 30px;height:30px;border-radius:50%;background:rgba(255,255,255,.2);font-family:var(--mono);font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.uc .uch .uctxt{flex:1}
+.uc .uch .actor{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--p100);display:block;margin-bottom:1px}
+.uc .uch .uct{font-weight:600;font-size:15.5px;font-family:var(--serif)}
+.uc .ucsub{padding:9px 16px;font-size:12.5px;color:var(--p800);background:var(--p50);border-bottom:1px solid var(--p100)}
+.uc .ucdiag{padding:20px 16px 14px}
+.ucnote{padding:2px 16px 14px;font-size:11.5px;color:var(--muted)}
+.ucnote b{color:var(--p700);font-family:var(--mono);font-size:10.5px}
+
+/* ============================================================
+   Boxes-and-arrows flow
+   ============================================================ */
+.dfg{display:flex;flex-wrap:wrap;align-items:stretch;gap:8px 0;margin:0}
+.node{flex:0 0 auto;width:156px;background:#fff;border:1.5px solid var(--p300);border-radius:8px;padding:9px 11px;display:flex;flex-direction:column;gap:3px}
+.node .op{align-self:flex-start;font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:1px 6px;border-radius:3px;border:1px solid;color:#fff;margin-bottom:2px}
+.node .nt{display:block;font-family:var(--mono);font-weight:700;font-size:12px;color:var(--p900);line-height:1.3;word-break:break-word}
+.node .nf{display:block;font-family:var(--mono);font-size:10px;color:var(--muted);line-height:1.45;word-break:break-word}
+.node.created{border-color:var(--new);background:var(--newbg)} .node.created .op{background:var(--new);border-color:var(--new)}
+.node.read{border-color:var(--p400);background:#eef4fb} .node.read .op{background:var(--p500);border-color:var(--p500)}
+.node.event{border-color:var(--ember);background:#fdf6f0} .node.event .op{background:var(--ember);border-color:var(--ember)}
+.node.store{border-style:dashed;border-color:var(--p500);background:#eef3f7} .node.store .op{background:var(--p700);border-color:var(--p700)}
+.edge{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:70px;max-width:104px;padding:0 4px}
+.edge .el{font-size:9px;color:var(--p600);font-family:var(--mono);text-align:center;line-height:1.3;margin-bottom:2px}
+.edge .ar{color:var(--p400);font-size:20px;font-weight:700;line-height:1}
+
+/* ============================================================
+   Card grid  (keep / change / drop comparisons)
+   ============================================================ */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:820px){.grid2{grid-template-columns:1fr}.erd{padding:12px}}
+.card{background:var(--card);border:1px solid var(--divider);border-radius:9px;padding:14px 16px}
+.card.keep{border-top:3px solid var(--new)} .card.change{border-top:3px solid var(--chg)} .card.drop{border-top:3px solid var(--ret)}
+.card strong{display:block;margin-bottom:4px;font-size:13.5px}
+.card ul{font-size:12.5px;margin:2px 0}
+
+/* ============================================================
+   Lifecycle / state machine
+   ============================================================ */
+.sm{display:flex;flex-wrap:wrap;gap:7px;align-items:center;margin:14px 0}
+.sm .s{border:1px solid var(--p300);background:var(--p50);border-radius:20px;padding:5px 12px;font-size:11.5px;font-weight:600;color:var(--p800);font-family:var(--mono)}
+.sm .s .who{display:block;font-size:9px;font-family:var(--mono);color:var(--muted);font-weight:400;text-transform:uppercase;letter-spacing:.03em}
+.sm .s.client{border-color:var(--newbd);background:var(--newbg)}
+.sm .s.cc{border-color:#f0cba8;background:#fdf6f0}
+.sm .s.spec{border-color:var(--chgbd);background:var(--chgbg)}
+.sm .a{color:var(--p400);font-weight:700}
+
+/* ============================================================
+   Use-case catalog — grouped list of candidate use cases
+   ============================================================ */
+.catgrp{border:1px solid var(--divider);border-radius:10px;overflow:hidden;margin:14px 0;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.catgrp .cath{background:var(--p700);color:#fff;padding:8px 14px;font-family:var(--serif);font-weight:600;font-size:14.5px;display:flex;align-items:center;gap:10px}
+.catgrp .cath .cgl{font-family:var(--mono);font-size:12px;font-weight:700;background:rgba(255,255,255,.2);border-radius:5px;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;flex:0 0 22px}
+.uci{display:flex;gap:9px;align-items:baseline;padding:7px 13px;border-top:1px solid #eef1f4;font-size:13px}
+.uci .uid{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--p600);flex:0 0 26px}
+.uci .utxt{flex:1;color:var(--ink);line-height:1.45}
+.uci .utxt b{color:var(--p900)}
+.uci .star{color:var(--ember);font-weight:700;font-size:12px;flex:0 0 auto;letter-spacing:-1px}
+.uci.later{opacity:.66}
+.utag{font-family:var(--mono);font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;text-transform:uppercase;letter-spacing:.03em;white-space:nowrap;flex:0 0 auto}
+.utag.t-orig{background:#e0edfb;color:#2456a8;border:1px solid #c3d8f2}
+.utag.t-add{background:var(--newbg);color:var(--new);border:1px solid var(--newbd)}
+
+/* ============================================================
+   Misc: storage strip, cross-reference box
+   ============================================================ */
+.storage{background:#eef3f7;border:1px dashed var(--p300);border-radius:8px;padding:9px 13px;font-family:var(--mono);font-size:12px;color:var(--p800);margin:12px 0}
+.storage b{color:var(--ember)}
+.xref{font-size:12px;color:var(--p600);background:var(--p50);border:1px solid var(--p100);border-radius:6px;padding:8px 12px;margin:10px 0}
+.foot{margin-top:44px;padding-top:18px;border-top:1px solid var(--divider);color:var(--muted);font-size:12px;font-family:var(--mono)}
+
+/* actor / repo chips (optional, for inline actor tags in prose) */
+.rc{display:inline-block;font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;padding:1px 6px;border-radius:5px;border:1px solid;vertical-align:middle;white-space:nowrap}
+.r-ch{background:#eef4fb;color:#2456a8;border-color:#c3d8f2}
+.r-sub{background:#f3eefb;color:#6b3fa0;border-color:#dcccf0}
+.r-fa{background:#e9f7f2;color:#0f7a5f;border-color:#bfe8db}
+.r-db{background:#eaeef2;color:#2d4559;border-color:#c7d2dd}
+.r-store{background:#e6eef3;color:#35526b;border-color:#bcd0dd}
+.r-user{background:#eefaf0;color:#15803d;border-color:#bbf7d0}
+.r-mcp{background:#fdf0e6;color:#b5590d;border-color:#f2d3b3}
+
+/* one-off: neutral compare-card header chip (kit-token colours only) */
+.cmp{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:1px 6px;border-radius:4px;border:1px solid;margin-left:6px;vertical-align:middle}
+.cmp-old{background:var(--p50);color:var(--p700);border-color:var(--p200)}
+.cmp-new{background:var(--newbg);color:var(--new);border-color:var(--newbd)}
+
+/* ============================================================
+   Clickable step nodes — step-chain card → §6 detail deep-link
+   ============================================================ */
+html{scroll-behavior:smooth}
+a.nl{display:flex;flex:0 0 auto;text-decoration:none;cursor:pointer;transition:transform .12s}
+a.nl:hover{transform:translateY(-2px)}
+a.nl .node{position:relative;cursor:pointer;width:156px}
+a.nl:hover .node{border-color:var(--ember);box-shadow:0 3px 11px rgba(187,77,0,.22)}
+a.nl .node::after{content:"§6 →";position:absolute;top:5px;right:6px;font-family:var(--mono);font-size:7.5px;font-weight:700;color:var(--ember);opacity:0;transition:opacity .12s}
+a.nl:hover .node::after{opacity:.9}
+
+/* ============================================================
+   Per-step detail cards (§6 "Steps in detail")
+   ============================================================ */
+.sd-group{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--p600);font-weight:700;margin:26px 0 4px;padding-bottom:5px;border-bottom:2px solid var(--p200)}
+.stepdetail{border:1px solid var(--divider);border-radius:11px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.05);margin:13px 0;overflow:hidden;scroll-margin-top:66px}
+.stepdetail .sdh{display:flex;align-items:center;gap:9px;padding:10px 15px;background:linear-gradient(135deg,var(--p800),var(--p600));color:#fff;flex-wrap:wrap}
+.stepdetail .sdh .sid{font-family:var(--mono);font-weight:700;font-size:13.5px;background:rgba(255,255,255,.18);border-radius:6px;padding:2px 9px}
+.stepdetail .sdh .sttl{font-family:var(--serif);font-weight:600;font-size:15.5px;flex:1;min-width:140px}
+.kb{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:2px 7px;border-radius:4px;white-space:nowrap;border:1px solid transparent}
+.kb.k-agent{background:var(--ember);color:#fff}
+.kb.k-script{background:var(--p400);color:#fff}
+.kb.k-check{background:var(--chg);color:#fff}
+.kb.mdl{background:#fff;color:var(--p800)}
+.stepdetail .sdb{padding:12px 16px}
+.stepdetail .sdb > p{margin:0 0 8px;font-size:13.5px;color:var(--ink)}
+dl.sdmeta{display:grid;grid-template-columns:118px 1fr;gap:7px 14px;margin:11px 0 2px;border-top:1px solid var(--divider);padding-top:11px;font-size:12.5px}
+dl.sdmeta dt{font-family:var(--mono);font-size:9.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--p600);font-weight:700;padding-top:3px}
+dl.sdmeta dd{margin:0;color:var(--ink);line-height:1.5}
+dl.sdmeta dd code{font-size:11.5px}
+@media(max-width:640px){dl.sdmeta{grid-template-columns:1fr;gap:2px 0}dl.sdmeta dt{margin-top:9px}}
+.pill{display:inline-block;font-family:var(--mono);font-size:10.5px;font-weight:600;padding:1px 7px;border-radius:5px;border:1px solid;margin:1px 3px 1px 0;white-space:nowrap}
+.pill.skill{background:#fdf0e6;color:#b5590d;border-color:#f2d3b3}
+.pill.cli{background:#f3eefb;color:#6b3fa0;border-color:#dcccf0}
+.pill.none{background:#f4f5f6;color:#8b929b;border-color:#e0e3e7;font-style:italic}
+
+/* ============================================================
+   Sequence diagram (inline SVG) — §6 step-detail cards
+   ============================================================ */
+.seqfig{margin:15px 0 4px;border:1px solid var(--divider);border-radius:11px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.05);padding:8px 10px 6px;overflow-x:auto}
+.seqfig svg{display:block;min-width:840px}
+.seqcap{display:flex;flex-wrap:wrap;gap:5px 18px;align-items:center;margin:8px 2px 2px;font-family:var(--mono);font-size:10.5px;color:var(--muted)}
+.seqcap b{font-family:var(--sans);font-weight:600;color:var(--p700);text-transform:uppercase;letter-spacing:.06em;font-size:10px}
+.seqcap .k{display:inline-flex;align-items:center;gap:7px}
+.seqcap .ln{display:inline-block;width:28px;border-top:2px solid var(--p600)}
+.seqcap .ln.ret{border-top:2px dashed var(--muted)}
+.seqcap .stop{color:var(--ret);font-weight:700}
+
+/* ============================================================
+   Returns reference — collapsible per-call API/shape/example
+   ============================================================ */
+.rrxh{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--p600);font-weight:700;margin:16px 0 7px;display:flex;align-items:center;gap:9px}
+.rrxh .hint{font-family:var(--sans);font-weight:400;letter-spacing:0;text-transform:none;color:var(--muted);font-size:11.5px}
+details.ret{border:1px solid var(--divider);border-radius:9px;background:#fff;margin:7px 0;overflow:hidden}
+details.ret > summary{list-style:none;cursor:pointer;padding:9px 13px;display:flex;align-items:center;gap:10px;font-size:12.5px;background:var(--p50);border-left:3px solid var(--p400)}
+details.ret[open] > summary{border-bottom:1px solid var(--divider)}
+details.ret > summary::-webkit-details-marker{display:none}
+details.ret > summary::before{content:"▸";font-family:var(--mono);color:var(--p500);font-size:11px;flex:0 0 auto}
+details.ret[open] > summary::before{content:"▾"}
+details.ret > summary .num{font-family:var(--mono);font-size:10.5px;font-weight:700;color:#fff;background:var(--p600);border-radius:5px;padding:1px 7px;flex:0 0 auto}
+details.ret > summary .ttl{font-family:var(--mono);font-weight:700;color:var(--p900)}
+details.ret > summary .ra{color:var(--ember);font-weight:700;margin:0 2px}
+details.ret .rbody{padding:12px 15px}
+dl.rgrid{display:grid;grid-template-columns:92px 1fr;gap:9px 14px;margin:0;font-size:12.5px}
+dl.rgrid dt{font-family:var(--mono);font-size:9.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--p600);font-weight:700;padding-top:3px}
+dl.rgrid dd{margin:0;line-height:1.5;color:var(--ink)}
+dl.rgrid dd code{font-size:11.5px}
+pre.cb{margin:7px 0 0;background:var(--p950);color:#e6edf3;border-radius:7px;padding:11px 13px;overflow-x:auto;font-family:var(--mono);font-size:11px;line-height:1.5;white-space:pre;-webkit-text-size-adjust:100%}
+pre.cb .cm{color:#7d95a6}
+pre.cb .k{color:#9ecbff}
+pre.cb .s{color:#a5d6a4}
+@media(max-width:640px){dl.rgrid{grid-template-columns:1fr;gap:2px 0}dl.rgrid dt{margin-top:8px}}
+.seqcap .nb{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;background:var(--p600);color:#fff;font-size:9px;font-weight:700;font-family:var(--mono)}
+/* per-API-call sub-sections inside a returns-reference item */
+.acintro{font-size:12.5px;color:var(--ink);margin:0 0 4px}
+.apicall{border-left:2px solid var(--p200);padding:1px 0 2px 13px;margin:12px 0}
+.apicall .ach{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px;margin-bottom:2px}
+.apicall .ach .step{font-family:var(--mono);font-size:8.5px;font-weight:700;color:#fff;background:var(--p500);border-radius:4px;padding:1px 6px;letter-spacing:.03em;white-space:nowrap;flex:0 0 auto}
+.apicall .ach .nm{font-family:var(--serif);font-weight:600;font-size:13px;color:var(--p900)}
+.apicall .ach .xport{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;padding:1px 6px;border-radius:4px;white-space:nowrap}
+.apicall .ach .xport.mcp{background:#f3eefb;color:#6b3fa0;border:1px solid #dcccf0}
+.apicall .ach .xport.http{background:#e9f7f2;color:#0f7a5f;border:1px solid #bfe8db}
+.apicall dl.rgrid{grid-template-columns:70px 1fr;gap:6px 12px;margin-top:5px}
+dl.rgrid dt.pe{color:var(--ember)}
+dl.rgrid dd.pe{background:#fdf6f0;border-left:2px solid var(--ember);padding:6px 10px;border-radius:0 5px 5px 0;line-height:1.55}
+
+/* ============================================================
+   Mermaid diagram overrides (hybrid prototype)
+   Keep the kit chrome; let mermaid own the diagram interior.
+   ============================================================ */
+.seqfig pre.mermaid{margin:0;background:transparent;border:0;padding:0;min-width:0;text-align:center}
+.seqfig pre.mermaid svg{min-width:0;max-width:100%;height:auto;display:inline-block}
+pre.mermaid:not([data-processed]){color:transparent}  /* hide raw source before render */
+</style>
+</head>
+<body>
+
+<header class="masthead">
+  <div class="kicker">DILIGENCE · SIR PIPELINES</div>
+  <h1>SIR Pipelines — Architecture Overview</h1>
+  <p>Two ways to produce a Site Intelligence Report: the <b>production <code>diligence-report</code> skill</b> that
+  serves customers today, and the <b>new bureau SIR pipeline</b> Jason has been building to replace it. This is an
+  orientation map — how each works, how complete the new one is, how it uses the Mayor, and what is committed to a
+  repo vs. still living as workspace WIP.</p>
+  <div class="meta">Draft v2 · 2026-08-03 · exploratory · + per-step detail (Tab 3 · §6) · MERMAID diagram variant · click a tab ↓</div>
+</header>
+
+<nav class="tabs">
+  <button data-tab="overview" class="active"><span class="n">01</span>High-Level Comparison</button>
+  <button data-tab="skill"><span class="n">02</span>Deep Dive · diligence-report skill</button>
+  <button data-tab="pipeline"><span class="n">03</span>Deep Dive · SIR pipeline</button>
+</nav>
+
+<main>
+
+<!-- ========================================================= -->
+<!-- TAB 1 — HIGH LEVEL COMPARISON                             -->
+<!-- ========================================================= -->
+<section class="panel active" id="overview">
+  <h2><span class="eyebrow">Tab 1</span>The two systems at a glance</h2>
+  <p class="lede">Same deliverable, same 10 disciplines, same rendering stack — but a different <em>shape</em>. The
+  skill is one long orchestrator session; the pipeline is a chain of small, resumable, individually-verified steps.
+  The new pipeline is not a branch of the skill — it is a ground-up rebuild that intends to retire it.</p>
+
+  <div class="callout new">
+    <span class="lab">the one-line answer</span>
+    The new "SIR pipeline" is <b>real, merged code in the <code>bureau</code> repo</b> (on <code>main</code>, 121
+    files) that has already run <b>end-to-end once</b> to a delivered 307-page PDF. The temp dir Jason shared is his
+    <b>planning workspace</b> (READMEs, PLAN/FACTS, session logs) — <b>not</b> the pipeline itself. Almost nothing of
+    substance is stranded in the temp dir; the engine is in the repo.
+  </div>
+
+  <h3><span class="hn">1</span>Side-by-side on the dimensions that matter</h3>
+
+  <h4>Form &amp; where it lives</h4>
+  <div class="grid2">
+    <div class="card"><strong>diligence-report skill<span class="cmp cmp-old">existing</span></strong>
+      <ul>
+        <li>A single Claude Code <b>skill</b> — one big <code>SKILL.md</code> orchestrator + ~34 prompt files + 26 reference docs.</li>
+        <li>Lives in <code>claude-plugins/plugins/noetic-tools/skills/diligence-report/</code>.</li>
+        <li>Invoked directly (Skill tool / interactive session, or the <code>field-agent</code> headless runner).</li>
+      </ul>
+    </div>
+    <div class="card"><strong>SIR bureau pipeline<span class="cmp cmp-new">new</span></strong>
+      <ul>
+        <li>A declarative <code>pipeline.yaml</code> (19 steps, §1–§7) + per-step prompts + per-step check scripts.</li>
+        <li>Lives in <code>bureau/pipelines/sir/</code> (bureau is its own nested git repo).</li>
+        <li>Driven step-by-step by <code>pipelines/lib/pipeline_runner.py</code>, executed by a Claude Code session.</li>
+      </ul>
+    </div>
+  </div>
+
+  <h4>Execution model &amp; resumability</h4>
+  <div class="grid2">
+    <div class="card"><strong>diligence-report skill<span class="cmp cmp-old">existing</span></strong>
+      <ul>
+        <li>One long orchestrator thread runs Phases 0→5, fanning out sub-agents at Phase 2 and Phase 3.</li>
+        <li>State is the working directory; no formal step lineage or per-step re-run contract.</li>
+        <li>HITL pauses (2.5, 4.5) are gates <em>inside</em> the orchestration.</li>
+      </ul>
+    </div>
+    <div class="card"><strong>SIR bureau pipeline<span class="cmp cmp-new">new</span></strong>
+      <ul>
+        <li>Each step runs on its own, writes an on-disk folder + <code>_health.json</code>, and is independently re-runnable.</li>
+        <li><code>requires:</code> lineage enforced; <code>verify</code> re-checks a step against its own outputs.</li>
+        <li>HITL1 (3.2) and HITL2 (4.4) are <b>first-class checkpoint steps</b> only a human <code>--decision</code> closes.</li>
+      </ul>
+    </div>
+  </div>
+
+  <h4>Billing &amp; models</h4>
+  <div class="grid2">
+    <div class="card"><strong>diligence-report skill<span class="cmp cmp-old">existing</span></strong>
+      <ul>
+        <li><b>Metered</b> — Opus 4.7 + Gemini 3.1 Pro via the AI gateway (real-dollar spend).</li>
+        <li>Sub-agent models are <em>not</em> pinned in-prompt (a documented hazard).</li>
+      </ul>
+    </div>
+    <div class="card"><strong>SIR bureau pipeline<span class="cmp cmp-new">new</span></strong>
+      <ul>
+        <li><b>Subscription-first</b> — Opus for judgment, Sonnet for chores; model named explicitly at every spawn.</li>
+        <li>The only metered exceptions: 2.1 plan-extraction still uses Gemini dual-vision (a parked question), and surveyor's declared mixed use.</li>
+      </ul>
+    </div>
+  </div>
+
+  <h4>Provenance &amp; verification</h4>
+  <div class="grid2">
+    <div class="card"><strong>diligence-report skill<span class="cmp cmp-old">existing</span></strong>
+      <ul>
+        <li>A large scrub-pass (~100 KB, 26+ numbered checks) enforces output hygiene at the end.</li>
+        <li>Corrections handled ad hoc; rules accreted reactively from an incident log.</li>
+      </ul>
+    </div>
+    <div class="card"><strong>SIR bureau pipeline<span class="cmp cmp-new">new</span></strong>
+      <ul>
+        <li>Per-step <code>check_*.py</code> scripts + <code>_health.json</code> verdicts; a <code>verify</code> gate per step.</li>
+        <li>Corrections are <b>patch-never-wipe</b>: <code>_superseded-*</code> snapshots + a <code>corrections[]</code> ledger + a diff audit trail.</li>
+        <li>Adversarial review is <b>build-phase scaffolding</b> (one Fable reviewer per newly-built step), not a runtime layer.</li>
+      </ul>
+    </div>
+  </div>
+
+  <h4>Maturity</h4>
+  <div class="grid2">
+    <div class="card keep"><strong>diligence-report skill<span class="cmp cmp-old">existing</span></strong>
+      <ul>
+        <li><b>Production.</b> This is what generates customer SIRs right now.</li>
+        <li>Actively hardened through end of July 2026 (latest PR #171).</li>
+        <li>Bloated and reactive, but battle-tested across many real runs.</li>
+      </ul>
+    </div>
+    <div class="card change"><strong>SIR bureau pipeline<span class="cmp cmp-new">new</span></strong>
+      <ul>
+        <li><b>Pilot.</b> Ran end-to-end <em>once</em> (Circle-K / Odessa TX) → 307-page PDF + DOCX.</li>
+        <li>§5 proven on a real render; §1–§4 verified against the pilot's artifacts but <b>not re-run step-by-step</b>.</li>
+        <li>Revision (6.1) and Learnback (7.x) not built yet.</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3><span class="hn">2</span>Where the Mayor fits — and where it doesn't</h3>
+  <p>The <b>Mayor</b> is a fleet-orchestration harness for <em>building and running</em> the pipeline — not a runtime
+  component and not a customer surface. A <code>/mayor</code> session points at the workspace, spawns fresh Opus
+  sessions to do the work, watches them, and briefs Jason. The pipeline steps themselves are executed by
+  <code>pipeline_runner.py</code>. The skill uses no Mayor at all.</p>
+
+  <div class="uc">
+    <div class="uch"><div class="ucn">M</div><div class="uctxt">
+      <span class="actor">Mayor session · dev/ops harness</span>
+      <span class="uct">How a pipeline step actually gets built or run</span>
+    </div></div>
+    <div class="ucsub">The Mayor orchestrates; a spawned Opus session does the work; the runner executes one step and stops at its gate.</div>
+    <div class="ucdiag"><div class="dfg">
+      <div class="node read"><span class="op">mayor</span><span class="nt">/mayor session</span><span class="nf">plans · briefs Jason<br>owns decisions</span></div>
+      <div class="edge"><span class="el">① claude --bg<br>--model opus</span><span class="ar">→</span></div>
+      <div class="node event"><span class="op">spawn</span><span class="nt">Opus session</span><span class="nf">one build/run task<br>mayor-fleet watch</span></div>
+      <div class="edge"><span class="el">② run --step</span><span class="ar">→</span></div>
+      <div class="node read"><span class="op">run</span><span class="nt">pipeline_runner.py</span><span class="nf">executes one step<br>on its model tier</span></div>
+      <div class="edge"><span class="el">③ writes</span><span class="ar">→</span></div>
+      <div class="node store"><span class="op">put</span><span class="nt">run tree</span><span class="nf">step folder +<br>_health.json</span></div>
+      <div class="edge"><span class="el">④ stops at</span><span class="ar">→</span></div>
+      <div class="node event"><span class="op">gate</span><span class="nt">HITL / cost gate</span><span class="nf">human --decision<br>closes it</span></div>
+    </div></div>
+    <div class="ucnote"><b>key</b> — the Mayor is above the pipeline (it builds &amp; drives it). The eventual product app wraps the <em>runner</em>, not the Mayor. Both SIR and review pipelines are built this way; the skill is not.</div>
+  </div>
+
+  <h3><span class="hn">3</span>What is committed vs. workspace WIP</h3>
+  <div class="grid2">
+    <div class="card keep"><strong>Committed to repos (durable)</strong>
+      <ul>
+        <li><code>bureau/pipelines/sir/</code> — the whole pipeline, on <code>main</code> (~121 files).</li>
+        <li><code>bureau/pipelines/review/</code> — the sibling "New Review" pipeline, on <code>main</code> (~60 files).</li>
+        <li><code>bureau/docs/pipelines/sir.md</code> — the human-authored pipeline spec.</li>
+        <li>Shared <code>pipelines/lib/pipeline_runner.py</code> + <code>sir/lib/*</code> render library.</li>
+      </ul>
+    </div>
+    <div class="card change"><strong>Workspace / local only (not the engine)</strong>
+      <ul>
+        <li><code>tmp/sir-jason-pipelines/active/July 2026 - SIR Pipeline/</code> — README, PLAN, FACTS, session logs (Mayor's memory).</li>
+        <li><code>~/noetic/working/sir/circle-k/…/</code> — the pilot <b>run output</b> (local disk, uncommitted by design).</li>
+        <li>A handful of open follow-up items still on feature branches / worktrees (tracked in PLAN "Owed").</li>
+      </ul>
+    </div>
+  </div>
+  <div class="callout ember">
+    <span class="lab">nuance worth flagging</span>
+    Jason's snapshot <code>PLAN.md</code> reads "nothing merged" — that was true mid-morning 2026-07-30. On the live
+    <code>bureau</code> checkout it is <b>all merged to main</b>. Because <code>bureau</code> is a nested, gitignored
+    repo, a <code>git</code> check from the <code>noetic</code> root shows none of it — you must run git <em>inside</em>
+    <code>bureau/</code>.
+  </div>
+
+  <div class="xref">Grounding: Jason's <code>active/July 2026 - SIR Pipeline/{README,PLAN,FACTS}.md</code> + session logs; live <code>bureau/pipelines/{sir,review}/</code> and <code>bureau/docs/pipelines/sir.md</code>; production skill at <code>claude-plugins/plugins/noetic-tools/skills/diligence-report/</code>.</div>
+</section>
+
+<!-- ========================================================= -->
+<!-- TAB 2 — DEEP DIVE: diligence-report skill                  -->
+<!-- ========================================================= -->
+<section class="panel" id="skill">
+  <h2><span class="eyebrow">Tab 2</span>Deep dive — the <code>diligence-report</code> skill</h2>
+  <p class="lede">The production engine. One orchestrating skill that walks a property through Phases 0–5 (plus
+  edit/learn-back tails), fanning out to sub-agents at two points, and rendering a single dual-format SIR. It works —
+  and it has accumulated a lot of cruft doing so.</p>
+
+  <div class="storage"><b>Location:</b> <code>claude-plugins/plugins/noetic-tools/skills/diligence-report/</code> · <b>Output:</b> <code>$NOETIC_DILIGENCE_DIR/sir/deliverable/</code></div>
+
+  <h3><span class="hn">1</span>The phase pipeline</h3>
+  <p>Phases run in one orchestrator thread. Blue = analysis/read work; green = a produced artifact; ember = a
+  fan-out or a mandatory human gate.</p>
+  <div class="dfg">
+    <div class="node read"><span class="op">phase 0</span><span class="nt">Jurisdiction &amp; Orientation</span><span class="nf">parcel triple · access trace<br>BLOCKING readiness gate</span></div>
+    <div class="edge"><span class="ar">→</span></div>
+    <div class="node read"><span class="op">phase 1</span><span class="nt">Vision Extraction</span><span class="nf">Gemini 3.1 + Opus 4.7<br>skip if no PDFs</span></div>
+    <div class="edge"><span class="ar">→</span></div>
+    <div class="node event"><span class="op">phase 2</span><span class="nt">Research ×9</span><span class="nf">9 parallel subagents<br>+ surveyor CLI</span></div>
+    <div class="edge"><span class="ar">→</span></div>
+    <div class="node event"><span class="op">HITL1</span><span class="nt">2.5 Checkpoint</span><span class="nf">confirm regulatory<br>frame · human pause</span></div>
+    <div class="edge"><span class="ar">→</span></div>
+    <div class="node event"><span class="op">phase 3</span><span class="nt">Disciplines ×10</span><span class="nf">10 parallel subagents<br>each loads its guide</span></div>
+    <div class="edge"><span class="ar">→</span></div>
+    <div class="node read"><span class="op">phase 4</span><span class="nt">Synthesis + Gap Recovery</span><span class="nf">issue matrix ·<br>regulatory briefing</span></div>
+    <div class="edge"><span class="ar">→</span></div>
+    <div class="node event"><span class="op">HITL2</span><span class="nt">4.5 Checkpoint</span><span class="nf">absolute-stop<br>gap readout</span></div>
+    <div class="edge"><span class="ar">→</span></div>
+    <div class="node created"><span class="op">phase 5</span><span class="nt">Render</span><span class="nf">single PDF (RDS) →<br>scrub → DOCX + rollup</span></div>
+    <div class="edge"><span class="ar">→</span></div>
+    <div class="node created"><span class="op">6 / 7</span><span class="nt">Edit &amp; Learn-back</span><span class="nf">operator feedback ·<br>route corrections back</span></div>
+  </div>
+
+  <h3><span class="hn">2</span>Orchestration &amp; models</h3>
+  <ul>
+    <li><b>One orchestrator</b> threads a shared <code>RUN_ID</code> and a RAM-budgeted browser-slot discipline into every browser-eligible sub-agent.</li>
+    <li><b>Two fan-out points:</b> Phase 2 (9 research sub-agents, incl. a surveyor Claude-subprocess CLI) and Phase 3 (10 discipline sub-agents).</li>
+    <li><b>Models:</b> Gemini 3.1 Pro + Opus 4.7 for Phase 1 vision; <code>claude-opus-4-7</code> elsewhere. Sub-agent models are <em>not</em> pinned in-prompt.</li>
+  </ul>
+
+  <h3><span class="hn">3</span>The 10 canonical disciplines</h3>
+  <p>Fixed slugs, each with a display label, a stub prompt inheriting <code>discipline-common.md</code>, and a
+  per-jurisdiction feasibility-guide in Bureau. Slugs are internal-only — scrub Check 7 forbids leaking them into the
+  deliverable.</p>
+  <div class="legend">
+    <span class="k"><b>el</b> Environmental</span><span class="k"><b>eptp</b> Env. Protection</span>
+    <span class="k"><b>fire</b> Fire</span><span class="k"><b>fwp</b> Floodplain</span>
+    <span class="k"><b>park</b> Parkland</span><span class="k"><b>sde</b> Drainage</span>
+    <span class="k"><b>sduf</b> Site Design</span><span class="k"><b>ta</b> Transportation</span>
+    <span class="k"><b>wwp</b> Water &amp; Wastewater</span><span class="k"><b>zlu</b> Zoning</span>
+  </div>
+  <div class="callout ember"><span class="lab">known wart</span> A documented <code>el</code>/<code>eptp</code> naming inversion (SIR-era <code>el</code> guides are environmental; canon says EL = Electrical) — parked to cutover because renaming breaks the in-production skill, and there is zero electrical content in any guide today.</div>
+
+  <h3><span class="hn">4</span>Output</h3>
+  <p>One deliverable, dual-format: <code>site-intelligence-report.pdf</code> (~180–340 pp) + <code>.docx</code>, both
+  from one <code>pages.tsx</code> rendered in RDS Report mode — exec summary + structured body (+ §10 Concept Plan
+  Review if a plan was supplied) + an in-document Research Appendix. The separate appendix PDF is retired.</p>
+
+  <h3><span class="hn">5</span>Signs of cruft / bloat</h3>
+  <div class="grid2">
+    <div class="card drop"><strong>Oversized reference docs</strong>
+      <ul>
+        <li><code>scrub-pass.md</code> ≈ <b>100 KB</b>, 26+ numbered checks — the single biggest bloat signal.</li>
+        <li><code>deliverables.md</code> 57 KB · <code>sir-style-guide.md</code> 57 KB · <code>phase4-synthesis.md</code> 42 KB · <code>run-manifest.md</code> 40 KB.</li>
+      </ul>
+    </div>
+    <div class="card drop"><strong>Reactive scar tissue</strong>
+      <ul>
+        <li>~34 prompts + 26 references; SKILL.md restates the same gates three times.</li>
+        <li>Rules cite <code>incident-log.md #N</code> — accreted from individual run failures, not designed.</li>
+        <li>Retired-feature notes inline ("React-PDF retired", version stamps); the local feasibility-guides dir is a near-empty vestige (real guides live in Bureau).</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3><span class="hn">6</span>Coupling / shared dependencies</h3>
+  <p>
+    <span class="rc r-sub">parcel-geo-location-resolution</span> Phase 0 subject location &nbsp;
+    <span class="rc r-sub">surveyor</span> Phase 2 records + clerk pulls &nbsp;
+    <span class="rc r-store">dsd / RDS</span> render (PDF + DOCX) &nbsp;
+    <span class="rc r-db">Bureau</span> feasibility-guides + jurisdiction stack &nbsp;
+    <span class="rc r-mcp">_shared-research</span> browser-discipline · visual-walk · access-trace
+  </p>
+  <div class="callout"><span class="lab">shared, not owned</span> <code>_shared-research/</code> (a sibling dir) and the sibling skills <code>diligence-replay-phase-5</code>, <code>audit-diligence-run</code>, <code>county-clerk-paid-pull-session</code>, <code>surveyor-review</code> all couple to this skill — so any cutover has to re-point or retire them, not just delete the skill.</div>
+</section>
+
+<!-- ========================================================= -->
+<!-- TAB 3 — DEEP DIVE: SIR bureau pipeline                     -->
+<!-- ========================================================= -->
+<section class="panel" id="pipeline">
+  <h2><span class="eyebrow">Tab 3</span>Deep dive — the new SIR bureau pipeline</h2>
+  <p class="lede">A ground-up rebuild of the same job as a declarative, resumable, individually-verified step chain in
+  the <code>bureau</code> repo. Subscription-billed, driven step-at-a-time by a shared runner, stopping at two
+  first-class human gates. §1–§5 are built and merged; §6–§7 are not.</p>
+
+  <div class="storage"><b>Location:</b> <code>bureau/pipelines/sir/</code> · <b>Runner:</b> <code>pipelines/lib/pipeline_runner.py</code> · <b>Spec doc:</b> <code>bureau/docs/pipelines/sir.md</code> · <b>Pilot run:</b> <code>~/noetic/working/sir/circle-k/university-w-odessa-tx/2026-07-20-075843</code></div>
+
+  <h3><span class="hn">1</span>The step chain (§1 → §5, then §6–§7 to come)</h3>
+  <p>Each step writes its own folder + <code>_health.json</code> and is re-runnable. Ember nodes are the two mandatory
+  human gates; the dashed node is the packaged deliverable. <b>Every card is clickable</b> — click a step to jump to its
+  full breakdown (prompts, Python scripts, external skills, key outputs and gate checks) in <a href="#s-detail">§6 below</a>.</p>
+
+  <h4>§1 Intake &amp; Site &nbsp;·&nbsp; §2 Plan Extraction</h4>
+  <div class="dfg">
+    <a class="nl" href="#s-1.1"><div class="node read"><span class="op">1.1</span><span class="nt">Input Capture</span><span class="nf">Sonnet · verbatim<br>provenance root</span></div></a>
+    <div class="edge"><span class="ar">→</span></div>
+    <a class="nl" href="#s-1.2"><div class="node read"><span class="op">1.2</span><span class="nt">Site &amp; Jurisdiction</span><span class="nf">Opus · parcel triple ·<br>visual walk → seed</span></div></a>
+    <div class="edge"><span class="ar">→</span></div>
+    <a class="nl" href="#s-2.1"><div class="node read"><span class="op">2.1</span><span class="nt">Plan Extraction</span><span class="nf">Gemini + Opus vision<br>+ reconcile · skip if none</span></div></a>
+  </div>
+
+  <h4>§3 Research</h4>
+  <div class="dfg">
+    <a class="nl" href="#s-3.1"><div class="node read"><span class="op">3.1</span><span class="nt">Pre-Gate Audit</span><span class="nf">readiness check<br>before the gate</span></div></a>
+    <div class="edge"><span class="ar">→</span></div>
+    <a class="nl" href="#s-3.2"><div class="node event"><span class="op">HITL1</span><span class="nt">3.2 Regulatory Orientation</span><span class="nf">human --decision<br>confirms the frame</span></div></a>
+    <div class="edge"><span class="ar">→</span></div>
+    <a class="nl" href="#s-3.3"><div class="node read"><span class="op">3.3</span><span class="nt">Surveyor</span><span class="nf">delegated agent ·<br>records + clerk docs</span></div></a>
+    <div class="edge"><span class="ar">→</span></div>
+    <a class="nl" href="#s-3.4"><div class="node event"><span class="op">3.4</span><span class="nt">Research + Site</span><span class="nf">fan-out ·<br>free-tier pulls</span></div></a>
+  </div>
+
+  <h4>§4 Analysis</h4>
+  <div class="dfg">
+    <a class="nl" href="#s-4.1"><div class="node event"><span class="op">4.1</span><span class="nt">Disciplines ×10</span><span class="nf">fan-out · shared<br>geometry sidecar</span></div></a>
+    <div class="edge"><span class="ar">→</span></div>
+    <a class="nl" href="#s-4.2"><div class="node read"><span class="op">4.2</span><span class="nt">Synthesis + Gap Recovery</span><span class="nf">bounded loop ·<br>recorded instruments</span></div></a>
+    <div class="edge"><span class="ar">→</span></div>
+    <a class="nl" href="#s-4.3"><div class="node read"><span class="op">4.3</span><span class="nt">Pre-Gate Audit</span><span class="nf">single full sweep<br>before the gate</span></div></a>
+    <div class="edge"><span class="ar">→</span></div>
+    <a class="nl" href="#s-4.4"><div class="node event"><span class="op">HITL2</span><span class="nt">4.4 Acquisition Gate</span><span class="nf">CTO brief ·<br>human --decision</span></div></a>
+  </div>
+
+  <h4>§5 Deliverable (strict order)</h4>
+  <div class="dfg">
+    <a class="nl" href="#s-5.1"><div class="node read"><span class="op">5.1</span><span class="nt">Compose</span><span class="nf">authors Parts<br>(now fans out)</span></div></a>
+    <div class="edge"><span class="ar">→</span></div>
+    <a class="nl" href="#s-5.2"><div class="node read"><span class="op">5.2</span><span class="nt">Content Scrub</span><span class="nf">full-intent sweep<br>(tiering killed)</span></div></a>
+    <div class="edge"><span class="ar">→</span></div>
+    <a class="nl" href="#s-5.3"><div class="node created"><span class="op">5.3</span><span class="nt">Render PDF</span><span class="nf">RDS report<br>+ page map</span></div></a>
+    <div class="edge"><span class="ar">→</span></div>
+    <a class="nl" href="#s-5.4"><div class="node read"><span class="op">5.4</span><span class="nt">Layout Scrub</span><span class="nf">per-page visual<br>walk + fixes</span></div></a>
+    <div class="edge"><span class="ar">→</span></div>
+    <a class="nl" href="#s-5.5"><div class="node created"><span class="op">5.5</span><span class="nt">Render DOCX</span><span class="nf">Word · live TOC</span></div></a>
+    <div class="edge"><span class="ar">→</span></div>
+    <a class="nl" href="#s-5.6"><div class="node read"><span class="op">5.6</span><span class="nt">Rollup</span><span class="nf">page/section<br>accounting</span></div></a>
+    <div class="edge"><span class="ar">→</span></div>
+    <a class="nl" href="#s-5.7"><div class="node store"><span class="op">5.7</span><span class="nt">Package</span><span class="nf">PDF + DOCX +<br>supporting docs</span></div></a>
+    <div class="edge"><span class="ar">→</span></div>
+    <a class="nl" href="#s-5.8"><div class="node event"><span class="op">5.8</span><span class="nt">Publish</span><span class="nf">opt-in gate →<br>upload-sir skill</span></div></a>
+  </div>
+
+  <h3><span class="hn">2</span>How a step executes — the runner</h3>
+  <p>Steps are declared in <code>pipeline.yaml</code> (conductor's <code>workflow.yaml</code> vocabulary +
+  <code>runner: claude-session</code> and per-step <code>hitl:</code>). Conductor sandboxes cannot pause for a human,
+  so these deliberately run outside conductor.</p>
+  <ul>
+    <li><b>Step kinds:</b> <code>script</code> · <code>agent</code> · <code>checkpoint</code> (only a human <code>--decision</code> closes a checkpoint).</li>
+    <li><b>Commands:</b> <code>validate | list | run --step &lt;id&gt; | verify | checkpoint</code>. <code>run</code> executes one step's entrypoint on one <code>model:</code> tier and stops at its gate.</li>
+    <li><b>Lineage:</b> <code>requires:</code> is enforced; a <code>cost_band</code> triggers a soft cost check-in; <code>skip_when</code> supports exactly one predicate (<code>empty_array</code>).</li>
+    <li><b>Where it runs:</b> <code>~/noetic/working/sir/{customer}/{project}/{ts}/</code>, subscription tokens.</li>
+  </ul>
+  <div class="callout new"><span class="lab">the design win</span> Because state is on disk and every step is re-runnable + verifiable, a correction is a targeted re-run — not a full re-generation. The pilot's entire §5 was re-run as a controlled experiment over the same §1–§4 artifacts, and every prior render was preserved under <code>_superseded-*</code>.</div>
+
+  <h3><span class="hn">3</span>Completeness — what's built, run, and left</h3>
+  <div class="legend">
+    <span class="k"><span class="swatch" style="background:var(--new)"></span> built &amp; proven on the pilot</span>
+    <span class="k"><span class="swatch" style="background:var(--chg)"></span> built, verified vs. artifacts, not re-run step-by-step</span>
+    <span class="k"><span class="swatch" style="background:var(--ret)"></span> not built yet</span>
+  </div>
+  <div class="grid2">
+    <div class="card keep"><strong>Built &amp; proven (§5)</strong>
+      <ul>
+        <li>5.1 → 5.7 all verify-green on a real render.</li>
+        <li>Pilot deliverable: <b>307 pp / 9.74 MB PDF</b> + DOCX + 5 supporting instruments + client README.</li>
+        <li>Page arc across the workstream: 412 → 311 → 307.</li>
+      </ul>
+    </div>
+    <div class="card change"><strong>Built, not re-exercised (§1–§4)</strong>
+      <ul>
+        <li>Every step exists and is merged; new upstream gates (retention, geometry sidecar, defect batch) were verified against the <em>pilot's existing</em> outputs.</li>
+        <li>The cheap rehearsal (<code>verify --step 3.3/3.4/4.1/4.2</code>) is owed <b>before</b> the next live SIR.</li>
+        <li>The next real SIR (Riverton WY) is the first true end-to-end re-exercise of §1–§4.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="grid2">
+    <div class="card drop"><strong>Not built (§6)</strong>
+      <ul>
+        <li><b>6.1 Revision</b> — the only step still <code>status: planned</code> in the yaml. Handles operator feedback after delivery.</li>
+      </ul>
+    </div>
+    <div class="card drop"><strong>Not built (§7)</strong>
+      <ul>
+        <li><b>7.x Learnback</b> — exists only as prose in <code>sir.md</code> (7.1–7.3), not as runnable steps. Routes corrections back into surveyor / Bureau guides.</li>
+        <li>First candidate to carry the reserved "cite-don't-retype / fact-ledger" architecture.</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3><span class="hn">4</span>What the pipeline gets right that the skill doesn't</h3>
+  <div class="grid2">
+    <div class="card keep"><strong>Provenance is mechanical</strong>
+      <ul>
+        <li>Patch-never-wipe: <code>_superseded-*</code> + <code>corrections[]</code> + a diff audit trail; the client never sees the sausage-making.</li>
+        <li>Per-step <code>check_*.py</code> + <code>_health.json</code> catch classes of defect a final scrub can't.</li>
+      </ul>
+    </div>
+    <div class="card keep"><strong>Resumable &amp; cheap to iterate</strong>
+      <ul>
+        <li>Re-run one step, not the whole run; per-step timing is stamped in <code>state/events.jsonl</code>.</li>
+        <li>Subscription-billed — the pilot ran at <code>metered_usd: 0</code> (except the parked Gemini 2.1 and surveyor exceptions).</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3><span class="hn">5</span>Known debt &amp; open threads (from the PLAN)</h3>
+  <ul>
+    <li><b>Length is the headline defect:</b> the pilot appendix ran ~3.26× both reference reports — a "write each fact once / point-don't-quote" problem, and the reserved fact-ledger follow-up is aimed straight at it.</li>
+    <li><b>Efficiency target unmet:</b> §1–§5 ≈ 8.2 h against a 2 h goal; the fix is fanning out the serial steps (5.1 compose, 5.4 layout scrub), sequenced after the format work.</li>
+    <li><b>A few RDS / check-script defects</b> recorded not fixed (rollup double-count, layout sampling floor, no PDF bookmarks).</li>
+    <li><b>Cutover checklist</b> (Jason's): migrate <code>parcel-geo</code> + <code>_shared-research</code> into the pipeline, <code>el</code>/<code>eptp</code> rename + real electrical guides, surveyor → its own sub-pipeline, then retire the skill.</li>
+  </ul>
+
+  <div class="callout"><span class="lab">relationship to "New Review"</span> The sibling <code>bureau/pipelines/review/</code> reuses this pipeline's §1.2/§3.1/§3.2/§3.3/§3.4 front-end (two files are literal symlinks into <code>sir/</code>) and imports <code>sir/lib/</code> for rendering. Improvements to the shared runner/lib and the front-end steps benefit both.</div>
+
+  <!-- ========================================================= -->
+  <!-- §6 — STEPS IN DETAIL                                       -->
+  <!-- ========================================================= -->
+  <h3 id="s-detail"><span class="hn">6</span>SIR pipeline steps in detail</h3>
+  <p>One card per step, sourced from <code>bureau/pipelines/sir/</code> — its prompt(s), the Python it runs (helpers vs.
+  <code>check_*.py</code> verifiers), any external <span class="pill skill">claude-plugins skill</span> or
+  <span class="pill cli">separate-repo CLI</span> it delegates to, its load-bearing outputs, and how its gate is enforced.
+  A step is one of three <b>kinds</b> — <span class="kb k-agent" style="border-color:var(--divider)">agent</span> (spec-and-verify: the runner prints the
+  spec, a Task agent does the work, <code>verify</code> checks the outputs), <span class="kb k-script" style="border-color:var(--divider)">script</span> (a deterministic
+  entrypoint the runner just runs), and <span class="kb k-check" style="border-color:var(--divider)">checkpoint</span> (executes nothing; a human
+  <code>--decision</code> is the only thing that closes it).</p>
+
+  <div class="callout"><span class="lab">the shared verification contract</span> Nearly every agent step wraps deterministic tools and its
+  <code>check_*.py</code> verifier. The runner never infers health from prose — it asserts each tool's own recorded
+  verdict via <code>health_requires:</code>, so a polished file at full size still fails the step if the tool behind it
+  fell back. Several verifiers double as <b>index builders</b> (<code>--write-index</code> / <code>--write-report</code>):
+  the machine-readable seam a downstream step consumes is <em>derived</em> from the markdown, never hand-authored beside
+  it, because two copies of the same findings drift and the drift always favours the summary.</div>
+
+  <!-- ========================================================= -->
+  <!-- STEP TIMING — worked example                              -->
+  <!-- ========================================================= -->
+  <style>
+    .timing-wrap{margin:16px 0 8px}
+    table.timetbl{border-collapse:collapse;width:100%;font-size:12.5px;background:#fff;border:1px solid var(--divider);border-radius:10px;overflow:hidden}
+    table.timetbl th,table.timetbl td{padding:6px 10px;text-align:left;border-bottom:1px solid #eef1f4;vertical-align:top}
+    table.timetbl thead th{font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--p600);background:var(--p50);border-bottom:2px solid var(--p200)}
+    table.timetbl td.sid,table.timetbl td.num{font-family:var(--mono);white-space:nowrap}
+    table.timetbl td.num{text-align:right}
+    table.timetbl tr.gate td{background:#fbfcfd}
+    table.timetbl tr.gate td.sid{color:var(--chg)}
+    table.timetbl .divergent{color:var(--ember);font-weight:600}
+    table.timetbl tfoot td{font-family:var(--mono);font-weight:700;background:var(--p50);border-top:2px solid var(--p200)}
+    .twhy{font-size:11px;color:var(--muted)}
+    .tag-h{font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:1px 5px;border-radius:3px;background:var(--chgbg);color:var(--chg);border:1px solid var(--chgbd);white-space:nowrap}
+  </style>
+  <h3 id="s-timing"><span class="hn">6a</span>Step timing — a worked example</h3>
+  <p>Every executing step already stamps its own start and end into the append-only event ledger at
+  <code>state/events.jsonl</code>: <code>run</code> writes <code>step.recorded&nbsp;status=running</code> before it hands
+  off, and <code>verify</code> writes <code>status=complete</code> (or <code>failed</code>) after the outputs are
+  asserted. So <b>per-step latency is a read-time derivation over data we already emit</b> — no new instrumentation, no
+  sidecar, one appended JSON line per transition. The method: pair each step's <code>running</code> with its
+  <em>next</em> event for that same step, and sum those segments. Two things fall out for free:</p>
+  <ul>
+    <li><b>Between-step idle is excluded.</b> The gap from one step's <code>complete</code> to the next step's
+    <code>running</code> — an operator reading a readout, going to lunch, or picking the run back up after the weekend —
+    lands <em>between</em> pairs and is never counted against any step.</li>
+    <li><b>Gate human-wait is structurally separated.</b> The two hard stops (3.2, 4.4) plus the publish gate (5.8) are
+    <span class="kb k-check" style="border-color:var(--divider)">checkpoint</span> steps that emit
+    <code>awaiting-decision</code>, never <code>running</code> — so pairing skips them, and their operator wait is read
+    off <code>presented_at → decided_at</code> instead. Human decision time never inflates agent time.</li>
+  </ul>
+
+  <p>Below is the real event ledger of the pilot Hutton car-wash run
+  (<code>working/sir/hutton/car-wash-louisville-ky/2026-08-01-083311</code>), decoded by that rule. <b>Active</b> is the
+  summed <code>running</code>→next-event window; <b>Elapsed</b> is first-<code>running</code>→last-terminal (shown only
+  where it diverges from Active, which is the tell that a step was suspended across a gate loop).</p>
+
+  <div class="timing-wrap">
+  <table class="timetbl">
+    <thead><tr><th>Step</th><th>Kind</th><th class="num">Active</th><th class="num">Elapsed</th><th>What the timing shows</th></tr></thead>
+    <tbody>
+      <tr><td class="sid">1.1</td><td>agent</td><td class="num">1m 56s</td><td class="num">—</td><td>Input capture. Clerical, fast.</td></tr>
+      <tr><td class="sid">1.2</td><td>agent</td><td class="num">26m 56s</td><td class="num">—</td><td>Site &amp; jurisdiction (opus). The heaviest §1 reasoning step.</td></tr>
+      <tr><td class="sid">2.1</td><td>agent</td><td class="num">12m 47s</td><td class="num">—</td><td>Plan extraction. Ran <b>two days later</b> — see the idle note below.</td></tr>
+      <tr><td class="sid">3.1</td><td>agent</td><td class="num">11m 2s</td><td class="num">—</td><td>Pre-gate audit; caught &amp; corrected the 1.2 Bardstown Rd locator before the gate.</td></tr>
+      <tr class="gate"><td class="sid">3.2</td><td><span class="tag-h">checkpoint</span></td><td class="num">30m 23s</td><td class="num">—</td><td><b>Human wait</b>, not compute — frame <em>confirmed</em>. Excluded from agent time.</td></tr>
+      <tr><td class="sid">3.3</td><td>agent</td><td class="num">2h 10m</td><td class="num">—</td><td>Surveyor / records. Longest active window — and partly <em>co-driven</em> (see blind spot #1).</td></tr>
+      <tr><td class="sid">3.4</td><td>agent</td><td class="num">1h 34m</td><td class="num">—</td><td>Research + site fan-out.</td></tr>
+      <tr><td class="sid">4.1</td><td>agent</td><td class="num">35m 27s</td><td class="num">—</td><td>Disciplines.</td></tr>
+      <tr><td class="sid">4.2</td><td>agent</td><td class="num">29m 50s</td><td class="num divergent">18h 22m</td><td>Synthesis. First pass 30m; suspended overnight, then <b>invalidated by the 4.4 gate</b> and re-worked — the correction passes carry <em>no</em> <code>running</code> marker (blind spot #2), so Active undercounts here.</td></tr>
+      <tr><td class="sid">4.3</td><td>agent</td><td class="num">14m 48s</td><td class="num divergent">4h 59m</td><td>Pre-gate audit; re-run after the 4.4 correction.</td></tr>
+      <tr class="gate"><td class="sid">4.4</td><td><span class="tag-h">checkpoint</span></td><td class="num">4h 25m</td><td class="num">—</td><td><b>Human wait</b> across <em>two</em> presentations: <em>corrected</em> (co-drove LOJIC at the gate, 4h 18m — invalidated 4.2/4.3) then <em>confirmed</em> (6m).</td></tr>
+      <tr><td class="sid">5.1</td><td>agent</td><td class="num">46m 37s</td><td class="num">—</td><td>Compose — the single most expensive §5 agent step.</td></tr>
+      <tr><td class="sid">5.2</td><td>agent</td><td class="num">11m 9s</td><td class="num">—</td><td>Content scrub.</td></tr>
+      <tr><td class="sid">5.3</td><td>script</td><td class="num">22m 14s</td><td class="num divergent">37m 28s</td><td>Render PDF — <b>9 run attempts</b> (two RDS component crashes, then the 5.4→5.3 re-render). The retry span is the signal.</td></tr>
+      <tr><td class="sid">5.4</td><td>agent</td><td class="num">22m 51s</td><td class="num">—</td><td>Layout scrub (one <code>_health.json</code> contract miss, then clean).</td></tr>
+      <tr><td class="sid">5.5</td><td>script</td><td class="num">29s</td><td class="num">—</td><td>Render DOCX.</td></tr>
+      <tr><td class="sid">5.6</td><td>script</td><td class="num">~0s</td><td class="num divergent">21m 24s</td><td>Rollup — failed twice on the <code>gates-undecided</code> health check, then a <b>hand override</b> (no <code>running</code>) — Active reads ~0, the 21m was operator remediation.</td></tr>
+      <tr><td class="sid">5.7</td><td>script</td><td class="num">&lt;1s</td><td class="num">—</td><td>Package. Instant.</td></tr>
+      <tr class="gate"><td class="sid">5.8</td><td><span class="tag-h">checkpoint</span></td><td class="num">6m 54s</td><td class="num">—</td><td><b>Human wait</b> — publish gate, <em>confirmed</em> (SIR uploaded).</td></tr>
+    </tbody>
+    <tfoot>
+      <tr><td colspan="2">Agent-active (sum)</td><td class="num">7h 40m</td><td class="num"></td><td class="twhy">actual step execution — the number an SLA should track</td></tr>
+      <tr><td colspan="2">Human-wait at gates</td><td class="num">5h 2m</td><td class="num"></td><td class="twhy">3.2 + 4.4 (both waits) + 5.8, read from presented→decided</td></tr>
+      <tr><td colspan="2">Idle / between-step</td><td class="num">63h 9m</td><td class="num"></td><td class="twhy"><b>48h 42m</b> of it is the Fri→Sun gap between 1.2 and 2.1</td></tr>
+      <tr><td colspan="2">Run wall clock</td><td class="num">75h 51m</td><td class="num"></td><td class="twhy">first event → last event, Fri 13:33 → Mon 17:25 UTC</td></tr>
+    </tfoot>
+  </table>
+  </div>
+
+  <div class="callout new"><span class="lab">the headline</span> A run whose wall clock reads <b>3 days, 9 hours</b>
+  contained under <b>8 hours</b> of actual step execution. Naive wall-clock timing would have declared this a 75-hour
+  pipeline; the ledger already carries everything needed to say it was ~7h 40m of work, ~5h of operator decisions, and
+  the rest a weekend. That reconciles with the §1–§5 ≈ 8.2 h efficiency figure this doc tracks against the 2 h goal —
+  the derivation needs zero pipeline changes to produce it.</div>
+
+  <div class="callout ember"><span class="lab">two blind spots the free method keeps</span> The ledger is
+  "good enough" today for triage, but two categories of time hide <em>inside</em> a step and cannot be separated from two
+  events alone. <b>(1) Co-driven work.</b> 3.3's 2h 10m and any gate-time co-driving (4.4's LOJIC pull) are wall-time of
+  the active window — they mix agent compute with an operator working alongside it. <b>(2) Un-instrumented remediation.</b>
+  A post-gate <code>step.corrected</code> pass or a hand override (4.2's re-work, 5.6's 21m) does <em>not</em> emit
+  <code>running</code>, so Active undercounts exactly the steps a human had to rescue. Closing either one needs one added
+  event — an end-of-work stamp at last-subagent-return, and a <code>running</code> on correction passes — and is only
+  worth doing if per-step precision starts to matter more than run-level triage.</div>
+
+  <div class="sd-group">§1 — Intake &amp; Site</div>
+
+  <div class="stepdetail" id="s-1.1">
+    <div class="sdh"><span class="sid">1.1</span><span class="sttl">Input Capture</span><span class="kb k-agent">agent</span><span class="kb mdl">sonnet</span></div>
+    <div class="sdb">
+      <p>The provenance root of the whole run. Records the operator's inputs <em>clerically</em> — the request
+      <b>verbatim</b>, attachments copied (never moved) with checksums, and a structured reading kept separate from the raw
+      text so a later step can overrule the interpretation without losing the original. It resolves nothing: parcel,
+      jurisdiction and research are all later steps.</p>
+      <dl class="sdmeta">
+        <dt>Prompt</dt><dd><code>prompts/1.1-input-capture.md</code></dd>
+        <dt>Python</dt><dd><code>check_intake.py</code> — validates the customer slug against the <code>organizations</code> table over PostgREST and refuses a project-slug collision with a different project for the same customer.</dd>
+        <dt>Skills / CLI</dt><dd><span class="pill none">none</span></dd>
+        <dt>Key outputs</dt><dd><code>request.md</code> (verbatim), <code>intake.json</code>, <code>attachments-manifest.json</code> (path · sha256 · size · why-believed-an-input, per file)</dd>
+        <dt>Why it matters</dt><dd>Every later premise traces back here; the checksums are how a re-run proves it read the same concept plan, not a different PDF out of a temp folder.</dd>
+      </dl>
+    </div>
+  </div>
+
+  <div class="stepdetail" id="s-1.2">
+    <div class="sdh"><span class="sid">1.2</span><span class="sttl">Site &amp; Jurisdiction</span><span class="kb k-agent">agent</span><span class="kb mdl">opus</span><span class="kb" style="background:rgba(255,255,255,.16);color:#fff">requires 1.1</span></div>
+    <div class="sdb">
+      <p>Establishes <em>what we are looking at and who governs it</em> — resolve-or-stop, no coarse fallbacks. Resolves the
+      full jurisdiction stack (county, co-located city, ETJ, overlays), the location triple (parcel / lat-lon / address),
+      parcel geometry, a deterministic road-network <b>access trace</b>, and a <b>visual walk</b> framed by that trace, then
+      writes the seed. Opus because this is the one step whose wrong answer is uncatchable: all ten §4 disciplines inherit
+      the jurisdiction, boundary and cardinal directions set here and will produce confident, well-cited findings against
+      whatever frame they are handed. Imagery is captured here (it needs the parcel geometry) but <em>adjudicated</em> at 3.4.</p>
+      <div class="seqfig">
+<pre class="mermaid">
+sequenceDiagram
+    participant R as Runner
+    participant A as 1.2 Agent
+    participant P as preflight.sh
+    participant G as parcel-geo
+    participant S as det. scripts
+    participant W as visual walk
+    participant T as run tree
+    R->>A: run --step 1.2 · spawn opus session
+    A->>T: read 1.1 · intake.json · request.md
+    A->>P: preflight.py --jurisdiction "City, ST"
+    P->>P: fetch origin/main (never a local checkout)
+    P-->>A: ① readiness verdict
+    Note right of A: ⛔ non-READY ⇒ record + STOP
+    A->>S: bureau_profiles.py --member … (slugs from disk)
+    S-->>A: ② bureau_slug per member · resolved | partial
+    A->>G: resolve triple — embedded (surveyor MCP)
+    G->>G: render_boundary_overlay.py (step 5, mandatory)
+    G-->>A: ③ parcel-rings.geojson · overlay.png · geometry-summary
+    Note right of A: ⛔ stopped:* / failed:* ⇒ STOP
+    A->>S: parcel_dimensions.py (rings · geodesy)
+    S-->>A: ④ union bbox · oriented min-area rect · ring area
+    A->>S: _access_trace.py trace — BEFORE the walk
+    S->>S: OSM / Overpass topology (keyless, zero-LLM)
+    S-->>A: ⑤ access-trace.json · _constraint-points.txt
+    Note right of A: degraded = non-blocking
+    A->>W: browser-slot acquire · site-visual-walk.sh --extra-points
+    W->>W: agent-browser capture · isolated
+    W-->>A: ⑥ imagery/ — aerials · SV series · constraint vantages
+    A->>A: visual QA gate — Read every frame
+    A->>T: write jurisdiction · parcel-geometry · seed-site-data · _health
+    A->>W: close session · browser-slot reap-stale
+    R->>T: verify — assert 5 health checks
+</pre>
+      </div>
+      <div class="seqcap"><b>step 1.2 sequence</b><span class="k"><span class="ln"></span> call</span><span class="k"><span class="ln ret"></span> return</span><span class="k">↻ local / deterministic step</span><span class="k"><span class="stop">red</span> hard-stop guard</span><span class="k"><span class="nb">N</span> numbered return → detailed below</span></div>
+
+      <div class="rrxh">what each call returns <span class="hint">— numbered <b>1</b>–<b>6</b> to match the return badges on the agent lifeline above; each gives the API it hits, the shape it hands back, and real example data from the pilot <code>hutton / car-wash-louisville-ky</code> run</span></div>
+
+      <details class="ret"><summary><span class="num">1</span><span class="ttl">preflight.sh</span><span class="ra">⇢</span> readiness verdict</summary>
+        <div class="rbody"><dl class="rgrid">
+          <dt>API</dt><dd><code>preflight.py</code> shells out to the diligence skill's <code>scripts/preflight.sh &lt;jurisdiction&gt; --sync</code> (600&nbsp;s). That script <code>git fetch</code>es <code>bureau</code> + <code>surveyor</code> and reads <b><code>origin/main</code></b>, never the local checkout — presence via <code>git ls-tree</code> (bureau needs ≥10 feasibility guides; surveyor a config), the surveyor <b>canary golden</b> (<code>coverage.floor_met</code>), and the <b>Prospector readiness DB</b> as a non-authoritative freshness layer. Fails <em>closed</em> if a remote is unreachable.</dd>
+          <dt>Returns</dt><dd><code>readiness{ verdict · exit_code · feasibility_guides · checked_at · db_readiness · workstreams[] · stale_workstreams[] · sources_floor_met · override }</code> + <code>repo_heads{ bureau · surveyor }</code> short SHAs (pin the exact guide revisions read). Verdicts: <code>READY</code>(0) &amp; <code>MAINTENANCE-DUE</code>(40) pass; <code>STALE</code>(10) · <code>NOT-ONBOARDED</code>(20) · <code>AUTHORITY-UNKNOWN</code>(30) ⇒ record &amp; STOP.</dd>
+          <dt>Example</dt><dd><pre class="cb">"readiness": {
+  "verdict": "READY",
+  "exit_code": 0,
+  "feasibility_guides": 10,
+  "checked_at": "2026-08-01T13:38:40+00:00",
+  "db_readiness": "UNVERIFIED",
+  "workstreams": [],
+  "stale_workstreams": [],
+  "sources_floor_met": null,
+  "override": null
+},
+"repo_heads": { "bureau": "1c06b6522ea4", "surveyor": "c74a2b2cb478" }</pre></dd>
+        </dl></div>
+      </details>
+
+      <details class="ret"><summary><span class="num">2</span><span class="ttl">bureau_profiles.py</span><span class="ra">⇢</span> bureau_slug per member</summary>
+        <div class="rbody"><dl class="rgrid">
+          <dt>API</dt><dd>No network — a local disk lookup under <code>bureau/jurisdictions/&lt;slug&gt;/</code>. The rule: <b>bureau slug = surveyor slug minus the trailing state</b> (<code>louisville-ky</code> → <code>louisville</code>), accepted only if the directory actually exists (a wrong guess stays <code>null</code> rather than bootstrapping a phantom). <code>--member "role=Name=slug"</code> resolves each stack member; <code>--check jurisdiction.json</code> re-verifies the written artifact and fails <code>unresolved</code> if a member whose profile exists on disk was left <code>null</code>.</dd>
+          <dt>Returns</dt><dd><code>stack[]</code> (<code>role · name · bureau_slug · surveyor_slug</code> — copied into <code>jurisdiction.json</code>) + a richer <code>detail[]</code> (<code>profile_path · feasibility_guides · has_codes · tried[]</code>). The <code>--check</code> verdict <code>resolved</code>&nbsp;/&nbsp;<code>partial</code>&nbsp;/&nbsp;<code>none-on-disk</code> becomes <code>checks.bureau_profiles</code>; <code>partial</code> degrades the step and names the unprofiled members.</dd>
+          <dt>Example</dt><dd><pre class="cb">"stack": [
+  { "role": "governing",
+    "name": "Louisville/Jefferson County Metro Government",
+    "bureau_slug": "louisville", "surveyor_slug": "louisville-ky" },
+  { "role": "county", "name": "Jefferson County",
+    "bureau_slug": "louisville", "surveyor_slug": "louisville-ky" },
+  { "role": "special-district",
+    "name": "Fern Creek Fire Protection District (F60)",
+    "bureau_slug": null, "surveyor_slug": null }   <span class="cm">// unprofiled</span>
+]</pre></dd>
+        </dl></div>
+      </details>
+
+      <details class="ret"><summary><span class="num">3</span><span class="ttl">parcel-geo-location-resolution</span><span class="ra">&#8642;</span> location triple &#183; rings &#183; geometry</summary>
+        <div class="rbody">
+          <p class="acintro"><code>parcel-geo</code> was shorthand &#8212; the skill's real name is <code>parcel-geo-location-resolution</code>, and it is <b>not one call</b>: it runs an ordered pipeline of discrete calls. Some drive the <b>Surveyor MCP server</b> (tool prefix <code>louisville_</code>); others are keyless HTTP (<code>curl</code>) to the Census geocoder and ESRI imagery. There is <b>no generic-geocoder fallback</b> &#8212; an unresolvable jurisdiction STOPs. In the pilot the operator pin landed on the adjacent <b>Wawa</b>; calls 3&#8211;4 are what recovered the two vacant subject pads. Each call below leads with a plain-English summary.</p>
+          <div class="callout"><span class="lab">generic protocol, jurisdiction-specific endpoints</span> The <code>raw ArcGIS</code> calls below (the LOJIC parcel queries, the ESRI export) use the <b>universal Esri REST query grammar</b> &#8212; but the <b>endpoint, layer IDs and field names</b> (<code>gis.lojic.org/&#8230;/OpenDataPVA/MapServer/1</code>, <code>PARCELID</code>, <code>LRSN</code>) are Louisville-specific; you only know how to build them because call 1 resolved the jurisdiction. Another county sits on a different host with different layer IDs and may call the id <code>PIN</code> or <code>PARCEL_ID</code>. That is the whole point of the <b>surveyor tools</b>: they normalize wildly heterogeneous county sources (ArcGIS, Socrata, scrapers, paid vendors, PDF-only) behind one uniform interface, so the pipeline is identical across jurisdictions and only the surveyor module changes. Louisville can drop to a raw <code>curl</code> only because it exposes a clean public ArcGIS estate &#8212; the exception, not the rule; most jurisdictions have no equivalent raw endpoint at all.</div>
+
+          <div class="apicall">
+            <div class="ach"><span class="step">Call 1 &#183; Step 1</span><span class="nm">Jurisdiction detection</span><span class="xport http">keyless HTTP</span></div>
+            <dl class="rgrid">
+              <dt class="pe">In plain English</dt><dd class="pe">Takes the operator's <b>bare pin</b> &#8212; a lat/lon with <em>no</em> jurisdiction attached &#8212; and asks the US Census which county the coordinate falls in, so the pipeline knows which county's surveyor toolset to load. Here the pin resolved to <b>Jefferson County, KY</b> &#8594; slug <code>louisville-ky</code>.</dd>
+              <dt>Calls</dt><dd><code>geocoding.geo.census.gov/geocoder/geographies/coordinates?x=&lt;lon&gt;&amp;y=&lt;lat&gt;&amp;benchmark=Public_AR_Current&amp;vintage=Current_Current</code> (US Census, <code>curl</code>).</dd>
+              <dt>Returns</dt><dd><code>.result.geographies.Counties[0].NAME</code> + state/county FIPS &#8212; mapped to the surveyor slug. (A coordinate query has no <code>addressMatches[]</code>.)</dd>
+              <dt>Request &#8594; response</dt><dd><span style="color:var(--muted)">real, keyless &#8212; the two operator inputs were the pin and a flyer address <code>4310 Bardstown Rd</code> (the Wawa's arterial address):</span><pre class="cb">$ curl "https://geocoding.geo.census.gov/geocoder/geographies/coordinates\
+?x=-85.6371661&amp;y=38.1853413&amp;benchmark=Public_AR_Current&amp;vintage=Current_Current&amp;format=json"
+
+{ "result": { "geographies": { "Counties": [
+  { "NAME": "Jefferson County", "STATE": "21", "COUNTY": "111", "GEOID": "21111" } ] } } }
+<span class="cm">// &#8594; surveyor slug louisville-ky</span></pre></dd>
+            </dl>
+          </div>
+
+          <div class="apicall">
+            <div class="ach"><span class="step">Call 2 &#183; Step 2</span><span class="nm">Point &#8594; parcel (LOJIC)</span><span class="xport http">raw ArcGIS</span><span class="xport mcp">surveyor MCP</span></div>
+            <dl class="rgrid">
+              <dt class="pe">In plain English</dt><dd class="pe">Takes the pin <b>plus the jurisdiction resolved in call 1</b> &#8212; which is what makes this call possible at all. Parcel data lives in <b>per-jurisdiction GIS estates</b> (different host, service, layer IDs, field names, spatial reference &#8212; there is no universal parcel API), and the pipeline addresses them through jurisdiction-namespaced surveyor tools (<code>&lt;jur&gt;_parcel_details_by_point</code>), so it cannot even <em>name</em> the call until it knows the county is Louisville. Louisville's surveyor module has no point-query tool, so this run fell back to a <b>raw keyless ArcGIS point query</b> on the LOJIC parcels layer for the parcel <em>identity</em>, then called the MCP <code>property_profile</code> for zoning/district <em>context</em>. The identity came back as the <b>Wawa</b> &#8212; the first hard signal the pin was on the wrong land.</dd>
+              <dt>Why MCP</dt><dd>surveyor is the abstraction that maps a jurisdiction slug &#8594; its parcel estate (endpoints, layer IDs, field names, SR, the LRSN join key), so the pipeline stays jurisdiction-agnostic instead of hard-coding LOJIC. Louisville is a <em>property-profile-only</em> module, so its identity step degrades to the raw ArcGIS query below &#8212; the endpoint still comes from surveyor's <code>louisville-ky</code> config.</dd>
+              <dt>Calls</dt><dd><b>identity</b> (PARCELID at the point) &#8212; a raw keyless ArcGIS point query on the parcels layer <code>OpenDataPVA/MapServer/1</code> (canonical path: the MCP <code>&lt;jur&gt;_parcel_details_by_point</code>, absent for Louisville). <b>context</b> &#8212; <code>louisville_property_profile</code> (MCP, family <code>louisville-gis</code>), a point-in-polygon across ~17 LOJIC layers.</dd>
+              <dt>Returns</dt><dd>the raw parcels query returns <code>{ PARCELID, LRSN }</code>; <code>property_profile</code> returns per-layer feature sets (<code>layersQueried</code>/<code>layersWithData</code> header): zoning, form district, recorded subdivision, plan-certain, council + fire district.</dd>
+              <dt>Request &#8594; response</dt><dd><pre class="cb"><span class="cm">// surveyor MCP tool call</span>
+louisville_property_profile { "lon": -85.6371661, "lat": 38.1853413 }
+
+<span class="cm">// response (from _pin-profile.json) &#8212; 7 of 17 LOJIC layers had data:</span>
+zoning        { "ZONING_CODE": "C1", "ZONING_NAME": "COMMERCIAL" }
+form-district { "DISTRICT_ABBR": "SMC", "DISTRICT": "SUBURBAN MARKETPLACE CORRIDOR" }
+subdivision   { "PLAT": "65041", "SUBDIV_NAME": "BOWMAN CONSULTING GROUP LTD MINOR PLAT",
+                "SUBDIV_YEAR": 2024, "DOCKET": "24-MPLAT-0014" }
+plan-certain  { "PLANCERT_DOCNO": "20-ZONE-0006" }
+council-dist  { "COUNDIST": 2, "COUN_NAME": "BARBARA SHANKLIN" }
+fire-district { "JCFD_DIST": "FERN CREEK", "JCFDNUM": "F60" }
+
+<span class="cm">// the PARCELID itself comes from the LOJIC parcels layer &#8212; equivalent raw curl:</span>
+$ curl "https://gis.lojic.org/maps/rest/services/LojicSolutions/OpenDataPVA/MapServer/1/query\
+?geometry=-85.6371661,38.1853413&amp;geometryType=esriGeometryPoint&amp;inSR=4326&amp;outFields=PARCELID,LRSN&amp;f=json"
+{ "features": [ { "attributes": { "PARCELID": "061801390000", "LRSN": 2009361 } } ] }  <span class="cm">// the Wawa</span></pre></dd>
+            </dl>
+          </div>
+
+          <div class="apicall">
+            <div class="ach"><span class="step">Call 3 &#183; Step 2</span><span class="nm">PVA appraisal lookup</span><span class="xport mcp">surveyor MCP</span></div>
+            <dl class="rgrid">
+              <dt class="pe">In plain English</dt><dd class="pe">Takes the <code>PARCELID</code> from call 2 and asks the county assessor (PVA) <b>what that parcel actually is</b> &#8212; owner, address, acreage, assessed value. The answer &#8212; Hutton's improved Wawa, 3.86 ac, $5.12M &#8212; confirms the pin's parcel is developed, so the real subject (vacant land) must be found elsewhere.</dd>
+              <dt>Calls</dt><dd><code>louisville_appraisal_search</code> then <code>louisville_appraisal_detail</code> by LRSN (family <code>louisville-cad</code>, the PVA assessor).</dd>
+              <dt>Returns</dt><dd><code>{ ParcelID &#183; Owner &#183; Address &#183; Acres &#183; AssessedValueTotal &#183; LRSN &#183; Neighborhood }</code>.</dd>
+              <dt>Request &#8594; response</dt><dd><pre class="cb"><span class="cm">// surveyor MCP tool call (PVA = jeffersonpva.ky.gov, a gated site the tool</span>
+<span class="cm">//  scrapes &#8212; there is no clean REST endpoint, hence the MCP wrapper)</span>
+louisville_appraisal_search { "query": "061801390000", "searchType": "parcel" }
+
+<span class="cm">// response &#8212; the free "core" fields:</span>
+{ "lrsn": 2009361,
+  "core": { "owner": "HUTTON LOUISVILLE BARDSTOWN KY ST LL",
+            "parcelId": "061801390000", "address": "4310 Bardstown Rd",
+            "acres": 3.86, "assessedValueTotal": 5122800 } }
+<span class="cm">// then louisville_appraisal_detail { "lrsn": 2009361 } returns the same core &#8594; improved Wawa</span></pre></dd>
+            </dl>
+          </div>
+
+          <div class="apicall">
+            <div class="ach"><span class="step">Call 4 &#183; Step 4a</span><span class="nm">Assemblage / adjoiner envelope sweep</span><span class="xport http">keyless HTTP</span></div>
+            <dl class="rgrid">
+              <dt class="pe">In plain English</dt><dd class="pe">Draws a padded box <b>around the operator's pin</b> (the raw lat/lon input) and pulls back <b>every parcel that box touches, with their rings, in one query</b> &#8212; the move that recovers the real subject. Three consecutive-LRSN Hutton parcels come back from the same 2024 plat; PVA then splits them into the improved Wawa (adjoiner) and the two vacant pads (the subject set). <span style="color:var(--muted)">The box is the pin (an input), not output from an earlier call &#8212; and note the parcel <b>rings</b> come back in <em>this</em> call's response, not call 2's.</span></dd>
+              <dt>Calls</dt><dd>raw ArcGIS envelope query on <code>OpenDataPVA/MapServer/1</code> &#8212; <code>geometryType=esriGeometryEnvelope&amp;spatialRel=esriSpatialRelIntersects&amp;outSR=4326&amp;returnGeometry=true</code>.</dd>
+              <dt>Returns</dt><dd><code>features[]{ attributes:{PARCELID, LRSN}, geometry:{rings} }</code>, <code>spatialReference.wkid: 4326</code>.</dd>
+              <dt>Request &#8594; response</dt><dd><span style="color:var(--muted)">the input geometry is a padded box around the operator pin (the run's methodology: &#8220;an envelope query around the pin&#8221;). Its exact coordinates weren't logged this run, so the <code>bbox</code> below is an illustrative stand-in; the endpoint, method, and kept trio are real:</span><pre class="cb">$ curl "https://gis.lojic.org/maps/rest/services/LojicSolutions/OpenDataPVA/MapServer/1/query\
+?geometry=-85.6387,38.1841,-85.6353,38.1862&amp;geometryType=esriGeometryEnvelope\
+&amp;inSR=4326&amp;outFields=PARCELID,LRSN&amp;returnGeometry=true&amp;outSR=4326&amp;f=json"
+
+<span class="cm">// returns every parcel in the envelope; the skill keeps the consecutive-LRSN Hutton trio:</span>
+{ "features": [
+  { "attributes": { "PARCELID": "061801390000", "LRSN": 2009361 } },  <span class="cm">// Wawa &#8594; adjoiner</span>
+  { "attributes": { "PARCELID": "061801400000", "LRSN": 2009362 } },  <span class="cm">// 1.02 ac &#8594; SUBJECT pad</span>
+  { "attributes": { "PARCELID": "061801410000", "LRSN": 2009363 } } ] <span class="cm">// 2.61 ac &#8594; SUBJECT (primary)</span>
+}  <span class="cm">// persisted with rings as _plat-trio.arcgis.json (all HUTTON-owned, 2024 Bowman plat)</span></pre>
+              <span style="color:var(--muted)">The rejected Wawa is recorded in <code>adjoining-parcels.json</code>; per-pad confirmation uses <code>louisville_parcel_lookup</code> + <code>louisville_parcel_class</code> (PVA <code>New_AllParcels</code> FeatureServer).</span></dd>
+            </dl>
+          </div>
+
+          <div class="apicall">
+            <div class="ach"><span class="step">Call 5 &#183; Step 5</span><span class="nm">ESRI World Imagery &#8594; geometry summary</span><span class="xport http">keyless HTTP</span></div>
+            <dl class="rgrid">
+              <dt class="pe">In plain English</dt><dd class="pe">Takes the two resolved subject rings and a satellite basemap and produces <b>the frame every later visual read uses</b> &#8212; a stroked boundary overlay &#8212; plus the mechanical geometry facts: each pad's acreage and whether the pin/centroid fall inside. This is where the "pin is on someone else's land" tripwire is stamped as a fact.</dd>
+              <dt>Calls</dt><dd><code>render_boundary_overlay.py</code> &#8594; <code>server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/export</code> (EPSG:3857, 4096&nbsp;px cap, retries 500s).</dd>
+              <dt>Returns</dt><dd><code>subject-boundary-overlay.png</code> + <code>geometry-summary.json</code> &#8212; per-parcel <code>{ bbox_ft &#183; ring_area_acres &#183; centroid_inside_ring }</code>, <code>pin_inside_ring</code>, <code>warnings[]</code>.</dd>
+              <dt>Request &#8594; response</dt><dd><pre class="cb"><span class="cm">// render_boundary_overlay.py fetches ONE keyless basemap frame (Web Mercator):</span>
+$ curl "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/export\
+?bbox=&lt;xmin,ymin,xmax,ymax in EPSG:3857&gt;&amp;bboxSR=3857&amp;imageSR=3857&amp;size=&lt;w,h&gt;&amp;format=png&amp;f=image" -o basemap.png
+
+<span class="cm">// returns image/png bytes (not JSON). The script strokes the rings + pin over it</span>
+<span class="cm">// &#8594; subject-boundary-overlay.png, and emits geometry-summary.json:</span>
+"parcels": [ { "parcel_id": "061801400000", "ring_area_acres": 1.02, "centroid_inside_ring": true },
+             { "parcel_id": "061801410000", "ring_area_acres": 2.61, "centroid_inside_ring": true } ],
+"pin_inside_ring": false,
+"warnings": ["geocode pin falls OUTSIDE every resolved parcel ring &#8212; do not caption from pin-centered imagery"]</pre></dd>
+            </dl>
+          </div>
+
+          <p class="acintro" style="margin-top:12px"><b>Resolved triple &#8594;</b> <code>4403 Fegenbush Ln</code> (primary pad) &#183; <code>38.184861, -85.636991</code> (primary-pad centroid, <em>not</em> the operator pin) &#183; PARCELID <code>061801410000</code>. &nbsp;<b>Outputs:</b> <code>parcel-rings.geojson</code> &#183; <code>geometry-summary.json</code> &#183; <code>subject-boundary-overlay.png</code> &#183; <code>location-resolution.md</code> (<code>Status: completed-with-warnings:adjoiners-need-confirmation</code>). &nbsp;<b>MCP tools (Louisville):</b> <code>louisville_property_profile</code> &#183; <code>louisville_parcel_lookup</code> &#183; <code>louisville_appraisal_search</code>/<code>_detail</code> &#183; <code>louisville_parcel_class</code> &#8212; families <code>louisville-gis</code> (LOJIC) &amp; <code>louisville-cad</code> (PVA).</p>
+        </div>
+      </details>
+
+      <details class="ret"><summary><span class="num">4</span><span class="ttl">parcel_dimensions.py</span><span class="ra">⇢</span> union bbox · oriented rect · area</summary>
+        <div class="rbody"><dl class="rgrid">
+          <dt>API</dt><dd>No network — geometry over the rings, projecting degrees→feet through <code>lib/geodesy.LocalFrame</code> (a WGS84 local tangent plane pinned at the rings' centroid; the run's single shared conversion, also used by 4.1). Computes each parcel's bbox + signed-shoelace area, the axis-aligned <code>union_bbox</code>, the <code>union_oriented</code> minimum-area rectangle (rotating calipers + long-axis azimuth), <code>ring_area_acres_total</code>, and a <code>naive_sum_would_have_said</code> diagnostic that exposes the never-add-bounding-boxes error.</dd>
+          <dt>Returns</dt><dd><code>parcels[]</code>, <code>union_bbox{ ew_ft · ns_ft }</code>, <code>union_oriented{ long_ft · short_ft · long_axis_azimuth_deg }</code>, <code>ring_area_acres_total</code> (the resolved acreage — area is the one additive quantity), <code>naive_sum_would_have_said</code> (diagnostic, never quotable), and the full <code>projection</code> block. The seed's lot-shape sentence quotes the oriented pair, not the bbox.</dd>
+          <dt>Example</dt><dd><pre class="cb">{ "union_bbox":     { "ew_ft": 583, "ns_ft": 438 },
+  "union_oriented": { "long_ft": 576, "short_ft": 426,
+                      "long_axis_azimuth_deg": 91.9 },
+  "ring_area_acres_total": 3.63,
+  "naive_sum_would_have_said": { "ew_ft": 807, "ns_ft": 446,
+      "note": "rings overlap on both axes — never quote these" },
+  "projection": { "kind": "local tangent plane, WGS84 ellipsoidal",
+                  "ft_per_deg_lat": 364173.18,
+                  "ft_per_deg_lon": 287437.70,
+                  "bearing_datum": "true north" } }</pre></dd>
+        </dl></div>
+      </details>
+
+      <details class="ret"><summary><span class="num">5</span><span class="ttl">_access_trace.py</span><span class="ra">⇢</span> access-trace.json · constraint points</summary>
+        <div class="rbody"><dl class="rgrid">
+          <dt>API</dt><dd>The <b>Overpass API</b> (OpenStreetMap) — <code>overpass-api.de</code> then <code>overpass.kumi.systems</code> as failover — POSTed via <code>curl</code> with query <code>way(around:400,lat,lon)["highway"];out geom;</code> (a 400&nbsp;m radius). <b>Keyless, zero-LLM</b>: pure geometry over OSM topology. Non-blocking failure is never silent — exit <code>10</code> (Overpass down) / <code>20</code> (rings unreadable) still writes a schema-valid <code>degraded:&lt;reason&gt;</code> file, which forces the step to <code>degraded</code>.</dd>
+          <dt>Returns</dt><dd><code>status</code>, <code>frontages[]</code>, <code>access_points[]</code> (with <code>approach_directions[]</code>), and <code>constraints[]</code> — each <code>kind</code> ∈ <code>name_split_severance · stub_dead_end · barrier_restriction · divided_carriageway</code> with a computed <code>vantage_*</code> (lat/lon/bearing). The sidecar <code>_constraint-points.txt</code> (7-col pipe: <code>lat|lon|heading|name|dist|kind|id</code>) is what the walk's <code>--extra-points</code> consumes to shoot a frame at each constraint.</dd>
+          <dt>Example</dt><dd><pre class="cb">{ "status": "ok", "query_radius_m": 400,
+  "frontages": [ { "id": "f1", "name": "fegenbush lane",
+      "bearing_deg": 274.03, "min_dist_m": 19.57,
+      "osm_way_ids": [464382740] } ],
+  "access_points": [ { "id": "a1", "frontage_id": "f1",
+      "kind": "osm_service_way",
+      "approach_directions": ["northbound","southbound"] } ],
+  "constraints": [ { "id": "c1", "kind": "name_split_severance",
+      "label": "fegenbush lane severance", "severity": "high",
+      "vantage_bearing_deg": 123.28,
+      "vantage_setback_actual_m": 26.69 } ] }
+
+<span class="cm"># _constraint-points.txt  lat|lon|heading|name|dist|kind|id</span>
+38.1869477|-85.6374597|123.28|fegenbush lane severance|26.69|constraint|c1</pre></dd>
+        </dl></div>
+      </details>
+
+      <details class="ret"><summary><span class="num">6</span><span class="ttl">visual walk</span><span class="ra">⇢</span> imagery · _capture-manifest.json</summary>
+        <div class="rbody"><dl class="rgrid">
+          <dt>API</dt><dd>All keyless, all headless. <b><code>agent-browser</code></b> (Chromium) drives Google Maps aerials, Google Earth 3D obliques (4 yaws), and the Google Street View series; <b><code>curl</code></b> pulls Esri Wayback historical aerials (WMTS) and USGS ground elevation (<code>epqs.nationalmap.gov</code>). Street View's served-panorama truth is un-embedded via <code>GeoPhotoService</code>. <code>--extra-points</code> injects the trace's constraint vantages (severity-ranked) into the SV series. Every frame passes an integrity gate + the agent's own visual QA read.</dd>
+          <dt>Returns</dt><dd><code>imagery/</code> — assemblage + per-parcel aerials, 4 obliques, the SV series (incl. <code>sv-NN-constraint-&lt;id&gt;</code> vantages), wayback — plus <code>_capture-manifest.json</code> (per-frame <code>path · kind · date · width · height · stddev</code>, <code>delivered_counts</code>, <code>total_usable_captures</code>, <code>failed_captures[]</code>) and <code>streetview/_frame-map.json</code> (served-panorama snap distance + <code>label_reliable</code>).</dd>
+          <dt>Example</dt><dd><pre class="cb">{ "site_anchor": [38.184861, -85.636991],
+  "bbox_diag_m": 275, "ground_elev_m": 159,
+  "address": "4403 Fegenbush Ln, Louisville, KY 40228",
+  "earth_oblique": ["earth-oblique-0.png", "...90", "...180", "...270"],
+  "streetview": ["sv-01-toward-111deg.png",
+                 "sv-11-constraint-c1-123.28deg.png"],
+  "wayback": [ { "date": "2014-06-11", "width": 1170, "stddev": 32.5 } ],
+  "delivered_counts": { "parcel_aerial": 2, "earth_oblique": 4,
+                        "streetview": 13, "wayback": 5 },
+  "total_usable_captures": 25,
+  "failed_captures": [ { "path": "sv-04-toward-206deg.png",
+      "reason": "synthetic placeholder — flat frame, stddev 5.39" } ] }</pre></dd>
+        </dl></div>
+      </details>
+
+      <dl class="sdmeta">
+        <dt>Prompt</dt><dd><code>prompts/1.2-site-jurisdiction.md</code></dd>
+        <dt>Python</dt><dd><b>helpers:</b> <code>preflight.py</code> (delegates to the diligence skill's <code>preflight.sh</code>, parses the jurisdiction-readiness verdict) · <code>parcel_dimensions.py</code> (union bbox + oriented minimum-area rectangle over every ring vertex, so lot dimensions are computed not hand-authored) · <code>bureau_profiles.py</code> (resolves each stack member's <code>bureau_slug</code> from disk; <code>--check</code> is its verifier half). <b>shared lib:</b> <code>lib/geodesy.py</code> (the run's single WGS84 degrees→feet <code>LocalFrame</code>).</dd>
+        <dt>Skills / CLI</dt><dd><span class="pill skill">parcel-geo-location-resolution</span> (embedded mode + its <code>render_boundary_overlay.py</code>) · <span class="pill cli">_shared-research</span> scripts <code>_access_trace.py</code>, <code>_visual_walk_geo.py</code>/<code>site-visual-walk.sh</code>, browser-slot + <code>agent-browser</code> · <span class="pill cli">diligence-report</span> <code>preflight.sh</code></dd>
+        <dt>Key outputs</dt><dd><code>seed-site-data.md</code>, <code>jurisdiction.json</code>, <code>location-resolution/</code> (rings, <code>subject-boundary-overlay.png</code>, <code>parcel-dimensions.json</code>), <code>access-trace/access-trace.json</code>, <code>imagery/</code></dd>
+        <dt>Gate</dt><dd>Runner asserts four tool verdicts directly — <code>jurisdiction_preflight</code>, <code>location_resolution</code>, <code>visual_walk</code>, <code>access_trace</code>, <code>bureau_profiles</code>. A STALE jurisdiction, a <code>stopped:</code> resolution, or an unresolved stack member fails the step no matter how confident the write-up.</dd>
+      </dl>
+    </div>
+  </div>
+
+  <div class="sd-group">§2 — Plan Extraction</div>
+
+  <div class="stepdetail" id="s-2.1">
+    <div class="sdh"><span class="sid">2.1</span><span class="sttl">Plan Extraction</span><span class="kb k-agent">agent</span><span class="kb mdl">opus</span><span class="kb" style="background:rgba(255,255,255,.16);color:#fff">skip if no attachments</span></div>
+    <div class="sdb">
+      <p>Two <b>independent</b> readings of the same attached drawings, reconciled by a blind third pass that <em>marks</em>
+      every disagreement as a data-gap rather than picking a winner. Reader A is a literal draftsman (geometry, dimension
+      strings, callouts, tables, no interpretation); reader B reasons about what the features mean; neither ever sees the
+      other. Independence is the whole mechanism — two readings from one context are one reading written twice, and a
+      self-consistent misread is exactly what the double-read exists to catch. Records what the plan <em>says</em> only — no
+      research, no compliance. Skips cleanly (records <code>skipped:no-attachments</code>) on an attachment-less run.</p>
+      <dl class="sdmeta">
+        <dt>Prompt</dt><dd><code>prompts/2.1-plan-extraction.md</code> + reader briefs <code>prompts/2.1-readers/{reader-a-literal,reader-b-meaning,reconcile}.md</code></dd>
+        <dt>Python</dt><dd><code>check_extraction.py</code> — schema conformance, both reader files present, every page inventoried once, every disagreement carrying a data-gap id, no cover-sheet field asserted when readers differ, and source-doc sha256s matching 1.1's manifest.</dd>
+        <dt>Skills / CLI</dt><dd><span class="pill none">none in the prompt</span> — the two readers + reconciler are Claude sub-agents; rendering is host binaries (<code>pdftoppm</code>/<code>pdftotext</code>/<code>pdfinfo</code>). The cross-vendor (Gemini) dual-vision pairing is a <em>parked question</em> confined to <code>prompts/2.1-readers/README.md</code> + master-plan §7.</dd>
+        <dt>Key outputs</dt><dd><code>plan-extraction.json</code> (per-reader values + supporting readers, or a data-gap id), <code>extraction.md</code>, <code>readers/reader-{a,b}-*.md</code>, <code>renders/</code></dd>
+      </dl>
+    </div>
+  </div>
+
+  <div class="sd-group">§3 — Research</div>
+
+  <div class="stepdetail" id="s-3.1">
+    <div class="sdh"><span class="sid">3.1</span><span class="sttl">Pre-Gate Audit</span><span class="kb k-agent">agent</span><span class="kb mdl">opus</span></div>
+    <div class="sdb">
+      <p>The gate's own pre-flight: an adversarial read of every human-facing artifact the operator is about to be shown,
+      against the run's own data. It runs three named attacks — <code>prose-vs-own-data</code>, <code>disputed-as-settled</code>,
+      <code>claim-with-no-artifact</code> — and fixes confirmed defects through a <em>recorded correction pass</em> on the
+      owning step before recording complete. This mechanizes the pilot's lesson: 1.2 and 2.1 each shipped an output that
+      read cleanly and contradicted their own JSON, caught only because a Fable review was run by hand. Doing it by hand is
+      not a mechanism. The auditor never runs <code>run</code>/<code>verify</code> itself.</p>
+      <dl class="sdmeta">
+        <dt>Prompt</dt><dd><code>prompts/pre-gate-audit.md</code> (shared with 4.3) + scope stanza <code>prompts/pre-gate-audit-scopes/3.1-pre-hitl1.md</code> (attacks 1.1/1.2/2.1 only)</dd>
+        <dt>Python</dt><dd><code>pre-gate-audit/check_audit.py</code> — asserts recorded bytes+sha256 match disk, every <code>fixed</code> finding resolves to a real <code>step.corrected</code> event in <code>state/events.jsonl</code>, event hygiene (no runner-driving events in the audit window), and verdict/counts follow deterministically from the findings.</dd>
+        <dt>Skills / CLI</dt><dd><span class="pill none">none</span> — uses the in-repo <code>pipelines/lib/runstate.py record-correction</code></dd>
+        <dt>Key outputs</dt><dd><code>audit-report.md</code>, <code>audit-findings.json</code> (claim-as-written + contradicting data + terminal disposition; a <code>fixed</code> one names its correction pass)</dd>
+      </dl>
+    </div>
+  </div>
+
+  <div class="stepdetail" id="s-3.2">
+    <div class="sdh"><span class="sid">3.2</span><span class="sttl">HITL1 — Regulatory Orientation</span><span class="kb k-check">checkpoint</span><span class="kb" style="background:rgba(255,255,255,.16);color:#fff">requires 3.1</span></div>
+    <div class="sdb">
+      <p>The first hard stop, and now the <b>first thing in §3</b> — everything expensive waits on it, because everything it
+      decides (the parcel frame, jurisdiction, zoning + FLU, overlays, flood, frontage, by-right) is answerable from 1.2 and
+      2.1 alone. The agent authors a validation surface presenting the frame as flat binary determinations, each tagged
+      <code>[Verified]</code> / <code>[Confirm — …]</code> / <code>[Agent estimate]</code>, then stops. <code>run --step 3.2</code>
+      records <code>awaiting-decision</code>; only <code>checkpoint --decision confirmed|corrected</code> completes it, and
+      <code>verify</code> refuses it — a gate <code>verify</code> could close would be a gate an agent can close. Recorded
+      restrictions are deliberately absent (no instrument pulled yet); §7 reads "pending — surveyor runs post-gate".</p>
+      <dl class="sdmeta">
+        <dt>Prompt</dt><dd><code>prompts/3.2-hitl1-readout.md</code> + calibration <code>prompts/3.2-readout-example.md</code> (the Sal-approved worked example, for <em>form</em> not confidence)</dd>
+        <dt>Python</dt><dd><span class="pill none">none</span> — a checkpoint executes nothing and has no health record by design</dd>
+        <dt>Skills / CLI</dt><dd><span class="pill none">none</span></dd>
+        <dt>Key outputs</dt><dd><code>hitl1-site-orientation.md</code> (the readout the operator's decision is recorded against)</dd>
+      </dl>
+    </div>
+  </div>
+
+  <div class="stepdetail" id="s-3.3">
+    <div class="sdh"><span class="sid">3.3</span><span class="sttl">Surveyor</span><span class="kb k-agent">agent</span><span class="kb mdl">opus</span><span class="kb" style="background:rgba(255,255,255,.16);color:#fff">requires 3.2</span></div>
+    <div class="sdb">
+      <p>A <b>thin adapter</b> around surveyor — a separate CLI in a separate repo, treated as a black box: run preflight,
+      invoke it against the operator-confirmed parcel frame, read its <code>run-status.json</code> as the verdict (never the
+      exit code), and recursively sweep the workspace to copy every retrieved instrument in with checksums. It sits <em>after</em>
+      the gate on purpose — surveyor's doc-search coverage is keyed on the parcel set it is handed, so a run against a frame
+      HITL1 then corrects spends its whole 15–30-minute records phase on the wrong parcels, and its <code>facts.md</code> reads
+      authoritative either way. The adapter's own judgment is which stack slug holds the records and whether a <code>salvaged</code>
+      run is worth resuming.</p>
+      <dl class="sdmeta">
+        <dt>Prompt</dt><dd><code>prompts/3.3-surveyor.md</code></dd>
+        <dt>Python</dt><dd><code>3.3-surveyor/check_surveyor.py</code> — manifest schema + per-file sha256 (both directions, no orphans), status file is this run's and parses, cross-checks surveyor's <em>shipped</em> schema for drift, the seed parses to exactly 1.2's parcel set, copied-doc count reaches <code>counts.pdfs_downloaded</code>, and the health record agrees with the status file.</dd>
+        <dt>Skills / CLI</dt><dd><span class="pill cli">surveyor</span> — <code>npx tsx src/cli.ts run --jurisdiction &lt;slug&gt; --site-plan &lt;project&gt; --seed-file &lt;abs&gt; --mode diligence</code> (+ <code>canary</code> preflight). <b>Billing is <code>mixed</code>:</b> subscription for research/synthesis (spawns <code>claude</code> with <code>ANTHROPIC_*</code> stripped → OAuth fallback), metered vision/zoning via the Vercel gateway on <code>AI_GATEWAY_API_KEY</code>.</dd>
+        <dt>Key outputs</dt><dd><code>surveyor-manifest.json</code>, <code>run-status.json</code> (copied in), <code>facts.md</code>, <code>recorded-instruments/</code> (or a <code>NONE-RETRIEVED.md</code>), <code>surveyor.log</code></dd>
+        <dt>Gate</dt><dd><code>salvaged</code> is accepted but is <b>not</b> a pass to <code>complete</code> — the health record must say <code>degraded</code>; <code>running</code> and <code>failed</code> fail.</dd>
+      </dl>
+    </div>
+  </div>
+
+  <div class="stepdetail" id="s-3.4">
+    <div class="sdh"><span class="sid">3.4</span><span class="sttl">Research + Site</span><span class="kb k-agent">agent</span><span class="kb mdl">opus</span><span class="kb" style="background:rgba(255,255,255,.16);color:#fff">requires 3.3</span></div>
+    <div class="sdb">
+      <p>The research fan-out (two concurrent waves of sub-agents) plus the orientation reconcile — and, since the reorder put
+      it after surveyor, the restrictive-covenants reading, whose sub-agent reads the instruments 3.3 copied off disk rather
+      than laundering them from the web. Four closing duties: a browser close-out sweep, the merged <code>portal-recipes.md</code>
+      digest (so a portal proven free here is never re-presented as "gated" at 4.4), the <code>retained-records-manifest.json</code>
+      census (retained docs + named-but-unretrieved gaps), and the contract check. The reconcile compares 1.2's imagery bearings
+      against 2.1's extracted plan-north and adjudicates 1.2's access-trace constraint candidates against the walk imagery.</p>
+      <dl class="sdmeta">
+        <dt>Prompt</dt><dd><code>prompts/3.4-research-site.md</code>; researcher briefs in <code>prompts/3.4-researchers/</code> (each spawn gets <code>_common.md</code> + its brief)</dd>
+        <dt>Roster</dt><dd><code>3.4-research-site/subagents.json</code> — <b>wave 1:</b> <code>environmental</code>, <code>zoning-pathway</code>, <code>neighborhood-plan</code>, <code>transportation</code>, <code>submarket</code>, <code>restrictive-covenants</code>; <b>wave 2:</b> <code>programs</code>, <code>web-followups</code>. (<code>orientation-reconcile</code> is the step's own work, not a roster item.)</dd>
+        <dt>Python</dt><dd><code>3.4-research-site/check_research.py</code> — every roster file present + carrying the <code>## Portal recipes (working)</code> trailer, covenants consistent with 3.3's instruments, every document named by number retained-or-gapped (with a closer), and the reconcile verdict recorded.</dd>
+        <dt>Skills / CLI</dt><dd><span class="pill cli">_shared-research</span> <code>_access_trace.py</code> (input) · <span class="pill cli">transcribe-pdf</span> / surveyor <code>vision_transcribe</code> (covenants). No claude-plugins skill.</dd>
+        <dt>Key outputs</dt><dd><code>{researcher}.md</code> ×8, <code>orientation-reconcile.md</code>, <code>portal-recipes.md</code>, <code>retained-records-manifest.json</code>, <code>retained-records/</code></dd>
+      </dl>
+    </div>
+  </div>
+
+  <div class="sd-group">§4 — Analysis &amp; Synthesis</div>
+
+  <div class="stepdetail" id="s-4.1">
+    <div class="sdh"><span class="sid">4.1</span><span class="sttl">Disciplines ×10</span><span class="kb k-agent">agent</span><span class="kb mdl">opus</span><span class="kb" style="background:rgba(255,255,255,.16);color:#fff">requires 3.4</span></div>
+    <div class="sdb">
+      <p>The ten-agent discipline fan-out — one agent per canonical discipline, each reading its jurisdiction feasibility guide
+      and applying it to the settled record. Before spawning, the author runs the geometry sidecar, writes <code>premises.md</code>
+      (the confirmed frame, upstream corrections/supersessions, open postures no discipline may close by inference, and the routing
+      table assigning each recorded conflict to its owning discipline), then cat-assembles each spawn brief on disk and spawns all
+      ten in one message. Its own step because the ten files are distinct inputs to 4.2 and the failure class — one discipline dying
+      quietly inside nine live ones — is the widest fan-out and the hardest thing to see in a polished report.</p>
+      <dl class="sdmeta">
+        <dt>Prompt</dt><dd><code>prompts/4.1-disciplines.md</code>; per-discipline briefs <code>prompts/4.1-disciplines/{zlu,sduf,ta,sde,fwp,wwp,fire,el,eptp,park}.md</code> + <code>_common.md</code></dd>
+        <dt>Roster</dt><dd><code>4.1-disciplines/disciplines.json</code> — the 10 canonical disciplines (<code>zlu sduf ta sde fwp wwp fire el eptp park</code>), plus the tiered <b>input map</b> (<code>common_inputs</code> / per-discipline <code>primary_inputs</code> / <code>out_of_context</code>) that bounds each agent's reading to ~260–434&nbsp;KB instead of the full ~1&nbsp;MB corpus.</dd>
+        <dt>Python</dt><dd><b>helper:</b> <code>site_geometry.py</code> — deterministic, keyless, zero-LLM geometry sidecar from <code>parcel-rings.geojson</code> (edge lengths + true-north bearings, dissolved union boundary + collinear runs, setback envelopes as exact polygon clips via Sutherland-Hodgman + ear-clip), so ten agents <em>quote</em> arithmetic instead of re-deriving it. <b>verifier:</b> <code>check_disciplines.py</code> — roster, finding fields + severity vocabulary, <code>## Headlines</code>, guide coverage, input-map ownership + anti-orphan routing, spawn provenance, and geometry-sidecar freshness (sha256 vs. current rings). <code>--write-index</code> emits <code>findings-index.json</code>.</dd>
+        <dt>Skills / CLI</dt><dd><span class="pill none">none</span></dd>
+        <dt>Key outputs</dt><dd><code>{discipline}.md</code> ×10, <code>premises.md</code>, <code>site-geometry.json</code>, <code>findings-index.json</code> (derived)</dd>
+      </dl>
+    </div>
+  </div>
+
+  <div class="stepdetail" id="s-4.2">
+    <div class="sdh"><span class="sid">4.2</span><span class="sttl">Synthesis + Gap Recovery</span><span class="kb k-agent">agent</span><span class="kb mdl">opus</span><span class="kb" style="background:rgba(255,255,255,.16);color:#fff">requires 4.1</span></div>
+    <div class="sdb">
+      <p>One context holding all ten disciplines at once. Its failure class is the mirror image of 4.1's: a consolidation that
+      reads complete because everything it dropped left nothing behind to notice — so it is verified on <b>accounting</b>, not
+      shape. Six duties: consolidate + account for what was <em>not</em> carried; elevate plan-vs-record discrepancies to the
+      top of the report; reconcile every figure against one polygon-derived geometry reference; run a 3-round exhaustion-bounded
+      gap-recovery loop (with a real-browser evidence bar); write the regulatory briefing; and derive the engineer-facing
+      acquisition list from the gap ledger. Where it supersedes a research finding it writes the corrected version into its own
+      <code>superseded/</code> — upstream folders stay immutable.</p>
+      <dl class="sdmeta">
+        <dt>Prompt</dt><dd><code>prompts/4.2-synthesis.md</code></dd>
+        <dt>Python</dt><dd><code>4.2-synthesis/check_synthesis.py</code> — issue coverage of every <code>significant</code>/<code>opportunity</code> (sourced or dispositioned in <code>## Not elevated</code>), discrepancy elevation, exactly one geometry reference named by every reconciliation item, bounded/terminal gap recovery (<code>working</code> legal only at the cap → forces <code>degraded</code>), acquisition-list derivation, carry-forward, supersession pairing, and the "regulations not laws" lint. <code>--write-index</code> emits <code>synthesis-index.json</code> — <b>the 4.2→5.1 seam</b>.</dd>
+        <dt>Skills / CLI</dt><dd><span class="pill cli">agent-browser</span> (headed) for gap-recovery + terminal-claim evidence</dd>
+        <dt>Key outputs</dt><dd><code>issue-matrix.md</code> (Discrepancies first), <code>regulatory-briefing.md</code>, <code>recovery-log.md</code>, <code>acquisition-list.md</code>, <code>superseded/</code>, <code>synthesis-index.json</code></dd>
+      </dl>
+    </div>
+  </div>
+
+  <div class="stepdetail" id="s-4.3">
+    <div class="sdh"><span class="sid">4.3</span><span class="sttl">Pre-Gate Audit</span><span class="kb k-agent">agent</span><span class="kb mdl">opus</span><span class="kb" style="background:rgba(255,255,255,.16);color:#fff">requires 4.2</span></div>
+    <div class="sdb">
+      <p>The same step <b>type</b> as 3.1 — one shared prompt, a per-instance scope stanza — standing in front of the second
+      gate. It is the one full three-attack sweep over all §4 artifacts. Four duties: <b>Duty 0</b> attacks
+      <code>acquisition-list.md</code> and kills every item that does not truly need a human (kills land as recorded corrections
+      against 4.2); <b>Duty 1</b> re-derives the 15–30 most load-bearing figures against live sources (including the
+      complement-flip class); <b>Duty 2</b> checks premise compliance (open postures, supersessions, frame/scope); <b>Duty 3</b>
+      checks routed-note consumption.</p>
+      <dl class="sdmeta">
+        <dt>Prompt</dt><dd><code>prompts/pre-gate-audit.md</code> (shared with 3.1) + scope stanza <code>prompts/pre-gate-audit-scopes/4.3-pre-hitl2.md</code></dd>
+        <dt>Python</dt><dd><code>pre-gate-audit/check_audit.py</code> (same verifier as 3.1); Duty 0 kills go through <code>record-correction</code> + <code>check_synthesis.py</code></dd>
+        <dt>Skills / CLI</dt><dd><span class="pill cli">agent-browser</span> (headed) for re-driving routes</dd>
+        <dt>Key outputs</dt><dd><code>audit-report.md</code>, <code>audit-findings.json</code></dd>
+        <dt>Note</dt><dd>§4 labels this "3.3" — an acknowledged CTO typo for 4.3; the ordering (after 4.2, before the 4.4 gate) is what the numbering follows.</dd>
+      </dl>
+    </div>
+  </div>
+
+  <div class="stepdetail" id="s-4.4">
+    <div class="sdh"><span class="sid">4.4</span><span class="sttl">HITL2 — Research Checkpoint</span><span class="kb k-check">checkpoint</span><span class="kb" style="background:rgba(255,255,255,.16);color:#fff">requires 4.3</span></div>
+    <div class="sdb">
+      <p>The second and last gate, and the one the incident happened at (a prior run walked from an undecided checkpoint straight
+      into composing the report). What it does <em>not</em> share with 3.2 is the format contract — that is the whole of this gate's
+      design. It asks the CTO <b>one</b> question — <em>is there anything about this site we could still plausibly get by desk
+      research and have not?</em> — as a ~350-word, one-screen brief that <b>transforms</b> 4.2's ledger, never re-renders it. Six
+      bold lead-ins in his order (<b>Bottom line</b>, <b>Tools.</b>, <b>County records and GIS.</b>, <b>Regulatory text.</b>,
+      <b>Need you?</b>, <b>Skipped.</b>) then <code>## The decision</code>. Only a headed browser co-drive and authorizing money
+      ever need him personally; everything else is routed to agents and presented as already routed.</p>
+      <dl class="sdmeta">
+        <dt>Prompt</dt><dd><code>prompts/4.4-hitl2-readout.md</code></dd>
+        <dt>Python</dt><dd><code>4.4-hitl2-research-checkpoint/check_readout.py</code> — the six lead-ins present and in order, <code>## The decision</code> the only heading and last, ledger vocabulary (field labels, HTTP status lines, <code>A&lt;n&gt;</code> ids, Ray IDs) <b>banned</b>, and coverage against the ledger via the <code>_ledger-coverage.json</code> sidecar (every open item covered by a verbatim brief phrase; every browser/paid item under <b>Need you?</b>).</dd>
+        <dt>Skills / CLI</dt><dd><span class="pill skill">/brief</span> (voice) · <span class="pill cli">agent-browser</span> <code>session list</code> (hygiene)</dd>
+        <dt>Key outputs</dt><dd><code>hitl2-research-checkpoint.md</code> (the brief), <code>_ledger-coverage.json</code> (traceability sidecar, off the brief)</dd>
+      </dl>
+    </div>
+  </div>
+
+  <!-- ========================================================= -->
+  <!-- §5.0 — THE INPUT CONTRACT (what composition consumes)      -->
+  <!-- ========================================================= -->
+  <style>
+  /* scoped to the §5-inputs card */
+  #s-5.0 .iotbl{width:100%;border-collapse:collapse;margin:10px 0 4px;font-size:12px}
+  #s-5.0 .iotbl th{text-align:left;font-family:var(--mono);font-size:9px;letter-spacing:.05em;text-transform:uppercase;color:var(--p600);font-weight:700;border-bottom:2px solid var(--p200);padding:5px 9px 4px}
+  #s-5.0 .iotbl td{border-bottom:1px solid #eef1f4;padding:6px 9px;vertical-align:top;line-height:1.45}
+  #s-5.0 .iotbl td:first-child{white-space:nowrap}
+  #s-5.0 .iotbl tr:hover td{background:#fbfcfd}
+  #s-5.0 .iotbl code{font-size:11px}
+  #s-5.0 .kind{font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.03em;padding:1px 5px;border-radius:3px;text-transform:uppercase;white-space:nowrap;border:1px solid}
+  #s-5.0 .kind.str{background:var(--newbg);color:var(--new);border-color:var(--newbd)}
+  #s-5.0 .kind.uns{background:#eef4fb;color:#2456a8;border-color:#c3d8f2}
+  #s-5.0 .kind.bin{background:#f3eefb;color:#6b3fa0;border-color:#dcccf0}
+  #s-5.0 .kind.ext{background:#fdf0e6;color:#b5590d;border-color:#f2d3b3}
+  </style>
+
+  <div class="sd-group">§5 · Inputs — the composition input contract</div>
+
+  <div class="stepdetail" id="s-5.0">
+    <div class="sdh"><span class="sid">5.0</span><span class="sttl">What §5 consumes — the settled record, on disk</span><span class="kb mdl">reference</span><span class="kb" style="background:rgba(255,255,255,.16);color:#fff">no new facts past here</span></div>
+    <div class="sdb">
+      <p>By the 4.4 gate the run has stopped gathering. Everything §5 does — compose, scrub, render, package — is
+      <b>transformation of a record that is already complete and already on disk.</b> 5.1's own prompt states it twice:
+      <em>"there is no new fact in this deliverable"</em> and <em>"a fact you cannot trace is a fact you do not write."</em>
+      So the honest way to read §5 is: <b>what exactly is the record 5.1 opens, and is it self-sufficient?</b> This card is
+      the inventory. Everything below is a real path in the pilot run
+      <code>working/sir/hutton/car-wash-louisville-ky/2026-08-01-083311/</code>.</p>
+
+      <div class="callout ember">
+        <span class="lab">the one load-bearing artifact</span>
+        <code>output/4.2-synthesis/synthesis-index.json</code> is <b>the contract</b> — the single structured file that
+        every other §5 step keys against. It is <b>DERIVED</b> from 4.2's markdown by <code>check_synthesis.py&nbsp;--write-index</code>,
+        never hand-authored, so its <code>D&lt;n&gt;</code> / <code>I&lt;n&gt;</code> / <code>G&lt;n&gt;</code> / <code>R&lt;n&gt;</code>
+        ids and severities cannot drift from the prose they summarise. 5.1's instruction is literally <em>"read the seam
+        first and read it whole, then reach into the prose behind an entry you are composing."</em> Two-tier reading: the
+        index says <b>what must be covered</b>; the markdown behind it is <b>the substance you re-render.</b>
+      </div>
+
+      <h4>The record, by producing step — six bundles 5.1 opens</h4>
+      <p>Blue-headed boxes are read as source; the green box is the seam. A <span class="kind str">json</span> row is
+      machine-structured; <span class="kind uns">md</span> is prose written for a human to re-render;
+      <span class="kind bin">img/pdf</span> is a binary asset.</p>
+
+      <div class="erd">
+        <div class="ent newt" style="min-width:280px">
+          <div class="eh"><span class="en">4.2-synthesis</span><span class="stereo">THE SEAM — required</span></div>
+          <div class="row hi"><span class="nm">synthesis-index.json</span><span class="ty">json · schema</span></div>
+          <div class="row"><span class="nm">issue-matrix.md</span><span class="ty">md</span></div>
+          <div class="row"><span class="nm">regulatory-briefing.md</span><span class="ty">md</span></div>
+          <div class="row"><span class="nm">recovery-log.md</span><span class="ty">md</span></div>
+          <div class="row"><span class="nm">acquisition-list.md</span><span class="ty">md</span></div>
+          <div class="row"><span class="nm">superseded/</span><span class="ty">dir · md</span></div>
+          <div class="note">the contract + the prose behind each entry; <code>superseded/</code> outranks the upstream original</div>
+        </div>
+
+        <div class="ent exist" style="min-width:260px">
+          <div class="eh"><span class="en">4.1-disciplines</span><span class="stereo">analysis + appendix source</span></div>
+          <div class="row"><span class="nm">premises.md</span><span class="ty">md · open postures</span></div>
+          <div class="row"><span class="nm">findings-index.json</span><span class="ty">json</span></div>
+          <div class="row"><span class="nm">{zlu,sduf,ta,sde,fwp,<br>wwp,fire,el,eptp,park}.md</span><span class="ty">md ×10</span></div>
+          <div class="row"><span class="nm">site-geometry.json</span><span class="ty">json</span></div>
+          <div class="note">the ten discipline files are appendix Parts; <code>site-geometry.json</code> is the ONE reconciliation reference</div>
+        </div>
+
+        <div class="ent exist" style="min-width:250px">
+          <div class="eh"><span class="en">3.4-research-site</span><span class="stereo">appendix source</span></div>
+          <div class="row"><span class="nm">environmental.md, transportation.md,<br>restrictive-covenants.md, programs.md,<br>zoning-pathway.md, submarket.md, …</span><span class="ty">md ×9</span></div>
+          <div class="row"><span class="nm">retained-records-manifest.json</span><span class="ty">json</span></div>
+          <div class="row strk"><span class="nm">portal-recipes.md</span><span class="ty">excluded</span></div>
+          <div class="note">the other half of the appendix; <code>portal-recipes.md</code> is the standing exclusion (access log, not site facts)</div>
+        </div>
+
+        <div class="ent exist" style="min-width:250px">
+          <div class="eh"><span class="en">1.2-site-jurisdiction</span><span class="stereo">figures + orientation</span></div>
+          <div class="row"><span class="nm">seed-site-data.md</span><span class="ty">md</span></div>
+          <div class="row"><span class="nm">parcel-geometry.json</span><span class="ty">json</span></div>
+          <div class="row"><span class="nm">jurisdiction.json</span><span class="ty">json</span></div>
+          <div class="row hi"><span class="nm">imagery/ (visual walk)</span><span class="ty">png → figures/</span></div>
+          <div class="note">imagery becomes the Site Orientation block; the confirmed frontage/cardinals every directional sentence must agree with</div>
+        </div>
+
+        <div class="ent exist" style="min-width:250px">
+          <div class="eh"><span class="en">2.1-plan-extraction</span><span class="stereo">the applicant's document</span></div>
+          <div class="row"><span class="nm">extraction.md</span><span class="ty">md</span></div>
+          <div class="row"><span class="nm">plan-extraction.json</span><span class="ty">json</span></div>
+          <div class="row"><span class="nm">source PDFs</span><span class="ty">pdf</span></div>
+          <div class="note">what the plan STATES (with drawing refs) → the discrepancies + The Proposal block. A 2.1 disagreement is a data gap, never a fact</div>
+        </div>
+
+        <div class="ent changed" style="min-width:250px">
+          <div class="eh"><span class="en">state/</span><span class="stereo">authorization + health</span></div>
+          <div class="row hi"><span class="nm">hitl/gate-4.4.json</span><span class="ty">json · green light</span></div>
+          <div class="row"><span class="nm">hitl/ledger.md</span><span class="ty">md · conditions</span></div>
+          <div class="row"><span class="nm">*/_health.json</span><span class="ty">json ×N</span></div>
+          <div class="note">the operator's <code>--decision</code> + any condition attached to it (a composition premise); every <code>degraded</code> a step recorded must be disclosed</div>
+        </div>
+      </div>
+
+      <h4>The structured spine — the schemas that exist (and where)</h4>
+      <p>Not everything 5.1 reads is structured, and that split is deliberate. The structured files are the
+      <b>machine-checkable skeleton</b> — coverage, ids, severities, dispositions, geometry — the things
+      <code>check_compose.py</code> asserts the deliverable did not silently drop. The markdown is the
+      <b>substance a human re-writes at report altitude.</b> Every schema below lives in
+      <code>bureau/pipelines/sir/schemas/</code>.</p>
+
+      <table class="iotbl">
+        <thead><tr><th>artifact</th><th>kind</th><th>schema</th><th>what 5.1 takes from it · pilot example</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>synthesis-index.json</code></td>
+            <td><span class="kind str">structured</span></td>
+            <td><code>schemas/synthesis-index.json</code></td>
+            <td>the coverage contract: <code>discrepancies[]</code> (1 — D1 <em>"marketed 1.56 ac vs recorded 2.608 ac"</em>), <code>issues[]</code> (21; 7 <code>significant</code> incl. I1 <em>"car-wash by-right conflict in C-1"</em>, 3 <code>opportunity</code>), <code>gaps[]</code> (17; 12 <code>human-gated</code> incl. G1 <em>"no engineered concept plan"</em>), <code>reconciliation[]</code>, <code>briefing{binds[6],does_not_bind,approval_path,open_questions}</code>, <code>totals</code>. Every D/I/G/R the report carries is keyed here.</td>
+          </tr>
+          <tr>
+            <td><code>site-geometry.json</code><br><code>parcel-geometry.json</code></td>
+            <td><span class="kind str">structured</span></td>
+            <td><code>schemas/site-geometry.json</code><br><code>schemas/parcel-geometry.json</code></td>
+            <td>the one polygon-derived reference every figure reconciles to — edge lengths, bearings, setback envelopes. Pilot: parcel <code>061801410000</code> = 2.608 ac. Directional prose and the boundary overlay both join on this.</td>
+          </tr>
+          <tr>
+            <td><code>findings-index.json</code></td>
+            <td><span class="kind str">structured</span></td>
+            <td><code>schemas/discipline-findings.json</code></td>
+            <td>a finding's provenance back to its owning 4.1 discipline — the target-read key when a seam entry's basis needs its original words + citation.</td>
+          </tr>
+          <tr>
+            <td><code>jurisdiction.json</code> · <code>plan-extraction.json</code></td>
+            <td><span class="kind str">structured</span></td>
+            <td><code>schemas/jurisdiction.json</code><br><code>schemas/plan-extraction.json</code></td>
+            <td>the regulatory frame (AHJ, codes in force) and the structured read of the applicant's document that the discrepancy prose points at.</td>
+          </tr>
+          <tr>
+            <td><code>gate-4.4.json</code></td>
+            <td><span class="kind str">structured</span></td>
+            <td><span style="color:var(--muted)">state contract</span></td>
+            <td>the authorization itself: <code>decision:&nbsp;"confirmed"</code>, <code>decided_by:&nbsp;"Will&nbsp;Navey"</code>, and any operator condition. 5.1 refuses to write without it.</td>
+          </tr>
+          <tr>
+            <td>the <code>*.md</code> bodies<br>(matrix, briefing, 10 disciplines, 9 research)</td>
+            <td><span class="kind uns">unstructured</span></td>
+            <td><span style="color:var(--muted)">prose — no schema</span></td>
+            <td>the human-altitude substance: the basis 5.1 re-writes for §1–§11 and the source text the appendix Parts reproduce. ~1.14&nbsp;MB across 19 files on the pilot — deliberately NOT structured, because a report is prose and structuring it would only invite re-analysis 5.1 is forbidden to do.</td>
+          </tr>
+          <tr>
+            <td><code>imagery/</code>, source PDFs</td>
+            <td><span class="kind bin">binary</span></td>
+            <td><span style="color:var(--muted)">assets</span></td>
+            <td>the visual-walk PNGs (→ Site Orientation) and the applicant's plan (→ The Proposal). Pilot placed 3 figures: <code>site-aerial.png</code>, <code>site-boundary-overlay.png</code>, <code>proposal-flyer.png</code>.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="callout">
+        <span class="lab">one input is NOT in the run tree — and that is on purpose</span>
+        The <b>v9 format spec</b> is not a run artifact and is not forked into <code>bureau</code>. 5.1 reads it live from
+        <code>$NOETIC_SKILLS_DIR/…/diligence-report/</code> — <code>references/deliverables.md</code> (§-structure, page
+        budgets), <code>references/sir-style-guide.md</code> (tone Rules 1–9), the <code>.report.tsx.template</code> scaffold,
+        the two <code>phase5-*-pages.md</code> image prompts, and the RDS component <code>CLAUDE.md</code> via
+        <span class="pill skill">generate-report-pdf</span>. <code>check_compose.py</code> <b>hard-fails if those files are
+        missing</b> — precisely so a composition is never <em>"written from memory of a format."</em> So the render is
+        format-code + run-data, kept in separate homes on purpose.
+      </div>
+
+      <h4>Does composition lean on the orchestrator's memory? No — and that is the whole design.</h4>
+      <p>This is the sharpest way the pipeline departs from the production <span class="pill cli">diligence-report</span>
+      skill. The skill threads Phases 0→5 through <b>one long orchestrator context</b> — the composer at the end has
+      "seen" everything that came before, and that living memory is load-bearing (and lossy: the serial appendix pass
+      literally ran out of context mid-step and needed an operator <code>/compact</code>). The pipeline inverts it:</p>
+      <ul>
+        <li>5.1 is an <b>agent step</b> — <code>pipeline_runner.py</code> prints the spec (<code>5.1-compose.md</code>) and
+        spawns a <b>fresh Task agent</b> whose entire world is that spec + the run dir. There is no upstream conversation to inherit.</li>
+        <li>The prompt makes it a rule: <em>"You never self-authorize past your own step"</em> and <em>"read the seam first
+        and read it whole."</em> State is the disk, not the thread.</li>
+        <li>The appendix fan-out hardens it further: each of the ~19 Part workers is handed a <b>byte-verbatim persisted
+        brief</b> (<code>_spawn/part-&lt;L&gt;-brief.md</code>) — 4.1's rule that <em>"an unpersisted wrapper is the one
+        part of a spawn nobody can audit."</em> Nothing an orchestrator merely <em>remembers</em> can leak into a worker; if
+        it is not written to the brief, the worker never sees it.</li>
+      </ul>
+      <p>The <b>only</b> orchestrator-held state that matters is what the composing agent itself builds <em>within</em> 5.1
+      — the fixed Part roster and the body it writes while workers run — and that is regenerated deterministically from
+      <code>appendix_fanout.py roster</code>, not carried in from §1–§4.</p>
+
+      <div class="callout new">
+        <span class="lab">so — could a brand-new session compose just as well from only the §1–§4 outputs?</span>
+        <b>Yes for the run data — and it was proven.</b> The pilot's <em>entire §5 was re-run cold</em> as a controlled
+        experiment over the same §1–§4 artifacts, and produced an equivalent deliverable (prior renders preserved under
+        <code>_superseded-*</code>). A cold composer that reads <code>synthesis-index.json</code> whole and reaches into the
+        prose behind each entry has, by construction, everything a warm one had — because 4.2 was <em>required</em> to
+        write it all down and the seam is <em>derived</em> so it cannot lie about the markdown.
+        <br><br>
+        <b>Two honest caveats, and both are deliberate boundaries, not gaps:</b>
+        <br>① <em>"only the produced artifacts"</em> is not quite the whole input — a cold session also needs the
+        <b>pipeline code</b> (the 5.1 prompt, <code>appendix_fanout.py</code>, <code>check_compose.py</code>) and the
+        <b>external v9 format spec</b> at <code>$NOETIC_SKILLS_DIR</code>. Given <code>{run tree + pipeline repo + skills
+        dir}</code> it performs identically; that triple <em>is</em> the contract.
+        <br>② The one thing a cold start cannot recover is an operator instruction that was <b>spoken but never written to
+        <code>state/hitl/</code></b>. That is exactly why the 4.4 gate persists <code>gate-4.4.json</code> +
+        <code>ledger.md</code>: to force every condition onto disk. An unrecorded verbal condition is the sole failure mode
+        — and the pipeline's answer to it is "record it at the gate," not "keep it in the orchestrator's head."
+      </div>
+    </div>
+  </div>
+
+  <div class="sd-group">§5 — Deliverable (strict order: 5.1 → 5.2 → 5.3 → 5.4 → re-run 5.3 → 5.5 → 5.6 → 5.7 → 5.8)</div>
+
+  <div class="stepdetail" id="s-5.1">
+    <div class="sdh"><span class="sid">5.1</span><span class="sttl">Compose</span><span class="kb k-agent">agent</span><span class="kb mdl">opus</span><span class="kb" style="background:rgba(255,255,255,.16);color:#fff">requires 4.4</span></div>
+    <div class="sdb">
+      <p>The only step that authors what the client reads: one Report-mode <code>&lt;ReportDocument&gt;</code> (RDS v9 format).
+      Pure composition, no new facts. Discrepancies at the top (unresolved, framed as the applicant's to resolve); every
+      <code>significant</code>/<code>opportunity</code> issue reaching the body; open gaps disclosed; <code>{/* sir-ref: … */}</code>
+      trace markers keyed to <code>synthesis-index.json</code>; string-literal footer labels (so 5.3 can attribute each printed
+      page). The Research Appendix <b>fans out</b> — one sub-agent per Part (measured at ~19 independent rewrites), assembled into
+      <code>research-appendix.md</code>.</p>
+      <dl class="sdmeta">
+        <dt>Prompt</dt><dd><code>prompts/5.1-compose.md</code> + the byte-verbatim appendix-worker contract <code>prompts/5.1-appendix/_common.md</code></dd>
+        <dt>Python</dt><dd><b>helper:</b> <code>appendix_fanout.py</code> (<code>roster</code>/<code>briefs</code>/<code>assemble</code>/<code>verify</code> — derives the Part roster + waves, generates per-Part briefs embedding <code>_common.md</code>, concatenates, runs the preservation check: section accounting, severity-never-dropped, named-entity survival). <b>verifier:</b> <code>check_compose.py</code> — discrepancy elevation, issue coverage, gap disclosure, appendix completeness, leaked-markup + internal-process-disclosure sweep, asset resolution, length budget (reported as WARN, never gated). <code>--write-index</code> emits <code>compose-index.json</code> — <b>the 5.1→5.2/5.4 seam</b>.</dd>
+        <dt>Skills / CLI</dt><dd><span class="pill skill">generate-report-pdf</span> + RDS <code>CLAUDE.md</code> and <span class="pill cli">diligence-report</span> <code>deliverables.md</code>/<code>sir-style-guide.md</code> — <b>read-only, for the format spec only</b></dd>
+        <dt>Key outputs</dt><dd><code>pages.tsx</code>, <code>research-appendix.md</code>, <code>figures/</code>, <code>compose-index.json</code></dd>
+      </dl>
+    </div>
+  </div>
+
+  <div class="stepdetail" id="s-5.2">
+    <div class="sdh"><span class="sid">5.2</span><span class="sttl">Content Scrub</span><span class="kb k-agent">agent</span><span class="kb mdl">opus</span><span class="kb" style="background:rgba(255,255,255,.16);color:#fff">requires 5.1</span></div>
+    <div class="sdb">
+      <p>Removes traces of <em>how</em> the report was made — step ids, discipline slugs, filenames, pipeline voice,
+      fetch-failure codes, deal verdicts — without rewriting the analysis. Three tiers: a mechanical sweep (the verifier itself,
+      over exec-summary + body + appendix), a judgment/intent read of the exec-summary + body, and a keyed body-vs-appendix gap
+      sweep (one targeted read per gap 4.2 carried). It writes its own scrubbed copy and <b>re-points</b> the absolute path its
+      appendix Parts read from — left alone it would read 5.1's unscrubbed appendix while reporting clean, the one silent failure
+      of this seam. Gates <b>both</b> renders.</p>
+      <dl class="sdmeta">
+        <dt>Prompt</dt><dd><code>prompts/5.2-content-scrub.md</code></dd>
+        <dt>Python</dt><dd><code>5.2-content-scrub/check_scrub.py</code> — the mechanical sweep; derives <code>issues_found</code>/<code>issues_remaining</code> from a diff of 5.1's source vs. 5.2's (with <code>## Accepted</code> waivers keyed by check-id + matched text). <code>--write-report</code> emits <code>scrub-report.json</code> (<code>pass: clean</code> + <code>issues_remaining: 0</code>).</dd>
+        <dt>Skills / CLI</dt><dd><span class="pill none">none</span></dd>
+        <dt>Key outputs</dt><dd><code>pages.tsx</code> (scrubbed), <code>research-appendix.md</code>, <code>scrub-log.md</code>, <code>scrub-report.json</code></dd>
+      </dl>
+    </div>
+  </div>
+
+  <div class="stepdetail" id="s-5.3">
+    <div class="sdh"><span class="sid">5.3</span><span class="sttl">Render PDF</span><span class="kb k-script">script</span><span class="kb" style="background:rgba(255,255,255,.16);color:#fff">requires 5.2</span></div>
+    <div class="sdb">
+      <p>A <b>wrapper</b>, not a second renderer — a fork in this repo would drift from the RDS component library it prints. The
+      step's own work is everything around the render: the scrub gate, the source precedence, staging the assets the renderer
+      resolves relative to the report file, and then interrogating the PDF that came out (page count, fonts actually embedded,
+      every declared section actually on a page, and the renderer's own asset warnings — it warns and prints the page with a hole
+      in it, exiting 0). The delivered PDF is re-rendered after 5.4 rewrites the source.</p>
+      <dl class="sdmeta">
+        <dt>Python</dt><dd><code>5.3-render-pdf/render_pdf.py</code> — calls <code>lib/renderers.run_renderer("pdf", …)</code>, which resolves and executes the <span class="pill skill">generate-report-pdf</span> skill's <code>render.sh</code> (the dsd RDS Chromium renderer). "Invoke, never fork."</dd>
+        <dt>Skills / CLI</dt><dd><span class="pill skill">generate-report-pdf</span> (dsd RDS Chromium renderer)</dd>
+        <dt>Key outputs</dt><dd><code>site-intelligence-report.pdf</code> (fixed filename), <code>page-map.json</code> (which section each page belongs to, read back off the <code>@page</code> footer margin boxes)</dd>
+        <dt>Gate</dt><dd>Refuses an <code>unscrubbed</code> source while 5.2 claims clean; asserts fonts <code>embedded</code>, page count in bounds, and every <code>&lt;FlowingSection&gt;</code> on a page.</dd>
+      </dl>
+    </div>
+  </div>
+
+  <div class="stepdetail" id="s-5.4">
+    <div class="sdh"><span class="sid">5.4</span><span class="sttl">Layout Scrub</span><span class="kb k-agent">agent</span><span class="kb mdl">opus</span><span class="kb" style="background:rgba(255,255,255,.16);color:#fff">requires 5.3</span></div>
+    <div class="sdb">
+      <p>The only step that looks at the artifact the <b>client opens</b>. A layout defect exists only on the printed page — a
+      shipped SIR once carried a page whose entire content was a figure's orphaned credit line, past twenty-six content checks
+      and a render that exited 0, because none of them ever looked at a page. It walks every page mechanically, visually reads
+      every body page and samples the appendix, and fixes layout at the compose/template level (never by deleting orphaned
+      content). It owns the re-render loop: a fix makes the PDF stale, so 5.3 re-runs — <code>render_current</code> is a
+      <em>refusal</em>, not a warning.</p>
+      <dl class="sdmeta">
+        <dt>Prompt</dt><dd><code>prompts/5.4-layout-scrub.md</code></dd>
+        <dt>Python</dt><dd><code>5.4-layout-scrub/check_layout.py</code> — reads the PDF page-by-page: per-page fill, near-empty / orphan-continuation detection, page-count parity vs. the map, source parity (sections + trace markers survive), and the <code>render_current</code> staleness check (page-map <code>source.sha256</code> vs. source on disk). <code>--write-report</code> emits <code>layout-report.json</code>.</dd>
+        <dt>Skills / CLI</dt><dd><span class="pill none">none</span> — systemic RDS defects are filed against dsd, not patched per-report</dd>
+        <dt>Key outputs</dt><dd><code>pages.tsx</code> (fixed; byte-identical to 5.2's if layout was already right), <code>layout-findings.md</code>, <code>layout-report.json</code></dd>
+      </dl>
+    </div>
+  </div>
+
+  <div class="stepdetail" id="s-5.5">
+    <div class="sdh"><span class="sid">5.5</span><span class="sttl">Render DOCX</span><span class="kb k-script">script</span><span class="kb" style="background:rgba(255,255,255,.16);color:#fff">requires 5.4</span></div>
+    <div class="sdb">
+      <p>The DOCX sibling of 5.3, off the <b>same source</b> — and here that is a sha256 comparison, not a sentence: 5.4 rewrites
+      the source after 5.3 printed, so this step refuses until 5.3 has been re-run against the same bytes. Shipping a client a PDF
+      and a Word file that are not the same document is the failure it exists to prevent. REPORT-mode only — it rejects editorial
+      arrays and chart components (<code>BarChart</code>/<code>RankingTable</code>) before a render is spent.</p>
+      <dl class="sdmeta">
+        <dt>Python</dt><dd><code>5.5-render-docx/render_docx.py</code> — calls <code>lib/renderers.run_renderer("docx", …)</code>, which executes the <span class="pill skill">generate-report-docx</span> skill's <code>render.sh</code> (the dsd DOCX renderer).</dd>
+        <dt>Skills / CLI</dt><dd><span class="pill skill">generate-report-docx</span> (dsd DOCX renderer)</dd>
+        <dt>Key outputs</dt><dd><code>site-intelligence-report.docx</code>, <code>docx-map.json</code> (the Heading-1 spine the native Word TOC field populates itself from)</dd>
+        <dt>Gate</dt><dd>Gated by both 5.2 (content) and 5.4 (layout); refuses on a stale PDF (<code>pdf_current</code>).</dd>
+      </dl>
+    </div>
+  </div>
+
+  <div class="stepdetail" id="s-5.6">
+    <div class="sdh"><span class="sid">5.6</span><span class="sttl">Rollup</span><span class="kb k-script">script</span><span class="kb" style="background:rgba(255,255,255,.16);color:#fff">requires 5.5</span></div>
+    <div class="sdb">
+      <p>The run's own record, <b>assembled — never authored</b>. Every field is derived from an artifact that already exists:
+      the declared steps table (from <code>pipeline.yaml</code>), each step's status + health checks, disciplines + severity
+      counts (from <code>findings-index.json</code>), disclosed data gaps + dispositions (from <code>synthesis-index.json</code>),
+      the page split (per-page attribution from 5.3's <code>page-map.json</code>, never summed per section), both deliverables,
+      and the HITL gate decisions. Where a source is absent the key is null and a check verdict says so. Nothing here re-derives a
+      fact from prose.</p>
+      <dl class="sdmeta">
+        <dt>Python</dt><dd><code>5.6-rollup/rollup.py</code></dd>
+        <dt>Skills / CLI</dt><dd><span class="pill none">none</span></dd>
+        <dt>Key outputs</dt><dd><code>run-manifest.json</code> (machine), <code>run-manifest.md</code> (the human view the 6.1 revision session opens)</dd>
+        <dt>Gate</dt><dd>Refuses to stand as the record if any gate reached the deliverable <code>awaiting-decision</code> — the incident this pipeline was rebuilt to make impossible.</dd>
+      </dl>
+    </div>
+  </div>
+
+  <div class="stepdetail" id="s-5.7">
+    <div class="sdh"><span class="sid">5.7</span><span class="sttl">Package</span><span class="kb k-script">script</span><span class="kb" style="background:rgba(255,255,255,.16);color:#fff">requires 5.6</span></div>
+    <div class="sdb">
+      <p>The thing that leaves the building. It <b>materializes</b> the client-facing <code>deliverable/</code> folder at the run
+      root — the report PDF, the Word version, a <code>supporting-documents/</code> subfolder carrying every recorded instrument
+      the run collected (sha-verified), and a client-voice README, and nothing else. The instrument census is read from each
+      <em>collecting</em> step's own manifest, never from a directory listing — a listing reports what is present and only a
+      census can report what is missing. It refuses when a declared instrument is absent; a short copy, a stale render, or a
+      leftover superseded instrument each fails here.</p>
+      <dl class="sdmeta">
+        <dt>Python</dt><dd><code>5.7-package/package.py</code> — copies + re-hashes both formats after landing, sweeps the instrument censuses from 3.3 / 3.4 / 4.2, excludes <code>figures/</code> and the run tree.</dd>
+        <dt>Skills / CLI</dt><dd><span class="pill none">none</span></dd>
+        <dt>Key outputs</dt><dd><code>deliverable/site-intelligence-report.{pdf,docx}</code>, <code>deliverable/supporting-documents/</code>, <code>package-manifest.json</code> (the receipt, kept out of the folder that ships)</dd>
+      </dl>
+    </div>
+  </div>
+
+  <div class="stepdetail" id="s-5.8">
+    <div class="sdh"><span class="sid">5.8</span><span class="sttl">Publish</span><span class="kb k-check">checkpoint</span><span class="kb" style="background:rgba(255,255,255,.16);color:#fff">requires 5.7</span></div>
+    <div class="sdb">
+      <p>The opt-in publish gate, restored so the new engine is not a delivery regression (the legacy skill already ended by
+      asking "Publish this SIR to the app?"). The runner stops, the session asks the one question, and on <em>yes</em> it
+      <b>hands off</b> to the <code>upload-sir</code> skill with <code>--run-dir</code> pre-filled. The boundary is the whole
+      design: this step holds no publish logic, no database access, and no credentials — every org/project decision and every
+      prod write happens inside the skill, exactly as today, so <code>bureau</code> never touches prod. Same shape 3.3 uses to
+      hand off to surveyor; here a checkpoint hands off to a skill.</p>
+      <dl class="sdmeta">
+        <dt>Prompt</dt><dd><code>prompts/5.8-publish.md</code></dd>
+        <dt>Python</dt><dd><span class="pill none">none</span> — a checkpoint has no health record</dd>
+        <dt>Skills / CLI</dt><dd><span class="pill skill">upload-sir</span> (owns org/project selection + all prod / DB / Storage writes)</dd>
+        <dt>Key outputs</dt><dd><code>publish-readout.md</code> (frames the yes/no; carries no publish plan). Outcome is recorded in the decision's <code>--notes</code>: <code>published-v&lt;N&gt;</code> or <code>skipped</code>. There is deliberately no <code>corrected</code> path — a skip is a finished run.</dd>
+      </dl>
+    </div>
+  </div>
+
+  <div class="sd-group">§6 — Revision &amp; Delivery <span style="color:var(--ret);font-weight:700">· not built</span></div>
+
+  <div class="stepdetail" id="s-6.1" style="opacity:.82">
+    <div class="sdh" style="background:linear-gradient(135deg,#6b7280,#9ca3af)"><span class="sid">6.1</span><span class="sttl">Revision</span><span class="kb k-agent">agent</span><span class="kb mdl">opus</span><span class="kb" style="background:var(--retbg);color:var(--ret)">status: planned</span></div>
+    <div class="sdb">
+      <p>The only step still <code>status: planned</code> in the yaml — <code>run</code> refuses it. The interactive edit loop that
+      handles operator feedback after delivery; the loop terminates when the operator approves, and <em>that</em> approval is the
+      delivery sign-off. It subsumes the <code>diligence-replay-phase-5</code> skill (which was the non-interactive "re-render with
+      an edit") — the plan is to retire that skill rather than keep two paths. §7 Learnback (routing corrections back into surveyor /
+      Bureau guides) exists only as prose in <code>sir.md</code>, not yet as runnable steps.</p>
+      <dl class="sdmeta">
+        <dt>Prompt</dt><dd><code>prompts/6.1-revision.md</code></dd>
+        <dt>Skills / CLI</dt><dd><span class="pill skill">diligence-replay-phase-5</span> (to be subsumed / retired)</dd>
+        <dt>Key outputs</dt><dd><code>revision-log.md</code>, <code>approved/</code></dd>
+      </dl>
+    </div>
+  </div>
+
+  <div class="foot">architecture-overview-mermaid.html · spec-kit v3 + mermaid@11 (hybrid prototype) · exploratory companion to a forthcoming DESIGN-SPEC.md · sources: bureau/docs/pipelines/sir.md, live bureau/pipelines/{sir,review}/ (§6 detail read from pipeline.yaml + each step's prompts/ and check_*.py), Jason's SIR-Pipeline workspace, production diligence-report skill.</div>
+</section>
+
+</main>
+
+<script>
+  const btns=document.querySelectorAll('nav.tabs button');
+  const panels=document.querySelectorAll('.panel');
+  const IDS=['overview','skill','pipeline']; /* KEEP IN SYNC with the data-tab / panel ids above */
+  function show(id){
+    btns.forEach(b=>b.classList.toggle('active',b.dataset.tab===id));
+    panels.forEach(p=>p.classList.toggle('active',p.id===id));
+    if(location.hash.slice(1)!==id) history.replaceState(null,'','#'+id);
+    window.scrollTo({top:0,behavior:'smooth'});
+  }
+  btns.forEach(b=>b.addEventListener('click',()=>show(b.dataset.tab)));
+  const initial=location.hash.slice(1);
+  if(IDS.includes(initial)) show(initial);
+
+  /* In-panel deep-links (step-chain cards + "§6 below") scroll to the detail
+     card WITHOUT writing the hash, so a reload never lands on the wrong tab. */
+  document.querySelectorAll('a.nl, a[href="#s-detail"]').forEach(a=>{
+    a.addEventListener('click',e=>{
+      /* getElementById, NOT querySelector: the detail ids contain dots
+         (s-4.1, s-5.3) which querySelector would read as class selectors. */
+      const t=document.getElementById(a.getAttribute('href').slice(1));
+      if(t){e.preventDefault();t.scrollIntoView({behavior:'smooth',block:'start'});}
+    });
+  });
+</script>
+<script src="assets/mermaid.min.js"></script>
+<script>
+  /* Hybrid prototype: theme baked here once (would live in spec-template.html).
+     Palette mirrors spec-kit steel-blue ramp; note = red hard-stop guard styling. */
+  mermaid.initialize({
+    startOnLoad: true,
+    securityLevel: 'strict',
+    theme: 'base',
+    themeVariables: {
+      fontFamily: "'Fira Code','SF Mono',ui-monospace,Menlo,Consolas,monospace",
+      fontSize: '12px',
+      actorBkg: '#35526b',
+      actorBorder: '#2d4559',
+      actorTextColor: '#ffffff',
+      actorLineColor: '#b9d2e5',
+      signalColor: '#3f6582',
+      signalTextColor: '#1f2937',
+      labelBoxBkgColor: '#eef4fb',
+      labelBoxBorderColor: '#8cb4d1',
+      labelTextColor: '#273b4b',
+      noteBkgColor: '#fef2f2',
+      noteBorderColor: '#fecaca',
+      noteTextColor: '#b91c1c'
+    },
+    sequence: {
+      mirrorActors: false,
+      showSequenceNumbers: false,
+      wrap: false,
+      messageFontFamily: "'Fira Code','SF Mono',ui-monospace,Menlo,monospace",
+      messageFontSize: 11,
+      actorFontFamily: "'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif"
+    }
+  });
+
+  /* Per-actor colouring + subtitle line — mermaid has no DSL for either, so we
+     decorate the rendered SVG once after render. Keyed on the actor label text;
+     colours mirror the original hand-authored SVG's actor palette. This whole
+     function would live in the spec-kit template, driven by a data attribute. */
+  const ACTORS = {
+    'Runner':       { c:'#35526b', sub:'pipeline_runner.py' },
+    '1.2 Agent':    { c:'#bb4d00', sub:'opus' },
+    'preflight.sh': { c:'#6b3fa0', sub:'diligence skill' },
+    'parcel-geo':   { c:'#6b3fa0', sub:'…-location-resolution' },
+    'det. scripts': { c:'#3f6582', sub:'bureau · dims · trace' },
+    'visual walk':  { c:'#0f7a5f', sub:'slot · agent-browser' },
+    'run tree':     { c:'#2d4559', sub:'outputs + _health' }
+  };
+  function decorateActors(svg){
+    const NS = 'http://www.w3.org/2000/svg';
+    const rects = Array.from(svg.querySelectorAll('rect.actor-top'));
+    svg.querySelectorAll('text.actor-box').forEach(t => {
+      const name = (t.textContent || '').trim();
+      const info = ACTORS[name];
+      if (!info) return;
+      const tx = parseFloat(t.getAttribute('x'));
+      const rect = rects.find(r => {
+        const x = parseFloat(r.getAttribute('x')), w = parseFloat(r.getAttribute('width'));
+        return tx >= x - 2 && tx <= x + w + 2;
+      });
+      if (rect) {
+        rect.setAttribute('fill', info.c);   rect.style.fill = info.c;
+        rect.setAttribute('stroke', info.c); rect.style.stroke = info.c;
+        rect.setAttribute('rx', '8'); rect.setAttribute('ry', '8');
+        rect.setAttribute('height', parseFloat(rect.getAttribute('height')) + 15);
+      }
+      const ty = parseFloat(t.getAttribute('y'));
+      t.setAttribute('fill', '#ffffff'); t.style.fill = '#ffffff'; t.style.fontWeight = '700';
+      t.setAttribute('y', ty - 6);
+      const sub = document.createElementNS(NS, 'text');
+      sub.setAttribute('x', tx); sub.setAttribute('y', ty + 10);
+      sub.setAttribute('text-anchor', 'middle');
+      sub.setAttribute('font-size', '9'); sub.setAttribute('fill', '#ffffff');
+      sub.setAttribute('opacity', '0.82');
+      sub.setAttribute('font-family', "'Fira Code','SF Mono',ui-monospace,monospace");
+      sub.textContent = info.sub;
+      t.parentNode.appendChild(sub);
+    });
+  }
+  /* mermaid auto-renders on load (startOnLoad); poll until the SVG + its actor
+     boxes exist, then decorate. Robust to render timing without depending on a
+     run() promise (which can no-op on an already-processed node). */
+  function decorateWhenReady(){
+    let tries = 0;
+    (function poll(){
+      const svgs = document.querySelectorAll('.seqfig svg');
+      if (svgs.length && svgs[0].querySelector('rect.actor-top')) {
+        svgs.forEach(decorateActors);
+        return;
+      }
+      if (tries++ < 60) requestAnimationFrame(poll);
+    })();
+  }
+  if (document.readyState === 'complete') decorateWhenReady();
+  else window.addEventListener('load', decorateWhenReady);
+</script>
+</body>
+</html>
