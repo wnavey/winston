@@ -1,0 +1,1521 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SIR — Geo-Spatial Reasoning: Findings &amp; Evidence Chains</title>
+<style>
+/* ============================================================
+   spec-kit v3  —  winston HTML spec design system
+   Inlined verbatim from ~/.claude/skills/winston-spec/assets/spec-kit.css
+   ============================================================ */
+
+:root{
+  /* steel-blue ramp (matches cityhall / Noetic report surfaces) */
+  --p50:#f0f5f9;--p100:#dce8f1;--p200:#b9d2e5;--p300:#8cb4d1;--p400:#6397b8;
+  --p500:#517e9e;--p600:#3f6582;--p700:#35526b;--p800:#2d4559;--p900:#273b4b;--p950:#182530;
+  --bg:#f9f9f9;--card:#ffffff;--divider:#dfdfdf;--ink:#1f2937;--muted:#6b7280;--ember:#bb4d00;
+  /* semantic: new / changed / retired */
+  --new:#15803d;--newbg:#f0fdf4;--newbd:#bbf7d0;
+  --chg:#b45309;--chgbg:#fffbeb;--chgbd:#fde68a;
+  --ret:#b91c1c;--retbg:#fef2f2;--retbd:#fecaca;
+  --sans:'Lexend',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  --serif:'Lora',Georgia,'Times New Roman',serif;
+  --mono:'Fira Code','SF Mono',ui-monospace,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.55;font-size:15px}
+
+/* ---------- masthead ---------- */
+header.masthead{background:linear-gradient(135deg,var(--p800),var(--p600));color:#fff;padding:34px 32px 30px;position:relative;overflow:hidden}
+header.masthead::after{content:"";position:absolute;inset:0;background-image:repeating-linear-gradient(115deg,rgba(255,255,255,.06) 0 1px,transparent 1px 26px);pointer-events:none}
+header.masthead .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--p200)}
+header.masthead h1{font-family:var(--serif);font-weight:600;margin:.35em 0 .2em;font-size:29px;position:relative}
+header.masthead p{margin:0;color:var(--p100);max-width:880px;font-size:15px}
+header.masthead .meta{margin-top:14px;font-size:12.5px;color:var(--p200);font-family:var(--mono)}
+
+/* ---------- tabs ---------- */
+nav.tabs{position:sticky;top:0;z-index:20;display:flex;gap:2px;background:var(--p950);padding:0 20px;box-shadow:0 2px 8px rgba(0,0,0,.12);flex-wrap:wrap}
+nav.tabs button{appearance:none;border:0;background:transparent;color:var(--p200);font-family:var(--sans);font-size:14px;font-weight:500;padding:14px 18px;cursor:pointer;border-bottom:3px solid transparent;transition:all .15s}
+nav.tabs button .n{font-family:var(--mono);font-size:11px;opacity:.7;margin-right:7px}
+nav.tabs button:hover{color:#fff;background:rgba(255,255,255,.04)}
+nav.tabs button.active{color:#fff;border-bottom-color:var(--ember);background:rgba(255,255,255,.06)}
+
+/* ---------- layout ---------- */
+main{max-width:1140px;margin:0 auto;padding:30px 26px 90px}
+.panel{display:none;animation:fade .25s ease}
+.panel.active{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+h2{font-family:var(--serif);font-weight:600;font-size:23px;margin:34px 0 6px;color:var(--p900)}
+h2:first-child{margin-top:4px}
+h2 .eyebrow{display:block;font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--p500);font-weight:400;margin-bottom:3px}
+h3{font-size:16px;font-weight:600;margin:28px 0 8px;color:var(--p800);display:flex;align-items:center;gap:9px}
+h3 .hn{font-family:var(--mono);font-size:12px;color:#fff;background:var(--p600);border-radius:5px;padding:2px 8px}
+h4{font-size:14px;font-weight:600;margin:18px 0 6px;color:var(--p800)}
+p{margin:.55em 0}
+.lede{font-size:16px;color:var(--p800);border-left:3px solid var(--ember);padding-left:16px;margin:14px 0 20px}
+ul{margin:.4em 0;padding-left:22px}li{margin:.28em 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px solid var(--p100);border-radius:4px;padding:1px 5px;color:var(--p800)}
+
+/* ---------- callout ---------- */
+.callout{background:var(--p50);border:1px solid var(--p200);border-left:4px solid var(--p500);border-radius:8px;padding:13px 17px;margin:16px 0}
+.callout.ember{background:#fdf6f0;border-color:#f0cba8;border-left-color:var(--ember)}
+.callout.new{background:var(--newbg);border-color:var(--newbd);border-left-color:var(--new)}
+.callout .lab{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--p600);font-weight:600;display:block;margin-bottom:3px}
+.callout.ember .lab{color:var(--ember)} .callout.new .lab{color:var(--new)}
+
+/* ---------- legend ---------- */
+.legend{display:flex;flex-wrap:wrap;gap:9px 16px;background:#fff;border:1px solid var(--divider);border-radius:10px;padding:12px 16px;margin:16px 0;font-size:12px;align-items:center}
+.legend .k{display:inline-flex;align-items:center;gap:6px}
+.swatch{width:26px;height:14px;border-radius:3px;display:inline-block;border:1px solid rgba(0,0,0,.15)}
+
+/* ---------- shared field badges (used by entity rows + legend) ---------- */
+.b{font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.04em;padding:1px 4px;border-radius:3px;text-transform:uppercase;white-space:nowrap}
+.b-pk{background:#fef3c7;color:#92600a;border:1px solid #fde68a}
+.b-fk{background:#e0edfb;color:#2456a8;border:1px solid #c3d8f2}
+.b-nn{background:#eef1f4;color:#4b5563;border:1px solid #d7dde3}
+.b-new{background:var(--newbg);color:var(--new);border:1px solid var(--newbd)}
+
+/* ============================================================
+   ER / UML entity boxes
+   ============================================================ */
+.erd{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start;margin:16px 0;background:#fbfcfd;border:1px solid var(--divider);border-radius:12px;padding:18px}
+.ent{border:1px solid var(--divider);border-radius:9px;overflow:hidden;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.05);min-width:236px;flex:0 1 auto}
+.ent .eh{padding:7px 12px;color:#fff;display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.ent .eh .en{font-family:var(--mono);font-size:12.5px;font-weight:700;letter-spacing:.02em}
+.ent .eh .stereo{font-size:9.5px;font-family:var(--mono);opacity:.85;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}
+.ent.exist .eh{background:var(--p700)}
+.ent.newt .eh{background:var(--new)}
+.ent.changed .eh{background:var(--chg)}
+.ent.retired .eh{background:#9ca3af}
+.ent.retired{opacity:.72}
+.ent .row{display:flex;align-items:center;gap:7px;padding:4px 11px;font-size:11.5px;border-top:1px solid #eef1f4}
+.ent .row:first-of-type{border-top:0}
+.ent .row .nm{font-family:var(--mono);font-size:11.5px;color:var(--p900);font-weight:600}
+.ent .row .ty{font-family:var(--mono);font-size:10px;color:var(--muted);margin-left:auto;white-space:nowrap}
+.ent .row.hi{background:#fff9f2}
+.ent .row.strk .nm{text-decoration:line-through;color:var(--muted)}
+.ent .note{padding:5px 11px;font-size:10px;color:var(--muted);font-style:italic;border-top:1px dashed #e5e9ee;background:#fbfcfd}
+/* diff rows — show a table modification (column added / removed), git-style.
+   Put a "+"/"−" marker in a .gut span at the start of the row. */
+.ent .row .gut{flex:0 0 10px;width:10px;text-align:center;font-family:var(--mono);font-size:11px;font-weight:700;color:var(--muted)}
+.ent .row.add{background:var(--newbg);box-shadow:inset 3px 0 0 var(--new)}
+.ent .row.add .gut{color:var(--new)}
+.ent .row.add .nm{color:#166534}
+.ent .row.del{background:var(--retbg);box-shadow:inset 3px 0 0 var(--ret)}
+.ent .row.del .gut{color:var(--ret)}
+.ent .row.del .nm{color:var(--ret);text-decoration:line-through}
+
+/* relationships panel — crow's-foot text notation */
+.rels{background:#fff;border:1px solid var(--divider);border-radius:10px;padding:12px 16px;margin:14px 0;font-family:var(--mono);font-size:12px;line-height:1.9}
+.rels .rl{display:block;color:var(--p800)}
+.rels .rl b{color:var(--ember)}
+.rels .cf{color:var(--p500);font-weight:700}
+.rels .cmt{color:var(--muted);font-style:normal;font-family:var(--sans);font-size:11.5px}
+.rels .tag-new{color:var(--new);font-weight:700}
+.rels .tag-ret{color:var(--ret);font-weight:700}
+.rels-h{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--p600);font-weight:700;margin-bottom:6px}
+
+/* ============================================================
+   Use-case scene  (an action + its boxes-and-arrows diagram)
+   ============================================================ */
+.uc{margin:16px 0 22px;border:1px solid var(--divider);border-radius:12px;overflow:hidden;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.uc .uch{display:flex;align-items:center;gap:13px;padding:11px 16px;background:linear-gradient(135deg,var(--p700),var(--p600));color:#fff}
+.uc .uch .ucn{flex:0 0 30px;height:30px;border-radius:50%;background:rgba(255,255,255,.2);font-family:var(--mono);font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.uc .uch .uctxt{flex:1}
+.uc .uch .actor{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--p100);display:block;margin-bottom:1px}
+.uc .uch .uct{font-weight:600;font-size:15.5px;font-family:var(--serif)}
+.uc .ucsub{padding:9px 16px;font-size:12.5px;color:var(--p800);background:var(--p50);border-bottom:1px solid var(--p100)}
+.uc .ucdiag{padding:20px 16px 14px}
+.ucnote{padding:2px 16px 14px;font-size:11.5px;color:var(--muted)}
+.ucnote b{color:var(--p700);font-family:var(--mono);font-size:10.5px}
+
+/* ============================================================
+   Boxes-and-arrows flow
+   ============================================================ */
+.dfg{display:flex;flex-wrap:wrap;align-items:stretch;gap:8px 0;margin:0}
+.node{flex:0 0 auto;width:156px;background:#fff;border:1.5px solid var(--p300);border-radius:8px;padding:9px 11px;display:flex;flex-direction:column;gap:3px}
+.node .op{align-self:flex-start;font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:1px 6px;border-radius:3px;border:1px solid;color:#fff;margin-bottom:2px}
+.node .nt{display:block;font-family:var(--mono);font-weight:700;font-size:12px;color:var(--p900);line-height:1.3;word-break:break-word}
+.node .nf{display:block;font-family:var(--mono);font-size:10px;color:var(--muted);line-height:1.45;word-break:break-word}
+.node.created{border-color:var(--new);background:var(--newbg)} .node.created .op{background:var(--new);border-color:var(--new)}
+.node.read{border-color:var(--p400);background:#eef4fb} .node.read .op{background:var(--p500);border-color:var(--p500)}
+.node.event{border-color:var(--ember);background:#fdf6f0} .node.event .op{background:var(--ember);border-color:var(--ember)}
+.node.store{border-style:dashed;border-color:var(--p500);background:#eef3f7} .node.store .op{background:var(--p700);border-color:var(--p700)}
+.edge{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:70px;max-width:104px;padding:0 4px}
+.edge .el{font-size:9px;color:var(--p600);font-family:var(--mono);text-align:center;line-height:1.3;margin-bottom:2px}
+.edge .ar{color:var(--p400);font-size:20px;font-weight:700;line-height:1}
+
+/* ============================================================
+   Card grid  (keep / change / drop comparisons)
+   ============================================================ */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:820px){.grid2{grid-template-columns:1fr}.erd{padding:12px}}
+.card{background:var(--card);border:1px solid var(--divider);border-radius:9px;padding:14px 16px}
+.card.keep{border-top:3px solid var(--new)} .card.change{border-top:3px solid var(--chg)} .card.drop{border-top:3px solid var(--ret)}
+.card strong{display:block;margin-bottom:4px;font-size:13.5px}
+.card ul{font-size:12.5px;margin:2px 0}
+
+/* ============================================================
+   Lifecycle / state machine
+   ============================================================ */
+.sm{display:flex;flex-wrap:wrap;gap:7px;align-items:center;margin:14px 0}
+.sm .s{border:1px solid var(--p300);background:var(--p50);border-radius:20px;padding:5px 12px;font-size:11.5px;font-weight:600;color:var(--p800);font-family:var(--mono)}
+.sm .s .who{display:block;font-size:9px;font-family:var(--mono);color:var(--muted);font-weight:400;text-transform:uppercase;letter-spacing:.03em}
+.sm .s.client{border-color:var(--newbd);background:var(--newbg)}
+.sm .s.cc{border-color:#f0cba8;background:#fdf6f0}
+.sm .s.spec{border-color:var(--chgbd);background:var(--chgbg)}
+.sm .a{color:var(--p400);font-weight:700}
+
+/* ============================================================
+   Use-case catalog — grouped list of candidate use cases
+   ============================================================ */
+.catgrp{border:1px solid var(--divider);border-radius:10px;overflow:hidden;margin:14px 0;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.catgrp .cath{background:var(--p700);color:#fff;padding:8px 14px;font-family:var(--serif);font-weight:600;font-size:14.5px;display:flex;align-items:center;gap:10px}
+.catgrp .cath .cgl{font-family:var(--mono);font-size:12px;font-weight:700;background:rgba(255,255,255,.2);border-radius:5px;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;flex:0 0 22px}
+.uci{display:flex;gap:9px;align-items:baseline;padding:7px 13px;border-top:1px solid #eef1f4;font-size:13px}
+.uci .uid{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--p600);flex:0 0 26px}
+.uci .utxt{flex:1;color:var(--ink);line-height:1.45}
+.uci .utxt b{color:var(--p900)}
+.uci .star{color:var(--ember);font-weight:700;font-size:12px;flex:0 0 auto;letter-spacing:-1px}
+.uci.later{opacity:.66}
+.utag{font-family:var(--mono);font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;text-transform:uppercase;letter-spacing:.03em;white-space:nowrap;flex:0 0 auto}
+.utag.t-orig{background:#e0edfb;color:#2456a8;border:1px solid #c3d8f2}
+.utag.t-add{background:var(--newbg);color:var(--new);border:1px solid var(--newbd)}
+
+/* ============================================================
+   Misc: storage strip, cross-reference box
+   ============================================================ */
+.storage{background:#eef3f7;border:1px dashed var(--p300);border-radius:8px;padding:9px 13px;font-family:var(--mono);font-size:12px;color:var(--p800);margin:12px 0}
+.storage b{color:var(--ember)}
+.xref{font-size:12px;color:var(--p600);background:var(--p50);border:1px solid var(--p100);border-radius:6px;padding:8px 12px;margin:10px 0}
+.foot{margin-top:44px;padding-top:18px;border-top:1px solid var(--divider);color:var(--muted);font-size:12px;font-family:var(--mono)}
+
+/* actor / repo chips (optional, for inline actor tags in prose) */
+.rc{display:inline-block;font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;padding:1px 6px;border-radius:5px;border:1px solid;vertical-align:middle;white-space:nowrap}
+.r-ch{background:#eef4fb;color:#2456a8;border-color:#c3d8f2}
+.r-sub{background:#f3eefb;color:#6b3fa0;border-color:#dcccf0}
+.r-fa{background:#e9f7f2;color:#0f7a5f;border-color:#bfe8db}
+.r-db{background:#eaeef2;color:#2d4559;border-color:#c7d2dd}
+.r-store{background:#e6eef3;color:#35526b;border-color:#bcd0dd}
+.r-user{background:#eefaf0;color:#15803d;border-color:#bbf7d0}
+.r-mcp{background:#fdf0e6;color:#b5590d;border-color:#f2d3b3}
+
+/* one-off: neutral compare-card header chip (kit-token colours only) */
+.cmp{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:1px 6px;border-radius:4px;border:1px solid;margin-left:6px;vertical-align:middle}
+.cmp-old{background:var(--p50);color:var(--p700);border-color:var(--p200)}
+.cmp-new{background:var(--newbg);color:var(--new);border-color:var(--newbd)}
+
+/* ============================================================
+   Clickable step nodes — step-chain card → §6 detail deep-link
+   ============================================================ */
+html{scroll-behavior:smooth}
+a.nl{display:flex;flex:0 0 auto;text-decoration:none;cursor:pointer;transition:transform .12s}
+a.nl:hover{transform:translateY(-2px)}
+a.nl .node{position:relative;cursor:pointer;width:156px}
+a.nl:hover .node{border-color:var(--ember);box-shadow:0 3px 11px rgba(187,77,0,.22)}
+a.nl .node::after{content:"§6 →";position:absolute;top:5px;right:6px;font-family:var(--mono);font-size:7.5px;font-weight:700;color:var(--ember);opacity:0;transition:opacity .12s}
+a.nl:hover .node::after{opacity:.9}
+
+/* ============================================================
+   Per-step detail cards (§6 "Steps in detail")
+   ============================================================ */
+.sd-group{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--p600);font-weight:700;margin:26px 0 4px;padding-bottom:5px;border-bottom:2px solid var(--p200)}
+.stepdetail{border:1px solid var(--divider);border-radius:11px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.05);margin:13px 0;overflow:hidden;scroll-margin-top:66px}
+.stepdetail .sdh{display:flex;align-items:center;gap:9px;padding:10px 15px;background:linear-gradient(135deg,var(--p800),var(--p600));color:#fff;flex-wrap:wrap}
+.stepdetail .sdh .sid{font-family:var(--mono);font-weight:700;font-size:13.5px;background:rgba(255,255,255,.18);border-radius:6px;padding:2px 9px}
+.stepdetail .sdh .sttl{font-family:var(--serif);font-weight:600;font-size:15.5px;flex:1;min-width:140px}
+.kb{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:2px 7px;border-radius:4px;white-space:nowrap;border:1px solid transparent}
+.kb.k-agent{background:var(--ember);color:#fff}
+.kb.k-script{background:var(--p400);color:#fff}
+.kb.k-check{background:var(--chg);color:#fff}
+.kb.mdl{background:#fff;color:var(--p800)}
+.stepdetail .sdb{padding:12px 16px}
+.stepdetail .sdb > p{margin:0 0 8px;font-size:13.5px;color:var(--ink)}
+dl.sdmeta{display:grid;grid-template-columns:118px 1fr;gap:7px 14px;margin:11px 0 2px;border-top:1px solid var(--divider);padding-top:11px;font-size:12.5px}
+dl.sdmeta dt{font-family:var(--mono);font-size:9.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--p600);font-weight:700;padding-top:3px}
+dl.sdmeta dd{margin:0;color:var(--ink);line-height:1.5}
+dl.sdmeta dd code{font-size:11.5px}
+@media(max-width:640px){dl.sdmeta{grid-template-columns:1fr;gap:2px 0}dl.sdmeta dt{margin-top:9px}}
+.pill{display:inline-block;font-family:var(--mono);font-size:10.5px;font-weight:600;padding:1px 7px;border-radius:5px;border:1px solid;margin:1px 3px 1px 0;white-space:nowrap}
+.pill.skill{background:#fdf0e6;color:#b5590d;border-color:#f2d3b3}
+.pill.cli{background:#f3eefb;color:#6b3fa0;border-color:#dcccf0}
+.pill.none{background:#f4f5f6;color:#8b929b;border-color:#e0e3e7;font-style:italic}
+
+/* ============================================================
+   Sequence diagram (inline SVG) — §6 step-detail cards
+   ============================================================ */
+.seqfig{margin:15px 0 4px;border:1px solid var(--divider);border-radius:11px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.05);padding:8px 10px 6px;overflow-x:auto}
+.seqfig svg{display:block;min-width:840px}
+.seqcap{display:flex;flex-wrap:wrap;gap:5px 18px;align-items:center;margin:8px 2px 2px;font-family:var(--mono);font-size:10.5px;color:var(--muted)}
+.seqcap b{font-family:var(--sans);font-weight:600;color:var(--p700);text-transform:uppercase;letter-spacing:.06em;font-size:10px}
+.seqcap .k{display:inline-flex;align-items:center;gap:7px}
+.seqcap .ln{display:inline-block;width:28px;border-top:2px solid var(--p600)}
+.seqcap .ln.ret{border-top:2px dashed var(--muted)}
+.seqcap .stop{color:var(--ret);font-weight:700}
+
+/* ============================================================
+   Returns reference — collapsible per-call API/shape/example
+   ============================================================ */
+.rrxh{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--p600);font-weight:700;margin:16px 0 7px;display:flex;align-items:center;gap:9px}
+.rrxh .hint{font-family:var(--sans);font-weight:400;letter-spacing:0;text-transform:none;color:var(--muted);font-size:11.5px}
+details.ret{border:1px solid var(--divider);border-radius:9px;background:#fff;margin:7px 0;overflow:hidden}
+details.ret > summary{list-style:none;cursor:pointer;padding:9px 13px;display:flex;align-items:center;gap:10px;font-size:12.5px;background:var(--p50);border-left:3px solid var(--p400)}
+details.ret[open] > summary{border-bottom:1px solid var(--divider)}
+details.ret > summary::-webkit-details-marker{display:none}
+details.ret > summary::before{content:"▸";font-family:var(--mono);color:var(--p500);font-size:11px;flex:0 0 auto}
+details.ret[open] > summary::before{content:"▾"}
+details.ret > summary .num{font-family:var(--mono);font-size:10.5px;font-weight:700;color:#fff;background:var(--p600);border-radius:5px;padding:1px 7px;flex:0 0 auto}
+details.ret > summary .ttl{font-family:var(--mono);font-weight:700;color:var(--p900)}
+details.ret > summary .ra{color:var(--ember);font-weight:700;margin:0 2px}
+details.ret .rbody{padding:12px 15px}
+dl.rgrid{display:grid;grid-template-columns:92px 1fr;gap:9px 14px;margin:0;font-size:12.5px}
+dl.rgrid dt{font-family:var(--mono);font-size:9.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--p600);font-weight:700;padding-top:3px}
+dl.rgrid dd{margin:0;line-height:1.5;color:var(--ink)}
+dl.rgrid dd code{font-size:11.5px}
+pre.cb{margin:7px 0 0;background:var(--p950);color:#e6edf3;border-radius:7px;padding:11px 13px;overflow-x:auto;font-family:var(--mono);font-size:11px;line-height:1.5;white-space:pre;-webkit-text-size-adjust:100%}
+pre.cb .cm{color:#7d95a6}
+pre.cb .k{color:#9ecbff}
+pre.cb .s{color:#a5d6a4}
+@media(max-width:640px){dl.rgrid{grid-template-columns:1fr;gap:2px 0}dl.rgrid dt{margin-top:8px}}
+.seqcap .nb{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;background:var(--p600);color:#fff;font-size:9px;font-weight:700;font-family:var(--mono)}
+/* per-API-call sub-sections inside a returns-reference item */
+.acintro{font-size:12.5px;color:var(--ink);margin:0 0 4px}
+.apicall{border-left:2px solid var(--p200);padding:1px 0 2px 13px;margin:12px 0}
+.apicall .ach{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px;margin-bottom:2px}
+.apicall .ach .step{font-family:var(--mono);font-size:8.5px;font-weight:700;color:#fff;background:var(--p500);border-radius:4px;padding:1px 6px;letter-spacing:.03em;white-space:nowrap;flex:0 0 auto}
+.apicall .ach .nm{font-family:var(--serif);font-weight:600;font-size:13px;color:var(--p900)}
+.apicall .ach .xport{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;padding:1px 6px;border-radius:4px;white-space:nowrap}
+.apicall .ach .xport.mcp{background:#f3eefb;color:#6b3fa0;border:1px solid #dcccf0}
+.apicall .ach .xport.http{background:#e9f7f2;color:#0f7a5f;border:1px solid #bfe8db}
+.apicall dl.rgrid{grid-template-columns:70px 1fr;gap:6px 12px;margin-top:5px}
+dl.rgrid dt.pe{color:var(--ember)}
+dl.rgrid dd.pe{background:#fdf6f0;border-left:2px solid var(--ember);padding:6px 10px;border-radius:0 5px 5px 0;line-height:1.55}
+</style>
+<style>
+/* sibling-specific: index table, tab colour for finding pages */
+table.idx{width:100%;border-collapse:collapse;font-size:12.5px;margin:14px 0;background:#fff;border:1px solid var(--divider);border-radius:10px;overflow:hidden}
+table.idx th{background:var(--p700);color:#fff;text-align:left;padding:8px 11px;font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;font-weight:700}
+table.idx td{padding:7px 11px;border-top:1px solid #eef1f4;vertical-align:top}
+table.idx tr:hover td{background:var(--p50)}
+table.idx .c-num{font-family:var(--mono);font-weight:700;white-space:nowrap}
+table.idx .c-num a.idxlink{color:var(--ember);text-decoration:none}
+table.idx .c-num a.idxlink:hover{text-decoration:underline}
+table.idx .c-pg{font-family:var(--mono);text-align:center;color:var(--p700);white-space:nowrap}
+table.idx .c-op{font-size:11.5px;color:var(--muted)}
+table.cov{width:100%;border-collapse:collapse;font-size:13px;margin:12px 0;background:#fff;border:1px solid var(--divider);border-radius:10px;overflow:hidden}
+table.cov th{background:var(--p800);color:#fff;text-align:left;padding:9px 12px;font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase}
+table.cov td{padding:9px 12px;border-top:1px solid #eef1f4}
+table.cov .xy{font-family:var(--mono);font-weight:700;color:var(--p900);text-align:center;white-space:nowrap}
+table.cov .pct{font-family:var(--mono);font-weight:700;text-align:center}
+table.cov tr.tot td{background:var(--p50);font-weight:600}
+.bar{position:relative;height:9px;border-radius:5px;background:var(--p100);overflow:hidden;min-width:90px}
+.bar > span{position:absolute;inset:0 auto 0 0;background:linear-gradient(90deg,var(--p500),var(--ember));border-radius:5px}
+table.const{width:100%;border-collapse:collapse;font-size:12.5px;margin:12px 0;background:#fff;border:1px solid var(--divider);border-radius:10px;overflow:hidden}
+table.const th{background:var(--p700);color:#fff;text-align:left;padding:8px 11px;font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase}
+table.const td{padding:7px 11px;border-top:1px solid #eef1f4;vertical-align:top}
+table.const td:first-child{font-weight:600;color:var(--p900);white-space:nowrap}
+table.const td b{color:var(--ember);font-family:var(--mono);font-size:12px}
+.sirquote{margin:14px 0 6px;padding:12px 16px 11px;background:linear-gradient(180deg,var(--p50),#fff);border:1px solid var(--divider);border-left:3px solid var(--ember);border-radius:0 10px 10px 0}
+.sirquote .sqlab{display:block;font-family:var(--mono);font-size:9px;letter-spacing:.09em;text-transform:uppercase;color:var(--ember);font-weight:700;margin-bottom:6px}
+.sirquote blockquote{margin:0;font-size:14px;line-height:1.5;color:var(--p900);font-weight:600}
+.sirquote .sqsub{display:block;font-weight:400;font-style:italic;color:var(--p700);font-size:12.5px;margin-top:4px}
+.sirquote cite{display:block;margin-top:8px;font-style:normal;font-family:var(--mono);font-size:10.5px;color:var(--muted)}
+.artleg{display:flex;flex-wrap:wrap;gap:8px 14px;margin:14px 0;font-size:11.5px}
+.artleg .k{display:inline-flex;align-items:center;gap:7px}
+.artleg .sw{width:15px;height:15px;border-radius:4px;flex:0 0 auto}
+.wrapx{overflow-x:auto}
+</style>
+</head>
+<body>
+<header class="masthead">
+  <div class="kicker">DILIGENCE · SIR · GEO-SPATIAL REASONING</div>
+  <h1>How the SIR Reasons in Space — Findings &amp; Their Evidence Chains</h1>
+  <p>A companion to <code>README.md</code> in this folder. It restates every geo-spatial finding of the
+  <b>Fegenbush Ln @ Bardstown Rd</b> car-wash SIR, then — for each one — draws a <b>sequence diagram</b> showing the
+  data and artifacts the agent pulls, and the exact moment it reasons its way to the conclusion it writes.
+  The flagship case (<a href="#f-R4" class="idxlink" style="color:var(--p200)">R4</a>) shows the operator concept plan
+  and the county-clerk-pulled drainage-easement image converging on the ~1.56-ac buildable conclusion.</p>
+  <div class="meta">sibling of architecture-overview.html · spec-kit v3 · source: sir_artifact 55a2720c · 118-pp SIR · click a tab ↓</div>
+</header>
+
+<nav class="tabs">
+  <button data-tab="overview" class="active"><span class="n">01</span>Coverage &amp; Index</button>
+  <button data-tab="top"><span class="n">02</span>Top Risks &amp; Opportunities · reasoning chains</button>
+  <button data-tab="anc"><span class="n">03</span>Ancillary Findings · reasoning chains</button>
+</nav>
+<main>
+
+<section class="panel active" id="overview">
+  <h2><span class="eyebrow">Tab 1</span>How much of the SIR is geo-spatial — and where each finding lives</h2>
+  <p class="lede">Geo-spatial reasoning is the SIR's dominant analytical mode: it drives ~5 of every 6 top risks and 4 of
+  every 5 discipline sections. This tab is the map; Tabs 2–3 open each finding's evidence chain.</p>
+
+  <h3><span class="hn">1</span>Coverage at a glance</h3>
+  <div class="wrapx"><table class="cov">
+    <thead><tr><th>Category</th><th>Geo-spatial / total</th><th>%</th><th>share</th><th>the non-geospatial remainder</th></tr></thead>
+    <tbody>
+      <tr><td><b>Top risks</b> (§1.3)</td><td class="xy">6 / 7</td><td class="pct" style="color:var(--ember)">86%</td><td><div class="bar"><span style="width:86%"></span></div></td><td>R1 approval-path — code text vs. local practice</td></tr>
+      <tr><td><b>Top opportunities</b> (§1.4)</td><td class="xy">2 / 3</td><td class="pct" style="color:var(--p600)">67%</td><td><div class="bar"><span style="width:67%"></span></div></td><td>O3 OZ-2.0 finalist — financing eligibility</td></tr>
+      <tr class="tot"><td><b>Top-line combined</b></td><td class="xy">8 / 10</td><td class="pct" style="color:var(--ember)">80%</td><td><div class="bar"><span style="width:80%"></span></div></td><td>R1, O3</td></tr>
+      <tr><td><b>Discipline sections</b> (§8.1–§8.10)</td><td class="xy">8 / 10</td><td class="pct" style="color:var(--ember)">80%</td><td><div class="bar"><span style="width:80%"></span></div></td><td>§8.8 Water/Wastewater, §8.10 Parks — availability/fees</td></tr>
+    </tbody>
+  </table></div>
+  <div class="callout"><span class="lab">note on labels</span><code>R#</code>/<code>O#</code> mirror the SIR's own top-risk / top-opportunity ordering.
+  <b><code>A1</code>–<code>A10</code> are labels assigned by this report</b>, not SIR-native IDs — they collect the geo-spatial
+  findings from the 10 Discipline Findings (§8), Parcel Facts (§2), Demand (§9) and the appendices, i.e. everything outside the two
+  enumerated top-line lists. The 8/10 discipline ratio is the honest denominator for that bucket.</div>
+
+  <h3><span class="hn">2</span>The full index <span style="font-family:var(--mono);font-size:11px;font-weight:400;color:var(--muted)">— click a number to jump to its reasoning chain</span></h3>
+  <div class="wrapx"><table class="idx">
+    <thead><tr><th>#</th><th>Finding</th><th>SIR&nbsp;p.</th><th>Severity</th><th>Spatial operation</th></tr></thead>
+    <tbody><tr><td class="c-num"><a href="#f-ORI" class="idxlink">§0</a></td><td>Site-orientation foundation</td><td class="c-pg">11, 39</td><td>—</td><td class="c-op">Bearing/azimuth geometry, adjacency</td></tr><tr><td class="c-num"><a href="#f-R2" class="idxlink">R2</a></td><td>Plan-certain overlay on the larger lot only</td><td class="c-pg">5</td><td>Significant</td><td class="c-op">Polygon containment</td></tr><tr><td class="c-num"><a href="#f-R3" class="idxlink">R3</a></td><td>State-route frontages → permit + stacking to KY-864</td><td class="c-pg">6</td><td>Significant</td><td class="c-op">Frontage/throat geometry, sight triangle</td></tr><tr><td class="c-num"><a href="#f-R4" class="idxlink">R4</a></td><td>Detention-governed buildable area (the example)</td><td class="c-pg">6</td><td>Significant</td><td class="c-op">Area subtraction, basin-siting conflict</td></tr><tr><td class="c-num"><a href="#f-R5" class="idxlink">R5</a></td><td>Karst forces lined basins &amp; constrains siting</td><td class="c-pg">6</td><td>Significant</td><td class="c-op">Mapped-terrain overlay, siting</td></tr><tr><td class="c-num"><a href="#f-R6" class="idxlink">R6</a></td><td>One public way in; 2nd fire access via cross-access</td><td class="c-pg">7</td><td>Significant</td><td class="c-op">Access-route topology, adjacency</td></tr><tr><td class="c-num"><a href="#f-R7" class="idxlink">R7</a></td><td>Adjacent petroleum release → Phase-I ESA</td><td class="c-pg">7</td><td>Significant</td><td class="c-op">Radius/proximity screen, gradient</td></tr><tr><td class="c-num"><a href="#f-O1" class="idxlink">O1</a></td><td>Constrained land double-duties as open space</td><td class="c-pg">7</td><td>Opportunity</td><td class="c-op">Area double-use overlay</td></tr><tr><td class="c-num"><a href="#f-O2" class="idxlink">O2</a></td><td>Off-site flood-compensation storage</td><td class="c-pg">8</td><td>Opportunity</td><td class="c-op">On-site vs off-site siting</td></tr><tr><td class="c-num"><a href="#f-A1" class="idxlink">A1</a></td><td>Marketed vs. recorded acreage reconciliation</td><td class="c-pg">13</td><td>Note</td><td class="c-op">Area reconciliation</td></tr><tr><td class="c-num"><a href="#f-A2" class="idxlink">A2</a></td><td>Map-pin re-anchored from Wawa to the pads</td><td class="c-pg">13</td><td>No constraint</td><td class="c-op">Point-in-polygon correction</td></tr><tr><td class="c-num"><a href="#f-A3" class="idxlink">A3</a></td><td>Setbacks, south buffer + Part 7 transition, replat</td><td class="c-pg">20</td><td>Moderate</td><td class="c-op">Setback/buffer geometry</td></tr><tr><td class="c-num"><a href="#f-A4" class="idxlink">A4</a></td><td>Floodplain cleared at the parcel centroid</td><td class="c-pg">21</td><td>No constraint</td><td class="c-op">Point-in-polygon zone test</td></tr><tr><td class="c-num"><a href="#f-A5" class="idxlink">A5</a></td><td>Easement attribution (burden on the Wawa)</td><td class="c-pg">16</td><td>Moderate/Note</td><td class="c-op">Easement-to-parcel attribution</td></tr><tr><td class="c-num"><a href="#f-A6" class="idxlink">A6</a></td><td>Streams/wetlands proximity + buffer bands</td><td class="c-pg">35</td><td>Note</td><td class="c-op">Buffer proximity (500 m), bands</td></tr><tr><td class="c-num"><a href="#f-A7" class="idxlink">A7</a></td><td>Slope/DEM sweep, airport, pipelines</td><td class="c-pg">35</td><td>Note</td><td class="c-op">DEM terrain analysis, proximity</td></tr><tr><td class="c-num"><a href="#f-A8" class="idxlink">A8</a></td><td>On-pad transformer/equipment siting conflict</td><td class="c-pg">74</td><td>Moderate</td><td class="c-op">Equipment-vs-buildable siting</td></tr><tr><td class="c-num"><a href="#f-A9" class="idxlink">A9</a></td><td>Special-district &amp; overlay containment</td><td class="c-pg">62</td><td>Note</td><td class="c-op">Point-in-polygon / overlay null</td></tr><tr><td class="c-num"><a href="#f-A10" class="idxlink">A10</a></td><td>Competitor proximity &amp; radial demand rings</td><td class="c-pg">52</td><td>Note</td><td class="c-op">Radius/ring proximity screen</td></tr></tbody>
+  </table></div>
+
+  <h3><span class="hn">3</span>The load-bearing spatial constants</h3>
+  <p>A handful of measured facts recur across the whole report and back most findings.</p>
+  <div class="wrapx"><table class="const">
+    <thead><tr><th>Constant</th><th>Value</th><th>Where it drives a finding</th></tr></thead>
+    <tbody>
+      <tr><td>Subject centroid</td><td><b>38.184861, -85.636991</b></td><td>every point-in-polygon zone/district test</td></tr>
+      <tr><td>Fegenbush frontage</td><td><b>369.36 ft</b>, bearing ~274° (normal 273.248°)</td><td>only public frontage — access, fire, setback</td></tr>
+      <tr><td>Union footprint</td><td><b>583 × 438 ft</b>, long axis 91.9° az</td><td>orientation, layout</td></tr>
+      <tr><td>South boundary</td><td><b>574.0 ft</b>, abuts apartments</td><td>buffer + Part 7 transition</td></tr>
+      <tr><td>Site area</td><td><b>158,179 sf (3.63 ac)</b></td><td>canopy %, buffer %, flow</td></tr>
+      <tr><td>Lot 3 gross → net</td><td><b>2.61 ac → ~1.56 ac</b> after detention</td><td>buildable-area squeeze (R4)</td></tr>
+      <tr><td>No-build strips</td><td><b>20-ft drainage</b> (~0.19 ac) + 15-ft sanitary</td><td>basin / lateral / structure siting</td></tr>
+      <tr><td>Dairy Mart release</td><td><b>~120–150 m NW</b> / up-cross-gradient</td><td>Phase-I priority (R7)</td></tr>
+      <tr><td>ZIPS competitor</td><td><b>~0.13 mi (~700 ft)</b></td><td>demand (A10)</td></tr>
+      <tr><td>ROW at corner</td><td><b>0.488 ac</b> + sight-distance easement</td><td>driveway window (R3)</td></tr>
+      <tr><td>Cross-access easement</td><td><b>0.392 ac</b>, through the Wawa</td><td>second fire egress (R6)</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3><span class="hn">4</span>How to read the reasoning chains</h3>
+  <p>Every finding in Tabs 2–3 gets a sequence diagram in one visual language. The <b style="color:var(--ember)">agent</b>
+  lifeline (leftmost, ember) pulls data from sources to its right, reasons, and writes to the SIR.</p>
+  <div class="artleg">
+    <span class="k"><span class="sw" style="background:#bb4d00"></span> discipline agent</span>
+    <span class="k"><span class="sw" style="background:#2d4559"></span> operator artifact (concept plan · flyer · pin)</span>
+    <span class="k"><span class="sw" style="background:#0f7a5f"></span> county-clerk / recorded instrument</span>
+    <span class="k"><span class="sw" style="background:#6b3fa0"></span> GIS / MCP map layer (LOJIC · FEMA · SSURGO · EPA · NHD)</span>
+    <span class="k"><span class="sw" style="background:#3f6582"></span> deterministic geometry / geodesy</span>
+    <span class="k"><span class="sw" style="background:#35526b"></span> the SIR (write target)</span>
+  </div>
+  <div class="seqcap"><b>reasoning sequence</b><span class="k"><span class="ln"></span> data call</span><span class="k"><span class="ln ret"></span> data returned</span><span class="k">↻ deterministic step</span><span class="k"><span style="color:#bb4d00;font-weight:700">↻ ember</span> agent reasons</span><span class="k"><span style="color:#bb4d00;font-weight:700">→</span> conclusion written to SIR</span><span class="k"><span class="nb">N</span> data input, keyed below</span></div>
+</section>
+<section class="panel" id="top">
+  <h2><span class="eyebrow">Tab 2</span>Top risks &amp; opportunities — data in, reasoning, conclusion out</h2>
+  <p class="lede">The eight geo-spatial top-line findings. Each diagram is read top-to-bottom: the agent gathers artifacts and
+  layer queries (numbered returns), then the <b style="color:var(--ember)">ember self-loops</b> are the moment it reasons,
+  and the <b style="color:var(--ember)">ember arrow</b> is the sentence it writes.</p>
+  <div class="sd-group">Foundation every finding inherits</div>
+  
+  <div class="stepdetail" id="f-ORI">
+    <div class="sdh"><span class="sid">§0</span><span class="sttl">Site-orientation foundation</span>
+      <span class="kb mdl">foundation</span>
+      <span class="kb" style="background:rgba(255,255,255,.16);color:#fff">SIR p.&nbsp;11, 39</span></div>
+    <div class="sdb">
+      <div class="sirquote"><span class="sqlab">as written in the Site Intelligence Report</span><blockquote>&ldquo;The lots front Fegenbush Ln (KY-864) on their west edge, the only public frontage. … North-up (GIS default, compass not engaged). The combined footprint runs roughly 583&nbsp;ft east–west by 438&nbsp;ft north–south.&rdquo;</blockquote><cite>&mdash;&nbsp;&sect;1.2 Site Orientation &middot; p.&nbsp;11</cite></div>
+      <p>Before any discipline reasons, one step measures the frame every later finding inherits: the single west frontage located by bearing against the centroid longitude, the union footprint's long axis, and the N/S/E/W adjacencies. A marketing flyer is checked for a north arrow and found to have none, so no cardinal reconciliation is possible — the agent records that explicitly rather than guessing.</p>
+      <p style="font-size:12px;color:#6b7280;margin:2px 0 0"><b style="font-family:var(--mono);font-size:10.5px;color:#35526b">SPATIAL OP</b> &nbsp;Bearing / azimuth geometry · cardinal adjacency &nbsp;·&nbsp; <b style="font-family:var(--mono);font-size:10.5px;color:#35526b">SIR</b> &nbsp;§1.2 Site &amp; Jurisdiction · Appx D</p>
+      <div class="seqfig"><svg viewBox="0 0 873 414" width="100%" role="img" aria-label="Reasoning sequence for finding ORI — Site-orientation foundation" xmlns="http://www.w3.org/2000/svg" font-family="'Fira Code','SF Mono',ui-monospace,Menlo,monospace">
+<defs><marker id="ah" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#3f6582"/></marker><marker id="ahe" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#bb4d00"/></marker><marker id="ret" markerWidth="10" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6" fill="none" stroke="#6b7280" stroke-width="1.2"/></marker></defs>
+<rect x="0" y="0" width="873" height="414" fill="#ffffff"/>
+<rect x="70" y="72" width="10" height="328" rx="2" fill="#bb4d00" opacity="0.10"/>
+<line x1="75" y1="52" x2="75" y2="400" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="2" y="6" width="146" height="46" rx="8" fill="#bb4d00"/>
+<text x="75" y="25" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12" font-weight="700" fill="#fff">Site Agent</text>
+<text x="75" y="41" text-anchor="middle" font-size="8.5" fill="#ffffff" opacity="0.82">§1.2 · opus</text>
+<line x1="247" y1="52" x2="247" y2="400" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="174" y="6" width="146" height="46" rx="8" fill="#6b3fa0"/>
+<text x="247" y="25" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12" font-weight="700" fill="#fff">County GIS</text>
+<text x="247" y="41" text-anchor="middle" font-size="8.5" fill="#ffffff" opacity="0.82">parcel geom</text>
+<line x1="419" y1="52" x2="419" y2="400" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="346" y="6" width="146" height="46" rx="8" fill="#3f6582"/>
+<text x="419" y="25" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12" font-weight="700" fill="#fff">OSM roads</text>
+<text x="419" y="41" text-anchor="middle" font-size="8.5" fill="#ffffff" opacity="0.82">Overpass trace</text>
+<line x1="591" y1="52" x2="591" y2="400" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="518" y="6" width="146" height="46" rx="8" fill="#2d4559"/>
+<text x="591" y="25" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12" font-weight="700" fill="#fff">Flyer</text>
+<text x="591" y="41" text-anchor="middle" font-size="8.5" fill="#ffffff" opacity="0.82">operator graphic</text>
+<line x1="763" y1="52" x2="763" y2="400" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="690" y="6" width="146" height="46" rx="8" fill="#35526b"/>
+<text x="763" y="25" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12" font-weight="700" fill="#fff">SIR seed</text>
+<text x="763" y="41" text-anchor="middle" font-size="8.5" fill="#ffffff" opacity="0.82">orientation</text>
+<line x1="75" y1="86" x2="241" y2="86" stroke="#3f6582" stroke-width="1.4" marker-end="url(#ah)"/>
+<text x="158.0" y="81" text-anchor="middle" font-size="10" fill="#1f2937">fetch parcel rings @ pads</text>
+<line x1="247" y1="120" x2="84" y2="120" stroke="#6b7280" stroke-width="1.4" stroke-dasharray="5 4"/>
+<text x="161.0" y="115" text-anchor="middle" font-size="10" fill="#6b7280">union footprint 583×438 ft · W edge</text>
+<circle cx="75" cy="120" r="9" fill="#3f6582" stroke="#fff" stroke-width="1.5"/>
+<text x="75" y="123.4" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">1</text>
+<path d="M419,154 h20 v16 h-20" fill="none" stroke="#3f6582" stroke-width="1.3" marker-end="url(#ah)"/>
+<text x="445" y="160" text-anchor="start" font-size="10" fill="#35526b">_access_trace.py — OSM frontage</text>
+<line x1="419" y1="188" x2="84" y2="188" stroke="#6b7280" stroke-width="1.4" stroke-dasharray="5 4"/>
+<text x="247.0" y="183" text-anchor="middle" font-size="10" fill="#6b7280">Fegenbush 369.36 ft · bearing 274.03°</text>
+<circle cx="75" cy="188" r="9" fill="#3f6582" stroke="#fff" stroke-width="1.5"/>
+<text x="75" y="191.4" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">2</text>
+<line x1="75" y1="222" x2="585" y2="222" stroke="#3f6582" stroke-width="1.4" marker-end="url(#ah)"/>
+<text x="330.0" y="217" text-anchor="middle" font-size="10" fill="#1f2937">read marketing flyer graphic</text>
+<line x1="591" y1="256" x2="84" y2="256" stroke="#6b7280" stroke-width="1.4" stroke-dasharray="5 4"/>
+<text x="333.0" y="251" text-anchor="middle" font-size="10" fill="#6b7280">no north arrow present</text>
+<circle cx="75" cy="256" r="9" fill="#3f6582" stroke="#fff" stroke-width="1.5"/>
+<text x="75" y="259.4" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">3</text>
+<path d="M75,290 h22 v16 h-22" fill="none" stroke="#bb4d00" stroke-width="1.7" marker-end="url(#ahe)"/>
+<text x="103" y="296" text-anchor="start" font-size="10" fill="#bb4d00" font-weight="700">long axis 91.9° az; frontage W of centroid lon; Wawa N / apts S</text>
+<path d="M75,324 h22 v16 h-22" fill="none" stroke="#bb4d00" stroke-width="1.7" marker-end="url(#ahe)"/>
+<text x="103" y="330" text-anchor="start" font-size="10" fill="#bb4d00" font-weight="700">no plan-north ⇒ cardinal delta vacuous (recorded, not guessed)</text>
+<line x1="75" y1="358" x2="757" y2="358" stroke="#bb4d00" stroke-width="1.8" marker-end="url(#ahe)"/>
+<text x="416.0" y="353" text-anchor="middle" font-size="10" fill="#bb4d00" font-weight="700">write measured orientation → seeds all §8 disciplines</text>
+</svg></div>
+      <div class="seqcap"><b>reasoning sequence</b><span class="k"><span class="ln"></span> data call</span><span class="k"><span class="ln ret"></span> data returned</span><span class="k">↻ deterministic step</span><span class="k"><span style="color:#bb4d00;font-weight:700">↻ ember</span> agent reasons</span><span class="k"><span style="color:#bb4d00;font-weight:700">→</span> conclusion written to SIR</span><span class="k"><span class="nb">N</span> data input, keyed below</span></div>
+      <div class="rrxh">what data feeds this finding <span class="hint">— numbered to match the <b>data-returned</b> badges on the agent lifeline</span></div>
+      <dl class="sdmeta"><dt>1</dt><dd><code>parcel-geometry</code> (county GIS) — union polygon 583×438 ft, pads front the west edge</dd><dt>2</dt><dd><code>_access_trace.py</code> over OSM/Overpass — Fegenbush frontage 369.36 ft, outward normal 273.248°, one approach</dd><dt>3</dt><dd>operator marketing flyer — the only graphic, and it carries <b>no north arrow</b></dd></dl>
+      <div class="callout ember"><span class="lab">the conclusion the agent writes to the SIR</span>"The parcel has exactly one frontage: Fegenbush Lane, bearing 274.03° … The union footprint measures 583 ft (E–W) × 438 ft (N–S), long axis 91.9° azimuth."</div>
+    </div>
+  </div>
+  <div class="sd-group">The six geo-spatial top risks</div>
+  
+  <div class="stepdetail" id="f-R2">
+    <div class="sdh"><span class="sid">R2</span><span class="sttl">Plan-certain overlay on the larger lot only</span>
+      <span class="kb k-check">significant</span>
+      <span class="kb" style="background:rgba(255,255,255,.16);color:#fff">SIR p.&nbsp;5</span></div>
+    <div class="sdb">
+      <div class="sirquote"><span class="sqlab">as written in the Site Intelligence Report</span><blockquote>&ldquo;A recorded development plan sits on the larger lot and may force a plan amendment for a car wash&rdquo;<span class="sqsub">The 2.61-ac lot is inside a plan-certain overlay; the 1.02-ac lot is not.</span></blockquote><cite>&mdash;&nbsp;&sect;1.3 Top risks &middot; p.&nbsp;5</cite></div>
+      <p>A pure point-and-polygon test. The base zoning is confirmed by a point-query at the pad centroid; the binding development plan is a recorded polygon. The entitlement fork turns entirely on which of the two lots falls inside that polygon.</p>
+      <p style="font-size:12px;color:#6b7280;margin:2px 0 0"><b style="font-family:var(--mono);font-size:10.5px;color:#35526b">SPATIAL OP</b> &nbsp;Polygon containment (one lot in, one out) &nbsp;·&nbsp; <b style="font-family:var(--mono);font-size:10.5px;color:#35526b">SIR</b> &nbsp;§1.3 · §8.1 Zoning · Appx J/T</p>
+      <div class="seqfig"><svg viewBox="0 0 873 380" width="100%" role="img" aria-label="Reasoning sequence for finding R2 — Plan-certain overlay on the larger lot only" xmlns="http://www.w3.org/2000/svg" font-family="'Fira Code','SF Mono',ui-monospace,Menlo,monospace">
+<defs><marker id="ah" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#3f6582"/></marker><marker id="ahe" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#bb4d00"/></marker><marker id="ret" markerWidth="10" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6" fill="none" stroke="#6b7280" stroke-width="1.2"/></marker></defs>
+<rect x="0" y="0" width="873" height="380" fill="#ffffff"/>
+<rect x="70" y="72" width="10" height="294" rx="2" fill="#bb4d00" opacity="0.10"/>
+<line x1="75" y1="52" x2="75" y2="366" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="2" y="6" width="146" height="46" rx="8" fill="#bb4d00"/>
+<text x="75" y="25" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12" font-weight="700" fill="#fff">Zoning Agent</text>
+<text x="75" y="41" text-anchor="middle" font-size="8.5" fill="#ffffff" opacity="0.82">§8.1</text>
+<line x1="247" y1="52" x2="247" y2="366" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="174" y="6" width="146" height="46" rx="8" fill="#6b3fa0"/>
+<text x="247" y="25" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12" font-weight="700" fill="#fff">LOJIC</text>
+<text x="247" y="41" text-anchor="middle" font-size="8.5" fill="#ffffff" opacity="0.82">zoning layer</text>
+<line x1="419" y1="52" x2="419" y2="366" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="346" y="6" width="146" height="46" rx="8" fill="#0f7a5f"/>
+<text x="419" y="25" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12" font-weight="700" fill="#fff">Metro plan</text>
+<text x="419" y="41" text-anchor="middle" font-size="8.5" fill="#ffffff" opacity="0.82">20-ZONE-0006</text>
+<line x1="591" y1="52" x2="591" y2="366" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="518" y="6" width="146" height="46" rx="8" fill="#3f6582"/>
+<text x="591" y="25" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12" font-weight="700" fill="#fff">geom</text>
+<text x="591" y="41" text-anchor="middle" font-size="8.5" fill="#ffffff" opacity="0.82">point-in-poly</text>
+<line x1="763" y1="52" x2="763" y2="366" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="690" y="6" width="146" height="46" rx="8" fill="#35526b"/>
+<text x="763" y="25" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12" font-weight="700" fill="#fff">SIR</text>
+<text x="763" y="41" text-anchor="middle" font-size="8.5" fill="#ffffff" opacity="0.82">§8.1 write</text>
+<line x1="75" y1="86" x2="241" y2="86" stroke="#3f6582" stroke-width="1.4" marker-end="url(#ah)"/>
+<text x="158.0" y="81" text-anchor="middle" font-size="10" fill="#1f2937">point-query zoning @ pad centroid</text>
+<line x1="247" y1="120" x2="84" y2="120" stroke="#6b7280" stroke-width="1.4" stroke-dasharray="5 4"/>
+<text x="161.0" y="115" text-anchor="middle" font-size="10" fill="#6b7280">C-1 at primary pad</text>
+<circle cx="75" cy="120" r="9" fill="#3f6582" stroke="#fff" stroke-width="1.5"/>
+<text x="75" y="123.4" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">1</text>
+<line x1="75" y1="154" x2="413" y2="154" stroke="#3f6582" stroke-width="1.4" marker-end="url(#ah)"/>
+<text x="244.0" y="149" text-anchor="middle" font-size="10" fill="#1f2937">pull binding plan 20-ZONE-0006 polygon (~6.52 ac)</text>
+<line x1="419" y1="188" x2="84" y2="188" stroke="#6b7280" stroke-width="1.4" stroke-dasharray="5 4"/>
+<text x="247.0" y="183" text-anchor="middle" font-size="10" fill="#6b7280">plan polygon geometry</text>
+<circle cx="75" cy="188" r="9" fill="#3f6582" stroke="#fff" stroke-width="1.5"/>
+<text x="75" y="191.4" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">2</text>
+<path d="M591,222 h20 v16 h-20" fill="none" stroke="#3f6582" stroke-width="1.3" marker-end="url(#ah)"/>
+<text x="617" y="228" text-anchor="start" font-size="10" fill="#35526b">point-in-polygon: each pad vs plan polygon</text>
+<line x1="591" y1="256" x2="84" y2="256" stroke="#6b7280" stroke-width="1.4" stroke-dasharray="5 4"/>
+<text x="333.0" y="251" text-anchor="middle" font-size="10" fill="#6b7280">Lot 3 061801410000 IN · Lot 2 061801400000 OUT</text>
+<circle cx="75" cy="256" r="9" fill="#3f6582" stroke="#fff" stroke-width="1.5"/>
+<text x="75" y="259.4" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">3</text>
+<path d="M75,290 h22 v16 h-22" fill="none" stroke="#bb4d00" stroke-width="1.7" marker-end="url(#ahe)"/>
+<text x="103" y="296" text-anchor="start" font-size="10" fill="#bb4d00" font-weight="700">entitlement fork = which lot ⊂ plan-certain overlay</text>
+<line x1="75" y1="324" x2="757" y2="324" stroke="#bb4d00" stroke-width="1.8" marker-end="url(#ahe)"/>
+<text x="416.0" y="319" text-anchor="middle" font-size="10" fill="#bb4d00" font-weight="700">write R2: 2.61-ac lot inside overlay; 1.02-ac lot not [V]</text>
+</svg></div>
+      <div class="seqcap"><b>reasoning sequence</b><span class="k"><span class="ln"></span> data call</span><span class="k"><span class="ln ret"></span> data returned</span><span class="k">↻ deterministic step</span><span class="k"><span style="color:#bb4d00;font-weight:700">↻ ember</span> agent reasons</span><span class="k"><span style="color:#bb4d00;font-weight:700">→</span> conclusion written to SIR</span><span class="k"><span class="nb">N</span> data input, keyed below</span></div>
+      <div class="rrxh">what data feeds this finding <span class="hint">— numbered to match the <b>data-returned</b> badges on the agent lifeline</span></div>
+      <dl class="sdmeta"><dt>1</dt><dd>LOJIC Zoning layer — C-1 by point-query at the primary-pad centroid</dd><dt>2</dt><dd>Metro planning record — binding plan 20-ZONE-0006 polygon (~6.52 ac)</dd><dt>3</dt><dd>point-in-polygon test — Lot 3 inside, Lot 2 outside</dd></dl>
+      <div class="callout ember"><span class="lab">the conclusion the agent writes to the SIR</span>"The 2.61-ac lot is inside a plan-certain overlay; the 1.02-ac lot is not." … "The 20-ZONE-0006 polygon (~6.52 ac) covers only Lot 3 … Lot 2 is outside it [V]."</div>
+    </div>
+  </div>
+  <div class="stepdetail" id="f-R3">
+    <div class="sdh"><span class="sid">R3</span><span class="sttl">State-route frontages → permit + stacking sized to the frontage</span>
+      <span class="kb k-check">significant</span>
+      <span class="kb" style="background:rgba(255,255,255,.16);color:#fff">SIR p.&nbsp;6</span></div>
+    <div class="sdb">
+      <div class="sirquote"><span class="sqlab">as written in the Site Intelligence Report</span><blockquote>&ldquo;Both frontages are state routes, so the driveway is a state entrance permit and stacking must be sized to it&rdquo;<span class="sqsub">Access is a KYTC pass/fail that constrains the whole layout.</span></blockquote><cite>&mdash;&nbsp;&sect;1.3 Top risks &middot; p.&nbsp;6</cite></div>
+      <p>Access is a spatial pass/fail. Which road physically touches the parcel sets the permit jurisdiction; then the queue must fit perpendicular into a footprint already compressed by setbacks, clear of the recorded corner sight-distance easement.</p>
+      <p style="font-size:12px;color:#6b7280;margin:2px 0 0"><b style="font-family:var(--mono);font-size:10.5px;color:#35526b">SPATIAL OP</b> &nbsp;Frontage &amp; throat geometry · corner sight triangle &nbsp;·&nbsp; <b style="font-family:var(--mono);font-size:10.5px;color:#35526b">SIR</b> &nbsp;§1.3 · §8.7 Transportation · Appx H/R</p>
+      <div class="seqfig"><svg viewBox="0 0 1045 448" width="100%" role="img" aria-label="Reasoning sequence for finding R3 — State-route frontages → permit + stacking sized to the frontage" xmlns="http://www.w3.org/2000/svg" font-family="'Fira Code','SF Mono',ui-monospace,Menlo,monospace">
+<defs><marker id="ah" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#3f6582"/></marker><marker id="ahe" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#bb4d00"/></marker><marker id="ret" markerWidth="10" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6" fill="none" stroke="#6b7280" stroke-width="1.2"/></marker></defs>
+<rect x="0" y="0" width="1045" height="448" fill="#ffffff"/>
+<rect x="70" y="72" width="10" height="362" rx="2" fill="#bb4d00" opacity="0.10"/>
+<line x1="75" y1="52" x2="75" y2="434" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="2" y="6" width="146" height="46" rx="8" fill="#bb4d00"/>
+<text x="75" y="25" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12" font-weight="700" fill="#fff">Transport Agent</text>
+<text x="75" y="41" text-anchor="middle" font-size="8.5" fill="#ffffff" opacity="0.82">§8.7</text>
+<line x1="247" y1="52" x2="247" y2="434" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="174" y="6" width="146" height="46" rx="8" fill="#3f6582"/>
+<text x="247" y="25" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12" font-weight="700" fill="#fff">OSM</text>
+<text x="247" y="41" text-anchor="middle" font-size="8.5" fill="#ffffff" opacity="0.82">frontage trace</text>
+<line x1="419" y1="52" x2="419" y2="434" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="346" y="6" width="146" height="46" rx="8" fill="#6b3fa0"/>
+<text x="419" y="25" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12" font-weight="700" fill="#fff">KYTC</text>
+<text x="419" y="41" text-anchor="middle" font-size="8.5" fill="#ffffff" opacity="0.82">route class</text>
+<line x1="591" y1="52" x2="591" y2="434" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="518" y="6" width="146" height="46" rx="8" fill="#0f7a5f"/>
+<text x="591" y="25" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12" font-weight="700" fill="#fff">Plat</text>
+<text x="591" y="41" text-anchor="middle" font-size="8.5" fill="#ffffff" opacity="0.82">2024 minor plat</text>
+<line x1="763" y1="52" x2="763" y2="434" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="690" y="6" width="146" height="46" rx="8" fill="#3f6582"/>
+<text x="763" y="25" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12" font-weight="700" fill="#fff">geom</text>
+<text x="763" y="41" text-anchor="middle" font-size="8.5" fill="#ffffff" opacity="0.82">throat/sight</text>
+<line x1="935" y1="52" x2="935" y2="434" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="862" y="6" width="146" height="46" rx="8" fill="#35526b"/>
+<text x="935" y="25" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12" font-weight="700" fill="#fff">SIR</text>
+<text x="935" y="41" text-anchor="middle" font-size="8.5" fill="#ffffff" opacity="0.82">§8.7 write</text>
+<path d="M247,86 h20 v16 h-20" fill="none" stroke="#3f6582" stroke-width="1.3" marker-end="url(#ah)"/>
+<text x="273" y="92" text-anchor="start" font-size="10" fill="#35526b">OSM frontage trace</text>
+<line x1="247" y1="120" x2="84" y2="120" stroke="#6b7280" stroke-width="1.4" stroke-dasharray="5 4"/>
+<text x="161.0" y="115" text-anchor="middle" font-size="10" fill="#6b7280">Fegenbush 369.36 ft · normal 273.248° · approaches = 1</text>
+<circle cx="75" cy="120" r="9" fill="#3f6582" stroke="#fff" stroke-width="1.5"/>
+<text x="75" y="123.4" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">1</text>
+<line x1="75" y1="154" x2="413" y2="154" stroke="#3f6582" stroke-width="1.4" marker-end="url(#ah)"/>
+<text x="244.0" y="149" text-anchor="middle" font-size="10" fill="#1f2937">route class Bardstown / Fegenbush</text>
+<line x1="419" y1="188" x2="84" y2="188" stroke="#6b7280" stroke-width="1.4" stroke-dasharray="5 4"/>
+<text x="247.0" y="183" text-anchor="middle" font-size="10" fill="#6b7280">US-31E/KY-150 &amp; KY-864 — both KYTC-maintained</text>
+<circle cx="75" cy="188" r="9" fill="#3f6582" stroke="#fff" stroke-width="1.5"/>
+<text x="75" y="191.4" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">2</text>
+<line x1="75" y1="222" x2="585" y2="222" stroke="#3f6582" stroke-width="1.4" marker-end="url(#ah)"/>
+<text x="330.0" y="217" text-anchor="middle" font-size="10" fill="#1f2937">pull 2024 minor plat @ corner</text>
+<line x1="591" y1="256" x2="84" y2="256" stroke="#6b7280" stroke-width="1.4" stroke-dasharray="5 4"/>
+<text x="333.0" y="251" text-anchor="middle" font-size="10" fill="#6b7280">ROW 0.488 ac dedicated + corner Sight Distance Easement</text>
+<circle cx="75" cy="256" r="9" fill="#3f6582" stroke="#fff" stroke-width="1.5"/>
+<text x="75" y="259.4" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">3</text>
+<path d="M763,290 h20 v16 h-20" fill="none" stroke="#3f6582" stroke-width="1.3" marker-end="url(#ah)"/>
+<text x="789" y="296" text-anchor="start" font-size="10" fill="#35526b">throat depth ⊥ into site; corner sight triangle + chamfer</text>
+<line x1="763" y1="324" x2="84" y2="324" stroke="#6b7280" stroke-width="1.4" stroke-dasharray="5 4"/>
+<text x="419.0" y="319" text-anchor="middle" font-size="10" fill="#6b7280">buildable depth compressed by SMC setback + carve-out</text>
+<circle cx="75" cy="324" r="9" fill="#3f6582" stroke="#fff" stroke-width="1.5"/>
+<text x="75" y="327.4" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">4</text>
+<path d="M75,358 h22 v16 h-22" fill="none" stroke="#bb4d00" stroke-width="1.7" marker-end="url(#ahe)"/>
+<text x="103" y="364" text-anchor="start" font-size="10" fill="#bb4d00" font-weight="700">queue sized off KY-864 so stacking never spills to a state route</text>
+<line x1="75" y1="392" x2="929" y2="392" stroke="#bb4d00" stroke-width="1.8" marker-end="url(#ahe)"/>
+<text x="502.0" y="387" text-anchor="middle" font-size="10" fill="#bb4d00" font-weight="700">write R3: KYTC District-5 entrance permit; stack to frontage [V]</text>
+</svg></div>
+      <div class="seqcap"><b>reasoning sequence</b><span class="k"><span class="ln"></span> data call</span><span class="k"><span class="ln ret"></span> data returned</span><span class="k">↻ deterministic step</span><span class="k"><span style="color:#bb4d00;font-weight:700">↻ ember</span> agent reasons</span><span class="k"><span style="color:#bb4d00;font-weight:700">→</span> conclusion written to SIR</span><span class="k"><span class="nb">N</span> data input, keyed below</span></div>
+      <div class="rrxh">what data feeds this finding <span class="hint">— numbered to match the <b>data-returned</b> badges on the agent lifeline</span></div>
+      <dl class="sdmeta"><dt>1</dt><dd>OSM frontage trace — Fegenbush 369.36 ft, one approach, outward normal 273.248°</dd><dt>2</dt><dd>KYTC route designation — Bardstown (US-31E/KY-150) &amp; Fegenbush (KY-864) both state-maintained</dd><dt>3</dt><dd>2024 recorded minor plat — 0.488-ac ROW dedication + a corner Sight Distance Easement</dd><dt>4</dt><dd>throat/sight geometry — perpendicular queue depth vs. setback-compressed buildable depth</dd></dl>
+      <div class="callout ember"><span class="lab">the conclusion the agent writes to the SIR</span>"… the entrance is a KYTC District 5 permit — not a Metro permit [V]. An express wash's queue must be sized off the KY-864 frontage so stacking does not spill onto a state route."</div>
+    </div>
+  </div>
+  <div class="stepdetail" id="f-R4">
+    <div class="sdh"><span class="sid">R4</span><span class="sttl">Detention-governed buildable footprint — the canonical example</span>
+      <span class="kb k-agent">significant · flagship</span>
+      <span class="kb" style="background:rgba(255,255,255,.16);color:#fff">SIR p.&nbsp;6</span></div>
+    <div class="sdb">
+      <div class="sirquote"><span class="sqlab">as written in the Site Intelligence Report</span><blockquote>&ldquo;After a recorded drainage easement and detention, the 2.61-ac lot&rsquo;s buildable footprint is materially tighter than its gross acreage&rdquo;<span class="sqsub">The larger lot is detention-governed, not acreage-governed.</span></blockquote><cite>&mdash;&nbsp;&sect;1.3 Top risks &middot; p.&nbsp;6</cite></div>
+      <p>The report's flagship geo-spatial finding, and the one the user pointed at. It fuses <b>two artifacts</b> — the operator's concept plan / marketing graphic (which markets a net ~1.56 ac) and a <b>county-clerk-pulled recorded plat carrying the image of the 20-ft sewer/drainage easement</b> — against the county GIS gross area, then subtracts on the ground and detects that the wash's own basin wants the same footprint the easement already occupies. That overlap is <em>where and when</em> the agent concludes buildable land is reduced.</p>
+      <p style="font-size:12px;color:#6b7280;margin:2px 0 0"><b style="font-family:var(--mono);font-size:10.5px;color:#35526b">SPATIAL OP</b> &nbsp;Area subtraction + basin-siting overlay conflict &nbsp;·&nbsp; <b style="font-family:var(--mono);font-size:10.5px;color:#35526b">SIR</b> &nbsp;§1.3 · §8.3 Stormwater · Appx B/P</p>
+      <div class="seqfig"><svg viewBox="0 0 1045 482" width="100%" role="img" aria-label="Reasoning sequence for finding R4 — Detention-governed buildable footprint — the canonical example" xmlns="http://www.w3.org/2000/svg" font-family="'Fira Code','SF Mono',ui-monospace,Menlo,monospace">
+<defs><marker id="ah" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#3f6582"/></marker><marker id="ahe" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#bb4d00"/></marker><marker id="ret" markerWidth="10" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6" fill="none" stroke="#6b7280" stroke-width="1.2"/></marker></defs>
+<rect x="0" y="0" width="1045" height="482" fill="#ffffff"/>
+<rect x="70" y="72" width="10" height="396" rx="2" fill="#bb4d00" opacity="0.10"/>
+<line x1="75" y1="52" x2="75" y2="468" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="2" y="6" width="146" height="46" rx="8" fill="#bb4d00"/>
+<text x="75" y="25" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12" font-weight="700" fill="#fff">Stormwater Agent</text>
+<text x="75" y="41" text-anchor="middle" font-size="8.5" fill="#ffffff" opacity="0.82">§8.3</text>
+<line x1="247" y1="52" x2="247" y2="468" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="174" y="6" width="146" height="46" rx="8" fill="#2d4559"/>
+<text x="247" y="25" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12" font-weight="700" fill="#fff">Flyer</text>
+<text x="247" y="41" text-anchor="middle" font-size="8.5" fill="#ffffff" opacity="0.82">concept plan</text>
+<line x1="419" y1="52" x2="419" y2="468" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="346" y="6" width="146" height="46" rx="8" fill="#6b3fa0"/>
+<text x="419" y="25" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12" font-weight="700" fill="#fff">County GIS</text>
+<text x="419" y="41" text-anchor="middle" font-size="8.5" fill="#ffffff" opacity="0.82">parcel area</text>
+<line x1="591" y1="52" x2="591" y2="468" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="518" y="6" width="146" height="46" rx="8" fill="#0f7a5f"/>
+<text x="591" y="25" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12" font-weight="700" fill="#fff">Clerk plat</text>
+<text x="591" y="41" text-anchor="middle" font-size="8.5" fill="#ffffff" opacity="0.82">drainage esmt img</text>
+<line x1="763" y1="52" x2="763" y2="468" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="690" y="6" width="146" height="46" rx="8" fill="#3f6582"/>
+<text x="763" y="25" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12" font-weight="700" fill="#fff">geom</text>
+<text x="763" y="41" text-anchor="middle" font-size="8.5" fill="#ffffff" opacity="0.82">area / geodesy</text>
+<line x1="935" y1="52" x2="935" y2="468" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="862" y="6" width="146" height="46" rx="8" fill="#35526b"/>
+<text x="935" y="25" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12" font-weight="700" fill="#fff">SIR</text>
+<text x="935" y="41" text-anchor="middle" font-size="8.5" fill="#ffffff" opacity="0.82">§8.3 write</text>
+<line x1="75" y1="86" x2="241" y2="86" stroke="#3f6582" stroke-width="1.4" marker-end="url(#ah)"/>
+<text x="158.0" y="81" text-anchor="middle" font-size="10" fill="#1f2937">read operator concept plan — marketed ~1.56 ac net</text>
+<line x1="247" y1="120" x2="84" y2="120" stroke="#6b7280" stroke-width="1.4" stroke-dasharray="5 4"/>
+<text x="161.0" y="115" text-anchor="middle" font-size="10" fill="#6b7280">flyer net area (no gross basis given)</text>
+<circle cx="75" cy="120" r="9" fill="#3f6582" stroke="#fff" stroke-width="1.5"/>
+<text x="75" y="123.4" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">1</text>
+<line x1="75" y1="154" x2="413" y2="154" stroke="#3f6582" stroke-width="1.4" marker-end="url(#ah)"/>
+<text x="244.0" y="149" text-anchor="middle" font-size="10" fill="#1f2937">query recorded area @ 061801410000</text>
+<line x1="419" y1="188" x2="84" y2="188" stroke="#6b7280" stroke-width="1.4" stroke-dasharray="5 4"/>
+<text x="247.0" y="183" text-anchor="middle" font-size="10" fill="#6b7280">county gross 2.6082 ac = 113,613.4 sf</text>
+<circle cx="75" cy="188" r="9" fill="#3f6582" stroke="#fff" stroke-width="1.5"/>
+<text x="75" y="191.4" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">2</text>
+<line x1="75" y1="222" x2="585" y2="222" stroke="#3f6582" stroke-width="1.4" marker-end="url(#ah)"/>
+<text x="330.0" y="217" text-anchor="middle" font-size="10" fill="#1f2937">pull county-clerk plat — sewer / drainage easement</text>
+<line x1="591" y1="256" x2="84" y2="256" stroke="#6b7280" stroke-width="1.4" stroke-dasharray="5 4"/>
+<text x="333.0" y="251" text-anchor="middle" font-size="10" fill="#6b7280">20-ft drainage easement (image) · DB 6516, interior band</text>
+<circle cx="75" cy="256" r="9" fill="#3f6582" stroke="#fff" stroke-width="1.5"/>
+<text x="75" y="259.4" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">3</text>
+<path d="M763,290 h20 v16 h-20" fill="none" stroke="#3f6582" stroke-width="1.3" marker-end="url(#ah)"/>
+<text x="789" y="296" text-anchor="start" font-size="10" fill="#35526b">area/geodesy: easement strip + detention remainder</text>
+<line x1="763" y1="324" x2="84" y2="324" stroke="#6b7280" stroke-width="1.4" stroke-dasharray="5 4"/>
+<text x="419.0" y="319" text-anchor="middle" font-size="10" fill="#6b7280">easement 8,317 sf (~0.19 ac) · remainder ~0.86 ac</text>
+<circle cx="75" cy="324" r="9" fill="#3f6582" stroke="#fff" stroke-width="1.5"/>
+<text x="75" y="327.4" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">4</text>
+<path d="M75,358 h22 v16 h-22" fill="none" stroke="#bb4d00" stroke-width="1.7" marker-end="url(#ahe)"/>
+<text x="103" y="364" text-anchor="start" font-size="10" fill="#bb4d00" font-weight="700">2.61 − 0.19 (easement) − 0.86 (detention) ≈ 1.56 ac buildable</text>
+<path d="M75,392 h22 v16 h-22" fill="none" stroke="#bb4d00" stroke-width="1.7" marker-end="url(#ahe)"/>
+<text x="103" y="398" text-anchor="start" font-size="10" fill="#bb4d00" font-weight="700">the wash&#x27;s own basin footprint overlaps the 20-ft easement corridor</text>
+<line x1="75" y1="426" x2="929" y2="426" stroke="#bb4d00" stroke-width="1.8" marker-end="url(#ahe)"/>
+<text x="502.0" y="421" text-anchor="middle" font-size="10" fill="#bb4d00" font-weight="700">write R4: buildable ~1.56 ac and the basin lands on top [V]</text>
+</svg></div>
+      <div class="seqcap"><b>reasoning sequence</b><span class="k"><span class="ln"></span> data call</span><span class="k"><span class="ln ret"></span> data returned</span><span class="k">↻ deterministic step</span><span class="k"><span style="color:#bb4d00;font-weight:700">↻ ember</span> agent reasons</span><span class="k"><span style="color:#bb4d00;font-weight:700">→</span> conclusion written to SIR</span><span class="k"><span class="nb">N</span> data input, keyed below</span></div>
+      <div class="rrxh">what data feeds this finding <span class="hint">— numbered to match the <b>data-returned</b> badges on the agent lifeline</span></div>
+      <dl class="sdmeta"><dt>1</dt><dd>operator concept plan / marketing graphic — markets a <b>net ~1.56 ac</b> with no gross basis</dd><dt>2</dt><dd>county GIS parcel record — <b>gross 2.6082 ac (113,613.4 sf)</b> at PARCELID 061801410000</dd><dt>3</dt><dd>county-clerk-pulled recorded plat — the <b>image of the 20-ft sewer/drainage easement</b> (DB 6516), an interior recorded band</dd><dt>4</dt><dd>area/geodesy script — easement ≈ 8,317 sf (0.19 ac); detention/undevelopable remainder ≈ 0.86 ac</dd></dl>
+      <div class="callout ember"><span class="lab">the conclusion the agent writes to the SIR</span>"Of the 2.61 ac gross, a recorded 20-ft drainage easement (~0.19 ac) plus an embedded detention remainder (~0.86 ac) leave roughly 1.56 ac, and the wash's own basin lands on top of that [V]."</div>
+    </div>
+  </div>
+  <div class="stepdetail" id="f-R5">
+    <div class="sdh"><span class="sid">R5</span><span class="sttl">Karst forces lined basins &amp; constrains basin siting</span>
+      <span class="kb k-check">significant</span>
+      <span class="kb" style="background:rgba(255,255,255,.16);color:#fff">SIR p.&nbsp;6</span></div>
+    <div class="sdb">
+      <div class="sirquote"><span class="sqlab">as written in the Site Intelligence Report</span><blockquote>&ldquo;Karst geology forces lined detention basins and bars infiltration credit, adding cost and constraining basin siting&rdquo;<span class="sqsub">Jefferson County sits over soluble limestone with a dedicated karst regime.</span></blockquote><cite>&mdash;&nbsp;&sect;1.3 Top risks &middot; p.&nbsp;6</cite></div>
+      <p>Grounded in soils geography by a map-unit lookup at each parcel centroid, then the terrain classification constrains where and how basins may sit — cross-referenced to the same recorded 20-ft easement from R4.</p>
+      <p style="font-size:12px;color:#6b7280;margin:2px 0 0"><b style="font-family:var(--mono);font-size:10.5px;color:#35526b">SPATIAL OP</b> &nbsp;Map-unit lookup at centroid · feature-siting constraint &nbsp;·&nbsp; <b style="font-family:var(--mono);font-size:10.5px;color:#35526b">SIR</b> &nbsp;§1.3 · §8.5 Environmental · Appx B/L/P</p>
+      <div class="seqfig"><svg viewBox="0 0 873 380" width="100%" role="img" aria-label="Reasoning sequence for finding R5 — Karst forces lined basins &amp; constrains basin siting" xmlns="http://www.w3.org/2000/svg" font-family="'Fira Code','SF Mono',ui-monospace,Menlo,monospace">
+<defs><marker id="ah" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#3f6582"/></marker><marker id="ahe" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#bb4d00"/></marker><marker id="ret" markerWidth="10" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6" fill="none" stroke="#6b7280" stroke-width="1.2"/></marker></defs>
+<rect x="0" y="0" width="873" height="380" fill="#ffffff"/>
+<rect x="70" y="72" width="10" height="294" rx="2" fill="#bb4d00" opacity="0.10"/>
+<line x1="75" y1="52" x2="75" y2="366" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="2" y="6" width="146" height="46" rx="8" fill="#bb4d00"/>
+<text x="75" y="25" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12" font-weight="700" fill="#fff">Environ. Agent</text>
+<text x="75" y="41" text-anchor="middle" font-size="8.5" fill="#ffffff" opacity="0.82">§8.5</text>
+<line x1="247" y1="52" x2="247" y2="366" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="174" y="6" width="146" height="46" rx="8" fill="#6b3fa0"/>
+<text x="247" y="25" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12" font-weight="700" fill="#fff">SSURGO</text>
+<text x="247" y="41" text-anchor="middle" font-size="8.5" fill="#ffffff" opacity="0.82">soils @ centroid</text>
+<line x1="419" y1="52" x2="419" y2="366" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="346" y="6" width="146" height="46" rx="8" fill="#0f7a5f"/>
+<text x="419" y="25" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12" font-weight="700" fill="#fff">MSD reg</text>
+<text x="419" y="41" text-anchor="middle" font-size="8.5" fill="#ffffff" opacity="0.82">karst regime</text>
+<line x1="591" y1="52" x2="591" y2="366" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="518" y="6" width="146" height="46" rx="8" fill="#3f6582"/>
+<text x="591" y="25" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12" font-weight="700" fill="#fff">geom</text>
+<text x="591" y="41" text-anchor="middle" font-size="8.5" fill="#ffffff" opacity="0.82">siting x-ref</text>
+<line x1="763" y1="52" x2="763" y2="366" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="690" y="6" width="146" height="46" rx="8" fill="#35526b"/>
+<text x="763" y="25" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12" font-weight="700" fill="#fff">SIR</text>
+<text x="763" y="41" text-anchor="middle" font-size="8.5" fill="#ffffff" opacity="0.82">§8.5 write</text>
+<line x1="75" y1="86" x2="241" y2="86" stroke="#3f6582" stroke-width="1.4" marker-end="url(#ah)"/>
+<text x="158.0" y="81" text-anchor="middle" font-size="10" fill="#1f2937">SSURGO map-unit @ both pad centroids</text>
+<line x1="247" y1="120" x2="84" y2="120" stroke="#6b7280" stroke-width="1.4" stroke-dasharray="5 4"/>
+<text x="161.0" y="115" text-anchor="middle" font-size="10" fill="#6b7280">mukey 1533091 — Urban–Alfic Udarents–Crider, 0–12%</text>
+<circle cx="75" cy="120" r="9" fill="#3f6582" stroke="#fff" stroke-width="1.5"/>
+<text x="75" y="123.4" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">1</text>
+<path d="M75,154 h22 v16 h-22" fill="none" stroke="#bb4d00" stroke-width="1.7" marker-end="url(#ahe)"/>
+<text x="103" y="160" text-anchor="start" font-size="10" fill="#bb4d00" font-weight="700">Crider series ⇒ soluble carbonate bedrock at depth = karst</text>
+<line x1="75" y1="188" x2="413" y2="188" stroke="#3f6582" stroke-width="1.4" marker-end="url(#ah)"/>
+<text x="244.0" y="183" text-anchor="middle" font-size="10" fill="#1f2937">MSD karst regime + §10.3.9 escalation</text>
+<line x1="419" y1="222" x2="84" y2="222" stroke="#6b7280" stroke-width="1.4" stroke-dasharray="5 4"/>
+<text x="247.0" y="217" text-anchor="middle" font-size="10" fill="#6b7280">lined/sealed basins; sinkhole ⇒ no-outlet storage</text>
+<circle cx="75" cy="222" r="9" fill="#3f6582" stroke="#fff" stroke-width="1.5"/>
+<text x="75" y="225.4" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">2</text>
+<path d="M591,256 h20 v16 h-20" fill="none" stroke="#3f6582" stroke-width="1.3" marker-end="url(#ah)"/>
+<text x="617" y="262" text-anchor="start" font-size="10" fill="#35526b">cross-ref basin siting to recorded 20-ft easement</text>
+<path d="M75,290 h22 v16 h-22" fill="none" stroke="#bb4d00" stroke-width="1.7" marker-end="url(#ahe)"/>
+<text x="103" y="296" text-anchor="start" font-size="10" fill="#bb4d00" font-weight="700">lined (not infiltration) basins; siting constrained on-pad</text>
+<line x1="75" y1="324" x2="757" y2="324" stroke="#bb4d00" stroke-width="1.8" marker-end="url(#ahe)"/>
+<text x="416.0" y="319" text-anchor="middle" font-size="10" fill="#bb4d00" font-weight="700">write R5: both lots mapped karst; lined basins required [V]</text>
+</svg></div>
+      <div class="seqcap"><b>reasoning sequence</b><span class="k"><span class="ln"></span> data call</span><span class="k"><span class="ln ret"></span> data returned</span><span class="k">↻ deterministic step</span><span class="k"><span style="color:#bb4d00;font-weight:700">↻ ember</span> agent reasons</span><span class="k"><span style="color:#bb4d00;font-weight:700">→</span> conclusion written to SIR</span><span class="k"><span class="nb">N</span> data input, keyed below</span></div>
+      <div class="rrxh">what data feeds this finding <span class="hint">— numbered to match the <b>data-returned</b> badges on the agent lifeline</span></div>
+      <dl class="sdmeta"><dt>1</dt><dd>SSURGO map-unit query at both centroids — mukey 1533091 (Crider complex), soluble carbonate at depth</dd><dt>2</dt><dd>MSD karst regime + §10.3.9 — lined/sealed basins, sinkhole escalation to no-outlet storage</dd><dt>3</dt><dd>siting cross-reference — basin position tied back to the recorded 20-ft drainage easement (R4)</dd></dl>
+      <div class="callout ember"><span class="lab">the conclusion the agent writes to the SIR</span>"Both lots are mapped karst terrain [V]; a sinkhole/void geotechnical screen and lined (not infiltration) basins are effectively required."</div>
+    </div>
+  </div>
+  <div class="stepdetail" id="f-R6">
+    <div class="sdh"><span class="sid">R6</span><span class="sttl">One public way in; second fire access rides on cross-access</span>
+      <span class="kb k-check">significant</span>
+      <span class="kb" style="background:rgba(255,255,255,.16);color:#fff">SIR p.&nbsp;7</span></div>
+    <div class="sdb">
+      <div class="sirquote"><span class="sqlab">as written in the Site Intelligence Report</span><blockquote>&ldquo;The lots have one public way in, so the required second fire access depends on the private cross-access through the neighboring store&rdquo;<span class="sqsub">The second apparatus route is legal, not physically redundant.</span></blockquote><cite>&mdash;&nbsp;&sect;1.3 Top risks &middot; p.&nbsp;7</cite></div>
+      <p>Framed as a connectivity graph: exactly one independent approach on the site's own frontage, with the code-required second apparatus route existing only as a recorded reciprocal easement running through the neighboring Wawa — a legal second access, not a physically independent one.</p>
+      <p style="font-size:12px;color:#6b7280;margin:2px 0 0"><b style="font-family:var(--mono);font-size:10.5px;color:#35526b">SPATIAL OP</b> &nbsp;Access-route topology · adjacency / pass-through &nbsp;·&nbsp; <b style="font-family:var(--mono);font-size:10.5px;color:#35526b">SIR</b> &nbsp;§1.3 · §8.6 Fire · Appx M</p>
+      <div class="seqfig"><svg viewBox="0 0 873 380" width="100%" role="img" aria-label="Reasoning sequence for finding R6 — One public way in; second fire access rides on cross-access" xmlns="http://www.w3.org/2000/svg" font-family="'Fira Code','SF Mono',ui-monospace,Menlo,monospace">
+<defs><marker id="ah" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#3f6582"/></marker><marker id="ahe" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#bb4d00"/></marker><marker id="ret" markerWidth="10" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6" fill="none" stroke="#6b7280" stroke-width="1.2"/></marker></defs>
+<rect x="0" y="0" width="873" height="380" fill="#ffffff"/>
+<rect x="70" y="72" width="10" height="294" rx="2" fill="#bb4d00" opacity="0.10"/>
+<line x1="75" y1="52" x2="75" y2="366" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="2" y="6" width="146" height="46" rx="8" fill="#bb4d00"/>
+<text x="75" y="25" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12" font-weight="700" fill="#fff">Fire Agent</text>
+<text x="75" y="41" text-anchor="middle" font-size="8.5" fill="#ffffff" opacity="0.82">§8.6</text>
+<line x1="247" y1="52" x2="247" y2="366" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="174" y="6" width="146" height="46" rx="8" fill="#3f6582"/>
+<text x="247" y="25" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12" font-weight="700" fill="#fff">OSM</text>
+<text x="247" y="41" text-anchor="middle" font-size="8.5" fill="#ffffff" opacity="0.82">approach count</text>
+<line x1="419" y1="52" x2="419" y2="366" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="346" y="6" width="146" height="46" rx="8" fill="#0f7a5f"/>
+<text x="419" y="25" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12" font-weight="700" fill="#fff">ECR</text>
+<text x="419" y="41" text-anchor="middle" font-size="8.5" fill="#ffffff" opacity="0.82">cross-access grant</text>
+<line x1="591" y1="52" x2="591" y2="366" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="518" y="6" width="146" height="46" rx="8" fill="#6b3fa0"/>
+<text x="591" y="25" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12" font-weight="700" fill="#fff">LOJIC</text>
+<text x="591" y="41" text-anchor="middle" font-size="8.5" fill="#ffffff" opacity="0.82">fire district</text>
+<line x1="763" y1="52" x2="763" y2="366" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="690" y="6" width="146" height="46" rx="8" fill="#35526b"/>
+<text x="763" y="25" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12" font-weight="700" fill="#fff">SIR</text>
+<text x="763" y="41" text-anchor="middle" font-size="8.5" fill="#ffffff" opacity="0.82">§8.6 write</text>
+<path d="M247,86 h20 v16 h-20" fill="none" stroke="#3f6582" stroke-width="1.3" marker-end="url(#ah)"/>
+<text x="273" y="92" text-anchor="start" font-size="10" fill="#35526b">OSM approach count on own frontage</text>
+<line x1="247" y1="120" x2="84" y2="120" stroke="#6b7280" stroke-width="1.4" stroke-dasharray="5 4"/>
+<text x="161.0" y="115" text-anchor="middle" font-size="10" fill="#6b7280">1 independent approach — Fegenbush 369.36 ft continuous</text>
+<circle cx="75" cy="120" r="9" fill="#3f6582" stroke="#fff" stroke-width="1.5"/>
+<text x="75" y="123.4" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">1</text>
+<line x1="75" y1="154" x2="413" y2="154" stroke="#3f6582" stroke-width="1.4" marker-end="url(#ah)"/>
+<text x="244.0" y="149" text-anchor="middle" font-size="10" fill="#1f2937">pull cross-access ECR 2024163213</text>
+<line x1="419" y1="188" x2="84" y2="188" stroke="#6b7280" stroke-width="1.4" stroke-dasharray="5 4"/>
+<text x="247.0" y="183" text-anchor="middle" font-size="10" fill="#6b7280">Bardstown Driveway reciprocal easement (0.392 ac) thru Wawa</text>
+<circle cx="75" cy="188" r="9" fill="#3f6582" stroke="#fff" stroke-width="1.5"/>
+<text x="75" y="191.4" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">2</text>
+<line x1="75" y1="222" x2="585" y2="222" stroke="#3f6582" stroke-width="1.4" marker-end="url(#ah)"/>
+<text x="330.0" y="217" text-anchor="middle" font-size="10" fill="#1f2937">point-query fire district @ centroid</text>
+<line x1="591" y1="256" x2="84" y2="256" stroke="#6b7280" stroke-width="1.4" stroke-dasharray="5 4"/>
+<text x="333.0" y="251" text-anchor="middle" font-size="10" fill="#6b7280">Fern Creek Fire Protection District (F60)</text>
+<circle cx="75" cy="256" r="9" fill="#3f6582" stroke="#fff" stroke-width="1.5"/>
+<text x="75" y="259.4" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">3</text>
+<path d="M75,290 h22 v16 h-22" fill="none" stroke="#bb4d00" stroke-width="1.7" marker-end="url(#ahe)"/>
+<text x="103" y="296" text-anchor="start" font-size="10" fill="#bb4d00" font-weight="700">2nd way out = legal cross-access, not physically redundant</text>
+<line x1="75" y1="324" x2="757" y2="324" stroke="#bb4d00" stroke-width="1.8" marker-end="url(#ahe)"/>
+<text x="416.0" y="319" text-anchor="middle" font-size="10" fill="#bb4d00" font-weight="700">write R6: one public frontage; 2nd access via cross-access [V]</text>
+</svg></div>
+      <div class="seqcap"><b>reasoning sequence</b><span class="k"><span class="ln"></span> data call</span><span class="k"><span class="ln ret"></span> data returned</span><span class="k">↻ deterministic step</span><span class="k"><span style="color:#bb4d00;font-weight:700">↻ ember</span> agent reasons</span><span class="k"><span style="color:#bb4d00;font-weight:700">→</span> conclusion written to SIR</span><span class="k"><span class="nb">N</span> data input, keyed below</span></div>
+      <div class="rrxh">what data feeds this finding <span class="hint">— numbered to match the <b>data-returned</b> badges on the agent lifeline</span></div>
+      <dl class="sdmeta"><dt>1</dt><dd>OSM access trace — one independent approach on the site's own 369.36-ft Fegenbush frontage</dd><dt>2</dt><dd>recorded cross-access ECR 2024163213 — the Bardstown Driveway reciprocal easement (0.392 ac) through the Wawa (Lot 1)</dd><dt>3</dt><dd>LOJIC Suburban Fire Districts — Fern Creek FPD (F60) by point-query at the centroid</dd></dl>
+      <div class="callout ember"><span class="lab">the conclusion the agent writes to the SIR</span>"The only public frontage is Fegenbush Ln; the recorded Bardstown Driveway cross-access through the Wawa (ECR 2024163213) is the second way out [V]."</div>
+    </div>
+  </div>
+  <div class="stepdetail" id="f-R7">
+    <div class="sdh"><span class="sid">R7</span><span class="sttl">Adjacent petroleum release → Phase-I ESA</span>
+      <span class="kb k-check">significant</span>
+      <span class="kb" style="background:rgba(255,255,255,.16);color:#fff">SIR p.&nbsp;7</span></div>
+    <div class="sdb">
+      <div class="sirquote"><span class="sqlab">as written in the Site Intelligence Report</span><blockquote>&ldquo;The land held a former car wash and a motel and sits by a documented petroleum release; a Phase-I ESA is warranted before closing&rdquo;<span class="sqsub">Contamination liability is real but unquantified on a soil/groundwater-sensitive use.</span></blockquote><cite>&mdash;&nbsp;&sect;1.3 Top risks &middot; p.&nbsp;7</cite></div>
+      <p>Sized by how close, in which direction, and up- or down-gradient each contamination source sits. A half-mile radius screen finds the cluster; distance, bearing and groundwater-gradient reasoning promote the Dairy Mart corner to the top off-site concern.</p>
+      <p style="font-size:12px;color:#6b7280;margin:2px 0 0"><b style="font-family:var(--mono);font-size:10.5px;color:#35526b">SPATIAL OP</b> &nbsp;Radius / proximity screen · gradient direction &nbsp;·&nbsp; <b style="font-family:var(--mono);font-size:10.5px;color:#35526b">SIR</b> &nbsp;§1.3 · §8.5 Environmental · Appx B/L/I</p>
+      <div class="seqfig"><svg viewBox="0 0 873 380" width="100%" role="img" aria-label="Reasoning sequence for finding R7 — Adjacent petroleum release → Phase-I ESA" xmlns="http://www.w3.org/2000/svg" font-family="'Fira Code','SF Mono',ui-monospace,Menlo,monospace">
+<defs><marker id="ah" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#3f6582"/></marker><marker id="ahe" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#bb4d00"/></marker><marker id="ret" markerWidth="10" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6" fill="none" stroke="#6b7280" stroke-width="1.2"/></marker></defs>
+<rect x="0" y="0" width="873" height="380" fill="#ffffff"/>
+<rect x="70" y="72" width="10" height="294" rx="2" fill="#bb4d00" opacity="0.10"/>
+<line x1="75" y1="52" x2="75" y2="366" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="2" y="6" width="146" height="46" rx="8" fill="#bb4d00"/>
+<text x="75" y="25" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12" font-weight="700" fill="#fff">Environ. Agent</text>
+<text x="75" y="41" text-anchor="middle" font-size="8.5" fill="#ffffff" opacity="0.82">§8.5</text>
+<line x1="247" y1="52" x2="247" y2="366" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="174" y="6" width="146" height="46" rx="8" fill="#6b3fa0"/>
+<text x="247" y="25" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12" font-weight="700" fill="#fff">EPA FRS</text>
+<text x="247" y="41" text-anchor="middle" font-size="8.5" fill="#ffffff" opacity="0.82">0.5-mi radius</text>
+<line x1="419" y1="52" x2="419" y2="366" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="346" y="6" width="146" height="46" rx="8" fill="#0f7a5f"/>
+<text x="419" y="25" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12" font-weight="700" fill="#fff">KY-TEMPO</text>
+<text x="419" y="41" text-anchor="middle" font-size="8.5" fill="#ffffff" opacity="0.82">state release file</text>
+<line x1="591" y1="52" x2="591" y2="366" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="518" y="6" width="146" height="46" rx="8" fill="#3f6582"/>
+<text x="591" y="25" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12" font-weight="700" fill="#fff">geom</text>
+<text x="591" y="41" text-anchor="middle" font-size="8.5" fill="#ffffff" opacity="0.82">dist/bearing/grad</text>
+<line x1="763" y1="52" x2="763" y2="366" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="690" y="6" width="146" height="46" rx="8" fill="#35526b"/>
+<text x="763" y="25" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12" font-weight="700" fill="#fff">SIR</text>
+<text x="763" y="41" text-anchor="middle" font-size="8.5" fill="#ffffff" opacity="0.82">§8.5 write</text>
+<line x1="75" y1="86" x2="241" y2="86" stroke="#3f6582" stroke-width="1.4" marker-end="url(#ah)"/>
+<text x="158.0" y="81" text-anchor="middle" font-size="10" fill="#1f2937">EPA FRS geospatial query — 0.5-mi radius @ centroid</text>
+<line x1="247" y1="120" x2="84" y2="120" stroke="#6b7280" stroke-width="1.4" stroke-dasharray="5 4"/>
+<text x="161.0" y="115" text-anchor="middle" font-size="10" fill="#6b7280">25 facilities; former Dairy Mart corner flagged</text>
+<circle cx="75" cy="120" r="9" fill="#3f6582" stroke="#fff" stroke-width="1.5"/>
+<text x="75" y="123.4" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">1</text>
+<line x1="75" y1="154" x2="413" y2="154" stroke="#3f6582" stroke-width="1.4" marker-end="url(#ah)"/>
+<text x="244.0" y="149" text-anchor="middle" font-size="10" fill="#1f2937">pull PSTEAF #104120 / KY-TEMPO 68685</text>
+<line x1="419" y1="188" x2="84" y2="188" stroke="#6b7280" stroke-width="1.4" stroke-dasharray="5 4"/>
+<text x="247.0" y="183" text-anchor="middle" font-size="10" fill="#6b7280">documented petroleum release (file behind bot wall)</text>
+<circle cx="75" cy="188" r="9" fill="#3f6582" stroke="#fff" stroke-width="1.5"/>
+<text x="75" y="191.4" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">2</text>
+<path d="M591,222 h20 v16 h-20" fill="none" stroke="#3f6582" stroke-width="1.3" marker-end="url(#ah)"/>
+<text x="617" y="228" text-anchor="start" font-size="10" fill="#35526b">distance + bearing + gradient to the source</text>
+<line x1="591" y1="256" x2="84" y2="256" stroke="#6b7280" stroke-width="1.4" stroke-dasharray="5 4"/>
+<text x="333.0" y="251" text-anchor="middle" font-size="10" fill="#6b7280">~120–150 m NW · up-/cross-gradient of Lot 3 centroid</text>
+<circle cx="75" cy="256" r="9" fill="#3f6582" stroke="#fff" stroke-width="1.5"/>
+<text x="75" y="259.4" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">3</text>
+<path d="M75,290 h22 v16 h-22" fill="none" stroke="#bb4d00" stroke-width="1.7" marker-end="url(#ahe)"/>
+<text x="103" y="296" text-anchor="start" font-size="10" fill="#bb4d00" font-weight="700">up-gradient proximity ⇒ plausible migration path to the pads</text>
+<line x1="75" y1="324" x2="757" y2="324" stroke="#bb4d00" stroke-width="1.8" marker-end="url(#ahe)"/>
+<text x="416.0" y="319" text-anchor="middle" font-size="10" fill="#bb4d00" font-weight="700">write R7: adjacent release ⇒ commission Phase-I ESA [V]/[P]</text>
+</svg></div>
+      <div class="seqcap"><b>reasoning sequence</b><span class="k"><span class="ln"></span> data call</span><span class="k"><span class="ln ret"></span> data returned</span><span class="k">↻ deterministic step</span><span class="k"><span style="color:#bb4d00;font-weight:700">↻ ember</span> agent reasons</span><span class="k"><span style="color:#bb4d00;font-weight:700">→</span> conclusion written to SIR</span><span class="k"><span class="nb">N</span> data input, keyed below</span></div>
+      <div class="rrxh">what data feeds this finding <span class="hint">— numbered to match the <b>data-returned</b> badges on the agent lifeline</span></div>
+      <dl class="sdmeta"><dt>1</dt><dd>EPA FRS geospatial query — 0.5-mile radius at the centroid, 25 facilities returned</dd><dt>2</dt><dd>KY-TEMPO / PSTEAF #104120 (#68685) — the documented Dairy Mart petroleum release</dd><dt>3</dt><dd>distance + bearing + gradient — ~120–150 m NW, up-/cross-gradient of the Lot 3 centroid</dd></dl>
+      <div class="callout ember"><span class="lab">the conclusion the agent writes to the SIR</span>"The neighboring corner (former Dairy Mart) has a documented petroleum release … The corner sits ~120-150 m NW / up-cross-gradient of Lot 3 — the single highest-priority off-site concern for the Phase I ESA."</div>
+    </div>
+  </div>
+  <div class="sd-group">The two geo-spatial opportunities</div>
+  
+  <div class="stepdetail" id="f-O1">
+    <div class="sdh"><span class="sid">O1</span><span class="sttl">Constrained drainage/buffer land double-duties as open space</span>
+      <span class="kb mdl">opportunity</span>
+      <span class="kb" style="background:rgba(255,255,255,.16);color:#fff">SIR p.&nbsp;7</span></div>
+    <div class="sdb">
+      <div class="sirquote"><span class="sqlab">as written in the Site Intelligence Report</span><blockquote>&ldquo;Constrained flood/drainage land can double as credited open space, softening the buildable-area squeeze&rdquo;</blockquote><cite>&mdash;&nbsp;&sect;1.4 Top opportunities &middot; p.&nbsp;7</cite></div>
+      <p>Spatial because the same physical acreage — the R4 detention remainder — is made to serve two overlapping functions: detention and credited open space.</p>
+      <p style="font-size:12px;color:#6b7280;margin:2px 0 0"><b style="font-family:var(--mono);font-size:10.5px;color:#35526b">SPATIAL OP</b> &nbsp;Area double-use overlay &nbsp;·&nbsp; <b style="font-family:var(--mono);font-size:10.5px;color:#35526b">SIR</b> &nbsp;§1.4 · §8.3 · Appx N/O</p>
+      <div class="seqfig"><svg viewBox="0 0 701 312" width="100%" role="img" aria-label="Reasoning sequence for finding O1 — Constrained drainage/buffer land double-duties as open space" xmlns="http://www.w3.org/2000/svg" font-family="'Fira Code','SF Mono',ui-monospace,Menlo,monospace">
+<defs><marker id="ah" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#3f6582"/></marker><marker id="ahe" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#bb4d00"/></marker><marker id="ret" markerWidth="10" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6" fill="none" stroke="#6b7280" stroke-width="1.2"/></marker></defs>
+<rect x="0" y="0" width="701" height="312" fill="#ffffff"/>
+<rect x="70" y="72" width="10" height="226" rx="2" fill="#bb4d00" opacity="0.10"/>
+<line x1="75" y1="52" x2="75" y2="298" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="2" y="6" width="146" height="46" rx="8" fill="#bb4d00"/>
+<text x="75" y="25" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12" font-weight="700" fill="#fff">Stormwater Agent</text>
+<text x="75" y="41" text-anchor="middle" font-size="8.5" fill="#ffffff" opacity="0.82">§8.3</text>
+<line x1="247" y1="52" x2="247" y2="298" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="174" y="6" width="146" height="46" rx="8" fill="#2d4559"/>
+<text x="247" y="25" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12" font-weight="700" fill="#fff">R4 remainder</text>
+<text x="247" y="41" text-anchor="middle" font-size="8.5" fill="#ffffff" opacity="0.82">prior finding</text>
+<line x1="419" y1="52" x2="419" y2="298" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="346" y="6" width="146" height="46" rx="8" fill="#6b3fa0"/>
+<text x="419" y="25" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12" font-weight="700" fill="#fff">MSD / LDC</text>
+<text x="419" y="41" text-anchor="middle" font-size="8.5" fill="#ffffff" opacity="0.82">open-space rules</text>
+<line x1="591" y1="52" x2="591" y2="298" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="518" y="6" width="146" height="46" rx="8" fill="#35526b"/>
+<text x="591" y="25" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12" font-weight="700" fill="#fff">SIR</text>
+<text x="591" y="41" text-anchor="middle" font-size="8.5" fill="#ffffff" opacity="0.82">§8.3 write</text>
+<line x1="75" y1="86" x2="241" y2="86" stroke="#3f6582" stroke-width="1.4" marker-end="url(#ah)"/>
+<text x="158.0" y="81" text-anchor="middle" font-size="10" fill="#1f2937">take detention remainder area (from R4)</text>
+<line x1="247" y1="120" x2="84" y2="120" stroke="#6b7280" stroke-width="1.4" stroke-dasharray="5 4"/>
+<text x="161.0" y="115" text-anchor="middle" font-size="10" fill="#6b7280">~0.86 ac constrained land on Lot 3</text>
+<circle cx="75" cy="120" r="9" fill="#3f6582" stroke="#fff" stroke-width="1.5"/>
+<text x="75" y="123.4" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">1</text>
+<line x1="75" y1="154" x2="413" y2="154" stroke="#3f6582" stroke-width="1.4" marker-end="url(#ah)"/>
+<text x="244.0" y="149" text-anchor="middle" font-size="10" fill="#1f2937">MSD / LDC open-space provisions</text>
+<line x1="419" y1="188" x2="84" y2="188" stroke="#6b7280" stroke-width="1.4" stroke-dasharray="5 4"/>
+<text x="247.0" y="183" text-anchor="middle" font-size="10" fill="#6b7280">50% open-space credit; required buffers count</text>
+<circle cx="75" cy="188" r="9" fill="#3f6582" stroke="#fff" stroke-width="1.5"/>
+<text x="75" y="191.4" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">2</text>
+<path d="M75,222 h22 v16 h-22" fill="none" stroke="#bb4d00" stroke-width="1.7" marker-end="url(#ahe)"/>
+<text x="103" y="228" text-anchor="start" font-size="10" fill="#bb4d00" font-weight="700">same acreage serves detention AND the open-space obligation</text>
+<line x1="75" y1="256" x2="585" y2="256" stroke="#bb4d00" stroke-width="1.8" marker-end="url(#ahe)"/>
+<text x="330.0" y="251" text-anchor="middle" font-size="10" fill="#bb4d00" font-weight="700">write O1: constrained land double-duties as open space [P]</text>
+</svg></div>
+      <div class="seqcap"><b>reasoning sequence</b><span class="k"><span class="ln"></span> data call</span><span class="k"><span class="ln ret"></span> data returned</span><span class="k">↻ deterministic step</span><span class="k"><span style="color:#bb4d00;font-weight:700">↻ ember</span> agent reasons</span><span class="k"><span style="color:#bb4d00;font-weight:700">→</span> conclusion written to SIR</span><span class="k"><span class="nb">N</span> data input, keyed below</span></div>
+      <div class="rrxh">what data feeds this finding <span class="hint">— numbered to match the <b>data-returned</b> badges on the agent lifeline</span></div>
+      <dl class="sdmeta"><dt>1</dt><dd>R4 output — the ~0.86-ac detention/undevelopable remainder on the larger lot</dd><dt>2</dt><dd>MSD / LDC open-space provisions — 50% open-space credit; buffer areas count toward the obligation</dd></dl>
+      <div class="callout ember"><span class="lab">the conclusion the agent writes to the SIR</span>"MSD and LDC open-space provisions let encumbered drainage land do double duty … A latent offset to the detention remainder on the larger lot [P]."</div>
+    </div>
+  </div>
+  <div class="stepdetail" id="f-O2">
+    <div class="sdh"><span class="sid">O2</span><span class="sttl">Off-site flood-compensation storage may relieve detention</span>
+      <span class="kb mdl">opportunity</span>
+      <span class="kb" style="background:rgba(255,255,255,.16);color:#fff">SIR p.&nbsp;8</span></div>
+    <div class="sdb">
+      <div class="sirquote"><span class="sqlab">as written in the Site Intelligence Report</span><blockquote>&ldquo;An MSD Flood Compensation Bank / off-site storage route may relieve on-site detention&rdquo;</blockquote><cite>&mdash;&nbsp;&sect;1.4 Top opportunities &middot; p.&nbsp;8</cite></div>
+      <p>Spatial because it trades <em>where</em> detention volume physically lives — moving part of the obligation off the tight parcel to free on-site footprint.</p>
+      <p style="font-size:12px;color:#6b7280;margin:2px 0 0"><b style="font-family:var(--mono);font-size:10.5px;color:#35526b">SPATIAL OP</b> &nbsp;Relocation of stored volume off-parcel &nbsp;·&nbsp; <b style="font-family:var(--mono);font-size:10.5px;color:#35526b">SIR</b> &nbsp;§1.4 · §8.3</p>
+      <div class="seqfig"><svg viewBox="0 0 529 312" width="100%" role="img" aria-label="Reasoning sequence for finding O2 — Off-site flood-compensation storage may relieve detention" xmlns="http://www.w3.org/2000/svg" font-family="'Fira Code','SF Mono',ui-monospace,Menlo,monospace">
+<defs><marker id="ah" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#3f6582"/></marker><marker id="ahe" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#bb4d00"/></marker><marker id="ret" markerWidth="10" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6" fill="none" stroke="#6b7280" stroke-width="1.2"/></marker></defs>
+<rect x="0" y="0" width="529" height="312" fill="#ffffff"/>
+<rect x="70" y="72" width="10" height="226" rx="2" fill="#bb4d00" opacity="0.10"/>
+<line x1="75" y1="52" x2="75" y2="298" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="2" y="6" width="146" height="46" rx="8" fill="#bb4d00"/>
+<text x="75" y="25" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12" font-weight="700" fill="#fff">Stormwater Agent</text>
+<text x="75" y="41" text-anchor="middle" font-size="8.5" fill="#ffffff" opacity="0.82">§8.3</text>
+<line x1="247" y1="52" x2="247" y2="298" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="174" y="6" width="146" height="46" rx="8" fill="#6b3fa0"/>
+<text x="247" y="25" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12" font-weight="700" fill="#fff">MSD</text>
+<text x="247" y="41" text-anchor="middle" font-size="8.5" fill="#ffffff" opacity="0.82">comp-storage bank</text>
+<line x1="419" y1="52" x2="419" y2="298" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="346" y="6" width="146" height="46" rx="8" fill="#35526b"/>
+<text x="419" y="25" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12" font-weight="700" fill="#fff">SIR</text>
+<text x="419" y="41" text-anchor="middle" font-size="8.5" fill="#ffffff" opacity="0.82">§8.3 write</text>
+<line x1="75" y1="86" x2="241" y2="86" stroke="#3f6582" stroke-width="1.4" marker-end="url(#ah)"/>
+<text x="158.0" y="81" text-anchor="middle" font-size="10" fill="#1f2937">on-site detention footprint tight? (from R4)</text>
+<line x1="247" y1="120" x2="84" y2="120" stroke="#6b7280" stroke-width="1.4" stroke-dasharray="5 4"/>
+<text x="161.0" y="115" text-anchor="middle" font-size="10" fill="#6b7280">net pad compressed</text>
+<circle cx="75" cy="120" r="9" fill="#3f6582" stroke="#fff" stroke-width="1.5"/>
+<text x="75" y="123.4" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">1</text>
+<line x1="75" y1="154" x2="241" y2="154" stroke="#3f6582" stroke-width="1.4" marker-end="url(#ah)"/>
+<text x="158.0" y="149" text-anchor="middle" font-size="10" fill="#1f2937">query MSD compensatory-storage / Flood Comp Bank</text>
+<line x1="247" y1="188" x2="84" y2="188" stroke="#6b7280" stroke-width="1.4" stroke-dasharray="5 4"/>
+<text x="161.0" y="183" text-anchor="middle" font-size="10" fill="#6b7280">mechanism to relocate stored volume off-site</text>
+<circle cx="75" cy="188" r="9" fill="#3f6582" stroke="#fff" stroke-width="1.5"/>
+<text x="75" y="191.4" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">2</text>
+<path d="M75,222 h22 v16 h-22" fill="none" stroke="#bb4d00" stroke-width="1.7" marker-end="url(#ahe)"/>
+<text x="103" y="228" text-anchor="start" font-size="10" fill="#bb4d00" font-weight="700">move part of obligation off-parcel ⇒ frees on-site footprint</text>
+<line x1="75" y1="256" x2="413" y2="256" stroke="#bb4d00" stroke-width="1.8" marker-end="url(#ahe)"/>
+<text x="244.0" y="251" text-anchor="middle" font-size="10" fill="#bb4d00" font-weight="700">write O2: off-site storage route worth pricing vs. on-site basin [P]</text>
+</svg></div>
+      <div class="seqcap"><b>reasoning sequence</b><span class="k"><span class="ln"></span> data call</span><span class="k"><span class="ln ret"></span> data returned</span><span class="k">↻ deterministic step</span><span class="k"><span style="color:#bb4d00;font-weight:700">↻ ember</span> agent reasons</span><span class="k"><span style="color:#bb4d00;font-weight:700">→</span> conclusion written to SIR</span><span class="k"><span class="nb">N</span> data input, keyed below</span></div>
+      <div class="rrxh">what data feeds this finding <span class="hint">— numbered to match the <b>data-returned</b> badges on the agent lifeline</span></div>
+      <dl class="sdmeta"><dt>1</dt><dd>R4 context — on-site detention is tight on the net pad</dd><dt>2</dt><dd>MSD compensatory-storage mechanisms / Flood Compensation Bank — can carry part of the obligation off-site</dd></dl>
+      <div class="callout ember"><span class="lab">the conclusion the agent writes to the SIR</span>"Where on-site detention is tight, MSD's compensatory-storage mechanisms can move part of the obligation off-site [P]."</div>
+    </div>
+  </div>
+</section>
+<section class="panel" id="anc">
+  <h2><span class="eyebrow">Tab 3</span>Ancillary &amp; discipline findings — reasoning chains</h2>
+  <p class="lede">The ten geo-spatial findings drawn from the discipline sections, parcel facts, demand and appendices —
+  labels A1–A10 assigned by this report. Same visual language, more compact chains.</p>
+  
+  <div class="stepdetail" id="f-A1">
+    <div class="sdh"><span class="sid">A1</span><span class="sttl">Marketed vs. recorded acreage reconciliation</span>
+      <span class="kb mdl">note</span>
+      <span class="kb" style="background:rgba(255,255,255,.16);color:#fff">SIR p.&nbsp;13</span></div>
+    <div class="sdb">
+      <div class="sirquote"><span class="sqlab">as written in the Site Intelligence Report</span><blockquote>&ldquo;The owner&rsquo;s exhibit markets the two pads as &ldquo;1.0 acre&rdquo; and &ldquo;1.56 acre.&rdquo; The recorded plat and county GIS establish 1.02 ac and 2.608 ac. The larger figure is ~1.05 ac (~40%) below the recorded gross, consistent with the marketing stating a net-of-detention area rather than the gross parcel.&rdquo;</blockquote><cite>&mdash;&nbsp;&sect;2 Parcel Facts &middot; Marketed vs. recorded acreage (D1) &middot; p.&nbsp;13</cite></div>
+      <p>The ~1.05-ac gap between the flyer's number and the recorded gross is resolved as the R4 subtraction, reused to explain the marketing.</p>
+      <p style="font-size:12px;color:#6b7280;margin:2px 0 0"><b style="font-family:var(--mono);font-size:10.5px;color:#35526b">SPATIAL OP</b> &nbsp;Area reconciliation (net vs. gross) &nbsp;·&nbsp; <b style="font-family:var(--mono);font-size:10.5px;color:#35526b">SIR</b> &nbsp;§2 Parcel Facts · Appx P/Q</p>
+      <div class="seqfig"><svg viewBox="0 0 873 380" width="100%" role="img" aria-label="Reasoning sequence for finding A1 — Marketed vs. recorded acreage reconciliation" xmlns="http://www.w3.org/2000/svg" font-family="'Fira Code','SF Mono',ui-monospace,Menlo,monospace">
+<defs><marker id="ah" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#3f6582"/></marker><marker id="ahe" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#bb4d00"/></marker><marker id="ret" markerWidth="10" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6" fill="none" stroke="#6b7280" stroke-width="1.2"/></marker></defs>
+<rect x="0" y="0" width="873" height="380" fill="#ffffff"/>
+<rect x="70" y="72" width="10" height="294" rx="2" fill="#bb4d00" opacity="0.10"/>
+<line x1="75" y1="52" x2="75" y2="366" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="2" y="6" width="146" height="46" rx="8" fill="#bb4d00"/>
+<text x="75" y="25" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12" font-weight="700" fill="#fff">Parcel Agent</text>
+<text x="75" y="41" text-anchor="middle" font-size="8.5" fill="#ffffff" opacity="0.82">§2</text>
+<line x1="247" y1="52" x2="247" y2="366" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="174" y="6" width="146" height="46" rx="8" fill="#6b3fa0"/>
+<text x="247" y="25" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12" font-weight="700" fill="#fff">County GIS</text>
+<text x="247" y="41" text-anchor="middle" font-size="8.5" fill="#ffffff" opacity="0.82">gross area</text>
+<line x1="419" y1="52" x2="419" y2="366" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="346" y="6" width="146" height="46" rx="8" fill="#0f7a5f"/>
+<text x="419" y="25" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12" font-weight="700" fill="#fff">Plat</text>
+<text x="419" y="41" text-anchor="middle" font-size="8.5" fill="#ffffff" opacity="0.82">recorded lots</text>
+<line x1="591" y1="52" x2="591" y2="366" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="518" y="6" width="146" height="46" rx="8" fill="#2d4559"/>
+<text x="591" y="25" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12" font-weight="700" fill="#fff">Flyer</text>
+<text x="591" y="41" text-anchor="middle" font-size="8.5" fill="#ffffff" opacity="0.82">marketed net</text>
+<line x1="763" y1="52" x2="763" y2="366" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="690" y="6" width="146" height="46" rx="8" fill="#35526b"/>
+<text x="763" y="25" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12" font-weight="700" fill="#fff">SIR</text>
+<text x="763" y="41" text-anchor="middle" font-size="8.5" fill="#ffffff" opacity="0.82">§2 write</text>
+<line x1="75" y1="86" x2="241" y2="86" stroke="#3f6582" stroke-width="1.4" marker-end="url(#ah)"/>
+<text x="158.0" y="81" text-anchor="middle" font-size="10" fill="#1f2937">county GIS gross area</text>
+<line x1="247" y1="120" x2="84" y2="120" stroke="#6b7280" stroke-width="1.4" stroke-dasharray="5 4"/>
+<text x="161.0" y="115" text-anchor="middle" font-size="10" fill="#6b7280">2.608 ac</text>
+<circle cx="75" cy="120" r="9" fill="#3f6582" stroke="#fff" stroke-width="1.5"/>
+<text x="75" y="123.4" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">1</text>
+<line x1="75" y1="154" x2="413" y2="154" stroke="#3f6582" stroke-width="1.4" marker-end="url(#ah)"/>
+<text x="244.0" y="149" text-anchor="middle" font-size="10" fill="#1f2937">recorded plat lot areas</text>
+<line x1="419" y1="188" x2="84" y2="188" stroke="#6b7280" stroke-width="1.4" stroke-dasharray="5 4"/>
+<text x="247.0" y="183" text-anchor="middle" font-size="10" fill="#6b7280">1.02 ac &amp; 2.608 ac</text>
+<circle cx="75" cy="188" r="9" fill="#3f6582" stroke="#fff" stroke-width="1.5"/>
+<text x="75" y="191.4" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">2</text>
+<line x1="75" y1="222" x2="585" y2="222" stroke="#3f6582" stroke-width="1.4" marker-end="url(#ah)"/>
+<text x="330.0" y="217" text-anchor="middle" font-size="10" fill="#1f2937">marketed net area</text>
+<line x1="591" y1="256" x2="84" y2="256" stroke="#6b7280" stroke-width="1.4" stroke-dasharray="5 4"/>
+<text x="333.0" y="251" text-anchor="middle" font-size="10" fill="#6b7280">~1.56 ac</text>
+<circle cx="75" cy="256" r="9" fill="#3f6582" stroke="#fff" stroke-width="1.5"/>
+<text x="75" y="259.4" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">3</text>
+<path d="M75,290 h22 v16 h-22" fill="none" stroke="#bb4d00" stroke-width="1.7" marker-end="url(#ahe)"/>
+<text x="103" y="296" text-anchor="start" font-size="10" fill="#bb4d00" font-weight="700">Δ ≈ 1.05 ac (~40%) = drainage easement + detention (R4)</text>
+<line x1="75" y1="324" x2="757" y2="324" stroke="#bb4d00" stroke-width="1.8" marker-end="url(#ahe)"/>
+<text x="416.0" y="319" text-anchor="middle" font-size="10" fill="#bb4d00" font-weight="700">write A1: marketed figure = net-of-detention, not gross</text>
+</svg></div>
+      <div class="seqcap"><b>reasoning sequence</b><span class="k"><span class="ln"></span> data call</span><span class="k"><span class="ln ret"></span> data returned</span><span class="k">↻ deterministic step</span><span class="k"><span style="color:#bb4d00;font-weight:700">↻ ember</span> agent reasons</span><span class="k"><span style="color:#bb4d00;font-weight:700">→</span> conclusion written to SIR</span><span class="k"><span class="nb">N</span> data input, keyed below</span></div>
+      <div class="rrxh">what data feeds this finding <span class="hint">— numbered to match the <b>data-returned</b> badges on the agent lifeline</span></div>
+      <dl class="sdmeta"><dt>1</dt><dd>county GIS — gross 2.608 ac</dd><dt>2</dt><dd>recorded plat — 1.02 ac &amp; 2.608 ac</dd><dt>3</dt><dd>marketing flyer — ~1.56 ac net</dd></dl>
+      <div class="callout ember"><span class="lab">the conclusion the agent writes to the SIR</span>"The larger figure is ~1.05 ac (~40%) below the recorded gross, consistent with the marketing stating a net-of-detention area rather than the gross parcel."</div>
+    </div>
+  </div>
+  <div class="stepdetail" id="f-A2">
+    <div class="sdh"><span class="sid">A2</span><span class="sttl">Operator map-pin re-anchored to the vacant pads</span>
+      <span class="kb mdl">no constraint</span>
+      <span class="kb" style="background:rgba(255,255,255,.16);color:#fff">SIR p.&nbsp;13</span></div>
+    <div class="sdb">
+      <div class="sirquote"><span class="sqlab">as written in the Site Intelligence Report</span><blockquote>&ldquo;The operator-supplied map pin resolved to the Wawa lot and was re-anchored to the vacant land. [V]&rdquo;</blockquote><cite>&mdash;&nbsp;&sect;2 Parcel Facts &middot; Single-owner two-lot assemblage &middot; p.&nbsp;13</cite></div>
+      <p>A supplied coordinate landed inside the wrong parcel polygon (the developed Wawa) and was corrected onto the subject pads.</p>
+      <p style="font-size:12px;color:#6b7280;margin:2px 0 0"><b style="font-family:var(--mono);font-size:10.5px;color:#35526b">SPATIAL OP</b> &nbsp;Point-in-polygon correction &nbsp;·&nbsp; <b style="font-family:var(--mono);font-size:10.5px;color:#35526b">SIR</b> &nbsp;§2 Parcel Facts</p>
+      <div class="seqfig"><svg viewBox="0 0 701 312" width="100%" role="img" aria-label="Reasoning sequence for finding A2 — Operator map-pin re-anchored to the vacant pads" xmlns="http://www.w3.org/2000/svg" font-family="'Fira Code','SF Mono',ui-monospace,Menlo,monospace">
+<defs><marker id="ah" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#3f6582"/></marker><marker id="ahe" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#bb4d00"/></marker><marker id="ret" markerWidth="10" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6" fill="none" stroke="#6b7280" stroke-width="1.2"/></marker></defs>
+<rect x="0" y="0" width="701" height="312" fill="#ffffff"/>
+<rect x="70" y="72" width="10" height="226" rx="2" fill="#bb4d00" opacity="0.10"/>
+<line x1="75" y1="52" x2="75" y2="298" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="2" y="6" width="146" height="46" rx="8" fill="#bb4d00"/>
+<text x="75" y="25" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12" font-weight="700" fill="#fff">Parcel Agent</text>
+<text x="75" y="41" text-anchor="middle" font-size="8.5" fill="#ffffff" opacity="0.82">§2</text>
+<line x1="247" y1="52" x2="247" y2="298" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="174" y="6" width="146" height="46" rx="8" fill="#2d4559"/>
+<text x="247" y="25" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12" font-weight="700" fill="#fff">Map pin</text>
+<text x="247" y="41" text-anchor="middle" font-size="8.5" fill="#ffffff" opacity="0.82">operator input</text>
+<line x1="419" y1="52" x2="419" y2="298" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="346" y="6" width="146" height="46" rx="8" fill="#6b3fa0"/>
+<text x="419" y="25" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12" font-weight="700" fill="#fff">Parcel set</text>
+<text x="419" y="41" text-anchor="middle" font-size="8.5" fill="#ffffff" opacity="0.82">GIS polygons</text>
+<line x1="591" y1="52" x2="591" y2="298" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="518" y="6" width="146" height="46" rx="8" fill="#35526b"/>
+<text x="591" y="25" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12" font-weight="700" fill="#fff">SIR</text>
+<text x="591" y="41" text-anchor="middle" font-size="8.5" fill="#ffffff" opacity="0.82">§2 write</text>
+<line x1="75" y1="86" x2="241" y2="86" stroke="#3f6582" stroke-width="1.4" marker-end="url(#ah)"/>
+<text x="158.0" y="81" text-anchor="middle" font-size="10" fill="#1f2937">operator-supplied map pin (lat/lon)</text>
+<line x1="247" y1="120" x2="84" y2="120" stroke="#6b7280" stroke-width="1.4" stroke-dasharray="5 4"/>
+<text x="161.0" y="115" text-anchor="middle" font-size="10" fill="#6b7280">a single coordinate point</text>
+<circle cx="75" cy="120" r="9" fill="#3f6582" stroke="#fff" stroke-width="1.5"/>
+<text x="75" y="123.4" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">1</text>
+<path d="M419,154 h20 v16 h-20" fill="none" stroke="#3f6582" stroke-width="1.3" marker-end="url(#ah)"/>
+<text x="445" y="160" text-anchor="start" font-size="10" fill="#35526b">point-in-polygon: pin vs parcel set</text>
+<line x1="419" y1="188" x2="84" y2="188" stroke="#6b7280" stroke-width="1.4" stroke-dasharray="5 4"/>
+<text x="247.0" y="183" text-anchor="middle" font-size="10" fill="#6b7280">pin ⊂ Wawa lot (developed)</text>
+<circle cx="75" cy="188" r="9" fill="#3f6582" stroke="#fff" stroke-width="1.5"/>
+<text x="75" y="191.4" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">2</text>
+<path d="M75,222 h22 v16 h-22" fill="none" stroke="#bb4d00" stroke-width="1.7" marker-end="url(#ahe)"/>
+<text x="103" y="228" text-anchor="start" font-size="10" fill="#bb4d00" font-weight="700">wrong parcel ⇒ re-anchor point onto the vacant subject pads</text>
+<line x1="75" y1="256" x2="585" y2="256" stroke="#bb4d00" stroke-width="1.8" marker-end="url(#ahe)"/>
+<text x="330.0" y="251" text-anchor="middle" font-size="10" fill="#bb4d00" font-weight="700">write A2: pin re-anchored to the vacant land [V]</text>
+</svg></div>
+      <div class="seqcap"><b>reasoning sequence</b><span class="k"><span class="ln"></span> data call</span><span class="k"><span class="ln ret"></span> data returned</span><span class="k">↻ deterministic step</span><span class="k"><span style="color:#bb4d00;font-weight:700">↻ ember</span> agent reasons</span><span class="k"><span style="color:#bb4d00;font-weight:700">→</span> conclusion written to SIR</span><span class="k"><span class="nb">N</span> data input, keyed below</span></div>
+      <div class="rrxh">what data feeds this finding <span class="hint">— numbered to match the <b>data-returned</b> badges on the agent lifeline</span></div>
+      <dl class="sdmeta"><dt>1</dt><dd>operator-supplied map pin — a coordinate point</dd><dt>2</dt><dd>GIS parcel polygons — pin resolves inside the Wawa lot</dd></dl>
+      <div class="callout ember"><span class="lab">the conclusion the agent writes to the SIR</span>"The operator-supplied map pin resolved to the Wawa lot and was re-anchored to the vacant land [V]."</div>
+    </div>
+  </div>
+  <div class="stepdetail" id="f-A3">
+    <div class="sdh"><span class="sid">A3</span><span class="sttl">Setbacks, south buffer + Part 7 transition, replat</span>
+      <span class="kb k-check">moderate</span>
+      <span class="kb" style="background:rgba(255,255,255,.16);color:#fff">SIR p.&nbsp;20</span></div>
+    <div class="sdb">
+      <div class="sirquote"><span class="sqlab">as written in the Site Intelligence Report</span><blockquote>&ldquo;The Suburban Marketplace Corridor form district sets the front build-line off &frac12; the standard ROW (a ~30-ft swing on the KY-864 functional class) and a 25-ft south landscaped buffer; because the south neighbor is a Neighborhood form district, LDC Part 7 transition standards stack on top. A wash spanning both lots raises a replat/lot-line question. [V]&rdquo;</blockquote><cite>&mdash;&nbsp;&sect;8.2 Site Design &amp; Urban Form &middot; p.&nbsp;20</cite></div>
+      <p>Each regulated edge becomes an exact area clip off the 158,179-sf site; the cross-lot layout then forces a replat.</p>
+      <p style="font-size:12px;color:#6b7280;margin:2px 0 0"><b style="font-family:var(--mono);font-size:10.5px;color:#35526b">SPATIAL OP</b> &nbsp;Setback / buffer geometry · edge budget &nbsp;·&nbsp; <b style="font-family:var(--mono);font-size:10.5px;color:#35526b">SIR</b> &nbsp;§8.2 Site Design · Appx Q/T</p>
+      <div class="seqfig"><svg viewBox="0 0 701 312" width="100%" role="img" aria-label="Reasoning sequence for finding A3 — Setbacks, south buffer + Part 7 transition, replat" xmlns="http://www.w3.org/2000/svg" font-family="'Fira Code','SF Mono',ui-monospace,Menlo,monospace">
+<defs><marker id="ah" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#3f6582"/></marker><marker id="ahe" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#bb4d00"/></marker><marker id="ret" markerWidth="10" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6" fill="none" stroke="#6b7280" stroke-width="1.2"/></marker></defs>
+<rect x="0" y="0" width="701" height="312" fill="#ffffff"/>
+<rect x="70" y="72" width="10" height="226" rx="2" fill="#bb4d00" opacity="0.10"/>
+<line x1="75" y1="52" x2="75" y2="298" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="2" y="6" width="146" height="46" rx="8" fill="#bb4d00"/>
+<text x="75" y="25" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12" font-weight="700" fill="#fff">SiteDesign Agent</text>
+<text x="75" y="41" text-anchor="middle" font-size="8.5" fill="#ffffff" opacity="0.82">§8.2</text>
+<line x1="247" y1="52" x2="247" y2="298" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="174" y="6" width="146" height="46" rx="8" fill="#6b3fa0"/>
+<text x="247" y="25" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12" font-weight="700" fill="#fff">LDC</text>
+<text x="247" y="41" text-anchor="middle" font-size="8.5" fill="#ffffff" opacity="0.82">form district</text>
+<line x1="419" y1="52" x2="419" y2="298" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="346" y="6" width="146" height="46" rx="8" fill="#3f6582"/>
+<text x="419" y="25" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12" font-weight="700" fill="#fff">geom</text>
+<text x="419" y="41" text-anchor="middle" font-size="8.5" fill="#ffffff" opacity="0.82">edge clips</text>
+<line x1="591" y1="52" x2="591" y2="298" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="518" y="6" width="146" height="46" rx="8" fill="#35526b"/>
+<text x="591" y="25" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12" font-weight="700" fill="#fff">SIR</text>
+<text x="591" y="41" text-anchor="middle" font-size="8.5" fill="#ffffff" opacity="0.82">§8.2 write</text>
+<line x1="75" y1="86" x2="241" y2="86" stroke="#3f6582" stroke-width="1.4" marker-end="url(#ah)"/>
+<text x="158.0" y="81" text-anchor="middle" font-size="10" fill="#1f2937">SMC form district + LDC Part 7</text>
+<line x1="247" y1="120" x2="84" y2="120" stroke="#6b7280" stroke-width="1.4" stroke-dasharray="5 4"/>
+<text x="161.0" y="115" text-anchor="middle" font-size="10" fill="#6b7280">front build-line = ½ ROW; 25-ft S buffer; 200-ft transition</text>
+<circle cx="75" cy="120" r="9" fill="#3f6582" stroke="#fff" stroke-width="1.5"/>
+<text x="75" y="123.4" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">1</text>
+<path d="M419,154 h20 v16 h-20" fill="none" stroke="#3f6582" stroke-width="1.3" marker-end="url(#ah)"/>
+<text x="445" y="160" text-anchor="start" font-size="10" fill="#35526b">clip areas off frontage &amp; south boundary (574.0 ft)</text>
+<line x1="419" y1="188" x2="84" y2="188" stroke="#6b7280" stroke-width="1.4" stroke-dasharray="5 4"/>
+<text x="247.0" y="183" text-anchor="middle" font-size="10" fill="#6b7280">front clip 11,215 sf (7.09%) · south ≥14,300 sf (9.07%)</text>
+<circle cx="75" cy="188" r="9" fill="#3f6582" stroke="#fff" stroke-width="1.5"/>
+<text x="75" y="191.4" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">2</text>
+<path d="M75,222 h22 v16 h-22" fill="none" stroke="#bb4d00" stroke-width="1.7" marker-end="url(#ahe)"/>
+<text x="103" y="228" text-anchor="start" font-size="10" fill="#bb4d00" font-weight="700">edge budget shrinks buildable; wash straddling lots ⇒ replat</text>
+<line x1="75" y1="256" x2="585" y2="256" stroke="#bb4d00" stroke-width="1.8" marker-end="url(#ahe)"/>
+<text x="330.0" y="251" text-anchor="middle" font-size="10" fill="#bb4d00" font-weight="700">write A3: setbacks + south buffer/transition + replat question</text>
+</svg></div>
+      <div class="seqcap"><b>reasoning sequence</b><span class="k"><span class="ln"></span> data call</span><span class="k"><span class="ln ret"></span> data returned</span><span class="k">↻ deterministic step</span><span class="k"><span style="color:#bb4d00;font-weight:700">↻ ember</span> agent reasons</span><span class="k"><span style="color:#bb4d00;font-weight:700">→</span> conclusion written to SIR</span><span class="k"><span class="nb">N</span> data input, keyed below</span></div>
+      <div class="rrxh">what data feeds this finding <span class="hint">— numbered to match the <b>data-returned</b> badges on the agent lifeline</span></div>
+      <dl class="sdmeta"><dt>1</dt><dd>LDC — Suburban Marketplace Corridor build-line (½ ROW), 25-ft south buffer, 200-ft transition zone</dd><dt>2</dt><dd>edge-clip geometry — 11,215 sf front (7.09%) + ≥14,300 sf south (9.07%) of the 158,179-sf site</dd></dl>
+      <div class="callout ember"><span class="lab">the conclusion the agent writes to the SIR</span>"A 30-ft inward clip off the frontage line is 11,215.3 sf (7.09% …) … A 25-ft clip off [the south boundary] is 14,348.1 sf (9.07% of the site)."</div>
+    </div>
+  </div>
+  <div class="stepdetail" id="f-A4">
+    <div class="sdh"><span class="sid">A4</span><span class="sttl">Floodplain cleared at the parcel centroid</span>
+      <span class="kb mdl">no constraint</span>
+      <span class="kb" style="background:rgba(255,255,255,.16);color:#fff">SIR p.&nbsp;21</span></div>
+    <div class="sdb">
+      <div class="sirquote"><span class="sqlab">as written in the Site Intelligence Report</span><blockquote>&ldquo;Both lots are FEMA Zone X (FIRM 21111C0078F) and outside the MSD Local Regulatory Floodplain, Conveyance Zone, and Combined Sewer Floodprone Area, confirmed at the parcel. [V]&rdquo;</blockquote><cite>&mdash;&nbsp;&sect;8.4 Floodplain &amp; Watershed &middot; p.&nbsp;21</cite></div>
+      <p>Even the 'no constraint' outcome is reached by a spatial containment test against the flood-zone polygons at each centroid.</p>
+      <p style="font-size:12px;color:#6b7280;margin:2px 0 0"><b style="font-family:var(--mono);font-size:10.5px;color:#35526b">SPATIAL OP</b> &nbsp;Point-in-polygon zone containment (negative) &nbsp;·&nbsp; <b style="font-family:var(--mono);font-size:10.5px;color:#35526b">SIR</b> &nbsp;§8.4 Floodplain · Appx B/N</p>
+      <div class="seqfig"><svg viewBox="0 0 701 312" width="100%" role="img" aria-label="Reasoning sequence for finding A4 — Floodplain cleared at the parcel centroid" xmlns="http://www.w3.org/2000/svg" font-family="'Fira Code','SF Mono',ui-monospace,Menlo,monospace">
+<defs><marker id="ah" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#3f6582"/></marker><marker id="ahe" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#bb4d00"/></marker><marker id="ret" markerWidth="10" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6" fill="none" stroke="#6b7280" stroke-width="1.2"/></marker></defs>
+<rect x="0" y="0" width="701" height="312" fill="#ffffff"/>
+<rect x="70" y="72" width="10" height="226" rx="2" fill="#bb4d00" opacity="0.10"/>
+<line x1="75" y1="52" x2="75" y2="298" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="2" y="6" width="146" height="46" rx="8" fill="#bb4d00"/>
+<text x="75" y="25" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12" font-weight="700" fill="#fff">Floodplain Agent</text>
+<text x="75" y="41" text-anchor="middle" font-size="8.5" fill="#ffffff" opacity="0.82">§8.4</text>
+<line x1="247" y1="52" x2="247" y2="298" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="174" y="6" width="146" height="46" rx="8" fill="#6b3fa0"/>
+<text x="247" y="25" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12" font-weight="700" fill="#fff">FEMA</text>
+<text x="247" y="41" text-anchor="middle" font-size="8.5" fill="#ffffff" opacity="0.82">FIRM layer</text>
+<line x1="419" y1="52" x2="419" y2="298" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="346" y="6" width="146" height="46" rx="8" fill="#6b3fa0"/>
+<text x="419" y="25" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12" font-weight="700" fill="#fff">MSD</text>
+<text x="419" y="41" text-anchor="middle" font-size="8.5" fill="#ffffff" opacity="0.82">local floodplain</text>
+<line x1="591" y1="52" x2="591" y2="298" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="518" y="6" width="146" height="46" rx="8" fill="#35526b"/>
+<text x="591" y="25" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12" font-weight="700" fill="#fff">SIR</text>
+<text x="591" y="41" text-anchor="middle" font-size="8.5" fill="#ffffff" opacity="0.82">§8.4 write</text>
+<line x1="75" y1="86" x2="241" y2="86" stroke="#3f6582" stroke-width="1.4" marker-end="url(#ah)"/>
+<text x="158.0" y="81" text-anchor="middle" font-size="10" fill="#1f2937">point-query FIRM @ each centroid</text>
+<line x1="247" y1="120" x2="84" y2="120" stroke="#6b7280" stroke-width="1.4" stroke-dasharray="5 4"/>
+<text x="161.0" y="115" text-anchor="middle" font-size="10" fill="#6b7280">Zone X · FIRM 21111C0078F · SFHA_TF=F</text>
+<circle cx="75" cy="120" r="9" fill="#3f6582" stroke="#fff" stroke-width="1.5"/>
+<text x="75" y="123.4" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">1</text>
+<line x1="75" y1="154" x2="413" y2="154" stroke="#3f6582" stroke-width="1.4" marker-end="url(#ah)"/>
+<text x="244.0" y="149" text-anchor="middle" font-size="10" fill="#1f2937">MSD local floodplain / conveyance layers</text>
+<line x1="419" y1="188" x2="84" y2="188" stroke="#6b7280" stroke-width="1.4" stroke-dasharray="5 4"/>
+<text x="247.0" y="183" text-anchor="middle" font-size="10" fill="#6b7280">outside all — pads &amp; cross-access driveways</text>
+<circle cx="75" cy="188" r="9" fill="#3f6582" stroke="#fff" stroke-width="1.5"/>
+<text x="75" y="191.4" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">2</text>
+<path d="M75,222 h22 v16 h-22" fill="none" stroke="#bb4d00" stroke-width="1.7" marker-end="url(#ahe)"/>
+<text x="103" y="228" text-anchor="start" font-size="10" fill="#bb4d00" font-weight="700">point-in-polygon (negative) ⇒ no floodplain constraint</text>
+<line x1="75" y1="256" x2="585" y2="256" stroke="#bb4d00" stroke-width="1.8" marker-end="url(#ahe)"/>
+<text x="330.0" y="251" text-anchor="middle" font-size="10" fill="#bb4d00" font-weight="700">write A4: FEMA Zone X, confirmed at parcel [V]</text>
+</svg></div>
+      <div class="seqcap"><b>reasoning sequence</b><span class="k"><span class="ln"></span> data call</span><span class="k"><span class="ln ret"></span> data returned</span><span class="k">↻ deterministic step</span><span class="k"><span style="color:#bb4d00;font-weight:700">↻ ember</span> agent reasons</span><span class="k"><span style="color:#bb4d00;font-weight:700">→</span> conclusion written to SIR</span><span class="k"><span class="nb">N</span> data input, keyed below</span></div>
+      <div class="rrxh">what data feeds this finding <span class="hint">— numbered to match the <b>data-returned</b> badges on the agent lifeline</span></div>
+      <dl class="sdmeta"><dt>1</dt><dd>FEMA FIRM 21111C0078F — Zone X, SFHA_TF=F at each centroid</dd><dt>2</dt><dd>MSD local regulatory floodplain / conveyance / CSO layers — outside all</dd></dl>
+      <div class="callout ember"><span class="lab">the conclusion the agent writes to the SIR</span>"Both lots are FEMA Zone X (FIRM 21111C0078F) and outside the MSD Local Regulatory Floodplain … confirmed at the parcel [V]."</div>
+    </div>
+  </div>
+  <div class="stepdetail" id="f-A5">
+    <div class="sdh"><span class="sid">A5</span><span class="sttl">Easement spatial attribution — burdens land on the Wawa</span>
+      <span class="kb k-check">moderate / note</span>
+      <span class="kb" style="background:rgba(255,255,255,.16);color:#fff">SIR p.&nbsp;16</span></div>
+    <div class="sdb">
+      <div class="sirquote"><span class="sqlab">as written in the Site Intelligence Report</span><blockquote>&ldquo;The MSD stormwater agreement (2024114301) and LG&amp;E easement (2024176896) burden the Wawa lot only, verified against each instrument&rsquo;s legal description.&rdquo;</blockquote><cite>&mdash;&nbsp;&sect;4 Recorded Encumbrances &amp; Title &middot; p.&nbsp;16</cite></div>
+      <p>Recorded strip geometry is read onto specific lots by legal description: the LG&amp;E/MSD strips tie to the Wawa, leaving the pads carrying only the generic plat strips.</p>
+      <p style="font-size:12px;color:#6b7280;margin:2px 0 0"><b style="font-family:var(--mono);font-size:10.5px;color:#35526b">SPATIAL OP</b> &nbsp;Easement-to-parcel attribution via strip geometry &nbsp;·&nbsp; <b style="font-family:var(--mono);font-size:10.5px;color:#35526b">SIR</b> &nbsp;§4 Encumbrances · §8.9 · Appx F/K</p>
+      <div class="seqfig"><svg viewBox="0 0 701 312" width="100%" role="img" aria-label="Reasoning sequence for finding A5 — Easement spatial attribution — burdens land on the Wawa" xmlns="http://www.w3.org/2000/svg" font-family="'Fira Code','SF Mono',ui-monospace,Menlo,monospace">
+<defs><marker id="ah" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#3f6582"/></marker><marker id="ahe" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#bb4d00"/></marker><marker id="ret" markerWidth="10" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6" fill="none" stroke="#6b7280" stroke-width="1.2"/></marker></defs>
+<rect x="0" y="0" width="701" height="312" fill="#ffffff"/>
+<rect x="70" y="72" width="10" height="226" rx="2" fill="#bb4d00" opacity="0.10"/>
+<line x1="75" y1="52" x2="75" y2="298" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="2" y="6" width="146" height="46" rx="8" fill="#bb4d00"/>
+<text x="75" y="25" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12" font-weight="700" fill="#fff">Encumbr. Agent</text>
+<text x="75" y="41" text-anchor="middle" font-size="8.5" fill="#ffffff" opacity="0.82">§4</text>
+<line x1="247" y1="52" x2="247" y2="298" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="174" y="6" width="146" height="46" rx="8" fill="#0f7a5f"/>
+<text x="247" y="25" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12" font-weight="700" fill="#fff">Clerk</text>
+<text x="247" y="41" text-anchor="middle" font-size="8.5" fill="#ffffff" opacity="0.82">recorded instruments</text>
+<line x1="419" y1="52" x2="419" y2="298" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="346" y="6" width="146" height="46" rx="8" fill="#3f6582"/>
+<text x="419" y="25" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12" font-weight="700" fill="#fff">geom</text>
+<text x="419" y="41" text-anchor="middle" font-size="8.5" fill="#ffffff" opacity="0.82">strip attribution</text>
+<line x1="591" y1="52" x2="591" y2="298" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="518" y="6" width="146" height="46" rx="8" fill="#35526b"/>
+<text x="591" y="25" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12" font-weight="700" fill="#fff">SIR</text>
+<text x="591" y="41" text-anchor="middle" font-size="8.5" fill="#ffffff" opacity="0.82">§4 write</text>
+<line x1="75" y1="86" x2="241" y2="86" stroke="#3f6582" stroke-width="1.4" marker-end="url(#ah)"/>
+<text x="158.0" y="81" text-anchor="middle" font-size="10" fill="#1f2937">pull instruments 2024114301 / 2024176896 / ECR</text>
+<line x1="247" y1="120" x2="84" y2="120" stroke="#6b7280" stroke-width="1.4" stroke-dasharray="5 4"/>
+<text x="161.0" y="115" text-anchor="middle" font-size="10" fill="#6b7280">legal descriptions + strips 254&#x27;×20&#x27;, 88&#x27;×15&#x27;</text>
+<circle cx="75" cy="120" r="9" fill="#3f6582" stroke="#fff" stroke-width="1.5"/>
+<text x="75" y="123.4" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">1</text>
+<path d="M419,154 h20 v16 h-20" fill="none" stroke="#3f6582" stroke-width="1.3" marker-end="url(#ah)"/>
+<text x="445" y="160" text-anchor="start" font-size="10" fill="#35526b">attribute each strip to a parcel via legal description</text>
+<line x1="419" y1="188" x2="84" y2="188" stroke="#6b7280" stroke-width="1.4" stroke-dasharray="5 4"/>
+<text x="247.0" y="183" text-anchor="middle" font-size="10" fill="#6b7280">strips ⊂ Wawa (Lot 1); pads carry only plat 10&#x27;/20&#x27; strips</text>
+<circle cx="75" cy="188" r="9" fill="#3f6582" stroke="#fff" stroke-width="1.5"/>
+<text x="75" y="191.4" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">2</text>
+<path d="M75,222 h22 v16 h-22" fill="none" stroke="#bb4d00" stroke-width="1.7" marker-end="url(#ahe)"/>
+<text x="103" y="228" text-anchor="start" font-size="10" fill="#bb4d00" font-weight="700">burden lands on the Wawa, not the pads (15-ft sanitary on Lot 3 edge)</text>
+<line x1="75" y1="256" x2="585" y2="256" stroke="#bb4d00" stroke-width="1.8" marker-end="url(#ahe)"/>
+<text x="330.0" y="251" text-anchor="middle" font-size="10" fill="#bb4d00" font-weight="700">write A5: LG&amp;E/MSD burdens on the Wawa lot only [V]</text>
+</svg></div>
+      <div class="seqcap"><b>reasoning sequence</b><span class="k"><span class="ln"></span> data call</span><span class="k"><span class="ln ret"></span> data returned</span><span class="k">↻ deterministic step</span><span class="k"><span style="color:#bb4d00;font-weight:700">↻ ember</span> agent reasons</span><span class="k"><span style="color:#bb4d00;font-weight:700">→</span> conclusion written to SIR</span><span class="k"><span class="nb">N</span> data input, keyed below</span></div>
+      <div class="rrxh">what data feeds this finding <span class="hint">— numbered to match the <b>data-returned</b> badges on the agent lifeline</span></div>
+      <dl class="sdmeta"><dt>1</dt><dd>county-clerk instruments — MSD 2024114301, LG&amp;E 2024176896, reciprocal-access ECR (legal descriptions + strip dims)</dd><dt>2</dt><dd>strip attribution — 254'×20' &amp; 88'×15' tie to the Wawa (Lot 1); pads free of them</dd></dl>
+      <div class="callout ember"><span class="lab">the conclusion the agent writes to the SIR</span>"The MSD stormwater agreement (2024114301) and LG&amp;E easement (2024176896) burden the Wawa lot only, verified against each instrument's legal description."</div>
+    </div>
+  </div>
+  <div class="stepdetail" id="f-A6">
+    <div class="sdh"><span class="sid">A6</span><span class="sttl">Streams / wetlands proximity + buffer bands</span>
+      <span class="kb mdl">note</span>
+      <span class="kb" style="background:rgba(255,255,255,.16);color:#fff">SIR p.&nbsp;35</span></div>
+    <div class="sdb">
+      <div class="sirquote"><span class="sqlab">as written in the Site Intelligence Report</span><blockquote>&ldquo;Within 500&nbsp;m, NHD maps two unnamed intermittent streams and NWI maps one riverine wetland (Cowardin R4SBC, 4.25 acres) coincident with the mapped intermittent channel … the constraint sits at the drainage-feature edge.&rdquo;</blockquote><cite>&mdash;&nbsp;Appendix B &middot; Streams, wetlands &amp; receiving waters &middot; p.&nbsp;35</cite></div>
+      <p>A 500-m proximity screen maps the hydrology; buffer-band geometry then places the constraint at the drainage-feature edge, pending a field top-of-bank.</p>
+      <p style="font-size:12px;color:#6b7280;margin:2px 0 0"><b style="font-family:var(--mono);font-size:10.5px;color:#35526b">SPATIAL OP</b> &nbsp;Buffer / proximity screen (500 m) · band geometry &nbsp;·&nbsp; <b style="font-family:var(--mono);font-size:10.5px;color:#35526b">SIR</b> &nbsp;Appx B / N / P</p>
+      <div class="seqfig"><svg viewBox="0 0 701 312" width="100%" role="img" aria-label="Reasoning sequence for finding A6 — Streams / wetlands proximity + buffer bands" xmlns="http://www.w3.org/2000/svg" font-family="'Fira Code','SF Mono',ui-monospace,Menlo,monospace">
+<defs><marker id="ah" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#3f6582"/></marker><marker id="ahe" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#bb4d00"/></marker><marker id="ret" markerWidth="10" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6" fill="none" stroke="#6b7280" stroke-width="1.2"/></marker></defs>
+<rect x="0" y="0" width="701" height="312" fill="#ffffff"/>
+<rect x="70" y="72" width="10" height="226" rx="2" fill="#bb4d00" opacity="0.10"/>
+<line x1="75" y1="52" x2="75" y2="298" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="2" y="6" width="146" height="46" rx="8" fill="#bb4d00"/>
+<text x="75" y="25" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12" font-weight="700" fill="#fff">Environ. Agent</text>
+<text x="75" y="41" text-anchor="middle" font-size="8.5" fill="#ffffff" opacity="0.82">§8.5</text>
+<line x1="247" y1="52" x2="247" y2="298" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="174" y="6" width="146" height="46" rx="8" fill="#6b3fa0"/>
+<text x="247" y="25" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12" font-weight="700" fill="#fff">NHD / NWI</text>
+<text x="247" y="41" text-anchor="middle" font-size="8.5" fill="#ffffff" opacity="0.82">hydro layers</text>
+<line x1="419" y1="52" x2="419" y2="298" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="346" y="6" width="146" height="46" rx="8" fill="#3f6582"/>
+<text x="419" y="25" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12" font-weight="700" fill="#fff">geom</text>
+<text x="419" y="41" text-anchor="middle" font-size="8.5" fill="#ffffff" opacity="0.82">buffer bands</text>
+<line x1="591" y1="52" x2="591" y2="298" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="518" y="6" width="146" height="46" rx="8" fill="#35526b"/>
+<text x="591" y="25" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12" font-weight="700" fill="#fff">SIR</text>
+<text x="591" y="41" text-anchor="middle" font-size="8.5" fill="#ffffff" opacity="0.82">§8.5 write</text>
+<line x1="75" y1="86" x2="241" y2="86" stroke="#3f6582" stroke-width="1.4" marker-end="url(#ah)"/>
+<text x="158.0" y="81" text-anchor="middle" font-size="10" fill="#1f2937">NHD / NWI within 500 m @ centroid</text>
+<line x1="247" y1="120" x2="84" y2="120" stroke="#6b7280" stroke-width="1.4" stroke-dasharray="5 4"/>
+<text x="161.0" y="115" text-anchor="middle" font-size="10" fill="#6b7280">2 intermittent streams; NWI R4SBC 4.25 ac on channel</text>
+<circle cx="75" cy="120" r="9" fill="#3f6582" stroke="#fff" stroke-width="1.5"/>
+<text x="75" y="123.4" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">1</text>
+<path d="M419,154 h20 v16 h-20" fill="none" stroke="#3f6582" stroke-width="1.3" marker-end="url(#ah)"/>
+<text x="445" y="160" text-anchor="start" font-size="10" fill="#35526b">buffer-band geometry (Type B 100-ft)</text>
+<line x1="419" y1="188" x2="84" y2="188" stroke="#6b7280" stroke-width="1.4" stroke-dasharray="5 4"/>
+<text x="247.0" y="183" text-anchor="middle" font-size="10" fill="#6b7280">constraint at drainage-feature edge; bands cross lines</text>
+<circle cx="75" cy="188" r="9" fill="#3f6582" stroke="#fff" stroke-width="1.5"/>
+<text x="75" y="191.4" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">2</text>
+<path d="M75,222 h22 v16 h-22" fill="none" stroke="#bb4d00" stroke-width="1.7" marker-end="url(#ahe)"/>
+<text x="103" y="228" text-anchor="start" font-size="10" fill="#bb4d00" font-weight="700">whether a band clips a pad ⇒ needs a field top-of-bank delineation</text>
+<line x1="75" y1="256" x2="585" y2="256" stroke="#bb4d00" stroke-width="1.8" marker-end="url(#ahe)"/>
+<text x="330.0" y="251" text-anchor="middle" font-size="10" fill="#bb4d00" font-weight="700">write A6: streams/wetlands proximity + buffer bands</text>
+</svg></div>
+      <div class="seqcap"><b>reasoning sequence</b><span class="k"><span class="ln"></span> data call</span><span class="k"><span class="ln ret"></span> data returned</span><span class="k">↻ deterministic step</span><span class="k"><span style="color:#bb4d00;font-weight:700">↻ ember</span> agent reasons</span><span class="k"><span style="color:#bb4d00;font-weight:700">→</span> conclusion written to SIR</span><span class="k"><span class="nb">N</span> data input, keyed below</span></div>
+      <div class="rrxh">what data feeds this finding <span class="hint">— numbered to match the <b>data-returned</b> badges on the agent lifeline</span></div>
+      <dl class="sdmeta"><dt>1</dt><dd>NHD / NWI — 2 unnamed intermittent streams + one riverine wetland (R4SBC, 4.25 ac) within 500 m</dd><dt>2</dt><dd>buffer-band geometry — Type B 100-ft (25+50+25) band, reaching across property lines</dd></dl>
+      <div class="callout ember"><span class="lab">the conclusion the agent writes to the SIR</span>"Within 500 m, NHD maps two unnamed intermittent streams and NWI maps one riverine wetland … the constraint sits at the drainage-feature edge."</div>
+    </div>
+  </div>
+  <div class="stepdetail" id="f-A7">
+    <div class="sdh"><span class="sid">A7</span><span class="sttl">Slope / DEM ground sweep, airport, pipelines</span>
+      <span class="kb mdl">note</span>
+      <span class="kb" style="background:rgba(255,255,255,.16);color:#fff">SIR p.&nbsp;35</span></div>
+    <div class="sdb">
+      <div class="sirquote"><span class="sqlab">as written in the Site Intelligence Report</span><blockquote>&ldquo;A 1&nbsp;m LiDAR-grade DEM at the centroid (2026-08-03; 81 samples over a 120&nbsp;m area) shows 9.31&nbsp;m relief, mean slope 3.8%, max 6.5%, and 100% of area under 25% slope. … there is no slope-driven constraint on buildable area or basin siting.&rdquo;</blockquote><cite>&mdash;&nbsp;Appendix B &middot; Ground sweep — soils, slope, pipelines, airport &middot; p.&nbsp;35</cite></div>
+      <p>A LiDAR DEM sampled at the centroid rules out a slope constraint; distance screens clear the airport and pipeline corridors.</p>
+      <p style="font-size:12px;color:#6b7280;margin:2px 0 0"><b style="font-family:var(--mono);font-size:10.5px;color:#35526b">SPATIAL OP</b> &nbsp;DEM terrain analysis · distance / containment screens &nbsp;·&nbsp; <b style="font-family:var(--mono);font-size:10.5px;color:#35526b">SIR</b> &nbsp;Appx B / P</p>
+      <div class="seqfig"><svg viewBox="0 0 701 312" width="100%" role="img" aria-label="Reasoning sequence for finding A7 — Slope / DEM ground sweep, airport, pipelines" xmlns="http://www.w3.org/2000/svg" font-family="'Fira Code','SF Mono',ui-monospace,Menlo,monospace">
+<defs><marker id="ah" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#3f6582"/></marker><marker id="ahe" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#bb4d00"/></marker><marker id="ret" markerWidth="10" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6" fill="none" stroke="#6b7280" stroke-width="1.2"/></marker></defs>
+<rect x="0" y="0" width="701" height="312" fill="#ffffff"/>
+<rect x="70" y="72" width="10" height="226" rx="2" fill="#bb4d00" opacity="0.10"/>
+<line x1="75" y1="52" x2="75" y2="298" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="2" y="6" width="146" height="46" rx="8" fill="#bb4d00"/>
+<text x="75" y="25" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12" font-weight="700" fill="#fff">Environ. Agent</text>
+<text x="75" y="41" text-anchor="middle" font-size="8.5" fill="#ffffff" opacity="0.82">§8.5</text>
+<line x1="247" y1="52" x2="247" y2="298" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="174" y="6" width="146" height="46" rx="8" fill="#6b3fa0"/>
+<text x="247" y="25" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12" font-weight="700" fill="#fff">DEM</text>
+<text x="247" y="41" text-anchor="middle" font-size="8.5" fill="#ffffff" opacity="0.82">1 m LiDAR</text>
+<line x1="419" y1="52" x2="419" y2="298" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="346" y="6" width="146" height="46" rx="8" fill="#6b3fa0"/>
+<text x="419" y="25" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12" font-weight="700" fill="#fff">screens</text>
+<text x="419" y="41" text-anchor="middle" font-size="8.5" fill="#ffffff" opacity="0.82">airport/pipe</text>
+<line x1="591" y1="52" x2="591" y2="298" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="518" y="6" width="146" height="46" rx="8" fill="#35526b"/>
+<text x="591" y="25" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12" font-weight="700" fill="#fff">SIR</text>
+<text x="591" y="41" text-anchor="middle" font-size="8.5" fill="#ffffff" opacity="0.82">§8.5 write</text>
+<line x1="75" y1="86" x2="241" y2="86" stroke="#3f6582" stroke-width="1.4" marker-end="url(#ah)"/>
+<text x="158.0" y="81" text-anchor="middle" font-size="10" fill="#1f2937">1 m LiDAR DEM @ centroid (81 samples)</text>
+<line x1="247" y1="120" x2="84" y2="120" stroke="#6b7280" stroke-width="1.4" stroke-dasharray="5 4"/>
+<text x="161.0" y="115" text-anchor="middle" font-size="10" fill="#6b7280">relief 9.31 m · mean 3.8% · 100% under 25% slope</text>
+<circle cx="75" cy="120" r="9" fill="#3f6582" stroke="#fff" stroke-width="1.5"/>
+<text x="75" y="123.4" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">1</text>
+<line x1="75" y1="154" x2="413" y2="154" stroke="#3f6582" stroke-width="1.4" marker-end="url(#ah)"/>
+<text x="244.0" y="149" text-anchor="middle" font-size="10" fill="#1f2937">airport / pipeline proximity screens</text>
+<line x1="419" y1="188" x2="84" y2="188" stroke="#6b7280" stroke-width="1.4" stroke-dasharray="5 4"/>
+<text x="247.0" y="183" text-anchor="middle" font-size="10" fill="#6b7280">Bowman 3.32 mi (&lt;Part 77); no pipeline on pads</text>
+<circle cx="75" cy="188" r="9" fill="#3f6582" stroke="#fff" stroke-width="1.5"/>
+<text x="75" y="191.4" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">2</text>
+<path d="M75,222 h22 v16 h-22" fill="none" stroke="#bb4d00" stroke-width="1.7" marker-end="url(#ahe)"/>
+<text x="103" y="228" text-anchor="start" font-size="10" fill="#bb4d00" font-weight="700">no slope- or corridor-driven constraint on buildable / basin siting</text>
+<line x1="75" y1="256" x2="585" y2="256" stroke="#bb4d00" stroke-width="1.8" marker-end="url(#ahe)"/>
+<text x="330.0" y="251" text-anchor="middle" font-size="10" fill="#bb4d00" font-weight="700">write A7: DEM / airport / pipeline sweep — clear</text>
+</svg></div>
+      <div class="seqcap"><b>reasoning sequence</b><span class="k"><span class="ln"></span> data call</span><span class="k"><span class="ln ret"></span> data returned</span><span class="k">↻ deterministic step</span><span class="k"><span style="color:#bb4d00;font-weight:700">↻ ember</span> agent reasons</span><span class="k"><span style="color:#bb4d00;font-weight:700">→</span> conclusion written to SIR</span><span class="k"><span class="nb">N</span> data input, keyed below</span></div>
+      <div class="rrxh">what data feeds this finding <span class="hint">— numbered to match the <b>data-returned</b> badges on the agent lifeline</span></div>
+      <dl class="sdmeta"><dt>1</dt><dd>1 m LiDAR DEM — 81 samples, 9.31 m relief, mean 3.8%, 100% under 25% slope</dd><dt>2</dt><dd>proximity screens — Bowman Field 3.32 mi (under 14 CFR Part 77); no petroleum/gas pipeline on either pad</dd></dl>
+      <div class="callout ember"><span class="lab">the conclusion the agent writes to the SIR</span>"A 1 m LiDAR-grade DEM at the centroid … shows … mean slope 3.8% … there is no slope-driven constraint on buildable area or basin siting."</div>
+    </div>
+  </div>
+  <div class="stepdetail" id="f-A8">
+    <div class="sdh"><span class="sid">A8</span><span class="sttl">On-pad transformer / equipment siting conflict</span>
+      <span class="kb k-check">moderate</span>
+      <span class="kb" style="background:rgba(255,255,255,.16);color:#fff">SIR p.&nbsp;74</span></div>
+    <div class="sdb">
+      <div class="sirquote"><span class="sqlab">as written in the Site Intelligence Report</span><blockquote>&ldquo;On-pad transformer siting also consumes buildable area on a pad already reduced by drainage and detention … reserve the transformer pad location in the layout accordingly.&rdquo;</blockquote><cite>&mdash;&nbsp;&sect;8.9 Electrical Service &middot; p.&nbsp;74</cite></div>
+      <p>The agent places equipment relative to the recorded strips and the residential edge on a pad already reduced by drainage and detention.</p>
+      <p style="font-size:12px;color:#6b7280;margin:2px 0 0"><b style="font-family:var(--mono);font-size:10.5px;color:#35526b">SPATIAL OP</b> &nbsp;Equipment-vs-buildable siting against no-build strips &nbsp;·&nbsp; <b style="font-family:var(--mono);font-size:10.5px;color:#35526b">SIR</b> &nbsp;§8.9 Electrical · Appx K</p>
+      <div class="seqfig"><svg viewBox="0 0 701 312" width="100%" role="img" aria-label="Reasoning sequence for finding A8 — On-pad transformer / equipment siting conflict" xmlns="http://www.w3.org/2000/svg" font-family="'Fira Code','SF Mono',ui-monospace,Menlo,monospace">
+<defs><marker id="ah" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#3f6582"/></marker><marker id="ahe" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#bb4d00"/></marker><marker id="ret" markerWidth="10" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6" fill="none" stroke="#6b7280" stroke-width="1.2"/></marker></defs>
+<rect x="0" y="0" width="701" height="312" fill="#ffffff"/>
+<rect x="70" y="72" width="10" height="226" rx="2" fill="#bb4d00" opacity="0.10"/>
+<line x1="75" y1="52" x2="75" y2="298" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="2" y="6" width="146" height="46" rx="8" fill="#bb4d00"/>
+<text x="75" y="25" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12" font-weight="700" fill="#fff">Electrical Agent</text>
+<text x="75" y="41" text-anchor="middle" font-size="8.5" fill="#ffffff" opacity="0.82">§8.9</text>
+<line x1="247" y1="52" x2="247" y2="298" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="174" y="6" width="146" height="46" rx="8" fill="#0f7a5f"/>
+<text x="247" y="25" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12" font-weight="700" fill="#fff">Plat</text>
+<text x="247" y="41" text-anchor="middle" font-size="8.5" fill="#ffffff" opacity="0.82">no-build strips</text>
+<line x1="419" y1="52" x2="419" y2="298" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="346" y="6" width="146" height="46" rx="8" fill="#3f6582"/>
+<text x="419" y="25" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12" font-weight="700" fill="#fff">geom</text>
+<text x="419" y="41" text-anchor="middle" font-size="8.5" fill="#ffffff" opacity="0.82">layout siting</text>
+<line x1="591" y1="52" x2="591" y2="298" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="518" y="6" width="146" height="46" rx="8" fill="#35526b"/>
+<text x="591" y="25" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12" font-weight="700" fill="#fff">SIR</text>
+<text x="591" y="41" text-anchor="middle" font-size="8.5" fill="#ffffff" opacity="0.82">§8.9 write</text>
+<line x1="75" y1="86" x2="241" y2="86" stroke="#3f6582" stroke-width="1.4" marker-end="url(#ah)"/>
+<text x="158.0" y="81" text-anchor="middle" font-size="10" fill="#1f2937">recorded no-build strips (20&#x27; drainage, 10&#x27; utility)</text>
+<line x1="247" y1="120" x2="84" y2="120" stroke="#6b7280" stroke-width="1.4" stroke-dasharray="5 4"/>
+<text x="161.0" y="115" text-anchor="middle" font-size="10" fill="#6b7280">strip geometry + south residential-buffer edge</text>
+<circle cx="75" cy="120" r="9" fill="#3f6582" stroke="#fff" stroke-width="1.5"/>
+<text x="75" y="123.4" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">1</text>
+<path d="M419,154 h20 v16 h-20" fill="none" stroke="#3f6582" stroke-width="1.3" marker-end="url(#ah)"/>
+<text x="445" y="160" text-anchor="start" font-size="10" fill="#35526b">site transformer clear of strips &amp; buffer</text>
+<line x1="419" y1="188" x2="84" y2="188" stroke="#6b7280" stroke-width="1.4" stroke-dasharray="5 4"/>
+<text x="247.0" y="183" text-anchor="middle" font-size="10" fill="#6b7280">footprint already reduced by drainage / detention</text>
+<circle cx="75" cy="188" r="9" fill="#3f6582" stroke="#fff" stroke-width="1.5"/>
+<text x="75" y="191.4" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">2</text>
+<path d="M75,222 h22 v16 h-22" fill="none" stroke="#bb4d00" stroke-width="1.7" marker-end="url(#ahe)"/>
+<text x="103" y="228" text-anchor="start" font-size="10" fill="#bb4d00" font-weight="700">on-pad equipment competes for scarce buildable area</text>
+<line x1="75" y1="256" x2="585" y2="256" stroke="#bb4d00" stroke-width="1.8" marker-end="url(#ahe)"/>
+<text x="330.0" y="251" text-anchor="middle" font-size="10" fill="#bb4d00" font-weight="700">write A8: reserve transformer pad clear of the strips</text>
+</svg></div>
+      <div class="seqcap"><b>reasoning sequence</b><span class="k"><span class="ln"></span> data call</span><span class="k"><span class="ln ret"></span> data returned</span><span class="k">↻ deterministic step</span><span class="k"><span style="color:#bb4d00;font-weight:700">↻ ember</span> agent reasons</span><span class="k"><span style="color:#bb4d00;font-weight:700">→</span> conclusion written to SIR</span><span class="k"><span class="nb">N</span> data input, keyed below</span></div>
+      <div class="rrxh">what data feeds this finding <span class="hint">— numbered to match the <b>data-returned</b> badges on the agent lifeline</span></div>
+      <dl class="sdmeta"><dt>1</dt><dd>recorded plat strips — 20-ft drainage + 10-ft utility no-build bands, plus the south residential-buffer edge</dd><dt>2</dt><dd>layout siting — transformer/meter placed relative to those strips on an already-reduced footprint</dd></dl>
+      <div class="callout ember"><span class="lab">the conclusion the agent writes to the SIR</span>"On-pad transformer siting also consumes buildable area on a pad already reduced by drainage and detention … reserve the transformer pad location in the layout."</div>
+    </div>
+  </div>
+  <div class="stepdetail" id="f-A9">
+    <div class="sdh"><span class="sid">A9</span><span class="sttl">Special-district &amp; overlay containment at the centroid</span>
+      <span class="kb mdl">note</span>
+      <span class="kb" style="background:rgba(255,255,255,.16);color:#fff">SIR p.&nbsp;62</span></div>
+    <div class="sdb">
+      <div class="sirquote"><span class="sqlab">as written in the Site Intelligence Report</span><blockquote>&ldquo;The subject lies inside the Fern Creek Fire Protection District (JCFD number F60, fire tax district 15), an independent suburban FPD with its own tax levy — the one confirmed special taxing district at the parcel.&rdquo;</blockquote><cite>&mdash;&nbsp;Appendix &middot; Special Districts &middot; p.&nbsp;62</cite></div>
+      <p>Several findings are decided purely by testing the centroid against district polygons — each 'none applies' is the result of a spatial query, not an assumption.</p>
+      <p style="font-size:12px;color:#6b7280;margin:2px 0 0"><b style="font-family:var(--mono);font-size:10.5px;color:#35526b">SPATIAL OP</b> &nbsp;Point-in-polygon district membership · overlay nulls &nbsp;·&nbsp; <b style="font-family:var(--mono);font-size:10.5px;color:#35526b">SIR</b> &nbsp;Appx I / J / N / Q / T</p>
+      <div class="seqfig"><svg viewBox="0 0 529 312" width="100%" role="img" aria-label="Reasoning sequence for finding A9 — Special-district &amp; overlay containment at the centroid" xmlns="http://www.w3.org/2000/svg" font-family="'Fira Code','SF Mono',ui-monospace,Menlo,monospace">
+<defs><marker id="ah" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#3f6582"/></marker><marker id="ahe" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#bb4d00"/></marker><marker id="ret" markerWidth="10" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6" fill="none" stroke="#6b7280" stroke-width="1.2"/></marker></defs>
+<rect x="0" y="0" width="529" height="312" fill="#ffffff"/>
+<rect x="70" y="72" width="10" height="226" rx="2" fill="#bb4d00" opacity="0.10"/>
+<line x1="75" y1="52" x2="75" y2="298" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="2" y="6" width="146" height="46" rx="8" fill="#bb4d00"/>
+<text x="75" y="25" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12" font-weight="700" fill="#fff">Multi Agent</text>
+<text x="75" y="41" text-anchor="middle" font-size="8.5" fill="#ffffff" opacity="0.82">§8</text>
+<line x1="247" y1="52" x2="247" y2="298" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="174" y="6" width="146" height="46" rx="8" fill="#6b3fa0"/>
+<text x="247" y="25" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12" font-weight="700" fill="#fff">LOJIC</text>
+<text x="247" y="41" text-anchor="middle" font-size="8.5" fill="#ffffff" opacity="0.82">district layers</text>
+<line x1="419" y1="52" x2="419" y2="298" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="346" y="6" width="146" height="46" rx="8" fill="#35526b"/>
+<text x="419" y="25" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12" font-weight="700" fill="#fff">SIR</text>
+<text x="419" y="41" text-anchor="middle" font-size="8.5" fill="#ffffff" opacity="0.82">§8 write</text>
+<line x1="75" y1="86" x2="241" y2="86" stroke="#3f6582" stroke-width="1.4" marker-end="url(#ah)"/>
+<text x="158.0" y="81" text-anchor="middle" font-size="10" fill="#1f2937">point-query districts @ centroid</text>
+<line x1="247" y1="120" x2="84" y2="120" stroke="#6b7280" stroke-width="1.4" stroke-dasharray="5 4"/>
+<text x="161.0" y="115" text-anchor="middle" font-size="10" fill="#6b7280">Fern Creek FPD F60 IN; Urban Service District OUT</text>
+<circle cx="75" cy="120" r="9" fill="#3f6582" stroke="#fff" stroke-width="1.5"/>
+<text x="75" y="123.4" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">1</text>
+<line x1="75" y1="154" x2="241" y2="154" stroke="#3f6582" stroke-width="1.4" marker-end="url(#ah)"/>
+<text x="158.0" y="149" text-anchor="middle" font-size="10" fill="#1f2937">overlay layers (Floyds Fork, DRO/WRO, neighborhoods)</text>
+<line x1="247" y1="188" x2="84" y2="188" stroke="#6b7280" stroke-width="1.4" stroke-dasharray="5 4"/>
+<text x="161.0" y="183" text-anchor="middle" font-size="10" fill="#6b7280">all null / outside</text>
+<circle cx="75" cy="188" r="9" fill="#3f6582" stroke="#fff" stroke-width="1.5"/>
+<text x="75" y="191.4" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">2</text>
+<path d="M75,222 h22 v16 h-22" fill="none" stroke="#bb4d00" stroke-width="1.7" marker-end="url(#ahe)"/>
+<text x="103" y="228" text-anchor="start" font-size="10" fill="#bb4d00" font-weight="700">membership by point-in-polygon; each &#x27;none&#x27; is a spatial query</text>
+<line x1="75" y1="256" x2="413" y2="256" stroke="#bb4d00" stroke-width="1.8" marker-end="url(#ahe)"/>
+<text x="244.0" y="251" text-anchor="middle" font-size="10" fill="#bb4d00" font-weight="700">write A9: district / overlay containment at the centroid</text>
+</svg></div>
+      <div class="seqcap"><b>reasoning sequence</b><span class="k"><span class="ln"></span> data call</span><span class="k"><span class="ln ret"></span> data returned</span><span class="k">↻ deterministic step</span><span class="k"><span style="color:#bb4d00;font-weight:700">↻ ember</span> agent reasons</span><span class="k"><span style="color:#bb4d00;font-weight:700">→</span> conclusion written to SIR</span><span class="k"><span class="nb">N</span> data input, keyed below</span></div>
+      <div class="rrxh">what data feeds this finding <span class="hint">— numbered to match the <b>data-returned</b> badges on the agent lifeline</span></div>
+      <dl class="sdmeta"><dt>1</dt><dd>LOJIC district layers — Fern Creek FPD (F60) inside; Urban Service District outside</dd><dt>2</dt><dd>LOJIC overlay layers — Floyds Fork SZO, DRO/WRO, neighborhood polygons all return null at the centroid</dd></dl>
+      <div class="callout ember"><span class="lab">the conclusion the agent writes to the SIR</span>"The subject lies inside the Fern Creek Fire Protection District (F60) … outside the Urban Service District … the subject is … confirmed outside [Floyds Fork]."</div>
+    </div>
+  </div>
+  <div class="stepdetail" id="f-A10">
+    <div class="sdh"><span class="sid">A10</span><span class="sttl">Competitor proximity &amp; radial demand rings</span>
+      <span class="kb mdl">note</span>
+      <span class="kb" style="background:rgba(255,255,255,.16);color:#fff">SIR p.&nbsp;52</span></div>
+    <div class="sdb">
+      <div class="sirquote"><span class="sqlab">as written in the Site Intelligence Report</span><blockquote>&ldquo;Straight-line distances from the subject centroid (38.184861, -85.636991): ZIPS Car Wash, 4405 Bardstown Rd … ~0.13 mi … directly across the corridor from the subject node — the dominant competitive fact of this submarket.&rdquo;</blockquote><cite>&mdash;&nbsp;&sect;9 Demand &middot; Appendix G &middot; p.&nbsp;52</cite></div>
+      <p>Competitors are ranked by straight-line distance from the centroid, demand by area-weighted radial rings, and exposure by a visual-occlusion read of the Wawa between the pads and the arterial.</p>
+      <p style="font-size:12px;color:#6b7280;margin:2px 0 0"><b style="font-family:var(--mono);font-size:10.5px;color:#35526b">SPATIAL OP</b> &nbsp;Straight-line distance · radial-ring aggregation &nbsp;·&nbsp; <b style="font-family:var(--mono);font-size:10.5px;color:#35526b">SIR</b> &nbsp;§9 Demand · Appx G</p>
+      <div class="seqfig"><svg viewBox="0 0 701 312" width="100%" role="img" aria-label="Reasoning sequence for finding A10 — Competitor proximity &amp; radial demand rings" xmlns="http://www.w3.org/2000/svg" font-family="'Fira Code','SF Mono',ui-monospace,Menlo,monospace">
+<defs><marker id="ah" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#3f6582"/></marker><marker id="ahe" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#bb4d00"/></marker><marker id="ret" markerWidth="10" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6" fill="none" stroke="#6b7280" stroke-width="1.2"/></marker></defs>
+<rect x="0" y="0" width="701" height="312" fill="#ffffff"/>
+<rect x="70" y="72" width="10" height="226" rx="2" fill="#bb4d00" opacity="0.10"/>
+<line x1="75" y1="52" x2="75" y2="298" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="2" y="6" width="146" height="46" rx="8" fill="#bb4d00"/>
+<text x="75" y="25" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12" font-weight="700" fill="#fff">Demand Agent</text>
+<text x="75" y="41" text-anchor="middle" font-size="8.5" fill="#ffffff" opacity="0.82">§9</text>
+<line x1="247" y1="52" x2="247" y2="298" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="174" y="6" width="146" height="46" rx="8" fill="#6b3fa0"/>
+<text x="247" y="25" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12" font-weight="700" fill="#fff">Competitors</text>
+<text x="247" y="41" text-anchor="middle" font-size="8.5" fill="#ffffff" opacity="0.82">geocoded set</text>
+<line x1="419" y1="52" x2="419" y2="298" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="346" y="6" width="146" height="46" rx="8" fill="#6b3fa0"/>
+<text x="419" y="25" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12" font-weight="700" fill="#fff">Census</text>
+<text x="419" y="41" text-anchor="middle" font-size="8.5" fill="#ffffff" opacity="0.82">tract pop</text>
+<line x1="591" y1="52" x2="591" y2="298" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="518" y="6" width="146" height="46" rx="8" fill="#35526b"/>
+<text x="591" y="25" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12" font-weight="700" fill="#fff">SIR</text>
+<text x="591" y="41" text-anchor="middle" font-size="8.5" fill="#ffffff" opacity="0.82">§9 write</text>
+<line x1="75" y1="86" x2="241" y2="86" stroke="#3f6582" stroke-width="1.4" marker-end="url(#ah)"/>
+<text x="158.0" y="81" text-anchor="middle" font-size="10" fill="#1f2937">straight-line distance to competitors @ centroid</text>
+<line x1="247" y1="120" x2="84" y2="120" stroke="#6b7280" stroke-width="1.4" stroke-dasharray="5 4"/>
+<text x="161.0" y="115" text-anchor="middle" font-size="10" fill="#6b7280">ZIPS ~0.13 mi · Fern Creek 3.2 mi · SpeedWash 5.8 mi</text>
+<circle cx="75" cy="120" r="9" fill="#3f6582" stroke="#fff" stroke-width="1.5"/>
+<text x="75" y="123.4" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">1</text>
+<line x1="75" y1="154" x2="413" y2="154" stroke="#3f6582" stroke-width="1.4" marker-end="url(#ah)"/>
+<text x="244.0" y="149" text-anchor="middle" font-size="10" fill="#1f2937">area-weighted tract population in radial rings</text>
+<line x1="419" y1="188" x2="84" y2="188" stroke="#6b7280" stroke-width="1.4" stroke-dasharray="5 4"/>
+<text x="247.0" y="183" text-anchor="middle" font-size="10" fill="#6b7280">1-mi 9,750 · 3-mi 103,757 · 5-mi 243,401</text>
+<circle cx="75" cy="188" r="9" fill="#3f6582" stroke="#fff" stroke-width="1.5"/>
+<text x="75" y="191.4" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">2</text>
+<path d="M75,222 h22 v16 h-22" fill="none" stroke="#bb4d00" stroke-width="1.7" marker-end="url(#ahe)"/>
+<text x="103" y="228" text-anchor="start" font-size="10" fill="#bb4d00" font-weight="700">ZIPS same node; Wawa occludes Bardstown ⇒ reads off Fegenbush</text>
+<line x1="75" y1="256" x2="585" y2="256" stroke="#bb4d00" stroke-width="1.8" marker-end="url(#ahe)"/>
+<text x="330.0" y="251" text-anchor="middle" font-size="10" fill="#bb4d00" font-weight="700">write A10: competitor proximity + radial demand rings</text>
+</svg></div>
+      <div class="seqcap"><b>reasoning sequence</b><span class="k"><span class="ln"></span> data call</span><span class="k"><span class="ln ret"></span> data returned</span><span class="k">↻ deterministic step</span><span class="k"><span style="color:#bb4d00;font-weight:700">↻ ember</span> agent reasons</span><span class="k"><span style="color:#bb4d00;font-weight:700">→</span> conclusion written to SIR</span><span class="k"><span class="nb">N</span> data input, keyed below</span></div>
+      <div class="rrxh">what data feeds this finding <span class="hint">— numbered to match the <b>data-returned</b> badges on the agent lifeline</span></div>
+      <dl class="sdmeta"><dt>1</dt><dd>geocoded competitors — straight-line distances from the centroid (ZIPS ~0.13 mi, on the same arterial)</dd><dt>2</dt><dd>census tract population — area-weighted radial rings (1/3/5-mi) vs. the demand threshold</dd></dl>
+      <div class="callout ember"><span class="lab">the conclusion the agent writes to the SIR</span>"Straight-line distances from the subject centroid (38.184861, -85.636991): ZIPS Car Wash … ~0.13 mi … True radial tract aggregation … 3-mi 103,757 …"</div>
+    </div>
+  </div>
+  <div class="foot">sir-geo-spatial-reasoning-findings.html · spec-kit v3 · sibling of architecture-overview.html ·
+  source: sir_artifact 55a2720c-c809-40fd-b589-6525cc48e3bb (118-pp SIR, report caac753c) · diagrams reconstruct the
+  SIR pipeline's discipline-agent evidence chains from the Executive Summary (§1), Discipline Findings (§8) and Research Appendices (B–T).</div>
+</section>
+</main>
+
+<script>
+  const btns=document.querySelectorAll('nav.tabs button');
+  const panels=document.querySelectorAll('.panel');
+  const IDS=['overview','top','anc'];
+  function show(id){
+    btns.forEach(b=>b.classList.toggle('active',b.dataset.tab===id));
+    panels.forEach(p=>p.classList.toggle('active',p.id===id));
+    if(location.hash.slice(1)!==id) history.replaceState(null,'','#'+id);
+    window.scrollTo({top:0,behavior:'smooth'});
+  }
+  btns.forEach(b=>b.addEventListener('click',()=>show(b.dataset.tab)));
+  const initial=location.hash.slice(1);
+  if(IDS.includes(initial)) show(initial);
+  // index deep-links: switch to the finding's tab, then scroll to its card
+  document.querySelectorAll('a.idxlink[href^="#f-"]').forEach(a=>{
+    a.addEventListener('click',e=>{
+      const id=a.getAttribute('href').slice(1);
+      const card=document.getElementById(id);
+      if(!card) return;
+      e.preventDefault();
+      const panel=card.closest('.panel');
+      if(panel) show(panel.id);
+      requestAnimationFrame(()=>card.scrollIntoView({behavior:'smooth',block:'start'}));
+    });
+  });
+</script>
+</body>
+</html>
