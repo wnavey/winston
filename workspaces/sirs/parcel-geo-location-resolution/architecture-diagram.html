@@ -383,7 +383,7 @@ dl.rgrid dd.pe{background:#fdf6f0;border-left:2px solid var(--ember);padding:6px
     </div>
     <div class="ent newt"><div class="eh"><span class="en">parcel-rings.geojson</span><span class="stereo">Step 5 · WGS84</span></div>
       <div class="row"><span class="nm">resolved ring(s)</span><span class="ty">polygon</span></div>
-      <div class="note">all resolved-set parcels, not just primary</div>
+      <div class="note">the in-scope resolved set only (primary + any Step-4 auto-includes) — NOT adjoiners; those live in adjoining-parcels.json</div>
     </div>
     <div class="ent newt"><div class="eh"><span class="en">subject-boundary-overlay.png</span><span class="stereo">Step 5</span></div>
       <div class="row"><span class="nm">rings on ESRI imagery</span><span class="ty">+ geocode pin</span></div>
@@ -731,7 +731,8 @@ dl.rgrid dd.pe{background:#fdf6f0;border-left:2px solid var(--ember);padding:6px
       a frame where the subject is unambiguous — and mechanically flag parcels whose centroid/pin does not sit inside
       them. This is the step that would have caught incident #10.</p>
       <dl class="sdmeta">
-        <dt>Persist</dt><dd>write polygon geometry from Step 2's <code>parcel_details</code> to <code>parcel-rings.geojson</code>. If the tool omitted geometry, fetch it directly — <b>one keyless ArcGIS query</b> (<code>returnGeometry=true&amp;outSR=4326</code>). Never soft-skip.</dd>
+        <dt>Persist</dt><dd>write polygon geometry from Step 2's <code>parcel_details</code> (held in context since Step 2) to <code>parcel-rings.geojson</code>. If the tool omitted geometry, fetch it directly — <b>one keyless ArcGIS query</b> (<code>returnGeometry=true&amp;outSR=4326</code>). Never soft-skip.</dd>
+        <dt>Scope</dt><dd>the file holds the <b>in-scope resolved set only</b> — the primary parcel plus any parcels Step 4 auto-included via two-independent-confirmations. <b>Adjoining/adjacent candidates are excluded</b> (they live in <code>adjoining-parcels.json</code> + Open Questions); the overlay strokes only these resolved rings. Despite the plural name, it's &ldquo;the subject,&rdquo; not &ldquo;every ring nearby.&rdquo;</dd>
         <dt>Render</dt><dd><code>scripts/render_boundary_overlay.py</code> fetches an ESRI World Imagery frame (keyless), strokes every ring in orange with its parcel ID, marks the geocode pin, emits <code>geometry-summary.json</code></dd>
         <dt>Flags</dt><dd><code>centroid_inside_ring</code> / <code>pin_inside_ring</code> — a <code>false</code> means the parcel is non-convex; copy the warning verbatim and frame all imagery from the overlay. <b>A false flag is a warning, not a stop.</b></dd>
         <dt>Cross-check</dt><dd>ring area vs assessor acreage — &gt; 15% disagreement ⇒ wrong-ring signal, re-check ID/layer</dd>
