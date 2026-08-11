@@ -856,7 +856,7 @@ dl.rgrid dd.pe{background:#fdf6f0;border-left:2px solid var(--ember);padding:6px
 
 <!-- STEP 4a · Skill → GIS sweep -->
 <line x1="248" y1="419" x2="759" y2="419" stroke="#3f6582" stroke-width="1.4" marker-end="url(#ah)"/>
-<text x="506.5" y="414" text-anchor="middle" font-size="10" fill="#1f2937">step 4a · buffer 50 ft · parcel-layer intersects query</text>
+<text x="506.5" y="414" text-anchor="middle" font-size="10" fill="#1f2937">step 4a · buffer the PRIMARY polygon (from step 2) 50 ft · intersects → adjoining candidates</text>
 <line x1="765" y1="453" x2="257" y2="453" stroke="#6b7280" stroke-width="1.4" stroke-dasharray="5 4"/>
 <text x="506.5" y="448" text-anchor="middle" font-size="10" fill="#6b7280">adjoining polygons · owner · subdivision · use-code</text>
 <circle cx="248" cy="453" r="9" fill="#3f6582" stroke="#fff" stroke-width="1.5"/>
@@ -889,11 +889,11 @@ dl.rgrid dd.pe{background:#fdf6f0;border-left:2px solid var(--ember);padding:6px
 
 <!-- STEP 5 · Skill → GIS geometry (if missing) -->
 <line x1="248" y1="714" x2="759" y2="714" stroke="#3f6582" stroke-width="1.4" marker-end="url(#ah)"/>
-<text x="506.5" y="709" text-anchor="middle" font-size="10" fill="#1f2937">step 5 · keyless parcel-layer query · returnGeometry · outSR=4326  (if MCP omitted geom)</text>
+<text x="506.5" y="709" text-anchor="middle" font-size="10" fill="#1f2937">step 5 · FALLBACK ONLY — parcel-layer query by ID · returnGeometry (only if parcel_details had no geom)</text>
 
 <!-- Skill → Output write geojson -->
 <line x1="248" y1="748" x2="1104" y2="748" stroke="#3f6582" stroke-width="1.4" marker-end="url(#ah)"/>
-<text x="679" y="743" text-anchor="middle" font-size="10" fill="#1f2937">write parcel-rings.geojson (WGS84 · all resolved rings)</text>
+<text x="679" y="743" text-anchor="middle" font-size="10" fill="#1f2937">write parcel-rings.geojson  ←  the step-2 parcel_details polygon (all resolved rings · WGS84)</text>
 
 <!-- Skill → GIS render overlay (ESRI) -->
 <line x1="248" y1="782" x2="759" y2="782" stroke="#3f6582" stroke-width="1.4" marker-end="url(#ah)"/>
