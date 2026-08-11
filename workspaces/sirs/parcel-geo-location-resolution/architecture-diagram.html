@@ -310,8 +310,9 @@ dl.rgrid dd.pe{background:#fdf6f0;border-left:2px solid var(--ember);padding:6px
 
 <nav class="tabs">
   <button data-tab="what" class="active"><span class="n">01</span>What the skill does</button>
-  <button data-tab="pipeline"><span class="n">02</span>The 7-step pipeline</button>
-  <button data-tab="sequence"><span class="n">03</span>Sequence diagram</button>
+  <button data-tab="resolve"><span class="n">02</span>Inside the resolve</button>
+  <button data-tab="pipeline"><span class="n">03</span>The 7-step pipeline</button>
+  <button data-tab="sequence"><span class="n">04</span>Sequence diagram</button>
 </nav>
 
 <main>
@@ -424,10 +425,174 @@ dl.rgrid dd.pe{background:#fdf6f0;border-left:2px solid var(--ember);padding:6px
 </section>
 
 <!-- ========================================================= -->
-<!-- TAB 2 — THE 7-STEP PIPELINE                                -->
+<!-- TAB 2 — INSIDE THE RESOLVE                                 -->
+<!-- ========================================================= -->
+<section class="panel" id="resolve">
+  <h2><span class="eyebrow">Tab 2</span>Inside the resolve — how the triple gets built</h2>
+  <p class="lede">This is the box you asked about: the <span style="color:var(--ember);font-weight:600">Skill agent · parcel-geo
+  resolve</span>. Its whole job is to turn <b>one</b> input into a coherent
+  <code>address + lat/lon + parcel-ID + rings</code> quad. The mechanic is a <b>funnel</b>: three input types each
+  resolve, by a different first call, down to a single <b>parcel-ID</b> — and then <em>every</em> path makes the same
+  second call, <code>&lt;jur&gt;_parcel_details(parcelId)</code>, which is the one source that emits the canonical
+  centroid and the polygon geometry. Route to an ID, then let <code>parcel_details</code> back-fill the rest.</p>
+
+  <div class="callout ember">
+    <span class="lab">the linchpin — read this first</span>
+    <b><code>&lt;jur&gt;_parcel_details(parcelId)</code> is called on all three paths</b> and is where the triple actually
+    becomes coherent. Its returned <b>WGS84 centroid becomes the canonical lat/lon</b> — <em>not</em> the caller's input
+    coordinate and <em>not</em> the Census geocode (both are approximate; the centroid is parcel-exact). Its returned
+    <b>polygon becomes the rings</b>. So the &ldquo;how&rdquo; is: the input only ever gets you to a parcel-ID; the
+    parcel-ID is what unlocks the precise lat/lon and the geometry.
+  </div>
+
+  <h3><span class="hn">1</span>The convergence, as a sequence</h3>
+  <p>Only one of the three input compartments runs (that's the <code>alt</code> frame); then the shared convergence runs
+  every time. Green arrows are <b>facets being written into the resolved triple</b> — watch the record fill up
+  <b>①→④</b>. Example data is the <code>4279 Roswell Rd NE, Atlanta</code> (Fulton) path.</p>
+
+  <div class="seqfig">
+<svg viewBox="0 0 1120 700" width="100%" role="img" aria-label="Sequence diagram: how the parcel-geo resolve builds the location triple, showing three input paths converging on parcel_details" xmlns="http://www.w3.org/2000/svg" font-family="'Fira Code','SF Mono',ui-monospace,Menlo,monospace">
+<defs>
+  <marker id="ah2" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#3f6582"/></marker>
+  <marker id="ahp" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#6b3fa0"/></marker>
+  <marker id="ahl2" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#3f6582"/></marker>
+  <marker id="ahg" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#15803d"/></marker>
+</defs>
+<rect x="0" y="0" width="1120" height="700" fill="#ffffff"/>
+<!-- convergence highlight band -->
+<rect x="20" y="446" width="1080" height="212" rx="9" fill="#f0fdf4" stroke="#bbf7d0" stroke-width="1"/>
+<text x="34" y="462" font-size="10.5" font-weight="700" fill="#15803d" font-family="'Lexend',-apple-system,sans-serif" letter-spacing="0.04em">CONVERGENCE · every input path funnels through parcel_details</text>
+<!-- alt frame -->
+<rect x="20" y="64" width="1080" height="372" rx="9" fill="none" stroke="#8cb4d1" stroke-width="1.2"/>
+<path d="M20,73 v-1 a8,8 0 0 1 8,-8 h150 v17 h-150 a8,8 0 0 1 -8,-8 z" fill="#35526b"/>
+<text x="30" y="77" font-size="10" font-weight="700" fill="#fff" font-family="'Lexend',-apple-system,sans-serif" letter-spacing="0.03em">alt · route by input type</text>
+<!-- compartment separators -->
+<line x1="20" y1="222" x2="1100" y2="222" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="6 5"/>
+<line x1="20" y1="378" x2="1100" y2="378" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="6 5"/>
+<!-- compartment labels -->
+<rect x="26" y="82" width="150" height="15" rx="3" fill="#eef4fb" stroke="#c3d8f2"/><text x="33" y="93" font-size="9.5" font-weight="700" fill="#2456a8">① input = address</text>
+<rect x="26" y="230" width="150" height="15" rx="3" fill="#eef4fb" stroke="#c3d8f2"/><text x="33" y="241" font-size="9.5" font-weight="700" fill="#2456a8">② input = lat / lon</text>
+<rect x="26" y="386" width="150" height="15" rx="3" fill="#eef4fb" stroke="#c3d8f2"/><text x="33" y="397" font-size="9.5" font-weight="700" fill="#2456a8">③ input = parcel-ID</text>
+
+<!-- lifelines + headers -->
+<line x1="105" y1="52" x2="105" y2="662" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="25" y="6" width="160" height="46" rx="8" fill="#bb4d00"/>
+<text x="105" y="26" text-anchor="middle" font-family="'Lexend',-apple-system,sans-serif" font-size="12.5" font-weight="700" fill="#fff">Skill agent</text>
+<text x="105" y="42" text-anchor="middle" font-size="9" fill="#fff" opacity="0.82">parcel-geo resolve</text>
+<line x1="320" y1="52" x2="320" y2="662" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="240" y="6" width="160" height="46" rx="8" fill="#3f6582"/>
+<text x="320" y="26" text-anchor="middle" font-family="'Lexend',-apple-system,sans-serif" font-size="12.5" font-weight="700" fill="#fff">Census</text>
+<text x="320" y="42" text-anchor="middle" font-size="9" fill="#fff" opacity="0.82">geographies · HTTP</text>
+<line x1="535" y1="52" x2="535" y2="662" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="455" y="6" width="160" height="46" rx="8" fill="#7a52a8"/>
+<text x="535" y="26" text-anchor="middle" font-family="'Lexend',-apple-system,sans-serif" font-size="12.5" font-weight="700" fill="#fff">Surveyor · locate</text>
+<text x="535" y="42" text-anchor="middle" font-size="9" fill="#fff" opacity="0.82">search / by-point</text>
+<line x1="750" y1="52" x2="750" y2="662" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="670" y="6" width="160" height="46" rx="8" fill="#6b3fa0"/>
+<text x="750" y="26" text-anchor="middle" font-family="'Lexend',-apple-system,sans-serif" font-size="12.5" font-weight="700" fill="#fff">Surveyor · details</text>
+<text x="750" y="42" text-anchor="middle" font-size="9" fill="#fff" opacity="0.82">parcel_details · linchpin</text>
+<line x1="965" y1="52" x2="965" y2="662" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="885" y="6" width="160" height="46" rx="8" fill="#15803d"/>
+<text x="965" y="26" text-anchor="middle" font-family="'Lexend',-apple-system,sans-serif" font-size="12.5" font-weight="700" fill="#fff">Location triple</text>
+<text x="965" y="42" text-anchor="middle" font-size="9" fill="#fff" opacity="0.82">the record being built</text>
+
+<!-- COMPARTMENT A · address -->
+<line x1="105" y1="112" x2="314" y2="112" stroke="#3f6582" stroke-width="1.4" marker-end="url(#ah2)"/>
+<text x="212.5" y="107" text-anchor="middle" font-size="10" fill="#1f2937">geographies/onelineaddress</text>
+<line x1="320" y1="140" x2="114" y2="140" stroke="#6b7280" stroke-width="1.4" stroke-dasharray="5 4"/>
+<text x="212.5" y="135" text-anchor="middle" font-size="9.5" fill="#6b7280">county · normalized address · rough geocode</text>
+<path d="M105,164 h20 v14 h-20" fill="none" stroke="#3f6582" stroke-width="1.3" marker-end="url(#ahl2)"/>
+<text x="131" y="170" font-size="9.5" fill="#35526b">↻ map county → surveyor_slug · normalize address (per-jur rule)</text>
+<line x1="105" y1="192" x2="529" y2="192" stroke="#7a52a8" stroke-width="1.4" marker-end="url(#ahp)"/>
+<text x="320" y="187" text-anchor="middle" font-size="10" fill="#1f2937">assessor_search(normalized address)</text>
+<line x1="535" y1="212" x2="114" y2="212" stroke="#6b7280" stroke-width="1.4" stroke-dasharray="5 4"/>
+<text x="320" y="207" text-anchor="middle" font-size="9.5" fill="#6b7280">[{ ParcelID, Owner }] — best-match first</text>
+
+<!-- COMPARTMENT B · lat/lon -->
+<line x1="105" y1="266" x2="314" y2="266" stroke="#3f6582" stroke-width="1.4" marker-end="url(#ah2)"/>
+<text x="212.5" y="261" text-anchor="middle" font-size="10" fill="#1f2937">geographies/coordinates (slug only)</text>
+<line x1="320" y1="294" x2="114" y2="294" stroke="#6b7280" stroke-width="1.4" stroke-dasharray="5 4"/>
+<text x="212.5" y="289" text-anchor="middle" font-size="9.5" fill="#6b7280">county</text>
+<path d="M105,318 h20 v14 h-20" fill="none" stroke="#3f6582" stroke-width="1.3" marker-end="url(#ahl2)"/>
+<text x="131" y="324" font-size="9.5" fill="#35526b">↻ map county → surveyor_slug</text>
+<line x1="105" y1="346" x2="529" y2="346" stroke="#7a52a8" stroke-width="1.4" marker-end="url(#ahp)"/>
+<text x="320" y="341" text-anchor="middle" font-size="10" fill="#1f2937">parcel_details_by_point(lon, lat)</text>
+<line x1="535" y1="366" x2="114" y2="366" stroke="#6b7280" stroke-width="1.4" stroke-dasharray="5 4"/>
+<text x="320" y="361" text-anchor="middle" font-size="9.5" fill="#6b7280">{ ParcelID }</text>
+
+<!-- COMPARTMENT C · parcel-ID -->
+<path d="M105,414 h20 v14 h-20" fill="none" stroke="#3f6582" stroke-width="1.3" marker-end="url(#ahl2)"/>
+<text x="131" y="420" font-size="9.5" fill="#35526b">↻ pattern-match PIN format → candidate jurisdiction   ·   ParcelID = input (verbatim)</text>
+
+<!-- CONVERGENCE -->
+<!-- facet 1: parcel-ID (however we got here) -->
+<line x1="105" y1="484" x2="959" y2="484" stroke="#15803d" stroke-width="1.5" marker-end="url(#ahg)"/>
+<text x="500" y="479" text-anchor="middle" font-size="10" fill="#166534">write facet ① — parcel-ID  (canonical, from whichever path ran)</text>
+<circle cx="965" cy="484" r="9" fill="#15803d" stroke="#fff" stroke-width="1.5"/><text x="965" y="487.6" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">1</text>
+<!-- the linchpin call -->
+<line x1="105" y1="512" x2="744" y2="512" stroke="#6b3fa0" stroke-width="1.8" marker-end="url(#ahp)"/>
+<text x="427" y="507" text-anchor="middle" font-size="10" font-weight="700" fill="#4b2a75">&lt;jur&gt;_parcel_details(parcelId)  —  called on ALL paths</text>
+<line x1="750" y1="540" x2="114" y2="540" stroke="#6b7280" stroke-width="1.4" stroke-dasharray="5 4"/>
+<text x="432" y="535" text-anchor="middle" font-size="9.5" fill="#6b7280">owner · acreage · polygon geometry · WGS84 centroid · situs address</text>
+<!-- facet 2: lat/lon = centroid -->
+<line x1="105" y1="568" x2="959" y2="568" stroke="#15803d" stroke-width="1.5" marker-end="url(#ahg)"/>
+<text x="500" y="563" text-anchor="middle" font-size="10" fill="#166534">write facet ② — lat/lon = centroid  (supersedes input pin / geocode)</text>
+<circle cx="965" cy="568" r="9" fill="#15803d" stroke="#fff" stroke-width="1.5"/><text x="965" y="571.6" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">2</text>
+<!-- facet 3: rings -->
+<line x1="105" y1="596" x2="959" y2="596" stroke="#15803d" stroke-width="1.5" marker-end="url(#ahg)"/>
+<text x="500" y="591" text-anchor="middle" font-size="10" fill="#166534">write facet ③ — rings = polygon geometry</text>
+<circle cx="965" cy="596" r="9" fill="#15803d" stroke="#fff" stroke-width="1.5"/><text x="965" y="599.6" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">3</text>
+<!-- facet 4: address -->
+<line x1="105" y1="624" x2="959" y2="624" stroke="#15803d" stroke-width="1.5" marker-end="url(#ahg)"/>
+<text x="500" y="619" text-anchor="middle" font-size="10" fill="#166534">write facet ④ — address = normalized input | situs address</text>
+<circle cx="965" cy="624" r="9" fill="#15803d" stroke="#fff" stroke-width="1.5"/><text x="965" y="627.6" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">4</text>
+<!-- assert -->
+<path d="M105,648 h20 v12 h-20" fill="none" stroke="#3f6582" stroke-width="1.3" marker-end="url(#ahl2)"/>
+<text x="131" y="654" font-size="9.5" fill="#35526b">↻ assert 4 facets coherent  →  hand to Step 3 reconcile · Step 4 multi-parcel · Step 5 persist rings → geojson</text>
+</svg>
+  </div>
+  <div class="seqcap"><b>the resolve, zoomed in</b><span class="k"><span class="ln"></span> call</span><span class="k"><span class="ln ret"></span> return</span><span class="k">↻ local / deterministic</span><span class="k"><span style="display:inline-block;width:28px;border-top:2px solid #15803d"></span> facet written to the triple</span><span class="k"><span class="nb" style="background:#15803d">N</span> facet ①–④</span></div>
+
+  <h3><span class="hn">2</span>The four facets — where each comes from</h3>
+  <p>The triple is really a quad. Read this as: the <b>input</b> gives you one facet for free; the
+  <b>first call</b> gets you the parcel-ID; the <b>second call</b> (<code>parcel_details</code>) gets you the other two,
+  precisely.</p>
+  <div class="erd">
+    <div class="ent newt"><div class="eh"><span class="en">Location triple (quad)</span><span class="stereo">assembled per resolve</span></div>
+      <div class="row"><span class="nm">parcel-ID</span><span class="ty">① locate call / input</span></div>
+      <div class="row hi"><span class="nm">lat / lon</span><span class="ty">② parcel_details centroid</span></div>
+      <div class="row hi"><span class="nm">rings</span><span class="ty">③ parcel_details geometry</span></div>
+      <div class="row"><span class="nm">address</span><span class="ty">④ input / situs</span></div>
+      <div class="note">canonical lat/lon = centroid, never the input pin</div>
+    </div>
+    <div class="ent exist"><div class="eh"><span class="en">by input type</span><span class="stereo">which first call runs</span></div>
+      <div class="row"><span class="nm">address</span><span class="ty">assessor_search → ID</span></div>
+      <div class="row"><span class="nm">lat/lon</span><span class="ty">parcel_details_by_point → ID</span></div>
+      <div class="row"><span class="nm">parcel-ID</span><span class="ty">PIN pattern-match → ID</span></div>
+      <div class="note">then ALL three → parcel_details(ID)</div>
+    </div>
+  </div>
+  <div class="callout">
+    <span class="lab">why the second call is non-negotiable</span>
+    Even when the input <em>is</em> a parcel-ID (compartment ③), the skill still calls
+    <code>parcel_details</code> — both to <b>confirm the jurisdiction</b> (a hit proves the PIN belongs to that
+    assessor) and to obtain the <b>centroid + polygon</b> that no other call returns. A one-row
+    <code>assessor_search</code> result proves an address matched a record; it does <b>not</b> prove single-parcel
+    scope, and it does <b>not</b> carry geometry. That's why routing-to-an-ID and then always calling
+    <code>parcel_details</code> is the whole shape of the resolve.
+  </div>
+
+  <div class="xref">This is the internal view of Steps 1–2 from <code>pipeline.md</code> (routing table + &ldquo;always follow up
+  with <code>&lt;jur&gt;_parcel_details</code>&rdquo;), grounded in the worked Fulton example in
+  <code>references/output-schema.md</code> §Methodology. Everything after facet ④ (customer reconcile, multi-parcel,
+  geometry persistence) is the <b>Tab 3</b> pipeline.</div>
+</section>
+
+<!-- ========================================================= -->
+<!-- TAB 3 — THE 7-STEP PIPELINE                                -->
 <!-- ========================================================= -->
 <section class="panel" id="pipeline">
-  <h2><span class="eyebrow">Tab 2</span>The seven steps</h2>
+  <h2><span class="eyebrow">Tab 3</span>The seven steps</h2>
   <p class="lede">Each step has a defined input contract, output contract, and STOP/continue rule. Blue = read/compute;
   ember = a fan-out or conditional layer; green = a produced artifact; dashed = a persisted store. Click a step to jump
   to its detail card.</p>
@@ -586,7 +751,7 @@ dl.rgrid dd.pe{background:#fdf6f0;border-left:2px solid var(--ember);padding:6px
 <!-- TAB 3 — SEQUENCE DIAGRAM                                   -->
 <!-- ========================================================= -->
 <section class="panel" id="sequence">
-  <h2><span class="eyebrow">Tab 3</span>The call sequence, end to end</h2>
+  <h2><span class="eyebrow">Tab 4</span>The call sequence, end to end</h2>
   <p class="lede">One lifeline per participant. The <span style="color:var(--ember);font-weight:600">Skill agent</span>
   drives; solid arrows are calls, dashed arrows are returns, <code>↻</code> loops are local/deterministic steps, and
   red text marks a hard-stop guard. Numbered badges <b>1</b>–<b>6</b> on the agent lifeline link to the
@@ -810,7 +975,7 @@ dl.rgrid dd.pe{background:#fdf6f0;border-left:2px solid var(--ember);padding:6px
 <script>
   const btns=document.querySelectorAll('nav.tabs button');
   const panels=document.querySelectorAll('.panel');
-  const IDS=['what','pipeline','sequence']; /* KEEP IN SYNC with the data-tab / panel ids above */
+  const IDS=['what','resolve','pipeline','sequence']; /* KEEP IN SYNC with the data-tab / panel ids above */
   function show(id){
     btns.forEach(b=>b.classList.toggle('active',b.dataset.tab===id));
     panels.forEach(p=>p.classList.toggle('active',p.id===id));
