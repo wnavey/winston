@@ -1,0 +1,1017 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Parcel-Geo-Location Resolution — Architecture</title>
+<style>
+/* ============================================================
+   spec-kit v3  —  winston HTML spec design system
+   Inlined verbatim from ~/.claude/skills/winston-spec/assets/spec-kit.css
+   ============================================================ */
+
+:root{
+  /* steel-blue ramp (matches cityhall / Noetic report surfaces) */
+  --p50:#f0f5f9;--p100:#dce8f1;--p200:#b9d2e5;--p300:#8cb4d1;--p400:#6397b8;
+  --p500:#517e9e;--p600:#3f6582;--p700:#35526b;--p800:#2d4559;--p900:#273b4b;--p950:#182530;
+  --bg:#f9f9f9;--card:#ffffff;--divider:#dfdfdf;--ink:#1f2937;--muted:#6b7280;--ember:#bb4d00;
+  /* semantic: new / changed / retired */
+  --new:#15803d;--newbg:#f0fdf4;--newbd:#bbf7d0;
+  --chg:#b45309;--chgbg:#fffbeb;--chgbd:#fde68a;
+  --ret:#b91c1c;--retbg:#fef2f2;--retbd:#fecaca;
+  --sans:'Lexend',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  --serif:'Lora',Georgia,'Times New Roman',serif;
+  --mono:'Fira Code','SF Mono',ui-monospace,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.55;font-size:15px}
+
+/* ---------- masthead ---------- */
+header.masthead{background:linear-gradient(135deg,var(--p800),var(--p600));color:#fff;padding:34px 32px 30px;position:relative;overflow:hidden}
+header.masthead::after{content:"";position:absolute;inset:0;background-image:repeating-linear-gradient(115deg,rgba(255,255,255,.06) 0 1px,transparent 1px 26px);pointer-events:none}
+header.masthead .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--p200)}
+header.masthead h1{font-family:var(--serif);font-weight:600;margin:.35em 0 .2em;font-size:29px;position:relative}
+header.masthead p{margin:0;color:var(--p100);max-width:880px;font-size:15px}
+header.masthead .meta{margin-top:14px;font-size:12.5px;color:var(--p200);font-family:var(--mono)}
+
+/* ---------- tabs ---------- */
+nav.tabs{position:sticky;top:0;z-index:20;display:flex;gap:2px;background:var(--p950);padding:0 20px;box-shadow:0 2px 8px rgba(0,0,0,.12);flex-wrap:wrap}
+nav.tabs button{appearance:none;border:0;background:transparent;color:var(--p200);font-family:var(--sans);font-size:14px;font-weight:500;padding:14px 18px;cursor:pointer;border-bottom:3px solid transparent;transition:all .15s}
+nav.tabs button .n{font-family:var(--mono);font-size:11px;opacity:.7;margin-right:7px}
+nav.tabs button:hover{color:#fff;background:rgba(255,255,255,.04)}
+nav.tabs button.active{color:#fff;border-bottom-color:var(--ember);background:rgba(255,255,255,.06)}
+
+/* ---------- layout ---------- */
+main{max-width:1140px;margin:0 auto;padding:30px 26px 90px}
+.panel{display:none;animation:fade .25s ease}
+.panel.active{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+h2{font-family:var(--serif);font-weight:600;font-size:23px;margin:34px 0 6px;color:var(--p900)}
+h2:first-child{margin-top:4px}
+h2 .eyebrow{display:block;font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--p500);font-weight:400;margin-bottom:3px}
+h3{font-size:16px;font-weight:600;margin:28px 0 8px;color:var(--p800);display:flex;align-items:center;gap:9px}
+h3 .hn{font-family:var(--mono);font-size:12px;color:#fff;background:var(--p600);border-radius:5px;padding:2px 8px}
+h4{font-size:14px;font-weight:600;margin:18px 0 6px;color:var(--p800)}
+p{margin:.55em 0}
+.lede{font-size:16px;color:var(--p800);border-left:3px solid var(--ember);padding-left:16px;margin:14px 0 20px}
+ul{margin:.4em 0;padding-left:22px}li{margin:.28em 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px solid var(--p100);border-radius:4px;padding:1px 5px;color:var(--p800)}
+
+/* ---------- callout ---------- */
+.callout{background:var(--p50);border:1px solid var(--p200);border-left:4px solid var(--p500);border-radius:8px;padding:13px 17px;margin:16px 0}
+.callout.ember{background:#fdf6f0;border-color:#f0cba8;border-left-color:var(--ember)}
+.callout.new{background:var(--newbg);border-color:var(--newbd);border-left-color:var(--new)}
+.callout .lab{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--p600);font-weight:600;display:block;margin-bottom:3px}
+.callout.ember .lab{color:var(--ember)} .callout.new .lab{color:var(--new)}
+
+/* ---------- legend ---------- */
+.legend{display:flex;flex-wrap:wrap;gap:9px 16px;background:#fff;border:1px solid var(--divider);border-radius:10px;padding:12px 16px;margin:16px 0;font-size:12px;align-items:center}
+.legend .k{display:inline-flex;align-items:center;gap:6px}
+.swatch{width:26px;height:14px;border-radius:3px;display:inline-block;border:1px solid rgba(0,0,0,.15)}
+
+/* ---------- shared field badges (used by entity rows + legend) ---------- */
+.b{font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.04em;padding:1px 4px;border-radius:3px;text-transform:uppercase;white-space:nowrap}
+.b-pk{background:#fef3c7;color:#92600a;border:1px solid #fde68a}
+.b-fk{background:#e0edfb;color:#2456a8;border:1px solid #c3d8f2}
+.b-nn{background:#eef1f4;color:#4b5563;border:1px solid #d7dde3}
+.b-new{background:var(--newbg);color:var(--new);border:1px solid var(--newbd)}
+
+/* ============================================================
+   ER / UML entity boxes
+   ============================================================ */
+.erd{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start;margin:16px 0;background:#fbfcfd;border:1px solid var(--divider);border-radius:12px;padding:18px}
+.ent{border:1px solid var(--divider);border-radius:9px;overflow:hidden;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.05);min-width:236px;flex:0 1 auto}
+.ent .eh{padding:7px 12px;color:#fff;display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.ent .eh .en{font-family:var(--mono);font-size:12.5px;font-weight:700;letter-spacing:.02em}
+.ent .eh .stereo{font-size:9.5px;font-family:var(--mono);opacity:.85;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}
+.ent.exist .eh{background:var(--p700)}
+.ent.newt .eh{background:var(--new)}
+.ent.changed .eh{background:var(--chg)}
+.ent.retired .eh{background:#9ca3af}
+.ent.retired{opacity:.72}
+.ent .row{display:flex;align-items:center;gap:7px;padding:4px 11px;font-size:11.5px;border-top:1px solid #eef1f4}
+.ent .row:first-of-type{border-top:0}
+.ent .row .nm{font-family:var(--mono);font-size:11.5px;color:var(--p900);font-weight:600}
+.ent .row .ty{font-family:var(--mono);font-size:10px;color:var(--muted);margin-left:auto;white-space:nowrap}
+.ent .row.hi{background:#fff9f2}
+.ent .row.strk .nm{text-decoration:line-through;color:var(--muted)}
+.ent .note{padding:5px 11px;font-size:10px;color:var(--muted);font-style:italic;border-top:1px dashed #e5e9ee;background:#fbfcfd}
+/* diff rows — show a table modification (column added / removed), git-style.
+   Put a "+"/"−" marker in a .gut span at the start of the row. */
+.ent .row .gut{flex:0 0 10px;width:10px;text-align:center;font-family:var(--mono);font-size:11px;font-weight:700;color:var(--muted)}
+.ent .row.add{background:var(--newbg);box-shadow:inset 3px 0 0 var(--new)}
+.ent .row.add .gut{color:var(--new)}
+.ent .row.add .nm{color:#166534}
+.ent .row.del{background:var(--retbg);box-shadow:inset 3px 0 0 var(--ret)}
+.ent .row.del .gut{color:var(--ret)}
+.ent .row.del .nm{color:var(--ret);text-decoration:line-through}
+
+/* relationships panel — crow's-foot text notation */
+.rels{background:#fff;border:1px solid var(--divider);border-radius:10px;padding:12px 16px;margin:14px 0;font-family:var(--mono);font-size:12px;line-height:1.9}
+.rels .rl{display:block;color:var(--p800)}
+.rels .rl b{color:var(--ember)}
+.rels .cf{color:var(--p500);font-weight:700}
+.rels .cmt{color:var(--muted);font-style:normal;font-family:var(--sans);font-size:11.5px}
+.rels .tag-new{color:var(--new);font-weight:700}
+.rels .tag-ret{color:var(--ret);font-weight:700}
+.rels-h{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--p600);font-weight:700;margin-bottom:6px}
+
+/* ============================================================
+   Use-case scene  (an action + its boxes-and-arrows diagram)
+   ============================================================ */
+.uc{margin:16px 0 22px;border:1px solid var(--divider);border-radius:12px;overflow:hidden;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.uc .uch{display:flex;align-items:center;gap:13px;padding:11px 16px;background:linear-gradient(135deg,var(--p700),var(--p600));color:#fff}
+.uc .uch .ucn{flex:0 0 30px;height:30px;border-radius:50%;background:rgba(255,255,255,.2);font-family:var(--mono);font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.uc .uch .uctxt{flex:1}
+.uc .uch .actor{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--p100);display:block;margin-bottom:1px}
+.uc .uch .uct{font-weight:600;font-size:15.5px;font-family:var(--serif)}
+.uc .ucsub{padding:9px 16px;font-size:12.5px;color:var(--p800);background:var(--p50);border-bottom:1px solid var(--p100)}
+.uc .ucdiag{padding:20px 16px 14px}
+.ucnote{padding:2px 16px 14px;font-size:11.5px;color:var(--muted)}
+.ucnote b{color:var(--p700);font-family:var(--mono);font-size:10.5px}
+
+/* ============================================================
+   Boxes-and-arrows flow
+   ============================================================ */
+.dfg{display:flex;flex-wrap:wrap;align-items:stretch;gap:8px 0;margin:0}
+.node{flex:0 0 auto;width:156px;background:#fff;border:1.5px solid var(--p300);border-radius:8px;padding:9px 11px;display:flex;flex-direction:column;gap:3px}
+.node .op{align-self:flex-start;font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:1px 6px;border-radius:3px;border:1px solid;color:#fff;margin-bottom:2px}
+.node .nt{display:block;font-family:var(--mono);font-weight:700;font-size:12px;color:var(--p900);line-height:1.3;word-break:break-word}
+.node .nf{display:block;font-family:var(--mono);font-size:10px;color:var(--muted);line-height:1.45;word-break:break-word}
+.node.created{border-color:var(--new);background:var(--newbg)} .node.created .op{background:var(--new);border-color:var(--new)}
+.node.read{border-color:var(--p400);background:#eef4fb} .node.read .op{background:var(--p500);border-color:var(--p500)}
+.node.event{border-color:var(--ember);background:#fdf6f0} .node.event .op{background:var(--ember);border-color:var(--ember)}
+.node.store{border-style:dashed;border-color:var(--p500);background:#eef3f7} .node.store .op{background:var(--p700);border-color:var(--p700)}
+.edge{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:70px;max-width:104px;padding:0 4px}
+.edge .el{font-size:9px;color:var(--p600);font-family:var(--mono);text-align:center;line-height:1.3;margin-bottom:2px}
+.edge .ar{color:var(--p400);font-size:20px;font-weight:700;line-height:1}
+
+/* ============================================================
+   Card grid  (keep / change / drop comparisons)
+   ============================================================ */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:820px){.grid2{grid-template-columns:1fr}.erd{padding:12px}}
+.card{background:var(--card);border:1px solid var(--divider);border-radius:9px;padding:14px 16px}
+.card.keep{border-top:3px solid var(--new)} .card.change{border-top:3px solid var(--chg)} .card.drop{border-top:3px solid var(--ret)}
+.card strong{display:block;margin-bottom:4px;font-size:13.5px}
+.card ul{font-size:12.5px;margin:2px 0}
+
+/* ============================================================
+   Lifecycle / state machine
+   ============================================================ */
+.sm{display:flex;flex-wrap:wrap;gap:7px;align-items:center;margin:14px 0}
+.sm .s{border:1px solid var(--p300);background:var(--p50);border-radius:20px;padding:5px 12px;font-size:11.5px;font-weight:600;color:var(--p800);font-family:var(--mono)}
+.sm .s .who{display:block;font-size:9px;font-family:var(--mono);color:var(--muted);font-weight:400;text-transform:uppercase;letter-spacing:.03em}
+.sm .s.client{border-color:var(--newbd);background:var(--newbg)}
+.sm .s.cc{border-color:#f0cba8;background:#fdf6f0}
+.sm .s.spec{border-color:var(--chgbd);background:var(--chgbg)}
+.sm .a{color:var(--p400);font-weight:700}
+
+/* ============================================================
+   Use-case catalog — grouped list of candidate use cases
+   ============================================================ */
+.catgrp{border:1px solid var(--divider);border-radius:10px;overflow:hidden;margin:14px 0;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.catgrp .cath{background:var(--p700);color:#fff;padding:8px 14px;font-family:var(--serif);font-weight:600;font-size:14.5px;display:flex;align-items:center;gap:10px}
+.catgrp .cath .cgl{font-family:var(--mono);font-size:12px;font-weight:700;background:rgba(255,255,255,.2);border-radius:5px;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;flex:0 0 22px}
+.uci{display:flex;gap:9px;align-items:baseline;padding:7px 13px;border-top:1px solid #eef1f4;font-size:13px}
+.uci .uid{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--p600);flex:0 0 26px}
+.uci .utxt{flex:1;color:var(--ink);line-height:1.45}
+.uci .utxt b{color:var(--p900)}
+.uci .star{color:var(--ember);font-weight:700;font-size:12px;flex:0 0 auto;letter-spacing:-1px}
+.uci.later{opacity:.66}
+.utag{font-family:var(--mono);font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;text-transform:uppercase;letter-spacing:.03em;white-space:nowrap;flex:0 0 auto}
+.utag.t-orig{background:#e0edfb;color:#2456a8;border:1px solid #c3d8f2}
+.utag.t-add{background:var(--newbg);color:var(--new);border:1px solid var(--newbd)}
+
+/* ============================================================
+   Misc: storage strip, cross-reference box
+   ============================================================ */
+.storage{background:#eef3f7;border:1px dashed var(--p300);border-radius:8px;padding:9px 13px;font-family:var(--mono);font-size:12px;color:var(--p800);margin:12px 0}
+.storage b{color:var(--ember)}
+.xref{font-size:12px;color:var(--p600);background:var(--p50);border:1px solid var(--p100);border-radius:6px;padding:8px 12px;margin:10px 0}
+.foot{margin-top:44px;padding-top:18px;border-top:1px solid var(--divider);color:var(--muted);font-size:12px;font-family:var(--mono)}
+
+/* actor / repo chips (optional, for inline actor tags in prose) */
+.rc{display:inline-block;font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;padding:1px 6px;border-radius:5px;border:1px solid;vertical-align:middle;white-space:nowrap}
+.r-ch{background:#eef4fb;color:#2456a8;border-color:#c3d8f2}
+.r-sub{background:#f3eefb;color:#6b3fa0;border-color:#dcccf0}
+.r-fa{background:#e9f7f2;color:#0f7a5f;border-color:#bfe8db}
+.r-db{background:#eaeef2;color:#2d4559;border-color:#c7d2dd}
+.r-store{background:#e6eef3;color:#35526b;border-color:#bcd0dd}
+.r-user{background:#eefaf0;color:#15803d;border-color:#bbf7d0}
+.r-mcp{background:#fdf0e6;color:#b5590d;border-color:#f2d3b3}
+
+/* one-off: neutral compare-card header chip (kit-token colours only) */
+.cmp{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:1px 6px;border-radius:4px;border:1px solid;margin-left:6px;vertical-align:middle}
+.cmp-old{background:var(--p50);color:var(--p700);border-color:var(--p200)}
+.cmp-new{background:var(--newbg);color:var(--new);border-color:var(--newbd)}
+
+/* ============================================================
+   Clickable step nodes — step-chain card → §6 detail deep-link
+   ============================================================ */
+html{scroll-behavior:smooth}
+a.nl{display:flex;flex:0 0 auto;text-decoration:none;cursor:pointer;transition:transform .12s}
+a.nl:hover{transform:translateY(-2px)}
+a.nl .node{position:relative;cursor:pointer;width:156px}
+a.nl:hover .node{border-color:var(--ember);box-shadow:0 3px 11px rgba(187,77,0,.22)}
+a.nl .node::after{content:"§6 →";position:absolute;top:5px;right:6px;font-family:var(--mono);font-size:7.5px;font-weight:700;color:var(--ember);opacity:0;transition:opacity .12s}
+a.nl:hover .node::after{opacity:.9}
+
+/* ============================================================
+   Per-step detail cards (§6 "Steps in detail")
+   ============================================================ */
+.sd-group{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--p600);font-weight:700;margin:26px 0 4px;padding-bottom:5px;border-bottom:2px solid var(--p200)}
+.stepdetail{border:1px solid var(--divider);border-radius:11px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.05);margin:13px 0;overflow:hidden;scroll-margin-top:66px}
+.stepdetail .sdh{display:flex;align-items:center;gap:9px;padding:10px 15px;background:linear-gradient(135deg,var(--p800),var(--p600));color:#fff;flex-wrap:wrap}
+.stepdetail .sdh .sid{font-family:var(--mono);font-weight:700;font-size:13.5px;background:rgba(255,255,255,.18);border-radius:6px;padding:2px 9px}
+.stepdetail .sdh .sttl{font-family:var(--serif);font-weight:600;font-size:15.5px;flex:1;min-width:140px}
+.kb{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:2px 7px;border-radius:4px;white-space:nowrap;border:1px solid transparent}
+.kb.k-agent{background:var(--ember);color:#fff}
+.kb.k-script{background:var(--p400);color:#fff}
+.kb.k-check{background:var(--chg);color:#fff}
+.kb.mdl{background:#fff;color:var(--p800)}
+.stepdetail .sdb{padding:12px 16px}
+.stepdetail .sdb > p{margin:0 0 8px;font-size:13.5px;color:var(--ink)}
+dl.sdmeta{display:grid;grid-template-columns:118px 1fr;gap:7px 14px;margin:11px 0 2px;border-top:1px solid var(--divider);padding-top:11px;font-size:12.5px}
+dl.sdmeta dt{font-family:var(--mono);font-size:9.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--p600);font-weight:700;padding-top:3px}
+dl.sdmeta dd{margin:0;color:var(--ink);line-height:1.5}
+dl.sdmeta dd code{font-size:11.5px}
+@media(max-width:640px){dl.sdmeta{grid-template-columns:1fr;gap:2px 0}dl.sdmeta dt{margin-top:9px}}
+.pill{display:inline-block;font-family:var(--mono);font-size:10.5px;font-weight:600;padding:1px 7px;border-radius:5px;border:1px solid;margin:1px 3px 1px 0;white-space:nowrap}
+.pill.skill{background:#fdf0e6;color:#b5590d;border-color:#f2d3b3}
+.pill.cli{background:#f3eefb;color:#6b3fa0;border-color:#dcccf0}
+.pill.none{background:#f4f5f6;color:#8b929b;border-color:#e0e3e7;font-style:italic}
+
+/* ============================================================
+   Sequence diagram (inline SVG) — §6 step-detail cards
+   ============================================================ */
+.seqfig{margin:15px 0 4px;border:1px solid var(--divider);border-radius:11px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.05);padding:8px 10px 6px;overflow-x:auto}
+.seqfig svg{display:block;min-width:840px}
+.seqcap{display:flex;flex-wrap:wrap;gap:5px 18px;align-items:center;margin:8px 2px 2px;font-family:var(--mono);font-size:10.5px;color:var(--muted)}
+.seqcap b{font-family:var(--sans);font-weight:600;color:var(--p700);text-transform:uppercase;letter-spacing:.06em;font-size:10px}
+.seqcap .k{display:inline-flex;align-items:center;gap:7px}
+.seqcap .ln{display:inline-block;width:28px;border-top:2px solid var(--p600)}
+.seqcap .ln.ret{border-top:2px dashed var(--muted)}
+.seqcap .stop{color:var(--ret);font-weight:700}
+
+/* ============================================================
+   Returns reference — collapsible per-call API/shape/example
+   ============================================================ */
+.rrxh{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--p600);font-weight:700;margin:16px 0 7px;display:flex;align-items:center;gap:9px}
+.rrxh .hint{font-family:var(--sans);font-weight:400;letter-spacing:0;text-transform:none;color:var(--muted);font-size:11.5px}
+details.ret{border:1px solid var(--divider);border-radius:9px;background:#fff;margin:7px 0;overflow:hidden}
+details.ret > summary{list-style:none;cursor:pointer;padding:9px 13px;display:flex;align-items:center;gap:10px;font-size:12.5px;background:var(--p50);border-left:3px solid var(--p400)}
+details.ret[open] > summary{border-bottom:1px solid var(--divider)}
+details.ret > summary::-webkit-details-marker{display:none}
+details.ret > summary::before{content:"▸";font-family:var(--mono);color:var(--p500);font-size:11px;flex:0 0 auto}
+details.ret[open] > summary::before{content:"▾"}
+details.ret > summary .num{font-family:var(--mono);font-size:10.5px;font-weight:700;color:#fff;background:var(--p600);border-radius:5px;padding:1px 7px;flex:0 0 auto}
+details.ret > summary .ttl{font-family:var(--mono);font-weight:700;color:var(--p900)}
+details.ret > summary .ra{color:var(--ember);font-weight:700;margin:0 2px}
+details.ret .rbody{padding:12px 15px}
+dl.rgrid{display:grid;grid-template-columns:92px 1fr;gap:9px 14px;margin:0;font-size:12.5px}
+dl.rgrid dt{font-family:var(--mono);font-size:9.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--p600);font-weight:700;padding-top:3px}
+dl.rgrid dd{margin:0;line-height:1.5;color:var(--ink)}
+dl.rgrid dd code{font-size:11.5px}
+pre.cb{margin:7px 0 0;background:var(--p950);color:#e6edf3;border-radius:7px;padding:11px 13px;overflow-x:auto;font-family:var(--mono);font-size:11px;line-height:1.5;white-space:pre;-webkit-text-size-adjust:100%}
+pre.cb .cm{color:#7d95a6}
+pre.cb .k{color:#9ecbff}
+pre.cb .s{color:#a5d6a4}
+@media(max-width:640px){dl.rgrid{grid-template-columns:1fr;gap:2px 0}dl.rgrid dt{margin-top:8px}}
+.seqcap .nb{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;background:var(--p600);color:#fff;font-size:9px;font-weight:700;font-family:var(--mono)}
+/* per-API-call sub-sections inside a returns-reference item */
+.acintro{font-size:12.5px;color:var(--ink);margin:0 0 4px}
+.apicall{border-left:2px solid var(--p200);padding:1px 0 2px 13px;margin:12px 0}
+.apicall .ach{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px;margin-bottom:2px}
+.apicall .ach .step{font-family:var(--mono);font-size:8.5px;font-weight:700;color:#fff;background:var(--p500);border-radius:4px;padding:1px 6px;letter-spacing:.03em;white-space:nowrap;flex:0 0 auto}
+.apicall .ach .nm{font-family:var(--serif);font-weight:600;font-size:13px;color:var(--p900)}
+.apicall .ach .xport{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;padding:1px 6px;border-radius:4px;white-space:nowrap}
+.apicall .ach .xport.mcp{background:#f3eefb;color:#6b3fa0;border:1px solid #dcccf0}
+.apicall .ach .xport.http{background:#e9f7f2;color:#0f7a5f;border:1px solid #bfe8db}
+.apicall dl.rgrid{grid-template-columns:70px 1fr;gap:6px 12px;margin-top:5px}
+dl.rgrid dt.pe{color:var(--ember)}
+dl.rgrid dd.pe{background:#fdf6f0;border-left:2px solid var(--ember);padding:6px 10px;border-radius:0 5px 5px 0;line-height:1.55}
+</style>
+</head>
+<body>
+
+<header class="masthead">
+  <div class="kicker">SIRS · SUBJECT-LOCATION RESOLUTION</div>
+  <h1>Parcel-Geo-Location Resolution — Architecture</h1>
+  <p>How the <code>parcel-geo-location-resolution</code> skill turns any <b>one</b> of
+  <em>address · lat/lon · parcel-ID</em> into a coherent, traceable
+  <b>address + lat/lon + parcel-set</b> triple — and the geometry artifacts
+  (<code>parcel-rings.geojson</code>, <code>subject-boundary-overlay.png</code>) every downstream
+  visual read must frame from. This is a how-it-works map: the seven steps, the call sequence,
+  and the fail-fast guards that make it a deterministic input rather than free-form agent reasoning.</p>
+  <div class="meta">Draft v1 · 2026-08-11 · architecture companion · click a tab ↓</div>
+</header>
+
+<nav class="tabs">
+  <button data-tab="what" class="active"><span class="n">01</span>What the skill does</button>
+  <button data-tab="resolve"><span class="n">02</span>Inside the resolve</button>
+  <button data-tab="pipeline"><span class="n">03</span>The 7-step pipeline</button>
+  <button data-tab="sequence"><span class="n">04</span>Sequence diagram</button>
+</nav>
+
+<main>
+
+<!-- ========================================================= -->
+<!-- TAB 1 — WHAT THE SKILL DOES                                -->
+<!-- ========================================================= -->
+<section class="panel active" id="what">
+  <h2><span class="eyebrow">Tab 1</span>What it does &amp; why</h2>
+  <p class="lede">One job: resolve a property's <b>location triple</b> — <code>address</code>,
+  <code>lat/lon</code>, and <code>parcel-ID(s)</code> — as a coherent, independently-validatable
+  artifact, accepting any one of the three as the primary input. The most common path is
+  <b>address in → parcel-ID + lat/lon out</b>. It either produces a high-confidence resolution or
+  it produces nothing.</p>
+
+  <div class="callout new">
+    <span class="lab">the one-line answer</span>
+    The skill runs <b>7 steps</b> — jurisdiction detection → primary parcel lookup → customer-input
+    reconciliation → two-layer multi-parcel detection → <b>mandatory geometry &amp; boundary overlay</b>
+    → write the standardized <code>location-resolution.md</code> → (the MCP-call log writes itself). Its
+    headline output, <code>parcel-rings.geojson</code>, plus the rendered
+    <code>subject-boundary-overlay.png</code>, exist so every downstream imagery read frames the subject
+    from a <b>drawn boundary</b> — never from a bare address pin that may sit on a neighbor's land.
+  </div>
+
+  <h3><span class="hn">1</span>One input, a resolved triple out</h3>
+  <p>The caller supplies <b>exactly one</b> primary input; the skill resolves the other two and reconciles
+  any optional customer-supplied geocode/pin against the authoritative answer.</p>
+  <div class="dfg">
+    <div class="node read"><span class="op">in · any 1</span><span class="nt">Primary input</span><span class="nf">--address<br>| --lat/--lon<br>| --parcel-id</span></div>
+    <div class="edge"><span class="el">+ optional</span><span class="ar">→</span></div>
+    <div class="node read"><span class="op">in · opt</span><span class="nt">Reconcilers</span><span class="nf">--customer-pin<br>--concept-plan<br>--jurisdiction</span></div>
+    <div class="edge"><span class="el">7 steps</span><span class="ar">→</span></div>
+    <div class="node event"><span class="op">skill</span><span class="nt">parcel-geo resolve</span><span class="nf">Census · Surveyor<br>GIS · vision · overlay</span></div>
+    <div class="edge"><span class="el">coherent</span><span class="ar">→</span></div>
+    <div class="node created"><span class="op">out</span><span class="nt">Location triple</span><span class="nf">address + lat/lon<br>+ parcel-set + rings</span></div>
+  </div>
+
+  <h3><span class="hn">2</span>The four failure modes it exists to kill</h3>
+  <p>Subject-location resolution is structurally fragile when it lives as free-form agent reasoning inside a
+  larger pipeline. Pulling it into its own skill kills four recurring failures:</p>
+  <div class="grid2">
+    <div class="card drop"><strong>Customer identifiers get lost</strong>
+      <ul><li>A caller passes <code>PIN# 17 00950004067</code> but the manifest only has a <code>{lat,lon}</code> slot → the ID silently drops to <code>null</code>.</li>
+      <li>Fix: reconcile the customer-pin as a tagged union; STOP on material disagreement.</li></ul></div>
+    <div class="card drop"><strong>One-to-one lookups assert single-parcel</strong>
+      <ul><li>An address-driven tool can only ever return one row — but a site assembled from 3 parcels still has one street address.</li>
+      <li>Fix: an always-on adjoining-parcels GIS sweep + a concept-plan vision pass.</li></ul></div>
+    <div class="card drop"><strong>Tool calls aren't structurally logged</strong>
+      <ul><li>Free-form reasoning leaves only a prose summary that can mis-attribute which source produced which value.</li>
+      <li>Fix: producer-owned JSONL — the Surveyor MCP server logs every call in real time.</li></ul></div>
+    <div class="card drop"><strong>&ldquo;Data-gap&rdquo; is treated as &ldquo;stop&rdquo;</strong>
+      <ul><li>Drawn area &gt; assessor acreage by &gt;15% is an assemblage signal, not a footnote — but shipping it as a later flag bakes a wrong &ldquo;single-parcel&rdquo; premise into every acreage-keyed calc.</li>
+      <li>Fix: the 15% block threshold hard-STOPs.</li></ul></div>
+  </div>
+
+  <h3><span class="hn">3</span>The output contract</h3>
+  <p>When invoked with <code>--output-dir &lt;dir&gt;</code>, the skill writes a fixed set of artifacts. Green =
+  always written; the geometry trio is <b>mandatory</b>; the rest are conditional on the inputs.</p>
+  <div class="storage"><b>&lt;output-dir&gt;/</b> location-resolution.md · <b>parcel-rings.geojson</b> · subject-boundary-overlay.png · geometry-summary.json · location-resolution-mcp-calls.jsonl</div>
+  <div class="erd">
+    <div class="ent newt"><div class="eh"><span class="en">location-resolution.md</span><span class="stereo">the artifact callers read</span></div>
+      <div class="row"><span class="nm">status</span><span class="ty">completed | stopped:* | failed:*</span></div>
+      <div class="row"><span class="nm">Confirmed Subject Location</span><span class="ty">addr + lat/lon + primary</span></div>
+      <div class="row"><span class="nm">Parcel Set</span><span class="ty">≥1 row</span></div>
+      <div class="row hi"><span class="nm">Parcel Geometry</span><span class="ty">inside-ring flags</span></div>
+      <div class="row"><span class="nm">Methodology · Open Questions</span><span class="ty">HITL</span></div>
+    </div>
+    <div class="ent newt"><div class="eh"><span class="en">parcel-rings.geojson</span><span class="stereo">Step 5 · WGS84</span></div>
+      <div class="row"><span class="nm">resolved ring(s)</span><span class="ty">polygon</span></div>
+      <div class="note">all resolved-set parcels, not just primary</div>
+    </div>
+    <div class="ent newt"><div class="eh"><span class="en">subject-boundary-overlay.png</span><span class="stereo">Step 5</span></div>
+      <div class="row"><span class="nm">rings on ESRI imagery</span><span class="ty">+ geocode pin</span></div>
+      <div class="note">every downstream visual read frames from here</div>
+    </div>
+    <div class="ent newt"><div class="eh"><span class="en">geometry-summary.json</span><span class="stereo">Step 5</span></div>
+      <div class="row"><span class="nm">vertex/bbox/area</span><span class="ty">per parcel</span></div>
+      <div class="row hi"><span class="nm">centroid_inside_ring</span><span class="ty">bool</span></div>
+      <div class="row hi"><span class="nm">pin_inside_ring</span><span class="ty">bool</span></div>
+    </div>
+    <div class="ent exist"><div class="eh"><span class="en">…-mcp-calls.jsonl</span><span class="stereo">Step 7 · producer-owned</span></div>
+      <div class="row"><span class="nm">one line per tool call</span><span class="ty">real-time</span></div>
+      <div class="note">byte-compatible with surveyor research-findings.jsonl</div>
+    </div>
+    <div class="ent changed"><div class="eh"><span class="en">adjoining-parcels.json</span><span class="stereo">Step 4a · audit trail</span></div>
+      <div class="row"><span class="nm">every adjoiner found</span><span class="ty">+ confidence</span></div>
+      <div class="note">candidates — never auto-included</div>
+    </div>
+  </div>
+
+  <h3><span class="hn">4</span>Fail-fast contract</h3>
+  <p>No &ldquo;good enough&rdquo; middle ground that silently degrades the downstream pipeline. The skill stops or
+  fails cleanly and hands the decision back to the caller.</p>
+  <div class="rels">
+    <div class="rels-h">status codes &amp; guards</div>
+    <span class="rl"><b>failed:no-jurisdiction-tooling</b> <span class="cf">⇐</span> no Surveyor config for the jurisdiction <span class="cmt">— no generic-geocoder fallback inside this skill</span></span>
+    <span class="rl"><b>failed:address-not-found</b> <span class="cf">⇐</span> assessor search returned zero rows <span class="cmt">— never silently broaden the query</span></span>
+    <span class="rl"><b>stopped:customer-input-mismatch</b> <span class="cf">⇐</span> customer pin &gt; 250 m off, or a different parcel</span>
+    <span class="rl"><b>stopped:assemblage-suspected</b> <span class="cf">⇐</span> concept plan declares &gt; 15% more area than the resolved set</span>
+    <span class="rl"><span class="tag-new">warn (not stop)</span> <b>centroid/pin_inside_ring = false</b> <span class="cf">⇒</span> non-convex parcel <span class="cmt">— frame from the overlay, don't stop</span></span>
+  </div>
+  <div class="callout ember"><span class="lab">the incident this was built around (#10 · jones-loop-punta-gorda)</span>
+    A run described the subject from an aerial centered on the address pin. The parcel was an <b>L-shaped strip
+    wrapping a neighbor's tract</b>; the pin sat on the neighbor's land, and the neighbor's graded loop road +
+    master pond got written into the seed data as the subject's. The polygon was one keyless GIS query away the whole
+    time. That is why Step 5 is mandatory and emits the two inside-ring flags.</div>
+
+  <div class="xref">Grounding: <code>claude-plugins/plugins/noetic-tools/skills/parcel-geo-location-resolution/{SKILL.md, pipeline.md}</code> + <code>references/*</code> + <code>scripts/{resolve.mjs, render_boundary_overlay.py}</code>.</div>
+</section>
+
+<!-- ========================================================= -->
+<!-- TAB 2 — INSIDE THE RESOLVE                                 -->
+<!-- ========================================================= -->
+<section class="panel" id="resolve">
+  <h2><span class="eyebrow">Tab 2</span>Inside the resolve — how the triple gets built</h2>
+  <p class="lede">This is the box you asked about: the <span style="color:var(--ember);font-weight:600">Skill agent · parcel-geo
+  resolve</span>. Its whole job is to turn <b>one</b> input into a coherent
+  <code>address + lat/lon + parcel-ID + rings</code> quad. The mechanic is a <b>funnel</b>: three input types each
+  resolve, by a different first call, down to a single <b>parcel-ID</b> — and then <em>every</em> path makes the same
+  second call — <code>&lt;src&gt;_parcel_details(parcelId)</code> (the source-prefixed details tool) — which is the one source that emits the canonical
+  centroid and the polygon geometry. Route to an ID, then let <code>parcel_details</code> back-fill the rest.</p>
+
+  <div class="callout ember">
+    <span class="lab">the linchpin — read this first</span>
+    <b><code>&lt;src&gt;_parcel_details(parcelId)</code> is called on all three paths</b> and is where the triple actually
+    becomes coherent. Its returned <b>WGS84 centroid becomes the canonical lat/lon</b> — <em>not</em> the caller's input
+    coordinate and <em>not</em> the Census geocode (both are approximate; the centroid is parcel-exact). Its returned
+    <b>polygon becomes the rings</b>. So the &ldquo;how&rdquo; is: the input only ever gets you to a parcel-ID; the
+    parcel-ID is what unlocks the precise lat/lon and the geometry.
+  </div>
+
+  <h3><span class="hn">1</span>The convergence, as a sequence</h3>
+  <p>Only one of the three input compartments runs (that's the <code>alt</code> frame); then the shared convergence runs
+  every time. Green arrows are <b>facets being written into the resolved triple</b> — watch the record fill up
+  <b>①→④</b>. Example data is the <code>4279 Roswell Rd NE, Atlanta</code> (Fulton) path.</p>
+
+  <div class="seqfig">
+<svg viewBox="0 0 1120 700" width="100%" role="img" aria-label="Sequence diagram: how the parcel-geo resolve builds the location triple, showing three input paths converging on parcel_details" xmlns="http://www.w3.org/2000/svg" font-family="'Fira Code','SF Mono',ui-monospace,Menlo,monospace">
+<defs>
+  <marker id="ah2" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#3f6582"/></marker>
+  <marker id="ahp" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#6b3fa0"/></marker>
+  <marker id="ahl2" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#3f6582"/></marker>
+  <marker id="ahg" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#15803d"/></marker>
+</defs>
+<rect x="0" y="0" width="1120" height="700" fill="#ffffff"/>
+<!-- convergence highlight band -->
+<rect x="20" y="446" width="1080" height="212" rx="9" fill="#f0fdf4" stroke="#bbf7d0" stroke-width="1"/>
+<text x="34" y="462" font-size="10.5" font-weight="700" fill="#15803d" font-family="'Lexend',-apple-system,sans-serif" letter-spacing="0.04em">CONVERGENCE · every input path funnels through parcel_details</text>
+<!-- alt frame -->
+<rect x="20" y="64" width="1080" height="372" rx="9" fill="none" stroke="#8cb4d1" stroke-width="1.2"/>
+<path d="M20,73 v-1 a8,8 0 0 1 8,-8 h150 v17 h-150 a8,8 0 0 1 -8,-8 z" fill="#35526b"/>
+<text x="30" y="77" font-size="10" font-weight="700" fill="#fff" font-family="'Lexend',-apple-system,sans-serif" letter-spacing="0.03em">alt · route by input type</text>
+<!-- compartment separators -->
+<line x1="20" y1="222" x2="1100" y2="222" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="6 5"/>
+<line x1="20" y1="378" x2="1100" y2="378" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="6 5"/>
+<!-- compartment labels -->
+<rect x="26" y="82" width="150" height="15" rx="3" fill="#eef4fb" stroke="#c3d8f2"/><text x="33" y="93" font-size="9.5" font-weight="700" fill="#2456a8">① input = address</text>
+<rect x="26" y="230" width="150" height="15" rx="3" fill="#eef4fb" stroke="#c3d8f2"/><text x="33" y="241" font-size="9.5" font-weight="700" fill="#2456a8">② input = lat / lon</text>
+<rect x="26" y="386" width="150" height="15" rx="3" fill="#eef4fb" stroke="#c3d8f2"/><text x="33" y="397" font-size="9.5" font-weight="700" fill="#2456a8">③ input = parcel-ID</text>
+
+<!-- lifelines + headers -->
+<line x1="105" y1="52" x2="105" y2="662" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="25" y="6" width="160" height="46" rx="8" fill="#bb4d00"/>
+<text x="105" y="26" text-anchor="middle" font-family="'Lexend',-apple-system,sans-serif" font-size="12.5" font-weight="700" fill="#fff">Skill agent</text>
+<text x="105" y="42" text-anchor="middle" font-size="9" fill="#fff" opacity="0.82">parcel-geo resolve</text>
+<line x1="320" y1="52" x2="320" y2="662" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="240" y="6" width="160" height="46" rx="8" fill="#3f6582"/>
+<text x="320" y="26" text-anchor="middle" font-family="'Lexend',-apple-system,sans-serif" font-size="12.5" font-weight="700" fill="#fff">Census</text>
+<text x="320" y="42" text-anchor="middle" font-size="9" fill="#fff" opacity="0.82">geographies · HTTP</text>
+<line x1="535" y1="52" x2="535" y2="662" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="455" y="6" width="160" height="46" rx="8" fill="#7a52a8"/>
+<text x="535" y="26" text-anchor="middle" font-family="'Lexend',-apple-system,sans-serif" font-size="12.5" font-weight="700" fill="#fff">Surveyor · locate</text>
+<text x="535" y="42" text-anchor="middle" font-size="9" fill="#fff" opacity="0.82">search / by-point</text>
+<line x1="750" y1="52" x2="750" y2="662" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="670" y="6" width="160" height="46" rx="8" fill="#6b3fa0"/>
+<text x="750" y="26" text-anchor="middle" font-family="'Lexend',-apple-system,sans-serif" font-size="12.5" font-weight="700" fill="#fff">Surveyor · details</text>
+<text x="750" y="42" text-anchor="middle" font-size="9" fill="#fff" opacity="0.82">parcel_details · linchpin</text>
+<line x1="965" y1="52" x2="965" y2="662" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="885" y="6" width="160" height="46" rx="8" fill="#15803d"/>
+<text x="965" y="26" text-anchor="middle" font-family="'Lexend',-apple-system,sans-serif" font-size="12.5" font-weight="700" fill="#fff">Location triple</text>
+<text x="965" y="42" text-anchor="middle" font-size="9" fill="#fff" opacity="0.82">the record being built</text>
+
+<!-- COMPARTMENT A · address -->
+<line x1="105" y1="112" x2="314" y2="112" stroke="#3f6582" stroke-width="1.4" marker-end="url(#ah2)"/>
+<text x="212.5" y="107" text-anchor="middle" font-size="10" fill="#1f2937">geographies/onelineaddress</text>
+<line x1="320" y1="140" x2="114" y2="140" stroke="#6b7280" stroke-width="1.4" stroke-dasharray="5 4"/>
+<text x="212.5" y="135" text-anchor="middle" font-size="9.5" fill="#6b7280">county · normalized address · rough geocode</text>
+<path d="M105,164 h20 v14 h-20" fill="none" stroke="#3f6582" stroke-width="1.3" marker-end="url(#ahl2)"/>
+<text x="131" y="170" font-size="9.5" fill="#35526b">↻ map county → surveyor_slug · normalize address (per-jur rule)</text>
+<line x1="105" y1="192" x2="529" y2="192" stroke="#7a52a8" stroke-width="1.4" marker-end="url(#ahp)"/>
+<text x="320" y="187" text-anchor="middle" font-size="10" fill="#1f2937">assessor_search(normalized address)</text>
+<line x1="535" y1="212" x2="114" y2="212" stroke="#6b7280" stroke-width="1.4" stroke-dasharray="5 4"/>
+<text x="320" y="207" text-anchor="middle" font-size="9.5" fill="#6b7280">[{ ParcelID, Owner }] — best-match first</text>
+
+<!-- COMPARTMENT B · lat/lon -->
+<line x1="105" y1="266" x2="314" y2="266" stroke="#3f6582" stroke-width="1.4" marker-end="url(#ah2)"/>
+<text x="212.5" y="261" text-anchor="middle" font-size="10" fill="#1f2937">geographies/coordinates (slug only)</text>
+<line x1="320" y1="294" x2="114" y2="294" stroke="#6b7280" stroke-width="1.4" stroke-dasharray="5 4"/>
+<text x="212.5" y="289" text-anchor="middle" font-size="9.5" fill="#6b7280">county</text>
+<path d="M105,318 h20 v14 h-20" fill="none" stroke="#3f6582" stroke-width="1.3" marker-end="url(#ahl2)"/>
+<text x="131" y="324" font-size="9.5" fill="#35526b">↻ map county → surveyor_slug</text>
+<line x1="105" y1="346" x2="529" y2="346" stroke="#7a52a8" stroke-width="1.4" marker-end="url(#ahp)"/>
+<text x="320" y="341" text-anchor="middle" font-size="10" fill="#1f2937">point lookup — &lt;src&gt;_*_at_point / byPoint arg (varies by source)</text>
+<line x1="535" y1="366" x2="114" y2="366" stroke="#6b7280" stroke-width="1.4" stroke-dasharray="5 4"/>
+<text x="320" y="361" text-anchor="middle" font-size="9.5" fill="#6b7280">{ ParcelID }</text>
+
+<!-- COMPARTMENT C · parcel-ID -->
+<path d="M105,414 h20 v14 h-20" fill="none" stroke="#3f6582" stroke-width="1.3" marker-end="url(#ahl2)"/>
+<text x="131" y="420" font-size="9.5" fill="#35526b">↻ pattern-match PIN format → candidate jurisdiction   ·   ParcelID = input (verbatim)</text>
+
+<!-- CONVERGENCE -->
+<!-- facet 1: parcel-ID (however we got here) -->
+<line x1="105" y1="484" x2="959" y2="484" stroke="#15803d" stroke-width="1.5" marker-end="url(#ahg)"/>
+<text x="500" y="479" text-anchor="middle" font-size="10" fill="#166534">write facet ① — parcel-ID  (canonical, from whichever path ran)</text>
+<circle cx="965" cy="484" r="9" fill="#15803d" stroke="#fff" stroke-width="1.5"/><text x="965" y="487.6" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">1</text>
+<!-- the linchpin call -->
+<line x1="105" y1="512" x2="744" y2="512" stroke="#6b3fa0" stroke-width="1.8" marker-end="url(#ahp)"/>
+<text x="427" y="507" text-anchor="middle" font-size="10" font-weight="700" fill="#4b2a75">&lt;src&gt;_parcel_details(parcelId)  —  called on ALL paths</text>
+<line x1="750" y1="540" x2="114" y2="540" stroke="#6b7280" stroke-width="1.4" stroke-dasharray="5 4"/>
+<text x="432" y="535" text-anchor="middle" font-size="9.5" fill="#6b7280">owner · acreage · polygon geometry · WGS84 centroid · situs address</text>
+<!-- facet 2: lat/lon = centroid -->
+<line x1="105" y1="568" x2="959" y2="568" stroke="#15803d" stroke-width="1.5" marker-end="url(#ahg)"/>
+<text x="500" y="563" text-anchor="middle" font-size="10" fill="#166534">write facet ② — lat/lon = centroid  (supersedes input pin / geocode)</text>
+<circle cx="965" cy="568" r="9" fill="#15803d" stroke="#fff" stroke-width="1.5"/><text x="965" y="571.6" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">2</text>
+<!-- facet 3: rings -->
+<line x1="105" y1="596" x2="959" y2="596" stroke="#15803d" stroke-width="1.5" marker-end="url(#ahg)"/>
+<text x="500" y="591" text-anchor="middle" font-size="10" fill="#166534">write facet ③ — rings = polygon geometry</text>
+<circle cx="965" cy="596" r="9" fill="#15803d" stroke="#fff" stroke-width="1.5"/><text x="965" y="599.6" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">3</text>
+<!-- facet 4: address -->
+<line x1="105" y1="624" x2="959" y2="624" stroke="#15803d" stroke-width="1.5" marker-end="url(#ahg)"/>
+<text x="500" y="619" text-anchor="middle" font-size="10" fill="#166534">write facet ④ — address = normalized input | situs address</text>
+<circle cx="965" cy="624" r="9" fill="#15803d" stroke="#fff" stroke-width="1.5"/><text x="965" y="627.6" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">4</text>
+<!-- assert -->
+<path d="M105,648 h20 v12 h-20" fill="none" stroke="#3f6582" stroke-width="1.3" marker-end="url(#ahl2)"/>
+<text x="131" y="654" font-size="9.5" fill="#35526b">↻ assert 4 facets coherent  →  hand to Step 3 reconcile · Step 4 multi-parcel · Step 5 persist rings → geojson</text>
+</svg>
+  </div>
+  <div class="seqcap"><b>the resolve, zoomed in</b><span class="k"><span class="ln"></span> call</span><span class="k"><span class="ln ret"></span> return</span><span class="k">↻ local / deterministic</span><span class="k"><span style="display:inline-block;width:28px;border-top:2px solid #15803d"></span> facet written to the triple</span><span class="k"><span class="nb" style="background:#15803d">N</span> facet ①–④</span></div>
+
+  <h3><span class="hn">2</span>The four facets — where each comes from</h3>
+  <p>The triple is really a quad. Read this as: the <b>input</b> gives you one facet for free; the
+  <b>first call</b> gets you the parcel-ID; the <b>second call</b> (<code>parcel_details</code>) gets you the other two,
+  precisely.</p>
+  <div class="erd">
+    <div class="ent newt"><div class="eh"><span class="en">Location triple (quad)</span><span class="stereo">assembled per resolve</span></div>
+      <div class="row"><span class="nm">parcel-ID</span><span class="ty">① locate call / input</span></div>
+      <div class="row hi"><span class="nm">lat / lon</span><span class="ty">② parcel_details centroid</span></div>
+      <div class="row hi"><span class="nm">rings</span><span class="ty">③ parcel_details geometry</span></div>
+      <div class="row"><span class="nm">address</span><span class="ty">④ input / situs</span></div>
+      <div class="note">canonical lat/lon = centroid, never the input pin</div>
+    </div>
+    <div class="ent exist"><div class="eh"><span class="en">by input type</span><span class="stereo">which first call runs</span></div>
+      <div class="row"><span class="nm">address</span><span class="ty">assessor_search → ID</span></div>
+      <div class="row"><span class="nm">lat/lon</span><span class="ty">point lookup (varies) → ID</span></div>
+      <div class="row"><span class="nm">parcel-ID</span><span class="ty">PIN pattern-match → ID</span></div>
+      <div class="note">then ALL three → parcel_details(ID)</div>
+    </div>
+  </div>
+  <div class="callout">
+    <span class="lab">why the second call is non-negotiable</span>
+    Even when the input <em>is</em> a parcel-ID (compartment ③), the skill still calls
+    <code>parcel_details</code> — both to <b>confirm the jurisdiction</b> (a hit proves the PIN belongs to that
+    assessor) and to obtain the <b>centroid + polygon</b> that no other call returns. A one-row
+    <code>assessor_search</code> result proves an address matched a record; it does <b>not</b> prove single-parcel
+    scope, and it does <b>not</b> carry geometry. That's why routing-to-an-ID and then always calling
+    <code>parcel_details</code> is the whole shape of the resolve.
+  </div>
+
+  <h3><span class="hn">3</span>A note on the tool names — the <code>&lt;src&gt;</code> prefix</h3>
+  <div class="callout ember">
+    <span class="lab">the names are schematic — there is no fixed &lt;jur&gt;_ convention</span>
+    Across the 56 jurisdictions and ~480 registered tools, <code>&lt;src&gt;</code> is the <b>data source</b> (a
+    CAD / assessor / county-GIS system), which is usually <em>not</em> the jurisdiction slug: Dallas is
+    <code>dcad_search</code> / <code>dcad_details</code>, Charlotte NC is <code>mecklenburg_*</code>, West Sacramento
+    is <code>yolo_*</code> (Yolo County), Broward is <code>bcpa_*</code>. The <b>verbs vary too</b>
+    (<code>_search</code> / <code>_cad_search</code> / <code>_assessor_search</code>; the details step is often
+    <code>_property_profile</code>, not <code>_parcel_details</code>), the lat/lon path has <b>no standard
+    by-point tool</b> (some fold it into the search tool as a <code>byPoint</code> arg; some have none), and a
+    single jurisdiction can expose <b>several source prefixes at once</b> — <code>atlanta-ga</code> is
+    <code>fulton_*</code> + <code>dekalb_*</code> + <code>atlanta_*</code> (two counties + city GIS). What is
+    invariant is the <b>shape</b>, not the names: <em>search/resolve → ParcelID</em>, then a <em>details call that
+    returns polygon geometry + WGS84 centroid</em>. The agent binds the real names at runtime from each
+    jurisdiction's <code>surveyor/jurisdictions/&lt;slug&gt;.md</code> &ldquo;Your Tools&rdquo; table.
+  </div>
+
+  <div class="xref">This is the internal view of Steps 1–2 from <code>pipeline.md</code> (routing table + &ldquo;always follow up
+  with the source-prefixed <code>&lt;src&gt;_parcel_details</code>&rdquo;), grounded in the worked Fulton example in
+  <code>references/output-schema.md</code> §Methodology. Everything after facet ④ (customer reconcile, multi-parcel,
+  geometry persistence) is the <b>Tab 3</b> pipeline.</div>
+</section>
+
+<!-- ========================================================= -->
+<!-- TAB 3 — THE 7-STEP PIPELINE                                -->
+<!-- ========================================================= -->
+<section class="panel" id="pipeline">
+  <h2><span class="eyebrow">Tab 3</span>The seven steps</h2>
+  <p class="lede">Each step has a defined input contract, output contract, and STOP/continue rule. Blue = read/compute;
+  ember = a fan-out or conditional layer; green = a produced artifact; dashed = a persisted store. Click a step to jump
+  to its detail card.</p>
+
+  <div class="dfg">
+    <a class="nl" href="#s-1"><div class="node read"><span class="op">step 1</span><span class="nt">Jurisdiction detection</span><span class="nf">Census → county<br>→ surveyor slug</span></div></a>
+    <div class="edge"><span class="ar">→</span></div>
+    <a class="nl" href="#s-2"><div class="node read"><span class="op">step 2</span><span class="nt">Primary parcel</span><span class="nf">Surveyor MCP<br>route by input</span></div></a>
+    <div class="edge"><span class="ar">→</span></div>
+    <a class="nl" href="#s-3"><div class="node read"><span class="op">step 3</span><span class="nt">Customer reconcile</span><span class="nf">dist / parcel<br>conditional</span></div></a>
+    <div class="edge"><span class="ar">→</span></div>
+    <a class="nl" href="#s-4"><div class="node event"><span class="op">step 4a/b/c</span><span class="nt">Multi-parcel detect</span><span class="nf">GIS sweep + vision<br>15% threshold</span></div></a>
+    <div class="edge"><span class="ar">→</span></div>
+    <a class="nl" href="#s-5"><div class="node created"><span class="op">step 5</span><span class="nt">Geometry &amp; overlay</span><span class="nf">parcel-rings.geojson<br>MANDATORY</span></div></a>
+    <div class="edge"><span class="ar">→</span></div>
+    <a class="nl" href="#s-6"><div class="node created"><span class="op">step 6</span><span class="nt">Write artifact</span><span class="nf">location-<br>resolution.md</span></div></a>
+    <div class="edge"><span class="ar">→</span></div>
+    <a class="nl" href="#s-7"><div class="node store"><span class="op">step 7</span><span class="nt">MCP-call log</span><span class="nf">jsonl · already<br>written</span></div></a>
+  </div>
+
+  <h3><span class="hn">1</span>The two-independent-confirmations rule</h3>
+  <p>The one design principle that governs Step 4: a parcel joins the resolved set only when <b>two independent
+  sources agree</b>. A single signal — shared owner, a title-block ID, a smoking-gun callout — makes a
+  <em>candidate</em>, not a member. Everything short of two confirmations flows to <b>Open Questions</b> for
+  human-in-the-loop confirmation, with a property-profile URL so the human can verify fast.</p>
+  <div class="sm">
+    <div class="s spec">Step 2 primary<span class="who">input</span></div><span class="a">+</span>
+    <div class="s">title-block ID<span class="who">vision</span></div><span class="a">&amp;</span>
+    <div class="s">GIS sweep hit<span class="who">4a</span></div><span class="a">⇒</span>
+    <div class="s client">auto-include<span class="who">confidence: high</span></div>
+    <span class="a" style="margin:0 6px">·</span>
+    <div class="s cc">one signal only<span class="who">candidate</span></div><span class="a">⇒</span>
+    <div class="s cc">Open Question<span class="who">HITL</span></div>
+  </div>
+
+  <h2><span class="eyebrow">§ detail</span>Steps in detail</h2>
+
+  <div class="sd-group">Step 1–3 — resolve the primary</div>
+
+  <div class="stepdetail" id="s-1">
+    <div class="sdh"><span class="sid">1</span><span class="sttl">Jurisdiction detection</span><span class="kb k-script">script</span><span class="kb mdl">keyless HTTP</span></div>
+    <div class="sdb">
+      <p>Map the primary input to a <code>(state, county, city, surveyor_slug, bureau_slug)</code> tuple so Step 2
+      knows which Surveyor source to call. Uses the US Census Bureau <b>Geographies</b> endpoint (free, no API key):
+      <code>onelineaddress</code> for an address, the <code>coordinates</code> path for a lat/lon. A parcel-ID input is
+      pattern-matched against known PIN formats, then confirmed via <code>&lt;src&gt;_parcel_details</code>.</p>
+      <dl class="sdmeta">
+        <dt>Input</dt><dd>primary input + optional <code>--jurisdiction</code> (skips detection entirely)</dd>
+        <dt>Calls</dt><dd>Census <code>geographies/{onelineaddress|coordinates}</code> → county + normalized addr + lat/lon + FIPS; then match county → <code>surveyor_slug</code> by reading each <code>jurisdictions/*.md</code> frontmatter</dd>
+        <dt>Output</dt><dd>resolved <code>surveyor_slug</code> (+ methodology capture of the normalized match)</dd>
+        <dt>STOP</dt><dd><span class="kb k-check" style="background:var(--ret)">fail</span> no config for the slug ⇒ <code>failed:no-jurisdiction-tooling</code>. No silent geocoder fallback.</dd>
+      </dl>
+    </div>
+  </div>
+
+  <div class="stepdetail" id="s-2">
+    <div class="sdh"><span class="sid">2</span><span class="sttl">Primary parcel resolution</span><span class="kb k-agent">MCP</span><span class="kb mdl">surveyor</span><span class="kb" style="background:rgba(255,255,255,.16);color:#fff">requires 1</span></div>
+    <div class="sdb">
+      <p>Resolve the input to <code>(canonical parcel ID, WGS84 centroid, assessor record)</code> via the Surveyor
+      MCP server. Route by input type, then <b>always</b> follow up with <code>&lt;src&gt;_parcel_details(parcelId)</code>
+      to capture the full record (owner, acreage, polygon geometry, centroid). The centroid is the canonical lat/lon all
+      downstream artifacts use. The server is spawned with <code>NOETIC_PHASE_LOG</code> set so its producer-owned JSONL
+      lands at the documented path (Step 7).</p>
+      <dl class="sdmeta">
+        <dt>Routing</dt><dd>address → <code>&lt;src&gt;_assessor_search</code> (a.k.a. <code>_search</code> / <code>_cad_search</code>) · lat/lon → a per-source point tool (<code>_parcel_at_point</code>, <code>_point_lookup</code>) or a <code>byPoint</code> arg — some sources have none · parcel-id → <code>&lt;src&gt;_parcel_details</code></dd>
+        <dt>Tool names</dt><dd>the prefix <code>&lt;src&gt;</code> is the <b>data source</b> (CAD / assessor / county-GIS system, e.g. <code>dcad_</code>, <code>bcpa_</code>, <code>fulton_</code>), <b>not</b> the jurisdiction slug — and one jurisdiction can expose several (<code>atlanta-ga</code> → <code>fulton_*</code> + <code>dekalb_*</code> + <code>atlanta_*</code>). The agent reads the real names at runtime from <code>surveyor/jurisdictions/&lt;slug&gt;.md</code>'s &ldquo;Your Tools&rdquo; table.</dd>
+        <dt>Normalization</dt><dd><b>required</b> for the address path — most CAMA <code>Address</code> fields store the street portion only, so a full postal query fails the <code>LIKE</code>. Rule is per-jurisdiction (e.g. <code>atlanta-ga</code>: drop everything after the first comma).</dd>
+        <dt>Modes</dt><dd>embedded (caller has surveyor MCP attached — <code>diligence-report</code> Phase 0) or standalone (<code>scripts/resolve.mjs</code> spawns its own MCP stdio subprocess, speaks JSON-RPC)</dd>
+        <dt>STOP</dt><dd><span class="kb k-check" style="background:var(--ret)">fail</span> normalized query returns zero rows ⇒ <code>failed:address-not-found</code>. Never fuzzy-broaden.</dd>
+      </dl>
+    </div>
+  </div>
+
+  <div class="stepdetail" id="s-3">
+    <div class="sdh"><span class="sid">3</span><span class="sttl">Customer-input reconciliation</span><span class="kb k-check">deterministic</span><span class="kb mdl">conditional</span><span class="kb" style="background:rgba(255,255,255,.16);color:#fff">if --customer-pin</span></div>
+    <div class="sdb">
+      <p>If the caller supplied a <code>--customer-pin</code>, verify it agrees with the Step 2 result. The pin's
+      <code>kind</code> (a tagged union) determines reconciliation: <code>lat-lon</code> → great-circle distance
+      vs the centroid; <code>parcel-id</code> → verbatim / alias-field / same-polygon comparison;
+      <code>google-maps-link</code> → parse coords, then the lat-lon logic. Outcome (confirmed / confirmed-as-alias /
+      confirmed-as-alternate-form) is recorded in the Customer-Supplied Inputs table.</p>
+      <dl class="sdmeta">
+        <dt>Threshold</dt><dd>&gt; 250 m (parcel-scale ambiguity auto-resolves toward authoritative; a 4 km miss does not)</dd>
+        <dt>STOP</dt><dd><span class="kb k-check" style="background:var(--ret)">stop</span> distance &gt; 250 m or a different polygon ⇒ <code>stopped:customer-input-mismatch</code></dd>
+      </dl>
+    </div>
+  </div>
+
+  <div class="sd-group">Step 4 — two-layer multi-parcel detection</div>
+
+  <div class="stepdetail" id="s-4">
+    <div class="sdh"><span class="sid">4</span><span class="sttl">Multi-parcel detection (4a always · 4b/4c if concept plan)</span><span class="kb k-agent">agent</span><span class="kb mdl">opus 4.7 vision</span></div>
+    <div class="sdb">
+      <p><b>4a — adjoining-parcels GIS sweep (always on).</b> Buffer the primary polygon ~50 ft, query the parcel layer
+      for intersecting polygons, score each candidate (shared owner = <b>high</b>, shared subdivision = <b>medium</b>,
+      shared use-code = <b>low</b>). <b>Candidates are never auto-included</b> — the sweep surfaces them for confirmation.
+      Every adjoiner is recorded in <code>adjoining-parcels.json</code> for the audit trail.</p>
+      <p><b>4b — concept-plan vision (when <code>--concept-plan</code> supplied).</b> <code>pdftoppm</code> renders the
+      PDF at 300 + 600 DPI, <code>magick</code> quadrant-crops it, and a scoped <b>Opus 4.7 native vision</b> pass reads
+      the title block (declared parcel IDs, total area), the drawn boundary, and smoking-gun callouts (&ldquo;Tract A/B&rdquo;,
+      &ldquo;interior lot lines to be abandoned&rdquo;, multiple plat refs). Findings are cross-checked against 4a's set;
+      auto-inclusion only when title-block evidence and the GIS sweep agree <b>and</b> vision confidence is <code>high</code>.</p>
+      <p><b>4c — 15% block threshold.</b> <code>Δ = (declared_area − resolved_set_area) / resolved_set_area</code>.</p>
+      <dl class="sdmeta">
+        <dt>Auto-include</dt><dd>only on two independent confirmations (see the rule box above); one signal ⇒ Open Question</dd>
+        <dt>Outputs</dt><dd><code>adjoining-parcels.json</code> · <code>concept-plan-extracted/</code> (renders, crops, <code>concept-plan-data.md</code>)</dd>
+        <dt>STOP</dt><dd><span class="kb k-check" style="background:var(--ret)">stop</span> Δ &gt; 15% ⇒ <code>stopped:assemblage-suspected</code></dd>
+        <dt>Deferred</dt><dd>three-way Google Maps + cadastral GIS reconciliation, and agent-browser point-sampling — surfaced as Open Questions in v1</dd>
+      </dl>
+    </div>
+  </div>
+
+  <div class="sd-group">Step 5–7 — geometry, artifact, log</div>
+
+  <div class="stepdetail" id="s-5">
+    <div class="sdh"><span class="sid">5</span><span class="sttl">Parcel geometry &amp; boundary overlay</span><span class="kb k-script">script</span><span class="kb mdl">MANDATORY</span></div>
+    <div class="sdb">
+      <p>Persist the resolved ring(s) and render a boundary-overlaid aerial so every downstream visual read starts from
+      a frame where the subject is unambiguous — and mechanically flag parcels whose centroid/pin does not sit inside
+      them. This is the step that would have caught incident #10.</p>
+      <dl class="sdmeta">
+        <dt>Persist</dt><dd>write polygon geometry from Step 2's <code>parcel_details</code> to <code>parcel-rings.geojson</code>. If the tool omitted geometry, fetch it directly — <b>one keyless ArcGIS query</b> (<code>returnGeometry=true&amp;outSR=4326</code>). Never soft-skip.</dd>
+        <dt>Render</dt><dd><code>scripts/render_boundary_overlay.py</code> fetches an ESRI World Imagery frame (keyless), strokes every ring in orange with its parcel ID, marks the geocode pin, emits <code>geometry-summary.json</code></dd>
+        <dt>Flags</dt><dd><code>centroid_inside_ring</code> / <code>pin_inside_ring</code> — a <code>false</code> means the parcel is non-convex; copy the warning verbatim and frame all imagery from the overlay. <b>A false flag is a warning, not a stop.</b></dd>
+        <dt>Cross-check</dt><dd>ring area vs assessor acreage — &gt; 15% disagreement ⇒ wrong-ring signal, re-check ID/layer</dd>
+      </dl>
+    </div>
+  </div>
+
+  <div class="stepdetail" id="s-6">
+    <div class="sdh"><span class="sid">6</span><span class="sttl">Write location-resolution.md</span><span class="kb k-agent">agent</span><span class="kb mdl">the artifact</span></div>
+    <div class="sdb">
+      <p>Produce the standardized artifact in <code>&lt;output-dir&gt;/location-resolution.md</code> — nine sections in a
+      fixed order: header (with <b>status</b>), Confirmed Subject Location, Parcel Set, <b>Parcel Geometry</b>,
+      Customer-Supplied Inputs, Methodology, Assumptions, Tool-Call Log, Open Questions. When <code>status != completed</code>,
+      it also carries a &ldquo;Reason for incomplete resolution&rdquo; + &ldquo;Recommended caller action&rdquo; section.</p>
+      <dl class="sdmeta">
+        <dt>Exit</dt><dd><code>0</code> on <code>completed</code> / <code>completed-with-warnings:*</code>; non-zero on every stop/fail</dd>
+      </dl>
+    </div>
+  </div>
+
+  <div class="stepdetail" id="s-7">
+    <div class="sdh"><span class="sid">7</span><span class="sttl">MCP-call log — already written</span><span class="kb k-script">producer-owned</span><span class="kb mdl">no write step</span></div>
+    <div class="sdb">
+      <p>The Surveyor MCP server logs every tool call to <code>location-resolution-mcp-calls.jsonl</code> in real time as
+      the skill runs — no separate write step. The path is chosen at server startup (the <code>NOETIC_PHASE_LOG</code>
+      env from Step 2 wins), and Step 6 records the actual path from the startup banner. The JSONL is byte-compatible
+      with the surveyor's <code>intermediate/research-findings.jsonl</code>; one reader serves both.</p>
+    </div>
+  </div>
+
+  <div class="xref">Source of truth for this tab: <code>pipeline.md</code> §1–§7 in the skill dir.</div>
+</section>
+
+<!-- ========================================================= -->
+<!-- TAB 3 — SEQUENCE DIAGRAM                                   -->
+<!-- ========================================================= -->
+<section class="panel" id="sequence">
+  <h2><span class="eyebrow">Tab 4</span>The call sequence, end to end</h2>
+  <p class="lede">One lifeline per participant. The <span style="color:var(--ember);font-weight:600">Skill agent</span>
+  drives; solid arrows are calls, dashed arrows are returns, <code>↻</code> loops are local/deterministic steps, and
+  red text marks a hard-stop guard. Numbered badges <b>1</b>–<b>6</b> on the agent lifeline link to the
+  &ldquo;what each call returns&rdquo; detail below. Example data is the <code>4279 Roswell Rd NE, Atlanta</code>
+  (Fulton County) happy path.</p>
+
+  <div class="seqfig">
+<svg viewBox="0 0 1185 970" width="100%" role="img" aria-label="End-to-end sequence diagram for the parcel-geo-location-resolution skill" xmlns="http://www.w3.org/2000/svg" font-family="'Fira Code','SF Mono',ui-monospace,Menlo,monospace">
+<defs>
+  <marker id="ah" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#3f6582"/></marker>
+  <marker id="ahl" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#3f6582"/></marker>
+  <marker id="ret" markerWidth="10" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6" fill="none" stroke="#6b7280" stroke-width="1.2"/></marker>
+</defs>
+<rect x="0" y="0" width="1185" height="970" fill="#ffffff"/>
+<rect x="243" y="72" width="10" height="856" rx="2" fill="#bb4d00" opacity="0.10"/>
+<!-- lifelines + headers -->
+<line x1="75" y1="52" x2="75" y2="928" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="2" y="6" width="146" height="46" rx="8" fill="#35526b"/>
+<text x="75" y="26" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12.5" font-weight="700" fill="#fff">Caller</text>
+<text x="75" y="42" text-anchor="middle" font-size="9" fill="#fff" opacity="0.82">diligence Phase 0</text>
+<line x1="248" y1="52" x2="248" y2="928" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="175" y="6" width="146" height="46" rx="8" fill="#bb4d00"/>
+<text x="248" y="26" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12.5" font-weight="700" fill="#fff">Skill agent</text>
+<text x="248" y="42" text-anchor="middle" font-size="9" fill="#fff" opacity="0.82">parcel-geo resolve</text>
+<line x1="420" y1="52" x2="420" y2="928" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="347" y="6" width="146" height="46" rx="8" fill="#3f6582"/>
+<text x="420" y="26" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12.5" font-weight="700" fill="#fff">Census</text>
+<text x="420" y="42" text-anchor="middle" font-size="9" fill="#fff" opacity="0.82">geographies · HTTP</text>
+<line x1="593" y1="52" x2="593" y2="928" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="520" y="6" width="146" height="46" rx="8" fill="#6b3fa0"/>
+<text x="593" y="26" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12.5" font-weight="700" fill="#fff">Surveyor MCP</text>
+<text x="593" y="42" text-anchor="middle" font-size="9" fill="#fff" opacity="0.82">assessor · parcel</text>
+<line x1="765" y1="52" x2="765" y2="928" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="692" y="6" width="146" height="46" rx="8" fill="#0f7a5f"/>
+<text x="765" y="26" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12.5" font-weight="700" fill="#fff">GIS + imagery</text>
+<text x="765" y="42" text-anchor="middle" font-size="9" fill="#fff" opacity="0.82">ArcGIS · ESRI · keyless</text>
+<line x1="938" y1="52" x2="938" y2="928" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="865" y="6" width="146" height="46" rx="8" fill="#517e9e"/>
+<text x="938" y="26" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12.5" font-weight="700" fill="#fff">Vision</text>
+<text x="938" y="42" text-anchor="middle" font-size="9" fill="#fff" opacity="0.82">Opus 4.7 · conditional</text>
+<line x1="1110" y1="52" x2="1110" y2="928" stroke="#b9d2e5" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect x="1037" y="6" width="146" height="46" rx="8" fill="#2d4559"/>
+<text x="1110" y="26" text-anchor="middle" font-family="'Lexend',-apple-system,'Segoe UI',Roboto,sans-serif" font-size="12.5" font-weight="700" fill="#fff">output dir</text>
+<text x="1110" y="42" text-anchor="middle" font-size="9" fill="#fff" opacity="0.82">artifacts + jsonl</text>
+
+<!-- 1 · Caller → Skill -->
+<line x1="75" y1="86" x2="242" y2="86" stroke="#3f6582" stroke-width="1.4" marker-end="url(#ah)"/>
+<text x="161.5" y="81" text-anchor="middle" font-size="10" fill="#1f2937">resolve — address | lat,lon | parcel-id · --output-dir · [--concept-plan]</text>
+
+<!-- STEP 1 · Skill → Census -->
+<line x1="248" y1="120" x2="414" y2="120" stroke="#3f6582" stroke-width="1.4" marker-end="url(#ah)"/>
+<text x="334" y="115" text-anchor="middle" font-size="10" fill="#1f2937">step 1 · GET geographies/onelineaddress · skip if --jurisdiction</text>
+<line x1="420" y1="154" x2="257" y2="154" stroke="#6b7280" stroke-width="1.4" stroke-dasharray="5 4"/>
+<text x="334" y="149" text-anchor="middle" font-size="10" fill="#6b7280">county · matched addr · lat,lon · state+county FIPS</text>
+<circle cx="248" cy="154" r="9" fill="#3f6582" stroke="#fff" stroke-width="1.5"/>
+<text x="248" y="157.4" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">1</text>
+
+<!-- self: map slug -->
+<path d="M248,188 h20 v16 h-20" fill="none" stroke="#3f6582" stroke-width="1.3" marker-end="url(#ahl)"/>
+<text x="274" y="194" font-size="10" fill="#35526b">↻ map county → surveyor_slug · read jurisdictions/*.md frontmatter</text>
+<text x="274" y="205" font-size="8.5" font-weight="700" fill="#b91c1c">no config ⇒ failed:no-jurisdiction-tooling · STOP</text>
+
+<!-- STEP 2 · Skill → Surveyor (route) -->
+<line x1="248" y1="222" x2="587" y2="222" stroke="#3f6582" stroke-width="1.4" marker-end="url(#ah)"/>
+<text x="420.5" y="217" text-anchor="middle" font-size="10" fill="#1f2937">step 2 · &lt;src&gt;_assessor_search | point lookup (route by input · names vary)</text>
+<line x1="593" y1="256" x2="257" y2="256" stroke="#6b7280" stroke-width="1.4" stroke-dasharray="5 4"/>
+<text x="420.5" y="251" text-anchor="middle" font-size="10" fill="#6b7280">[{ ParcelID, Owner, Address }] — best-match first</text>
+<circle cx="248" cy="256" r="9" fill="#3f6582" stroke="#fff" stroke-width="1.5"/>
+<text x="248" y="259.4" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">2</text>
+<text x="420.5" y="267" text-anchor="middle" font-size="8.5" font-weight="700" fill="#b91c1c">zero rows ⇒ failed:address-not-found · STOP</text>
+
+<!-- Skill → Surveyor (canonical details) -->
+<line x1="248" y1="300" x2="587" y2="300" stroke="#3f6582" stroke-width="1.4" marker-end="url(#ah)"/>
+<text x="420.5" y="295" text-anchor="middle" font-size="10" fill="#1f2937">&lt;src&gt;_parcel_details(parcelId) — canonical record</text>
+<line x1="593" y1="334" x2="257" y2="334" stroke="#6b7280" stroke-width="1.4" stroke-dasharray="5 4"/>
+<text x="420.5" y="329" text-anchor="middle" font-size="10" fill="#6b7280">ParcelID · owner · acreage · polygon · WGS84 centroid</text>
+<circle cx="248" cy="334" r="9" fill="#3f6582" stroke="#fff" stroke-width="1.5"/>
+<text x="248" y="337.4" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">3</text>
+
+<!-- STEP 3 · self reconcile -->
+<path d="M248,368 h20 v16 h-20" fill="none" stroke="#3f6582" stroke-width="1.3" marker-end="url(#ahl)"/>
+<text x="274" y="374" font-size="10" fill="#35526b">↻ step 3 · reconcile --customer-pin (great-circle dist / parcel)</text>
+<text x="274" y="385" font-size="8.5" font-weight="700" fill="#b91c1c">&gt; 250 m or diff parcel ⇒ stopped:customer-input-mismatch · STOP</text>
+
+<!-- STEP 4a · Skill → GIS sweep -->
+<line x1="248" y1="419" x2="759" y2="419" stroke="#3f6582" stroke-width="1.4" marker-end="url(#ah)"/>
+<text x="506.5" y="414" text-anchor="middle" font-size="10" fill="#1f2937">step 4a · buffer the PRIMARY polygon (from step 2) 50 ft · intersects → adjoining candidates</text>
+<line x1="765" y1="453" x2="257" y2="453" stroke="#6b7280" stroke-width="1.4" stroke-dasharray="5 4"/>
+<text x="506.5" y="448" text-anchor="middle" font-size="10" fill="#6b7280">adjoining polygons · owner · subdivision · use-code</text>
+<circle cx="248" cy="453" r="9" fill="#3f6582" stroke="#fff" stroke-width="1.5"/>
+<text x="248" y="456.4" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">4</text>
+
+<!-- self: score candidates -->
+<path d="M248,487 h20 v16 h-20" fill="none" stroke="#3f6582" stroke-width="1.3" marker-end="url(#ahl)"/>
+<text x="274" y="493" font-size="10" fill="#35526b">↻ score candidates (owner=high · subdiv=med · use=low) → adjoining-parcels.json · never auto-include</text>
+
+<!-- self: preprocess concept plan -->
+<path d="M248,521 h20 v16 h-20" fill="none" stroke="#3f6582" stroke-width="1.3" marker-end="url(#ahl)"/>
+<text x="274" y="527" font-size="10" fill="#35526b">↻ step 4b · pdftoppm 300/600 DPI · magick quadrant crops   [if --concept-plan]</text>
+
+<!-- Skill → Vision -->
+<line x1="248" y1="561" x2="932" y2="561" stroke="#3f6582" stroke-width="1.4" marker-end="url(#ah)"/>
+<text x="593" y="556" text-anchor="middle" font-size="10" fill="#1f2937">scoped Opus 4.7 pass — title-block IDs · drawn boundary · smoking guns</text>
+<line x1="938" y1="595" x2="257" y2="595" stroke="#6b7280" stroke-width="1.4" stroke-dasharray="5 4"/>
+<text x="593" y="590" text-anchor="middle" font-size="10" fill="#6b7280">concept-plan-data.md · overall confidence { high | med | low }</text>
+<circle cx="248" cy="595" r="9" fill="#3f6582" stroke="#fff" stroke-width="1.5"/>
+<text x="248" y="598.4" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">5</text>
+
+<!-- Skill → Surveyor verify title-block IDs -->
+<line x1="248" y1="629" x2="587" y2="629" stroke="#3f6582" stroke-width="1.4" marker-end="url(#ah)"/>
+<text x="420.5" y="624" text-anchor="middle" font-size="10" fill="#1f2937">&lt;src&gt;_parcel_details(title-block IDs) — verify novel IDs</text>
+
+<!-- self: cross-check + 4c -->
+<path d="M248,663 h20 v16 h-20" fill="none" stroke="#3f6582" stroke-width="1.3" marker-end="url(#ahl)"/>
+<text x="274" y="669" font-size="10" fill="#35526b">↻ cross-check · two-independent-confirmations · 4c  Δ = declared vs resolved area</text>
+<text x="274" y="680" font-size="8.5" font-weight="700" fill="#b91c1c">Δ &gt; 15% ⇒ stopped:assemblage-suspected · STOP</text>
+
+<!-- STEP 5 · Skill → GIS geometry (if missing) -->
+<line x1="248" y1="714" x2="759" y2="714" stroke="#3f6582" stroke-width="1.4" marker-end="url(#ah)"/>
+<text x="506.5" y="709" text-anchor="middle" font-size="10" fill="#1f2937">step 5 · FALLBACK ONLY — parcel-layer query by ID · returnGeometry (only if parcel_details had no geom)</text>
+
+<!-- Skill → Output write geojson -->
+<line x1="248" y1="748" x2="1104" y2="748" stroke="#3f6582" stroke-width="1.4" marker-end="url(#ah)"/>
+<text x="679" y="743" text-anchor="middle" font-size="10" fill="#1f2937">write parcel-rings.geojson  ←  the step-2 parcel_details polygon (all resolved rings · WGS84)</text>
+
+<!-- Skill → GIS render overlay (ESRI) -->
+<line x1="248" y1="782" x2="759" y2="782" stroke="#3f6582" stroke-width="1.4" marker-end="url(#ah)"/>
+<text x="506.5" y="777" text-anchor="middle" font-size="10" fill="#1f2937">render_boundary_overlay.py · fetch ESRI World Imagery (keyless)</text>
+
+<!-- self: stroke rings + flags -->
+<path d="M248,816 h20 v16 h-20" fill="none" stroke="#3f6582" stroke-width="1.3" marker-end="url(#ahl)"/>
+<text x="274" y="822" font-size="10" fill="#35526b">↻ stroke rings · mark pin · emit geometry-summary.json</text>
+<circle cx="248" cy="816" r="9" fill="#3f6582" stroke="#fff" stroke-width="1.5"/>
+<text x="248" y="819.4" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">6</text>
+<text x="274" y="833" font-size="8.5" font-weight="700" fill="#bb4d00">centroid/pin_inside_ring = false ⇒ non-convex · frame from overlay (warn, not stop)</text>
+
+<!-- Skill → Output overlay + summary -->
+<line x1="248" y1="860" x2="1104" y2="860" stroke="#3f6582" stroke-width="1.4" marker-end="url(#ah)"/>
+<text x="679" y="855" text-anchor="middle" font-size="10" fill="#1f2937">write subject-boundary-overlay.png · geometry-summary.json</text>
+
+<!-- STEP 6 · Skill → Output write md -->
+<line x1="248" y1="894" x2="1104" y2="894" stroke="#3f6582" stroke-width="1.4" marker-end="url(#ah)"/>
+<text x="679" y="889" text-anchor="middle" font-size="10" fill="#1f2937">step 6 · write location-resolution.md (9 sections · status)</text>
+
+<!-- STEP 7 · Surveyor → Output jsonl (producer-owned, real time) -->
+<line x1="593" y1="912" x2="1104" y2="912" stroke="#6b7280" stroke-width="1.4" stroke-dasharray="2 3"/>
+<text x="851.5" y="907" text-anchor="middle" font-size="10" fill="#6b7280">step 7 · …-mcp-calls.jsonl — real-time · producer-owned (throughout)</text>
+
+<!-- return to caller -->
+<line x1="242" y1="921" x2="76" y2="921" stroke="#6b7280" stroke-width="1.4" stroke-dasharray="5 4" marker-end="url(#ret)"/>
+<text x="161.5" y="916" text-anchor="middle" font-size="10" fill="#6b7280">status + artifact paths</text>
+</svg>
+  </div>
+  <div class="seqcap"><b>end-to-end sequence</b><span class="k"><span class="ln"></span> call</span><span class="k"><span class="ln ret"></span> return</span><span class="k">↻ local / deterministic step</span><span class="k"><span class="stop">red</span> hard-stop guard</span><span class="k"><span style="color:var(--ember);font-weight:700">amber</span> warn (not a stop)</span><span class="k"><span class="nb">N</span> numbered return → detailed below</span></div>
+
+  <div class="rrxh">what each call returns <span class="hint">— numbered <b>1</b>–<b>6</b> to match the badges on the agent lifeline; each gives the API it hits, the shape it hands back, and real example data from the <code>4279 Roswell Rd NE, Atlanta</code> (Fulton) path</span></div>
+
+  <details class="ret"><summary><span class="num">1</span><span class="ttl">Census geographies</span><span class="ra">⇢</span> county · normalized addr · lat/lon · FIPS</summary>
+    <div class="rbody"><dl class="rgrid">
+      <dt>API</dt><dd><span class="rc r-fa">http</span> keyless <code>geocoding.geo.census.gov/geocoder/geographies/onelineaddress</code> (<code>coordinates</code> path for a lat/lon input) with <code>benchmark=Public_AR_Current&amp;vintage=Current_Current</code>. Skipped entirely when <code>--jurisdiction</code> is passed.</dd>
+      <dt>Returns</dt><dd>the matched address block: <code>{ matchedAddress · coordinates{x,y} · geographies.Counties[0]{NAME,STATE,COUNTY} }</code>. County name drives the <code>surveyor_slug</code> match; the normalized address + lat/lon feed the methodology block.</dd>
+      <dt>Example</dt><dd><pre class="cb"><span class="k">"addressMatches"</span>: [{
+  <span class="k">"matchedAddress"</span>: <span class="s">"4279 ROSWELL RD NE, ATLANTA, GA, 30342"</span>,
+  <span class="k">"coordinates"</span>: { <span class="k">"x"</span>: -84.379667, <span class="k">"y"</span>: 33.871083 },
+  <span class="k">"geographies"</span>: { <span class="k">"Counties"</span>: [{
+    <span class="k">"NAME"</span>: <span class="s">"Fulton County"</span>, <span class="k">"STATE"</span>: <span class="s">"13"</span>, <span class="k">"COUNTY"</span>: <span class="s">"121"</span> }] }
+}]  <span class="cm">// → surveyor_slug: atlanta-ga</span></pre></dd>
+    </dl></div></details>
+
+  <details class="ret"><summary><span class="num">2</span><span class="ttl">&lt;src&gt;_assessor_search</span><span class="ra">⇢</span> best-match parcel row</summary>
+    <div class="rbody"><dl class="rgrid">
+      <dt>API</dt><dd><span class="rc r-mcp">mcp</span> <code>fulton_assessor_search(query, searchType="address")</code> — the prefix is the <b>data source</b> (Fulton County GIS), not the jurisdiction slug <code>atlanta-ga</code> (which also exposes <code>dekalb_*</code> and <code>atlanta_*</code> tools). The address is <b>normalized first</b> (drop everything after the first comma) because Fulton CAMA stores the street portion only and implements <code>WHERE UPPER(Address) LIKE '%query%'</code>.</dd>
+      <dt>Returns</dt><dd><code>[{ ParcelID, Owner, Address, ... }]</code> — best-match first; one row in the single-parcel case. A one-to-one result does <b>not</b> prove a single-parcel site.</dd>
+      <dt class="pe">Guard</dt><dd class="pe">A zero-row result ⇒ <code>failed:address-not-found</code>. The skill never fuzzy-broadens (strip unit, partial match) — a near-match can resolve to a completely different parcel.</dd>
+      <dt>Example</dt><dd><pre class="cb"><span class="cm">// normalized query: "4279 Roswell Rd NE"</span>
+[{ <span class="k">"ParcelID"</span>: <span class="s">"17 009500040675"</span>,
+   <span class="k">"Owner"</span>: <span class="s">"IRT PROPERTY COMPANY"</span>,
+   <span class="k">"Address"</span>: <span class="s">"4279 ROSWELL RD NE"</span> }]</pre></dd>
+    </dl></div></details>
+
+  <details class="ret"><summary><span class="num">3</span><span class="ttl">&lt;src&gt;_parcel_details</span><span class="ra">⇢</span> canonical record + polygon + centroid</summary>
+    <div class="rbody"><dl class="rgrid">
+      <dt>API</dt><dd><span class="rc r-mcp">mcp</span> <code>fulton_parcel_details(parcelId)</code> — <b>always</b> called after the input-shape-specific call to capture the full record. The returned centroid becomes the canonical lat/lon for every downstream artifact.</dd>
+      <dt>Returns</dt><dd><code>{ ParcelID · Owner · LandAcres · geometry(rings) · centroid{lat,lon} · attributes{...} }</code>. The <code>geometry</code> is what Step 5 persists to <code>parcel-rings.geojson</code>.</dd>
+      <dt>Example</dt><dd><pre class="cb">{ <span class="k">"ParcelID"</span>: <span class="s">"17 009500040675"</span>,
+  <span class="k">"LandAcres"</span>: 7.38,
+  <span class="k">"centroid"</span>: { <span class="k">"lat"</span>: 33.871083, <span class="k">"lon"</span>: -84.379667 },
+  <span class="k">"geometry"</span>: { <span class="k">"rings"</span>: [[ [-84.3801,33.8715], … ]] } }</pre></dd>
+    </dl></div></details>
+
+  <details class="ret"><summary><span class="num">4</span><span class="ttl">adjoining-parcels GIS sweep</span><span class="ra">⇢</span> scored candidates (never auto-included)</summary>
+    <div class="rbody"><dl class="rgrid">
+      <dt>API</dt><dd><span class="rc r-fa">http</span> keyless ArcGIS <code>query?geometry=&lt;buffered ring&gt;&amp;geometryType=esriGeometryPolygon&amp;spatialRel=esriSpatialRelIntersects</code> against the jurisdiction's parcel layer.</dd>
+      <dt>Returns</dt><dd>every intersecting parcel with <code>ParcelID · Owner · Acreage · LandUseCode · Subdivision</code>. Scored: shared owner = <b>high</b>, shared subdivision = <b>medium</b>, shared use-code = <b>low</b>. Written to <code>adjoining-parcels.json</code>.</dd>
+      <dt class="pe">Rule</dt><dd class="pe">Candidates are <b>never</b> auto-included from this signal alone. Auto-inclusion needs a second independent confirmation (a title-block ID from the vision pass). Otherwise → Open Questions with a property-profile URL.</dd>
+    </dl></div></details>
+
+  <details class="ret"><summary><span class="num">5</span><span class="ttl">scoped Opus 4.7 vision</span><span class="ra">⇢</span> concept-plan-data.md + confidence</summary>
+    <div class="rbody"><dl class="rgrid">
+      <dt>API</dt><dd><span class="rc r-fa">llm</span> Opus 4.7 native vision over the 300/600 DPI renders + quadrant crops. Runs only when <code>--concept-plan</code> is supplied. Scoped to multi-parcel signals only — not a full-feature extraction.</dd>
+      <dt>Returns</dt><dd><code>concept-plan-data.md</code>: title-block parcel IDs, declared total area, recorded-plat refs, drawn-boundary shape, smoking-gun callouts (Tract A/B · abandoned lot lines · UDP · multiple plats), plus an overall <code>confidence { high | med | low }</code>.</dd>
+      <dt class="pe">Gate</dt><dd class="pe">Auto-inclusion of any parcel requires overall confidence <code>high</code> <b>and</b> corroboration from the 4a GIS sweep. Confidence <code>low</code> ⇒ every finding becomes an Open Question (<code>completed-with-warnings:vision-pass-low-confidence</code>).</dd>
+    </dl></div></details>
+
+  <details class="ret"><summary><span class="num">6</span><span class="ttl">render_boundary_overlay.py</span><span class="ra">⇢</span> overlay.png + inside-ring flags</summary>
+    <div class="rbody"><dl class="rgrid">
+      <dt>API</dt><dd><span class="rc r-fa">http</span> + local — fetches a keyless ESRI World Imagery frame via <code>curl</code>, strokes every resolved ring (orange, labeled with parcel ID), marks the geocode pin, computes geometry.</dd>
+      <dt>Returns</dt><dd><code>subject-boundary-overlay.png</code> + <code>geometry-summary.json</code>: per-parcel vertex count, bbox (ft), ring area (acres), and the two mechanical flags <code>centroid_inside_ring</code> / <code>pin_inside_ring</code>.</dd>
+      <dt class="pe">Warn</dt><dd class="pe">A <code>false</code> flag means the parcel is non-convex — any point-centered image shows a <em>different property</em> at its center. Copy the warning verbatim; every downstream visual read frames from the overlay. <b>This is a warning, not a stop.</b></dd>
+      <dt>Example</dt><dd><pre class="cb">{ <span class="k">"parcels"</span>: [{ <span class="k">"parcel_id"</span>: <span class="s">"17 009500040675"</span>,
+    <span class="k">"vertices"</span>: 34, <span class="k">"area_acres"</span>: 7.36,
+    <span class="k">"centroid_inside_ring"</span>: <span class="k">true</span>,
+    <span class="k">"pin_inside_ring"</span>: <span class="k">true</span> }] }</pre></dd>
+    </dl></div></details>
+
+  <div class="xref">The sequence shows the <b>embedded-mode</b> happy path (caller has the surveyor MCP attached). In <b>standalone mode</b> the <code>scripts/resolve.mjs</code> driver spawns its own surveyor MCP stdio subprocess and speaks JSON-RPC directly — same tool calls, no child Claude process. Tool names shown (<code>fulton_*</code>, <code>&lt;src&gt;_…</code>) are <b>data-source prefixes</b>, not a fixed <code>&lt;jur&gt;_</code> convention — see the note in Tab 2.</div>
+</section>
+
+</main>
+
+<script>
+  const btns=document.querySelectorAll('nav.tabs button');
+  const panels=document.querySelectorAll('.panel');
+  const IDS=['what','resolve','pipeline','sequence']; /* KEEP IN SYNC with the data-tab / panel ids above */
+  function show(id){
+    btns.forEach(b=>b.classList.toggle('active',b.dataset.tab===id));
+    panels.forEach(p=>p.classList.toggle('active',p.id===id));
+    if(location.hash.slice(1)!==id) history.replaceState(null,'','#'+id);
+    window.scrollTo({top:0,behavior:'smooth'});
+  }
+  btns.forEach(b=>b.addEventListener('click',()=>show(b.dataset.tab)));
+  const initial=location.hash.slice(1);
+  if(IDS.includes(initial)) show(initial);
+
+  /* In-panel deep-links (step-chain cards) scroll to the detail card WITHOUT
+     writing the hash, so a reload never lands on the wrong tab. */
+  document.querySelectorAll('a.nl').forEach(a=>{
+    a.addEventListener('click',e=>{
+      const t=document.getElementById(a.getAttribute('href').slice(1));
+      if(t){e.preventDefault();t.scrollIntoView({behavior:'smooth',block:'start'});}
+    });
+  });
+</script>
+</body>
+</html>
