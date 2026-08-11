@@ -307,17 +307,19 @@ pre.mermaid:not([data-processed]){color:transparent}  /* hide raw source before 
 <header class="masthead">
   <div class="kicker">DILIGENCE · SIR PIPELINES</div>
   <h1>SIR Pipelines — Architecture Overview</h1>
-  <p>Two ways to produce a Site Intelligence Report: the <b>production <code>diligence-report</code> skill</b> that
-  serves customers today, and the <b>new bureau SIR pipeline</b> Jason has been building to replace it. This is an
-  orientation map — how each works, how complete the new one is, how it uses the Mayor, and what is committed to a
+  <p>Three ways to produce a Site Intelligence Report: the <b>production <code>diligence-report</code> skill</b> that
+  serves customers today, the <b>declarative bureau SIR pipeline</b> (19 verified steps), and the <b>newest
+  <code>bureau/runbooks/sir/</code> freeform runbook</b> — an operator-driven, three-phase / two-stop shape. This is an
+  orientation map — how each works, how complete each is, how it uses the Mayor, and what is committed to a
   repo vs. still living as workspace WIP.</p>
-  <div class="meta">Draft v2 · 2026-08-03 · exploratory · + per-step detail (Tab 3 · §6) · MERMAID diagram variant · click a tab ↓</div>
+  <div class="meta">Draft v3 · 2026-08-11 · exploratory · + Tab 4 SIR Runbook (state + sequence per section) · MERMAID diagram variant · click a tab ↓</div>
 </header>
 
 <nav class="tabs">
   <button data-tab="overview" class="active"><span class="n">01</span>High-Level Comparison</button>
   <button data-tab="skill"><span class="n">02</span>Deep Dive · diligence-report skill</button>
   <button data-tab="pipeline"><span class="n">03</span>Deep Dive · SIR pipeline</button>
+  <button data-tab="runbook"><span class="n">04</span>Deep Dive · SIR Runbook</button>
 </nav>
 
 <main>
@@ -1641,12 +1643,338 @@ $ curl "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapSe
   <div class="foot">architecture-overview-mermaid.html · spec-kit v3 + mermaid@11 (hybrid prototype) · exploratory companion to a forthcoming DESIGN-SPEC.md · sources: bureau/docs/pipelines/sir.md, live bureau/pipelines/{sir,review}/ (§6 detail read from pipeline.yaml + each step's prompts/ and check_*.py), Jason's SIR-Pipeline workspace, production diligence-report skill.</div>
 </section>
 
+<!-- ========================================================= -->
+<!-- TAB 4 — DEEP DIVE: SIR Runbook (freeform)                 -->
+<!-- ========================================================= -->
+<section class="panel" id="runbook">
+  <h2><span class="eyebrow">Tab 4</span>Deep dive — the SIR <code>RUNBOOK</code> (freeform)</h2>
+  <p class="lede">The newest shape, and the simplest to <em>describe</em>: not 19 declarative steps but <b>three fat
+  phases and two human stops</b>. A single operator-facing session (the <b>top-level runner</b>) captures the request,
+  then spawns one background <b>phase orchestrator</b> at a time and sits idle. Each orchestrator has full agency
+  inside its phase — it decides how many sub-agents to spawn, what to read, when to dig deeper — bounded only by a
+  <b>folder contract</b> and a roster it must cover.</p>
+
+  <div class="storage"><b>Location:</b> <code>bureau/runbooks/sir/</code> (RUNBOOK.md + <code>prompts/phase-{1,2,3}/</code> + <code>scripts/</code>) · <b>Run dir:</b> <code>~/noetic/working/sir/&lt;customer&gt;-&lt;project-slug&gt;/</code></div>
+
+  <div class="callout new">
+    <span class="lab">the shape in one breath</span>
+    <b>Frame → ⛔ HITL1 → Research → ⛔ HITL2 → Analysis+Deliverable → publish on explicit go.</b> Each phase owns one
+    folder; the next phase reads only that folder's <em>declared</em> files. That single contract is simultaneously the
+    inter-phase API, the resume mechanism (a fresh session picks up any run from the folders alone), and the audit
+    surface. An unlinked file is invisible downstream <em>by design</em>.
+  </div>
+
+  <div class="grid2">
+    <div class="card keep"><strong>Two actors, three orchestrators</strong>
+      <ul>
+        <li><b>Top-level runner</b> — operator-facing. Only jobs: author <code>ADDENDUM.md</code>, spawn one orchestrator at a time, run the two HITL chats, relay directives. <em>Never does phase work inline</em> (context is reserved for the operator).</li>
+        <li><b>Phase orchestrators ×3</b> — background opus sub-agents, one per phase, each pointed at its pre-written <code>prompts/phase-*/</code>. They spawn their own workers.</li>
+      </ul>
+    </div>
+    <div class="card change"><strong>Model &amp; effort discipline</strong>
+      <ul>
+        <li>Every spawn names its model explicitly — never inherits. <b>Opus</b> for orchestration / research leads / disciplines / adversarial passes; <b>sonnet</b> for format-following (appendix parts, compose); <b>haiku</b> for mechanical children whose output is copied, never composed prose.</li>
+        <li>Effort: <b>high</b> for orchestrators + adversarial; <b>medium</b> for research legs + disciplines; <b>low</b> for mechanical children.</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3><span class="hn">1</span>The whole run — three phases, two stops</h3>
+  <p>One lifecycle. The two ⛔ states are the <em>only</em> places a human decision gates progress; everything else is
+  the orchestrators' judgment. Note the two loops: HITL1 can bounce back to Frame for corrections, and Delivery can
+  bounce back into Phase 3 for revisions until the operator says <em>publish</em>.</p>
+  <div class="seqfig">
+<pre class="mermaid">
+stateDiagram-v2
+    direction LR
+    state "Phase 1 · Frame" as Frame
+    state "Phase 2 · Research" as Research
+    state "Phase 3 · Analysis + Deliverable" as Deliver
+    [*] --> Kickoff
+    Kickoff --> Frame : spawn P1 orch
+    Frame --> HITL1
+    HITL1 --> Frame : corrections
+    HITL1 --> Research : confirmed
+    Research --> HITL2
+    HITL2 --> Deliver : acquisition ruled
+    Deliver --> Delivery
+    Delivery --> Deliver : revision loop
+    Delivery --> Published : operator says publish
+    Published --> [*]
+    note right of HITL1
+      records-pull launches HERE and
+      runs under the operator's turnaround
+    end note
+    classDef stop fill:#fef2f2,stroke:#b91c1c,color:#b91c1c,font-weight:bold
+    classDef done fill:#f0fdf4,stroke:#15803d,color:#15803d
+    class HITL1,HITL2 stop
+    class Published done
+</pre>
+  </div>
+  <div class="seqcap"><b>whole-run lifecycle</b><span class="k"><span class="stop">red</span> human hard-stop (HITL)</span><span class="k">green = published</span><span class="k">loops = corrections / revisions</span></div>
+
+  <!-- ---- Section: Kickoff ---- -->
+  <div class="sd-group">§2 · Kickoff — what the top-level runner literally does</div>
+  <p>Purely clerical. Scaffold the run tree, write <code>ADDENDUM.md</code> (the operator's request <b>verbatim</b> — every
+  later premise traces to it), spawn phase 1 in the background, then go idle. <code>ADDENDUM.md</code> is written once and
+  never updated mid-run; decisions land in <code>hitl/</code>, work lands in the phase folders.</p>
+
+  <div class="seqfig">
+<pre class="mermaid">
+stateDiagram-v2
+    direction LR
+    [*] --> Scaffold
+    Scaffold --> WriteAddendum
+    WriteAddendum --> SpawnP1
+    SpawnP1 --> Idle
+    Idle --> [*] : P1 reports back
+    state "mkdir run tree" as Scaffold
+    state "Write ADDENDUM.md" as WriteAddendum
+    state "Spawn P1 (bg opus)" as SpawnP1
+    state "Idle — reserve context" as Idle
+    note right of Scaffold
+      hitl/ · phase-1-frame/ ·
+      phase-2-research/ · phase-3-deliverable/
+    end note
+    note right of WriteAddendum
+      request VERBATIM · site · intended use ·
+      coverage-checklist · depth directives ·
+      attachments · speed authorization
+    end note
+</pre>
+  </div>
+  <div class="seqcap"><b>kickoff · state</b></div>
+
+  <div class="seqfig">
+<pre class="mermaid">
+sequenceDiagram
+    participant OP as Operator
+    participant TR as Top Runner
+    participant FS as Run Tree
+    participant P1 as P1 Orch
+    OP->>TR: SIR request (verbatim) + attachments
+    TR->>FS: mkdir run tree + write ADDENDUM.md
+    Note over TR,FS: ADDENDUM written once — never updated mid-run
+    TR->>P1: spawn bg opus · read prompts/phase-1/phase-1.md + run dir
+    Note right of TR: runner never does phase work inline
+    P1-->>TR: report back — 2-para summary + readout path
+</pre>
+  </div>
+  <div class="seqcap"><b>kickoff · sequence</b><span class="k"><span class="ln"></span> call</span><span class="k"><span class="ln ret"></span> return</span></div>
+
+  <!-- ---- Section: Phase 1 Frame ---- -->
+  <div class="sd-group">§3 · Phase 1 — Frame (everything before HITL1)</div>
+  <p>Cheap and fast: establish a <em>correct frame</em> for the operator to confirm before the heavier research spend.
+  Resolve the parcel triple + jurisdiction stack, compute geometry with <code>parcel_dimensions.py</code> (never by
+  hand), capture imagery — but the Street View walk runs <b>after</b> the access trace, since the trace's constraints
+  are the vantage list. One adversarial pass runs over the draft before the readout lands in <code>hitl/</code> — the
+  file appearing there is the presentation signal.</p>
+
+  <div class="seqfig">
+<pre class="mermaid">
+stateDiagram-v2
+    direction LR
+    [*] --> Capture
+    Capture --> Resolve
+    Resolve --> Extract : attachments exist
+    Resolve --> Adversarial : no attachments
+    Extract --> Adversarial
+    Adversarial --> Readout
+    Readout --> [*] : lands in hitl/
+    state "Capture attachments" as Capture
+    state "Resolve site (triple · jurisdiction · geometry · trace · walk)" as Resolve
+    state "Extract plan (2 readers + reconcile)" as Extract
+    state "Adversarial pass" as Adversarial
+    state "Author HITL1 readout" as Readout
+    note right of Resolve
+      access trace BEFORE the walk;
+      adjudicate each constraint vs imagery:
+      confirmed / refuted / uncorroborated
+    end note
+</pre>
+  </div>
+  <div class="seqcap"><b>phase 1 · state</b><span class="k">branch on whether a concept plan was attached</span></div>
+
+  <div class="seqfig">
+<pre class="mermaid">
+sequenceDiagram
+    participant TR as Top Runner
+    participant P1 as P1 Orch
+    participant W as Workers
+    participant FS as Run Tree
+    participant OP as Operator
+    TR->>P1: spawn (phase-1.md + run dir)
+    P1->>FS: read ADDENDUM.md + shared-conventions.md
+    P1->>W: parcel-geo resolution + parcel_dimensions.py
+    W-->>P1: triple · rings · jurisdiction stack · dimensions
+    P1->>W: access trace, then Street View walk, then adjudicate
+    W-->>P1: imagery/ + constraint adjudication
+    opt concept plan attached
+        P1->>W: 2 independent readers (literal / meaning)
+        W-->>P1: raw readings
+        P1->>W: reconcile — disagreements become data gaps
+        W-->>P1: plan-extraction.md
+    end
+    P1->>W: adversarial reader (background, over draft)
+    W-->>P1: attacks — fix, or note what stands
+    P1->>FS: write seed-site-data.md + hitl1-readout.md
+    Note over P1,FS: readout landing in hitl/ = presentation signal
+    P1-->>TR: report back
+    TR->>OP: present HITL1 (regulatory orientation)
+    Note over TR,OP: ⛔ HITL1 — decision recorded verbatim · records-pull spawned on present
+    OP-->>TR: confirmed (or corrections → fresh scoped P1)
+</pre>
+  </div>
+  <div class="seqcap"><b>phase 1 · sequence</b><span class="k"><span class="ln"></span> call</span><span class="k"><span class="ln ret"></span> return</span><span class="k"><span class="stop">note</span> ⛔ HITL1</span></div>
+
+  <!-- ---- Section: Phase 2 Research ---- -->
+  <div class="sd-group">§4 · Phase 2 — Research (HITL1 → HITL2)</div>
+  <p>The confirmed frame is the premise set. The records pull was launched back at HITL1 and ran under the operator's
+  turnaround — phase 2 first verifies it landed, then fans out one opus worker per research leg. Sequencing is the
+  orchestrator's judgment, with hard dependencies: <b>covenants + environmental wait on the records pull</b>;
+  <b>web-followups waits on surveyor's <code>facts.md</code></b>; the rest start immediately.</p>
+
+  <div class="seqfig">
+<pre class="mermaid">
+stateDiagram-v2
+    direction LR
+    [*] --> Verify
+    Verify --> Fanout
+    Fanout --> Accounting
+    Accounting --> Adversarial
+    Adversarial --> Readout
+    Readout --> [*] : lands in hitl/
+    state "Verify records-pull landed" as Verify
+    state "Research fan-out (8 legs + orientation)" as Fanout
+    state "Accounting (roster · docs · coverage)" as Accounting
+    state "Adversarial pass" as Adversarial
+    state "Author HITL2 readout" as Readout
+    note right of Fanout
+      immediate: zoning · programs · transportation ·
+      submarket · neighborhood-plan
+      after records: covenants · environmental
+      after facts.md: web-followups
+    end note
+</pre>
+  </div>
+  <div class="seqcap"><b>phase 2 · state</b></div>
+
+  <div class="seqfig">
+<pre class="mermaid">
+sequenceDiagram
+    participant TR as Top Runner
+    participant P2 as P2 Orch
+    participant RP as Records
+    participant W as Workers
+    participant FS as Run Tree
+    participant OP as Operator
+    Note over RP: launched at HITL1 — ran under operator turnaround
+    TR->>P2: spawn (phase-2.md + run dir + HITL1 decision)
+    P2->>FS: read phase-1-frame/ + hitl1-decision.md
+    P2->>RP: verify records-pull-report.md landed
+    RP-->>P2: recorded instruments · documents.md · coverage · gaps
+    P2->>W: dispatch — zoning · programs · transport · submarket · nbhd-plan
+    W-->>P2: leg files (+ portal-recipes trailer)
+    P2->>W: covenants + environmental (wait records) · web-followups (wait facts.md)
+    W-->>P2: leg files
+    P2->>P2: accounting — count roster · retain named docs (sha256) or log gaps.md
+    P2->>W: adversarial reader over corpus + gaps + draft
+    W-->>P2: fix, or note what stands
+    P2->>FS: write hitl2-readout.md (ONE acquisition question)
+    P2-->>TR: report back — summary + gap count
+    TR->>OP: present HITL2 — anything still gettable by desk research?
+    Note over TR,OP: ⛔ HITL2 — decision recorded verbatim
+    OP-->>TR: ruled
+</pre>
+  </div>
+  <div class="seqcap"><b>phase 2 · sequence</b><span class="k"><span class="ln"></span> call</span><span class="k"><span class="ln ret"></span> return</span><span class="k"><span class="stop">note</span> ⛔ HITL2</span></div>
+
+  <!-- ---- Section: Phase 3 Deliverable ---- -->
+  <div class="sd-group">§5 · Phase 3 — Analysis &amp; Deliverable (post-HITL2)</div>
+  <p>Turns the confirmed corpus into the shipped SIR: <b>premises → disciplines ×10 → synthesis → compose → scrub →
+  render → package</b>. Geometry is computed once (<code>site_geometry.py</code>) and quoted by every discipline. The
+  delivered render is always last — one round of fixes, one re-render, one verify — and publishing to the app happens
+  <em>only</em> on the operator's explicit "publish", via <code>upload-sir</code>.</p>
+
+  <div class="seqfig">
+<pre class="mermaid">
+stateDiagram-v2
+    direction LR
+    [*] --> Premises
+    Premises --> Disciplines
+    Disciplines --> Synthesis
+    Synthesis --> Compose
+    Compose --> ContentScrub
+    ContentScrub --> RenderPDF
+    RenderPDF --> PostRender
+    PostRender --> RenderPDF : verify fails
+    PostRender --> RenderDOCX
+    RenderDOCX --> Package
+    Package --> Delivery
+    Delivery --> Compose : revision requests
+    Delivery --> Published : explicit publish
+    Published --> [*]
+    state "Premises + site_geometry.py" as Premises
+    state "Discipline fan-out ×10" as Disciplines
+    state "Synthesis (issue-matrix + briefing)" as Synthesis
+    state "Compose pages.tsx (RDS Report)" as Compose
+    state "Content scrub" as ContentScrub
+    state "Render PDF" as RenderPDF
+    state "Post-render pass (layout scrub + fixes)" as PostRender
+    state "Render DOCX (same source bytes)" as RenderDOCX
+    classDef done fill:#f0fdf4,stroke:#15803d,color:#15803d
+    class Published done
+</pre>
+  </div>
+  <div class="seqcap"><b>phase 3 · state</b><span class="k">post-render loop repeats only if verify fails</span><span class="k">delivery loop = operator revisions</span></div>
+
+  <div class="seqfig">
+<pre class="mermaid">
+sequenceDiagram
+    participant TR as Top Runner
+    participant P3 as P3 Orch
+    participant W as Workers
+    participant FS as Run Tree
+    participant OP as Operator
+    TR->>P3: spawn (phase-3.md + run dir + both HITL decisions)
+    P3->>FS: read phase-1/2 declared files + decisions
+    P3->>FS: write premises.md + site_geometry.py sidecar
+    P3->>W: 10 discipline workers (opus) — premises + geometry + inputs
+    W-->>P3: 10 discipline files (Headlines · severities · citations)
+    P3->>P3: synthesis — issue-matrix.md + regulatory-briefing.md
+    P3->>W: compose Part workers (sonnet) → pages.tsx + research-appendix.md
+    W-->>P3: composed source
+    P3->>W: content scrub vs source (intent + mechanical tiers)
+    W-->>P3: clean
+    P3->>FS: render_pdf.py → report.pdf + page-map.json
+    P3->>W: post-render fan-out — layout scrub + check_layout.py + gap/imagery
+    W-->>P3: findings only
+    P3->>FS: one owner applies fixes → re-render once → verify changed pages
+    P3->>FS: render_docx.py (same bytes) → package deliverable/
+    P3-->>TR: report — paths · page count · disclosed gaps
+    TR->>OP: hand over the real PDF
+    opt revision requests
+        OP-->>TR: change X
+        TR->>P3: narrow spawn — edit source → re-scrub → re-render
+    end
+    OP->>TR: explicit "publish"
+    TR->>FS: upload-sir skill → app
+    Note over TR,FS: publish ONLY on explicit go
+</pre>
+  </div>
+  <div class="seqcap"><b>phase 3 · sequence</b><span class="k"><span class="ln"></span> call</span><span class="k"><span class="ln ret"></span> return</span><span class="k">opt = operator revision loop</span></div>
+
+  <div class="xref">Grounding: <code>bureau/runbooks/sir/RUNBOOK.md</code> + <code>prompts/phase-{1,2,3}/phase-*.md</code>, the researcher/discipline rosters, and <code>scripts/{parcel_dimensions,site_geometry,render_pdf,render_docx,check_layout}.py</code>. First iteration of the mermaid state+sequence treatment — deliberately coarse; deepen per-phase in later passes.</div>
+
+  <div class="foot">Tab 4 · SIR Runbook · state + sequence per phase · mermaid@11 stateDiagram-v2 + sequenceDiagram · source: bureau/runbooks/sir/.</div>
+</section>
+
 </main>
 
 <script>
   const btns=document.querySelectorAll('nav.tabs button');
   const panels=document.querySelectorAll('.panel');
-  const IDS=['overview','skill','pipeline']; /* KEEP IN SYNC with the data-tab / panel ids above */
+  const IDS=['overview','skill','pipeline','runbook']; /* KEEP IN SYNC with the data-tab / panel ids above */
   function show(id){
     btns.forEach(b=>b.classList.toggle('active',b.dataset.tab===id));
     panels.forEach(p=>p.classList.toggle('active',p.id===id));
@@ -1713,7 +2041,16 @@ $ curl "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapSe
     'parcel-geo':   { c:'#6b3fa0', sub:'…-location-resolution' },
     'det. scripts': { c:'#3f6582', sub:'bureau · dims · trace' },
     'visual walk':  { c:'#0f7a5f', sub:'slot · agent-browser' },
-    'run tree':     { c:'#2d4559', sub:'outputs + _health' }
+    'run tree':     { c:'#2d4559', sub:'outputs + _health' },
+    /* ── Tab 4 · SIR Runbook actors ── */
+    'Operator':     { c:'#15803d', sub:'human · HITL' },
+    'Top Runner':   { c:'#35526b', sub:'operator-facing CC' },
+    'P1 Orch':      { c:'#bb4d00', sub:'opus · frame' },
+    'P2 Orch':      { c:'#bb4d00', sub:'opus · research' },
+    'P3 Orch':      { c:'#bb4d00', sub:'opus · deliverable' },
+    'Workers':      { c:'#3f6582', sub:'spawned sub-agents' },
+    'Records':      { c:'#6b3fa0', sub:'records-pull · opus' },
+    'Run Tree':     { c:'#2d4559', sub:'phase folders + hitl/' }
   };
   function decorateActors(svg){
     const NS = 'http://www.w3.org/2000/svg';
