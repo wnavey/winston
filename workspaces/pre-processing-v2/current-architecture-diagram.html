@@ -160,9 +160,9 @@ code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px s
 <header class="masthead">
   <div class="kicker">PRE-PROCESSING V2 · CURRENT ARCHITECTURE</div>
   <h1>Site-Plan Pre-Processing — How It Works Today</h1>
-  <p>The framing tab: what pre-processing is, how it runs, the data model it writes, how each
-  plan-set block gets processed, and the vision model behind it. Grounding for the v2 redesign
-  in <code>preprocessing-packet/</code>.</p>
+  <p>Three tabs: <b>how pre-processing works today</b>, <b>why it's changing</b> (the recorded
+  transcription defects), and <b>the v2 proposal</b> — strip the AI out of the cloud job and move
+  all reading into an operator-run runbook. Grounding + intent in <code>preprocessing-packet/</code>.</p>
   <div class="meta">Draft v1 · 2026-08-13 · verified against substation @ 2026-08-13 · click a tab ↓</div>
 </header>
 
@@ -414,16 +414,236 @@ Return JSON:
   </section>
 
   <section class="panel" id="failures">
-    <h2><span class="eyebrow">Tab 02</span>Why It's Changing</h2>
-    <p class="lede">Placeholder — the evidence dossier and failure-mode catalog live in
-    <code>preprocessing-packet/preprocessing-transcription-handoff.md</code>. To be built out next.</p>
+    <h2><span class="eyebrow">The problem</span>The transcriptions can't be trusted</h2>
+    <p class="lede">The AI reading layer is wrong at a rate that makes it dangerous as the source of
+    any number, name, or symbol — and the defects are <b>invisible to every existing check</b>,
+    because row counts, headers, and structure survive intact while the cell contents rot.</p>
+
+    <div class="callout ember"><span class="lab">measured on the benchmark package</span>
+    <b>~40 of 57 sheets</b> on the 1700 S. Lamar run carry at least one recorded transcription
+    defect. Sheet <b>04 has no transcription at all</b> — so every "search all sheets" text sweep
+    silently covered 56 of 57. The 08-04 run and FTL's Take 5 logged the same class independently.
+    Nothing changed in pre-processing to cause this; it was always like this — the 08-12 run just
+    quantified it.</div>
+
+    <h3><span class="hn">9×</span>Recorded failure modes</h3>
+    <div class="catgrp">
+      <div class="cath"><span class="cgl">F</span> Nine ways the reader silently fails</div>
+      <div class="uci"><span class="uid">F1</span><span class="utag t-orig">substitute</span><span class="utxt">Single digit/character swaps inside intact tables — <code>FL 502.57</code> for the printed <code>528.57</code>.</span></div>
+      <div class="uci"><span class="uid">F2</span><span class="utag t-orig">drop</span><span class="utxt">Whole rows dropped — sheet 03: 25 of 28 plat notes; the missing note 27 is the filing's <b>only</b> parkland-credit claim.</span></div>
+      <div class="uci"><span class="uid">F3</span><span class="utag t-orig">omit</span><span class="star">★</span><span class="utxt">Whole blocks missing while <code>block-manifest.json</code> declares them valid; sheet 04 transcribed to nothing.</span></div>
+      <div class="uci"><span class="uid">F4</span><span class="utag t-orig">shift</span><span class="utxt">Spanning table headers collapsed into a data column — every row shifts one cell.</span></div>
+      <div class="uci"><span class="uid">F5</span><span class="utag t-orig">mis-assign</span><span class="utxt">Semantic mis-assignment — stall length filed as width; floor elevations mixed into building dims.</span></div>
+      <div class="uci"><span class="uid">F6</span><span class="utag t-orig">confabulate</span><span class="star">★</span><span class="utxt"><b>Invented</b> recorded-instrument numbers that resolve to real documents on <i>unrelated</i> properties; invented utility crossings.</span></div>
+      <div class="uci"><span class="uid">F7</span><span class="utag t-orig">"correct"</span><span class="utxt">Silently fixes the drawing's own errors — a legend transposition quietly repaired, hiding a real filing defect.</span></div>
+      <div class="uci"><span class="uid">F8</span><span class="utag t-orig">meaning</span><span class="utxt">Non-text meaning lost — checkbox fill, X-outs through voided details, watermark identity, prime vs double-prime.</span></div>
+      <div class="uci"><span class="uid">F9</span><span class="utag t-orig">diverge</span><span class="star">★</span><span class="utxt">Two transcriptions of the <b>same</b> printed block disagree with each other and the page — defeats reconciliation checks (sheets 08/09/56, 19–20).</span></div>
+    </div>
+
+    <h2><span class="eyebrow">The deeper problem</span>Extraction is near-null on civil sheets</h2>
+    <div class="callout"><span class="lab">outlined vector, no text layer</span>
+    Most civil sheets are outlined vector with <b>no embedded text</b>: <code>pdftotext</code> got
+    <b>1,831 chars</b> from sheet 05 vs <b>31,410</b> via OCR, and a package-wide search for
+    "watershed" returned <b>zero hits</b> — including the sheet that states it in full. One embedded
+    font dropped every digit <code>8</code> from extraction on a sheet that renders fine. The lesson
+    for v2: <b>extraction is not a ground-truth source either — the rendered image is.</b></div>
+
+    <h2><span class="eyebrow">Why it stays invisible</span>Every AI step is a swallow-path</h2>
+    <p>On failure the pipeline marks the row <code>processed</code> anyway, with NULL/empty fields —
+    so a garbled read is indistinguishable from a genuinely blank sheet.</p>
+    <div class="grid2">
+      <div class="card drop"><strong>Summary fails → looks complete</strong>
+      <ul><li>Sheet ends <code>processed</code> with NULL <code>summary</code>/<code>label</code>.</li>
+      <li>A garbled PDF yields an unnamed sheet that looks fine.</li></ul></div>
+      <div class="card drop"><strong>Transcription fails → empty, silently</strong>
+      <ul><li>Sheet ends <code>processed</code> with <b>zero</b> <code>content_block</code> rows.</li>
+      <li>Empty <code>blocks.md</code> reads as a genuinely blank sheet.</li></ul></div>
+      <div class="card drop"><strong>Rasterize partial → sheets vanish</strong>
+      <ul><li>Page count is derived from rendered <code>.jpg</code>s.</li>
+      <li>A partial <code>pdftoppm</code> truncates the set — no cross-check.</li></ul></div>
+      <div class="card drop"><strong>Similarity script errors → mislabel</strong>
+      <ul><li>Non-zero exit drops the pair with no log.</li>
+      <li>Matching then mislabels a <code>modified</code> sheet as <code>added</code>.</li></ul></div>
+    </div>
+
+    <h2><span class="eyebrow">The tell</span>Review already stopped trusting it</h2>
+    <div class="callout new"><span class="lab">the review side has already demoted the layer</span>
+    The review runbook's own conventions state the <b>vector PDF is the authority</b>, and
+    "<i>a negative reached only by searching text is not a negative</i>." The 08-12 Austin review
+    effectively operated without the transcription layer — re-reading the actual drawings. So today
+    we <b>pay full Gemini cost to generate content our own reviewers already don't trust.</b> That
+    is what makes the v2 move near-inevitable rather than speculative.</div>
+
+    <div class="foot">evidence: preprocessing-packet/preprocessing-transcription-handoff.md · design-notes.md §1 · exploration-upload-pipeline.md §6</div>
   </section>
 
   <section class="panel" id="next">
-    <h2><span class="eyebrow">Tab 03</span>v2 Proposal</h2>
-    <p class="lede">Placeholder — the "strip AI from the sandbox, move reading to an interactive
-    runbook" proposal lives in <code>preprocessing-packet/README.md</code> +
-    <code>design-notes.md</code>. To be specced here next.</p>
+    <h2><span class="eyebrow">The shape</span>Split along the mechanical / judgment line</h2>
+    <p class="lede">Keep only the <b>mechanical</b> work in the cloud job — split, rasterize,
+    thumbnails, zip-unpack. Move all <b>reading and understanding</b> into a new operator-run
+    runbook (built like the review / SIR sessions) that publishes to the <b>same DB fields</b> —
+    so nothing downstream changes. Ratified by Jason; implementation is Will's.</p>
+
+    <div class="grid2">
+      <div class="card keep"><strong>Stays in the Vercel Sandbox (mechanical)</strong>
+      <ul><li>Split PDF → per-sheet PDFs + 150-dpi thumbnails</li>
+      <li>Optimize, rasterize, similarity/overlay (no AI)</li>
+      <li>Zip unpack + the <b>one</b> retained AI call: zip triage (text-only)</li>
+      <li><b>NEW:</b> a loud page-count check (<code>pdfinfo</code> vs rendered) — fail visibly, not silently</li></ul></div>
+      <div class="card change"><strong>Moves to the operator runbook (judgment)</strong>
+      <ul><li>Sheet naming + summary, block discovery + transcription</li>
+      <li>Reading guide, title-block metadata, doc inventory</li>
+      <li>Change narrative (incl. the <code>UNRELATED</code> chain-break)</li>
+      <li>Project-facts refresh, drainage-model analysis, embeddings</li></ul></div>
+    </div>
+
+    <h2><span class="eyebrow">The new pipeline</span>Upload is mechanical; reading is operator-run</h2>
+
+    <div class="uc">
+      <div class="uch"><div class="ucn">1</div><div class="uctxt">
+        <span class="actor">Vercel Sandbox · unchanged trigger, AI stripped</span>
+        <span class="uct">Upload → mechanical processing only</span>
+      </div></div>
+      <div class="ucsub">Same drag-drop + <code>process-file</code> event; the sandbox now emits bare artifacts and stops.</div>
+      <div class="ucdiag"><div class="dfg">
+        <div class="node event"><span class="op">run</span><span class="nt">split / rasterize</span><span class="nf">GS + Poppler<br>thumbnails</span></div>
+        <div class="edge"><span class="el">retain</span><span class="ar">→</span></div>
+        <div class="node event"><span class="op">ai</span><span class="nt">zip triage</span><span class="nf">text-only ·<br>the 1 AI call<br>that stays</span></div>
+        <div class="edge"><span class="el">add</span><span class="ar">→</span></div>
+        <div class="node event"><span class="op">assert</span><span class="nt">page-count check</span><span class="nf">pdfinfo vs<br>rendered ·<br>fail LOUD</span></div>
+        <div class="edge"><span class="el">seed</span><span class="ar">→</span></div>
+        <div class="node created"><span class="op">insert</span><span class="nt">sheet_version</span><span class="nf">paths +<br>thumbnail only<br>NO summary<br>NO blocks</span></div>
+        <div class="edge"><span class="el">UI</span><span class="ar">→</span></div>
+        <div class="node store"><span class="op">show</span><span class="nt">bare thumbnails</span><span class="nf">flip through ·<br>no names/<br>search yet</span></div>
+      </div></div>
+      <div class="ucnote"><b>accepted cost</b> — until an operator runs the runbook, the app shows bare thumbnails + file names, and in-app content search is empty. Jason has accepted this explicitly; at current volume, review is the forcing function.</div>
+    </div>
+
+    <div class="uc">
+      <div class="uch"><div class="ucn">2</div><div class="uctxt">
+        <span class="actor">Claude Code · operator session · Opus orchestrator</span>
+        <span class="uct">Agentic pre-processing runbook</span>
+      </div></div>
+      <div class="ucsub">Reads the whole submission with context; escalates to the operator when something's off; publishes to today's fields.</div>
+      <div class="ucdiag"><div class="dfg">
+        <div class="node event"><span class="op">read</span><span class="nt">cover sheet first</span><span class="nf">extracted once,<br>handed to every<br>sheet worker</span></div>
+        <div class="edge"><span class="el">per sheet</span><span class="ar">→</span></div>
+        <div class="node event"><span class="op">worker</span><span class="nt">reader A + reader B</span><span class="nf">two independent<br>passes ↓ triad</span></div>
+        <div class="edge"><span class="el">reconcile</span><span class="ar">→</span></div>
+        <div class="node event"><span class="op">worker</span><span class="nt">reconcile</span><span class="nf">disagreement<br>= data gap ·<br>never pick a<br>winner</span></div>
+        <div class="edge"><span class="el">escalate?</span><span class="ar">→</span></div>
+        <div class="node read"><span class="op">hitl</span><span class="nt">operator stop</span><span class="nf">corrupt PDF /<br>missing sheets<br>vs prior version</span></div>
+        <div class="edge"><span class="el">publish</span><span class="ar">→</span></div>
+        <div class="node created"><span class="op">write</span><span class="nt">same DB fields</span><span class="nf">+ embeddings<br>+ analysis_<br>published_at</span></div>
+      </div></div>
+      <div class="ucnote"><b>publisher</b> — a deterministic service-role script (not agent freehand): same <code>short_id</code> reading-order, <code>block_numbering_scheme</code>, and bbox normalization the sandbox writes today. Mirrors the dual-view publisher pattern.</div>
+    </div>
+
+    <h2><span class="eyebrow">The engine</span>The two-pass reader triad</h2>
+    <p>Stolen from the SIR runbook — its design is what defeats the recorded failure modes: a model
+    can't converge on its own hallucination when two <b>independent</b> readings must agree.</p>
+    <div class="uc">
+      <div class="uch"><div class="ucn">3</div><div class="uctxt">
+        <span class="actor">per sheet · Opus readers, never share context</span>
+        <span class="uct">Two readers, one reconciler</span>
+      </div></div>
+      <div class="ucdiag"><div class="dfg">
+        <div class="node read"><span class="op">pass A</span><span class="nt">literal draftsman</span><span class="nf">transcribe ONLY<br>what's printed</span></div>
+        <div class="edge"><span class="el">independent</span><span class="ar">+</span></div>
+        <div class="node read"><span class="op">pass B</span><span class="nt">meaning</span><span class="nf">interpret ONLY ·<br>never sees A</span></div>
+        <div class="edge"><span class="el">both →</span><span class="ar">→</span></div>
+        <div class="node event"><span class="op">reconcile</span><span class="nt">reconciler</span><span class="nf">agree → publish<br>disagree → gap ·<br>coverage<br>confession</span></div>
+        <div class="edge"><span class="el">reconciled<br>only</span><span class="ar">→</span></div>
+        <div class="node created"><span class="op">publish</span><span class="nt">content_block</span><span class="nf">reconciled<br>values only</span></div>
+      </div></div>
+      <div class="ucnote"><b>how it kills the modes</b> — independent contexts kill confabulation-convergence (F6/F9); coverage confessions kill silent-missing-sheet (F3); disagreement-as-gap kills silent substitution (F1/F7). <b>Zoom</b> is a costed disposition (<code>needs-higher-dpi-read</code>) the orchestrator approves; cross-sheet exploration (find a legend two sheets back) is available when stuck — <b>not</b> the golden path.</div>
+    </div>
+
+    <h2><span class="eyebrow">The review gate</span>A dumb prerequisite, not a system</h2>
+    <div class="sm">
+      <span class="s spec">review kickoff<span class="who">operator</span></span>
+      <span class="a">→</span>
+      <span class="s cc">check analysis_published_at<span class="who">on this version</span></span>
+      <span class="a">→</span>
+      <span class="s client">missing → run preprocessing runbook first<span class="who">same session, HITL</span></span>
+      <span class="a">→</span>
+      <span class="s spec">proceed with review<span class="who">operator</span></span>
+    </div>
+
+    <h2><span class="eyebrow">The strip list</span>11 AI calls, not 3</h2>
+    <div class="legend">
+      <span class="k"><span class="utag t-add">→ runbook</span> moves to the agentic session</span>
+      <span class="k"><span class="utag t-orig">stays</span> remains in the sandbox</span>
+    </div>
+    <div class="catgrp">
+      <div class="cath"><span class="cgl">S</span> Every AI call today &amp; where it goes</div>
+      <div class="uci"><span class="uid">1</span><span class="utag t-add">→ runbook</span><span class="utxt">Sheet naming + page summary</span></div>
+      <div class="uci"><span class="uid">2</span><span class="utag t-add">→ runbook</span><span class="utxt">Block discovery / bounding boxes</span></div>
+      <div class="uci"><span class="uid">3</span><span class="utag t-add">→ runbook</span><span class="utxt">Block transcription (batched)</span></div>
+      <div class="uci"><span class="uid">4</span><span class="utag t-add">→ runbook</span><span class="utxt">Reading guide per sheet</span></div>
+      <div class="uci"><span class="uid">5</span><span class="utag t-add">→ runbook</span><span class="star">★</span><span class="utxt">Sheet-version change narrative — incl. the <code>UNRELATED</code> chain-break (a <b>structural</b> edit, not just prose)</span></div>
+      <div class="uci"><span class="uid">6</span><span class="utag t-add">→ runbook</span><span class="utxt">Plan-set title-block metadata</span></div>
+      <div class="uci"><span class="uid">7</span><span class="utag t-add">→ runbook</span><span class="utxt">Document inventory (name / summary / sections)</span></div>
+      <div class="uci"><span class="uid">8</span><span class="utag t-orig">stays</span><span class="utxt"><b>Zip content triage</b> — text-only, cheap, synchronous (Jason's call)</span></div>
+      <div class="uci"><span class="uid">9</span><span class="utag t-add">→ runbook</span><span class="utxt">Project-facts refresh (Haiku)</span></div>
+      <div class="uci"><span class="uid">10</span><span class="utag t-add">→ runbook</span><span class="utxt">Block embeddings — move <i>with</i> transcription (search is empty until publish)</span></div>
+      <div class="uci"><span class="uid">11</span><span class="utag t-add">→ runbook</span><span class="utxt">Drainage-model analysis</span></div>
+    </div>
+
+    <h2><span class="eyebrow">Schema</span>Exactly one addition</h2>
+    <p>Don't build a home for data gaps in the DB — publish only <b>reconciled</b> content; the gap
+    ledger stays a run artifact. The only new column is a stamp the review gate can read.</p>
+    <div class="erd">
+      <div class="ent changed">
+        <div class="eh"><span class="en">plan_set_version</span><span class="stereo">modified</span></div>
+        <div class="row"><span class="gut"></span><span class="b b-pk">PK</span><span class="nm">id</span><span class="ty">uuid</span></div>
+        <div class="row"><span class="gut"></span><span class="nm">processing_state</span><span class="ty">enum</span></div>
+        <div class="row add"><span class="gut">+</span><span class="b b-new">NEW</span><span class="nm">analysis_published_at</span><span class="ty">tstz · nullable</span></div>
+      </div>
+      <div class="ent changed">
+        <div class="eh"><span class="en">document_version</span><span class="stereo">modified</span></div>
+        <div class="row"><span class="gut"></span><span class="b b-pk">PK</span><span class="nm">id</span><span class="ty">uuid</span></div>
+        <div class="row"><span class="gut"></span><span class="nm">processing_state</span><span class="ty">enum</span></div>
+        <div class="row add"><span class="gut">+</span><span class="b b-new">NEW</span><span class="nm">analysis_published_at</span><span class="ty">tstz · nullable</span></div>
+      </div>
+    </div>
+    <div class="callout"><span class="lab">why the stamp</span>
+    It gives the review gate <b>one unambiguous field</b> instead of inferring "processed?" from
+    whether summaries happen to be NULL — fragile, since a genuinely blank sheet is indistinguishable
+    from an unprocessed one. Everything else keeps its current shape, which is exactly what keeps the
+    four <code>sheet_version</code> workspace builders and the whole UI unchanged.</div>
+
+    <h2><span class="eyebrow">Build order</span>Spike first, then three small PRs</h2>
+    <div class="catgrp">
+      <div class="cath"><span class="cgl">0</span> One-day spike — ratify quality &amp; cost before committing</div>
+      <div class="uci"><span class="uid">0</span><span class="utag t-orig">spike</span><span class="utxt">Run the drafted runbook against the benchmark package; <b>score by defects caught</b> on the known-bad sheets (03, 19/20, 08/09/56, 04, 17). Puts a number on per-package subscription cost. Let it settle the <b>tiering</b> question below.</span></div>
+    </div>
+    <div class="sm">
+      <span class="s cc">PR 1 — strip AI from the sandbox<span class="who">+ delete swallow paths, add page-count check</span></span>
+      <span class="a">·</span>
+      <span class="s cc">PR 2 — reading runbook + publisher script<span class="who">two-pass triad</span></span>
+      <span class="a">·</span>
+      <span class="s cc">PR 3 — review-runbook prerequisite gate<span class="who">reads the stamp</span></span>
+    </div>
+
+    <h2><span class="eyebrow">Open call</span>Ratified shape vs. Will's latitude</h2>
+    <div class="grid2">
+      <div class="card keep"><strong>Ratified by Jason (the shape)</strong>
+      <ul><li>Mechanical stays in the sandbox; all reading → runbook</li>
+      <li>Runbook publishes to the existing DB fields</li>
+      <li>Review runbook gates on pre-processing having run</li>
+      <li>Zip triage stays as the one upload-time AI call</li></ul></div>
+      <div class="card change"><strong>Will's to decide (implementation)</strong>
+      <ul><li><b>Tiering:</b> full two-pass every sheet, <i>or</i> value-bearing sheets (cover, tables, notes, legends, schedules) get two passes while pure-drawing sheets get a single read + a coverage confession</li>
+      <li>The spike's defect-catch rate is the bar — let it decide</li></ul></div>
+    </div>
+
+    <div class="callout ember"><span class="lab">rails</span>
+    Subscription tokens only; metered spend needs Jason. Worktree protocol for substation/bureau/cityhall
+    (one step per PR, merges on agentic-reviewer approval). Don't touch live run trees; the powerstation
+    Lamar plan-set is read-only ground truth.</div>
+
+    <div class="foot">proposal: preprocessing-packet/README.md · jason-commentary.md · design-notes.md §§2–11</div>
   </section>
 
 </main>
