@@ -153,6 +153,41 @@ code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px s
 /* one-off: readable prompt block, mono, scroll-safe */
 .prompt{background:#fbfcfd;border:1px solid var(--p200);border-left:4px solid var(--p500);border-radius:8px;padding:12px 15px;margin:12px 0;font-family:var(--mono);font-size:11.5px;line-height:1.6;color:var(--p900);white-space:pre-wrap;overflow-x:auto}
 .prompt .ph{display:block;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--p600);font-weight:700;margin-bottom:6px}
+/* sequence diagram (spec-kit v4) */
+.seq-scroll{overflow-x:auto;margin:16px 0;border:1px solid var(--divider);border-radius:12px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.seq{min-width:840px}
+.seq-head,.seq-body{display:grid;grid-template-columns:30px repeat(6,minmax(104px,1fr))}
+.seq-head{background:linear-gradient(135deg,var(--p800),var(--p700));padding:11px 12px}
+.seq-h{display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;padding:0 4px}
+.seq-h .role{font-family:var(--mono);font-size:8.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--p200)}
+.seq-h .who{font-family:var(--mono);font-size:11px;font-weight:700;color:#fff;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.24);border-radius:6px;padding:3px 9px}
+.seq-body{position:relative;row-gap:11px;padding:16px 12px 20px}
+.seq-life{width:2px;background:var(--p100);justify-self:center;border-radius:2px;z-index:0}
+.seq-num{grid-column:1;justify-self:center;align-self:center;font-family:var(--mono);font-size:10px;font-weight:700;color:#fff;background:var(--p600);min-width:19px;height:19px;padding:0 3px;border-radius:10px;display:flex;align-items:center;justify-content:center;z-index:1}
+.seq-msg{align-self:center;display:flex;flex-direction:row;align-items:center;gap:8px;justify-content:space-between;background:#fff;border:1.5px solid var(--p300);border-radius:7px;padding:5px 10px;z-index:1;min-width:0}
+.seq-msg .mt{display:flex;flex-direction:column;gap:1px;min-width:0}
+.seq-msg .m{font-family:var(--mono);font-size:10.5px;color:var(--p900);font-weight:700;line-height:1.32;word-break:break-word}
+.seq-msg .m2{font-family:var(--mono);font-size:9.5px;color:var(--muted);line-height:1.3;word-break:break-word}
+.seq-msg .dir{font-size:14px;font-weight:700;color:var(--p500);flex:0 0 auto}
+.seq-msg.write{border-color:var(--new);background:var(--newbg)} .seq-msg.write .dir{color:var(--new)}
+.seq-msg.event{border-color:var(--ember);background:#fdf6f0} .seq-msg.event .dir{color:var(--ember)}
+.seq-msg.ret{border-style:dashed;background:#f6f9fb} .seq-msg.ret .m{font-weight:500;color:var(--p600)}
+.seq-msg.self{border-style:dashed;border-color:var(--p400);background:#eef3f7}
+.seq-foot{display:flex;flex-wrap:wrap;gap:8px 15px;padding:9px 14px;border-top:1px solid var(--divider);background:#fbfcfd;font-size:10.5px;font-family:var(--mono);color:var(--muted);align-items:center}
+.seq-foot .sw{display:inline-block;width:20px;height:11px;border-radius:3px;border:1.5px solid var(--p300);vertical-align:middle;margin-right:5px}
+.seq-foot .sw.write{border-color:var(--new);background:var(--newbg)} .seq-foot .sw.event{border-color:var(--ember);background:#fdf6f0}
+.seq-foot .sw.ret{border-style:dashed;background:#f6f9fb} .seq-foot .sw.self{border-style:dashed;border-color:var(--p400);background:#eef3f7}
+/* data table (spec-kit v4) */
+.spectable-scroll{overflow-x:auto;margin:14px 0}
+.spectable{width:100%;border-collapse:collapse;font-size:12.5px;background:#fff;border:1px solid var(--divider);border-radius:10px;overflow:hidden}
+.spectable thead th{background:var(--p700);color:#fff;font-family:var(--mono);font-size:10px;letter-spacing:.04em;text-transform:uppercase;text-align:left;padding:8px 12px;font-weight:700;white-space:nowrap}
+.spectable tbody td{padding:7px 12px;border-top:1px solid #eef1f4;vertical-align:top;line-height:1.5}
+.spectable tbody tr:nth-child(even){background:#fbfcfd}
+.spectable td .sn{font-family:var(--mono);font-weight:700;color:#fff;background:var(--p600);border-radius:9px;padding:1px 7px;font-size:10.5px}
+.spectable td code{font-size:11px}
+.spectable td .none{color:var(--muted);font-style:italic;font-family:var(--sans)}
+.spectable td .w{color:var(--new);font-weight:700}
+.spectable td .r{color:var(--p500);font-weight:700}
 </style>
 </head>
 <body>
@@ -192,25 +227,121 @@ code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px s
 
     <h2><span class="eyebrow">Execution</span>How it gets kicked off &amp; where it runs</h2>
 
-    <div class="uc">
-      <div class="uch"><div class="ucn">1</div><div class="uctxt">
-        <span class="actor">customer · cityhall submission page</span>
-        <span class="uct">Drag a file into a submission</span>
-      </div></div>
-      <div class="ucsub">Three-step upload → deterministic byte-sniff classify → one async event per file.</div>
-      <div class="ucdiag"><div class="dfg">
-        <div class="node event"><span class="op">upload</span><span class="nt">prepare-upload</span><span class="nf">signed PUT<br>1-hr token</span></div>
-        <div class="edge"><span class="el">① PUT bytes</span><span class="ar">→</span></div>
-        <div class="node store"><span class="op">put</span><span class="nt">submission-data</span><span class="nf">{proj}/uploads/<br>{id}/file</span></div>
-        <div class="edge"><span class="el">② commit</span><span class="ar">→</span></div>
-        <div class="node read"><span class="op">classify</span><span class="nt">classifyFile</span><span class="nf">magic bytes:<br>PDF short side<br>&gt;11in→plan_set<br>·document·zip·binary</span></div>
-        <div class="edge"><span class="el">③ inngest.send</span><span class="ar">→</span></div>
-        <div class="node event"><span class="op">fire</span><span class="nt">process-file</span><span class="nf">Inngest · 60m<br>1 sandbox/file<br>4 vCPU</span></div>
-        <div class="edge"><span class="el">④ branch on<br>class</span><span class="ar">→</span></div>
-        <div class="node event"><span class="op">worker</span><span class="nt">Vercel Sandbox</span><span class="nf">plan_set → the<br>sheet pipeline ↓</span></div>
-      </div></div>
-      <div class="ucnote"><b>split of labor</b> — the sandbox does only <i>mechanical</i> work (Ghostscript / Poppler / bsdtar / sharp). <b>Every AI call runs in the substation Node process</b> via Vercel AI Gateway — not in the sandbox.</div>
+    <h3><span class="hn">pre</span>What must already exist</h3>
+    <p>Pre-processing is the tail end of an upload into an existing submission — none of it runs until this backend state is in place:</p>
+    <div class="catgrp">
+      <div class="cath"><span class="cgl">D</span> Data rows that must exist</div>
+      <div class="uci"><span class="uid">D1</span><span class="utag t-orig">row</span><span class="utxt"><b>organization + user</b> — the customer's authenticated account &amp; tenant.</span></div>
+      <div class="uci"><span class="uid">D2</span><span class="utag t-orig">row</span><span class="utxt"><b>project</b> — the development project a plan set hangs off (<code>plan_set.project_id</code>).</span></div>
+      <div class="uci"><span class="uid">D3</span><span class="utag t-orig">row</span><span class="utxt"><b>submission + submission_version</b> — the draft the upload targets; every version row is stamped with <code>submission_version_id</code>.</span></div>
     </div>
+    <div class="catgrp">
+      <div class="cath"><span class="cgl">I</span> Infra that must be deployed</div>
+      <div class="uci"><span class="uid">I1</span><span class="utag t-add">infra</span><span class="utxt"><b><code>submission-data</code> storage bucket</b> — holds the source PDF + every rendered artifact.</span></div>
+      <div class="uci"><span class="uid">I2</span><span class="utag t-add">infra</span><span class="utxt"><b><code>process-file</code> Inngest function</b> + the <code>PROCESSING_SNAPSHOT_ID</code> sandbox image (Ghostscript / Poppler / bsdtar / sharp).</span></div>
+      <div class="uci"><span class="uid">I3</span><span class="utag t-add">infra</span><span class="utxt"><b>Vercel AI Gateway credentials</b> — every AI call (Gemini / Haiku / OpenAI) routes through it.</span></div>
+    </div>
+
+    <h3><span class="hn">seq</span>The kickoff sequence</h3>
+    <p>Who calls whom, across services. The browser talks to <span class="rc r-ch">cityhall</span>, which proxies to the <span class="rc r-sub">substation</span> Hono API; <b>substation</b> commits rows and fires the Inngest event; the <b>Inngest</b> function boots a Vercel Sandbox (mechanical work) and fans out the per-sheet Gemini calls; results land in <b>Postgres</b> + <b>Storage</b> and stream back to the UI over realtime.</p>
+    <div class="seq-scroll"><div class="seq">
+      <div class="seq-head">
+        <div></div>
+        <div class="seq-h"><span class="role">user</span><span class="who">Customer</span></div>
+        <div class="seq-h"><span class="role">app</span><span class="who">cityhall</span></div>
+        <div class="seq-h"><span class="role">api</span><span class="who">substation</span></div>
+        <div class="seq-h"><span class="role">fn · sandbox</span><span class="who">Inngest</span></div>
+        <div class="seq-h"><span class="role">store</span><span class="who">Storage</span></div>
+        <div class="seq-h"><span class="role">db</span><span class="who">Postgres</span></div>
+      </div>
+      <div class="seq-body" style="grid-template-rows:repeat(16,auto)">
+        <div class="seq-life" style="grid-column:2;grid-row:1/-1"></div>
+        <div class="seq-life" style="grid-column:3;grid-row:1/-1"></div>
+        <div class="seq-life" style="grid-column:4;grid-row:1/-1"></div>
+        <div class="seq-life" style="grid-column:5;grid-row:1/-1"></div>
+        <div class="seq-life" style="grid-column:6;grid-row:1/-1"></div>
+        <div class="seq-life" style="grid-column:7;grid-row:1/-1"></div>
+
+        <div class="seq-num" style="grid-row:1">1</div>
+        <div class="seq-msg" style="grid-row:1;grid-column:2/4"><div class="mt"><span class="m">Drop file into submission</span><span class="m2">handleFiles</span></div><span class="dir">▸</span></div>
+
+        <div class="seq-num" style="grid-row:2">2</div>
+        <div class="seq-msg" style="grid-row:2;grid-column:3/5"><div class="mt"><span class="m">POST prepare-upload</span></div><span class="dir">▸</span></div>
+
+        <div class="seq-num" style="grid-row:3">3</div>
+        <div class="seq-msg write" style="grid-row:3;grid-column:4/8"><div class="mt"><span class="m">INSERT upload_token</span><span class="m2">1-hr signed PUT</span></div><span class="dir">▸</span></div>
+
+        <div class="seq-num" style="grid-row:4">4</div>
+        <div class="seq-msg ret" style="grid-row:4;grid-column:3/5"><span class="dir">◂</span><div class="mt"><span class="m">signed PUT URL</span></div></div>
+
+        <div class="seq-num" style="grid-row:5">5</div>
+        <div class="seq-msg write" style="grid-row:5;grid-column:3/7"><div class="mt"><span class="m">PUT file bytes</span><span class="m2">→ uploads/{id}/file</span></div><span class="dir">▸</span></div>
+
+        <div class="seq-num" style="grid-row:6">6</div>
+        <div class="seq-msg" style="grid-row:6;grid-column:3/5"><div class="mt"><span class="m">POST commit-upload</span></div><span class="dir">▸</span></div>
+
+        <div class="seq-num" style="grid-row:7">7</div>
+        <div class="seq-msg self" style="grid-row:7;grid-column:4/5"><div class="mt"><span class="m">classifyFile</span><span class="m2">byte-sniff · &gt;11in → plan_set</span></div></div>
+
+        <div class="seq-num" style="grid-row:8">8</div>
+        <div class="seq-msg write" style="grid-row:8;grid-column:4/8"><div class="mt"><span class="m">INSERT plan_set · plan_set_version (pending) · submission_plan_set</span></div><span class="dir">▸</span></div>
+
+        <div class="seq-num" style="grid-row:9">9</div>
+        <div class="seq-msg event" style="grid-row:9;grid-column:4/6"><div class="mt"><span class="m">send process-file</span><span class="m2">{planSetId, versionId}</span></div><span class="dir">▸</span></div>
+
+        <div class="seq-num" style="grid-row:10">10</div>
+        <div class="seq-msg ret" style="grid-row:10;grid-column:3/5"><span class="dir">◂</span><div class="mt"><span class="m">200 → "Processing…"</span></div></div>
+
+        <div class="seq-num" style="grid-row:11">11</div>
+        <div class="seq-msg self" style="grid-row:11;grid-column:5/6"><div class="mt"><span class="m">boot Sandbox · optimize / rasterize / split</span><span class="m2">GS + Poppler · ~95s</span></div></div>
+
+        <div class="seq-num" style="grid-row:12">12</div>
+        <div class="seq-msg write" style="grid-row:12;grid-column:5/7"><div class="mt"><span class="m">upload optimized + sheets/{n}.pdf·jpg</span></div><span class="dir">▸</span></div>
+
+        <div class="seq-num" style="grid-row:13">13</div>
+        <div class="seq-msg write" style="grid-row:13;grid-column:5/8"><div class="mt"><span class="m">version → processing · INSERT sheet · sheet_version</span></div><span class="dir">▸</span></div>
+
+        <div class="seq-num" style="grid-row:14">14</div>
+        <div class="seq-msg event" style="grid-row:14;grid-column:5/6"><div class="mt"><span class="m">fan out process-file/sheet</span><span class="m2">Gemini vision · per sheet</span></div></div>
+
+        <div class="seq-num" style="grid-row:15">15</div>
+        <div class="seq-msg write" style="grid-row:15;grid-column:5/8"><div class="mt"><span class="m">UPDATE sheet_version · INSERT content_block · title_block_meta · mark processed</span></div><span class="dir">▸</span></div>
+
+        <div class="seq-num" style="grid-row:16">16</div>
+        <div class="seq-msg event" style="grid-row:16;grid-column:3/8"><span class="dir">◂</span><div class="mt"><span class="m">realtime → UI shows sheets &amp; summaries</span><span class="m2">supabase realtime</span></div></div>
+      </div>
+      <div class="seq-foot">
+        <span><span class="sw"></span> sync call</span><span><span class="sw write"></span> DB / storage write</span>
+        <span><span class="sw event"></span> async event</span><span><span class="sw ret"></span> return</span>
+        <span><span class="sw self"></span> self / in-sandbox compute</span>
+      </div>
+    </div></div>
+
+    <div class="callout"><span class="lab">split of labor</span>
+    Steps 1–10 are <span class="rc r-ch">cityhall</span> + <span class="rc r-sub">substation</span> (upload + classify + row creation, all synchronous). Steps 11–15 are the <b>Inngest</b> function: the <b>Vercel Sandbox</b> does only <i>mechanical</i> work (Ghostscript / Poppler / bsdtar / sharp), while <b>every AI call runs in the substation Node process</b> via Vercel AI Gateway — never in the sandbox.</div>
+
+    <h3><span class="hn">Δ</span>Entities modified, by step</h3>
+    <div class="spectable-scroll"><table class="spectable">
+      <thead><tr><th>Step</th><th>What happens</th><th>Entities modified</th></tr></thead>
+      <tbody>
+        <tr><td><span class="sn">1</span></td><td>Customer drops a file into the submission page</td><td><span class="none">none — client UI</span></td></tr>
+        <tr><td><span class="sn">2</span></td><td>cityhall proxies <code>prepare-upload</code> to substation</td><td><span class="none">none — request</span></td></tr>
+        <tr><td><span class="sn">3</span></td><td>substation mints an upload token</td><td><code>upload_token</code> <span class="w">INSERT</span></td></tr>
+        <tr><td><span class="sn">4</span></td><td>substation returns the 1-hr signed PUT URL</td><td><span class="none">none — return</span></td></tr>
+        <tr><td><span class="sn">5</span></td><td>Browser PUTs bytes straight to the signed URL</td><td><code>submission-data</code> object <span class="w">PUT</span> <span class="none">(uploads/…)</span></td></tr>
+        <tr><td><span class="sn">6</span></td><td>cityhall proxies <code>commit-upload</code> to substation</td><td><span class="none">none — request</span></td></tr>
+        <tr><td><span class="sn">7</span></td><td>substation byte-sniffs the file → <code>plan_set</code></td><td><span class="none">none — in-memory classify</span></td></tr>
+        <tr><td><span class="sn">8</span></td><td>substation creates the plan-set records</td><td><code>plan_set</code> <span class="w">INSERT</span> · <code>plan_set_version</code> <span class="w">INSERT</span> (pending) · <code>submission_plan_set</code> <span class="w">INSERT</span></td></tr>
+        <tr><td><span class="sn">9</span></td><td>substation fires the <code>process-file</code> event</td><td><span class="none">none — Inngest enqueue</span></td></tr>
+        <tr><td><span class="sn">10</span></td><td>substation returns 200; UI flips to "Processing…"</td><td><span class="none">none — return</span></td></tr>
+        <tr><td><span class="sn">11</span></td><td>Inngest boots the sandbox; optimize / rasterize / split</td><td><span class="none">none — in-sandbox artifacts only</span></td></tr>
+        <tr><td><span class="sn">12</span></td><td>Inngest uploads optimized PDF + per-sheet pdf/jpg</td><td><code>submission-data</code> objects <span class="w">PUT</span> <span class="none">(optimized.pdf, sheets/{n}.pdf·jpg)</span></td></tr>
+        <tr><td><span class="sn">13</span></td><td>Inngest sets the version processing &amp; seeds sheets</td><td><code>plan_set_version</code> <span class="w">UPDATE</span> (processing) · <code>sheet</code> <span class="w">INSERT</span> · <code>sheet_version</code> <span class="w">INSERT</span></td></tr>
+        <tr><td><span class="sn">14</span></td><td>Inngest fans out <code>process-file/sheet</code> (Gemini per sheet)</td><td><code>sheet_version</code> <span class="w">UPDATE</span> (summary, label, reading_guide) · <code>content_block</code> <span class="w">INSERT</span> · <code>processing_event</code> <span class="w">INSERT</span></td></tr>
+        <tr><td><span class="sn">15</span></td><td>Inngest writes plan-set metadata &amp; completes the version</td><td><code>plan_set_version</code> <span class="w">UPDATE</span> (title_block_meta, change_summary, processed) · <code>sheet_version</code> <span class="w">UPDATE</span> (processed)</td></tr>
+        <tr><td><span class="sn">16</span></td><td>Postgres realtime pushes state; cityhall renders it</td><td><span class="none">none — read / subscription</span></td></tr>
+      </tbody>
+    </table></div>
 
     <h2><span class="eyebrow">The plan_set golden path</span>Mechanical split, then per-sheet AI</h2>
 
