@@ -487,6 +487,30 @@ code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px s
       <span class="rl">document <span class="cf">‖──&lt;</span> document_version <span class="cf">‖──&lt;</span> document_section <span class="cmt">— supplementary-doc side</span></span>
     </div>
 
+    <h3><span class="hn">id</span>Sheet identity — a stable sheet × versioned content</h3>
+    <p>A <code>sheet_version</code> is not a standalone sheet — it's the <b>intersection of a stable <code>sheet</code> identity and one <code>plan_set_version</code></b>. One <code>sheet_version</code> exists per sheet <i>per version</i>, even when the drawing didn't change.</p>
+    <div class="uc">
+      <div class="uch"><div class="ucn">id</div><div class="uctxt">
+        <span class="actor">example · one logical sheet across three submittals</span>
+        <span class="uct">"Utility Plan" — one sheet, three sheet_versions</span>
+      </div></div>
+      <div class="ucsub">The stable <code>sheet</code> row holds the identity; each <code>plan_set_version</code> gets its own <code>sheet_version</code>, chained by <code>previous_sheet_version_id</code>.</div>
+      <div class="ucdiag"><div class="dfg">
+        <div class="node read"><span class="op">identity</span><span class="nt">sheet</span><span class="nf">stable ·<br>label<br>"Utility Plan"</span></div>
+        <div class="edge"><span class="el">one per<br>version →</span><span class="ar">→</span></div>
+        <div class="node created"><span class="op">v1</span><span class="nt">sheet_version</span><span class="nf">plan_set_<br>version 1<br>read fresh</span></div>
+        <div class="edge"><span class="el">previous_sheet_<br>version_id</span><span class="ar">→</span></div>
+        <div class="node created"><span class="op">v2</span><span class="nt">sheet_version</span><span class="nf">plan_set_<br>version 2<br>unchanged →<br>carried forward</span></div>
+        <div class="edge"><span class="el">previous_sheet_<br>version_id</span><span class="ar">→</span></div>
+        <div class="node created"><span class="op">v3</span><span class="nt">sheet_version</span><span class="nf">plan_set_<br>version 3<br>modified →<br>re-read</span></div>
+      </div></div>
+      <div class="ucnote"><b>keys</b> — every sheet_version carries both <code>sheet_id</code> (which sheet) and <code>plan_set_version_id</code> (which iteration); each has its own <code>content_block</code> set.</div>
+    </div>
+    <div class="callout"><span class="lab">three consequences</span>
+    <b>Intersection key</b> — a sheet_version = (this sheet) × (this plan_set_version), not a counter on the sheet.<br>
+    <b>Change chain</b> — <code>previous_sheet_version_id</code> (self-FK) traces one sheet across v1 → v2 → v3.<br>
+    <b>Carry-forward</b> — on a resubmittal an unchanged sheet still gets a <i>new</i> sheet_version row with its summary/blocks copied (<code>needsProcessing=false</code>); only added/modified sheets are re-read.</div>
+
     <div class="callout"><span class="lab">not written here</span>
     The progressive-reading files the review agent navigates — <code>README</code> (sheet index),
     <code>facts.md</code>, per-sheet <code>guide.md</code> / <code>blocks.md</code> — are <b>not</b> produced by
