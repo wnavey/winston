@@ -1,6 +1,6 @@
 # Plan-Set Storage Pathing — Canonicalize the `source_storage_path` Scheme
 
-**Status:** Draft v2
+**Status:** ✅ SHIPPED — substation #209 (2026-08-17). Follow-on fix `58cfe69` corrected a zip-triage Inngest-replay bug (child `process-file` events dropped) surfaced by the first full-zip upload after this landed.
 **Date:** 2026-08-17
 **Repos touched:** `substation` only — (1) assign a canonical plan-set storage key at commit-time via `storage.move`; (2) rewrite zip triage into a two-pass classifier that elects a single plan set; (3) auto-replace collision policy when a second plan set lands on the same submission version. No migration.
 **Repos verified — NO change required:** `cityhall`, `conductor` (both derive the output prefix from the stored `source_storage_path` at runtime — they are scheme-agnostic; see §5).

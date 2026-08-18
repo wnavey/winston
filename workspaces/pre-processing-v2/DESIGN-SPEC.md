@@ -1,6 +1,6 @@
 # Pre-Processing v2 — Flag-Gated Mechanical Strip (Phase 1) + Full Plan
 
-**Status:** Draft v2
+**Status:** Draft v2 — **Phase 1 SHIPPED (substation #206/#207/#208, 2026-08-17); Phase 2 next.**
 **Date:** 2026-08-17
 **Repos touched (Phase 1):** `substation` (read a flag, stamp it into the `process-file` event, branch the function to skip the AI calls; add failure logging to BetterStack)
 **Repos verified (Phase 1):** `cityhall` — bare-thumbnail rendering already degrades gracefully; **no change required** (confirmed below)
@@ -31,16 +31,18 @@ Upload-time pre-processing has the Vercel Sandbox split the plan-set PDF, then h
 
 | Phase | What | Where | Status |
 |---|---|---|---|
-| **1** | **Flag-gated mechanical strip** + **failure observability (O1)** — a `pre-processing-v2` boolean gates `process-file` down a mechanical-only path; failures become queryable in BetterStack. | `substation` | **This spec — buildable now** |
-| **2** | Reading runbook (two-pass reader triad) + deterministic publisher writing the same rows + `ai_processed_at`. cityhall "not yet AI-processed" affordance. | `bureau` + `substation` + `cityhall` | Planned, deferred |
+| **1** | **Flag-gated mechanical strip** + **failure observability (O1)** — a `pre-processing-v2` boolean gates `process-file` down a mechanical-only path; failures become queryable in BetterStack. | `substation` | ✅ **SHIPPED** — substation #206 (flag strip), #207 (O1 logging), #208 (page-count check). |
+| **2** | Reading runbook (two-pass reader triad) + deterministic publisher writing the same rows + `ai_processed_at`. cityhall "not yet AI-processed" affordance. | `bureau` + `substation` + `cityhall` | **NEXT — being spec'd now.** Addendum (`ADDENDUM-DESIGN-SPEC.md`) folds in the four defect classes. |
 | **3** | Review-runbook **prerequisite gate** (checks `ai_processed_at`; runs the reading runbook first if missing). | `bureau` | Planned, deferred |
 | **4** | **Cutover** — remove the flag, delete the old AI path + its silent-failure branches. | `substation` | Planned, deferred |
 
 Phase 1 is independently shippable, testable, and reversible, and doesn't depend on Phase 2 existing.
 
+> **Phase 1 shipped 2026-08-17.** All three PRs merged to substation main (#206/#207/#208). Two adjacent fixes also landed in the same subsystem: **plan-set storage-pathing canonicalization + elect-one-winner zip triage** (#209, spec at `bugs/plan-set-storage-pathing/BUGFIX-SPEC.md`) and a **zip-triage Inngest-replay fix** (commit `58cfe69` — child `process-file` events were dropped because `childEvents.push` ran inside a memoized `step.run` callback; no separate spec, direct bugfix). The flag defaults **off**; production is inert until flipped against the test project.
+
 ---
 
-## Phase 1 — the testable slice
+## Phase 1 — the testable slice ✅ SHIPPED (substation #206/#207/#208)
 
 ### 1.1 The flag
 
