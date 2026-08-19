@@ -1,0 +1,319 @@
+<title>Pre-Processing v2 — Single-Sheet Latency Report</title>
+<style>
+  :root{
+    --bg:#0f1420; --panel:#161d2c; --panel2:#1d2637; --ink:#e8edf5; --muted:#94a3b8;
+    --line:#2a3547; --accent:#5e9bff; --teal:#3fd0c9; --amber:#f5b955; --green:#4ade80;
+    --red:#f87171; --violet:#a78bfa; --pink:#f472b6;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.55;
+    -webkit-font-smoothing:antialiased;font-size:15px}
+  .wrap{max-width:1080px;margin:0 auto;padding:40px 24px 96px}
+  h1{font-size:30px;line-height:1.15;margin:0 0 6px;letter-spacing:-.02em}
+  h2{font-size:20px;margin:44px 0 14px;letter-spacing:-.01em;border-bottom:1px solid var(--line);padding-bottom:8px}
+  h3{font-size:15px;margin:26px 0 10px;color:var(--teal);text-transform:uppercase;letter-spacing:.06em;font-weight:600}
+  p{margin:0 0 12px;color:#cdd6e4}
+  .sub{color:var(--muted);font-size:15px;margin-bottom:4px}
+  code,.mono{font-family:var(--mono);font-size:.9em}
+  a{color:var(--accent)}
+  .lede{font-size:16px;color:#dbe3ef;background:var(--panel);border:1px solid var(--line);
+    border-left:3px solid var(--accent);border-radius:8px;padding:16px 18px;margin:20px 0 8px}
+  .lede b{color:#fff}
+
+  /* stat cards */
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:22px 0}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+  .card .n{font-size:26px;font-weight:700;font-family:var(--mono);letter-spacing:-.02em}
+  .card .l{font-size:12.5px;color:var(--muted);margin-top:2px}
+  .card.hero .n{color:var(--amber)}
+  .card.human .n{color:var(--muted)}
+  .card.crop .n{color:var(--teal)}
+  .card.pub .n{color:var(--green)}
+
+  /* legend */
+  .legend{display:flex;flex-wrap:wrap;gap:14px;margin:14px 0 6px;font-size:12.5px;color:var(--muted)}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .sw{width:12px;height:12px;border-radius:3px;display:inline-block}
+
+  /* proportional timeline */
+  .tl{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px 20px 12px;margin:8px 0}
+  .axis{position:relative;height:18px;margin:0 0 6px;border-bottom:1px dashed var(--line)}
+  .tick{position:absolute;transform:translateX(-50%);font:600 11px var(--mono);color:var(--muted);top:0}
+  .track{position:relative;height:46px;margin:8px 0}
+  .bar{position:absolute;top:0;height:100%;border-radius:6px;overflow:hidden;display:flex;align-items:center;
+    padding:0 8px;font:600 11.5px var(--mono);color:#0b0f18;white-space:nowrap;min-width:2px}
+  .bar small{font-weight:600;opacity:.8}
+  .bar.lbl-out{color:var(--ink)}
+  .hatch{background-image:repeating-linear-gradient(45deg,rgba(255,255,255,.08) 0 6px,transparent 6px 12px)}
+  .rowlab{font:600 12px var(--sans);color:var(--muted);margin:16px 0 2px}
+
+  /* swimlanes */
+  .lanes{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:8px 16px 18px;margin:8px 0}
+  .lane{position:relative;height:30px;border-top:1px solid var(--line);display:flex;align-items:center}
+  .lane:first-child{border-top:none}
+  .lane .name{width:150px;flex:0 0 150px;font:600 12px var(--sans);color:var(--muted);padding-right:10px}
+  .lane .rail{position:relative;flex:1;height:100%}
+  .act{position:absolute;top:6px;height:18px;border-radius:5px;font:600 10px var(--mono);color:#0b0f18;
+    display:flex;align-items:center;padding:0 6px;overflow:hidden;white-space:nowrap}
+
+  /* table */
+  table{width:100%;border-collapse:collapse;margin:10px 0;font-size:13.5px}
+  th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--muted);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.04em}
+  td.dur,td.num{font-family:var(--mono);white-space:nowrap}
+  tr.tot td{border-top:2px solid var(--line);font-weight:700}
+  .tag{display:inline-block;font:600 10.5px var(--mono);padding:2px 7px;border-radius:20px;color:#0b0f18}
+
+  /* horizontal bar chart */
+  .hchart{margin:14px 0}
+  .hrow{display:grid;grid-template-columns:180px 1fr 62px;align-items:center;gap:10px;margin:7px 0}
+  .hrow .hl{font-size:13px;color:#cdd6e4;text-align:right}
+  .hbar{height:22px;border-radius:5px;position:relative;background:linear-gradient(90deg,var(--accent),var(--teal))}
+  .hrow .hv{font-family:var(--mono);font-size:12.5px;color:var(--muted)}
+
+  .callout{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:16px 18px;margin:16px 0}
+  .callout.warn{border-left:3px solid var(--amber)}
+  .callout.good{border-left:3px solid var(--green)}
+  ul{margin:8px 0 12px;padding-left:22px}
+  li{margin:5px 0;color:#cdd6e4}
+  .foot{margin-top:40px;padding-top:16px;border-top:1px solid var(--line);color:var(--muted);font-size:12.5px}
+  .kbd{font-family:var(--mono);background:var(--panel2);border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:.85em}
+  .scroll{overflow-x:auto}
+</style>
+
+<div class="wrap">
+
+  <p class="sub mono">Pre-Processing v2 · Phase 2 runbook · run <span style="color:var(--teal)">austin-preprocv2-sheet6</span></p>
+  <h1>Where did the hour go?</h1>
+  <p class="sub">Wall-clock anatomy of pre-processing <b>one</b> plan-set sheet (Sheet 6, 1700 S. Lamar) with the Phase-2 reading runbook — 2026-08-19.</p>
+
+  <div class="lede">
+    Reading a <b>single value-bearing sheet</b> at maximum fidelity took the orchestrator <b>57 minutes</b> of compute
+    (telemetry: 3,420 s). End-to-end including the human review gate and publish it was <b>~77 minutes</b>. The cost is
+    almost entirely <b>serial vision reads</b>: the sheet was rendered and cropped <b>166 times</b> and effectively read
+    <b>~5 times over</b> (Reader A + Reader B + a forced Reader A2 + Reconciler + Adversary + corrective re-reads).
+  </div>
+
+  <div class="cards">
+    <div class="card hero"><div class="n">57 min</div><div class="l">Orchestrator reading compute (3,420 s)</div></div>
+    <div class="card"><div class="n">~77 min</div><div class="l">End-to-end (kickoff → published)</div></div>
+    <div class="card human"><div class="n">~20 min</div><div class="l">Human review gate (HITL wait)</div></div>
+    <div class="card crop"><div class="n">166</div><div class="l">Render / crop vision reads</div></div>
+    <div class="card"><div class="n">~5×</div><div class="l">Times the sheet was re-read</div></div>
+    <div class="card pub"><div class="n">30 s</div><div class="l">Deterministic publish pipeline</div></div>
+  </div>
+
+  <h2>End-to-end timeline (proportional)</h2>
+  <p>Bars are sized to real elapsed time. Blue/teal = orchestrator vision reading · violet = adversarial/verify · gray hatched = <b>human</b> wait (not system latency) · green = deterministic scripts.</p>
+
+  <div class="legend">
+    <span><i class="sw" style="background:var(--accent)"></i>setup / render</span>
+    <span><i class="sw" style="background:var(--teal)"></i>reader vision passes</span>
+    <span><i class="sw" style="background:var(--violet)"></i>reconcile / adversarial</span>
+    <span><i class="sw" style="background:var(--pink)"></i>corrections + assembly</span>
+    <span><i class="sw hatch" style="background:var(--muted)"></i>human review gate</span>
+    <span><i class="sw" style="background:var(--green)"></i>publish scripts</span>
+  </div>
+
+  <div class="tl">
+    <div class="scroll">
+    <div style="min-width:760px">
+    <!-- axis: total span 4624s from 11:02:56 -->
+    <div class="axis">
+      <span class="tick" style="left:0%">11:03</span>
+      <span class="tick" style="left:19.5%">11:18</span>
+      <span class="tick" style="left:38.9%">11:33</span>
+      <span class="tick" style="left:58.4%">11:48</span>
+      <span class="tick" style="left:77.9%">12:03</span>
+      <span class="tick" style="left:97.3%">12:18</span>
+    </div>
+
+    <div class="rowlab">Phase (single track — everything here is serial)</div>
+    <div class="track">
+      <!-- offsets/widths as % of 4624s -->
+      <div class="bar" style="left:0%;width:3.05%;background:var(--accent)" title="Setup + base renders + tier classify — 2m21s"></div>
+      <div class="bar" style="left:3.05%;width:11.01%;background:var(--teal)" title="Reader A + Reader B (parallel) — 8m29s">A+B</div>
+      <div class="bar" style="left:14.06%;width:23.51%;background:#2fb3ad" title="Reader A2 forced 2nd pass + table cropping — 18m07s">A2 + tables&nbsp;<small>18m</small></div>
+      <div class="bar" style="left:37.56%;width:14.36%;background:var(--violet)" title="Reconciler + Delta-A spot-checks + 1st assembly — 11m04s">Reconcile&nbsp;<small>11m</small></div>
+      <div class="bar" style="left:51.92%;width:10.36%;background:#8b6ff0" title="Adversarial pass — 7m59s">Adversary&nbsp;<small>8m</small></div>
+      <div class="bar" style="left:62.28%;width:11.68%;background:var(--pink)" title="Corrective re-reads + final reconcile + artifact — 10m22s">Fix+asm</div>
+      <div class="bar hatch lbl-out" style="left:73.96%;width:25.39%;background:#3a4353" title="Human review gate — I present readout, Will decides — ~19m34s">⏸ Human review gate&nbsp;<small>~20m</small></div>
+      <div class="bar" style="left:99.35%;width:1.4%;background:var(--green)" title="normalize → embed → register → publish — ~30s"></div>
+    </div>
+    </div>
+    </div>
+  </div>
+
+  <h2>Agent swimlanes (who was working, when)</h2>
+  <p>The classic sequence view: each participant is a lane; a bar is an activation. Note the readers run <b>concurrently</b>, but everything after is <b>strictly serial</b> — reconcile waits for all readers, the adversary waits for the assembled artifact, corrections wait for the adversary.</p>
+
+  <div class="lanes">
+    <div class="scroll"><div style="min-width:760px">
+    <div class="lane"><div class="name">Operator (human)</div><div class="rail">
+      <div class="act" style="left:0%;width:2%;background:var(--amber)">kick</div>
+      <div class="act hatch" style="left:73.96%;width:25.39%;background:#3a4353;color:var(--ink)">review + decide</div>
+    </div></div>
+    <div class="lane"><div class="name">Top-level runner</div><div class="rail">
+      <div class="act" style="left:0%;width:3.05%;background:var(--accent)">kickoff</div>
+      <div class="act" style="left:99.35%;width:0.65%;background:var(--accent)"></div>
+    </div></div>
+    <div class="lane"><div class="name">Orchestrator</div><div class="rail">
+      <div class="act" style="left:0%;width:3.05%;background:#3d6fb0;color:var(--ink)">setup</div>
+      <div class="act" style="left:62.28%;width:11.68%;background:var(--pink)">corrections+assembly</div>
+    </div></div>
+    <div class="lane"><div class="name">Reader A (literal)</div><div class="rail">
+      <div class="act" style="left:3.05%;width:11.01%;background:var(--teal)">top ~55%</div>
+    </div></div>
+    <div class="lane"><div class="name">Reader B (meaning)</div><div class="rail">
+      <div class="act" style="left:3.05%;width:11.01%;background:var(--teal)">whole sheet</div>
+    </div></div>
+    <div class="lane"><div class="name">Reader A2 (literal)</div><div class="rail">
+      <div class="act" style="left:14.06%;width:23.51%;background:#2fb3ad;color:var(--ink)">bottom-right ~45% (forced by image cap)</div>
+    </div></div>
+    <div class="lane"><div class="name">Reconciler</div><div class="rail">
+      <div class="act" style="left:37.56%;width:14.36%;background:var(--violet)">reconcile + Delta-A</div>
+      <div class="act" style="left:63%;width:8%;background:var(--violet)">final</div>
+    </div></div>
+    <div class="lane"><div class="name">Adversary</div><div class="rail">
+      <div class="act" style="left:51.92%;width:10.36%;background:#8b6ff0;color:var(--ink)">attack the artifact</div>
+    </div></div>
+    <div class="lane"><div class="name">Scripts (deterministic)</div><div class="rail">
+      <div class="act" style="left:99.35%;width:0.65%;background:var(--green)"></div>
+    </div></div>
+    </div></div>
+  </div>
+
+  <h2>Phase-by-phase breakdown</h2>
+  <p>Boundaries derived from the 166 output-file mtimes; phase durations sum to the 3,420 s the orchestrator reported, so the segmentation is exact.</p>
+
+  <div class="scroll">
+  <table>
+    <thead><tr>
+      <th>#</th><th>Phase</th><th>Window (CDT)</th><th class="num">Duration</th><th class="num">Crops</th><th>What happened</th>
+    </tr></thead>
+    <tbody>
+      <tr>
+        <td>1</td><td>Setup + base renders + tier</td><td class="mono">11:02:56–11:05:17</td><td class="dur">2m21s</td><td class="num">~8</td>
+        <td>Pull sheet PDF/JPG from Storage; render 300 &amp; 600 DPI + 4 quadrants; extract text layer; tier-classify (→ value-bearing, full triad).</td>
+      </tr>
+      <tr>
+        <td>2</td><td>Reader A + Reader B <span class="tag" style="background:var(--teal)">parallel</span></td><td class="mono">11:05:17–11:13:46</td><td class="dur">8m29s</td><td class="num">~22</td>
+        <td>Literal transcription + meaning classification of the top ~55%. Both hit the ~20-image API cap and left the bottom-right unread.</td>
+      </tr>
+      <tr>
+        <td>3</td><td>Reader A2 (forced) + table cropping <span class="tag" style="background:var(--amber)">bottleneck</span></td><td class="mono">11:13:46–11:31:53</td><td class="dur">18m07s</td><td class="num">~73</td>
+        <td>Second literal pass over the bottom-right ~45% (SCN notes, inspection, meter, OWRS, dedication-deposit tables). The single largest slice — a direct consequence of the image cap.</td>
+      </tr>
+      <tr>
+        <td>4</td><td>Reconciler + Delta-A + 1st assembly</td><td class="mono">11:31:53–11:42:57</td><td class="dur">11m04s</td><td class="num">~13</td>
+        <td>Merge A/B/A2; spot-check agreed cells vs pixels (caught SER→SDR normalization, missing waiver column); assemble + first <code>normalize.ts</code>.</td>
+      </tr>
+      <tr>
+        <td>5</td><td>Adversarial pass <span class="tag" style="background:var(--violet)">verify</span></td><td class="mono">11:42:57–11:50:56</td><td class="dur">7m59s</td><td class="num">~38</td>
+        <td>Independent attack (38 <code>atk-*</code> crops). Found the dropped construction note 10, the fabricated 17==18 duplicate, the dropped review block + expiration stamp, and the unpublished PE seal.</td>
+      </tr>
+      <tr>
+        <td>6</td><td>Corrective re-reads + final reconcile</td><td class="mono">11:50:56–11:58:34</td><td class="dur">7m38s</td><td class="num">~12</td>
+        <td>Re-read the construction-notes gutter (<code>cn-*</code>), seal, review block; rewrite <code>reconciled.json</code>, <code>gap-ledger.json</code>, <code>raw-artifact.json</code>; re-normalize clean.</td>
+      </tr>
+      <tr>
+        <td>7</td><td>Readout authoring</td><td class="mono">11:58:34–11:59:56</td><td class="dur">~1m22s</td><td class="num">0</td>
+        <td>Author the HITL readout; report back to the top-level runner.</td>
+      </tr>
+      <tr class="tot">
+        <td></td><td>Reading compute (orchestrator)</td><td class="mono">11:02:56–11:59:56</td><td class="dur">57m00s</td><td class="num">166</td><td></td>
+      </tr>
+      <tr>
+        <td>—</td><td>Human review gate <span class="tag" style="background:#3a4353;color:var(--ink)">human</span></td><td class="mono">11:59:56–12:19:30</td><td class="dur">~19m34s</td><td class="num">0</td>
+        <td>Not system latency: readout presented, operator reviewed and said "yes publish".</td>
+      </tr>
+      <tr>
+        <td>8</td><td>Publish pipeline <span class="tag" style="background:var(--green)">deterministic</span></td><td class="mono">12:19:30–12:20:00</td><td class="dur">~30s</td><td class="num">0</td>
+        <td><code>normalize</code> → <code>embed</code> (29 blocks) → <code>register</code> → <code>publish</code>. Negligible.</td>
+      </tr>
+      <tr class="tot">
+        <td></td><td>End-to-end</td><td class="mono">11:02:56–12:20:00</td><td class="dur">~77m04s</td><td class="num">166</td><td></td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h2>Where the 57 minutes actually went</h2>
+  <div class="hchart">
+    <div class="hrow"><div class="hl">Reader A2 (forced 2nd pass)</div><div class="hbar" style="width:31.8%"></div><div class="hv">18m07s</div></div>
+    <div class="hrow"><div class="hl">Reconcile + Delta-A</div><div class="hbar" style="width:19.4%;background:linear-gradient(90deg,var(--violet),#8b6ff0)"></div><div class="hv">11m04s</div></div>
+    <div class="hrow"><div class="hl">Reader A + B (parallel)</div><div class="hbar" style="width:14.9%"></div><div class="hv">8m29s</div></div>
+    <div class="hrow"><div class="hl">Adversarial pass</div><div class="hbar" style="width:14.0%;background:linear-gradient(90deg,var(--violet),#8b6ff0)"></div><div class="hv">7m59s</div></div>
+    <div class="hrow"><div class="hl">Corrections + assembly</div><div class="hbar" style="width:13.4%;background:linear-gradient(90deg,var(--pink),#d65f9c)"></div><div class="hv">7m38s</div></div>
+    <div class="hrow"><div class="hl">Setup + renders + tier</div><div class="hbar" style="width:4.1%"></div><div class="hv">2m21s</div></div>
+    <div class="hrow"><div class="hl">Readout authoring</div><div class="hbar" style="width:2.4%;background:#3d6fb0"></div><div class="hv">1m22s</div></div>
+  </div>
+
+  <h2>Why one sheet took an hour</h2>
+
+  <div class="callout warn">
+    <h3 style="margin-top:0">1 · Serial vision reads dominate</h3>
+    <p>166 render/crop cycles, run essentially one-at-a-time. Each cycle is render → encode → vision round-trip
+    (~8–15 s). That alone is ~25–40 min of pure serial I/O. The sheet is a dense, filled-in Austin Water
+    standard form (small-print tables: demand, LUE, meter sizing, dedication deposit, service-connection notes),
+    which invited granular cropping — <b>73 crops in Phase 3 alone</b>.</p>
+  </div>
+
+  <div class="callout warn">
+    <h3 style="margin-top:0">2 · The image-API cap forced a whole extra pass (~18 min)</h3>
+    <p>Reader A and Reader B <b>both</b> independently hit a cumulative ~20-image cap mid-read and left the
+    bottom-right ~45% unread. Recovering it required spawning Reader A2 — the single largest phase. This is a
+    <b>tool limitation, not inherent work</b>; logged to <code>tool-bugs.md</code> with the mitigation (budget/pre-stage
+    bounded ≤2000px crops, which A2, the reconciler and the adversary all used successfully).</p>
+  </div>
+
+  <div class="callout good">
+    <h3 style="margin-top:0">3 · The sheet was read ~5× on purpose — and it paid off</h3>
+    <p>Full triad (A + B + A2) → Reconciler → Adversary → corrective re-reads. That redundancy is the whole point of
+    the runbook, and here it earned its keep: the adversarial pass caught a <b>dropped safety-critical negation</b>
+    ("REPAIR COUPLINGS ARE NOT ALLOWED"), a <b>fabricated duplicate note</b> masking an off-by-one, and a dropped
+    review block / PE seal. The fidelity is real; the question is the price.</p>
+  </div>
+
+  <h2>What this does (and doesn't) imply for scale</h2>
+  <ul>
+    <li><b>Don't linearly extrapolate.</b> This was a <span class="tag" style="background:var(--amber)">value-bearing</span>
+      sheet read with the full triad and "tie-break up" fidelity. Most of a 45-sheet set is pure-drawing sheets that take
+      a single literal read + coverage confession — far cheaper. The tier classifier exists precisely to avoid paying
+      triad price on every sheet.</li>
+    <li><b>Sheets parallelize; a single sheet's passes do not.</b> The design fans out across sheets (up to N workers),
+      so 45 sheets is <em>not</em> 45×57 min. The 57 min is the depth of one hard sheet's dependency chain, and that
+      chain is almost entirely serial.</li>
+    <li><b>The cheapest win is the image cap.</b> Removing the forced A2 pass reclaims ~18 min (~30% of this sheet).
+      Pre-staging bounded crops up front turns the reader passes from "discover-then-crop" into "read a fixed set".</li>
+    <li><b>The adversarial + correction loop is ~15 min (~27%).</b> Worth it for a value-bearing sheet given what it
+      caught; a candidate to gate by tier (skip full adversarial on pure-drawing sheets).</li>
+    <li><b>Compute vs. human vs. deterministic:</b> of the ~77 min end-to-end, deterministic publish was 30 s and the
+      human gate ~20 min. The lever is the reading compute, not the plumbing.</li>
+  </ul>
+
+  <div class="callout">
+    <h3 style="margin-top:0">Suggested follow-ups (not yet decided)</h3>
+    <ul>
+      <li>Fix / raise the per-agent image cap, or pre-stage a bounded crop set → eliminate the A2 re-pass.</li>
+      <li>Tier-gate the adversarial pass (full on value-bearing, light/none on pure-drawing).</li>
+      <li>Batch vision reads where the API allows, to attack the serial round-trip cost directly.</li>
+      <li>Instrument the runbook to emit real per-step timings (this report was reconstructed from file mtimes).</li>
+    </ul>
+  </div>
+
+  <div class="foot">
+    <p><b>Data sources.</b> Orchestrator wall-clock (3,420 s) and the two Explore-agent durations from Claude Code
+    task telemetry. Phase boundaries and crop counts from the 166 output-file mtimes in
+    <code>~/noetic/working/preprocessing/austin-preprocv2-sheet6/</code>. Publish timestamps from the
+    <code>site_plan_preprocessing_run</code> row (<code>register</code> 17:19:52Z, <code>publish</code> 17:20:00Z =
+    12:19:52 / 12:20:00 CDT). Phase-7 end is inferred from the reported 3,420 s orchestrator duration.</p>
+    <p><b>Run.</b> Project <code>ed9e7ec4-…</code> (Pre-Processing V2 Test Project) · submission_version
+    <code>d1ddc5bd-…</code> · plan_set_version <code>e7a09154-…</code> · sheet 6
+    <code>018c6d45-…</code> · run <code>b27b18a0-…</code> (active, 29 blocks). Single-sheet re-run of an
+    already-processed set. Runbook <code>bureau@8c21d61</code>.</p>
+  </div>
+
+</div>
