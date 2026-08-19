@@ -153,6 +153,37 @@ code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px s
 /* one-off: readable prompt block, mono, scroll-safe */
 .prompt{background:#fbfcfd;border:1px solid var(--p200);border-left:4px solid var(--p500);border-radius:8px;padding:12px 15px;margin:12px 0;font-family:var(--mono);font-size:11.5px;line-height:1.6;color:var(--p900);white-space:pre-wrap;overflow-x:auto}
 .prompt .ph{display:block;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--p600);font-weight:700;margin-bottom:6px}
+/* sequence diagram — additive component (tab 04) */
+.seq{border:1px solid var(--divider);border-radius:12px;background:#fff;margin:16px 0;box-shadow:0 1px 3px rgba(0,0,0,.05);overflow:hidden}
+.seq .seqh{display:flex;flex-wrap:wrap;gap:7px;padding:11px 14px;background:linear-gradient(135deg,var(--p700),var(--p600))}
+.seq .seqh .pt{font-family:var(--mono);font-size:10px;font-weight:700;padding:4px 10px;border-radius:20px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.28);color:#fff;display:inline-flex;flex-direction:column;line-height:1.35;text-align:center}
+.seq .seqh .pt .rl{font-size:8px;font-weight:600;opacity:.82;text-transform:uppercase;letter-spacing:.04em}
+.seq .sqbody{overflow-x:auto}
+.seq .sqrow{display:grid;grid-template-columns:26px minmax(118px,150px) 28px minmax(118px,150px) 1fr;align-items:baseline;gap:9px;padding:7px 14px;border-top:1px solid #eef1f4;font-size:12px;min-width:660px}
+.seq .sqrow .sn{font-family:var(--mono);font-size:10.5px;font-weight:700;color:#fff;background:var(--p500);border-radius:5px;padding:1px 0;text-align:center;align-self:center}
+.seq .sqrow .fr{font-family:var(--mono);font-size:10.5px;font-weight:700;color:var(--p800);text-align:right;word-break:break-word}
+.seq .sqrow .ar{color:var(--ember);font-weight:700;text-align:center;font-size:15px;align-self:center}
+.seq .sqrow .to{font-family:var(--mono);font-size:10.5px;font-weight:700;color:var(--p800);word-break:break-word}
+.seq .sqrow .ms{color:var(--ink);font-size:11.5px;line-height:1.42}
+.seq .sqrow .ms code{font-size:10.5px}
+.seq .sqrow.ret{background:#fbfcfd}
+.seq .sqrow.ret .ar{color:var(--p400);font-weight:400}
+.seq .sqrow.ret .fr,.seq .sqrow.ret .to{color:var(--muted)}
+.seq .sqrow.self .ar{color:var(--p400);font-size:12px}
+.seq .sqrow.note{grid-template-columns:26px 1fr;background:var(--p50)}
+.seq .sqrow.note .nt{grid-column:2;font-size:11px;color:var(--p700);font-style:italic}
+.seq .sqrow.note .nt b{font-style:normal;font-family:var(--mono);font-size:10px;color:var(--ember)}
+.filetree{background:#fbfcfd;border:1px solid var(--p200);border-left:4px solid var(--p500);border-radius:8px;padding:12px 15px;margin:12px 0;font-family:var(--mono);font-size:11px;line-height:1.6;color:var(--p900);white-space:pre;overflow-x:auto}
+.filetree .th{display:block;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--p600);font-weight:700;margin-bottom:6px;white-space:normal}
+.filetree .cm{color:var(--muted)}
+.filetree .ai{color:var(--ember)}
+/* annotated screenshots — additive (tab 04, section C) */
+.shot{margin:14px 0;border:1px solid var(--divider);border-radius:10px;overflow:hidden;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.shot img{display:block;width:100%;max-width:100%;height:auto}
+.shot .cap{padding:8px 13px;font-size:12px;color:var(--p800);border-top:1px solid #eef1f4;background:#fbfcfd;line-height:1.45}
+.shot .cap b{font-family:var(--mono);color:var(--ember);font-size:11.5px}
+.shotgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:14px 0}
+@media(max-width:820px){.shotgrid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -160,9 +191,11 @@ code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px s
 <header class="masthead">
   <div class="kicker">PRE-PROCESSING V2 · CURRENT ARCHITECTURE</div>
   <h1>Site-Plan Pre-Processing — How It Works Today</h1>
-  <p>Three tabs: <b>how pre-processing works today</b>, <b>why it's changing</b> (the recorded
-  transcription defects), and <b>the v2 proposal</b> — strip the AI out of the cloud job and move
-  all reading into an operator-run runbook. Grounding + intent in <code>preprocessing-packet/</code>.</p>
+  <p>Four tabs: <b>how pre-processing works today</b>, <b>why it's changing</b> (the recorded
+  transcription defects), <b>the v2 proposal</b> — strip the AI out of the cloud job and move
+  all reading into an operator-run runbook — and <b>how the pre-processing data gets consumed</b>
+  (the old cloud review workflow vs. the new operator-run review runbook). Grounding + intent in
+  <code>preprocessing-packet/</code>.</p>
   <div class="meta">Draft v1 · 2026-08-13 · verified against substation @ 2026-08-13 · click a tab ↓</div>
 </header>
 
@@ -170,6 +203,7 @@ code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px s
   <button data-tab="arch" class="active"><span class="n">01</span>Current Architecture</button>
   <button data-tab="failures"><span class="n">02</span>Why It's Changing</button>
   <button data-tab="next"><span class="n">03</span>v2 Proposal</button>
+  <button data-tab="usage"><span class="n">04</span>How Pre-Processing Gets Used</button>
 </nav>
 
 <main>
@@ -694,12 +728,339 @@ Return JSON:
     <div class="foot">proposal: preprocessing-packet/README.md · jason-commentary.md · design-notes.md §§2–11</div>
   </section>
 
+  <section class="panel" id="usage">
+    <h2><span class="eyebrow">The one-liner</span>Two consumers of the same pre-processing output</h2>
+    <p class="lede">Pre-processing's only outputs are <b>DB rows + storage artifacts</b> (tab 01). Two
+    different review pipelines consume them. The <b>old way</b> — the unattended cloud review workflow
+    — re-renders those rows into progressive-reading markdown inside a Vercel Sandbox and lets N cheap
+    agents navigate the text, reaching pixels only through a vision tool. The <b>new way</b> — the
+    operator-run review runbook — reads a pre-staged on-disk workspace where the vector PDF is the
+    authority and the transcriptions are a demoted convenience layer.</p>
+
+    <div class="callout"><span class="lab">the through-line</span>
+    Both paths ultimately trace back to the same pre-processed data — <code>sheet_version.summary</code>
+    / <code>reading_guide</code>, <code>content_block.content</code>, <code>project_facts.content</code>.
+    The difference is <b>trust</b>: the cloud workflow treats the AI transcription as the primary
+    reading surface; the runbook treats it as a hint and re-reads the drawing itself. That demotion is
+    the whole reason the runbook survives the transcription defects catalogued in <b>tab 02</b> — and
+    it is the review-side "tell" that made the v2 strip (tab 03) near-inevitable.</div>
+
+    <div class="legend">
+      <span class="k"><span class="swatch" style="background:#eef4fb;border-color:var(--p400)"></span> read / navigate</span>
+      <span class="k"><span class="swatch" style="background:#fdf6f0;border-color:#f0cba8"></span> event / agent / AI call</span>
+      <span class="k"><span class="swatch" style="background:var(--newbg);border-color:var(--newbd)"></span> DB / file write</span>
+      <span class="k"><span class="swatch" style="background:#eef3f7;border-color:var(--p500);border-style:dashed"></span> storage / disk</span>
+      <span class="k"><span style="background:#fff9f2;padding:0 4px;border-radius:3px;font-size:11px">amber column</span> = a pre-processing (AI) field being consumed</span>
+    </div>
+
+    <!-- ══════════════════════════ OLD WAY ══════════════════════════ -->
+    <h2><span class="eyebrow">Section A · the old way</span>Conductor cloud review workflow <span class="rc r-sub">substation</span> <span class="rc r-db">conductor</span></h2>
+    <p>Source of truth: <code>bureau/workflows/review/workflow.yaml</code>. Runs fully unattended in a
+    Vercel Sandbox. It never reads pre-processing's rows for their own sake — it materializes them into
+    a progressive-reading file tree at review time, via Conductor's
+    <code>project-downloader.ts</code>, then fans out N Haiku review passes over that tree.</p>
+
+    <h3><span class="hn">A · entities</span>DB rows → rendered markdown tree</h3>
+    <p>The downloader reads these tables (amber = the AI-populated pre-processing fields it consumes)
+    and renders one markdown file set per submission version. It reads Postgres for text and the
+    <code>submission-data</code> bucket only for the raster thumbnails the vision tool later fetches.</p>
+
+    <div class="erd">
+      <div class="ent exist">
+        <div class="eh"><span class="en">project_facts</span><span class="stereo">read</span></div>
+        <div class="row hi"><span class="nm">content</span><span class="ty">md · AI</span></div>
+        <div class="row"><span class="nm">research_session_id</span><span class="ty">uuid</span></div>
+      </div>
+      <div class="ent exist">
+        <div class="eh"><span class="en">plan_set_version</span><span class="stereo">read</span></div>
+        <div class="row"><span class="b b-pk">PK</span><span class="nm">id</span></div>
+        <div class="row hi"><span class="nm">title_block_meta</span><span class="ty">jsonb · AI</span></div>
+        <div class="row"><span class="nm">processing_state</span><span class="ty">enum</span></div>
+      </div>
+      <div class="ent exist">
+        <div class="eh"><span class="en">sheet_version</span><span class="stereo">read</span></div>
+        <div class="row"><span class="b b-pk">PK</span><span class="nm">id</span></div>
+        <div class="row"><span class="nm">sheet_number</span><span class="ty">text</span></div>
+        <div class="row hi"><span class="nm">summary</span><span class="ty">text · AI</span></div>
+        <div class="row hi"><span class="nm">label</span><span class="ty">text · AI</span></div>
+        <div class="row hi"><span class="nm">reading_guide</span><span class="ty">text · AI</span></div>
+        <div class="row hi"><span class="nm">change_description / _type</span><span class="ty">AI</span></div>
+        <div class="row"><span class="nm">thumbnail_storage_path</span><span class="ty">n.jpg</span></div>
+      </div>
+      <div class="ent exist">
+        <div class="eh"><span class="en">content_block</span><span class="stereo">read</span></div>
+        <div class="row"><span class="b b-fk">FK</span><span class="nm">sheet_version_id</span><span class="ty">→ sheet_version</span></div>
+        <div class="row hi"><span class="nm">category</span><span class="ty">enum · AI</span></div>
+        <div class="row hi"><span class="nm">description</span><span class="ty">text · AI</span></div>
+        <div class="row hi"><span class="nm">content</span><span class="ty">md · AI</span></div>
+        <div class="row hi"><span class="nm">short_id</span><span class="ty">reading order</span></div>
+      </div>
+      <div class="ent exist">
+        <div class="eh"><span class="en">document_version</span><span class="stereo">read</span></div>
+        <div class="row"><span class="b b-pk">PK</span><span class="nm">id</span></div>
+        <div class="row hi"><span class="nm">summary</span><span class="ty">text · AI</span></div>
+        <div class="row"><span class="nm">storage_path</span><span class="ty">text</span></div>
+      </div>
+      <div class="ent exist">
+        <div class="eh"><span class="en">document_section</span><span class="stereo">read</span></div>
+        <div class="row"><span class="b b-fk">FK</span><span class="nm">document_version_id</span><span class="ty">→ …_version</span></div>
+        <div class="row hi"><span class="nm">title / description</span><span class="ty">text · AI</span></div>
+        <div class="row hi"><span class="nm">content</span><span class="ty">md · AI</span></div>
+      </div>
+    </div>
+
+    <div class="rels">
+      <div class="rels-h">Column → rendered-file mapping (project-downloader.ts)</div>
+      <span class="rl"><b>project_facts.content</b> <span class="cf">→</span> facts.md</span>
+      <span class="rl"><b>sheet_version.summary</b> <span class="cf">→</span> README sheet-index line <span class="cf">+</span> sheet-NN/guide.md</span>
+      <span class="rl"><b>sheet_version.reading_guide</b> <span class="cf">→</span> sheet-NN/guide.md <span class="cmt">## Reading Guide</span></span>
+      <span class="rl"><b>content_block.content</b> <span class="cf">→</span> sheet-NN/blocks.md <span class="cmt">(large blocks split to block-N.md)</span></span>
+      <span class="rl"><b>plan_set_version.title_block_meta</b> <span class="cf">→</span> README "Project Metadata"</span>
+      <span class="rl"><b>document_version.summary + document_section.content</b> <span class="cf">→</span> supplementary-docs/&lt;doc&gt;/overview.md + NN-&lt;section&gt;.md</span>
+      <span class="rl"><b>sheet_version.thumbnail_storage_path</b> <span class="cf">→</span> <span class="tag-new">vision tool</span> fetch from <code>submission-data</code> bucket <span class="cmt">(on demand only)</span></span>
+    </div>
+
+    <div class="filetree"><span class="th">rendered at review time → workspace/projects/&lt;projectId&gt;/</span>projects/&lt;projectId&gt;/
+├─ README.md              <span class="cm"># sheet index + doc index + title-block meta</span>
+├─ facts.md               <span class="cm"># project_facts.content</span>
+├─ plan-set-versions.json <span class="cm"># pinned version map</span>
+├─ block-manifest.json    <span class="cm"># valid block numbers per sheet</span>
+├─ primary-site-plan/&lt;plan-set&gt;/
+│   ├─ sheet-01/
+│   │   ├─ guide.md       <span class="ai"># summary + reading_guide + block index</span>
+│   │   └─ blocks.md      <span class="ai"># content_block.category/description/content</span>
+│   └─ sheet-02/ …
+└─ supplementary-docs/&lt;doc&gt;/
+    ├─ overview.md        <span class="ai"># document_version.summary + TOC</span>
+    └─ 01-&lt;section&gt;.md    <span class="ai"># document_section.content</span></div>
+
+    <div class="callout ember"><span class="lab">the trust posture</span>
+    The agent's <i>primary</i> reading surface is this rendered text. The rasters exist only behind the
+    <code>vision</code> tool, called when "existing visual analysis is not specific enough." So a
+    transcription defect (tab 02) flows straight into the review unless an agent happens to open the
+    pixels for that exact value.</div>
+
+    <h3><span class="hn">A · sequence</span>Event → sandbox → download → fan-out</h3>
+    <div class="seq">
+      <div class="seqh">
+        <span class="pt"><span class="rl">trigger</span>City Hall / Inngest</span>
+        <span class="pt"><span class="rl">substation</span>workflowRun fn</span>
+        <span class="pt"><span class="rl">vercel sandbox</span>Conductor</span>
+        <span class="pt"><span class="rl">supabase</span>Postgres + bucket</span>
+        <span class="pt"><span class="rl">×N parallel</span>Haiku review agents</span>
+      </div>
+      <div class="sqbody">
+        <div class="sqrow"><span class="sn">1</span><span class="fr">City Hall</span><span class="ar">→</span><span class="to">Inngest</span><span class="ms">fire <code>workflow/run</code> — <code>review</code>, <code>submissionVersionId</code>, <code>guideCode</code>, <code>runs=3</code></span></div>
+        <div class="sqrow"><span class="sn">2</span><span class="fr">Inngest</span><span class="ar">→</span><span class="to">Sandbox</span><span class="ms">spawn Vercel Sandbox, clone Conductor + Bureau, <code>npx tsx src/index.ts --workflow=review</code></span></div>
+        <div class="sqrow"><span class="sn">3</span><span class="fr">Sandbox</span><span class="ar">→</span><span class="to">Supabase</span><span class="ms">resolve projectId: <code>submission_version → submission.project_id</code></span></div>
+        <div class="sqrow"><span class="sn">4</span><span class="fr">Sandbox</span><span class="ar">→</span><span class="to">Supabase</span><span class="ms"><code>project-downloader.ts</code> reads sheet_version · content_block · project_facts · document_* rows</span></div>
+        <div class="sqrow ret"><span class="sn">5</span><span class="fr">Supabase</span><span class="ar">⇠</span><span class="to">Sandbox</span><span class="ms">rows returned (pre-processing's AI fields)</span></div>
+        <div class="sqrow self"><span class="sn">6</span><span class="fr">Sandbox</span><span class="ar">↺</span><span class="to">disk</span><span class="ms">render <code>README.md</code> → <code>facts.md</code> → <code>guide.md</code> → <code>blocks.md</code> tree</span></div>
+        <div class="sqrow"><span class="sn">7</span><span class="fr">Sandbox</span><span class="ar">→</span><span class="to">Agents</span><span class="ms">step <code>review-runs</code>: fan out N passes × checklist items (maxWorkers 30)</span></div>
+        <div class="sqrow"><span class="sn">8</span><span class="fr">Agents</span><span class="ar">→</span><span class="to">disk</span><span class="ms">progressive read: README → facts → candidate guide.md → blocks.md</span></div>
+        <div class="sqrow"><span class="sn">9</span><span class="fr">Agents</span><span class="ar">→</span><span class="to">Supabase</span><span class="ms"><code>vision</code> tool → thumbnail JPEG from <code>submission-data</code> <i>(only when text isn't enough)</i></span></div>
+        <div class="sqrow ret"><span class="sn">10</span><span class="fr">Agents</span><span class="ar">⇠</span><span class="to">Sandbox</span><span class="ms">per-item findings JSON (pass / fail / not-verifiable / n/a)</span></div>
+        <div class="sqrow self"><span class="sn">11</span><span class="fr">Sandbox</span><span class="ar">↺</span><span class="to">disk</span><span class="ms">consolidate → synthesize → organize → <code>review-comments.json</code></span></div>
+        <div class="sqrow"><span class="sn">12</span><span class="fr">Sandbox</span><span class="ar">→</span><span class="to">Supabase</span><span class="ms">save review + upload run to <code>workflow-runs</code> bucket; emit <code>conductor.complete</code></span></div>
+        <div class="sqrow note"><span class="sn">‣</span><span class="nt"><b>key</b> — every drawing the agent "reads" is really rendered markdown; the actual pixels are one <code>vision</code> call away, not the default path.</span></div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════ NEW WAY ══════════════════════════ -->
+    <h2><span class="eyebrow">Section B · the new way</span>Bureau review runbook <span class="rc r-user">operator</span> <span class="rc r-store">on-disk</span></h2>
+    <p>Source of truth: <code>bureau/runbooks/review/RUNBOOK.md</code>. An operator-driven Claude Code
+    session — no Inngest, no Sandbox, no Supabase reads. The pre-processed submission is
+    <b>pre-staged on disk</b> (single-sheet vector PDFs + rasters + transcriptions), and the top-level
+    runner spawns phase orchestrators that read those files directly, with the <b>vector PDF as the
+    authority</b>.</p>
+
+    <div class="callout"><span class="lab">how the data gets on disk</span>
+    The runbook does <b>not</b> use <code>project-downloader.ts</code> and never calls Supabase. Staging
+    the plan-set workspace on the local filesystem is a <b>precondition</b> of the run: the operator (or
+    a preparatory step) puts it there and writes its absolute path into <code>ADDENDUM.md</code> at
+    kickoff. In the v2 world (tab 03) that staging <i>is</i> the pre-processing runbook's publish output.</div>
+
+    <h3><span class="hn">B · entities</span>Pre-staged workspace + the run folder</h3>
+    <p>The runbook's entities are <b>files</b>, not DB rows. The same pre-processing content is present —
+    but the per-sheet <b>vector PDF and raster live on disk</b> beside the transcription, so a worker can
+    open the drawing natively instead of through a tool.</p>
+
+    <div class="erd">
+      <div class="ent exist">
+        <div class="eh"><span class="en">plan-set workspace/</span><span class="stereo">pre-staged input · read-only</span></div>
+        <div class="row"><span class="nm">README.md</span><span class="ty">sheet index</span></div>
+        <div class="row hi"><span class="nm">sheet-NN/ vector PDF</span><span class="ty">★ authority</span></div>
+        <div class="row"><span class="nm">sheet-NN/ raster</span><span class="ty">image</span></div>
+        <div class="row"><span class="nm">sheet-NN/ transcription</span><span class="ty">convenience layer</span></div>
+        <div class="row"><span class="nm">supplementary docs</span><span class="ty">PDF + text</span></div>
+        <div class="note">same content as the DB rows, materialized as files</div>
+      </div>
+      <div class="ent newt">
+        <div class="eh"><span class="en">runs/&lt;juris&gt;-&lt;slug&gt;/</span><span class="stereo">run output</span></div>
+        <div class="row"><span class="nm">ADDENDUM.md</span><span class="ty">paths + request</span></div>
+        <div class="row"><span class="nm">hitl/</span><span class="ty">readouts + decisions</span></div>
+        <div class="row"><span class="nm">1-frame/</span><span class="ty">orientation</span></div>
+        <div class="row"><span class="nm">2-research/</span><span class="ty">premises.md</span></div>
+        <div class="row"><span class="nm">3-review/</span><span class="ty">findings → PDF</span></div>
+      </div>
+      <div class="ent exist">
+        <div class="eh"><span class="en">3-review/3.1b-plan-set</span><span class="stereo">nav index</span></div>
+        <div class="row"><span class="nm">plan-set.md</span><span class="ty">read map</span></div>
+        <div class="row"><span class="nm">sheet-index.json</span><span class="ty">label → ordinal</span></div>
+        <div class="note">publishing reads this to open the drawing a comment names</div>
+      </div>
+    </div>
+
+    <div class="rels">
+      <div class="rels-h">Relationships</div>
+      <span class="rl">plan-set workspace <span class="cf">‖──&lt;</span> sheet-NN/ <span class="cf">‖──&lt;</span> { vector PDF, raster, transcription } <span class="cmt">— per-sheet folder</span></span>
+      <span class="rl">runbook session <span class="cf">reads</span> plan-set workspace <span class="cf">·</span> <span class="cf">writes</span> runs/&lt;slug&gt;/ <span class="cmt">— never the DB</span></span>
+      <span class="rl">ADDENDUM.md <span class="cf">──?</span> absolute path <span class="cf">→</span> external plan-set workspace <span class="cmt">— the handoff</span></span>
+      <span class="rl">worker <span class="cf">→</span> sheet-NN/ vector PDF <span class="cmt">§3: the authority; transcription is only a hint</span></span>
+    </div>
+
+    <div class="callout new"><span class="lab">shared-conventions.md §3–§5 · verbatim</span>
+    "<b>The vector plan PDF is the authority; the per-sheet transcriptions are a convenience layer over
+    it.</b> Transcriptions contain OCR errors … any value that decides a finding is read off the PDF
+    itself." · "<b>A negative reached only by searching text is not a negative.</b> Most annotation on
+    these sheets is outlined vector text that no text extraction sees; corroborate an absence against the
+    image before asserting it."
+    <br><span style="font-size:11px;color:var(--muted)">bureau/runbooks/review/prompts/shared-conventions.md · lines 12–14</span></div>
+
+    <h3><span class="hn">B · sequence</span>Operator → runner → phase orchestrators → workers</h3>
+    <div class="seq">
+      <div class="seqh">
+        <span class="pt"><span class="rl">human</span>Operator</span>
+        <span class="pt"><span class="rl">claude code</span>Top-level runner</span>
+        <span class="pt"><span class="rl">opus sub-agents</span>Phase orchestrators</span>
+        <span class="pt"><span class="rl">opus / sonnet</span>Discipline workers</span>
+        <span class="pt"><span class="rl">local fs</span>Pre-staged workspace</span>
+      </div>
+      <div class="sqbody">
+        <div class="sqrow note"><span class="sn">0</span><span class="nt"><b>precondition</b> — plan-set workspace staged on disk (single-sheet PDFs + rasters + transcriptions). No downloader, no Supabase.</span></div>
+        <div class="sqrow"><span class="sn">1</span><span class="fr">Operator</span><span class="ar">→</span><span class="to">Runner</span><span class="ms">invoke review runbook + absolute path to the pre-processed workspace + request</span></div>
+        <div class="sqrow self"><span class="sn">2</span><span class="fr">Runner</span><span class="ar">↺</span><span class="to">disk</span><span class="ms">write <code>ADDENDUM.md</code> (request verbatim + paths); mkdir <code>runs/&lt;slug&gt;/</code></span></div>
+        <div class="sqrow"><span class="sn">3</span><span class="fr">Runner</span><span class="ar">→</span><span class="to">Phase 1</span><span class="ms">spawn Frame orchestrator (opus) → reads <code>1-frame.md</code> + ADDENDUM</span></div>
+        <div class="sqrow"><span class="sn">4</span><span class="fr">Phase 1</span><span class="ar">→</span><span class="to">workspace</span><span class="ms">read README index + open <b>vector PDFs directly</b>; diff vs transcription, log defects</span></div>
+        <div class="sqrow ret"><span class="sn">5</span><span class="fr">Phase 1</span><span class="ar">⇠</span><span class="to">Runner</span><span class="ms"><code>hitl1-readout.md</code> → Operator confirms (HITL 1 · STOP)</span></div>
+        <div class="sqrow"><span class="sn">6</span><span class="fr">Runner</span><span class="ar">→</span><span class="to">Phase 2</span><span class="ms">spawn Research orchestrator → HITL 2 acquisition question · STOP</span></div>
+        <div class="sqrow"><span class="sn">7</span><span class="fr">Runner</span><span class="ar">→</span><span class="to">Phase 3</span><span class="ms">spawn Review orchestrator (opus)</span></div>
+        <div class="sqrow"><span class="sn">8</span><span class="fr">Phase 3</span><span class="ar">→</span><span class="to">Workers</span><span class="ms">fan out per discipline / guide (nested spawn, depth 4)</span></div>
+        <div class="sqrow"><span class="sn">9</span><span class="fr">Workers</span><span class="ar">→</span><span class="to">workspace</span><span class="ms">navigate README → guide → blocks, then <b>open the vector PDF + raster natively</b>; corroborate any absence against the image (§5)</span></div>
+        <div class="sqrow ret"><span class="sn">10</span><span class="fr">Workers</span><span class="ar">⇠</span><span class="to">Phase 3</span><span class="ms">discipline findings → synthesis → comments → scrub → adversarial audit → render PDF</span></div>
+        <div class="sqrow"><span class="sn">11</span><span class="fr">Phase 3</span><span class="ar">→</span><span class="to">Operator</span><span class="ms">hand over the rendered report path (<code>3-review/3.6-render/</code>)</span></div>
+        <div class="sqrow note"><span class="sn">‣</span><span class="nt"><b>key</b> — no <code>vision</code> MCP tool exists in a runbook session; the per-sheet PDFs and rasters are local files the agent reads directly, so the transcription is never the last word.</span></div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════ CONTRAST ══════════════════════════ -->
+    <h2><span class="eyebrow">Side by side</span>Same input, opposite trust posture</h2>
+    <div class="grid2">
+      <div class="card change"><strong>Old · cloud review workflow</strong>
+      <ul>
+        <li><b>Where:</b> Vercel Sandbox, unattended, Inngest-triggered</li>
+        <li><b>Gets data via:</b> <code>project-downloader.ts</code> reads DB rows → renders markdown tree</li>
+        <li><b>Reads:</b> README → facts → guide.md → blocks.md (rendered transcriptions)</li>
+        <li><b>Pixels:</b> only via the <code>vision</code> tool on the thumbnail, on demand</li>
+        <li><b>Trust:</b> transcription <b>is</b> the reading surface</li>
+        <li><b>Model:</b> N × Haiku ensemble</li>
+      </ul></div>
+      <div class="card keep"><strong>New · review runbook</strong>
+      <ul>
+        <li><b>Where:</b> operator's Claude Code session, HITL, local</li>
+        <li><b>Gets data via:</b> pre-staged on-disk workspace (path in ADDENDUM); no DB, no downloader</li>
+        <li><b>Reads:</b> README → guide → blocks, then the <b>vector PDF directly</b></li>
+        <li><b>Pixels:</b> per-sheet PDF + raster are native local files — the default authority</li>
+        <li><b>Trust:</b> transcription is a demoted convenience layer (§3)</li>
+        <li><b>Model:</b> opus orchestrators + workers, two-pass judgment</li>
+      </ul></div>
+    </div>
+
+    <div class="xref">Cross-reference · the runbook's trust posture (§3–§5) is the same signal tab 02 calls
+    "the tell" — review already stopped trusting the transcription layer. Tab 03's v2 strip makes the
+    runbook the <i>producer</i> of the on-disk workspace this tab shows it <i>consuming</i>.</div>
+
+    <!-- ══════════════════════════ SECTION C · APP FIELD MAP ══════════════════════════ -->
+    <h2><span class="eyebrow">Section C · seeing it in the app</span>Where the data surfaces — an annotated field map</h2>
+    <p>Both consumers above read the <b>same</b> pre-processing output. Here is that output as a person
+    sees it — the <b>sheet detail view</b> in cityhall. This is a live capture of
+    <code>Wills Pre-Processing V2 Test Project</code> · plan set <b>v1</b> · <b>sheet 6</b> (an Austin
+    Water utility-notes sheet). Every field below is boxed in red and mapped to the data model from
+    <b>tab 01</b>. This is exactly the data <code>project-downloader.ts</code> renders to markdown
+    (Section A) and that the runbook reads off disk (Section B).</p>
+
+    <div class="shot">
+      <img src="assets/usage-fields/00-overview.png" alt="Sheet 6 detail view in cityhall — heading and summary on the left, the rasterized sheet with content-block overlays in the center, and the Content Blocks list on the right">
+      <div class="cap">The full sheet detail view: heading + <b>summary</b> (left), the rasterized sheet
+      with content-block bounding-box overlays (center), and the <b>Content Blocks</b> list — one row
+      per block, each a category badge + description (right).</div>
+    </div>
+
+    <div class="shotgrid">
+      <div class="shot">
+        <img src="assets/usage-fields/01-summary.png" alt="Red box around the sheet summary paragraph, labeled sheet_version.summary">
+        <div class="cap"><b>sheet_version.summary</b> — the AI page overview. Renders into the README
+        sheet-index line and the top of each <code>guide.md</code>.</div>
+      </div>
+      <div class="shot">
+        <img src="assets/usage-fields/02-sheet-id.png" alt="Red box around the 'Sheet 6' heading, labeled sheet / sheet_version">
+        <div class="cap"><b>sheet</b> / <b>sheet_version</b> — stable sheet identity + <code>sheet_number</code>
+        (6 of 25). <code>sheet_version.label</code> carries the AI short title.</div>
+      </div>
+      <div class="shot">
+        <img src="assets/usage-fields/03-version.png" alt="Red box around the 'Site Plan v1' selector, labeled plan_set_version">
+        <div class="cap"><b>plan_set_version</b> — one row per uploaded iteration (v1). Pins which
+        <code>sheet_version</code>s belong to this submission.</div>
+      </div>
+      <div class="shot">
+        <img src="assets/usage-fields/05-raster.png" alt="Red box around the rasterized sheet image, labeled sheet_version.thumbnail_storage_path">
+        <div class="cap"><b>sheet_version.thumbnail_storage_path</b> — the rasterized sheet image
+        (<code>n.jpg</code>). What the cloud <code>vision</code> tool fetches on demand.</div>
+      </div>
+      <div class="shot">
+        <img src="assets/usage-fields/04-pdf.png" alt="Red box around the PDF link, labeled sheet_version.storage_path">
+        <div class="cap"><b>sheet_version.storage_path</b> — the single-sheet <b>vector PDF</b> artifact.
+        The runbook's authority (§3); the cloud path only reaches it via the vision tool.</div>
+      </div>
+      <div class="shot">
+        <img src="assets/usage-fields/06-bounding-box.png" alt="Red box around one content-block overlay on the sheet, labeled content_block.bounding_box">
+        <div class="cap"><b>content_block.bounding_box</b> — a normalized <code>[ymin,xmin,ymax,xmax]/1000</code>
+        region drawn over the raster. One box per transcribed block; order = <code>short_id</code>.</div>
+      </div>
+      <div class="shot">
+        <img src="assets/usage-fields/07-category.png" alt="Red box around a content-block category badge, labeled content_block.category">
+        <div class="cap"><b>content_block.category</b> — the 11-value enum badge (Callout / Table / Form /
+        General&nbsp;Notes / drawing / legend / seal …).</div>
+      </div>
+      <div class="shot">
+        <img src="assets/usage-fields/08-description.png" alt="Red box around a content-block description, labeled content_block.description">
+        <div class="cap"><b>content_block.description</b> — AI keyword-rich text for retrieval.
+        <code>content_block.content</code> holds the verbatim markdown transcription (→ <code>blocks.md</code>;
+        not surfaced in this view).</div>
+      </div>
+      <div class="shot">
+        <img src="assets/usage-fields/09-version-history.png" alt="Red box around the Version History entry, labeled sheet_version change-chain">
+        <div class="cap"><b>sheet_version</b> change-chain — <code>previous_sheet_version_id</code> +
+        <code>change_type</code> / <code>change_description</code> / <code>similarity_score</code>. Blank on
+        v1; the AI sheet-comparison call fills these on resubmittal.</div>
+      </div>
+    </div>
+
+    <div class="callout ember"><span class="lab">the one field the UI hides</span>
+    The Content Blocks list shows each block's <code>category</code> + <code>description</code>, but not
+    <code>content_block.content</code> — the verbatim markdown transcription. That is the exact field the
+    transcription defects (tab 02) live inside, and the field the cloud review agent reads as
+    <code>blocks.md</code>. It is invisible here, which is part of why the rot stayed invisible for so long.</div>
+
+    <div class="foot">verified 2026-08-19 · app capture: app.noeticbuild.com sheet detail view (project ed9e7ec4 · plan set 3560309c · sheet 6) · old: bureau/workflows/review/workflow.yaml + conductor/src/shared/project-downloader.ts + prompts/review.md · new: bureau/runbooks/review/RUNBOOK.md + prompts/shared-conventions.md §3–§5</div>
+  </section>
+
 </main>
 
 <script>
   const btns=document.querySelectorAll('nav.tabs button');
   const panels=document.querySelectorAll('.panel');
-  const IDS=['arch','failures','next'];
+  const IDS=['arch','failures','next','usage'];
   function show(id){
     btns.forEach(b=>b.classList.toggle('active',b.dataset.tab===id));
     panels.forEach(p=>p.classList.toggle('active',p.id===id));
