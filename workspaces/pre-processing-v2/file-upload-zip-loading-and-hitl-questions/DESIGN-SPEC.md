@@ -1,11 +1,13 @@
 # File-Upload Jobs — Streamed Loading UX + HITL "Version / Replace / Separate / Discard" Questions
 
-**Status:** Draft v4 — adds the question-surface UX (inline "Pending" section) on top of v3's 2026-08-25 audit (attach-on-resolve, flavor-routed detection, single-decision argmax, plan-set-lineage resolved, stale citation fixed)
+**Status:** Draft v5 — adds exact-duplicate (content-hash) detection + question, on top of v4's question-surface UX and v3's 2026-08-25 audit
 **Date:** 2026-08-25
 **Repos touched:** `substation` (new `file_upload_job` + `file_upload_decision` tables; write job/decision rows through the upload → classify → process → zip-fan-out pipeline; a **flavor-routed** similarity step — text-layer Jaccard for text-native documents, the reused `sharp` `computeSheetSimilarity`/`matchSheets` comparator for plan sheets and scanned/image-only PDFs; a decision-resolve endpoint), `cityhall` (subscribe to jobs/decisions over Supabase Realtime; render a per-job/zip-tree loading surface + per-file banner + submission-level "needs input" aggregate; render decisions via a `question_type → component` registry)
 **Repos NOT touched:** `conductor` (not on the upload/triage path), `bureau`, `radar`, `navalbase`
 **Parent:** `../DESIGN-SPEC.md` (Pre-Processing v2)
 **Supersedes / absorbs:** `../new-features/clarifying-questions/DESIGN-SPEC.md` — that spec's async **Context 2** (`preprocessing_question` table + Inngest `waitForEvent`) is generalized here into the durable `file_upload_job` / `file_upload_decision` model. Its `kind` enum becomes `question_type`. Its safe-default/timeout principle is **overridden** (D18: no timeouts). See [§10](#10-relationship-to-the-clarifying-questions-spec).
+
+> **Revision note (v5 — exact-duplicate detection).** Adds a **byte-for-byte content-hash** check (`sha256`) that runs **before** the fuzzy similarity routes and can **short-circuit processing**. No dedup/hashing exists today (`node:crypto` is already a dep — HMAC at `index.ts:115`). A **new 4th `question_type` `exact_duplicate`** (options **discard / keep**) fires when an incoming file is byte-identical to an existing one. `content_sha256` is stored **nullable on `document_version`/`plan_set_version`** (no backfill; null → skip exact-check, fall back to similarity). This is a **narrow, deliberate reversal of D22**: the hash is justified by *certainty* + the *short-circuit*, not by near-dup detection (which the perceptual/text routes still own). <10ms for typical docs, ~50–150ms for 100 MB+ plan sets. See [§6 → Exact-duplicate pre-check](#exact-duplicate-pre-check-content-hash--runs-first-d27) and D27.
 
 > **Revision note (v4 — question-surface UX).** Open decisions render as an inline **"Pending" section** on the current (latest) submission version's page, directly **above the "Plan Set" row** — **not** a modal. **One full-width row per open decision**, stacked when several are open (e.g. a zip that produced several matches). Version/replace/promote rows show **side-by-side thumbnails**; the existing file's thumbnail **links to its document/plan-set page**. Each row's top-right **'X' = discard**, gated by a *"This will discard the uploaded file {filename}. Are you sure?"* confirmation modal. Supersedes v3's per-file-banner + `Lightbox`. See [§6 → Question surface](#question-surface--the-pending-section-on-the-submission-page-d20-revised-v4).
 
@@ -18,7 +20,7 @@
 
 > **Revision note (v2 — folds the 2026-08-24 grilling).**
 > - **Detection swapped from vision → reused `sharp` perceptual comparison** (`computeSheetSimilarity` + `matchSheets`, `similarity.ts`/`match-sheets.ts`). Documents already persist per-page JPEGs (`document.ts:80-99`), so the plan-set diff machinery reuses directly — deterministic, free, no LLM. (D8–D13.) *(v3: retained for the visual route — plan sheets & scanned docs — but text-native documents now route to text-layer Jaccard; see D24.)*
-> - **`content_hash` dropped entirely** (Q22): the perceptual score already returns ≈1.0 for byte-identical content, so a hash column adds compute for a case the raster compare subsumes. *(v3: the text route likewise scores 1.0 for identical text; still no hash column.)*
+> - **`content_hash` dropped entirely** (Q22): the perceptual score already returns ≈1.0 for byte-identical content, so a hash column adds compute for a case the raster compare subsumes. *(v3: the text route likewise scores 1.0 for identical text; still no hash column. **v5: narrowly reversed** — see D22 (amended) / D27.)*
 > - **Byte-% upload bar dropped** (Q23): the job row's "Uploading…" state is enough; no `XMLHttpRequest` swap.
 > - **Plan sets are now first-class detection targets** (P1–P6, reverses v1's "documents-only"). The real accident is *cross-type*: a plan set that lands as a separate **document** via the strict `>11″` classification gate (`classify.ts:21`) or a lost zip winner-election. So v1 includes a **doc→plan-set** promotion path.
 > - **No decision timeouts** (D18): a decision persists until answered; the UI makes it clearly unanswered.
@@ -149,17 +151,18 @@ The typed HITL question. Separate table (not JSONB on the job) so the ask/answer
 | `question_type` | text | UI renders a component per type. Three shapes in v1 (below). |
 | `payload` | jsonb | the filled-in dynamic values the component needs (below) |
 | `status` | text | `pending \| answered \| dismissed` |
-| `answer` | jsonb NULL | `{ choice: 'version' \| 'replace' \| 'separate' \| 'discard' \| 'promote', … }` |
+| `answer` | jsonb NULL | `{ choice: 'version' \| 'replace' \| 'separate' \| 'discard' \| 'promote' \| 'keep', … }` |
 | `created_at` | timestamptz | |
 | `answered_at` | timestamptz NULL | |
 | `answered_by` | uuid NULL | user who answered (RLS-scoped) |
 
 **One decision per uploaded file (D25 — argmax).** A file gets **at most one** open decision, targeting the single best-matching candidate across all comparison types (see [§6](#6-change-2--similarity-detection--the-hitl-decision)). `payload.candidate` therefore names exactly one target, not a list.
 
-**Three `question_type`s in v1** (D3/P3 — the option sets differ because plan sets are single-slot):
+**Four `question_type`s in v1** (D3/P3 — the option sets differ because plan sets are single-slot). `exact_duplicate` is checked **first**; the three similarity types fire only if no exact match (D27):
 
 | `question_type` | Fires when | Options |
 |---|---|---|
+| `exact_duplicate` | an incoming file is **byte-for-byte identical** (`sha256`) to an existing file | `discard`, `keep` (keep = attach as separate) |
 | `doc_version_or_separate` | an incoming **document** resembles an existing **document** on the version | `version`, `replace`, `separate`, `discard` |
 | `plan_set_version_or_discard` | an incoming **plan set** arrives and one already exists | `version`, `replace`, `discard` (no "separate" — one plan set per version) |
 | `doc_is_plan_set_version` | an incoming **document** resembles the existing **plan set's sheets** (the misclassification fix) | `promote` (→ plan-set version), `separate` (keep as document), `discard` |
@@ -207,6 +210,16 @@ The job row is the spine; Supabase Realtime is the delivery. Three windows, thre
 ---
 
 ## 6. Change 2 — similarity detection + the HITL decision
+
+### Exact-duplicate pre-check (content hash) — runs first (D27)
+
+Before any fuzzy comparison, a **byte-for-byte** check catches exact re-uploads with certainty and lets us skip processing entirely:
+
+- **Compute** `content_sha256 = crypto.createHash('sha256')` over the file bytes **on the pass we already do** — at `classifyFile` for a direct upload, or when extracting each zip child in the sandbox. Zero new deps (`node:crypto` already used at `index.ts:115`), zero extra I/O. Persist it on the produced `document_version` / `plan_set_version` (nullable).
+- **Match** against the live set: `WHERE content_sha256 = :incoming AND processing_state = 'completed'`, plus any already-registered **same-batch sibling** (unlike the similarity routes, byte-identical siblings *are* flagged — two identical files in one zip is pure redundancy; the first-registered is canonical, later identical ones flag). Null hashes (legacy, no backfill) simply don't match → fall through to similarity.
+- **On match → `exact_duplicate` decision** (`discard` / `keep`), hold the incoming file off-slot, and **short-circuit**: skip rasterization and the similarity routes for that file (no point processing a known dupe). This is the efficiency win over relying on similarity ≈1.0.
+- **Precedence (D25/D27):** exact-hash → (else) flavor-routed similarity → (else) auto-attach. At most one decision per file; if the exact check fires, no similarity question is raised.
+- **Cost:** <10ms for typical documents; ~50–150ms for 100 MB+ plan sets — negligible, and it *removes* the far larger rasterization cost for true dupes.
 
 ### Detection: flavor-routed — text for documents, visual for sheets (D24)
 
@@ -277,6 +290,7 @@ Detection runs while the incoming file is **held** (document: junction deferred;
 | `replace` | same as `version` but the prior version is superseded/soft-retired as the non-current head | `superseded` |
 | `separate` | **attach the held incoming file** — insert its `submission_document` junction row (today's default, now deferred to this point). For a held plan set this option is absent. | `done` |
 | `discard` | **hard delete** the held incoming `document`/`document_version` (or held plan-set bytes) + storage object — nothing was ever attached (D17) | `discarded` |
+| `keep` (exact-dup only) | attach the held incoming file **as separate** despite being byte-identical (insert its junction / promote plan set to slot) — the user explicitly wants both copies | `done` |
 | `promote` (doc→plan-set) | delete the held incoming net-new `document`; route its bytes through the plan-set versioning path under the **existing `plan_set_id`** (see Q-planset-lineage resolution below) | `superseded` |
 
 `version` vs `replace` differ only in prior-version retention (both write under the candidate's `document_id`); only `discard` hard-deletes (D17). **Files with no candidate above threshold skip the decision entirely and auto-attach** (junction inserted at the end of detection) — the common, no-collision path.
@@ -310,7 +324,7 @@ This **supersedes v3's "per-file banner + `Lightbox`"** surfacing: the canonical
 | Stage | File:line (today) | Job write |
 |---|---|---|
 | prepare-upload | `submissions.ts:520-577` | create `file_upload_job` (`awaiting_upload`) alongside the `upload_token`; return `job_id`(s) |
-| commit-upload | `submissions.ts:580-751`; `classifyFile` `classify.ts:11-29` | `uploaded → classifying`; set `classification`. **v3: do NOT insert the `submission_document` junction here** — defer it (off-slot hold) |
+| commit-upload | `submissions.ts:580-751`; `classifyFile` `classify.ts:11-29` | `uploaded → classifying`; set `classification`. **v3: do NOT insert the `submission_document` junction here** — defer it (off-slot hold). **v5: compute `content_sha256` from the bytes; exact-match the live set → `exact_duplicate` decision + skip processing (D27)** |
 | process-file dispatch | `handlePlanSetUpload`, `handleZipUpload`, `handleDocumentUpload` | `→ processing`; **plan-set case: hold off-slot + ask when a plan set already exists** (P1) |
 | zip triage | `zip.ts` `processZip:42-287` | parent `→ triaging → extracting` |
 | zip child register | `registerAsDocument:366`, `registerWinnerAsPlanSet`, `registerDrainageModel` | create child job (`parent_job_id` = zip), link `produced_*`; **defer the child's junction insert** (off-slot hold) |
@@ -347,8 +361,9 @@ Precedents to model on: the `/plan-sets/:id/replace` route (existing-`plan_set_i
 - **D11 — First N pages, N = min(3, pageCount);** doc score = mean matched-page similarity (visual) or whole-doc Jaccard (text).
 - **D12 — Propose above threshold** (text-Jaccard and visual ~0.7 are independent, both tunable); no auto-apply. **Validate against real resubmittal pairs before Phase B.**
 - **D13 — No candidate cap; `log()` the count.**
-- **D25 — One decision per uploaded file (argmax).** Score against every eligible candidate across question types; none above threshold → no question (auto-attach); ≥1 → exactly one decision against the single highest score. Wrong-top-1 is accepted; no multi-candidate prompts.
-- **D22 — Drop `content_hash`** — both the visual score and the text Jaccard already ≈1.0 for identical content.
+- **D25 — One decision per uploaded file (argmax).** Score against every eligible candidate across question types; none above threshold → no question (auto-attach); ≥1 → exactly one decision against the single highest score. Wrong-top-1 is accepted; no multi-candidate prompts. **The exact-hash check (D27) is evaluated first; if it fires, no similarity question is raised.**
+- **D22 (amended v5) — `content_sha256` re-added, narrowly.** v3 dropped a content hash on the logic that similarity ≈1.0 already covers identical bytes; v5 re-adds `content_sha256` **on the produced `document_version`/`plan_set_version` (nullable, no backfill)** — justified not by near-dup detection (the perceptual/text routes still own that) but by two things similarity can't give: **certainty** (0 false positives) and a **pre-check that short-circuits processing** (D27).
+- **D27 — Exact-duplicate check runs first and can short-circuit.** `crypto.createHash('sha256')` over the bytes already read (at `classifyFile` / zip-child extract; `node:crypto` already a dep, `index.ts:115`); equality lookup against the live set (+ already-registered same-batch siblings — byte-identical siblings are pure redundancy). On match → `exact_duplicate` decision (`discard` / `keep`), hold off-slot, **skip rasterization + similarity** for that file. <10ms typical docs, ~50–150ms for 100 MB+ plan sets.
 
 **Resolver**
 - **D15 — Attach-only-on-resolve (off-slot hold).** The incoming file's `submission_document` junction is not inserted until detection clears (no candidate → auto-attach) or the decision resolves. Documents are held off-slot exactly like plan sets — **no live duplicate ever appears**. `version`/`replace`/`promote`/`separate`/`discard` all commit or discard a *held* entity.
@@ -376,7 +391,7 @@ Precedents to model on: the `/plan-sets/:id/replace` route (existing-`plan_set_i
 
 - **Phase A — Loading spine (Change 1).** `file_upload_job` table + Realtime publication; write it through prepare→commit→process→zip-fan-out; cityhall subscribes and renders the job/zip tree. No decisions yet (junction still inserted as today). Independently shippable; immediately kills windows #2–#3 and shows "Uploading…" for #1.
 - **Phase B — HITL decisions (Change 2), incl. plan sets.** `file_upload_decision` table; the flavor-routed detection step (text Jaccard for docs, visual for sheets, doc→plan-set cross-type); the off-slot hold (defer the junction insert); the resolve endpoint + outcome mapping; cityhall `question_type` components + per-file banner + submission-level aggregate. Depends on A. **Pre-build spike: validate detection thresholds on ~10 real resubmittal pairs.** Could sub-split doc-only then plan-set if needed.
-- **Out (v1):** similarity-threshold perfection; the reverse cross-type (plan-set→document); resumable/chunked uploads (Q9); a stuck-processing watchdog (D7); byte-% upload bar (D23); `content_hash` (D22); replacing per-entity `processing_state`; conductor/review changes.
+- **Out (v1):** similarity-threshold perfection; the reverse cross-type (plan-set→document); resumable/chunked uploads (Q9); a stuck-processing watchdog (D7); byte-% upload bar (D23); replacing per-entity `processing_state`; conductor/review changes.
 
 ---
 
@@ -393,11 +408,12 @@ Precedents to model on: the `/plan-sets/:id/replace` route (existing-`plan_set_i
 
 ## 11. Open questions / TODOs
 
-**Resolved** (kept for the audit trail): byte-% bar → out (D23); exact-dup `content_hash` → dropped (D22); decision timeout → none (D18); blocking-UX → non-blocking banner + aggregate (D20); plan-set inclusion → in, cross-type (D-P1–D-P6); detector → flavor-routed (D24, text+visual); goal-vs-mechanism (live duplicate) → off-slot hold / attach-on-resolve (D15); ordering race → none, compares against current-live plan set excluding same-zip siblings (D-P4); **Q-planset-lineage → resolved, reuse `/replace` existing-`plan_set_id` shape (D26)**; one-decision-per-file → argmax (D25); stale `replaceExistingPlanSet` citation → fixed (Appendix).
+**Resolved** (kept for the audit trail): byte-% bar → out (D23); exact-dup detection → **added** as a byte-hash pre-check + `exact_duplicate` question (D27; narrow reversal of v3’s D22 drop); decision timeout → none (D18); blocking-UX → non-blocking banner + aggregate (D20); plan-set inclusion → in, cross-type (D-P1–D-P6); detector → flavor-routed (D24, text+visual); goal-vs-mechanism (live duplicate) → off-slot hold / attach-on-resolve (D15); ordering race → none, compares against current-live plan set excluding same-zip siblings (D-P4); **Q-planset-lineage → resolved, reuse `/replace` existing-`plan_set_id` shape (D26)**; one-decision-per-file → argmax (D25); stale `replaceExistingPlanSet` citation → fixed (Appendix).
 
 **Still open:**
 - **Q-detection — Threshold tuning (least-settled).** The text-Jaccard propose cutoff, the visual ~0.7 cutoff, the "looks identical" messaging cutoff (~0.98), N (first pages), the text-density router threshold, and the cross-type doc→plan-set cutoff all need calibration against real resubmittals. **Do the ~10-pair spike before building Phase B detection.**
 - **Q-textextract — Text-layer extraction dependency.** substation's existing `dv-inventory` is LLM-based; a non-LLM text extractor for the Jaccard route is likely net-new (trivial). Confirm the lib and how it behaves on image-only PDFs (→ routes to visual fallback).
+- **Q-exactdup — Exact-duplicate schema + intra-zip semantics.** `content_sha256` migration on `document_version`/`plan_set_version` (nullable, indexed, no backfill). Confirm the same-batch-sibling canonical-ordering rule (which of two byte-identical siblings is kept vs. flagged) and that surfacing a `keep` option (attach both copies) is desired over always-discard.
 - **Q-crosstype-reverse — Reverse cross-type deferred.** An incoming *plan set* that matches an existing *document*. Rare; not in v1.
 - **Q-RLS — RLS on both tables** — project-member read; who may answer (any project member with write? role-gated?).
 - **Q-migration — No backfill.** Historical `document_version`/`plan_set_version` rows have no owning job. Confirm cityhall renders cards with or without a job (D21).
