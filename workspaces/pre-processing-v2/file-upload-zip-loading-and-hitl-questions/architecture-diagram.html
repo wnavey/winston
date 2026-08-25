@@ -492,14 +492,16 @@ code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px s
       <div class="uc" style="margin:0">
         <div class="uch"><div class="ucn">T</div><div class="uctxt">
           <span class="actor">text-native documents (the common case)</span>
-          <span class="uct">Text route — token/shingle Jaccard</span>
+          <span class="uct">Text route — 3-gram shingle Jaccard</span>
         </div></div>
         <div class="ucdiag"><div class="dfg">
-          <div class="node read"><span class="op">extract</span><span class="nt">text layer</span><span class="nf">first N pages</span></div>
-          <div class="edge"><span class="el">normalize</span><span class="ar">→</span></div>
-          <div class="node read"><span class="op">compute</span><span class="nt">Jaccard</span><span class="nf">whole-doc<br>token overlap</span></div>
+          <div class="node read"><span class="op">extract</span><span class="nt">text layer</span><span class="nf">first N pages<br>lowercase · strip</span></div>
+          <div class="edge"><span class="el">shingle<br>k=3</span><span class="ar">→</span></div>
+          <div class="node read"><span class="op">build</span><span class="nt">shingle set</span><span class="nf">{3-word windows}<br>unigram fallback</span></div>
+          <div class="edge"><span class="el">overlap</span><span class="ar">→</span></div>
+          <div class="node read"><span class="op">compute</span><span class="nt">set Jaccard</span><span class="nf">|A∩B| / |A∪B|<br>whole-doc, one score</span></div>
         </div></div>
-        <div class="ucnote"><b>why</b> — answers "is this a revised version of that doc" directly. Revisions share most text; unrelated forms don't, regardless of shared letterhead.</div>
+        <div class="ucnote"><b>set-overlap, not alignment</b> — pooled first-N-pages text → set of contiguous 3-word shingles → one doc-level Jaccard. Order-sensitive only within each window; a repeated shingle counts once (set, not multiset). Answers "is this a revised version" directly.</div>
       </div>
 
       <div class="uc" style="margin:0">
@@ -518,14 +520,22 @@ code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px s
       </div>
     </div>
 
-    <h3><span class="hn">thresholds</span>Cutoffs — all tunable, all unvalidated</h3>
-    <div class="legend">
-      <span class="k"><span class="utag t-add">N</span> first pages = min(3, pageCount)</span>
-      <span class="k"><span class="utag t-add">text</span> Jaccard propose cutoff</span>
-      <span class="k"><span class="utag t-add">visual</span> ~0.7 (never validated)</span>
-      <span class="k"><span class="utag t-add">identical</span> ~0.98 "looks identical" copy</span>
-      <span class="k"><span class="utag t-add">router</span> text-density threshold</span>
-    </div>
+    <h3><span class="hn">thresholds</span>Seed values to calibrate — shape pinned, every number a seed</h3>
+    <div class="spectable-scroll"><table class="spectable">
+      <thead><tr><th>Parameter</th><th>Seed</th><th>Role</th><th>Pinned?</th></tr></thead>
+      <tbody>
+        <tr><td><b>N</b> — pages compared</td><td><code>min(3, pageCount)</code></td><td>depth of the compare</td><td><span class="w">pinned (D11)</span></td></tr>
+        <tr><td><b>Text token</b></td><td>3-gram shingles · set Jaccard · unigram fallback</td><td>how the text set is built</td><td><span class="w">pinned</span> · k=3 seed</td></tr>
+        <tr><td><b>Text propose cutoff</b></td><td><code>J ≥ 0.60</code></td><td>≥ → raise <code>doc_version_or_separate</code></td><td><span class="none">seed only</span></td></tr>
+        <tr><td><b>"Looks identical" copy</b></td><td><code>J ≥ 0.98</code></td><td>phrases prompt as "appears identical" (options unchanged)</td><td><span class="none">seed only</span></td></tr>
+        <tr><td><b>Text-density router</b></td><td><code>≥ 100 chars/page</code></td><td>≥ → text route; below → visual</td><td><span class="none">seed only</span></td></tr>
+        <tr><td><b>Visual propose cutoff</b></td><td><code>~0.70</code> doc-level</td><td>≥ → raise the visual-route question</td><td><span class="none">seed only</span></td></tr>
+        <tr><td><b>Per-sheet match floor</b></td><td><code>MIN_MATCH_SIMILARITY=0.5</code></td><td>which pages pair up before the doc-level mean</td><td><span class="w">existing code</span></td></tr>
+        <tr><td><b>Cross-type doc→plan-set</b></td><td><code>~0.70</code> visual</td><td>≥ → raise <code>doc_is_plan_set_version</code></td><td><span class="none">seed only</span></td></tr>
+      </tbody>
+    </table></div>
+    <div class="callout"><span class="lab">reading the numbers</span>
+      The text cutoffs (<code>0.60</code>, <code>0.98</code>) are <b>shingle-Jaccard</b> values — comparable only against a k=3 build; re-seed them if k changes. The visual <code>~0.70</code> is a doc-level score <em>after</em> <code>matchSheets</code> has dropped page-pairs below <code>0.5</code>. The exact-hash pre-check (Tab 03) has <b>no threshold</b> — byte equality, evaluated first.</div>
     <div class="callout ember"><span class="lab">highest-leverage de-risk (Q-detection)</span>
       The <code>0.7</code> visual number was never validated, and greyscale raster is the <b>weakest</b> signal for text forms — which is exactly why the trace's near-identical-name, content-revised documents route to text. <b>Validate every cutoff against ~10 real resubmittal pairs before building Phase B detection.</b> Start with pure per-flavor routing; add the visual/text booster only if validation shows false negatives.</div>
 

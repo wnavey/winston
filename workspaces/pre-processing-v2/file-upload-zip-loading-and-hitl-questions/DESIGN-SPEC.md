@@ -153,7 +153,7 @@ Example `payload` for `doc_version_or_separate` (score from the text-Jaccard rou
 {
   "incoming":  { "job_id": "…", "file_name": "1700 South Lamar - Formal Site Plan Application_.pdf" },
   "candidate": { "document_id": "1a6a8129-…", "file_name": "Site Plan Application — Formal Submittal",
-                 "reason": "text-layer Jaccard 0.88 over first 3 pages", "score": 0.88, "method": "text" }
+                 "reason": "3-gram shingle Jaccard 0.71 over first 3 pages", "score": 0.71, "method": "text" }
 }
 ```
 
@@ -206,7 +206,16 @@ Before any fuzzy comparison, a **byte-for-byte** check catches exact re-uploads 
 **No LLM by default.** The deciding factor is whether the incoming PDF has a usable text layer, which also happens to be exactly where each comparator is strong:
 
 - **Plan sheets** (the classify gate's `plan_set` — large-format line drawings) → **visual**: the existing `computeSheetSimilarity` (`src/inngest/lib/sandbox/similarity.ts`, `sharp` resize→256×170 greyscale, `max(NCC, content-pixel-match-rate)` → 0–1) + `matchSheets` (`match-sheets.ts`, `MIN_MATCH_SIMILARITY=0.5`). Unchanged; this is its home turf.
-- **Text-native documents** (digitally-generated forms/applications — the common case in the trace) → **text**: extract the PDF text layer for the first N pages, normalize (lowercase, collapse whitespace, strip punctuation), and compute **token/shingle Jaccard**. This directly answers "is this a revised version of that document" — revisions share most text; unrelated forms don't, regardless of shared letterhead. Deterministic, cheap, no LLM.
+- **Text-native documents** (digitally-generated forms/applications — the common case in the trace) → **text**: extract the PDF text layer for the first N pages and compute a **k-gram shingle Jaccard** (pinned below). This directly answers "is this a revised version of that document" — revisions share most text; unrelated forms don't, regardless of shared letterhead. Deterministic, cheap, no LLM.
+
+**Tokenization (pinned).** The text route is a **set-overlap** measure, not sentence alignment or edit distance:
+1. **Normalize** the pooled first-N-pages text — lowercase, collapse whitespace, strip punctuation.
+2. **Split** on whitespace into a word stream.
+3. **Shingle** into the **set of contiguous 3-word windows** (k-grams, **k = 3**). Example: `"the revised site plan"` → `{"the revised site", "revised site plan"}`.
+4. **Score** incoming `A` vs candidate `B` with **set Jaccard**: `J = |A ∩ B| / |A ∪ B|` ∈ [0,1]. It is a **set**, not a multiset — a shingle repeated across the document counts once; the measure is order-sensitive only within each 3-word window and otherwise position-insensitive.
+5. **Fallback:** a document with fewer than k tokens on the extracted pages degrades to **unigram** tokens (k = 1, plain word-set Jaccard).
+
+`k` is itself a calibratable knob — **k = 3 is the seed**, not a validated value (larger k = stricter/more edit-sensitive, k = 1 = order-blind and more boilerplate-tolerant). Because a shingle-Jaccard number runs materially lower than a unigram-Jaccard number for the same pair, **the propose cutoff is only meaningful once k is fixed** — hence k is pinned before the cutoff is calibrated. See the seed-parameter table below.
 - **Scanned / image-only documents** (no usable text layer) → **visual** fallback (the same `sharp` comparator on the persisted page JPEGs).
 
 **The router** is a cheap text-density check on the incoming file inside the sandbox (chars/page extracted over the first N pages, above a threshold → text-native → text route; below → visual route; plan sheets always visual).
@@ -219,6 +228,23 @@ Before any fuzzy comparison, a **byte-for-byte** check catches exact re-uploads 
 - **Propose above threshold** (tunable — the text-Jaccard cutoff and the visual ~0.7 cutoff are independent and both need calibration); no auto-apply (D12).
 - **No candidate cap** (each compare is cheap); `log()` the candidate count (D13).
 - **⚠ Validate thresholds against ~10 real resubmittal doc-pairs before building Phase B** (Q-detection). The 0.7 visual number was never validated and greyscale raster is the weakest signal for text forms — the pre-build spike on real pairs is the single highest-leverage de-risk.
+
+### Detection parameters — seed values to calibrate
+
+These are **starting points for the ~10-pair spike, not validated production thresholds** (Q-detection). The algorithm *shape* is pinned; every *number* here is a seed the spike moves.
+
+| Parameter | Seed | Role | Pinned? |
+|---|---|---|---|
+| **N** — pages compared | `min(3, pageCount)` | depth of the text/visual comparison | ✅ pinned (D11) |
+| **Text token** | 3-gram word shingles, set Jaccard; unigram (k=1) fallback | how the text set is built | ✅ pinned; **k=3 seed**, tunable |
+| **Text propose cutoff** | `J ≥ 0.60` | ≥ → raise `doc_version_or_separate` | seed only |
+| **"Looks identical" copy cutoff** | `J ≥ 0.98` | phrases the prompt as "appears identical" (does *not* change options) | seed only |
+| **Text-density router** | `≥ 100 chars/page` over first N | ≥ → text route; below → visual route | seed only |
+| **Visual propose cutoff** | `~0.70` doc-level | ≥ → raise the visual-route question | seed only (never validated) |
+| **Per-sheet match floor** | `MIN_MATCH_SIMILARITY = 0.5` | inside `matchSheets` — which pages pair up before the doc-level mean | ✅ existing code |
+| **Cross-type doc→plan-set cutoff** | `~0.70` visual | ≥ → raise `doc_is_plan_set_version` | seed only |
+
+**Reading the numbers:** the text cutoffs (`0.60`, `0.98`) are **shingle-Jaccard** values and are only comparable against a k=3 build — re-seed them if k changes. The visual `~0.70` is a doc-level score after `matchSheets` has already dropped page-pairs below `0.5`. The exact-hash pre-check (D27) has **no threshold** — it is byte equality, evaluated first, and never competes with these.
 
 ### Candidate set + single-decision selection (D25)
 
@@ -335,7 +361,7 @@ Precedents to model on: the `/plan-sets/:id/replace` route (existing-`plan_set_i
 
 **Detection**
 - **D8 — Reuse `computeSheetSimilarity` + `matchSheets`** (deterministic `sharp`, no vision) for the **visual route** — plan sheets and scanned/image-only PDFs.
-- **D24 — Detection is flavor-routed.** Text-native documents → text-layer extraction + token/shingle Jaccard; plan sheets & scanned docs → the visual comparator. A cheap text-density check routes each file. When both signals are cheaply available, the non-primary is a tiebreaker/booster on the same single decision, never a second question.
+- **D24 — Detection is flavor-routed.** Text-native documents → text-layer extraction + **3-gram shingle set-Jaccard** (k=3 seed, unigram fallback; see Tokenization); plan sheets & scanned docs → the visual comparator. A cheap text-density check routes each file. When both signals are cheaply available, the non-primary is a tiebreaker/booster on the same single decision, never a second question.
 - **D9 — Detection runs inside `processDocument`** (pages + downloaded PDF fresh in sandbox), per document child.
 - **D11 — First N pages, N = min(3, pageCount);** doc score = mean matched-page similarity (visual) or whole-doc Jaccard (text).
 - **D12 — Propose above threshold** (text-Jaccard and visual ~0.7 are independent, both tunable); no auto-apply. **Validate against real resubmittal pairs before Phase B.**
@@ -387,7 +413,7 @@ Precedents to model on: the `/plan-sets/:id/replace` route (existing-`plan_set_i
 
 ## 11. Open questions / TODOs
 
-- **Q-detection — Threshold tuning (least-settled).** The text-Jaccard propose cutoff, the visual ~0.7 cutoff, the "looks identical" messaging cutoff (~0.98), N (first pages), the text-density router threshold, and the cross-type doc→plan-set cutoff all need calibration against real resubmittals. **Do the ~10-pair spike before building Phase B detection.**
+- **Q-detection — Threshold tuning (least-settled).** The token *definition* is now pinned (3-gram shingle set-Jaccard, unigram fallback) with **seed values tabled** in §6 ("Detection parameters"), but every number is still a seed: the text propose cutoff (0.60), the shingle size k (3), the visual ~0.7 cutoff, the "looks identical" copy cutoff (~0.98), N (first pages), the text-density router (~100 chars/page), and the cross-type doc→plan-set cutoff all need calibration against real resubmittals. **Do the ~10-pair spike before building Phase B detection.**
 - **Q-textextract — Text-layer extraction dependency.** substation's existing `dv-inventory` is LLM-based; a non-LLM text extractor for the Jaccard route is likely net-new (trivial). Confirm the lib and how it behaves on image-only PDFs (→ routes to visual fallback).
 - **Q-exactdup — Exact-duplicate schema + intra-zip semantics.** `content_sha256` migration on `document_version`/`plan_set_version` (nullable, indexed, no backfill). Confirm the same-batch-sibling canonical-ordering rule (which of two byte-identical siblings is kept vs. flagged) and that surfacing a `keep` option (attach both copies) is desired over always-discard.
 - **Q-crosstype-reverse — Reverse cross-type deferred.** An incoming *plan set* that matches an existing *document*. Rare; not in v1.
