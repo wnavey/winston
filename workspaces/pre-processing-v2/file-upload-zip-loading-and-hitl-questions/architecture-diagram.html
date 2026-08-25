@@ -1,0 +1,612 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>File-Upload Jobs — Architecture Diagram</title>
+<style>
+/* ============================================================
+   spec-kit v4  —  winston HTML spec design system  (inlined)
+   ============================================================ */
+:root{
+  --p50:#f0f5f9;--p100:#dce8f1;--p200:#b9d2e5;--p300:#8cb4d1;--p400:#6397b8;
+  --p500:#517e9e;--p600:#3f6582;--p700:#35526b;--p800:#2d4559;--p900:#273b4b;--p950:#182530;
+  --bg:#f9f9f9;--card:#ffffff;--divider:#dfdfdf;--ink:#1f2937;--muted:#6b7280;--ember:#bb4d00;
+  --new:#15803d;--newbg:#f0fdf4;--newbd:#bbf7d0;
+  --chg:#b45309;--chgbg:#fffbeb;--chgbd:#fde68a;
+  --ret:#b91c1c;--retbg:#fef2f2;--retbd:#fecaca;
+  --sans:'Lexend',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  --serif:'Lora',Georgia,'Times New Roman',serif;
+  --mono:'Fira Code','SF Mono',ui-monospace,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.55;font-size:15px}
+header.masthead{background:linear-gradient(135deg,var(--p800),var(--p600));color:#fff;padding:34px 32px 30px;position:relative;overflow:hidden}
+header.masthead::after{content:"";position:absolute;inset:0;background-image:repeating-linear-gradient(115deg,rgba(255,255,255,.06) 0 1px,transparent 1px 26px);pointer-events:none}
+header.masthead .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--p200)}
+header.masthead h1{font-family:var(--serif);font-weight:600;margin:.35em 0 .2em;font-size:29px;position:relative}
+header.masthead p{margin:0;color:var(--p100);max-width:880px;font-size:15px}
+header.masthead .meta{margin-top:14px;font-size:12.5px;color:var(--p200);font-family:var(--mono)}
+nav.tabs{position:sticky;top:0;z-index:20;display:flex;gap:2px;background:var(--p950);padding:0 20px;box-shadow:0 2px 8px rgba(0,0,0,.12);flex-wrap:wrap}
+nav.tabs button{appearance:none;border:0;background:transparent;color:var(--p200);font-family:var(--sans);font-size:14px;font-weight:500;padding:14px 18px;cursor:pointer;border-bottom:3px solid transparent;transition:all .15s}
+nav.tabs button .n{font-family:var(--mono);font-size:11px;opacity:.7;margin-right:7px}
+nav.tabs button:hover{color:#fff;background:rgba(255,255,255,.04)}
+nav.tabs button.active{color:#fff;border-bottom-color:var(--ember);background:rgba(255,255,255,.06)}
+main{max-width:1140px;margin:0 auto;padding:30px 26px 90px}
+.panel{display:none;animation:fade .25s ease}
+.panel.active{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+h2{font-family:var(--serif);font-weight:600;font-size:23px;margin:34px 0 6px;color:var(--p900)}
+h2:first-child{margin-top:4px}
+h2 .eyebrow{display:block;font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--p500);font-weight:400;margin-bottom:3px}
+h3{font-size:16px;font-weight:600;margin:28px 0 8px;color:var(--p800);display:flex;align-items:center;gap:9px}
+h3 .hn{font-family:var(--mono);font-size:12px;color:#fff;background:var(--p600);border-radius:5px;padding:2px 8px}
+h4{font-size:14px;font-weight:600;margin:18px 0 6px;color:var(--p800)}
+p{margin:.55em 0}
+.lede{font-size:16px;color:var(--p800);border-left:3px solid var(--ember);padding-left:16px;margin:14px 0 20px}
+ul{margin:.4em 0;padding-left:22px}li{margin:.28em 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px solid var(--p100);border-radius:4px;padding:1px 5px;color:var(--p800)}
+.callout{background:var(--p50);border:1px solid var(--p200);border-left:4px solid var(--p500);border-radius:8px;padding:13px 17px;margin:16px 0}
+.callout.ember{background:#fdf6f0;border-color:#f0cba8;border-left-color:var(--ember)}
+.callout.new{background:var(--newbg);border-color:var(--newbd);border-left-color:var(--new)}
+.callout .lab{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--p600);font-weight:600;display:block;margin-bottom:3px}
+.callout.ember .lab{color:var(--ember)} .callout.new .lab{color:var(--new)}
+.legend{display:flex;flex-wrap:wrap;gap:9px 16px;background:#fff;border:1px solid var(--divider);border-radius:10px;padding:12px 16px;margin:16px 0;font-size:12px;align-items:center}
+.legend .k{display:inline-flex;align-items:center;gap:6px}
+.swatch{width:26px;height:14px;border-radius:3px;display:inline-block;border:1px solid rgba(0,0,0,.15)}
+.b{font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.04em;padding:1px 4px;border-radius:3px;text-transform:uppercase;white-space:nowrap}
+.b-pk{background:#fef3c7;color:#92600a;border:1px solid #fde68a}
+.b-fk{background:#e0edfb;color:#2456a8;border:1px solid #c3d8f2}
+.b-nn{background:#eef1f4;color:#4b5563;border:1px solid #d7dde3}
+.b-new{background:var(--newbg);color:var(--new);border:1px solid var(--newbd)}
+.erd{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start;margin:16px 0;background:#fbfcfd;border:1px solid var(--divider);border-radius:12px;padding:18px}
+.ent{border:1px solid var(--divider);border-radius:9px;overflow:hidden;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.05);min-width:236px;flex:0 1 auto}
+.ent .eh{padding:7px 12px;color:#fff;display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.ent .eh .en{font-family:var(--mono);font-size:12.5px;font-weight:700;letter-spacing:.02em}
+.ent .eh .stereo{font-size:9.5px;font-family:var(--mono);opacity:.85;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}
+.ent.exist .eh{background:var(--p700)}
+.ent.newt .eh{background:var(--new)}
+.ent.changed .eh{background:var(--chg)}
+.ent.retired .eh{background:#9ca3af}
+.ent.retired{opacity:.72}
+.ent .row{display:flex;align-items:center;gap:7px;padding:4px 11px;font-size:11.5px;border-top:1px solid #eef1f4}
+.ent .row:first-of-type{border-top:0}
+.ent .row .nm{font-family:var(--mono);font-size:11.5px;color:var(--p900);font-weight:600}
+.ent .row .ty{font-family:var(--mono);font-size:10px;color:var(--muted);margin-left:auto;white-space:nowrap}
+.ent .row.hi{background:#fff9f2}
+.ent .row.strk .nm{text-decoration:line-through;color:var(--muted)}
+.ent .note{padding:5px 11px;font-size:10px;color:var(--muted);font-style:italic;border-top:1px dashed #e5e9ee;background:#fbfcfd}
+.ent .row .gut{flex:0 0 10px;width:10px;text-align:center;font-family:var(--mono);font-size:11px;font-weight:700;color:var(--muted)}
+.ent .row.add{background:var(--newbg);box-shadow:inset 3px 0 0 var(--new)}
+.ent .row.add .gut{color:var(--new)}
+.ent .row.add .nm{color:#166534}
+.ent .row.del{background:var(--retbg);box-shadow:inset 3px 0 0 var(--ret)}
+.ent .row.del .gut{color:var(--ret)}
+.ent .row.del .nm{color:var(--ret);text-decoration:line-through}
+.rels{background:#fff;border:1px solid var(--divider);border-radius:10px;padding:12px 16px;margin:14px 0;font-family:var(--mono);font-size:12px;line-height:1.9}
+.rels .rl{display:block;color:var(--p800)}
+.rels .rl b{color:var(--ember)}
+.rels .cf{color:var(--p500);font-weight:700}
+.rels .cmt{color:var(--muted);font-style:normal;font-family:var(--sans);font-size:11.5px}
+.rels .tag-new{color:var(--new);font-weight:700}
+.rels .tag-ret{color:var(--ret);font-weight:700}
+.rels-h{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--p600);font-weight:700;margin-bottom:6px}
+.uc{margin:16px 0 22px;border:1px solid var(--divider);border-radius:12px;overflow:hidden;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.uc .uch{display:flex;align-items:center;gap:13px;padding:11px 16px;background:linear-gradient(135deg,var(--p700),var(--p600));color:#fff}
+.uc .uch .ucn{flex:0 0 30px;height:30px;border-radius:50%;background:rgba(255,255,255,.2);font-family:var(--mono);font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.uc .uch .uctxt{flex:1}
+.uc .uch .actor{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--p100);display:block;margin-bottom:1px}
+.uc .uch .uct{font-weight:600;font-size:15.5px;font-family:var(--serif)}
+.uc .ucsub{padding:9px 16px;font-size:12.5px;color:var(--p800);background:var(--p50);border-bottom:1px solid var(--p100)}
+.uc .ucdiag{padding:20px 16px 14px}
+.ucnote{padding:2px 16px 14px;font-size:11.5px;color:var(--muted)}
+.ucnote b{color:var(--p700);font-family:var(--mono);font-size:10.5px}
+.dfg{display:flex;flex-wrap:wrap;align-items:stretch;gap:8px 0;margin:0}
+.node{flex:0 0 auto;width:156px;background:#fff;border:1.5px solid var(--p300);border-radius:8px;padding:9px 11px;display:flex;flex-direction:column;gap:3px}
+.node .op{align-self:flex-start;font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:1px 6px;border-radius:3px;border:1px solid;color:#fff;margin-bottom:2px}
+.node .nt{display:block;font-family:var(--mono);font-weight:700;font-size:12px;color:var(--p900);line-height:1.3;word-break:break-word}
+.node .nf{display:block;font-family:var(--mono);font-size:10px;color:var(--muted);line-height:1.45;word-break:break-word}
+.node.created{border-color:var(--new);background:var(--newbg)} .node.created .op{background:var(--new);border-color:var(--new)}
+.node.read{border-color:var(--p400);background:#eef4fb} .node.read .op{background:var(--p500);border-color:var(--p500)}
+.node.event{border-color:var(--ember);background:#fdf6f0} .node.event .op{background:var(--ember);border-color:var(--ember)}
+.node.store{border-style:dashed;border-color:var(--p500);background:#eef3f7} .node.store .op{background:var(--p700);border-color:var(--p700)}
+.edge{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:70px;max-width:104px;padding:0 4px}
+.edge .el{font-size:9px;color:var(--p600);font-family:var(--mono);text-align:center;line-height:1.3;margin-bottom:2px}
+.edge .ar{color:var(--p400);font-size:20px;font-weight:700;line-height:1}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:820px){.grid2{grid-template-columns:1fr}.erd{padding:12px}}
+.card{background:var(--card);border:1px solid var(--divider);border-radius:9px;padding:14px 16px}
+.card.keep{border-top:3px solid var(--new)} .card.change{border-top:3px solid var(--chg)} .card.drop{border-top:3px solid var(--ret)}
+.card strong{display:block;margin-bottom:4px;font-size:13.5px}
+.card ul{font-size:12.5px;margin:2px 0}
+.sm{display:flex;flex-wrap:wrap;gap:7px;align-items:center;margin:14px 0}
+.sm .s{border:1px solid var(--p300);background:var(--p50);border-radius:20px;padding:5px 12px;font-size:11.5px;font-weight:600;color:var(--p800);font-family:var(--mono)}
+.sm .s .who{display:block;font-size:9px;font-family:var(--mono);color:var(--muted);font-weight:400;text-transform:uppercase;letter-spacing:.03em}
+.sm .s.client{border-color:var(--newbd);background:var(--newbg)}
+.sm .s.cc{border-color:#f0cba8;background:#fdf6f0}
+.sm .s.spec{border-color:var(--chgbd);background:var(--chgbg)}
+.sm .a{color:var(--p400);font-weight:700}
+.catgrp{border:1px solid var(--divider);border-radius:10px;overflow:hidden;margin:14px 0;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.catgrp .cath{background:var(--p700);color:#fff;padding:8px 14px;font-family:var(--serif);font-weight:600;font-size:14.5px;display:flex;align-items:center;gap:10px}
+.catgrp .cath .cgl{font-family:var(--mono);font-size:12px;font-weight:700;background:rgba(255,255,255,.2);border-radius:5px;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;flex:0 0 22px}
+.uci{display:flex;gap:9px;align-items:baseline;padding:7px 13px;border-top:1px solid #eef1f4;font-size:13px}
+.uci .uid{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--p600);flex:0 0 26px}
+.uci .utxt{flex:1;color:var(--ink);line-height:1.45}
+.uci .utxt b{color:var(--p900)}
+.uci .star{color:var(--ember);font-weight:700;font-size:12px;flex:0 0 auto;letter-spacing:-1px}
+.uci.later{opacity:.66}
+.utag{font-family:var(--mono);font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;text-transform:uppercase;letter-spacing:.03em;white-space:nowrap;flex:0 0 auto}
+.utag.t-orig{background:#e0edfb;color:#2456a8;border:1px solid #c3d8f2}
+.utag.t-add{background:var(--newbg);color:var(--new);border:1px solid var(--newbd)}
+.storage{background:#eef3f7;border:1px dashed var(--p300);border-radius:8px;padding:9px 13px;font-family:var(--mono);font-size:12px;color:var(--p800);margin:12px 0}
+.storage b{color:var(--ember)}
+.xref{font-size:12px;color:var(--p600);background:var(--p50);border:1px solid var(--p100);border-radius:6px;padding:8px 12px;margin:10px 0}
+.foot{margin-top:44px;padding-top:18px;border-top:1px solid var(--divider);color:var(--muted);font-size:12px;font-family:var(--mono)}
+.rc{display:inline-block;font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;padding:1px 6px;border-radius:5px;border:1px solid;vertical-align:middle;white-space:nowrap}
+.r-ch{background:#eef4fb;color:#2456a8;border-color:#c3d8f2}
+.r-sub{background:#f3eefb;color:#6b3fa0;border-color:#dcccf0}
+.r-fa{background:#e9f7f2;color:#0f7a5f;border-color:#bfe8db}
+.r-db{background:#eaeef2;color:#2d4559;border-color:#c7d2dd}
+.r-store{background:#e6eef3;color:#35526b;border-color:#bcd0dd}
+.r-user{background:#eefaf0;color:#15803d;border-color:#bbf7d0}
+.r-mcp{background:#fdf0e6;color:#b5590d;border-color:#f2d3b3}
+.seq-scroll{overflow-x:auto;margin:16px 0;border:1px solid var(--divider);border-radius:12px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.seq{min-width:840px}
+.seq-head,.seq-body{display:grid;grid-template-columns:30px repeat(6,minmax(104px,1fr))}
+.seq-head{background:linear-gradient(135deg,var(--p800),var(--p700));padding:11px 12px}
+.seq-h{display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;padding:0 4px}
+.seq-h .role{font-family:var(--mono);font-size:8.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--p200)}
+.seq-h .who{font-family:var(--mono);font-size:11px;font-weight:700;color:#fff;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.24);border-radius:6px;padding:3px 9px}
+.seq-body{position:relative;row-gap:11px;padding:16px 12px 20px}
+.seq-life{width:2px;background:var(--p100);justify-self:center;border-radius:2px;z-index:0}
+.seq-num{grid-column:1;justify-self:center;align-self:center;font-family:var(--mono);font-size:10px;font-weight:700;color:#fff;background:var(--p600);min-width:19px;height:19px;padding:0 3px;border-radius:10px;display:flex;align-items:center;justify-content:center;z-index:1}
+.seq-msg{align-self:center;display:flex;flex-direction:row;align-items:center;gap:8px;justify-content:space-between;background:#fff;border:1.5px solid var(--p300);border-radius:7px;padding:5px 10px;z-index:1;min-width:0}
+.seq-msg .mt{display:flex;flex-direction:column;gap:1px;min-width:0}
+.seq-msg .m{font-family:var(--mono);font-size:10.5px;color:var(--p900);font-weight:700;line-height:1.32;word-break:break-word}
+.seq-msg .m2{font-family:var(--mono);font-size:9.5px;color:var(--muted);line-height:1.3;word-break:break-word}
+.seq-msg .dir{font-size:14px;font-weight:700;color:var(--p500);flex:0 0 auto}
+.seq-msg.write{border-color:var(--new);background:var(--newbg)} .seq-msg.write .dir{color:var(--new)}
+.seq-msg.event{border-color:var(--ember);background:#fdf6f0} .seq-msg.event .dir{color:var(--ember)}
+.seq-msg.ret{border-style:dashed;background:#f6f9fb} .seq-msg.ret .m{font-weight:500;color:var(--p600)}
+.seq-msg.self{border-style:dashed;border-color:var(--p400);background:#eef3f7}
+.seq-foot{display:flex;flex-wrap:wrap;gap:8px 15px;padding:9px 14px;border-top:1px solid var(--divider);background:#fbfcfd;font-size:10.5px;font-family:var(--mono);color:var(--muted);align-items:center}
+.seq-foot .sw{display:inline-block;width:20px;height:11px;border-radius:3px;border:1.5px solid var(--p300);vertical-align:middle;margin-right:5px}
+.seq-foot .sw.write{border-color:var(--new);background:var(--newbg)} .seq-foot .sw.event{border-color:var(--ember);background:#fdf6f0}
+.seq-foot .sw.ret{border-style:dashed;background:#f6f9fb} .seq-foot .sw.self{border-style:dashed;border-color:var(--p400);background:#eef3f7}
+.spectable-scroll{overflow-x:auto;margin:14px 0}
+.spectable{width:100%;border-collapse:collapse;font-size:12.5px;background:#fff;border:1px solid var(--divider);border-radius:10px;overflow:hidden}
+.spectable thead th{background:var(--p700);color:#fff;font-family:var(--mono);font-size:10px;letter-spacing:.04em;text-transform:uppercase;text-align:left;padding:8px 12px;font-weight:700;white-space:nowrap}
+.spectable tbody td{padding:7px 12px;border-top:1px solid #eef1f4;vertical-align:top;line-height:1.5}
+.spectable tbody tr:nth-child(even){background:#fbfcfd}
+.spectable td .sn{font-family:var(--mono);font-weight:700;color:#fff;background:var(--p600);border-radius:9px;padding:1px 7px;font-size:10.5px}
+.spectable td code{font-size:11px}
+.spectable td .none{color:var(--muted);font-style:italic;font-family:var(--sans)}
+.spectable td .w{color:var(--new);font-weight:700}
+.spectable td .r{color:var(--p500);font-weight:700}
+.prompt{background:#fbfcfd;border:1px solid var(--p200);border-left:4px solid var(--p500);border-radius:8px;padding:12px 15px;margin:12px 0;font-family:var(--mono);font-size:11.5px;line-height:1.6;color:var(--p900);white-space:pre-wrap;overflow-x:auto}
+.prompt .ph{display:block;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--p600);font-weight:700;margin-bottom:6px}
+</style>
+</head>
+<body>
+
+<header class="masthead">
+  <div class="kicker">PRE-PROCESSING v2 · FILE-UPLOAD JOBS</div>
+  <h1>File-Upload Jobs — Architecture Diagram</h1>
+  <p>Visual companion to <code>DESIGN-SPEC.md</code>. The Inngest ingest flow, the two new DB entities, the logic that decides <em>which</em> question to ask, the logic that decides whether a file is <em>close enough</em> to another, and where staged files (and their rows) live while a decision is pending.</p>
+  <div class="meta">Draft · 2026-08-25 · winston PR #240 · click a tab ↓</div>
+</header>
+
+<nav class="tabs">
+  <button data-tab="flow" class="active"><span class="n">01</span>Inngest flow</button>
+  <button data-tab="model"><span class="n">02</span>Data model</button>
+  <button data-tab="question"><span class="n">03</span>Which question?</button>
+  <button data-tab="similarity"><span class="n">04</span>Close enough?</button>
+  <button data-tab="staging"><span class="n">05</span>Staging &amp; hold</button>
+</nav>
+
+<main>
+
+  <!-- ==================== TAB 01 — INNGEST FLOW ==================== -->
+  <section class="panel active" id="flow">
+    <h2><span class="eyebrow">Change 1 + Change 2</span>The ingest pipeline, end to end</h2>
+    <p class="lede">One dropped file (or zip) traced across cityhall → substation → Inngest sandbox → Storage → Postgres — from the <code>file_upload_job</code> row created at prepare-upload, through classification and the exact-duplicate short-circuit, zip fan-out, per-document detection, the held decision, and resolution.</p>
+
+    <div class="seq-scroll"><div class="seq">
+      <div class="seq-head">
+        <div></div>
+        <div class="seq-h"><span class="role">user</span><span class="who">Uploader</span></div>
+        <div class="seq-h"><span class="role">app</span><span class="who">cityhall</span></div>
+        <div class="seq-h"><span class="role">api</span><span class="who">substation</span></div>
+        <div class="seq-h"><span class="role">fn</span><span class="who">Inngest</span></div>
+        <div class="seq-h"><span class="role">store</span><span class="who">Storage</span></div>
+        <div class="seq-h"><span class="role">db</span><span class="who">Postgres</span></div>
+      </div>
+      <div class="seq-body" style="grid-template-rows:repeat(18,auto)">
+        <div class="seq-life" style="grid-column:2;grid-row:1/-1"></div>
+        <div class="seq-life" style="grid-column:3;grid-row:1/-1"></div>
+        <div class="seq-life" style="grid-column:4;grid-row:1/-1"></div>
+        <div class="seq-life" style="grid-column:5;grid-row:1/-1"></div>
+        <div class="seq-life" style="grid-column:6;grid-row:1/-1"></div>
+        <div class="seq-life" style="grid-column:7;grid-row:1/-1"></div>
+
+        <div class="seq-num" style="grid-row:1">1</div>
+        <div class="seq-msg" style="grid-row:1;grid-column:2/4"><div class="mt"><span class="m">Drop file(s) / zip</span></div><span class="dir">▸</span></div>
+
+        <div class="seq-num" style="grid-row:2">2</div>
+        <div class="seq-msg" style="grid-row:2;grid-column:3/5"><div class="mt"><span class="m">POST prepare-upload</span><span class="m2">submissions.ts:520</span></div><span class="dir">▸</span></div>
+
+        <div class="seq-num" style="grid-row:3">3</div>
+        <div class="seq-msg write" style="grid-row:3;grid-column:4/8"><div class="mt"><span class="m">INSERT file_upload_job (awaiting_upload) + upload_token</span></div><span class="dir">▸</span></div>
+
+        <div class="seq-num" style="grid-row:4">4</div>
+        <div class="seq-msg ret" style="grid-row:4;grid-column:3/5"><span class="dir">◂</span><div class="mt"><span class="m">job_id + signed PUT URL</span></div></div>
+
+        <div class="seq-num" style="grid-row:5">5</div>
+        <div class="seq-msg" style="grid-row:5;grid-column:3/7"><div class="mt"><span class="m">PUT bytes (silent window #1)</span><span class="m2">job shows "Uploading…"</span></div><span class="dir">▸</span></div>
+
+        <div class="seq-num" style="grid-row:6">6</div>
+        <div class="seq-msg" style="grid-row:6;grid-column:3/5"><div class="mt"><span class="m">POST commit-upload</span><span class="m2">submissions.ts:580</span></div><span class="dir">▸</span></div>
+
+        <div class="seq-num" style="grid-row:7">7</div>
+        <div class="seq-msg self" style="grid-row:7;grid-column:4/5"><div class="mt"><span class="m">classifyFile + sha256</span><span class="m2">classify.ts:11</span></div></div>
+
+        <div class="seq-num" style="grid-row:8">8</div>
+        <div class="seq-msg write" style="grid-row:8;grid-column:4/8"><div class="mt"><span class="m">job → classifying; exact-dup lookup (D27)</span><span class="m2">match → INSERT exact_duplicate decision, skip processing</span></div><span class="dir">▸</span></div>
+
+        <div class="seq-num" style="grid-row:9">9</div>
+        <div class="seq-msg event" style="grid-row:9;grid-column:4/6"><div class="mt"><span class="m">dispatch process-file</span></div><span class="dir">▸</span></div>
+
+        <div class="seq-num" style="grid-row:10">10</div>
+        <div class="seq-msg self" style="grid-row:10;grid-column:5/6"><div class="mt"><span class="m">zip triage (window #2)</span><span class="m2">sandbox: unzip, elect winner</span></div></div>
+
+        <div class="seq-num" style="grid-row:11">11</div>
+        <div class="seq-msg write" style="grid-row:11;grid-column:5/8"><div class="mt"><span class="m">spawn child jobs (parent_job_id)</span></div><span class="dir">▸</span></div>
+
+        <div class="seq-num" style="grid-row:12">12</div>
+        <div class="seq-msg self" style="grid-row:12;grid-column:5/6"><div class="mt"><span class="m">processDocument (window #3)</span><span class="m2">rasterize + extract text</span></div></div>
+
+        <div class="seq-num" style="grid-row:13">13</div>
+        <div class="seq-msg self" style="grid-row:13;grid-column:5/6"><div class="mt"><span class="m">flavor-routed similarity</span><span class="m2">argmax vs live set (D24/D25)</span></div></div>
+
+        <div class="seq-num" style="grid-row:14">14</div>
+        <div class="seq-msg write" style="grid-row:14;grid-column:5/8"><div class="mt"><span class="m">≥1 match → INSERT file_upload_decision; job → awaiting_decision (HELD off-slot)</span><span class="m2">none → attach junction, job → done</span></div><span class="dir">▸</span></div>
+
+        <div class="seq-num" style="grid-row:15">15</div>
+        <div class="seq-msg event" style="grid-row:15;grid-column:3/8"><span class="dir">◂</span><div class="mt"><span class="m">Realtime postgres_changes nudge</span><span class="m2">→ invalidateAll() → re-render</span></div></div>
+
+        <div class="seq-num" style="grid-row:16">16</div>
+        <div class="seq-msg" style="grid-row:16;grid-column:2/4"><div class="mt"><span class="m">Answer in "Pending" section</span><span class="m2">version/replace/separate/discard/promote/keep</span></div><span class="dir">▸</span></div>
+
+        <div class="seq-num" style="grid-row:17">17</div>
+        <div class="seq-msg" style="grid-row:17;grid-column:3/5"><div class="mt"><span class="m">POST /file-upload-decisions/:id/answer</span></div><span class="dir">▸</span></div>
+
+        <div class="seq-num" style="grid-row:18">18</div>
+        <div class="seq-msg write" style="grid-row:18;grid-column:4/8"><div class="mt"><span class="m">resolve: attach junction / reuse /replace / delete</span><span class="m2">job → done | superseded | discarded</span></div><span class="dir">▸</span></div>
+      </div>
+      <div class="seq-foot">
+        <span><span class="sw"></span> call</span><span><span class="sw write"></span> DB write</span>
+        <span><span class="sw event"></span> async event / push</span><span><span class="sw ret"></span> return</span>
+        <span><span class="sw self"></span> self / compute in sandbox</span>
+      </div>
+    </div></div>
+
+    <div class="callout ember"><span class="lab">the three silent windows</span>
+      <b>#1</b> browser→storage PUT (minutes), <b>#2</b> zip triage (~2 min), <b>#3</b> per-child processing (minutes). Today all three are invisible until step 8+. The <code>file_upload_job</code> row exists from step 3, so every window becomes a watchable status — that is Change 1 (D3, the loading spine).</div>
+
+    <h3><span class="hn">seams</span>Where the job/decision rows are written</h3>
+    <div class="spectable-scroll"><table class="spectable">
+      <thead><tr><th>Stage</th><th>File:line (today)</th><th>Job / decision write</th></tr></thead>
+      <tbody>
+        <tr><td><span class="sn">2·3</span> prepare-upload</td><td><code>submissions.ts:520-577</code></td><td><code>file_upload_job</code> <span class="w">INSERT</span> (<code>awaiting_upload</code>) beside <code>upload_token</code>; return <code>job_id</code>(s)</td></tr>
+        <tr><td><span class="sn">6·8</span> commit-upload</td><td><code>submissions.ts:580-751</code> · <code>classify.ts:11-29</code></td><td><code>uploaded→classifying</code>; set <code>classification</code>. <b>Do not</b> insert the <code>submission_document</code> junction (off-slot hold). Compute <code>content_sha256</code>; exact-match → <code>exact_duplicate</code> + skip processing</td></tr>
+        <tr><td><span class="sn">9</span> dispatch</td><td><code>handlePlanSetUpload / handleZipUpload / handleDocumentUpload</code></td><td><code>→ processing</code>; plan-set case: hold off-slot + ask when a plan set already exists (P1)</td></tr>
+        <tr><td><span class="sn">10</span> zip triage</td><td><code>zip.ts processZip:42-287</code></td><td>parent <code>→ triaging → extracting</code></td></tr>
+        <tr><td><span class="sn">11</span> child register</td><td><code>registerAsDocument:366 · registerWinnerAsPlanSet · registerDrainageModel</code></td><td>child job <span class="w">INSERT</span> (<code>parent_job_id</code>), link <code>produced_*</code>; defer junction insert</td></tr>
+        <tr><td><span class="sn">13·14</span> detect</td><td>inside <code>processDocument</code></td><td>none above threshold → <span class="w">INSERT</span> junction, job <code>→ done</code>; else <code>file_upload_decision</code> <span class="w">INSERT</span>, job <code>→ awaiting_decision</code></td></tr>
+        <tr><td><span class="sn">18</span> resolve</td><td><b>new endpoint</b></td><td>apply outcome; <code>separate</code>→junction insert; <code>version/replace/promote</code>→reuse <code>/replace</code>; <code>discard</code>→delete; job <code>→ done/superseded/discarded</code></td></tr>
+      </tbody>
+    </table></div>
+
+    <div class="callout"><span class="lab">no new transport</span>
+      There is <b>no Inngest <code>publish()</code></b> anywhere in substation. Every "pause and ask" is modeled as <b>DB row state</b> (job + decision), and delivery is the existing Supabase Realtime <code>postgres_changes</code> → <code>invalidateAll()</code> push (step 15). The zip fan-out already returns child events rather than sending inside a step (<code>zip.ts:181-191</code>) — job/decision writes mirror that replay-safe discipline (Q-idempotency).</div>
+  </section>
+
+  <!-- ==================== TAB 02 — DATA MODEL ==================== -->
+  <section class="panel" id="model">
+    <h2><span class="eyebrow">Two new tables · two amended columns</span>The entities</h2>
+    <p class="lede">Two net-new tables (green) carry the whole feature; the only change to existing pipeline tables is a nullable <code>content_sha256</code> for the exact-duplicate pre-check. Membership in a submission version is still just a <code>submission_document</code> junction row — the feature defers <em>when</em> that row is inserted, not its shape.</p>
+
+    <div class="legend">
+      <span class="k"><span class="swatch" style="background:var(--new)"></span> net-new table</span>
+      <span class="k"><span class="swatch" style="background:var(--chg)"></span> existing table, new column</span>
+      <span class="k"><span class="swatch" style="background:var(--p700)"></span> existing (unchanged)</span>
+      <span class="k"><span class="b b-pk">PK</span></span><span class="k"><span class="b b-fk">FK</span></span>
+      <span class="k"><span class="b b-nn">NN</span> not-null</span><span class="k"><span class="b b-new">NEW</span></span>
+    </div>
+
+    <div class="erd">
+      <div class="ent newt">
+        <div class="eh"><span class="en">file_upload_job</span><span class="stereo">NEW · the spine</span></div>
+        <div class="row"><span class="b b-pk">PK</span><span class="nm">id</span><span class="ty">uuid</span></div>
+        <div class="row"><span class="nm">upload_type</span><span class="ty">text · 'site_plan'</span></div>
+        <div class="row"><span class="b b-fk">FK</span><span class="b b-nn">NN</span><span class="nm">project_id</span><span class="ty">→ project</span></div>
+        <div class="row"><span class="b b-fk">FK</span><span class="nm">submission_version_id</span><span class="ty">nullable</span></div>
+        <div class="row hi"><span class="b b-fk">FK</span><span class="nm">parent_job_id</span><span class="ty">→ self · nullable</span></div>
+        <div class="row"><span class="nm">source_file_name</span><span class="ty">text</span></div>
+        <div class="row"><span class="nm">source_file_size</span><span class="ty">bigint</span></div>
+        <div class="row"><span class="nm">storage_path</span><span class="ty">text</span></div>
+        <div class="row"><span class="nm">classification</span><span class="ty">text · nullable</span></div>
+        <div class="row hi"><span class="nm">status</span><span class="ty">text · lifecycle</span></div>
+        <div class="row"><span class="b b-fk">FK</span><span class="nm">produced_document_id</span><span class="ty">nullable</span></div>
+        <div class="row"><span class="b b-fk">FK</span><span class="nm">produced_plan_set_id</span><span class="ty">nullable</span></div>
+        <div class="row"><span class="nm">error</span><span class="ty">text · nullable</span></div>
+        <div class="row"><span class="nm">created / started / finished / updated_at</span><span class="ty">timestamptz</span></div>
+        <div class="note">one row per file being ingested; zip children point back via parent_job_id</div>
+      </div>
+
+      <div class="ent newt">
+        <div class="eh"><span class="en">file_upload_decision</span><span class="stereo">NEW · the question</span></div>
+        <div class="row"><span class="b b-pk">PK</span><span class="nm">id</span><span class="ty">uuid</span></div>
+        <div class="row"><span class="b b-fk">FK</span><span class="b b-nn">NN</span><span class="nm">job_id</span><span class="ty">→ file_upload_job</span></div>
+        <div class="row hi"><span class="nm">question_type</span><span class="ty">text · registry key</span></div>
+        <div class="row"><span class="nm">payload</span><span class="ty">jsonb</span></div>
+        <div class="row hi"><span class="nm">status</span><span class="ty">pending·answered·dismissed</span></div>
+        <div class="row"><span class="nm">answer</span><span class="ty">jsonb · nullable</span></div>
+        <div class="row"><span class="nm">created / answered_at</span><span class="ty">timestamptz</span></div>
+        <div class="row"><span class="b b-fk">FK</span><span class="nm">answered_by</span><span class="ty">→ user · nullable</span></div>
+        <div class="note">answer is race-safe: UPDATE … WHERE status='pending' → 2nd tab gets 409</div>
+      </div>
+
+      <div class="ent changed">
+        <div class="eh"><span class="en">document_version</span><span class="stereo">MODIFIED</span></div>
+        <div class="row"><span class="gut"></span><span class="b b-pk">PK</span><span class="nm">id</span><span class="ty">uuid</span></div>
+        <div class="row"><span class="gut"></span><span class="b b-fk">FK</span><span class="nm">document_id</span><span class="ty">→ document</span></div>
+        <div class="row"><span class="gut"></span><span class="nm">processing_state</span><span class="ty">pending→…→processed</span></div>
+        <div class="row add"><span class="gut">+</span><span class="b b-new">NEW</span><span class="nm">content_sha256</span><span class="ty">text · nullable · no backfill</span></div>
+        <div class="note">null hash (legacy) → skip exact-check, fall to similarity</div>
+      </div>
+
+      <div class="ent changed">
+        <div class="eh"><span class="en">plan_set_version</span><span class="stereo">MODIFIED</span></div>
+        <div class="row"><span class="gut"></span><span class="b b-pk">PK</span><span class="nm">id</span><span class="ty">uuid</span></div>
+        <div class="row"><span class="gut"></span><span class="b b-fk">FK</span><span class="nm">plan_set_id</span><span class="ty">→ plan_set</span></div>
+        <div class="row"><span class="gut"></span><span class="nm">processing_state</span><span class="ty">text</span></div>
+        <div class="row add"><span class="gut">+</span><span class="b b-new">NEW</span><span class="nm">content_sha256</span><span class="ty">text · nullable · no backfill</span></div>
+        <div class="note">idx_plan_set_version_plan_set_id already exists (baseline:487)</div>
+      </div>
+
+      <div class="ent exist">
+        <div class="eh"><span class="en">submission_document</span><span class="stereo">UNCHANGED · junction</span></div>
+        <div class="row"><span class="b b-pk">PK</span><span class="b b-fk">FK</span><span class="nm">submission_version_id</span><span class="ty">→ submission_version</span></div>
+        <div class="row"><span class="b b-pk">PK</span><span class="b b-fk">FK</span><span class="nm">document_version_id</span><span class="ty">→ document_version</span></div>
+        <div class="note">baseline:697-701 · no status column. The off-slot hold defers this INSERT — no schema change</div>
+      </div>
+
+      <div class="ent exist">
+        <div class="eh"><span class="en">submission_plan_set</span><span class="stereo">UNCHANGED · junction</span></div>
+        <div class="row"><span class="b b-pk">PK</span><span class="b b-fk">FK</span><span class="nm">submission_version_id</span><span class="ty">→ submission_version</span></div>
+        <div class="row"><span class="b b-pk">PK</span><span class="b b-fk">FK</span><span class="nm">plan_set_version_id</span><span class="ty">→ plan_set_version</span></div>
+        <div class="note">baseline:683-687 · already permits a transient second link — no schema change for the held plan set</div>
+      </div>
+    </div>
+
+    <div class="rels">
+      <div class="rels-h">Relationships (crow's foot)</div>
+      <span class="rl">file_upload_job <span class="cf">‖──&lt;</span> file_upload_job <span class="tag-new">[NEW]</span> <span class="cmt">— zip → children via parent_job_id (one-level tree)</span></span>
+      <span class="rl">file_upload_job <span class="cf">‖──&lt;</span> file_upload_decision <span class="tag-new">[NEW]</span> <span class="cmt">— 1:N; at most one pending at a time (D25 argmax)</span></span>
+      <span class="rl">file_upload_job <span class="cf">&gt;──?</span> document <span class="tag-new">[NEW]</span> <span class="cmt">— produced_document_id, set once known</span></span>
+      <span class="rl">file_upload_job <span class="cf">&gt;──?</span> plan_set <span class="tag-new">[NEW]</span> <span class="cmt">— produced_plan_set_id, set once known</span></span>
+      <span class="rl">file_upload_job <span class="cf">&gt;──?</span> submission_version <span class="tag-new">[NEW]</span> <span class="cmt">— nullable → generalizes beyond submissions (D-reuse)</span></span>
+      <span class="rl">submission_version <span class="cf">‖──&lt;</span> submission_document <span class="cf">&gt;──‖</span> document_version <span class="cmt">— membership; INSERT deferred by the hold (D15)</span></span>
+    </div>
+
+    <div class="callout new"><span class="lab">why two tables, not JSONB-on-job</span>
+      The ask/answer pair is an addressable, auditable resource with race-safe resolution (<code>WHERE status='pending'</code>), and a job can carry a sequence of questions over time. <code>question_type</code> keys a closed registry — a substation detector, a cityhall component, and a resolver per type — mirroring the existing Rich Card Message registry (<code>rcm/components.ts</code>). New ambiguities are new types on the same transport (D-tables, D-registry).</div>
+  </section>
+
+  <!-- ==================== TAB 03 — WHICH QUESTION ==================== -->
+  <section class="panel" id="question">
+    <h2><span class="eyebrow">Precedence + argmax</span>Deciding which question to ask</h2>
+    <p class="lede">Every incoming file runs a fixed precedence: exact hash first (certain, short-circuits), then one flavor-routed similarity pass that produces <em>at most one</em> decision against the single best candidate. If nothing clears threshold, no question is asked and the file auto-attaches.</p>
+
+    <div class="uc">
+      <div class="uch"><div class="ucn">▸</div><div class="uctxt">
+        <span class="actor">substation · per incoming file X on submission version S</span>
+        <span class="uct">Precedence pipeline → one decision, or none</span>
+      </div></div>
+      <div class="ucsub">exact-hash → (else) flavor-routed similarity → (else) auto-attach. At most one open decision per file.</div>
+      <div class="ucdiag"><div class="dfg">
+        <div class="node read"><span class="op">read</span><span class="nt">incoming file X</span><span class="nf">bytes + rasters + text</span></div>
+        <div class="edge"><span class="el">① sha256</span><span class="ar">→</span></div>
+        <div class="node read"><span class="op">match</span><span class="nt">exact-dup check</span><span class="nf">content_sha256 = X<br>&amp; state=completed</span></div>
+        <div class="edge"><span class="el">② no exact<br>match</span><span class="ar">→</span></div>
+        <div class="node read"><span class="op">route</span><span class="nt">flavor router</span><span class="nf">text-density check</span></div>
+        <div class="edge"><span class="el">③ score vs<br>every candidate</span><span class="ar">→</span></div>
+        <div class="node read"><span class="op">argmax</span><span class="nt">single winner</span><span class="nf">drop &lt; threshold;<br>pick top score</span></div>
+        <div class="edge"><span class="el">④ ≥1 above<br>threshold</span><span class="ar">→</span></div>
+        <div class="node created"><span class="op">insert</span><span class="nt">file_upload_decision</span><span class="nf">1 row · job →<br>awaiting_decision</span></div>
+      </div></div>
+      <div class="ucnote"><b>branch ①</b> exact match → <code>exact_duplicate</code> decision (discard/keep), <b>skip</b> rasterization + similarity. &nbsp; <b>branch ④-none</b> nothing above threshold → no decision; junction inserted, job → <code>done</code>.</div>
+    </div>
+
+    <h3><span class="hn">map</span>Condition → question_type → options</h3>
+    <div class="spectable-scroll"><table class="spectable">
+      <thead><tr><th>Order</th><th>question_type</th><th>Fires when</th><th>Options</th></tr></thead>
+      <tbody>
+        <tr><td><span class="sn">1st</span></td><td><code>exact_duplicate</code></td><td>incoming file is <b>byte-for-byte identical</b> (sha256) to an existing file (or an already-registered same-batch sibling)</td><td><code>discard</code> · <code>keep</code></td></tr>
+        <tr><td><span class="sn">then</span></td><td><code>doc_version_or_separate</code></td><td>incoming <b>document</b> resembles an existing <b>document</b> (text-Jaccard, usually)</td><td><code>version</code> · <code>replace</code> · <code>separate</code> · <code>discard</code></td></tr>
+        <tr><td><span class="sn">then</span></td><td><code>plan_set_version_or_discard</code></td><td>incoming <b>plan set</b> arrives and one already exists</td><td><code>version</code> · <code>replace</code> · <code>discard</code> <span class="none">(no separate — single slot)</span></td></tr>
+        <tr><td><span class="sn">then</span></td><td><code>doc_is_plan_set_version</code></td><td>incoming <b>document</b> matches the live <b>plan set's sheets</b> (misclassification fix, visual)</td><td><code>promote</code> · <code>separate</code> · <code>discard</code></td></tr>
+      </tbody>
+    </table></div>
+    <div class="callout"><span class="lab">argmax spans types</span>
+      The best doc↔doc match and the doc→plan-set cross-type match <b>compete</b> — the single global winner is asked (D25). <b>Wrong-top-1 is accepted</b>: if the true match is 2nd place and the user answers <code>separate</code>, the real match is missed — rare, and far better UX than a "is this A? …is this Z?" barrage. The <code>separate</code>/<code>keep</code> options cleanly cover "no, these differ."</div>
+
+    <h3><span class="hn">candidate set</span>What X is scored against</h3>
+    <div class="prompt"><span class="ph">candidates(incoming file X on svn S)</span>  submission_document(S) → document_version → document      (doc↔doc)
+  + the submission's current-live plan set                  (doc→plan-set)
+  EXCLUDE:  X's own document
+            entities produced by a same-zip-batch sibling
+              (job.parent_job_id == X.job.parent_job_id, via produced_*)
+  FILTER:   processing_state = 'completed'    (rasters/text exist)
+            rasterizable/text-bearing type    (pdf OR image/*; not binary/zip/model)</div>
+    <div class="callout new"><span class="lab">why the job records produced_*</span>
+      The <b>same-zip-batch exclusion</b> is only expressible because the job carries <code>parent_job_id</code> + <code>produced_document_id/plan_set_id</code> — there is no batch key in the DB today. A serially-uploaded earlier file has no shared <code>parent_job_id</code>, so it stays a candidate: "compare serial D→E, but not zip-mates D↔E" falls out for free.</div>
+
+    <h3><span class="hn">resolver</span>Answer → operation → terminal status</h3>
+    <div class="spectable-scroll"><table class="spectable">
+      <thead><tr><th>choice</th><th>Operation (on a HELD entity — D15)</th><th>Job status</th></tr></thead>
+      <tbody>
+        <tr><td><code>version</code></td><td>new <code>document_version</code> under candidate's <code>document_id</code> (reuse <code>/documents/:id/replace</code>) + point junction; delete held net-new doc; prior soft-retired</td><td><span class="w">done</span></td></tr>
+        <tr><td><code>replace</code></td><td>as <code>version</code>, prior superseded as non-current head</td><td><span class="w">superseded</span></td></tr>
+        <tr><td><code>separate</code></td><td>attach held file — INSERT its <code>submission_document</code> junction (today's default, deferred to here)</td><td><span class="w">done</span></td></tr>
+        <tr><td><code>discard</code></td><td><b>hard delete</b> held doc/version (or plan-set bytes) + storage object — nothing was ever attached</td><td><span class="w">discarded</span></td></tr>
+        <tr><td><code>keep</code></td><td>exact-dup only — attach as separate despite identical bytes (user wants both)</td><td><span class="w">done</span></td></tr>
+        <tr><td><code>promote</code></td><td>doc→plan-set — delete held net-new doc; route bytes through plan-set versioning under the <b>existing</b> <code>plan_set_id</code> (reuse <code>/plan-sets/:id/replace</code> shape, D26)</td><td><span class="w">superseded</span></td></tr>
+      </tbody>
+    </table></div>
+    <div class="callout ember"><span class="lab">only discard deletes</span>
+      <code>version</code> vs <code>replace</code> differ only in prior-version retention; both write under the candidate's <code>document_id</code>. Only <code>discard</code> hard-deletes (D17). Because detection runs while the file is <b>held</b>, every branch commits or discards a held entity — no live duplicate ever existed.</div>
+  </section>
+
+  <!-- ==================== TAB 04 — CLOSE ENOUGH ==================== -->
+  <section class="panel" id="similarity">
+    <h2><span class="eyebrow">Flavor-routed · no LLM</span>Deciding whether a file is "close enough"</h2>
+    <p class="lede">The router picks a comparator by the one property that decides which signal is trustworthy: does the incoming PDF have a usable text layer? Revised forms share text; plan sheets share pixels. Both comparators are deterministic and already in the codebase — no vision call.</p>
+
+    <div class="uc">
+      <div class="uch"><div class="ucn">R</div><div class="uctxt">
+        <span class="actor">inside processDocument · sandbox alive, rasters + PDF co-located</span>
+        <span class="uct">The router: text-density → one route</span>
+      </div></div>
+      <div class="ucsub">chars/page over first N pages, N = min(3, pageCount). Above threshold → text-native. Plan sheets always visual.</div>
+      <div class="ucdiag"><div class="dfg">
+        <div class="node read"><span class="op">read</span><span class="nt">incoming PDF</span><span class="nf">first N pages</span></div>
+        <div class="edge"><span class="el">measure<br>chars/page</span><span class="ar">→</span></div>
+        <div class="node read"><span class="op">route</span><span class="nt">text-density gate</span><span class="nf">classification +<br>text layer?</span></div>
+      </div></div>
+      <div class="ucnote"><b>note</b> — text-native document → text route · plan sheet / scanned image-only → visual route. A text-native doc also has rasters, so the visual score is a cheap tiebreaker/booster on the <b>same</b> decision — never a second question (D24).</div>
+    </div>
+
+    <div class="grid2">
+      <div class="uc" style="margin:0">
+        <div class="uch"><div class="ucn">T</div><div class="uctxt">
+          <span class="actor">text-native documents (the common case)</span>
+          <span class="uct">Text route — token/shingle Jaccard</span>
+        </div></div>
+        <div class="ucdiag"><div class="dfg">
+          <div class="node read"><span class="op">extract</span><span class="nt">text layer</span><span class="nf">first N pages</span></div>
+          <div class="edge"><span class="el">normalize</span><span class="ar">→</span></div>
+          <div class="node read"><span class="op">compute</span><span class="nt">Jaccard</span><span class="nf">whole-doc<br>token overlap</span></div>
+        </div></div>
+        <div class="ucnote"><b>why</b> — answers "is this a revised version of that doc" directly. Revisions share most text; unrelated forms don't, regardless of shared letterhead.</div>
+      </div>
+
+      <div class="uc" style="margin:0">
+        <div class="uch"><div class="ucn">V</div><div class="uctxt">
+          <span class="actor">plan sheets + scanned/image-only PDFs</span>
+          <span class="uct">Visual route — reused sharp comparator</span>
+        </div></div>
+        <div class="ucdiag"><div class="dfg">
+          <div class="node read"><span class="op">resize</span><span class="nt">sharp greyscale</span><span class="nf">256×170</span></div>
+          <div class="edge"><span class="el">per page</span><span class="ar">→</span></div>
+          <div class="node read"><span class="op">compute</span><span class="nt">computeSheetSimilarity</span><span class="nf">max(NCC,<br>pixel-match)</span></div>
+          <div class="edge"><span class="el">aggregate</span><span class="ar">→</span></div>
+          <div class="node read"><span class="op">score</span><span class="nt">matchSheets</span><span class="nf">mean matched<br>similarity</span></div>
+        </div></div>
+        <div class="ucnote"><b>reuse</b> — <code>similarity.ts</code> + <code>match-sheets.ts</code> (<code>MIN_MATCH_SIMILARITY=0.5</code>), unchanged. Documents persist per-page JPEGs, so the same comparator crosses the doc→plan-set type boundary.</div>
+      </div>
+    </div>
+
+    <h3><span class="hn">thresholds</span>Cutoffs — all tunable, all unvalidated</h3>
+    <div class="legend">
+      <span class="k"><span class="utag t-add">N</span> first pages = min(3, pageCount)</span>
+      <span class="k"><span class="utag t-add">text</span> Jaccard propose cutoff</span>
+      <span class="k"><span class="utag t-add">visual</span> ~0.7 (never validated)</span>
+      <span class="k"><span class="utag t-add">identical</span> ~0.98 "looks identical" copy</span>
+      <span class="k"><span class="utag t-add">router</span> text-density threshold</span>
+    </div>
+    <div class="callout ember"><span class="lab">highest-leverage de-risk (Q-detection)</span>
+      The <code>0.7</code> visual number was never validated, and greyscale raster is the <b>weakest</b> signal for text forms — which is exactly why the trace's near-identical-name, content-revised documents route to text. <b>Validate every cutoff against ~10 real resubmittal pairs before building Phase B detection.</b> Start with pure per-flavor routing; add the visual/text booster only if validation shows false negatives.</div>
+
+    <div class="callout new"><span class="lab">certainty vs. fuzziness — why both exist</span>
+      The <b>exact-duplicate hash</b> (Tab 03, step ①) is a separate, earlier check: 0 false positives and it <b>short-circuits</b> rasterization for true re-uploads. Similarity ≈1.0 would eventually catch identical bytes too, but only after paying the full rasterization cost — so the hash owns <em>certainty + skip</em>, and these fuzzy routes own <em>near-duplicate / revised-version</em> detection (D22/D27).</div>
+  </section>
+
+  <!-- ==================== TAB 05 — STAGING & HOLD ==================== -->
+  <section class="panel" id="staging">
+    <h2><span class="eyebrow">Off-slot hold · attach-only-on-resolve</span>Where staged files &amp; their rows live</h2>
+    <p class="lede">The core invariant: an incoming file is <em>never</em> in the live submission set until its decision resolves. A held document is fully processed but its junction row is withheld; a held plan set's bytes are parked at a staging key. No live duplicate ever appears (D15).</p>
+
+    <h3><span class="hn">where</span>Physical storage of the bytes</h3>
+    <div class="storage"><b>staging</b> · <code>…/uploads/{job_id}/…</code> — landing zone from the browser PUT; <code>file_upload_job.storage_path</code> points here first</div>
+    <div class="storage"><b>held document</b> · normal document location — bytes + per-page rasters are fully written; only the <code>submission_document</code> junction row is withheld. Rasters are already available for the Pending-section thumbnails (no re-upload)</div>
+    <div class="storage"><b>held plan set</b> · <code>pending/…</code> off-slot key — bytes are NOT moved to the canonical single-occupancy source key until <code>version/replace/keep</code> resolves. The existing plan set stays live; <code>produced_plan_set_id</code> stays null</div>
+    <div class="callout ember"><span class="lab">verify at build time</span>
+      The exact <code>storage-keys.ts</code> helper (<code>planSetSourceKey</code>) was not re-verified in this pass. The single-occupancy constraint is only on the canonical <em>source key</em>; the <code>submission_plan_set</code> junction already permits a transient second link, so the held plan set needs no schema change — confirm the helper name before relying on the <code>pending/…</code> key.</div>
+
+    <h3><span class="hn">rows</span>What each held file's rows look like</h3>
+    <div class="uc">
+      <div class="uch"><div class="ucn">H</div><div class="uctxt">
+        <span class="actor">detection found a candidate above threshold</span>
+        <span class="uct">Hold: everything written except the junction</span>
+      </div></div>
+      <div class="ucdiag"><div class="dfg">
+        <div class="node created"><span class="op">exists</span><span class="nt">document_version</span><span class="nf">processed ·<br>content_sha256 set</span></div>
+        <div class="edge"><span class="el">but</span><span class="ar">→</span></div>
+        <div class="node read"><span class="op">withheld</span><span class="nt">submission_document</span><span class="nf">junction NOT<br>inserted (D15)</span></div>
+        <div class="edge"><span class="el">so</span><span class="ar">→</span></div>
+        <div class="node created"><span class="op">insert</span><span class="nt">file_upload_decision</span><span class="nf">pending ·<br>job awaiting_decision</span></div>
+        <div class="edge"><span class="el">on<br>resolve</span><span class="ar">→</span></div>
+        <div class="node created"><span class="op">insert</span><span class="nt">submission_document</span><span class="nf">only if separate/<br>keep chosen</span></div>
+      </div></div>
+      <div class="ucnote"><b>consequence</b> — the live document list appears to gain the file only after processing + detection clear. The job-row loading surface covers that in-flight window, so the list never shows a half-processed or duplicate document.</div>
+    </div>
+
+    <h3><span class="hn">lifecycle</span>file_upload_job.status</h3>
+    <div class="sm">
+      <span class="s cc">awaiting_upload<span class="who">prepare</span></span><span class="a">→</span>
+      <span class="s cc">uploaded<span class="who">PUT done</span></span><span class="a">→</span>
+      <span class="s cc">classifying<span class="who">sha256 + type</span></span><span class="a">→</span>
+      <span class="s spec">triaging<span class="who">zip only</span></span><span class="a">→</span>
+      <span class="s spec">extracting<span class="who">spawn children</span></span><span class="a">→</span>
+      <span class="s cc">processing<span class="who">rasterize/text</span></span><span class="a">→</span>
+      <span class="s spec">awaiting_decision<span class="who">HELD off-slot</span></span><span class="a">→</span>
+      <span class="s client">done<span class="who">attached/versioned</span></span>
+    </div>
+    <div class="sm">
+      <span class="s spec">awaiting_decision</span><span class="a">→</span>
+      <span class="s client">discarded<span class="who">hard delete</span></span>
+      <span class="a" style="margin:0 10px">|</span>
+      <span class="s client">superseded<span class="who">replace/promote</span></span>
+      <span class="a" style="margin:0 10px">|</span>
+      <span class="s client">failed<span class="who">onFailure</span></span>
+    </div>
+    <div class="callout"><span class="lab">the tree proceeds independently</span>
+      A decision blocks only its own job's finalization (D2) — never the parent zip or sibling children, which reach <code>done</code> on their own. The parent zip → <code>done</code> at end of extract; "still processing" is derived from the child tree (D5). No stuck-processing watchdog in v1 (D7).</div>
+
+    <h3><span class="hn">surface</span>Where the held file is visible to the user</h3>
+    <div class="callout new"><span class="lab">the "Pending" section (D20)</span>
+      A held decision renders inline on the current submission version's page, directly above the "Plan Set" row — <b>not</b> a modal. One full-width row per open decision, stacked when several are open. Version/replace/promote rows show <b>side-by-side thumbnails</b> (incoming page-1 raster vs. the matched existing file's, whose thumbnail links to its document/plan-set page). Each row's top-right <b>'X' = discard</b>, gated by a <em>"This will discard the uploaded file {filename}. Are you sure?"</em> confirm modal. Supabase Realtime keeps the section live — rows appear as detection creates decisions, disappear as they resolve. <b>No timeout</b> (D18): the held file waits off-slot until answered.</div>
+
+    <div class="foot">winston PR #240 · companion to DESIGN-SPEC.md · built from spec-kit v4 · all file:line anchors are re-confirm targets, not gospel (see spec Appendix)</div>
+  </section>
+
+</main>
+
+<script>
+  const btns=document.querySelectorAll('nav.tabs button');
+  const panels=document.querySelectorAll('.panel');
+  const IDS=['flow','model','question','similarity','staging'];
+  function show(id){
+    btns.forEach(b=>b.classList.toggle('active',b.dataset.tab===id));
+    panels.forEach(p=>p.classList.toggle('active',p.id===id));
+    if(location.hash.slice(1)!==id) history.replaceState(null,'','#'+id);
+    window.scrollTo({top:0,behavior:'smooth'});
+  }
+  btns.forEach(b=>b.addEventListener('click',()=>show(b.dataset.tab)));
+  const initial=location.hash.slice(1);
+  if(IDS.includes(initial)) show(initial);
+</script>
+</body>
+</html>
