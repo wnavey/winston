@@ -1,11 +1,13 @@
 # File-Upload Jobs — Streamed Loading UX + HITL "Version / Replace / Separate / Discard" Questions
 
-**Status:** Draft v3 — folds the 2026-08-25 audit (attach-on-resolve for documents, flavor-routed detection, single-decision argmax, plan-set-lineage resolved, stale citation fixed)
+**Status:** Draft v4 — adds the question-surface UX (inline "Pending" section) on top of v3's 2026-08-25 audit (attach-on-resolve, flavor-routed detection, single-decision argmax, plan-set-lineage resolved, stale citation fixed)
 **Date:** 2026-08-25
 **Repos touched:** `substation` (new `file_upload_job` + `file_upload_decision` tables; write job/decision rows through the upload → classify → process → zip-fan-out pipeline; a **flavor-routed** similarity step — text-layer Jaccard for text-native documents, the reused `sharp` `computeSheetSimilarity`/`matchSheets` comparator for plan sheets and scanned/image-only PDFs; a decision-resolve endpoint), `cityhall` (subscribe to jobs/decisions over Supabase Realtime; render a per-job/zip-tree loading surface + per-file banner + submission-level "needs input" aggregate; render decisions via a `question_type → component` registry)
 **Repos NOT touched:** `conductor` (not on the upload/triage path), `bureau`, `radar`, `navalbase`
 **Parent:** `../DESIGN-SPEC.md` (Pre-Processing v2)
 **Supersedes / absorbs:** `../new-features/clarifying-questions/DESIGN-SPEC.md` — that spec's async **Context 2** (`preprocessing_question` table + Inngest `waitForEvent`) is generalized here into the durable `file_upload_job` / `file_upload_decision` model. Its `kind` enum becomes `question_type`. Its safe-default/timeout principle is **overridden** (D18: no timeouts). See [§10](#10-relationship-to-the-clarifying-questions-spec).
+
+> **Revision note (v4 — question-surface UX).** Open decisions render as an inline **"Pending" section** on the current (latest) submission version's page, directly **above the "Plan Set" row** — **not** a modal. **One full-width row per open decision**, stacked when several are open (e.g. a zip that produced several matches). Version/replace/promote rows show **side-by-side thumbnails**; the existing file's thumbnail **links to its document/plan-set page**. Each row's top-right **'X' = discard**, gated by a *"This will discard the uploaded file {filename}. Are you sure?"* confirmation modal. Supersedes v3's per-file-banner + `Lightbox`. See [§6 → Question surface](#question-surface--the-pending-section-on-the-submission-page-d20-revised-v4).
 
 > **Revision note (v3 — folds the 2026-08-25 audit).**
 > - **Documents are now held off-slot ("attach-only-on-resolve," D15).** The incoming document's `submission_document` junction row is **not inserted** until detection clears (no candidate) or the decision resolves. This makes documents symmetric with plan sets (both held off-slot) and **structurally prevents a live duplicate from ever appearing** — the earlier "undo-and-reattach" created the duplicate first. No schema change: it defers one existing INSERT out of `commit-upload` to the end of the detection step.
@@ -285,7 +287,21 @@ Detection runs while the incoming file is **held** (document: junction deferred;
 
 - **Detection + decision creation:** inside `processDocument` (doc rasters/text fresh in sandbox) for the document/cross-type cases; at `handlePlanSetUpload` (hold off-slot + ask) for the plan-set case. Writes the `file_upload_decision`, flips the job to `awaiting_decision`.
 - **Resolution:** a new substation resolve endpoint + a thin cityhall proxy; `version`/`replace`/`promote` reuse the existing document/plan-set `/replace` machinery; `separate` attaches (junction insert); `discard` deletes.
-- **Surfacing (D19/D20/C2):** **non-blocking to siblings and the rest of the page** — a per-file banner on the file's (held) job card *and* a submission-level "N files need your input" aggregate on the submission page; clicking opens the `question_type` component in a `Lightbox`. **No timeout** (D18): the decision persists until answered; the held file simply stays a pending job (off-slot) until then.
+- **Surfacing:** open decisions render inline as stacked full-width rows in a **"Pending" section** on the current submission version's page (see the next subsection). **No timeout** (D18): the decision persists until answered; the held file stays off-slot until then.
+
+### Question surface — the "Pending" section on the submission page (D20, revised v4)
+
+Open decisions render **inline on the current (latest) submission version's page** (`/project/:projectId/submission/:submissionId`) — **not** in a modal/`Lightbox`. A **"Pending" section** appears **directly above the "Plan Set" row** (rendered before the plan-set cards block at `cityhall …/submission/[submissionId]/+page.svelte:681`):
+
+- **One full-width row per open decision.** Multiple decisions can be open at once (e.g. a zip that produced several matches); the rows **stack** vertically in the section. The section is titled **"Pending"** and is not rendered when empty.
+- **Version / replace / promote questions show side-by-side thumbnails** — the incoming file (page-1 raster) vs. the matched existing file (page-1 raster; both already persisted). The **existing file's thumbnail is a link** to its page so the user can inspect the candidate before deciding: a document → `/project/:projectId/document/:documentId`, a plan set → `/project/:projectId/plan-set/:planSetId`. Cross-type (doc→plan-set) uses the same side-by-side pattern (incoming doc page vs. matched plan-set sheet; the existing thumbnail links to the plan set).
+- **Actions** are the `question_type`'s option buttons (version / replace / separate / discard / promote per §4), inline on the row.
+- **Each row has an 'X' (top-right) = discard.** Clicking it raises a **confirmation modal**: *"This will discard the uploaded file {filename}. Are you sure?"* On confirm → the `discard` resolver (hard delete the held file + storage object, D17); job → `discarded`; the row leaves the Pending section. On cancel → nothing changes. There is no silent dismissal — the 'X' path **is** the `discard` outcome.
+- **Association + liveness:** each row is a `file_upload_decision` whose `job.submission_version_id` = the page's (latest) submission version; Supabase Realtime keeps the section live — rows appear as detection creates decisions and disappear as they resolve.
+
+**Payload additions for rendering.** So the side-by-side thumbnails draw without an extra fetch, `file_upload_decision.payload` carries page-1 raster paths for **both** sides (incoming + candidate), the candidate's `document_id`/`plan_set_id` for the link, and `file_name` for the confirm-modal copy.
+
+This **supersedes v3's "per-file banner + `Lightbox`"** surfacing: the canonical surface is the inline Pending section. The zip-tree "⚠ needs your input" marker (§5) remains as an echo/pointer, but the question is answered in its Pending row.
 
 ---
 
@@ -349,8 +365,8 @@ Precedents to model on: the `/plan-sets/:id/replace` route (existing-`plan_set_i
 
 **Interaction / infra**
 - **D18 — No decision timeouts.** A decision persists until answered; the UI makes it clearly unanswered. Never auto-defaults (overrides the clarifying-questions safe-default rule).
-- **D19 — A held file is fully processed but off-slot** (not in the live set) while `awaiting_decision`; it surfaces as a pending job needing input. (v3: revised from "fully usable" — the whole point of the off-slot hold is that the held file is *not* live until resolved.)
-- **D20 — Non-blocking surfacing:** a per-file banner + a submission-level "N files need input" aggregate; `Lightbox` on click. Non-blocking to siblings and the rest of the page (the held file itself waits off-slot). (C2)
+- **D19 — A held file is fully processed but off-slot** (not in the live set) while `awaiting_decision`; it appears only as a row in the **"Pending" section** (D20), never in the live document/plan-set lists. (v3: revised from "fully usable" — the whole point of the off-slot hold is that the held file is *not* live until resolved.)
+- **D20 — Surfacing = the inline "Pending" section** on the current submission version's page, directly **above the "Plan Set" row**: one full-width row per open decision, **stacked** when several are open; version/replace/promote rows show **side-by-side thumbnails** (the existing side links to its `document`/`plan-set` page); each row's top-right **'X' = `discard`**, gated by a *"This will discard the uploaded file {filename}. Are you sure?"* confirmation modal. **Supersedes** the v3 per-file-banner + `Lightbox`. (C2)
 - **D21 — Deploy substation first** (tables + publication + writes), cityhall reads after; **no backfill** — cityhall renders cards with or without an owning job (legacy data).
 - **D23 — No byte-% upload bar** (drop the `XMLHttpRequest` swap); the job-row "Uploading…" state suffices.
 
