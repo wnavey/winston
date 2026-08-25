@@ -434,3 +434,53 @@ Precedents to model on: the `/plan-sets/:id/replace` route (existing-`plan_set_i
 - **Prod trace:** app project `mgxqsrjutswbciyrltwd`; submission `1eb513c1-…`, v2 `submission_version` `90aa50f0-…`; zip at `…/uploads/e34602ed-…/TestProjFromLamarCollier-v2-files.zip` (`129,225,659` B); plan-set child `PLAN_SET__1700 S Lamar Plan Set.pdf` (`124,211,871` B), `plan_set_version` `218c8596-…`, `…/plan-set/v2/source.pdf`; new plan_set `437b621e-…` (v1's was `3560309c-…`).
 - **substation:** `src/inngest/functions/process-file/main.ts` (switch); `src/lib/classify.ts:11-29` (`PLAN_SET_THRESHOLD_PTS=792`, strict `>11″` at `:21`); `src/inngest/functions/process-file/zip.ts` (`processZip:42-287`, `registerFile:185-214` mints fresh `plan_set` via `crypto.randomUUID()`); `src/routes/submissions.ts` (prepare `520-577`, commit `580-751`, `handlePlanSetUpload`, carry-forward `POST /versions` `227-246`, `handleDocumentUpload` — junction insert at `submission_document`); `src/routes/documents.ts:68-218` (`/replace`, junction re-point `127-193`); **plan-set lineage:** `src/routes/plan-sets.ts:222-238` (`/replace` inserts `plan_set_version` under existing `plan_set_id` + junction link + `process-file` dispatch), `src/inngest/functions/process-file/plan-set.logic.ts:24-39` (`fetchPriorVersion` keys on shared `plan_set_id`, different `submission_version_id`), `src/inngest/functions/process-file/plan-set.ts:117-192` (v1-vs-v2 branch); **detection reuse:** `src/inngest/lib/sandbox/similarity.ts` (`computeSheetSimilarity`), `src/inngest/functions/process-file/match-sheets.ts` (`matchSheets`, `MIN_MATCH_SIMILARITY=0.5`), `src/inngest/functions/process-file/document.ts:80-99` (per-page JPEG persistence); **schema:** `supabase/migrations/00000000000000_baseline.sql` — `submission_document:697-701` (junction, PK, no status col), `plan_set:452-459`, `plan_set_version:473-489` (`plan_set_id` FK, `idx_plan_set_version_plan_set_id:487`), `submission_plan_set:683-687`; realtime publication `supabase/migrations/20260427230000_add_realtime_tables.sql`; `upload_token` `supabase/migrations/20260426181238_upload_token.sql`. **No content-hash column on any pipeline table; no Inngest `publish()`; one-plan-set invariant is convention-only (no DB constraint); `replaceExistingPlanSet` does not exist.**
 - **cityhall:** upload PUT `src/routes/(app)/project/[projectId]/submission/[submissionId]/+page.svelte:329-342` + `src/lib/intake/upload.ts:62-66`; upload state enum `+page.svelte:246-253`; Realtime `+page.svelte:436-481`, `src/lib/realtime.svelte.ts`; feasibility-intake pending-action loop `…/intake/[conversationId]/+page.server.ts:261-302` + `+page.svelte:445-482`; `Lightbox` `src/lib/ui/elements/Lightbox.svelte`; RCM registry `src/lib/rcm/components.ts`; upload proxies `…/prepare-upload/+server.ts`, `…/commit-upload/+server.ts`.
+
+---
+
+## Appendix B — Phase B detection spike (Q-detection): queries to run
+
+**Status (2026-08-25).** Phase A (loading spine) shipped: **substation PR #222** (`file_upload_job` table + Realtime publication + pipeline job-writes) and **cityhall PR #637** (zip→children loading surface + `subscribeToRows` migration), both green in CI, both draft (merge is Will's call; deploy substation first — D21).
+
+Phase B is proceeding on **seed thresholds** (the "Option C" path): the threshold-independent scaffolding — `file_upload_decision` table, `content_sha256` + exact-duplicate pre-check, the off-slot hold, the resolve endpoint + outcome mapping, and the cityhall `question_type` registry + "Pending" section — is being built now, with the similarity cutoffs landed as **calibratable constants seeded from §6** (text `J ≥ 0.60` at k=3, visual `~0.70`). The spike below **calibrates those constants** against the motivating trace once the data is in hand; it does not gate the structural work.
+
+**Why this section exists.** The pre-build spike (§6, Q-detection) needs the 1700 S Lamar trace's real resubmittal document pairs. In the automated build environment there is **no Supabase MCP wired in**, and ad-hoc PostgREST with a service-role key is (correctly) blocked by the credential-safety classifier — so the DB lookups that resolve the 8 documents' `storage_path`s and the plan-set lineage must be run by a human with DB access. Run the three queries below against project **`mgxqsrjutswbciyrltwd`** (Noetic App) and paste the results back; from the `storage_path`s the analysis (download PDFs → first-N-pages text → k=3 / k=1 shingle-Jaccard → separation vs. controls → cutoff recommendation) can finish unblocked. Query 3 answers **Q-planset-trace** directly.
+
+```sql
+-- 1) The submission's versions (expect v1 = review_complete, v2 = draft).
+SELECT sv.id, sv.version_number, sv.status
+FROM submission_version sv
+JOIN submission s ON s.id = sv.submission_id
+WHERE s.id::text LIKE '1eb513c1%'
+ORDER BY sv.version_number;
+
+-- 2) Documents on v1 + v2 — name + storage_path (the 4 near-dup pairs live here).
+--    Fill in <v1_id> / <v2_id> from query 1.
+SELECT sv.version_number, d.name AS document_name, d.kind,
+       dv.file_name, dv.storage_path, dv.processing_state
+FROM submission_document sd
+JOIN submission_version sv ON sv.id = sd.submission_version_id
+JOIN document_version dv ON dv.id = sd.document_version_id
+JOIN document d ON d.id = dv.document_id
+WHERE sd.submission_version_id IN ('<v1_id>','<v2_id>')
+ORDER BY sv.version_number, d.name;
+
+-- 3) Plan-set trace (Q-planset-trace): did v2 reuse v1's plan_set_id (version
+--    chain) or mint a fresh one (silent auto-replace)?
+SELECT sps.submission_version_id, sps.plan_set_version_id,
+       psv.plan_set_id, psv.processing_state, psv.created_at
+FROM submission_plan_set sps
+JOIN plan_set_version psv ON psv.id = sps.plan_set_version_id
+WHERE sps.submission_version_id IN ('<v1_id>','<v2_id>')
+ORDER BY sps.submission_version_id;
+```
+
+**The 4 expected near-duplicate pairs** (v1 carried-forward ↔ v2 zip net-new), from the Problem section:
+
+| v1 carried-forward document | v2 zip net-new document |
+|---|---|
+| "Site Plan Application — Formal Submittal" | "Formal Site Plan Application" |
+| "Consolidated Site Plan Application — CC Submittal" | "CC Site Plan Application" |
+| "Project Review Form (PRF)" | "Project Review Form" |
+| "Engineer's Summary Letter" | "Engineer Summary Letter" |
+
+**What to paste back:** the rows from all three queries (especially the 8 `storage_path`s from query 2 and the `plan_set_id`s from query 3). With those, the spike produces: a per-pair `J(k=3)` / `J(k=1)` table with chars/page, the min-J(true) vs. max-J(negative-control) separation, whether the seed `J ≥ 0.60` (k=3) cutoff cleanly separates on this data (and if not, what does), and the resolved plan-set outcome. **Caveat:** only 4 true pairs — a starting calibration point, not a validated production number.
