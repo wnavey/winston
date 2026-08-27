@@ -1,0 +1,373 @@
+<title>Pre-Processing v2 — Single-Sheet Latency Report (v2, post box-refine)</title>
+<style>
+  :root{
+    --bg:#0f1420; --panel:#161d2c; --panel2:#1d2637; --ink:#e8edf5; --muted:#94a3b8;
+    --line:#2a3547; --accent:#5e9bff; --teal:#3fd0c9; --amber:#f5b955; --green:#4ade80;
+    --red:#f87171; --violet:#a78bfa; --pink:#f472b6;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.55;
+    -webkit-font-smoothing:antialiased;font-size:15px}
+  .wrap{max-width:1080px;margin:0 auto;padding:40px 24px 96px}
+  h1{font-size:30px;line-height:1.15;margin:0 0 6px;letter-spacing:-.02em}
+  h2{font-size:20px;margin:44px 0 14px;letter-spacing:-.01em;border-bottom:1px solid var(--line);padding-bottom:8px}
+  h3{font-size:15px;margin:26px 0 10px;color:var(--teal);text-transform:uppercase;letter-spacing:.06em;font-weight:600}
+  p{margin:0 0 12px;color:#cdd6e4}
+  .sub{color:var(--muted);font-size:15px;margin-bottom:4px}
+  code,.mono{font-family:var(--mono);font-size:.9em}
+  a{color:var(--accent)}
+  .lede{font-size:16px;color:#dbe3ef;background:var(--panel);border:1px solid var(--line);
+    border-left:3px solid var(--accent);border-radius:8px;padding:16px 18px;margin:20px 0 8px}
+  .lede b{color:#fff}
+
+  /* stat cards */
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:22px 0}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+  .card .n{font-size:26px;font-weight:700;font-family:var(--mono);letter-spacing:-.02em}
+  .card .l{font-size:12.5px;color:var(--muted);margin-top:2px}
+  .card.hero .n{color:var(--amber)}
+  .card.human .n{color:var(--muted)}
+  .card.crop .n{color:var(--teal)}
+  .card.pub .n{color:var(--green)}
+  .card.brf .n{color:var(--pink)}
+
+  /* legend */
+  .legend{display:flex;flex-wrap:wrap;gap:14px;margin:14px 0 6px;font-size:12.5px;color:var(--muted)}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .sw{width:12px;height:12px;border-radius:3px;display:inline-block}
+
+  /* proportional timeline */
+  .tl{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px 20px 12px;margin:8px 0}
+  .axis{position:relative;height:18px;margin:0 0 6px;border-bottom:1px dashed var(--line)}
+  .tick{position:absolute;transform:translateX(-50%);font:600 11px var(--mono);color:var(--muted);top:0}
+  .track{position:relative;height:46px;margin:8px 0}
+  .bar{position:absolute;top:0;height:100%;border-radius:6px;overflow:hidden;display:flex;align-items:center;
+    padding:0 8px;font:600 11.5px var(--mono);color:#0b0f18;white-space:nowrap;min-width:2px}
+  .bar small{font-weight:600;opacity:.8}
+  .bar.lbl-out{color:var(--ink)}
+  .hatch{background-image:repeating-linear-gradient(45deg,rgba(255,255,255,.08) 0 6px,transparent 6px 12px)}
+  .rowlab{font:600 12px var(--sans);color:var(--muted);margin:16px 0 2px}
+
+  /* swimlanes */
+  .lanes{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:8px 16px 18px;margin:8px 0}
+  .lane{position:relative;height:30px;border-top:1px solid var(--line);display:flex;align-items:center}
+  .lane:first-child{border-top:none}
+  .lane .name{width:150px;flex:0 0 150px;font:600 12px var(--sans);color:var(--muted);padding-right:10px}
+  .lane .rail{position:relative;flex:1;height:100%}
+  .act{position:absolute;top:6px;height:18px;border-radius:5px;font:600 10px var(--mono);color:#0b0f18;
+    display:flex;align-items:center;padding:0 6px;overflow:hidden;white-space:nowrap}
+
+  /* table */
+  table{width:100%;border-collapse:collapse;margin:10px 0;font-size:13.5px}
+  th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--muted);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.04em}
+  td.dur,td.num{font-family:var(--mono);white-space:nowrap}
+  tr.tot td{border-top:2px solid var(--line);font-weight:700}
+  .tag{display:inline-block;font:600 10.5px var(--mono);padding:2px 7px;border-radius:20px;color:#0b0f18}
+
+  /* horizontal bar chart */
+  .hchart{margin:14px 0}
+  .hrow{display:grid;grid-template-columns:190px 1fr 62px;align-items:center;gap:10px;margin:7px 0}
+  .hrow .hl{font-size:13px;color:#cdd6e4;text-align:right}
+  .hbar{height:22px;border-radius:5px;position:relative;background:linear-gradient(90deg,var(--accent),var(--teal))}
+  .hrow .hv{font-family:var(--mono);font-size:12.5px;color:var(--muted)}
+
+  .callout{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:16px 18px;margin:16px 0}
+  .callout.warn{border-left:3px solid var(--amber)}
+  .callout.good{border-left:3px solid var(--green)}
+  .callout.info{border-left:3px solid var(--accent)}
+  ul{margin:8px 0 12px;padding-left:22px}
+  li{margin:5px 0;color:#cdd6e4}
+  .foot{margin-top:40px;padding-top:16px;border-top:1px solid var(--line);color:var(--muted);font-size:12.5px}
+  .kbd{font-family:var(--mono);background:var(--panel2);border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:.85em}
+  .scroll{overflow-x:auto}
+  .delta-up{color:var(--red)} .delta-down{color:var(--green)}
+</style>
+
+<div class="wrap">
+
+  <p class="sub mono">Pre-Processing v2 · reading runbook · run <span style="color:var(--teal)">austin-1700-s-lamar-sheet6-run3</span> · <span style="color:var(--muted)">report v2</span></p>
+  <h1>Where did the 72 minutes go?</h1>
+  <p class="sub">Wall-clock anatomy of pre-processing <b>one</b> plan-set sheet (Sheet 6, 1700 S. Lamar) — the first run <b>after</b> the box-refine
+    second pass landed. Reading 2026-08-19 · published 2026-08-24.</p>
+
+  <div class="lede">
+    Reading a <b>single value-bearing sheet</b> at maximum fidelity took the orchestrator <b>71m44s</b> of compute
+    (telemetry: 4,304 s) — up from 57 min in the pre-box-refine run. The added time is <b>entirely the new box-refine pass</b>:
+    a per-block zoom-and-correct sweep that ran <b>31m56s across 3 passes and 166 crops</b> (~45% of the whole run) and
+    relocated <b>~16 of 25 grossly-mislocated bounding boxes</b>. It paid for itself but is now the single dominant cost.
+    Meanwhile the <b>image-cap bottleneck that cost the prior run an ~18-min forced re-pass did not recur</b> — both readers
+    completed cleanly. End-to-end system latency (kickoff → published, excluding the async human gate) was <b>~72.5 min</b>;
+    the deterministic publish was <b>~10 s</b>.
+  </div>
+
+  <div class="cards">
+    <div class="card hero"><div class="n">71m44s</div><div class="l">Orchestrator reading compute (4,304 s)</div></div>
+    <div class="card brf"><div class="n">32 min</div><div class="l">Box-refine (new) — 44% of the run</div></div>
+    <div class="card crop"><div class="n">~220</div><div class="l">Render / crop files (166 from box-refine)</div></div>
+    <div class="card"><div class="n">25</div><div class="l">Published content blocks (was 29)</div></div>
+    <div class="card pub"><div class="n">~10 s</div><div class="l">Deterministic publish (register→publish)</div></div>
+    <div class="card human"><div class="n">async</div><div class="l">Human gate (background job, multi-day)</div></div>
+  </div>
+
+  <h2>End-to-end timeline (proportional to the 4,304 s reading compute)</h2>
+  <p>Bars are sized to real elapsed time within the orchestrator's reading window. Blue = setup/render · teal = reader vision passes ·
+    violet = reconcile · <b>pink = box-refine (new)</b> · plum = adversarial · gray = corrections/assembly. The human review gate and
+    publish are shown below the axis because the gate was <b>asynchronous</b> (this ran as a background job; the operator returned days
+    later) and cannot be drawn to the same scale.</p>
+
+  <div class="legend">
+    <span><i class="sw" style="background:var(--accent)"></i>setup / render</span>
+    <span><i class="sw" style="background:var(--teal)"></i>reader vision passes</span>
+    <span><i class="sw" style="background:var(--violet)"></i>reconcile / Delta-A</span>
+    <span><i class="sw" style="background:var(--pink)"></i>box-refine (2nd pass)</span>
+    <span><i class="sw" style="background:#8b6ff0"></i>adversarial</span>
+    <span><i class="sw" style="background:#3a4353"></i>corrections + assembly</span>
+  </div>
+
+  <div class="tl">
+    <div class="scroll">
+    <div style="min-width:760px">
+    <!-- axis: total span 4304s from 15:09:30 CDT -->
+    <div class="axis">
+      <span class="tick" style="left:0.7%">15:10</span>
+      <span class="tick" style="left:21.6%">15:25</span>
+      <span class="tick" style="left:42.5%">15:40</span>
+      <span class="tick" style="left:63.4%">15:55</span>
+      <span class="tick" style="left:84.3%">16:10</span>
+      <span class="tick" style="left:99.7%">16:21</span>
+    </div>
+
+    <div class="rowlab">Reading compute (single track — everything after the readers is serial)</div>
+    <div class="track">
+      <!-- offsets/widths as % of 4304s -->
+      <div class="bar" style="left:0%;width:6.16%;background:var(--accent)" title="Setup + base renders (tier pinned value-bearing) — 4m25s"></div>
+      <div class="bar" style="left:6.16%;width:13.96%;background:var(--teal)" title="Reader A + Reader B (parallel, both completed) — 10m01s">A+B</div>
+      <div class="bar" style="left:20.12%;width:17.73%;background:var(--violet)" title="Reconciler + Delta-A spot-check + 1st reconciled.json — 12m43s">Reconcile&nbsp;<small>13m</small></div>
+      <div class="bar" style="left:37.85%;width:44.52%;background:var(--pink)" title="Box-refine: 3 passes, 166 crops, re-boxed all 25 blocks — 31m56s">Box-refine&nbsp;<small>32m · 3 passes</small></div>
+      <div class="bar" style="left:82.37%;width:2.60%;background:#d65f9c" title="Remap corrected boxes + before/after overlay — 1m52s"></div>
+      <div class="bar" style="left:84.97%;width:9.76%;background:#8b6ff0" title="Adversarial pass — 16 crops — 7m00s">Adversary&nbsp;<small>7m</small></div>
+      <div class="bar lbl-out" style="left:94.73%;width:3.55%;background:#3a4353" title="Corrections (F1/F2) + raw-artifact assembly + normalize — 2m33s">fix</div>
+      <div class="bar" style="left:98.28%;width:1.72%;background:#3d6fb0" title="Readout authoring + report back — 1m14s"></div>
+    </div>
+
+    <div class="rowlab">After the gate (not to scale — human gate was ~4.7 days of async wait)</div>
+    <div class="track" style="height:30px">
+      <div class="bar hatch lbl-out" style="left:0%;width:82%;background:#3a4353" title="Async human review gate: readout ready 08-19 16:20 → operator 'publish' 08-24 09:18">⏸ Human review gate — async / background job (~4.7 days wall-clock, not system latency)</div>
+      <div class="bar" style="left:82%;width:18%;background:var(--green)" title="normalize → embed → register → publish — ~50s (register→publish 10s)">publish ~10s</div>
+    </div>
+    </div>
+    </div>
+  </div>
+
+  <h2>Agent swimlanes (who was working, when)</h2>
+  <p>Each participant is a lane; a bar is an activation. The readers run <b>concurrently</b>; everything after is <b>strictly serial</b> —
+    reconcile waits for both readers, box-refine waits for the reconciled boxes, the adversary waits for the assembled artifact. The new
+    <b>box-refine worker</b> is the long pink lane.</p>
+
+  <div class="lanes">
+    <div class="scroll"><div style="min-width:760px">
+    <div class="lane"><div class="name">Operator (human)</div><div class="rail">
+      <div class="act" style="left:0%;width:2%;background:var(--amber)">kick</div>
+      <div class="act hatch" style="left:98%;width:2%;background:#3a4353;color:var(--ink)">⏸</div>
+    </div></div>
+    <div class="lane"><div class="name">Top-level runner</div><div class="rail">
+      <div class="act" style="left:0%;width:6.16%;background:var(--accent)">kickoff</div>
+    </div></div>
+    <div class="lane"><div class="name">Orchestrator</div><div class="rail">
+      <div class="act" style="left:0%;width:6.16%;background:#3d6fb0;color:var(--ink)">setup</div>
+      <div class="act" style="left:94.73%;width:5.27%;background:#3a4353;color:var(--ink)">fix+asm+readout</div>
+    </div></div>
+    <div class="lane"><div class="name">Reader A (literal)</div><div class="rail">
+      <div class="act" style="left:6.16%;width:13.96%;background:var(--teal)">whole sheet (completed)</div>
+    </div></div>
+    <div class="lane"><div class="name">Reader B (meaning)</div><div class="rail">
+      <div class="act" style="left:6.16%;width:10.5%;background:var(--teal)">whole sheet (completed)</div>
+    </div></div>
+    <div class="lane"><div class="name">Reconciler</div><div class="rail">
+      <div class="act" style="left:20.12%;width:17.73%;background:var(--violet)">reconcile + Delta-A</div>
+      <div class="act" style="left:82.37%;width:2.6%;background:var(--violet)">remap</div>
+      <div class="act" style="left:94.73%;width:3.55%;background:var(--violet)">final</div>
+    </div></div>
+    <div class="lane"><div class="name">Box-refine</div><div class="rail">
+      <div class="act" style="left:37.85%;width:29.2%;background:var(--pink)">pass-1 (90 crops · 21m)</div>
+      <div class="act" style="left:67.05%;width:9.5%;background:#d65f9c">pass-2 (7m)</div>
+      <div class="act" style="left:76.55%;width:5.82%;background:#e07bad">p3</div>
+    </div></div>
+    <div class="lane"><div class="name">Adversary</div><div class="rail">
+      <div class="act" style="left:84.97%;width:9.76%;background:#8b6ff0;color:var(--ink)">attack the artifact (16 crops)</div>
+    </div></div>
+    <div class="lane"><div class="name">Scripts (publish)</div><div class="rail">
+      <div class="act" style="left:98%;width:2%;background:var(--green)"></div>
+    </div></div>
+    </div></div>
+  </div>
+
+  <h2>Phase-by-phase breakdown</h2>
+  <p>Boundaries derived from 230 output-file mtimes; phase durations sum to the 4,304 s the orchestrator reported, so the segmentation is exact.
+    All reading times are 2026-08-19 (CDT); the publish is 2026-08-24.</p>
+
+  <div class="scroll">
+  <table>
+    <thead><tr>
+      <th>#</th><th>Phase</th><th>Window (CDT)</th><th class="num">Duration</th><th class="num">Crops</th><th>What happened</th>
+    </tr></thead>
+    <tbody>
+      <tr>
+        <td>1</td><td>Setup + base renders</td><td class="mono">15:09:30–15:13:55</td><td class="dur">4m25s</td><td class="num">~9</td>
+        <td>Pull sheet 6 PDF/JPG from Storage; render 200/300 DPI + quadrants + overview. Tier was operator-pinned value-bearing, so no classifier pass.</td>
+      </tr>
+      <tr>
+        <td>2</td><td>Reader A + Reader B <span class="tag" style="background:var(--teal)">parallel</span></td><td class="mono">15:13:55–15:23:56</td><td class="dur">10m01s</td><td class="num">~28</td>
+        <td>Literal transcription + meaning classification, blind to each other. <b>Both completed the whole sheet — no forced A2 re-pass</b> (the prior run's image-cap bottleneck did not recur). Reader B done 15:17, Reader A 15:24.</td>
+      </tr>
+      <tr>
+        <td>3</td><td>Reconciler + Delta-A</td><td class="mono">15:23:56–15:36:39</td><td class="dur">12m43s</td><td class="num">~few</td>
+        <td>Merge A/B; spot-check agreed cells against pixels (zero agreed cells failed); write the first <code>reconciled.json</code> with eyeballed boxes.</td>
+      </tr>
+      <tr>
+        <td>4</td><td>Box-refine <span class="tag" style="background:var(--pink)">new · bottleneck</span></td><td class="mono">15:36:39–16:08:35</td><td class="dur">31m56s</td><td class="num">166</td>
+        <td>Per-block zoom-and-correct over all 25 blocks, 3 passes (<code>pass-1</code> 20m58s/90 · <code>pass-2</code> 6m51s/53 · <code>pass-3</code> 3m10s/23). Each pass renders a clean crop + a blue-overlay crop per block, then deterministically remaps. The single largest slice.</td>
+      </tr>
+      <tr>
+        <td>5</td><td>Remap + before/after overlay</td><td class="mono">16:08:35–16:10:27</td><td class="dur">1m52s</td><td class="num">0</td>
+        <td>Write corrected boxes back into <code>reconciled.json</code> (retaining <code>bounding_box_pre_refine</code>); render the whole-sheet before/after overlay for the HITL eyeball.</td>
+      </tr>
+      <tr>
+        <td>6</td><td>Adversarial pass <span class="tag" style="background:#8b6ff0;color:#0b0f18">verify</span></td><td class="mono">16:10:27–16:17:27</td><td class="dur">7m00s</td><td class="num">16</td>
+        <td>Independent attack over the assembled artifact (16 <code>attack/</code> crops). Verdict: pixel-faithful. Raised F1 (title-block dropped from structured fields), F2 (a dropped "(" in a fire-sprinkler label), F3 (bullet dash — stands).</td>
+      </tr>
+      <tr>
+        <td>7</td><td>Corrections + assembly</td><td class="mono">16:17:27–16:20:00</td><td class="dur">2m33s</td><td class="num">0</td>
+        <td>Fix F2 in <code>reconciled.json</code>; add F1 gap-ledger entry; assemble <code>raw-artifact.json</code>; first <code>normalize.ts</code>.</td>
+      </tr>
+      <tr>
+        <td>8</td><td>Readout authoring</td><td class="mono">16:20:00–16:21:14</td><td class="dur">1m14s</td><td class="num">0</td>
+        <td>Author the HITL readout; report back to the top-level runner.</td>
+      </tr>
+      <tr class="tot">
+        <td></td><td>Reading compute (orchestrator)</td><td class="mono">15:09:30–16:21:14</td><td class="dur">71m44s</td><td class="num">~220</td><td></td>
+      </tr>
+      <tr>
+        <td>—</td><td>Human review gate <span class="tag" style="background:#3a4353;color:var(--ink)">async</span></td><td class="mono">08-19 16:20 → 08-24 09:18</td><td class="dur">~4.7 d</td><td class="num">0</td>
+        <td>Not system latency: this ran as a background job; the operator reviewed the readout and said "publish" days later. The actual review decision was seconds of attention.</td>
+      </tr>
+      <tr>
+        <td>9</td><td>Publish pipeline <span class="tag" style="background:var(--green)">deterministic</span></td><td class="mono">08-24 09:18:30–09:19:22</td><td class="dur">~50s</td><td class="num">0</td>
+        <td><code>normalize</code> → <code>embed</code> (25 blocks, 1536-dim) → <code>register</code> (09:19:12) → <code>publish</code> (09:19:22). Register→publish itself was 10 s.</td>
+      </tr>
+      <tr class="tot">
+        <td></td><td>System latency (excl. human gate)</td><td class="mono">—</td><td class="dur">~72m34s</td><td class="num">~220</td><td></td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h2>Where the 72 minutes actually went</h2>
+  <div class="hchart">
+    <div class="hrow"><div class="hl">Box-refine (2nd pass)</div><div class="hbar" style="width:100%;background:linear-gradient(90deg,var(--pink),#d65f9c)"></div><div class="hv">31m56s</div></div>
+    <div class="hrow"><div class="hl">Reconcile + Delta-A</div><div class="hbar" style="width:39.8%;background:linear-gradient(90deg,var(--violet),#8b6ff0)"></div><div class="hv">12m43s</div></div>
+    <div class="hrow"><div class="hl">Reader A + B (parallel)</div><div class="hbar" style="width:31.4%"></div><div class="hv">10m01s</div></div>
+    <div class="hrow"><div class="hl">Adversarial pass</div><div class="hbar" style="width:21.9%;background:linear-gradient(90deg,var(--violet),#8b6ff0)"></div><div class="hv">7m00s</div></div>
+    <div class="hrow"><div class="hl">Setup + base renders</div><div class="hbar" style="width:13.8%"></div><div class="hv">4m25s</div></div>
+    <div class="hrow"><div class="hl">Corrections + assembly</div><div class="hbar" style="width:8.0%;background:#3a4353"></div><div class="hv">2m33s</div></div>
+    <div class="hrow"><div class="hl">Remap + overlay</div><div class="hbar" style="width:5.9%;background:linear-gradient(90deg,#d65f9c,var(--pink))"></div><div class="hv">1m52s</div></div>
+    <div class="hrow"><div class="hl">Readout authoring</div><div class="hbar" style="width:3.9%;background:#3d6fb0"></div><div class="hv">1m14s</div></div>
+  </div>
+
+  <h2>v2 vs v1 — box-refine replaced the image-cap re-pass</h2>
+  <p>Same sheet, same fidelity target; the two runs differ in one structural way — v2 added the box-refine second pass, and (independently) v2 did
+    not hit the image-cap bug that forced the prior run's extra reader pass.</p>
+
+  <div class="scroll">
+  <table>
+    <thead><tr><th>Dimension</th><th class="num">v1 run (b27b18a0)</th><th class="num">v2 run (9cd8a0eb)</th><th class="num">Δ</th></tr></thead>
+    <tbody>
+      <tr><td>Reading compute</td><td class="num">57m00s</td><td class="num">71m44s</td><td class="num delta-up">+14m44s</td></tr>
+      <tr><td>Dominant phase</td><td class="num">Reader A2 re-pass 18m07s</td><td class="num">Box-refine 31m56s</td><td class="num">—</td></tr>
+      <tr><td>Forced A2 (image cap)</td><td class="num delta-up">yes (~18m)</td><td class="num delta-down">none</td><td class="num delta-down">−18m</td></tr>
+      <tr><td>Box-refine pass</td><td class="num">absent</td><td class="num delta-up">31m56s / 166 crops</td><td class="num delta-up">+32m</td></tr>
+      <tr><td>Render / crop files</td><td class="num">166</td><td class="num">~220</td><td class="num delta-up">+~54</td></tr>
+      <tr><td>Published blocks</td><td class="num">29</td><td class="num">25</td><td class="num">−4 (re-decomposed)</td></tr>
+      <tr><td>Publish pipeline</td><td class="num">~30s</td><td class="num">~10–50s</td><td class="num">≈</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p class="sub">Net: the run got ~15 min slower, but the swap is favorable in kind — a genuinely-load-bearing box-correction pass came in, while an
+    ~18-min pass caused by a <em>tool limitation</em> went away. If box-refine and the readers both stay clean, the reader/adversary/reconcile
+    scaffolding is unchanged run-to-run and box-refine is the only new lever.</p>
+
+  <h2>Why box-refine cost 32 minutes — and whether it was worth it</h2>
+
+  <div class="callout warn">
+    <h3 style="margin-top:0">1 · Box-refine is serial, per-block, and multi-pass</h3>
+    <p>166 crop files across <b>3 passes</b> over 25 blocks. Each block gets a clean crop + a blue-overlay crop rendered, a vision round-trip to
+      correct the coordinates, then a deterministic remap — one block at a time. Pass-1 alone was <b>20m58s / 90 crops</b>; passes 2–3 re-checked
+      the blocks that hadn't converged. That serial zoom-render-read loop is the entire +32 min.</p>
+  </div>
+
+  <div class="callout good">
+    <h3 style="margin-top:0">2 · It earned its keep — ~16 of 25 boxes were grossly mislocated</h3>
+    <p>The first-pass eyeballed boxes weren't merely loose: a note box pointed at a neighbor, the PE-seal box sat off the seal, the Inspection-Notes
+      box landed on the meter panels — individual corner moves up to <b>~231/1000 ≈ 23% of the sheet</b>. Box-refine relocated and tightened them;
+      23/25 converged and the 2 that didn't grew deliberately to avoid a clip. On a dense form sheet, single-pass whole-sheet box eyeballing has a
+      systematic placement weakness, and this pass is what closes it. The before/after overlay is in the run's <code>hitl/</code> dir.</p>
+  </div>
+
+  <div class="callout good">
+    <h3 style="margin-top:0">3 · The image-cap bottleneck did not recur</h3>
+    <p>The prior run lost ~18 min to a forced Reader A2 pass after both readers hit a cumulative image cap and left the bottom-right unread. This
+      run's readers <b>both completed the whole sheet</b> (Reader A 15:24, Reader B 15:17) with no A2 subdir and no re-pass — the bounded-crop
+      mitigation held. That reclaimed roughly the time box-refine added.</p>
+  </div>
+
+  <div class="callout info">
+    <h3 style="margin-top:0">4 · The quadrant-crop convenience renders were still wasted</h3>
+    <p>The <code>sheet-300-{NW,NE,SW,SE}</code> quadrant renders all collapsed onto the same top-left region (an ImageMagick percentage-offset
+      quirk), so every reader rendered its own crops instead. It cost no coverage (box-refine uses absolute-pixel geometry) but is pure wasted
+      setup I/O. Filed as a one-line recipe fix in <code>bureau#1159</code>.</p>
+  </div>
+
+  <h2>What this does (and doesn't) imply for scale</h2>
+  <ul>
+    <li><b>Box-refine is now the #1 lever on a value-bearing sheet.</b> At ~45% of the run it dwarfs every other phase. Batching its per-block
+      vision calls, or skipping passes 2–3 once a block converges, attacks the biggest slice directly.</li>
+    <li><b>Tier-gate box-refine like the adversarial pass.</b> A pure-drawing sheet has few content blocks and loose boxes matter less; running the
+      full 3-pass sweep on every sheet of a 45-sheet set would be the dominant cost of the whole set. Gate it to value-bearing sheets.</li>
+    <li><b>Sheets parallelize; a single sheet's passes do not.</b> Everything after the two readers is a serial dependency chain
+      (reconcile → box-refine → adversary → corrections). The 72 min is the depth of one hard sheet's chain, not a per-sheet multiplier — 45 sheets
+      is <em>not</em> 45×72 min.</li>
+    <li><b>Don't linearly extrapolate.</b> This is a value-bearing sheet read with the full triad, box-refine, and "tie-break up" fidelity. Most of a
+      real set is cheaper pure-drawing sheets.</li>
+    <li><b>Human + deterministic cost is ~nil.</b> The publish pipeline was ~10 s of real work; the human gate was async background-job wait, not
+      latency. The only lever that matters is the reading compute — and within it, box-refine.</li>
+  </ul>
+
+  <div class="callout">
+    <h3 style="margin-top:0">Suggested follow-ups (not yet decided)</h3>
+    <ul>
+      <li>Tier-gate box-refine (full 3-pass on value-bearing, light/none on pure-drawing).</li>
+      <li>Early-exit box-refine per block once it converges, instead of running fixed passes 2–3 over all blocks.</li>
+      <li>Batch box-refine's per-block vision reads where the API allows, to break the serial zoom loop.</li>
+      <li>Land <code>bureau#1159</code> so the quadrant convenience crops stop being wasted setup I/O.</li>
+      <li>Instrument the runbook to emit real per-step timings (this report was reconstructed from file mtimes + one telemetry number).</li>
+    </ul>
+  </div>
+
+  <div class="foot">
+    <p><b>Data sources.</b> Orchestrator wall-clock (4,304,409 ms = 71m44s), tool-use count (58) and token total (182,717) from Claude Code task
+      telemetry. Phase boundaries and crop counts from 230 output-file mtimes in
+      <code>~/noetic/working/preprocessing/austin-1700-s-lamar-sheet6-run3/</code> (box-refine pass dirs, <code>renders/attack/</code>,
+      <code>mycrops/</code>). Publish timestamps from the <code>site_plan_preprocessing_run</code> row (<code>created_at</code>/register
+      2026-08-24T14:19:12Z, <code>published_at</code> 14:19:22Z = 09:19:12 / 09:19:22 CDT). Human-gate span from the readout mtime
+      (08-19 16:20) to the operator's "publish" (08-24 09:18); this ran as a background job, so that span is async wait, not system latency.
+      Phase-1/8 endpoints are anchored to the reported 4,304 s orchestrator duration.</p>
+    <p><b>Run.</b> Project <code>ed9e7ec4-…</code> (Pre-Processing V2 Test Project) · submission_version <code>d1ddc5bd-…</code> ·
+      plan_set_version <code>e7a09154-…</code> · sheet 6 <code>018c6d45-…</code> · run <code>9cd8a0eb-…</code> (active, 25 blocks) ·
+      supersedes prior sheet-6 run <code>b27b18a0-…</code> (29 blocks, report v1). Single-sheet re-run of an already-processed set, first read
+      after the box-refine second pass. Runbook <code>bureau@9d62eda</code>.</p>
+  </div>
+
+</div>
