@@ -277,8 +277,8 @@ code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px s
 <header class="masthead">
   <div class="kicker">RUNBOOK-CHECKPOINTS · HITL UI</div>
   <h1>Runbook Checkpoints + HITL Questions</h1>
-  <p>Visual companion to <code>DESIGN-SPEC.md</code>: the three new tables, and how a human-in-the-loop question flows through each lane — the live <b>local captain</b> (poll) vs the stopped-sandbox <b>cloud launcher</b> (resume event).</p>
-  <div class="meta">Draft v1 · 2026-09-08 · click a tab ↓</div>
+  <p>Visual companion to <code>DESIGN-SPEC.md</code>: the three new tables, and how a human-in-the-loop question flows through each lane — the live <b>local captain</b> (poll) vs the stopped-sandbox <b>cloud reconcile control plane</b> (hot resume + cron backstop). <b>v2:</b> Inngest removed.</p>
+  <div class="meta">Draft v2 · 2026-09-08 · click a tab ↓</div>
 </header>
 
 <nav class="tabs">
@@ -308,11 +308,11 @@ code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px s
       </div>
       <div class="card change">
         <h3><span class="hn">C</span>Cloud lane</h3>
-        <p>2.0 runbooks only, run in a per-project Vercel Sandbox driven by the substation <code>runbook/run</code> launcher.</p>
+        <p>2.0 runbooks only, run in a <b>persistent per-project</b> Vercel Sandbox driven by the substation <b>launch route + reconcile cron</b> — no Inngest (v2).</p>
         <ul>
-          <li>Launcher writes the run / checkpoints / questions.</li>
+          <li>The launch / callback / reconcile routes write the run / checkpoints / questions, reading the run dir structurally.</li>
           <li>Answerable <b>in the UI only</b> (no captain).</li>
-          <li>Sandbox is <b>stopped</b> while parked → answer returns via an <b>Inngest resume event</b>; the launcher writes <code>decision.json</code>.</li>
+          <li>Advance runs <b>detached</b> (outlives the request; no 800s cap). Sandbox is <b>stopped</b> while parked → the answer route writes the gate row and <b>fires a detached resume</b> (reconcile backstops); the resume writes <code>decision.json</code>.</li>
           <li>Multi-turn via an out-of-band <code>conductor run-step</code> clarifier — zero conductor2 change.</li>
         </ul>
       </div>
@@ -345,16 +345,19 @@ code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px s
         <div class="eh"><span class="en">runbook_run</span><span class="stereo">NEW</span></div>
         <div class="row"><span class="b b-pk">PK</span><span class="nm">id</span><span class="ty">uuid</span></div>
         <div class="row hi"><span class="nm">runbook_name</span><span class="ty">text · sir-new/…</span></div>
-        <div class="row"><span class="nm">lane</span><span class="ty">local | cloud</span></div>
+        <div class="row add"><span class="gut">+</span><span class="nm">host</span><span class="ty">vercel | machine · v2</span></div>
         <div class="row hi"><span class="nm">status</span><span class="ty">queued…awaiting_input…</span></div>
-        <div class="row"><span class="b b-fk">FK</span><span class="nm">project_id</span><span class="ty">→ project · null</span></div>
+        <div class="row"><span class="b b-fk">FK</span><span class="nm">project_id</span><span class="ty">→ project · names sandbox</span></div>
         <div class="row"><span class="b b-fk">FK</span><span class="nm">submission_version_id</span><span class="ty">→ submission_version · null</span></div>
-        <div class="row"><span class="nm">inputs</span><span class="ty">jsonb · request.json</span></div>
-        <div class="row"><span class="nm">run_dir / sandbox_id</span><span class="ty">text</span></div>
-        <div class="row"><span class="nm">inngest_event_id</span><span class="ty">text · resume key</span></div>
+        <div class="row"><span class="nm">inputs</span><span class="ty">jsonb · request + plan</span></div>
+        <div class="row"><span class="nm">run_dir / sandbox_id</span><span class="ty">text · derivable</span></div>
+        <div class="row add"><span class="gut">+</span><span class="nm">claimed_at</span><span class="ty">tstz · reconcile lease</span></div>
+        <div class="row add"><span class="gut">+</span><span class="nm">session_started_at</span><span class="ty">tstz · advance start</span></div>
+        <div class="row add"><span class="gut">+</span><span class="nm">last_callback_at</span><span class="ty">tstz · park/exit report</span></div>
+        <div class="row del"><span class="gut">−</span><span class="nm">inngest_event_id</span><span class="ty">removed · no event</span></div>
         <div class="row"><span class="b b-fk">FK</span><span class="nm">triggered_by</span><span class="ty">→ auth.users · null</span></div>
         <div class="row"><span class="nm">ledger_total_usd / error</span><span class="ty">numeric / text</span></div>
-        <div class="note">one row per run · lifecycle record, not a registry</div>
+        <div class="note">one row per run · also the reconcile loop's record (v2)</div>
       </div>
 
       <div class="ent newt">
@@ -374,13 +377,14 @@ code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px s
         <div class="row"><span class="b b-pk">PK</span><span class="nm">id</span><span class="ty">uuid</span></div>
         <div class="row"><span class="b b-fk">FK</span><span class="b b-nn">NN</span><span class="nm">run_id</span><span class="ty">→ runbook_run</span></div>
         <div class="row"><span class="nm">gate_step_id</span><span class="ty">text</span></div>
-        <div class="row hi"><span class="nm">input_type</span><span class="ty">decision | clarification</span></div>
-        <div class="row hi"><span class="nm">payload</span><span class="ty">jsonb · prompt+options+freeform</span></div>
-        <div class="row"><span class="nm">status</span><span class="ty">awaiting_input | answered | …</span></div>
+        <div class="row add"><span class="gut">±</span><span class="nm">kind</span><span class="ty">decision|clarification|operator|hands</span></div>
+        <div class="row hi"><span class="nm">payload</span><span class="ty">jsonb · varies by kind</span></div>
+        <div class="row"><span class="nm">status</span><span class="ty">awaiting_input|answered|applied…</span></div>
         <div class="row"><span class="nm">answer</span><span class="ty">jsonb</span></div>
         <div class="row"><span class="b b-fk">FK</span><span class="nm">answered_by</span><span class="ty">→ auth.users · null</span></div>
         <div class="row"><span class="nm">channel</span><span class="ty">ui | session | agent</span></div>
-        <div class="note">payload generated from the gate's zod contract · UNIQUE open per (run, gate)</div>
+        <div class="row add"><span class="gut">+</span><span class="nm">audience</span><span class="ty">specialist | engineer</span></div>
+        <div class="note">v2: one <code>kind</code> over 4 gate types · <code>applied</code> state · UNIQUE open per (run, gate)</div>
       </div>
 
       <div class="ent exist">
@@ -456,16 +460,16 @@ code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px s
   </section>
 
   <section class="panel" id="cloud">
-    <h2><span class="eyebrow">Section 4</span>Cloud lane — the launcher resumes</h2>
-    <p class="lede">The sandbox is stopped while parked, so the readout is exported to Storage and the answer returns via an Inngest resume event carrying the decision; the launcher writes <code>decision.json</code> before re-advancing.</p>
+    <h2><span class="eyebrow">Section 4</span>Cloud lane — the reconcile control plane resumes</h2>
+    <p class="lede">No Inngest (v2). The sandbox is stopped while parked, so the readout is exported to Storage; the answer route writes the gate row and <b>fires a detached resume advance</b> (the reconcile cron backstops a missed fire). The resume boots the sandbox and writes <code>decision.json</code> before re-advancing.</p>
 
     <div class="seq-scroll"><div class="seq">
       <div class="seq-head">
         <div></div>
         <div class="seq-h"><span class="role">user</span><span class="who">operator</span></div>
         <div class="seq-h"><span class="role">app</span><span class="who">cityhall</span></div>
-        <div class="seq-h"><span class="role">api</span><span class="who">substation</span></div>
-        <div class="seq-h"><span class="role">fn</span><span class="who">launcher+conductor</span></div>
+        <div class="seq-h"><span class="role">api</span><span class="who">substation routes</span></div>
+        <div class="seq-h"><span class="role">fn</span><span class="who">sandbox+conductor</span></div>
         <div class="seq-h"><span class="role">store</span><span class="who">Storage</span></div>
         <div class="seq-h"><span class="role">db</span><span class="who">Postgres</span></div>
       </div>
@@ -478,7 +482,7 @@ code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px s
         <div class="seq-life" style="grid-column:7;grid-row:1/-1"></div>
 
         <div class="seq-num" style="grid-row:1">1</div>
-        <div class="seq-msg write" style="grid-row:1;grid-column:5/8"><div class="mt"><span class="m">INSERT runbook_run (running)</span></div><span class="dir">▸</span></div>
+        <div class="seq-msg write" style="grid-row:1;grid-column:4/8"><div class="mt"><span class="m">launch: INSERT run + hot detached advance</span><span class="m2">status=running · claim lease</span></div><span class="dir">▸</span></div>
 
         <div class="seq-num" style="grid-row:2">2</div>
         <div class="seq-msg self" style="grid-row:2;grid-column:5/6"><div class="mt"><span class="m">conductor advance → exit 75</span><span class="m2">park at gate</span></div></div>
@@ -496,10 +500,10 @@ code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px s
         <div class="seq-msg" style="grid-row:6;grid-column:3/5"><div class="mt"><span class="m">POST answer</span></div><span class="dir">▸</span></div>
 
         <div class="seq-num" style="grid-row:7">7</div>
-        <div class="seq-msg write" style="grid-row:7;grid-column:4/8"><div class="mt"><span class="m">UPDATE question answered</span></div><span class="dir">▸</span></div>
+        <div class="seq-msg write" style="grid-row:7;grid-column:4/8"><div class="mt"><span class="m">UPDATE question answered · run=queued</span></div><span class="dir">▸</span></div>
 
         <div class="seq-num" style="grid-row:8">8</div>
-        <div class="seq-msg event" style="grid-row:8;grid-column:4/6"><div class="mt"><span class="m">fire runbook/run resume</span><span class="m2">resume_run_dir + decision</span></div><span class="dir">▸</span></div>
+        <div class="seq-msg" style="grid-row:8;grid-column:4/6"><div class="mt"><span class="m">fire detached resume advance</span><span class="m2">boot sandbox · reconcile backstops</span></div><span class="dir">▸</span></div>
 
         <div class="seq-num" style="grid-row:9">9</div>
         <div class="seq-msg self" style="grid-row:9;grid-column:5/6"><div class="mt"><span class="m">write decision.json → advance → exit 0</span></div></div>
@@ -508,30 +512,33 @@ code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px s
         <div class="seq-msg write" style="grid-row:10;grid-column:5/8"><div class="mt"><span class="m">UPDATE run completed</span></div><span class="dir">▸</span></div>
       </div>
       <div class="seq-foot">
-        <span><span class="sw"></span> call</span><span><span class="sw write"></span> DB write</span>
-        <span><span class="sw event"></span> async event</span><span><span class="sw self"></span> self / compute</span>
+        <span><span class="sw"></span> call / detached fire</span><span><span class="sw write"></span> DB write</span>
+        <span><span class="sw self"></span> self / compute</span>
       </div>
     </div></div>
     <div class="callout ember"><span class="lab">before stop</span> Steps 3–4 must run <b>before</b> the sandbox is stopped/snapshotted — once stopped, the run dir (and its readout) is unreadable until a resume.</div>
   </section>
 
   <section class="panel" id="lifecycle">
-    <h2><span class="eyebrow">Section 5</span>Question lifecycle &amp; the human-input supertype</h2>
-    <p class="lede">A gate accepts a <b>supertype</b> of human input. Only a <code>decision</code> projects to <code>decision.json</code> and advances the graph; a <code>clarification</code> is answered by an agent but never satisfies the gate.</p>
+    <h2><span class="eyebrow">Section 5</span>Question lifecycle &amp; the four gate kinds</h2>
+    <p class="lede">v2 merges v1's <code>input_type</code> and Jason's gate <code>kind</code> into one <b><code>kind</code></b> enum over four types. A derived <b><code>terminal</code></b> = <code>kind ≠ clarification</code>: terminal kinds advance the graph on answer; a <code>clarification</code> is answered by an agent but leaves the gate parked.</p>
 
     <div class="sm">
-      <span class="s spec">created<span class="who">awaiting_input</span></span><span class="a">→</span>
+      <span class="s spec">awaiting_input<span class="who">created</span></span><span class="a">→</span>
       <span class="s client">clarification?<span class="who">agent answers, stays parked</span></span><span class="a">→</span>
-      <span class="s client">decision<span class="who">approve/revise + notes</span></span><span class="a">→</span>
+      <span class="s client">terminal answer<span class="who">decision / operator / hands</span></span><span class="a">→</span>
       <span class="s cc">answered<span class="who">channel recorded</span></span><span class="a">→</span>
-      <span class="s spec">advance<span class="who">decision.json written</span></span>
+      <span class="s cc">applied<span class="who">written into run dir</span></span><span class="a">→</span>
+      <span class="s spec">advance<span class="who">resume</span></span>
     </div>
 
     <div class="spectable-scroll"><table class="spectable">
-      <thead><tr><th>input_type</th><th>writes decision.json?</th><th>who answers</th><th>gate effect</th></tr></thead>
+      <thead><tr><th>kind</th><th>terminal?</th><th>readout</th><th>answer → effect</th><th>who / audience</th></tr></thead>
       <tbody>
-        <tr><td><code>decision</code></td><td><span class="w">yes</span></td><td>human (UI or captain), or agent (auto)</td><td>contract passes → advance</td></tr>
-        <tr><td><code>clarification</code></td><td><span class="none">no</span></td><td>live captain (local) or ad-hoc <code>conductor run-step</code> clarifier (cloud)</td><td>stays <code>awaiting_input</code></td></tr>
+        <tr><td><code>decision</code></td><td><span class="w">yes</span></td><td>digest / SIR readout + PDF</td><td><code>{approved|revise,…}</code> → <code>decision.json</code>, advance</td><td>specialist (content) / engineer (delivery)</td></tr>
+        <tr><td><code>clarification</code></td><td><span class="none">no</span></td><td>run context</td><td><code>{question}</code> → note, stays <code>awaiting_input</code></td><td>captain (local) / <code>run-step</code> clarifier (cloud)</td></tr>
+        <tr><td><code>operator</code></td><td><span class="w">yes</span></td><td><span class="none">often none</span></td><td><code>{void_step, findings}</code> → remediate + re-advance</td><td>engineer</td></tr>
+        <tr><td><code>hands</code></td><td><span class="w">yes</span></td><td>needs-hands + live-view URL</td><td><code>{hands_done}</code> → resume opens fresh browser</td><td>whoever holds the card</td></tr>
       </tbody>
     </table></div>
 
@@ -546,9 +553,9 @@ code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px s
   "schema_ref": "sir-new/3.10-deliver#Decision"
 }</div>
 
-    <div class="callout new"><span class="lab">zero conductor2 change</span> conductor is decision-agnostic — it runs the gate's contract test and reads an exit code. The clarification thread lives in the run dir (invisible to the contract), and the cloud clarifier is just an out-of-band <code>conductor run-step</code>. No new runner kind, no scheduler change.</div>
+    <div class="callout new"><span class="lab">zero conductor2 change (emission)</span> conductor is decision-agnostic — it runs the gate's contract test and reads an exit code, and already emits park+readout+ledger via its own telemetry. Gate rows are built by the driver reading the run dir structurally. The one conductor2 <i>engine</i> change is Jason-owned: budget-cap → operator-gate park (D54). <b>Open (Q7):</b> the decision schema is Zod-in-TS in each <code>contract.test.ts</code> — not machine-readable on disk — so <code>schema_ref</code> needs a bureau-side extraction; MVP falls back to a substation schema keyed by <code>(runbook, gate)</code>.</div>
 
-    <div class="xref">Grounding: <code>conductor2/src/{model.rs,sched.rs,verbs.rs,contract.rs,claude.rs}</code>; <code>substation/src/inngest/functions/runbook-run.ts</code>; <code>file_upload_decision</code> + RCM (<code>cityhall/src/lib/rcm/</code>). Full detail in <code>DESIGN-SPEC.md</code>.</div>
+    <div class="xref">Grounding: <code>conductor2/src/{main.rs,model.rs,sched.rs,verbs.rs,ledger.rs,telemetry.rs}</code>; the reconcile routes replace <code>substation/src/inngest/functions/runbook-run.ts</code>; <code>file_upload_decision</code> + RCM (<code>cityhall/src/lib/rcm/</code>). Full detail in <code>DESIGN-SPEC.md</code> (see v2 revision note + D51–D57).</div>
   </section>
 
 </main>
