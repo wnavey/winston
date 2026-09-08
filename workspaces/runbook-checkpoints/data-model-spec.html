@@ -1,0 +1,571 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Runbook Checkpoints + HITL — data model & lane flows</title>
+<style>
+/* ============================================================
+   spec-kit v4  —  winston HTML spec design system
+   Inline the ENTIRE contents of this file into the spec's style block.
+   Canonical source: ~/.claude/skills/winston-spec/assets/spec-kit.css
+   When you change this file, bump the version above and in COMPONENTS.md.
+   v4: + sequence diagram (.seq*), + data table (.spectable), + prompt block (.prompt)
+   ============================================================ */
+
+:root{
+  /* steel-blue ramp (matches cityhall / Noetic report surfaces) */
+  --p50:#f0f5f9;--p100:#dce8f1;--p200:#b9d2e5;--p300:#8cb4d1;--p400:#6397b8;
+  --p500:#517e9e;--p600:#3f6582;--p700:#35526b;--p800:#2d4559;--p900:#273b4b;--p950:#182530;
+  --bg:#f9f9f9;--card:#ffffff;--divider:#dfdfdf;--ink:#1f2937;--muted:#6b7280;--ember:#bb4d00;
+  /* semantic: new / changed / retired */
+  --new:#15803d;--newbg:#f0fdf4;--newbd:#bbf7d0;
+  --chg:#b45309;--chgbg:#fffbeb;--chgbd:#fde68a;
+  --ret:#b91c1c;--retbg:#fef2f2;--retbd:#fecaca;
+  --sans:'Lexend',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  --serif:'Lora',Georgia,'Times New Roman',serif;
+  --mono:'Fira Code','SF Mono',ui-monospace,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.55;font-size:15px}
+
+/* ---------- masthead ---------- */
+header.masthead{background:linear-gradient(135deg,var(--p800),var(--p600));color:#fff;padding:34px 32px 30px;position:relative;overflow:hidden}
+header.masthead::after{content:"";position:absolute;inset:0;background-image:repeating-linear-gradient(115deg,rgba(255,255,255,.06) 0 1px,transparent 1px 26px);pointer-events:none}
+header.masthead .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--p200)}
+header.masthead h1{font-family:var(--serif);font-weight:600;margin:.35em 0 .2em;font-size:29px;position:relative}
+header.masthead p{margin:0;color:var(--p100);max-width:880px;font-size:15px}
+header.masthead .meta{margin-top:14px;font-size:12.5px;color:var(--p200);font-family:var(--mono)}
+
+/* ---------- tabs ---------- */
+nav.tabs{position:sticky;top:0;z-index:20;display:flex;gap:2px;background:var(--p950);padding:0 20px;box-shadow:0 2px 8px rgba(0,0,0,.12);flex-wrap:wrap}
+nav.tabs button{appearance:none;border:0;background:transparent;color:var(--p200);font-family:var(--sans);font-size:14px;font-weight:500;padding:14px 18px;cursor:pointer;border-bottom:3px solid transparent;transition:all .15s}
+nav.tabs button .n{font-family:var(--mono);font-size:11px;opacity:.7;margin-right:7px}
+nav.tabs button:hover{color:#fff;background:rgba(255,255,255,.04)}
+nav.tabs button.active{color:#fff;border-bottom-color:var(--ember);background:rgba(255,255,255,.06)}
+
+/* ---------- layout ---------- */
+main{max-width:1140px;margin:0 auto;padding:30px 26px 90px}
+.panel{display:none;animation:fade .25s ease}
+.panel.active{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+h2{font-family:var(--serif);font-weight:600;font-size:23px;margin:34px 0 6px;color:var(--p900)}
+h2:first-child{margin-top:4px}
+h2 .eyebrow{display:block;font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--p500);font-weight:400;margin-bottom:3px}
+h3{font-size:16px;font-weight:600;margin:28px 0 8px;color:var(--p800);display:flex;align-items:center;gap:9px}
+h3 .hn{font-family:var(--mono);font-size:12px;color:#fff;background:var(--p600);border-radius:5px;padding:2px 8px}
+h4{font-size:14px;font-weight:600;margin:18px 0 6px;color:var(--p800)}
+p{margin:.55em 0}
+.lede{font-size:16px;color:var(--p800);border-left:3px solid var(--ember);padding-left:16px;margin:14px 0 20px}
+ul{margin:.4em 0;padding-left:22px}li{margin:.28em 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px solid var(--p100);border-radius:4px;padding:1px 5px;color:var(--p800)}
+
+/* ---------- callout ---------- */
+.callout{background:var(--p50);border:1px solid var(--p200);border-left:4px solid var(--p500);border-radius:8px;padding:13px 17px;margin:16px 0}
+.callout.ember{background:#fdf6f0;border-color:#f0cba8;border-left-color:var(--ember)}
+.callout.new{background:var(--newbg);border-color:var(--newbd);border-left-color:var(--new)}
+.callout .lab{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--p600);font-weight:600;display:block;margin-bottom:3px}
+.callout.ember .lab{color:var(--ember)} .callout.new .lab{color:var(--new)}
+
+/* ---------- legend ---------- */
+.legend{display:flex;flex-wrap:wrap;gap:9px 16px;background:#fff;border:1px solid var(--divider);border-radius:10px;padding:12px 16px;margin:16px 0;font-size:12px;align-items:center}
+.legend .k{display:inline-flex;align-items:center;gap:6px}
+.swatch{width:26px;height:14px;border-radius:3px;display:inline-block;border:1px solid rgba(0,0,0,.15)}
+
+/* ---------- shared field badges (used by entity rows + legend) ---------- */
+.b{font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.04em;padding:1px 4px;border-radius:3px;text-transform:uppercase;white-space:nowrap}
+.b-pk{background:#fef3c7;color:#92600a;border:1px solid #fde68a}
+.b-fk{background:#e0edfb;color:#2456a8;border:1px solid #c3d8f2}
+.b-nn{background:#eef1f4;color:#4b5563;border:1px solid #d7dde3}
+.b-new{background:var(--newbg);color:var(--new);border:1px solid var(--newbd)}
+
+/* ============================================================
+   ER / UML entity boxes
+   ============================================================ */
+.erd{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start;margin:16px 0;background:#fbfcfd;border:1px solid var(--divider);border-radius:12px;padding:18px}
+.ent{border:1px solid var(--divider);border-radius:9px;overflow:hidden;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.05);min-width:236px;flex:0 1 auto}
+.ent .eh{padding:7px 12px;color:#fff;display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.ent .eh .en{font-family:var(--mono);font-size:12.5px;font-weight:700;letter-spacing:.02em}
+.ent .eh .stereo{font-size:9.5px;font-family:var(--mono);opacity:.85;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}
+.ent.exist .eh{background:var(--p700)}
+.ent.newt .eh{background:var(--new)}
+.ent.changed .eh{background:var(--chg)}
+.ent.retired .eh{background:#9ca3af}
+.ent.retired{opacity:.72}
+.ent .row{display:flex;align-items:center;gap:7px;padding:4px 11px;font-size:11.5px;border-top:1px solid #eef1f4}
+.ent .row:first-of-type{border-top:0}
+.ent .row .nm{font-family:var(--mono);font-size:11.5px;color:var(--p900);font-weight:600}
+.ent .row .ty{font-family:var(--mono);font-size:10px;color:var(--muted);margin-left:auto;white-space:nowrap}
+.ent .row.hi{background:#fff9f2}
+.ent .row.strk .nm{text-decoration:line-through;color:var(--muted)}
+.ent .note{padding:5px 11px;font-size:10px;color:var(--muted);font-style:italic;border-top:1px dashed #e5e9ee;background:#fbfcfd}
+/* diff rows — show a table modification (column added / removed), git-style.
+   Put a "+"/"−" marker in a .gut span at the start of the row. */
+.ent .row .gut{flex:0 0 10px;width:10px;text-align:center;font-family:var(--mono);font-size:11px;font-weight:700;color:var(--muted)}
+.ent .row.add{background:var(--newbg);box-shadow:inset 3px 0 0 var(--new)}
+.ent .row.add .gut{color:var(--new)}
+.ent .row.add .nm{color:#166534}
+.ent .row.del{background:var(--retbg);box-shadow:inset 3px 0 0 var(--ret)}
+.ent .row.del .gut{color:var(--ret)}
+.ent .row.del .nm{color:var(--ret);text-decoration:line-through}
+
+/* relationships panel — crow's-foot text notation */
+.rels{background:#fff;border:1px solid var(--divider);border-radius:10px;padding:12px 16px;margin:14px 0;font-family:var(--mono);font-size:12px;line-height:1.9}
+.rels .rl{display:block;color:var(--p800)}
+.rels .rl b{color:var(--ember)}
+.rels .cf{color:var(--p500);font-weight:700}
+.rels .cmt{color:var(--muted);font-style:normal;font-family:var(--sans);font-size:11.5px}
+.rels .tag-new{color:var(--new);font-weight:700}
+.rels .tag-ret{color:var(--ret);font-weight:700}
+.rels-h{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--p600);font-weight:700;margin-bottom:6px}
+
+/* ============================================================
+   Use-case scene  (an action + its boxes-and-arrows diagram)
+   ============================================================ */
+.uc{margin:16px 0 22px;border:1px solid var(--divider);border-radius:12px;overflow:hidden;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.uc .uch{display:flex;align-items:center;gap:13px;padding:11px 16px;background:linear-gradient(135deg,var(--p700),var(--p600));color:#fff}
+.uc .uch .ucn{flex:0 0 30px;height:30px;border-radius:50%;background:rgba(255,255,255,.2);font-family:var(--mono);font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.uc .uch .uctxt{flex:1}
+.uc .uch .actor{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--p100);display:block;margin-bottom:1px}
+.uc .uch .uct{font-weight:600;font-size:15.5px;font-family:var(--serif)}
+.uc .ucsub{padding:9px 16px;font-size:12.5px;color:var(--p800);background:var(--p50);border-bottom:1px solid var(--p100)}
+.uc .ucdiag{padding:20px 16px 14px}
+.ucnote{padding:2px 16px 14px;font-size:11.5px;color:var(--muted)}
+.ucnote b{color:var(--p700);font-family:var(--mono);font-size:10.5px}
+
+/* ============================================================
+   Boxes-and-arrows flow
+   Robustness rules baked in:
+   - .dfg WRAPS (flex-wrap:wrap) so long chains never clip / never
+     need horizontal scroll. Arrows reflow with the nodes.
+   - .node is a flex COLUMN: the op-badge is an in-flow header row
+     (never position:absolute), and .nt / .nf are block-level, so a
+     table name and its fields can never smush onto one line.
+   ============================================================ */
+.dfg{display:flex;flex-wrap:wrap;align-items:stretch;gap:8px 0;margin:0}
+.node{flex:0 0 auto;width:156px;background:#fff;border:1.5px solid var(--p300);border-radius:8px;padding:9px 11px;display:flex;flex-direction:column;gap:3px}
+.node .op{align-self:flex-start;font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:1px 6px;border-radius:3px;border:1px solid;color:#fff;margin-bottom:2px}
+.node .nt{display:block;font-family:var(--mono);font-weight:700;font-size:12px;color:var(--p900);line-height:1.3;word-break:break-word}
+.node .nf{display:block;font-family:var(--mono);font-size:10px;color:var(--muted);line-height:1.45;word-break:break-word}
+.node.created{border-color:var(--new);background:var(--newbg)} .node.created .op{background:var(--new);border-color:var(--new)}
+.node.read{border-color:var(--p400);background:#eef4fb} .node.read .op{background:var(--p500);border-color:var(--p500)}
+.node.event{border-color:var(--ember);background:#fdf6f0} .node.event .op{background:var(--ember);border-color:var(--ember)}
+.node.store{border-style:dashed;border-color:var(--p500);background:#eef3f7} .node.store .op{background:var(--p700);border-color:var(--p700)}
+.edge{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:70px;max-width:104px;padding:0 4px}
+.edge .el{font-size:9px;color:var(--p600);font-family:var(--mono);text-align:center;line-height:1.3;margin-bottom:2px}
+.edge .ar{color:var(--p400);font-size:20px;font-weight:700;line-height:1}
+
+/* ============================================================
+   Card grid  (keep / change / drop comparisons)
+   ============================================================ */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:820px){.grid2{grid-template-columns:1fr}.erd{padding:12px}}
+.card{background:var(--card);border:1px solid var(--divider);border-radius:9px;padding:14px 16px}
+.card.keep{border-top:3px solid var(--new)} .card.change{border-top:3px solid var(--chg)} .card.drop{border-top:3px solid var(--ret)}
+.card strong{display:block;margin-bottom:4px;font-size:13.5px}
+.card ul{font-size:12.5px;margin:2px 0}
+
+/* ============================================================
+   Lifecycle / state machine
+   ============================================================ */
+.sm{display:flex;flex-wrap:wrap;gap:7px;align-items:center;margin:14px 0}
+.sm .s{border:1px solid var(--p300);background:var(--p50);border-radius:20px;padding:5px 12px;font-size:11.5px;font-weight:600;color:var(--p800);font-family:var(--mono)}
+.sm .s .who{display:block;font-size:9px;font-family:var(--mono);color:var(--muted);font-weight:400;text-transform:uppercase;letter-spacing:.03em}
+.sm .s.client{border-color:var(--newbd);background:var(--newbg)}
+.sm .s.cc{border-color:#f0cba8;background:#fdf6f0}
+.sm .s.spec{border-color:var(--chgbd);background:var(--chgbg)}
+.sm .a{color:var(--p400);font-weight:700}
+
+/* ============================================================
+   Use-case catalog — grouped list of candidate use cases
+   (a scoped list, NOT a diagram — for "what would we build" inventories)
+   ============================================================ */
+.catgrp{border:1px solid var(--divider);border-radius:10px;overflow:hidden;margin:14px 0;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.catgrp .cath{background:var(--p700);color:#fff;padding:8px 14px;font-family:var(--serif);font-weight:600;font-size:14.5px;display:flex;align-items:center;gap:10px}
+.catgrp .cath .cgl{font-family:var(--mono);font-size:12px;font-weight:700;background:rgba(255,255,255,.2);border-radius:5px;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;flex:0 0 22px}
+.uci{display:flex;gap:9px;align-items:baseline;padding:7px 13px;border-top:1px solid #eef1f4;font-size:13px}
+.uci .uid{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--p600);flex:0 0 26px}
+.uci .utxt{flex:1;color:var(--ink);line-height:1.45}
+.uci .utxt b{color:var(--p900)}
+.uci .star{color:var(--ember);font-weight:700;font-size:12px;flex:0 0 auto;letter-spacing:-1px}
+.uci.later{opacity:.66}
+.utag{font-family:var(--mono);font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;text-transform:uppercase;letter-spacing:.03em;white-space:nowrap;flex:0 0 auto}
+.utag.t-orig{background:#e0edfb;color:#2456a8;border:1px solid #c3d8f2}
+.utag.t-add{background:var(--newbg);color:var(--new);border:1px solid var(--newbd)}
+
+/* ============================================================
+   Misc: storage strip, cross-reference box
+   ============================================================ */
+.storage{background:#eef3f7;border:1px dashed var(--p300);border-radius:8px;padding:9px 13px;font-family:var(--mono);font-size:12px;color:var(--p800);margin:12px 0}
+.storage b{color:var(--ember)}
+.xref{font-size:12px;color:var(--p600);background:var(--p50);border:1px solid var(--p100);border-radius:6px;padding:8px 12px;margin:10px 0}
+.foot{margin-top:44px;padding-top:18px;border-top:1px solid var(--divider);color:var(--muted);font-size:12px;font-family:var(--mono)}
+
+/* actor / repo chips (optional, for inline actor tags in prose) */
+.rc{display:inline-block;font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;padding:1px 6px;border-radius:5px;border:1px solid;vertical-align:middle;white-space:nowrap}
+.r-ch{background:#eef4fb;color:#2456a8;border-color:#c3d8f2}
+.r-sub{background:#f3eefb;color:#6b3fa0;border-color:#dcccf0}
+.r-fa{background:#e9f7f2;color:#0f7a5f;border-color:#bfe8db}
+.r-db{background:#eaeef2;color:#2d4559;border-color:#c7d2dd}
+.r-store{background:#e6eef3;color:#35526b;border-color:#bcd0dd}
+.r-user{background:#eefaf0;color:#15803d;border-color:#bbf7d0}
+.r-mcp{background:#fdf0e6;color:#b5590d;border-color:#f2d3b3}
+
+/* ============================================================
+   Sequence diagram — swimlane message flow
+   A CSS grid: col 1 = step number, then one column per actor lane.
+   Each message is a grid item that SPANS grid-columns from its
+   source lane to its target lane, so it always sits under the right
+   headers and never smushes. Continuous lifelines are grid items
+   spanning all rows (grid-row:1/-1) — so set .seq-body's
+   grid-template-rows to repeat(STEP_COUNT, auto) for -1 to resolve.
+   Wide diagrams scroll inside .seq-scroll, never the page body.
+   Direction is an in-flow glyph (.dir ◂/▸) pushed to the target edge
+   by justify-content:space-between — never position:absolute.
+   ============================================================ */
+.seq-scroll{overflow-x:auto;margin:16px 0;border:1px solid var(--divider);border-radius:12px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.seq{min-width:840px}
+.seq-head,.seq-body{display:grid;grid-template-columns:30px repeat(6,minmax(104px,1fr))}
+.seq-head{background:linear-gradient(135deg,var(--p800),var(--p700));padding:11px 12px}
+.seq-h{display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;padding:0 4px}
+.seq-h .role{font-family:var(--mono);font-size:8.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--p200)}
+.seq-h .who{font-family:var(--mono);font-size:11px;font-weight:700;color:#fff;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.24);border-radius:6px;padding:3px 9px}
+.seq-body{position:relative;row-gap:11px;padding:16px 12px 20px}
+.seq-life{width:2px;background:var(--p100);justify-self:center;border-radius:2px;z-index:0}
+.seq-num{grid-column:1;justify-self:center;align-self:center;font-family:var(--mono);font-size:10px;font-weight:700;color:#fff;background:var(--p600);min-width:19px;height:19px;padding:0 3px;border-radius:10px;display:flex;align-items:center;justify-content:center;z-index:1}
+.seq-msg{align-self:center;display:flex;flex-direction:row;align-items:center;gap:8px;justify-content:space-between;background:#fff;border:1.5px solid var(--p300);border-radius:7px;padding:5px 10px;z-index:1;min-width:0}
+.seq-msg .mt{display:flex;flex-direction:column;gap:1px;min-width:0}
+.seq-msg .m{font-family:var(--mono);font-size:10.5px;color:var(--p900);font-weight:700;line-height:1.32;word-break:break-word}
+.seq-msg .m2{font-family:var(--mono);font-size:9.5px;color:var(--muted);line-height:1.3;word-break:break-word}
+.seq-msg .dir{font-size:14px;font-weight:700;color:var(--p500);flex:0 0 auto}
+.seq-msg.write{border-color:var(--new);background:var(--newbg)} .seq-msg.write .dir{color:var(--new)}
+.seq-msg.event{border-color:var(--ember);background:#fdf6f0} .seq-msg.event .dir{color:var(--ember)}
+.seq-msg.ret{border-style:dashed;background:#f6f9fb} .seq-msg.ret .m{font-weight:500;color:var(--p600)}
+.seq-msg.self{border-style:dashed;border-color:var(--p400);background:#eef3f7}
+.seq-foot{display:flex;flex-wrap:wrap;gap:8px 15px;padding:9px 14px;border-top:1px solid var(--divider);background:#fbfcfd;font-size:10.5px;font-family:var(--mono);color:var(--muted);align-items:center}
+.seq-foot .sw{display:inline-block;width:20px;height:11px;border-radius:3px;border:1.5px solid var(--p300);vertical-align:middle;margin-right:5px}
+.seq-foot .sw.write{border-color:var(--new);background:var(--newbg)} .seq-foot .sw.event{border-color:var(--ember);background:#fdf6f0}
+.seq-foot .sw.ret{border-style:dashed;background:#f6f9fb} .seq-foot .sw.self{border-style:dashed;border-color:var(--p400);background:#eef3f7}
+
+/* ============================================================
+   Data table — for step→entity maps and any tabular spec content.
+   Wrap in .spectable-scroll so wide tables scroll, not the page.
+   ============================================================ */
+.spectable-scroll{overflow-x:auto;margin:14px 0}
+.spectable{width:100%;border-collapse:collapse;font-size:12.5px;background:#fff;border:1px solid var(--divider);border-radius:10px;overflow:hidden}
+.spectable thead th{background:var(--p700);color:#fff;font-family:var(--mono);font-size:10px;letter-spacing:.04em;text-transform:uppercase;text-align:left;padding:8px 12px;font-weight:700;white-space:nowrap}
+.spectable tbody td{padding:7px 12px;border-top:1px solid #eef1f4;vertical-align:top;line-height:1.5}
+.spectable tbody tr:nth-child(even){background:#fbfcfd}
+.spectable td .sn{font-family:var(--mono);font-weight:700;color:#fff;background:var(--p600);border-radius:9px;padding:1px 7px;font-size:10.5px}
+.spectable td code{font-size:11px}
+.spectable td .none{color:var(--muted);font-style:italic;font-family:var(--sans)}
+.spectable td .w{color:var(--new);font-weight:700} /* write */
+.spectable td .r{color:var(--p500);font-weight:700} /* read/return */
+
+/* ============================================================
+   Prompt / code block — a readable mono block (LLM prompts, snippets).
+   White-space preserved; scrolls horizontally inside itself.
+   ============================================================ */
+.prompt{background:#fbfcfd;border:1px solid var(--p200);border-left:4px solid var(--p500);border-radius:8px;padding:12px 15px;margin:12px 0;font-family:var(--mono);font-size:11.5px;line-height:1.6;color:var(--p900);white-space:pre-wrap;overflow-x:auto}
+.prompt .ph{display:block;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--p600);font-weight:700;margin-bottom:6px}
+
+</style>
+</head>
+<body>
+
+<header class="masthead">
+  <div class="kicker">RUNBOOK-CHECKPOINTS · HITL UI</div>
+  <h1>Runbook Checkpoints + HITL Questions</h1>
+  <p>Visual companion to <code>DESIGN-SPEC.md</code>: the three new tables, and how a human-in-the-loop question flows through each lane — the live <b>local captain</b> (poll) vs the stopped-sandbox <b>cloud launcher</b> (resume event).</p>
+  <div class="meta">Draft v1 · 2026-09-08 · click a tab ↓</div>
+</header>
+
+<nav class="tabs">
+  <button data-tab="overview" class="active"><span class="n">01</span>Overview</button>
+  <button data-tab="data"><span class="n">02</span>Data model</button>
+  <button data-tab="local"><span class="n">03</span>Local lane</button>
+  <button data-tab="cloud"><span class="n">04</span>Cloud lane</button>
+  <button data-tab="lifecycle"><span class="n">05</span>Question lifecycle</button>
+</nav>
+
+<main>
+
+  <section class="panel active" id="overview">
+    <h2><span class="eyebrow">Section 1</span>Two lanes, one shared data contract</h2>
+    <p class="lede">Every runbook run gets a durable <code>runbook_run</code> row, an ordered <code>runbook_checkpoint</code> stream, and — when it parks at a gate — a <code>runbook_hitl_question</code>. The tables are identical across lanes; only <i>who writes them</i> and <i>how an answer gets back into the run</i> differ.</p>
+
+    <div class="grid2">
+      <div class="card keep">
+        <h3><span class="hn">L</span>Local lane</h3>
+        <p>1.0 <b>and</b> 2.0 runbooks, run in a local Podman container driven by a live <span class="rc r-user">/conductor</span> captain session.</p>
+        <ul>
+          <li>Captain shells out to <code>app_client.py</code> to write the run / checkpoints / questions.</li>
+          <li>Answerable <b>in-session (chat) OR in the UI</b>.</li>
+          <li>Captain <b>polls</b> the question row, writes <code>decision.json</code> locally, resumes.</li>
+          <li>Multi-turn is free: the live captain answers clarifications from context.</li>
+        </ul>
+      </div>
+      <div class="card change">
+        <h3><span class="hn">C</span>Cloud lane</h3>
+        <p>2.0 runbooks only, run in a per-project Vercel Sandbox driven by the substation <code>runbook/run</code> launcher.</p>
+        <ul>
+          <li>Launcher writes the run / checkpoints / questions.</li>
+          <li>Answerable <b>in the UI only</b> (no captain).</li>
+          <li>Sandbox is <b>stopped</b> while parked → answer returns via an <b>Inngest resume event</b>; the launcher writes <code>decision.json</code>.</li>
+          <li>Multi-turn via an out-of-band <code>conductor run-step</code> clarifier — zero conductor2 change.</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3><span class="hn">SM</span><code>runbook_run.status</code></h3>
+    <div class="sm">
+      <span class="s spec">queued<span class="who">launcher/captain</span></span><span class="a">→</span>
+      <span class="s cc">running<span class="who">conductor</span></span><span class="a">→</span>
+      <span class="s client">awaiting_input<span class="who">human</span></span><span class="a">→</span>
+      <span class="s cc">running<span class="who">resume</span></span><span class="a">→</span>
+      <span class="s spec">completed<span class="who">exit 0</span></span>
+    </div>
+    <div class="callout ember"><span class="lab">wait model</span> The run <b>parks at exit 75</b> and (cloud) stops the sandbox. Verified token-free for catch-up: a <code>runner: none</code> gate runs no agent, and the node after it is a fresh invocation that reads from disk — so a long human wait costs the same tokens as an instant answer.</div>
+
+    <div class="legend">
+      <span class="k"><span class="swatch" style="background:var(--new)"></span> net-new table / write</span>
+      <span class="k"><span class="swatch" style="background:var(--p500)"></span> read / call</span>
+      <span class="k"><span class="swatch" style="background:var(--ember)"></span> async event</span>
+      <span class="k"><span class="swatch" style="background:var(--p700);border:1px dashed #fff"></span> object storage</span>
+    </div>
+  </section>
+
+  <section class="panel" id="data">
+    <h2><span class="eyebrow">Section 2</span>Data model — three new tables</h2>
+    <p class="lede">Modeled on proven precedents: <code>site_plan_preprocessing_run</code> (run row), <code>diligence_runs</code> (status lifecycle + realtime), and <code>file_upload_decision</code> (the typed HITL question). Service-role writes; noetic-scoped authenticated SELECT so cityhall can subscribe.</p>
+
+    <div class="erd">
+      <div class="ent newt">
+        <div class="eh"><span class="en">runbook_run</span><span class="stereo">NEW</span></div>
+        <div class="row"><span class="b b-pk">PK</span><span class="nm">id</span><span class="ty">uuid</span></div>
+        <div class="row hi"><span class="nm">runbook_name</span><span class="ty">text · sir-new/…</span></div>
+        <div class="row"><span class="nm">lane</span><span class="ty">local | cloud</span></div>
+        <div class="row hi"><span class="nm">status</span><span class="ty">queued…awaiting_input…</span></div>
+        <div class="row"><span class="b b-fk">FK</span><span class="nm">project_id</span><span class="ty">→ project · null</span></div>
+        <div class="row"><span class="b b-fk">FK</span><span class="nm">submission_version_id</span><span class="ty">→ submission_version · null</span></div>
+        <div class="row"><span class="nm">inputs</span><span class="ty">jsonb · request.json</span></div>
+        <div class="row"><span class="nm">run_dir / sandbox_id</span><span class="ty">text</span></div>
+        <div class="row"><span class="nm">inngest_event_id</span><span class="ty">text · resume key</span></div>
+        <div class="row"><span class="b b-fk">FK</span><span class="nm">triggered_by</span><span class="ty">→ auth.users · null</span></div>
+        <div class="row"><span class="nm">ledger_total_usd / error</span><span class="ty">numeric / text</span></div>
+        <div class="note">one row per run · lifecycle record, not a registry</div>
+      </div>
+
+      <div class="ent newt">
+        <div class="eh"><span class="en">runbook_checkpoint</span><span class="stereo">NEW</span></div>
+        <div class="row"><span class="b b-pk">PK</span><span class="nm">id</span><span class="ty">uuid</span></div>
+        <div class="row"><span class="b b-fk">FK</span><span class="b b-nn">NN</span><span class="nm">run_id</span><span class="ty">→ runbook_run</span></div>
+        <div class="row"><span class="nm">seq</span><span class="ty">bigint · order</span></div>
+        <div class="row hi"><span class="nm">kind</span><span class="ty">status | note | question</span></div>
+        <div class="row"><span class="nm">step_id</span><span class="ty">text · null</span></div>
+        <div class="row"><span class="nm">title / body_md</span><span class="ty">text</span></div>
+        <div class="row hi"><span class="b b-fk">FK</span><span class="nm">hitl_question_id</span><span class="ty">→ question · null</span></div>
+        <div class="note">the ONE stream the UI renders; question rows link out</div>
+      </div>
+
+      <div class="ent newt">
+        <div class="eh"><span class="en">runbook_hitl_question</span><span class="stereo">NEW</span></div>
+        <div class="row"><span class="b b-pk">PK</span><span class="nm">id</span><span class="ty">uuid</span></div>
+        <div class="row"><span class="b b-fk">FK</span><span class="b b-nn">NN</span><span class="nm">run_id</span><span class="ty">→ runbook_run</span></div>
+        <div class="row"><span class="nm">gate_step_id</span><span class="ty">text</span></div>
+        <div class="row hi"><span class="nm">input_type</span><span class="ty">decision | clarification</span></div>
+        <div class="row hi"><span class="nm">payload</span><span class="ty">jsonb · prompt+options+freeform</span></div>
+        <div class="row"><span class="nm">status</span><span class="ty">awaiting_input | answered | …</span></div>
+        <div class="row"><span class="nm">answer</span><span class="ty">jsonb</span></div>
+        <div class="row"><span class="b b-fk">FK</span><span class="nm">answered_by</span><span class="ty">→ auth.users · null</span></div>
+        <div class="row"><span class="nm">channel</span><span class="ty">ui | session | agent</span></div>
+        <div class="note">payload generated from the gate's zod contract · UNIQUE open per (run, gate)</div>
+      </div>
+
+      <div class="ent exist">
+        <div class="eh"><span class="en">project / submission_version / auth.users</span><span class="stereo">existing</span></div>
+        <div class="row"><span class="nm">referenced by FK</span><span class="ty">tenant + answerer</span></div>
+        <div class="note">unchanged</div>
+      </div>
+    </div>
+
+    <div class="rels">
+      <div class="rels-h">Relationships (crow's foot)</div>
+      <span class="rl">runbook_run <span class="cf">‖──&lt;</span> runbook_checkpoint <span class="cmt">— one run, many ordered checkpoints</span> <span class="tag-new">[NEW]</span></span>
+      <span class="rl">runbook_run <span class="cf">‖──&lt;</span> runbook_hitl_question <span class="cmt">— N open across gates, one per gate</span> <span class="tag-new">[NEW]</span></span>
+      <span class="rl">runbook_checkpoint <span class="cf">&gt;──?</span> runbook_hitl_question <span class="cmt">— a question-kind checkpoint links to its question</span> <span class="tag-new">[NEW]</span></span>
+      <span class="rl">project <span class="cf">‖──&lt;</span> runbook_run <span class="cmt">— nullable tenant scope</span></span>
+    </div>
+
+    <div class="callout new"><span class="lab">key divergence</span> Unlike <code>file_upload_decision</code> (options derived in code from a closed <code>question_type</code> set), the question's <b>options live in <code>payload</code></b> and are generated from the gate's zod contract — because runbook gate questions are author-written and open-ended, mirroring <code>AskUserQuestion</code>.</div>
+  </section>
+
+  <section class="panel" id="local">
+    <h2><span class="eyebrow">Section 3</span>Local lane — the captain polls</h2>
+    <p class="lede">The live <code>/conductor</code> captain session owns writes and pulls the answer. cityhall never touches the local filesystem — it only writes the answer row; the captain's poll picks it up. (In-session chat answering is the same, minus steps 5–6.)</p>
+
+    <div class="seq-scroll"><div class="seq">
+      <div class="seq-head">
+        <div></div>
+        <div class="seq-h"><span class="role">user</span><span class="who">operator</span></div>
+        <div class="seq-h"><span class="role">app</span><span class="who">captain (CC)</span></div>
+        <div class="seq-h"><span class="role">fn</span><span class="who">conductor2</span></div>
+        <div class="seq-h"><span class="role">app</span><span class="who">cityhall</span></div>
+        <div class="seq-h"><span class="role">store</span><span class="who">Storage</span></div>
+        <div class="seq-h"><span class="role">db</span><span class="who">Postgres</span></div>
+      </div>
+      <div class="seq-body" style="grid-template-rows:repeat(8,auto)">
+        <div class="seq-life" style="grid-column:2;grid-row:1/-1"></div>
+        <div class="seq-life" style="grid-column:3;grid-row:1/-1"></div>
+        <div class="seq-life" style="grid-column:4;grid-row:1/-1"></div>
+        <div class="seq-life" style="grid-column:5;grid-row:1/-1"></div>
+        <div class="seq-life" style="grid-column:6;grid-row:1/-1"></div>
+        <div class="seq-life" style="grid-column:7;grid-row:1/-1"></div>
+
+        <div class="seq-num" style="grid-row:1">1</div>
+        <div class="seq-msg" style="grid-row:1;grid-column:3/5"><div class="mt"><span class="m">conductor advance → reaches gate</span></div><span class="dir">▸</span></div>
+
+        <div class="seq-num" style="grid-row:2">2</div>
+        <div class="seq-msg ret" style="grid-row:2;grid-column:3/5"><span class="dir">◂</span><div class="mt"><span class="m">exit 75 · readout path</span></div></div>
+
+        <div class="seq-num" style="grid-row:3">3</div>
+        <div class="seq-msg" style="grid-row:3;grid-column:3/7"><div class="mt"><span class="m">upload readout.md</span></div><span class="dir">▸</span></div>
+
+        <div class="seq-num" style="grid-row:4">4</div>
+        <div class="seq-msg write" style="grid-row:4;grid-column:3/8"><div class="mt"><span class="m">ask: INSERT question + checkpoint</span><span class="m2">status=awaiting_input</span></div><span class="dir">▸</span></div>
+
+        <div class="seq-num" style="grid-row:5">5</div>
+        <div class="seq-msg" style="grid-row:5;grid-column:2/6"><div class="mt"><span class="m">open run · read readout · pick answer</span></div><span class="dir">▸</span></div>
+
+        <div class="seq-num" style="grid-row:6">6</div>
+        <div class="seq-msg write" style="grid-row:6;grid-column:5/8"><div class="mt"><span class="m">UPDATE question answered</span><span class="m2">channel=ui</span></div><span class="dir">▸</span></div>
+
+        <div class="seq-num" style="grid-row:7">7</div>
+        <div class="seq-msg" style="grid-row:7;grid-column:3/8"><div class="mt"><span class="m">await-answer poll → answered</span></div><span class="dir">▸</span></div>
+
+        <div class="seq-num" style="grid-row:8">8</div>
+        <div class="seq-msg write" style="grid-row:8;grid-column:3/5"><div class="mt"><span class="m">write decision.json → advance</span></div><span class="dir">▸</span></div>
+      </div>
+      <div class="seq-foot">
+        <span><span class="sw"></span> call</span><span><span class="sw write"></span> DB write</span>
+        <span><span class="sw ret"></span> return</span>
+      </div>
+    </div></div>
+    <div class="callout"><span class="lab">multi-turn</span> If the operator answers with a <b>clarification</b> instead of a decision, the captain answers from run context and posts a <code>note</code> checkpoint; the gate stays <code>awaiting_input</code> until a real decision arrives. No conductor2 change.</div>
+  </section>
+
+  <section class="panel" id="cloud">
+    <h2><span class="eyebrow">Section 4</span>Cloud lane — the launcher resumes</h2>
+    <p class="lede">The sandbox is stopped while parked, so the readout is exported to Storage and the answer returns via an Inngest resume event carrying the decision; the launcher writes <code>decision.json</code> before re-advancing.</p>
+
+    <div class="seq-scroll"><div class="seq">
+      <div class="seq-head">
+        <div></div>
+        <div class="seq-h"><span class="role">user</span><span class="who">operator</span></div>
+        <div class="seq-h"><span class="role">app</span><span class="who">cityhall</span></div>
+        <div class="seq-h"><span class="role">api</span><span class="who">substation</span></div>
+        <div class="seq-h"><span class="role">fn</span><span class="who">launcher+conductor</span></div>
+        <div class="seq-h"><span class="role">store</span><span class="who">Storage</span></div>
+        <div class="seq-h"><span class="role">db</span><span class="who">Postgres</span></div>
+      </div>
+      <div class="seq-body" style="grid-template-rows:repeat(10,auto)">
+        <div class="seq-life" style="grid-column:2;grid-row:1/-1"></div>
+        <div class="seq-life" style="grid-column:3;grid-row:1/-1"></div>
+        <div class="seq-life" style="grid-column:4;grid-row:1/-1"></div>
+        <div class="seq-life" style="grid-column:5;grid-row:1/-1"></div>
+        <div class="seq-life" style="grid-column:6;grid-row:1/-1"></div>
+        <div class="seq-life" style="grid-column:7;grid-row:1/-1"></div>
+
+        <div class="seq-num" style="grid-row:1">1</div>
+        <div class="seq-msg write" style="grid-row:1;grid-column:5/8"><div class="mt"><span class="m">INSERT runbook_run (running)</span></div><span class="dir">▸</span></div>
+
+        <div class="seq-num" style="grid-row:2">2</div>
+        <div class="seq-msg self" style="grid-row:2;grid-column:5/6"><div class="mt"><span class="m">conductor advance → exit 75</span><span class="m2">park at gate</span></div></div>
+
+        <div class="seq-num" style="grid-row:3">3</div>
+        <div class="seq-msg" style="grid-row:3;grid-column:5/7"><div class="mt"><span class="m">export readout + PDF</span></div><span class="dir">▸</span></div>
+
+        <div class="seq-num" style="grid-row:4">4</div>
+        <div class="seq-msg write" style="grid-row:4;grid-column:5/8"><div class="mt"><span class="m">INSERT question + checkpoint</span><span class="m2">run.status=awaiting_input</span></div><span class="dir">▸</span></div>
+
+        <div class="seq-num" style="grid-row:5">5</div>
+        <div class="seq-msg" style="grid-row:5;grid-column:2/4"><div class="mt"><span class="m">read readout · choose answer</span></div><span class="dir">▸</span></div>
+
+        <div class="seq-num" style="grid-row:6">6</div>
+        <div class="seq-msg" style="grid-row:6;grid-column:3/5"><div class="mt"><span class="m">POST answer</span></div><span class="dir">▸</span></div>
+
+        <div class="seq-num" style="grid-row:7">7</div>
+        <div class="seq-msg write" style="grid-row:7;grid-column:4/8"><div class="mt"><span class="m">UPDATE question answered</span></div><span class="dir">▸</span></div>
+
+        <div class="seq-num" style="grid-row:8">8</div>
+        <div class="seq-msg event" style="grid-row:8;grid-column:4/6"><div class="mt"><span class="m">fire runbook/run resume</span><span class="m2">resume_run_dir + decision</span></div><span class="dir">▸</span></div>
+
+        <div class="seq-num" style="grid-row:9">9</div>
+        <div class="seq-msg self" style="grid-row:9;grid-column:5/6"><div class="mt"><span class="m">write decision.json → advance → exit 0</span></div></div>
+
+        <div class="seq-num" style="grid-row:10">10</div>
+        <div class="seq-msg write" style="grid-row:10;grid-column:5/8"><div class="mt"><span class="m">UPDATE run completed</span></div><span class="dir">▸</span></div>
+      </div>
+      <div class="seq-foot">
+        <span><span class="sw"></span> call</span><span><span class="sw write"></span> DB write</span>
+        <span><span class="sw event"></span> async event</span><span><span class="sw self"></span> self / compute</span>
+      </div>
+    </div></div>
+    <div class="callout ember"><span class="lab">before stop</span> Steps 3–4 must run <b>before</b> the sandbox is stopped/snapshotted — once stopped, the run dir (and its readout) is unreadable until a resume.</div>
+  </section>
+
+  <section class="panel" id="lifecycle">
+    <h2><span class="eyebrow">Section 5</span>Question lifecycle &amp; the human-input supertype</h2>
+    <p class="lede">A gate accepts a <b>supertype</b> of human input. Only a <code>decision</code> projects to <code>decision.json</code> and advances the graph; a <code>clarification</code> is answered by an agent but never satisfies the gate.</p>
+
+    <div class="sm">
+      <span class="s spec">created<span class="who">awaiting_input</span></span><span class="a">→</span>
+      <span class="s client">clarification?<span class="who">agent answers, stays parked</span></span><span class="a">→</span>
+      <span class="s client">decision<span class="who">approve/revise + notes</span></span><span class="a">→</span>
+      <span class="s cc">answered<span class="who">channel recorded</span></span><span class="a">→</span>
+      <span class="s spec">advance<span class="who">decision.json written</span></span>
+    </div>
+
+    <div class="spectable-scroll"><table class="spectable">
+      <thead><tr><th>input_type</th><th>writes decision.json?</th><th>who answers</th><th>gate effect</th></tr></thead>
+      <tbody>
+        <tr><td><code>decision</code></td><td><span class="w">yes</span></td><td>human (UI or captain), or agent (auto)</td><td>contract passes → advance</td></tr>
+        <tr><td><code>clarification</code></td><td><span class="none">no</span></td><td>live captain (local) or ad-hoc <code>conductor run-step</code> clarifier (cloud)</td><td>stays <code>awaiting_input</code></td></tr>
+      </tbody>
+    </table></div>
+
+    <div class="prompt"><span class="ph">payload · generated from the gate's zod contract</span>{
+  "prompt": "Approve the SIR for publication, or send revisions back?",
+  "options": [
+    { "label": "Approve & publish", "source": { "kind": "inferred", "label": "3.9-final readout" } },
+    { "label": "Send revisions back" }
+  ],
+  "allow_freeform": true,
+  "readout_storage_path": "runbook-runs/<run>/3.10-deliver/readout.md",
+  "schema_ref": "sir-new/3.10-deliver#Decision"
+}</div>
+
+    <div class="callout new"><span class="lab">zero conductor2 change</span> conductor is decision-agnostic — it runs the gate's contract test and reads an exit code. The clarification thread lives in the run dir (invisible to the contract), and the cloud clarifier is just an out-of-band <code>conductor run-step</code>. No new runner kind, no scheduler change.</div>
+
+    <div class="xref">Grounding: <code>conductor2/src/{model.rs,sched.rs,verbs.rs,contract.rs,claude.rs}</code>; <code>substation/src/inngest/functions/runbook-run.ts</code>; <code>file_upload_decision</code> + RCM (<code>cityhall/src/lib/rcm/</code>). Full detail in <code>DESIGN-SPEC.md</code>.</div>
+  </section>
+
+</main>
+
+<script>
+  const btns=document.querySelectorAll('nav.tabs button');
+  const panels=document.querySelectorAll('.panel');
+  const IDS=['overview','data','local','cloud','lifecycle']; /* KEEP IN SYNC */
+  function show(id){
+    btns.forEach(b=>b.classList.toggle('active',b.dataset.tab===id));
+    panels.forEach(p=>p.classList.toggle('active',p.id===id));
+    if(location.hash.slice(1)!==id) history.replaceState(null,'','#'+id);
+    window.scrollTo({top:0,behavior:'smooth'});
+  }
+  btns.forEach(b=>b.addEventListener('click',()=>show(b.dataset.tab)));
+  const initial=location.hash.slice(1);
+  if(IDS.includes(initial)) show(initial);
+</script>
+</body>
+</html>
