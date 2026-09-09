@@ -278,7 +278,7 @@ code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px s
   <div class="kicker">RUNBOOK-CHECKPOINTS · WORKSTREAM RECONCILE</div>
   <h1>Reconciling two Runbook Control Plane workstreams</h1>
   <p>The same feature got built twice — Jason's <code>runs</code>+<code>gates</code> (<code>#247</code>, <b>merged</b>) and my <code>runbook_*</code> tables + local lane + console (<code>#245</code>/<code>#1549</code>/<code>#663</code>, open). This is the venn of the deltas and the fix-forward.</p>
-  <div class="meta">Draft v2 · 2026-09-09 · companion to DESIGN-SPEC.md · click a tab ↓</div>
+  <div class="meta">Draft v3 · 2026-09-09 · companion to DESIGN-SPEC.md · click a tab ↓</div>
 </header>
 
 <nav class="tabs">
@@ -428,6 +428,7 @@ code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px s
         <tr><td><code>schema JSONB</code> (validation)</td><td><span class="none">— (weak registry)</span></td><td>keep A's <code>schema</code></td></tr>
         <tr><td><span class="none">&mdash;</span></td><td><code>payload JSONB</code> (render)</td><td><span class="w">add <code>payload</code></span></td></tr>
         <tr><td><code>decided_by TEXT</code></td><td><code>answered_by</code> &rarr; auth.users</td><td>keep A's + <b>add <code>decided_by_user_id</code></b> (FK) + <code>channel</code></td></tr>
+        <tr><td><span class="none">&mdash;</span></td><td><span class="none">&mdash;</span></td><td><span class="w">add <code>next_action</code></span> (proceed | report_back) &mdash; <b>new (v3)</b></td></tr>
         <tr><td><code>status</code>: <b>open/decided</b>/applied</td><td><b>awaiting_input/answered</b>/…</td><td>keep A's literals</td></tr>
         <tr><td><code>UNIQUE(run_id,step)</code> upsert-on-repark</td><td>partial-unique + history rows</td><td>keep A's upsert; stream carries history</td></tr>
       </tbody>
@@ -445,6 +446,7 @@ code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px s
         <li><code>status += cancelled</code> on runs; <code>kind += clarification</code> on questions.</li>
         <li>Add <code>payload</code> (render) beside A's <code>schema</code> (validate) — keep both.</li>
         <li>Add <code>decided_by_user_id</code> (&rarr;auth.users) + <code>channel</code>.</li>
+        <li><b>Add <code>next_action</code></b> (proceed | report_back) &mdash; the human's next-action directive (new).</li>
         <li>Turn <b>RLS policies + realtime ON</b> (B's noetic-member SELECT).</li>
         <li><b>Drop</b> <code>run_dir</code> (derive-only); keep A's <code>sandbox_session_id</code>/<code>cmd_id</code>.</li>
       </ul></div>
@@ -467,6 +469,8 @@ code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px s
     </table></div>
     <div class="callout ember"><span class="lab">bottom line</span> One PR (<b>#245</b>) is largely dated &rarr; <b>chunk &amp; re-cut</b>. Two (<b>#1549</b>, <b>#663</b>) are net-new &rarr; <b>keep &amp; re-target</b> names. No B capability is thrown away — only B's duplicate tables + duplicate standalone decide route.</div>
 
+    <div class="callout new"><span class="lab">new in v3 — two-part HITL</span> Every question is now the ask <b>+</b> a human <b>next-action directive</b>: two buttons at answer time — <b>Proceed</b> (ingest &amp; move forward) or <b>Report back</b> (ingest, take the next step, then pause &amp; report). A manual override on the agent's autonomy. Data: a <code>next_action</code> column on <code>runbook_hitl_questions</code> (+ optional <code>payload.allow_report_back</code>). MVP: the <b>local captain honors it live</b>; the cloud driver honors it when the reconcile body lands. Clarification stays a kind that always holds; <code>next_action</code> lets a <i>terminal</i> gate hold per-answer.</div>
+
     <h3><span class="hn">3</span>Open decisions</h3>
     <div class="spectable-scroll"><table class="spectable">
       <thead><tr><th>#</th><th>decision</th><th>status / lean</th></tr></thead>
@@ -477,6 +481,7 @@ code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px s
         <tr><td>Q4</td><td><code>run_dir</code> derive-only — does <code>&lt;root&gt;/&lt;runbook&gt;/&lt;id&gt;</code> cover the local lane?</td><td>verify w/ bureau CLI</td></tr>
         <tr><td>Q5</td><td>Schema extraction emits JSON-Schema into <code>questions.schema</code>, not a zod registry</td><td>yes — changes bureau output</td></tr>
         <tr><td>Q6</td><td>Reconcile: A's probe only, or add B's <code>claimed_at</code> lease?</td><td>decide when built</td></tr>
+        <tr><td>Q7</td><td><code>report_back</code> past the local lane: control-plane step-then-repark vs runbook-authored hold; offer on operator/hands?</td><td>local: live · cloud: with reconcile</td></tr>
       </tbody>
     </table></div>
     <div class="xref">Full detail: <code>DESIGN-SPEC.md</code> (this dir). Sources: <code>substation#247</code> (<code>d1c082b</code>) · <code>#245</code>/<code>#1549</code>/<code>#663</code>. Prior context: <code>../DESIGN-SPEC.md</code> + <code>../data-model-spec.html</code>.</div>

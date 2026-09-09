@@ -1,6 +1,6 @@
 # Reconciling the two Runbook Control Plane workstreams
 
-**Status:** Draft v2
+**Status:** Draft v3
 **Date:** 2026-09-09
 **Repos touched (proposed):** `substation` (rename A's tables + graft B's fields; one decide controller behind two routes), `bureau` (re-target the local captain CLI), `cityhall` (re-target the console)
 **Repos NOT touched:** `conductor2` (still DB-free; still zero emission changes)
@@ -10,6 +10,8 @@
 > **One-line problem.** The same feature got built twice, in parallel, with different table names, a different gate model, and an overlapping decide route — and **Jason's half already merged to `main`**. This spec categorizes every delta and proposes a fix-forward that keeps one canonical schema and one route surface.
 
 > **Revision note (v2, 2026-09-09).** Folds in Will's feedback. **(a) Rename, don't keep A's names** — the canonical tables become `runbook_runs` / `runbook_hitl_questions` / `runbook_checkpoints` (rename A's `runs`/`gates`, add checkpoints). **(b) Decide route = two routes over one controller** — keep A's `POST /api/gates/:id/decide` as a thin alias and add the canonical `POST /api/runbook-hitl-questions/:id/answer`; both delegate to one controller, so A's existing callers keep working (a clean swap). **(c) `schema` and `payload` both stay** — they're orthogonal (validation contract vs render content), new §3.1. **(d) `cancelled` added** to run status; **(e) `run_dir` dropped** (derive-only, §5.1). **(f) Reconcile reframed** as a shared *gap* (both reference it, neither built it), not a build conflict.
+
+> **Revision note (v3, 2026-09-09).** Adds a feature: **two-part HITL** — every question now carries the ask **plus** a human **next-action directive** set at answer time (*Proceed* = move forward, *Report back* = ingest + take the next step, then pause & report). New column `next_action` on `runbook_hitl_questions`; the local captain honors it in the MVP; full spec in **§6**. This is the target for the locally-testable MVP.
 
 ## Problem
 
@@ -132,6 +134,7 @@ They are **not** the same and do not overlap in purpose:
   - **add `clarification`** to the `kind` CHECK → `decision/clarification/operator/hands`. Clarification is non-terminal: the controller records a `runbook_checkpoints` note and does **not** requeue the run.
   - **add `payload JSONB`** (B's render content — prompt/options/allow_freeform/void_candidates). **Keep A's `schema` too** — they're orthogonal (§3.1): `schema` validates the answer, `payload` renders the card.
   - **add `decided_by_user_id UUID → auth.users`** (real attribution for the UI answer path) alongside A's free-text `decided_by`, and **`channel`** (ui/session/agent).
+  - **add `next_action TEXT CHECK (proceed | report_back)`** — the human's next-action directive (§6), set at answer time; `null` until answered.
 - **Turn RLS policies + realtime ON** for all three (B's noetic-member SELECT + `is_noetic_member()` + `REPLICA IDENTITY FULL` + `supabase_realtime` publication) — A's deferred "shape (b)", now decided.
 
 **`run_dir` — what it did in B, why we drop it.** `run_dir` was a denormalized TEXT column caching the run directory's absolute path (local path or sandbox path). A omits it and *derives* the path from `<runs root>/<runbook>/<id>`, because "two spellings of one path is how a resume ends up pointed at a directory that does not exist." Since the path is deterministic from `id`+`runbook`, the column is a convenience that only adds drift risk. **Drop it.** Caveat (Q4): B's local captain CLI currently passes an explicit `--run-dir`; confirm the derive rule covers a local run's dir, or keep `run_dir` strictly as a non-authoritative display hint never used for resume path resolution.
@@ -161,7 +164,34 @@ They are **not** the same and do not overlap in purpose:
 
 ---
 
-## 6. Open questions
+## 6. New in v3 — two-part HITL: the ask, then the human's next-action directive
+
+A HITL question now carries **two decisions**, not one:
+
+1. **The answer** (as already defined) — multiple-choice, open-ended, or both — validated against the gate's `schema`.
+2. **The next-action directive** — at answer time the human *forces what the agent does next*, rather than trusting the agent to stop in the right place. Two buttons:
+   - **Proceed** — "take the answer and move forward": the agent ingests the answer and continues autonomously (today's terminal behavior).
+   - **Report back** — "ingest the input and report back": the agent ingests the answer, does the immediate next unit of work, then **pauses and reports** (a checkpoint, plus a follow-up question if it needs another decision) instead of running ahead.
+
+It is a manual override on the agent's autonomy — awkward in some flows (acknowledged), fine for the MVP.
+
+**Data — answer side.** Add `next_action TEXT CHECK (proceed | report_back)` to `runbook_hitl_questions`, set at answer time beside `decision`/`decided_by` (`null` until answered). It is a **first-class control column, not buried in the answer JSONB**, because the driver branches the run's state machine on it. (Zero-migration fallback: `answer.next_action` inside the JSONB — but a column is cleaner for the controller, the UI, and reconcile to read.)
+
+**Data — ask side (optional).** `payload.allow_report_back` (default `true`) lets an author suppress the option where it is nonsensical (e.g. a final publish gate). MVP always shows both buttons.
+
+**State machine.** On answer the gate goes `decided` regardless; `next_action` then governs the **run's** next move:
+- `proceed` → advance/resume — write the decision into the run dir, the run advances to the next gate or completion (today's terminal path).
+- `report_back` → ingest, take the next bounded step, then **re-park** with a report; the run does **not** autonomously continue. The report lands in the checkpoint stream — exactly what `runbook_checkpoints` is for (another reason the merged model keeps the stream).
+
+**Lane scope (locally-testable MVP).**
+- **Local lane — honored now.** The captain is a live agent: `proceed` → `conductor advance`; `report_back` → ingest, run the next step, post a checkpoint (+ open a follow-up question if needed), wait. The override is realized by the live captain — **this is the MVP.**
+- **Cloud lane — deferred** with the rest of the driver: the controller/reconcile branches on `next_action` (proceed = fire resume-advance; report_back = resume, bounded step, re-park). The column is the seam.
+
+**Relationship to `clarification`.** This generalizes the terminal/non-terminal split. `clarification` is a *kind* hard-wired to never advance (agent-set, ask time); `next_action=report_back` lets a **terminal** gate hold **per answer** (human-set, answer time). A `clarification` ignores `next_action` (always holds). Keep both — different actor, different time.
+
+**Controller + UI.** The one decide controller (§5.2) reads `next_action` and skips the autonomous advance on `report_back`. cityhall's rich card renders the two buttons; the answer body becomes `{ answer, next_action }`.
+
+## 7. Open questions
 
 - **Q1 — RESOLVED (v2).** Adopt A's base, renamed to B's convention (`runbook_runs`/`runbook_hitl_questions`/`runbook_checkpoints`). Not a rewrite of A's shape — a rename + graft.
 - **Q2 — RESOLVED (v2).** Keep B's extra statuses: `cancelled` on runs (Will-confirmed); `dismissed`/`superseded` on questions optional (additive) — decide during the migration.
@@ -169,3 +199,4 @@ They are **not** the same and do not overlap in purpose:
 - **Q4** — `run_dir` derived-only confirmed (v2). Verify the derive rule (`<runs root>/<runbook>/<id>`) covers the **local** lane, where B's captain CLI currently passes an explicit run dir. If not, keep `run_dir` as a non-authoritative display hint only.
 - **Q5** — Decision schema now lives on `runbook_hitl_questions.schema` (ajv/JSON-Schema, §3.1). The bureau schema-extraction task (old Q7) must emit JSON Schema into the gate at callback time, not a zod registry — confirm that output format.
 - **Q6** — Reconcile liveness: A's `Command.wait` probe (via `sandbox_session_id`+`cmd_id`) vs adding B's `claimed_at` lease to stop a tick and a hot-fire double-advancing one run. Decide when the effectful reconcile body is built.
+- **Q7 — NEW (v3).** `report_back` mechanics past the local lane: is "do the next bounded step then re-park" a control-plane behavior (advance one node via `conductor run-step`, then re-park) or a runbook-authored conditional hold? MVP only needs the local captain to honor it; the cloud answer is due with the reconcile body. Also: should `report_back` be offered on `operator`/`hands`, or only `decision`?
