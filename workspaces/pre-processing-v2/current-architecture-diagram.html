@@ -153,6 +153,14 @@ code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px s
 /* one-off: readable prompt block, mono, scroll-safe */
 .prompt{background:#fbfcfd;border:1px solid var(--p200);border-left:4px solid var(--p500);border-radius:8px;padding:12px 15px;margin:12px 0;font-family:var(--mono);font-size:11.5px;line-height:1.6;color:var(--p900);white-space:pre-wrap;overflow-x:auto}
 .prompt .ph{display:block;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--p600);font-weight:700;margin-bottom:6px}
+/* one-off: clickable source-code links per vision call (tab 01, section 4) */
+.codelinks{background:#eef3f7;border:1px dashed var(--p300);border-radius:8px;padding:10px 14px;margin:12px 0;font-family:var(--mono);font-size:11.5px;line-height:1.95}
+.codelinks .clh{display:block;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--p600);font-weight:700;margin-bottom:5px}
+.codelinks .cl{display:block}
+.codelinks .cl .rl{color:var(--muted);margin-right:6px}
+.codelinks a{color:var(--ember);text-decoration:none;border-bottom:1px dotted var(--ember)}
+.codelinks a:hover{background:#fdf6f0}
+.codelinks .fn{color:var(--p800);font-style:normal}
 /* sequence diagram — additive component (tab 04) */
 .seq{border:1px solid var(--divider);border-radius:12px;background:#fff;margin:16px 0;box-shadow:0 1px 3px rgba(0,0,0,.05);overflow:hidden}
 .seq .seqh{display:flex;flex-wrap:wrap;gap:7px;padding:11px 14px;background:linear-gradient(135deg,var(--p700),var(--p600))}
@@ -196,7 +204,7 @@ code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px s
   all reading into an operator-run runbook — and <b>how the pre-processing data gets consumed</b>
   (the old cloud review workflow vs. the new operator-run review runbook). Grounding + intent in
   <code>preprocessing-packet/</code>.</p>
-  <div class="meta">Draft v1 · 2026-08-13 · verified against substation @ 2026-08-13 · click a tab ↓</div>
+  <div class="meta">Draft v1 · 2026-08-13 · §4 "Vision calls expanded" added &amp; re-verified against substation @ ef1aff32 (2026-09-02) · click a tab ↓</div>
 </header>
 
 <nav class="tabs">
@@ -290,6 +298,341 @@ code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px s
         <div class="node created"><span class="op">update</span><span class="nt">sheet_version</span><span class="nf">reading_guide<br>block_numbering<br>_scheme</span></div>
       </div></div>
       <div class="ucnote"><b>plus, per plan set</b> — a title-block metadata call (sheet 1 → <code>plan_set_version.title_block_meta</code>), a project-facts refresh (Haiku, v2+), and on resubmittals a sheet-comparison call that writes a change narrative — or declares a pair <code>UNRELATED</code>, which edits the version chain.</div>
+    </div>
+
+    <h2 id="vision-expanded"><span class="eyebrow">Step 3, expanded</span>Vision calls expanded</h2>
+    <p class="lede">The four per-sheet Gemini calls from step 3, opened up: for each one, <b>the exact source
+    code that defines it</b>, <b>the verbatim prompt sent to Gemini</b>, and <b>the entity fields the
+    response writes</b>. All four run inside the <code>process-file/sheet</code> Inngest function in
+    order — summary → discovery → transcription → reading guide — each in its own <code>step.run</code>
+    so a failure in one is swallowed (logged, then <code>processed</code> anyway) without aborting the
+    rest.</p>
+    <div class="callout"><span class="lab">verified against source · substation @ ef1aff32 (2026-09-02)</span>
+    All four are <b>Gemini 3.1 Pro</b> (<code>google/gemini-3.1-pro-preview</code>) via Vercel AI Gateway,
+    every call with <code>mediaResolution: MEDIA_RESOLUTION_HIGH</code>. Calls ① / ② / ③ use
+    <code>generateObject</code> (Zod-schema-constrained JSON); call ④ uses <code>generateText</code>
+    (free-form prose). A <b>5th</b> per-sheet call — sheet comparison (v2+ resubmittals only) — and the
+    OpenAI block-embedding pass are adjacent in the same function but are <b>not</b> vision reads of a
+    fresh sheet, so they sit outside "the four." Per-sheet title-block extraction was <b>deliberately
+    removed</b> (see the code comment at the head of <code>sheet.llm.ts</code>).</div>
+
+    <!-- ========================= CALL 1 ========================= -->
+    <div class="uc">
+      <div class="uch"><div class="ucn">①</div><div class="uctxt">
+        <span class="actor">substation · step <code style="color:#fff">sheet-summary</code> · input = single-page sheet PDF (<code style="color:#fff">n.pdf</code>) · generateObject</span>
+        <span class="uct">Name + page summary</span>
+      </div></div>
+      <div class="ucsub">Reads the one-page sheet PDF and returns a 6–10 word overview plus a Title-Case sheet label. Runs with <code>thinkingLevel: low</code>. This is the only one of the four whose output lands on the <code>sheet</code> identity row, not just the version.</div>
+      <div class="ucdiag">
+        <div class="codelinks">
+          <span class="clh">Where it's defined</span>
+          <span class="cl"><span class="rl">fn</span><a href="https://github.com/noetic-inc/substation/blob/ef1aff32db9d8cfa879590191a095895f32d43d6/src/inngest/functions/process-file/sheet.llm.ts#L70-L94"><span class="fn">extractPageSummary()</span> — sheet.llm.ts:70</a></span>
+          <span class="cl"><span class="rl">prompt</span><a href="https://github.com/noetic-inc/substation/blob/ef1aff32db9d8cfa879590191a095895f32d43d6/src/inngest/lib/prompts/processing.ts#L1-L12"><span class="fn">pageSummaryPrompt</span> — processing.ts:1</a></span>
+          <span class="cl"><span class="rl">schema</span><a href="https://github.com/noetic-inc/substation/blob/ef1aff32db9d8cfa879590191a095895f32d43d6/src/inngest/functions/process-file/sheet.llm.ts#L24-L27"><span class="fn">pageSummarySchema</span> {summary, sheetLabel} — sheet.llm.ts:24</a></span>
+          <span class="cl"><span class="rl">call site</span><a href="https://github.com/noetic-inc/substation/blob/ef1aff32db9d8cfa879590191a095895f32d43d6/src/inngest/functions/process-file/sheet.ts#L97-L133"><span class="fn">sheet.ts:97</a></span>
+        </div>
+        <div class="prompt"><span class="ph">Prompt · pageSummaryPrompt (verbatim) + the sheet PDF as a file part</span>You are analyzing a single page from a civil engineering site plan submission. Your task is to summarize the page and identify what kind of sheet it is.
+
+## Output
+
+Provide the complete JSON object, including:
+
+* `summary` - a concise 6–10 word overview of what can be found on the page. This will be shown in context, so do you do NOT need to include the name of the project or the sheet number - e.g. do NOT say "this is sheet 3 of 10 in the site plan for the 14th &amp; Lavaca project - instead, say something like "This page serves as the title sheet and contains essential project information including the main site plan drawing, professional certifications, approval blocks, and administrative elements."
+* `sheetLabel` - this can typically be found in the right side margin, in bold or a larger font. Examples include: "Cover", "General Notes", "Existing Conditions", "Utility Plan", "Erosion Control", "Water Details", "Landscape", "Fire Protection Plan", etc. - ALWAYS write these in Title Case, capitalizing each word (like the examples given).
+
+Do not include any additional commentary outside the JSON structure.
+
+Now analyze the provided document.</div>
+        <div class="erd">
+          <div class="ent exist">
+            <div class="eh"><span class="en">sheet_version</span><span class="stereo">this version's sheet</span></div>
+            <div class="row"><span class="b b-pk">PK</span><span class="nm">id</span></div>
+            <div class="row add"><span class="gut">+</span><span class="nm">summary</span><span class="ty">← result.summary</span></div>
+            <div class="row add"><span class="gut">+</span><span class="nm">label</span><span class="ty">← result.sheetLabel</span></div>
+            <div class="note">title_block column left NULL — per-sheet extraction removed</div>
+          </div>
+          <div class="ent exist">
+            <div class="eh"><span class="en">sheet</span><span class="stereo">stable identity</span></div>
+            <div class="row"><span class="b b-pk">PK</span><span class="nm">id</span></div>
+            <div class="row add"><span class="gut">+</span><span class="nm">label</span><span class="ty">← result.sheetLabel</span></div>
+            <div class="note">identity's "current name" — overwritten every run</div>
+          </div>
+        </div>
+      </div>
+      <div class="ucnote"><b>why the label is written twice</b> — <code>sheet_version.label</code> is frozen to this version (what a workspace build must trust); <code>sheet.label</code> is the identity's live name (what the app's sheet lists show). Writing only the latter is the bug the pair fixes — on Lamar+Collier v4, 44/57 sheets had inherited a later version's name.</div>
+    </div>
+
+    <!-- ========================= CALL 2 ========================= -->
+    <div class="uc">
+      <div class="uch"><div class="ucn">②</div><div class="uctxt">
+        <span class="actor">substation · step <code style="color:#fff">sheet-blocks</code> (part 1) · input = thumbnail JPEG (<code style="color:#fff">n.jpg</code>) · generateObject</span>
+        <span class="uct">Block discovery</span>
+      </div></div>
+      <div class="ucsub">Reads the low-res <i>thumbnail</i> (not the PDF) and returns a category + normalized bounding box for every distinct content element. <code>title_block</code> blocks are then dropped, and each survivor is stamped a <code>short_id</code> in reading order (y ASC, x ASC) <b>before</b> transcription — so the prompt label, the echoed <code>blockId</code>, and the persisted <code>short_id</code> are all the same number.</div>
+      <div class="ucdiag">
+        <div class="codelinks">
+          <span class="clh">Where it's defined</span>
+          <span class="cl"><span class="rl">fn</span><a href="https://github.com/noetic-inc/substation/blob/ef1aff32db9d8cfa879590191a095895f32d43d6/src/inngest/functions/process-file/sheet.llm.ts#L96-L117"><span class="fn">discoverContentBlocks()</span> — sheet.llm.ts:96</a></span>
+          <span class="cl"><span class="rl">prompt</span><a href="https://github.com/noetic-inc/substation/blob/ef1aff32db9d8cfa879590191a095895f32d43d6/src/inngest/lib/prompts/processing.ts#L14-L110"><span class="fn">blockDiscoveryPrompt</span> — processing.ts:14</a></span>
+          <span class="cl"><span class="rl">schema</span><a href="https://github.com/noetic-inc/substation/blob/ef1aff32db9d8cfa879590191a095895f32d43d6/src/inngest/functions/process-file/sheet.llm.ts#L29-L48"><span class="fn">blockDiscoverySchema</span> {contentSections[]: category, bounding_box[4]} — sheet.llm.ts:29</a></span>
+          <span class="cl"><span class="rl">post</span><a href="https://github.com/noetic-inc/substation/blob/ef1aff32db9d8cfa879590191a095895f32d43d6/src/inngest/functions/process-file/sheet.logic.ts#L4-L33"><span class="fn">normalizeDiscoveredBlocks()</span> + <span class="fn">assignShortIds()</span> — sheet.logic.ts:4</a></span>
+          <span class="cl"><span class="rl">call site</span><a href="https://github.com/noetic-inc/substation/blob/ef1aff32db9d8cfa879590191a095895f32d43d6/src/inngest/functions/process-file/sheet.ts#L209-L246"><span class="fn">sheet.ts:209</a></span>
+        </div>
+        <div class="prompt"><span class="ph">Prompt · blockDiscoveryPrompt (verbatim) + the thumbnail JPEG as a file part</span>You are analyzing a single page from a civil engineering site plan submission. Your task is to create a comprehensive breakout of all distinct content elements on this page.
+
+## Categorization Guidelines
+
+**title_block:**
+- The title block strip — typically a narrow vertical bar running the full height of the right edge of the page
+- Contains project name, sheet number, firm info/logo, PE seals, dates, revision history, and job numbers
+- Discover this as a single block covering the entire title block region; do not break it into sub-elements
+
+**drawing:**
+- Site plan, grading plan, utility plan, landscape plan, drainage plan, erosion control plan, etc.
+- Full engineering drawings showing plans, elevations, or sections
+- The title block strip may overlap with drawing bounding boxes — that is fine. Discover the title block separately as its own `title_block` block.
+- Look for plan-specific labels and typical drawing conventions
+
+**diagram:**
+- Detail callouts, section views, technical details
+- Smaller focused technical illustrations (e.g., "DETAIL 3-A")
+- Construction details and enlarged views
+- Separate from full page drawings
+
+**text_block:**
+- Continuous prose paragraphs
+- Narrative descriptions that aren't structured as notes
+
+**notes:**
+- Note sections (labeled "NOTES:", "GENERAL NOTES:", "ABBREVIATIONS:", etc.)
+- Bulleted or numbered lists of specifications
+
+**table:**
+- Structured data in rows/columns
+- Can be part of a form or standalone
+- Sheet index/table of contents counts as a table
+- Schedules and data matrices
+
+**form:**
+- Standardized fill-in forms with blank fields, checkboxes, or signature lines
+- Application forms, checklists, compliance forms
+- Distinct from doc_embed — forms are templates to be filled in, not reproductions of completed documents
+
+**legend:**
+- Symbol keys, line type definitions, and pattern legends that explain drawing notation
+- Labeled "LEGEND", "SITE LEGEND", "GRADING LEGEND", etc.
+- Distinct from notes — legends define visual symbols used elsewhere on the sheet
+
+**doc_embed:**
+- Embedded 8.5×11" (or similar) documents placed on a larger format sheet
+- Treat the entire embedded document as a single block regardless of its internal structure (it may contain tables, text, drawings, seals, etc.)
+- Common examples: recorded plats, survey documents, compliance letters, permit applications
+- Distinct from forms — doc_embed is a complete standalone document reproduced on the sheet, not a fill-in form
+
+**seal:**
+- Professional certifications (engineer seals, surveyor seals, architect seals)
+- Official government stamps (city approval stamps, permit stamps)
+- Typically circular or rectangular with official insignia
+- Include license numbers, signatures, and dates
+- Distinct from forms - these are certifications, not fill-in documents
+
+**other:**
+- Content that doesn't fit the above categories
+- Use sparingly
+
+## Critical Instructions
+
+1. **Treat embedded 8.5×11" documents as single `doc_embed` items** - Even if they contain tables and text blocks internally, classify the whole document as one `doc_embed` item.
+
+2. **Distinguish between drawings that share space vs. overlap** - Multiple construction drawings side-by-side should be separate items. A single drawing with detail callouts should be separate items (the main drawing is `drawing`, each detail is `diagram`)
+
+3. **Bounding boxes must use normalized coordinates** - Bounding boxes should be in box_2d format [ymin, xmin, ymax, xmax] normalized to 0-1000.
+
+4. **Ignore pure decoration** - Border lines, page backgrounds, and decorative elements don't count as content unless they contain information
+
+## Example Scenarios
+
+**Multiple embedded documents**: If the page shows 3 different 8.5×11" documents arranged on a 24×36" sheet, list 3 separate `doc_embed` items with appropriate bounding boxes
+
+**Complex construction drawing**: A site plan with 3 detail callouts and a notes section would be:
+- 1 `drawing` item for the main site plan
+- 3 `diagram` items for each detail callout
+- 1 `notes` item for the notes section
+
+**Mixed content sheet**: A page with a site plan on the left and a large notes section on the right:
+- 1 `drawing` item with bounding box approximately `[0, 0, 1000, 600]`
+- 1 `notes` item with bounding box approximately `[0, 400, 1000, 1000]`
+
+## Output
+
+Provide the complete JSON object, including:
+
+* `contentSections` an array of content blocks.
+  - `category`: Must be one of: `title_block`, `table`, `text_block`, `drawing`, `form`, `diagram`, `notes`, `seal`, `legend`, `doc_embed`, `other`
+  - `bounding_box`: Bounding box for the section.  The box_2d should be [ymin, xmin, ymax, xmax] normalized to 0-1000
+
+
+Do not include any additional commentary outside the JSON structure.
+
+Now analyze the provided image.</div>
+        <div class="erd">
+          <div class="ent exist">
+            <div class="eh"><span class="en">content_block</span><span class="stereo">one row per surviving block</span></div>
+            <div class="row"><span class="b b-pk">PK</span><span class="nm">id</span></div>
+            <div class="row"><span class="b b-fk">FK</span><span class="nm">sheet_version_id</span><span class="ty">→ sheet_version</span></div>
+            <div class="row add"><span class="gut">+</span><span class="nm">category</span><span class="ty">← LLM enum (11)</span></div>
+            <div class="row add"><span class="gut">+</span><span class="nm">bounding_box</span><span class="ty">← normalized {x,y,w,h}</span></div>
+            <div class="row add"><span class="gut">+</span><span class="nm">short_id</span><span class="ty">← derived, not LLM</span></div>
+            <div class="row"><span class="nm">description</span><span class="ty">'' until ③</span></div>
+            <div class="row"><span class="nm">content</span><span class="ty">'' until ③</span></div>
+            <div class="note">rows are seeded here (via saveBlockDiscoveryResults) after ③ fills text</div>
+          </div>
+        </div>
+      </div>
+      <div class="ucnote"><b>bbox math</b> — the LLM returns <code>[ymin,xmin,ymax,xmax]/1000</code>; <code>normalizeDiscoveredBlocks</code> drops <code>title_block</code> and converts to a fractional <code>{x, y, width, height}</code>. <code>short_id</code> is computed deterministically from that box (stable sort, discovery order breaks ties) — the model never chooses it.</div>
+    </div>
+
+    <!-- ========================= CALL 3 ========================= -->
+    <div class="uc">
+      <div class="uch"><div class="ucn">③</div><div class="uctxt">
+        <span class="actor">substation · step <code style="color:#fff">sheet-blocks</code> (part 2) · input = full sheet PDF · generateObject</span>
+        <span class="uct">Block transcription</span>
+      </div></div>
+      <div class="ucsub"><b>One batched call</b> over the whole sheet PDF — <i>not</i> one crop per box. The prompt lists every discovered bounding box with its <code>short_id</code>, and the model returns an array of one detail per block, each echoing back its <code>blockId</code>. Details are joined to boxes <b>by that id, never by array position</b>; a missing / unknown / duplicated id is dropped rather than glued to the wrong box.</div>
+      <div class="ucdiag">
+        <div class="codelinks">
+          <span class="clh">Where it's defined</span>
+          <span class="cl"><span class="rl">fn</span><a href="https://github.com/noetic-inc/substation/blob/ef1aff32db9d8cfa879590191a095895f32d43d6/src/inngest/functions/process-file/sheet.llm.ts#L119-L139"><span class="fn">extractBlockDetails()</span> — sheet.llm.ts:119</a></span>
+          <span class="cl"><span class="rl">prompt</span><a href="https://github.com/noetic-inc/substation/blob/ef1aff32db9d8cfa879590191a095895f32d43d6/src/inngest/lib/prompts/processing.ts#L112-L141"><span class="fn">blockDetailsBasePrompt</span> — processing.ts:112</a></span>
+          <span class="cl"><span class="rl">wrapper</span><a href="https://github.com/noetic-inc/substation/blob/ef1aff32db9d8cfa879590191a095895f32d43d6/src/inngest/functions/process-file/sheet.logic.ts#L130-L148"><span class="fn">buildBatchBlockPrompt()</span> — sheet.logic.ts:130</a></span>
+          <span class="cl"><span class="rl">schema</span><a href="https://github.com/noetic-inc/substation/blob/ef1aff32db9d8cfa879590191a095895f32d43d6/src/inngest/functions/process-file/sheet.llm.ts#L50-L65"><span class="fn">batchBlockDetailsSchema</span> {blocks[]: blockId, sectionName, description, content} — sheet.llm.ts:50</a></span>
+          <span class="cl"><span class="rl">join</span><a href="https://github.com/noetic-inc/substation/blob/ef1aff32db9d8cfa879590191a095895f32d43d6/src/inngest/functions/process-file/sheet.logic.ts#L62-L101"><span class="fn">mergeBlockDetails()</span> — sheet.logic.ts:62</a></span>
+          <span class="cl"><span class="rl">persist</span><a href="https://github.com/noetic-inc/substation/blob/ef1aff32db9d8cfa879590191a095895f32d43d6/src/inngest/functions/process-file/sheet.logic.ts#L150-L170"><span class="fn">saveBlockDiscoveryResults()</span> — sheet.logic.ts:150</a></span>
+        </div>
+        <div class="prompt"><span class="ph">Prompt · buildBatchBlockPrompt() wrapper (per-sheet, N = block count)</span>There are {N} content blocks on this page. For each block, analyze ONLY the content within its bounding box.
+
+Bounding boxes (in [ymin, xmin, ymax, xmax] format, normalized to 0-1000):
+Block 1: [y,x,y,x]
+Block 2: [y,x,y,x]
+… (one line per discovered block, labeled by short_id)
+
+Return an array of {N} block details, one per block above. Each entry's `blockId` field MUST echo the block's number from the list above (the content inside "Block 3: [...]" is returned with blockId 3). Entries are matched back to their bounding boxes by blockId — an entry with a missing, unknown, or duplicated blockId is discarded.
+
+For each block:
+{blockDetailsBasePrompt ↓}</div>
+        <div class="prompt"><span class="ph">Prompt · blockDetailsBasePrompt (verbatim, appended to the wrapper) + the full sheet PDF as a file part</span>You are analyzing an individual section from a civil engineering site plan submission. Your task is provide comprehensive details about this section.
+
+## Important Instructions
+
+You are provided a bounding box for a portion of the page to analyze.  ONLY LOOK WITHIN THE BOUNDING BOX.  The bounding box is provided in box_2d format like [ymin, xmin, ymax, xmax] normalized to 0-1000.
+
+## Markup vs Original Content
+Distinguish between original plan content and review markup: - Original content: Plans, drawings, notes, tables that are part of the submission - Review markup: Red-lined text, yellow highlights, stamp instructions, comment boxes - If unsure, mark as original content and note in description: "Appears to be review markup"
+
+## Example Scenarios
+
+**Embedded documents**: If section of the page is an embedded document that has been pasted into this document then include an overall description of the document as well as the document type and origin in the `description` field.  Include the full text or in-depth image description in `content`.
+
+## Output
+
+Provide the complete JSON object, including:
+- `sectionName`: Brief descriptive title. Include any visible labels or callout numbers (e.g., "DETAIL 3-A - Valley Gutter", "General Notes", "Site Plan")
+- `description`: Description of the content and its purpose including key details. Up to 500 words. Should include any key words and details that would be helpful in locating this content block for more detailed analysis.
+- `content`: A markdown formatted reproduction of the content in this block.  Do not include links to images in the content.
+  - Text content should be reproduced directly.
+  - Tables should be formatted as markdown tables.
+  - Images and drawings should be described in detail.
+  - Content that is a mix of drawings and text should contain the original text as well as descriptions of the drawings.  If there are inline drawings, use brackets to denote the images.  Examples:
+    - "[symbol for water value] - Water valve"
+    - "[editor's signature] - Editor"
+    - "[logo for call before you dig] - 811 Call before you dig"
+
+Do not include any additional commentary outside the JSON structure.
+
+Now analyze the provided image.  *IMPORTANT*: Remember to analyze only within the supplied bounding box.</div>
+        <div class="erd">
+          <div class="ent exist">
+            <div class="eh"><span class="en">content_block</span><span class="stereo">rows from ②, now filled</span></div>
+            <div class="row"><span class="b b-pk">PK</span><span class="nm">id</span></div>
+            <div class="row add"><span class="gut">+</span><span class="nm">description</span><span class="ty">← detail.description</span></div>
+            <div class="row add"><span class="gut">+</span><span class="nm">content</span><span class="ty">← detail.content (md)</span></div>
+            <div class="row"><span class="nm">category / bounding_box / short_id</span><span class="ty">from ②</span></div>
+            <div class="note">sectionName is returned by the model but NOT persisted — dropped at the merge</div>
+          </div>
+        </div>
+      </div>
+      <div class="ucnote"><b>the join is the safety rail</b> — <code>mergeBlockDetails</code> keys on <code>blockId === short_id</code>. Duplicates drop <i>all</i> claimants (no way to know which is right); an unmatched block is saved with empty text (recoverable) rather than a wrong transcription (silent corruption). Both cases are logged as a <code>warning</code> <code>processing_event</code>.</div>
+    </div>
+
+    <!-- ========================= CALL 4 ========================= -->
+    <div class="uc">
+      <div class="uch"><div class="ucn">④</div><div class="uctxt">
+        <span class="actor">substation · step <code style="color:#fff">sheet-reading-guide</code> · input = full sheet PDF + block context · generateText</span>
+        <span class="uct">Reading guide</span>
+      </div></div>
+      <div class="ucsub">The only free-text call (<code>generateText</code>, no schema). Re-reads the sheet PDF <i>plus</i> a text dump of every persisted block (built from the DB rows ② + ③ wrote) and produces a narrative "how to read this sheet" that lets the review agent skip most individual block reads. Written atomically with the numbering scheme it assumes.</div>
+      <div class="ucdiag">
+        <div class="codelinks">
+          <span class="clh">Where it's defined</span>
+          <span class="cl"><span class="rl">fn</span><a href="https://github.com/noetic-inc/substation/blob/ef1aff32db9d8cfa879590191a095895f32d43d6/src/inngest/functions/process-file/sheet.llm.ts#L199-L218"><span class="fn">generateReadingGuide()</span> — sheet.llm.ts:199</a></span>
+          <span class="cl"><span class="rl">prompt</span><a href="https://github.com/noetic-inc/substation/blob/ef1aff32db9d8cfa879590191a095895f32d43d6/src/inngest/lib/prompts/processing.ts#L143-L178"><span class="fn">readingGuidePrompt</span> — processing.ts:143</a></span>
+          <span class="cl"><span class="rl">context</span><a href="https://github.com/noetic-inc/substation/blob/ef1aff32db9d8cfa879590191a095895f32d43d6/src/inngest/functions/process-file/sheet.logic.ts#L103-L128"><span class="fn">buildBlocksContext()</span> — sheet.logic.ts:103</a></span>
+          <span class="cl"><span class="rl">call site</span><a href="https://github.com/noetic-inc/substation/blob/ef1aff32db9d8cfa879590191a095895f32d43d6/src/inngest/functions/process-file/sheet.ts#L249-L306"><span class="fn">sheet.ts:249</a></span>
+        </div>
+        <div class="prompt"><span class="ph">Prompt · readingGuidePrompt (verbatim) + buildBlocksContext() output + the full sheet PDF as a file part</span>You are generating a reading guide for a single sheet from a civil engineering site plan submission.
+
+## Context
+
+You are provided:
+1. The page image (PDF)
+2. A list of content blocks that have been identified on this page, each with a description and transcribed content
+
+## Task
+
+Produce a reading guide that helps a review agent efficiently navigate this sheet. The guide should contain enough detail that the agent often won't need to read individual block content.
+
+## Output Format
+
+Write the reading guide as plain text (not JSON). Structure it as follows:
+
+**Opening paragraph**: 1-2 sentences describing what this sheet contains and its primary purpose.
+
+**Key values**: A bulleted list of the most important numerical values, dimensions, elevations, specifications, and other key data points visible on this sheet. Include units. Extract actual values — don't just describe what kinds of values exist.
+
+**Content blocks on this sheet**: For each content block, provide:
+- **Always include the block number** (e.g., "Block 3: diagram — Outlet Structure Detail"). The block number is critical — it maps to the file the agent reads to access the block content.
+- A brief description of what the block contains
+- Navigation guidance: either "READ the block content for [what you'll find]" or "Use VISION to examine [what to look for]"
+  - Use READ for: tables, text-heavy content, specifications, notes, schedules, legends
+  - Use VISION for: drawings, diagrams, spatial relationships, contour details, cross-sections with visual elements
+  - Some blocks may warrant both: "READ for exact values, VISION for spatial layout"
+- You may group multiple boilerplate blocks into one entry (e.g., "Blocks 8, 9, 10: various — Boilerplate &amp; Administrative")
+
+## Important
+
+- Extract ACTUAL values from the sheet — specific numbers, dimensions, elevations, not generic descriptions
+- Be thorough but concise — every line should be useful information, not filler
+- The reading guide replaces the need to read the full sheet in most cases
+- If a content block is boilerplate (title block, approval stamps, standard notes), say so briefly
+- Order content blocks by importance/relevance, not by position on the page
+
+--- appended: buildBlocksContext() ---
+## Content Blocks on This Page
+
+### Block 1: {category} — {description}
+{content, or "(No transcription available)"}
+### Block 2: …  (one entry per persisted content_block, labeled by short_id)</div>
+        <div class="erd">
+          <div class="ent exist">
+            <div class="eh"><span class="en">sheet_version</span><span class="stereo">this version's sheet</span></div>
+            <div class="row"><span class="b b-pk">PK</span><span class="nm">id</span></div>
+            <div class="row add"><span class="gut">+</span><span class="nm">reading_guide</span><span class="ty">← guide text</span></div>
+            <div class="row add"><span class="gut">+</span><span class="nm">block_numbering_scheme</span><span class="ty">← short-id-ordered | legacy-category-order</span></div>
+            <div class="note">both fields written in ONE update so the scheme never lies about the guide</div>
+          </div>
+        </div>
+      </div>
+      <div class="ucnote"><b>the scheme guard</b> — <code>short-id-ordered</code> is stamped only when the block fetch succeeded <i>and</i> every block has a <code>short_id</code>; otherwise <code>buildBlocksContext</code>'s <code>i+1</code> fallback may have mixed short_ids with array indexes, so it fails safe to <code>legacy-category-order</code> and logs a warning. The guide's "Block N" labels must match the short-id-ordered <code>blocks.md</code> the review agent later reads.</div>
     </div>
 
     <h2><span class="eyebrow">Data model</span>Where every artifact lands</h2>
@@ -444,7 +787,7 @@ Return JSON:
     every AI step is a swallow-path: on failure the sheet still marks <code>processed</code> with
     NULL/empty fields, so the rot is invisible while the structure looks fine.</div>
 
-    <div class="foot">current-architecture-diagram.html · pre-processing-v2 · substation <code>src/inngest/functions/process-file/*</code> · verified 2026-08-13</div>
+    <div class="foot">current-architecture-diagram.html · pre-processing-v2 · substation <code>src/inngest/functions/process-file/{sheet.ts, sheet.llm.ts, sheet.logic.ts}</code> + <code>lib/prompts/processing.ts</code> · verified 2026-08-13 · §4 re-verified @ ef1aff32 (2026-09-02)</div>
   </section>
 
   <section class="panel" id="failures">
