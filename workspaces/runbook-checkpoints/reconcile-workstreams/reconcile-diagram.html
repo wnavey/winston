@@ -278,7 +278,7 @@ code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px s
   <div class="kicker">RUNBOOK-CHECKPOINTS · WORKSTREAM RECONCILE</div>
   <h1>Reconciling two Runbook Control Plane workstreams</h1>
   <p>The same feature got built twice — Jason's <code>runs</code>+<code>gates</code> (<code>#247</code>, <b>merged</b>) and my <code>runbook_*</code> tables + local lane + console (<code>#245</code>/<code>#1549</code>/<code>#663</code>, open). This is the venn of the deltas and the fix-forward.</p>
-  <div class="meta">Draft v1 · 2026-09-09 · companion to DESIGN-SPEC.md · click a tab ↓</div>
+  <div class="meta">Draft v2 · 2026-09-09 · companion to DESIGN-SPEC.md · click a tab ↓</div>
 </header>
 
 <nav class="tabs">
@@ -321,11 +321,11 @@ code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px s
         <tr><td><b>Gate model</b></td><td>A folds ask+decision into one row (upsert-on-repark); B splits the question from an append-only checkpoint stream</td></tr>
         <tr><td><b>Decide route</b></td><td>built <b>twice</b> — <code>POST /api/gates/:id/decide</code> (A, ajv) vs <code>POST /api/runbook-hitl-questions/:id/answer</code> (B, zod)</td></tr>
         <tr><td><b>Who's ahead</b></td><td>A is <b>merged to main</b> with tests; B is three open PRs</td></tr>
-        <tr><td><b>Reconcile</b></td><td><b>neither</b> has a live loop — A's route is a dry-run stub, B defers it entirely</td></tr>
+        <tr><td><b>Reconcile</b></td><td>a <b>shared to-do</b>, not a conflict — A's route is a dry-run stub, B only references a future loop; <b>neither drives a run forward</b></td></tr>
       </tbody>
     </table></div>
 
-    <div class="callout new"><span class="lab">recommendation</span> <b>Converge on A's merged base; graft B's additive surface onto it.</b> B's differentiators (stream, clarification, RLS/realtime, local lane, UI) mostly <i>add</i> to A's tables — they don't need A's shape to change. Re-targeting B's names beats unwinding a merged migration. → Tab 4 for the per-PR plan.</div>
+    <div class="callout new"><span class="lab">recommendation (v2)</span> <b>Converge on A's merged base; rename its tables to B's convention and graft B's additive surface.</b> Canonical tables → <code>runbook_runs</code> / <code>runbook_hitl_questions</code> / <code>runbook_checkpoints</code>. B's differentiators (stream, clarification, RLS/realtime, local lane, UI, payload, real attribution) mostly <i>add</i> to A's tables — a rename + graft, not a reshape. → Tab 4 for the per-PR plan.</div>
   </section>
 
   <section class="panel" id="code">
@@ -357,14 +357,15 @@ code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px s
         </ul>
       </div>
       <div class="card">
-        <h3><span class="hn">&cap;</span>Overlap — conflict</h3>
+        <h3><span class="hn">&cap;</span>Overlap — must merge</h3>
         <ul>
-          <li><b>Decide/answer route</b> — built twice (detail below)</li>
-          <li><b>Reconcile</b> — A's route (dry-run) vs B's "the guarantee"; neither live</li>
+          <li><b>Decide/answer route</b> — built twice (detail + resolution below)</li>
         </ul>
-        <p style="margin-top:8px;font-size:12px;color:var(--p600)">These are the only two places code must <i>merge</i>, not just coexist.</p>
+        <p style="margin-top:8px;font-size:12px;color:var(--p600)">The <i>only</i> place code must merge rather than coexist.</p>
       </div>
     </div>
+
+    <div class="callout ember"><span class="lab">shared gap — not a conflict</span> <b>Reconcile.</b> A shipped <code>GET /api/cron/reconcile</code> but it is a <b>dry-run</b>: it returns the plan it <i>would</i> run (<code>resume_and_advance</code>/<code>probe_session</code>/<code>none</code>) and changes nothing — no sandbox resumes, no run advances. B never built a reconcile route; its answer route flips a cloud run to <code>queued</code> and <i>names</i> "the reconcile loop" as the future guarantee. So <b>neither side has a working loop that drives a parked run forward</b> — it's a to-do both halves point at (run-environment workstream), not a place two built things disagree.</div>
 
     <h3><span class="hn">&cap;</span>The decide/answer route — two implementations</h3>
     <div class="spectable-scroll"><table class="spectable">
@@ -378,76 +379,79 @@ code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px s
         <tr><td>Mount</td><td>outside <code>authMiddleware</code> (own admission)</td><td>inside <code>authMiddleware</code></td></tr>
       </tbody>
     </table></div>
-    <div class="callout new"><span class="lab">merge</span> Keep A's route path + ajv; <b>fold in</b> B's noetic-JWT path, <code>answered_by</code>/<code>channel</code>, and clarification-parks. Retire B's route; cityhall's proxy points at <code>/api/gates/:id/decide</code>.</div>
+    <div class="callout new"><span class="lab">merge (v2) — two routes, one controller</span> Extract the decide logic into <b>one controller</b>, then expose <b>both</b> routes at it: keep <code>POST /api/gates/:id/decide</code> as a <b>thin alias</b> (A's existing callers keep working) and add the canonical <code>POST /api/runbook-hitl-questions/:id/answer</code> (cityhall). The controller absorbs B's additions — noetic-JWT + <code>decided_by_user_id</code>/<code>channel</code>, clarification-parks — and keeps A's ajv-vs-<code>schema</code>. A clean swap; the alias can retire later without touching the controller.</div>
   </section>
 
   <section class="panel" id="data">
     <h2><span class="eyebrow">Section 3</span>Data entity deltas</h2>
-    <p class="lede">Two entities are the same thing renamed (<code>runs</code>&asymp;<code>runbook_run</code>, <code>gates</code>&asymp;<code>runbook_hitl_question</code>); B adds a third (<code>runbook_checkpoint</code>). The hard points are the enum literals and where the decision schema lives.</p>
+    <p class="lede">Two entities are the same thing renamed (<code>runs</code>&asymp;<code>runbook_run</code>, <code>gates</code>&asymp;<code>runbook_hitl_question</code>); B adds a third (<code>runbook_checkpoint</code>). The hard points are the enum literals and where the decision <i>schema</i> lives.</p>
 
     <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin:14px 0">
       <div class="card change"><h3><span class="hn">A</span>A-only columns</h3><ul>
-        <li><code>gates.schema JSONB</code> — per-gate JSON Schema (ajv)</li>
+        <li><code>gates.schema JSONB</code> — the answer <b>validation contract</b> (ajv) &mdash; keep</li>
         <li><code>runs.sandbox_session_id</code> + <code>cmd_id</code> — liveness</li>
       </ul></div>
       <div class="card keep"><h3><span class="hn">B</span>B-only entities / cols</h3><ul>
-        <li><b><code>runbook_checkpoint</code></b> — the whole stream table</li>
-        <li>run: <code>claimed_at</code>, <code>run_dir</code>, <code>runbook_ref</code>, <code>submission_version_id</code>, <code>triggered_by</code>, <code>started_at</code>/<code>finished_at</code></li>
-        <li>gate: <code>payload JSONB</code>, <code>channel</code></li>
+        <li><b><code>runbook_checkpoint</code></b> — the whole stream table &mdash; keep</li>
+        <li>gate: <code>payload JSONB</code> (<b>render content</b>), <code>channel</code>, <code>answered_by</code>(FK) &mdash; keep</li>
+        <li>run: <code>runbook_ref</code>, <code>submission_version_id</code>, <code>triggered_by</code>, <code>started_at</code>/<code>finished_at</code> &mdash; graft</li>
+        <li><code>run_dir</code>, <code>claimed_at</code> &mdash; <span class="w">drop</span> (derive / use A's probe)</li>
       </ul></div>
       <div class="card"><h3><span class="hn">&cap;</span>Same entity, renamed</h3><ul>
-        <li><code>runs</code> &harr; <code>runbook_run</code></li>
-        <li><code>gates</code> &harr; <code>runbook_hitl_question</code></li>
+        <li><code>runs</code> &rarr; <b><code>runbook_runs</code></b></li>
+        <li><code>gates</code> &rarr; <b><code>runbook_hitl_questions</code></b></li>
         <li>column + enum renames (tables below)</li>
       </ul></div>
     </div>
 
-    <h3><span class="hn">R</span><code>runs</code> &harr; <code>runbook_run</code></h3>
+    <div class="callout new"><span class="lab">schema vs payload — orthogonal, keep both</span> <b><code>schema</code> (A)</b> = the machine <b>validation contract</b>: a JSON Schema saying what a valid answer must be; the decide route validates against it with ajv (and A's HITL page auto-generates its form from it). <b>A is strict here; B only had a weak zod registry.</b> <b><code>payload</code> (B)</b> = the human <b>presentation content</b>: prompt prose, option labels, <code>allow_freeform</code>, <code>void_candidates</code>, readout pointer, <code>live_view_url</code> — what the cityhall card renders. They answer different questions ("is this answer valid?" vs "what do I show the human?"), so the merged row carries <b>both</b>.</div>
+
+    <h3><span class="hn">R</span><code>runs</code> &rarr; <code>runbook_runs</code></h3>
     <div class="spectable-scroll"><table class="spectable">
-      <thead><tr><th>A (merged)</th><th>B (mine)</th><th>verdict</th></tr></thead>
+      <thead><tr><th>A (merged)</th><th>B (mine)</th><th>verdict (v2)</th></tr></thead>
       <tbody>
-        <tr><td><code>runbook</code></td><td><code>runbook_name</code></td><td>rename</td></tr>
-        <tr><td><code>request</code></td><td><code>inputs</code></td><td>rename</td></tr>
-        <tr><td><code>status</code>: queued/running/<b>parked</b>/<b>done</b>/failed</td><td>queued/running/<b>awaiting_input</b>/<b>completed</b>/failed/<b>cancelled</b></td><td><span class="w">enum conflict</span></td></tr>
-        <tr><td><code>cost_usd</code> NUMERIC(12,4)</td><td><code>ledger_total_usd</code> NUMERIC</td><td>rename</td></tr>
-        <tr><td><code>sandbox_session_id</code>+<code>cmd_id</code></td><td><code>claimed_at</code> (lease)</td><td>diff. liveness model</td></tr>
-        <tr><td><span class="none">&mdash; (derived)</span></td><td><code>run_dir</code></td><td><span class="w">A omits on purpose</span></td></tr>
+        <tr><td><code>runbook</code></td><td><code>runbook_name</code></td><td>keep A's <code>runbook</code></td></tr>
+        <tr><td><code>request</code></td><td><code>inputs</code></td><td>keep A's <code>request</code></td></tr>
+        <tr><td><code>status</code>: queued/running/<b>parked</b>/<b>done</b>/failed</td><td>+ <b>cancelled</b></td><td><span class="w">A's literals + add <code>cancelled</code></span></td></tr>
+        <tr><td><code>cost_usd</code> NUMERIC(12,4)</td><td><code>ledger_total_usd</code></td><td>keep A's <code>cost_usd</code></td></tr>
+        <tr><td><code>sandbox_session_id</code>+<code>cmd_id</code></td><td><code>claimed_at</code> (lease)</td><td>keep A's probe; drop lease (Q6)</td></tr>
+        <tr><td><span class="none">&mdash; (derived)</span></td><td><code>run_dir</code></td><td><span class="w">drop <code>run_dir</code> — derive-only</span></td></tr>
       </tbody>
     </table></div>
 
-    <h3><span class="hn">G</span><code>gates</code> &harr; <code>runbook_hitl_question</code></h3>
+    <h3><span class="hn">G</span><code>gates</code> &rarr; <code>runbook_hitl_questions</code></h3>
     <div class="spectable-scroll"><table class="spectable">
-      <thead><tr><th>A (merged)</th><th>B (mine)</th><th>verdict</th></tr></thead>
+      <thead><tr><th>A (merged)</th><th>B (mine)</th><th>verdict (v2)</th></tr></thead>
       <tbody>
-        <tr><td><code>step</code></td><td><code>gate_step_id</code></td><td>rename</td></tr>
-        <tr><td><code>kind</code>: decision/operator/hands</td><td>+ <b><code>clarification</code></b></td><td><span class="w">B adds a kind</span></td></tr>
-        <tr><td><code>schema JSONB</code> (on row)</td><td><span class="none">&mdash; (code registry)</span></td><td><span class="w">where's the schema?</span></td></tr>
-        <tr><td><code>readout_prefix</code>, <code>live_view_url</code> cols</td><td>inside <code>payload JSONB</code></td><td>shape conflict</td></tr>
-        <tr><td><code>decided_by TEXT</code></td><td><code>answered_by</code> &rarr; auth.users</td><td>B upgrades to real FK</td></tr>
-        <tr><td><code>status</code>: <b>open/decided</b>/applied</td><td><b>awaiting_input/answered</b>/applied/dismissed/superseded</td><td><span class="w">enum conflict</span></td></tr>
-        <tr><td><code>UNIQUE(run_id,step)</code> upsert-on-repark</td><td>partial-unique WHERE open + history rows</td><td>uniqueness model</td></tr>
+        <tr><td><code>step</code></td><td><code>gate_step_id</code></td><td>keep A's <code>step</code></td></tr>
+        <tr><td><code>kind</code>: decision/operator/hands</td><td>+ <b><code>clarification</code></b></td><td><span class="w">add <code>clarification</code></span></td></tr>
+        <tr><td><code>schema JSONB</code> (validation)</td><td><span class="none">— (weak registry)</span></td><td>keep A's <code>schema</code></td></tr>
+        <tr><td><span class="none">&mdash;</span></td><td><code>payload JSONB</code> (render)</td><td><span class="w">add <code>payload</code></span></td></tr>
+        <tr><td><code>decided_by TEXT</code></td><td><code>answered_by</code> &rarr; auth.users</td><td>keep A's + <b>add <code>decided_by_user_id</code></b> (FK) + <code>channel</code></td></tr>
+        <tr><td><code>status</code>: <b>open/decided</b>/applied</td><td><b>awaiting_input/answered</b>/…</td><td>keep A's literals</td></tr>
+        <tr><td><code>UNIQUE(run_id,step)</code> upsert-on-repark</td><td>partial-unique + history rows</td><td>keep A's upsert; stream carries history</td></tr>
       </tbody>
     </table></div>
   </section>
 
   <section class="panel" id="plan">
-    <h2><span class="eyebrow">Section 4</span>Path forward — converge on A, graft B</h2>
-    <p class="lede">A is merged, has the harder cloud plumbing + tests, and is the design of record. B's surface is additive. So: <b>keep <code>runs</code>+<code>gates</code>, add a <code>checkpoints</code> table, extend the decide route, re-target B's local lane + UI.</b></p>
+    <h2><span class="eyebrow">Section 4</span>Path forward — rename A, graft B</h2>
+    <p class="lede">A is merged, has the harder cloud plumbing + tests, and is the design of record. B's surface is additive. So: <b>rename A's tables to B's convention, add a <code>runbook_checkpoints</code> table, graft B's fields, and put both decide routes behind one controller.</b></p>
 
     <h3><span class="hn">1</span>The converged model</h3>
     <div class="grid2">
       <div class="card keep"><h3>Data</h3><ul>
-        <li>Keep <code>runs</code> + <code>gates</code>; <b>add <code>checkpoints</code></b> (B's stream).</li>
-        <li><code>gates.kind += clarification</code>.</li>
-        <li>Add <code>gates.decided_by_user_id</code> (&rarr;auth.users) + <code>channel</code>.</li>
+        <li>Rename <code>runs</code>&rarr;<b><code>runbook_runs</code></b>, <code>gates</code>&rarr;<b><code>runbook_hitl_questions</code></b>; add <b><code>runbook_checkpoints</code></b>.</li>
+        <li><code>status += cancelled</code> on runs; <code>kind += clarification</code> on questions.</li>
+        <li>Add <code>payload</code> (render) beside A's <code>schema</code> (validate) — keep both.</li>
+        <li>Add <code>decided_by_user_id</code> (&rarr;auth.users) + <code>channel</code>.</li>
         <li>Turn <b>RLS policies + realtime ON</b> (B's noetic-member SELECT).</li>
-        <li>Keep A's <code>gates.schema</code>+ajv; drop B's zod registry.</li>
-        <li>Adopt A's enums (parked/done, open/decided); drop B's <code>run_dir</code>.</li>
+        <li><b>Drop</b> <code>run_dir</code> (derive-only); keep A's <code>sandbox_session_id</code>/<code>cmd_id</code>.</li>
       </ul></div>
       <div class="card keep"><h3>Routes</h3><ul>
         <li>Keep A's launch / callback / reconcile.</li>
-        <li><b>Extend</b> <code>POST /api/gates/:id/decide</code>: noetic-JWT, <code>channel</code>, clarification-parks.</li>
-        <li><b>Retire</b> B's <code>/runbook-hitl-questions/:id/answer</code>.</li>
+        <li><b>One controller, two routes:</b> keep <code>/api/gates/:id/decide</code> (alias) + add <code>/api/runbook-hitl-questions/:id/answer</code> (canonical).</li>
+        <li>Controller gains: noetic-JWT + <code>channel</code>, clarification-parks; keeps ajv-vs-<code>schema</code>.</li>
         <li>Reconcile effectful body still unbuilt (run-env workstream).</li>
       </ul></div>
     </div>
@@ -456,23 +460,23 @@ code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px s
     <div class="spectable-scroll"><table class="spectable">
       <thead><tr><th>PR</th><th>verdict</th><th>action</th></tr></thead>
       <tbody>
-        <tr><td><b>substation #245</b></td><td><span class="w">mostly dated</span></td><td>Chunk the competing tables + answer route. Re-cut a small PR on A's tables: <code>checkpoints</code>, <code>kind += clarification</code>, RLS + realtime, <code>is_noetic_member()</code>, decide-route extensions. (~30% salvaged)</td></tr>
-        <tr><td><b>bureau #1549</b></td><td><span class="none">keep · modify</span></td><td>Net-new local lane (A has none). Re-target the CLI to <code>runs</code>/<code>gates</code>/<code>checkpoints</code> + A's column/enum names. No capability lost.</td></tr>
-        <tr><td><b>cityhall #663</b></td><td><span class="none">keep · modify</span></td><td>Net-new UI (A has only a commented-out policy sketch). Re-target reads + point the answer proxy at <code>/api/gates/:id/decide</code>.</td></tr>
+        <tr><td><b>substation #245</b></td><td><span class="w">mostly dated</span></td><td>Chunk the competing tables + standalone answer route. Re-cut a small PR on <code>main</code>: the rename migration + <code>runbook_checkpoints</code> + <code>clarification</code>/<code>payload</code>/<code>channel</code>/<code>decided_by_user_id</code> + RLS/realtime + <code>is_noetic_member()</code> + the decide-controller extraction. Salvage the concepts.</td></tr>
+        <tr><td><b>bureau #1549</b></td><td><span class="none">keep · modify</span></td><td>Net-new local lane (A has none). Re-target the CLI to the renamed tables + A's column/enum names. No capability lost.</td></tr>
+        <tr><td><b>cityhall #663</b></td><td><span class="none">keep · modify</span></td><td>Net-new UI (A has only a policy sketch). Re-target reads + point the answer proxy at the decide controller; cards render <code>payload</code>.</td></tr>
       </tbody>
     </table></div>
-    <div class="callout ember"><span class="lab">bottom line</span> One PR (<b>#245</b>) is largely dated &rarr; <b>chunk &amp; re-cut</b>. Two (<b>#1549</b>, <b>#663</b>) are net-new &rarr; <b>keep &amp; re-target</b> names. No B capability is thrown away — only B's duplicate tables + duplicate decide route.</div>
+    <div class="callout ember"><span class="lab">bottom line</span> One PR (<b>#245</b>) is largely dated &rarr; <b>chunk &amp; re-cut</b>. Two (<b>#1549</b>, <b>#663</b>) are net-new &rarr; <b>keep &amp; re-target</b> names. No B capability is thrown away — only B's duplicate tables + duplicate standalone decide route.</div>
 
     <h3><span class="hn">3</span>Open decisions</h3>
     <div class="spectable-scroll"><table class="spectable">
-      <thead><tr><th>#</th><th>decision</th><th>lean</th></tr></thead>
+      <thead><tr><th>#</th><th>decision</th><th>status / lean</th></tr></thead>
       <tbody>
-        <tr><td>Q1</td><td>Adopt A's base vs rename A&rarr;B</td><td>A-base (merged + tested)</td></tr>
-        <tr><td>Q2</td><td>Keep B's extra statuses (cancelled / dismissed / superseded)</td><td>yes — additive</td></tr>
-        <tr><td>Q3</td><td><code>checkpoints</code> FK to <code>gates</code> directly?</td><td>yes (<code>gate_id</code>)</td></tr>
-        <tr><td>Q4</td><td><code>run_dir</code> derived-only — does it cover the local lane?</td><td>verify with bureau CLI</td></tr>
-        <tr><td>Q5</td><td>Schema extraction targets <code>gates.schema</code> (JSON-Schema), not a zod registry</td><td>yes — changes bureau output</td></tr>
-        <tr><td>Q6</td><td>Reconcile: lease + probe, or probe only?</td><td>decide when built</td></tr>
+        <tr><td>Q1</td><td>Adopt A's base, renamed to B's convention</td><td><span class="none">resolved — yes</span></td></tr>
+        <tr><td>Q2</td><td>Add <code>cancelled</code> (runs); <code>dismissed</code>/<code>superseded</code> (questions)?</td><td><span class="none">cancelled: yes</span> · others optional</td></tr>
+        <tr><td>Q3</td><td><code>runbook_checkpoints</code> FK to the question directly (<code>hitl_question_id</code>)?</td><td>yes (B did)</td></tr>
+        <tr><td>Q4</td><td><code>run_dir</code> derive-only — does <code>&lt;root&gt;/&lt;runbook&gt;/&lt;id&gt;</code> cover the local lane?</td><td>verify w/ bureau CLI</td></tr>
+        <tr><td>Q5</td><td>Schema extraction emits JSON-Schema into <code>questions.schema</code>, not a zod registry</td><td>yes — changes bureau output</td></tr>
+        <tr><td>Q6</td><td>Reconcile: A's probe only, or add B's <code>claimed_at</code> lease?</td><td>decide when built</td></tr>
       </tbody>
     </table></div>
     <div class="xref">Full detail: <code>DESIGN-SPEC.md</code> (this dir). Sources: <code>substation#247</code> (<code>d1c082b</code>) · <code>#245</code>/<code>#1549</code>/<code>#663</code>. Prior context: <code>../DESIGN-SPEC.md</code> + <code>../data-model-spec.html</code>.</div>
