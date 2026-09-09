@@ -286,7 +286,8 @@ code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px s
   <button data-tab="data"><span class="n">02</span>Data model</button>
   <button data-tab="local"><span class="n">03</span>Local lane</button>
   <button data-tab="cloud"><span class="n">04</span>Cloud lane</button>
-  <button data-tab="lifecycle"><span class="n">05</span>Question lifecycle</button>
+  <button data-tab="routes"><span class="n">05</span>Cloud routes</button>
+  <button data-tab="lifecycle"><span class="n">06</span>Question lifecycle</button>
 </nav>
 
 <main>
@@ -517,10 +518,102 @@ code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px s
       </div>
     </div></div>
     <div class="callout ember"><span class="lab">before stop</span> Steps 3–4 must run <b>before</b> the sandbox is stopped/snapshotted — once stopped, the run dir (and its readout) is unreadable until a resume.</div>
+    <div class="callout new"><span class="lab">where are the routes?</span> Every message above is really <b>one of four control-plane routes</b>. The sequence folds them into generic hops — see <b>§5 Cloud routes</b> for exactly how &amp; when <code>POST /api/runs</code> (launch, step 1), <code>POST /api/runs/:id/callback</code> (steps 2–4, park → gate rows), <code>POST /api/gates/:id/decide</code> (step 7) and <code>GET /api/cron/reconcile</code> (the backstop, not on the happy path) fire.</div>
+  </section>
+
+  <section class="panel" id="routes">
+    <h2><span class="eyebrow">Section 5</span>The four control-plane routes — how the DB row moves</h2>
+    <p class="lede">The cloud lane has <b>no job engine</b>. A run is just a <code>runbook_run</code> row; it moves forward <i>only</i> when one of four substation routes fires. Three of them — <b>launch</b>, <b>callback</b>, <b>reconcile</b> — are the unbuilt control plane (Phase 2; they depend on Jason's detached-sandbox API). The <b>answer / decide</b> route ships in <code>substation#245</code>. This is the trigger and the writes for each — the boundaries the §4 sequence hides.</p>
+
+    <div class="legend">
+      <span class="k"><span class="swatch" style="background:var(--new)"></span> DB write</span>
+      <span class="k"><span class="swatch" style="background:var(--p500)"></span> read / report</span>
+      <span class="k"><span class="swatch" style="background:var(--ember)"></span> detached fire / boot</span>
+      <span class="k"><span class="swatch" style="background:var(--p700);border:1px dashed #fff"></span> object storage</span>
+    </div>
+
+    <div class="uc">
+      <div class="uch"><div class="ucn">1</div><div class="uctxt">
+        <span class="actor">cityhall · conductor skill · prospector — Phase 2</span>
+        <span class="uct"><code>POST /api/runs</code> — launch a cloud run</span>
+      </div></div>
+      <div class="ucsub">Fires <b>once</b>, when a human or system kicks a runbook off. Kickoff latency is one HTTP call — <i>not</i> the cron interval. (This is step&nbsp;1 of the §4 sequence.)</div>
+      <div class="ucdiag"><div class="dfg">
+        <div class="node created"><span class="op">insert</span><span class="nt">runbook_run</span><span class="nf">host=vercel · status=running<br>inputs + derived plan · claim lease</span></div>
+        <div class="edge"><span class="el">① boot</span><span class="ar">→</span></div>
+        <div class="node event"><span class="op">boot</span><span class="nt">project sandbox</span><span class="nf">resume snapshot (~10s)</span></div>
+        <div class="edge"><span class="el">② detached</span><span class="ar">→</span></div>
+        <div class="node event"><span class="op">fire</span><span class="nt">conductor advance</span><span class="nf">detached — outlives the request<br>(no 800s cap)</span></div>
+      </div></div>
+      <div class="ucnote"><b>backstop</b> — if the hot fire is dropped, the run sits <code>queued</code> and reconcile picks it up on the next tick.</div>
+    </div>
+
+    <div class="uc">
+      <div class="uch"><div class="ucn">2</div><div class="uctxt">
+        <span class="actor">the detached advance's own shell wrapper — Phase 2</span>
+        <span class="uct"><code>POST /api/runs/:id/callback</code> — the run reports back</span>
+      </div></div>
+      <div class="ucsub">A <code>curl</code> appended to the conductor command fires at <b>every park / exit</b> — <b>zero conductor2 change</b>. This is the mechanism behind §4 steps&nbsp;2–4: the sequence shows "the sandbox" exporting the readout and inserting the question, but mechanically the run calls back and <i>this route</i> does those DB writes.</div>
+      <div class="ucdiag"><div class="dfg">
+        <div class="node read"><span class="op">report</span><span class="nt">exit code + ledger</span><span class="nf">75 parked · 0 done · 1 failed</span></div>
+        <div class="edge"><span class="el">① exit 75</span><span class="ar">→</span></div>
+        <div class="node store"><span class="op">put</span><span class="nt">readout + PDF</span><span class="nf">Storage — before the sandbox stops</span></div>
+        <div class="edge"><span class="el">②</span><span class="ar">→</span></div>
+        <div class="node created"><span class="op">insert</span><span class="nt">runbook_hitl_question</span><span class="nf">+ linked checkpoint<br>run.status=awaiting_input</span></div>
+      </div></div>
+      <div class="ucnote"><b>branches</b> — exit 0 → <code>run=completed</code>; exit 1 → <code>failed</code>. Every call stamps <code>last_callback_at</code> + <code>ledger_total_usd</code>; then the sandbox is stopped &amp; snapshotted.</div>
+    </div>
+
+    <div class="uc">
+      <div class="uch"><div class="ucn">3</div><div class="uctxt">
+        <span class="actor">cityhall answer endpoint — shipped · substation#245</span>
+        <span class="uct"><code>POST /api/gates/:id/decide</code> — operator answers a gate</span>
+      </div></div>
+      <div class="ucsub">Fires when a human answers in the console (§4 steps&nbsp;6–8). Validates against the gate schema, race-safe claim, then flips the run back to <code>queued</code> and fires the resume.</div>
+      <div class="ucdiag"><div class="dfg">
+        <div class="node created"><span class="op">update</span><span class="nt">runbook_hitl_question</span><span class="nf">status=answered · channel=ui</span></div>
+        <div class="edge"><span class="el">①</span><span class="ar">→</span></div>
+        <div class="node created"><span class="op">update</span><span class="nt">runbook_run</span><span class="nf">status=queued</span></div>
+        <div class="edge"><span class="el">② detached</span><span class="ar">→</span></div>
+        <div class="node event"><span class="op">fire</span><span class="nt">resume advance</span><span class="nf">boot sandbox · write decision.json</span></div>
+      </div></div>
+      <div class="ucnote"><b>lane split</b> — local stops at the row write (the captain polls); cloud flips <code>run=queued</code> and fires the resume. Reconcile backstops a missed fire. <i>The <code>queued</code> flip is the only part built today (#245); the detached resume is Phase 2.</i></div>
+    </div>
+
+    <div class="uc">
+      <div class="uch"><div class="ucn">4</div><div class="uctxt">
+        <span class="actor">Vercel Cron — every 2–5 min — Phase 2</span>
+        <span class="uct"><code>GET /api/cron/reconcile</code> — repair reality to match the rows</span>
+      </div></div>
+      <div class="ucsub">The <b>backstop + crash recovery</b> — it never appears on the §4 happy path because it only acts when a hot fire was missed or a session died. Walks <code>host='vercel'</code> runs and re-issues the same advance launch/decide would have. The timer bounds <i>recovery</i>, never user-facing latency.</div>
+      <div class="ucdiag"><div class="dfg">
+        <div class="node read"><span class="op">read</span><span class="nt">runbook_run</span><span class="nf">where host=vercel</span></div>
+        <div class="edge"><span class="el">queued · no session<br>or answered gate</span><span class="ar">→</span></div>
+        <div class="node event"><span class="op">fire</span><span class="nt">resume + advance</span><span class="nf">the missed hot fire</span></div>
+        <div class="edge"><span class="el">running · dead session</span><span class="ar">→</span></div>
+        <div class="node event"><span class="op">recover</span><span class="nt">re-advance</span><span class="nf">interrupted (session-cap / crash)</span></div>
+      </div></div>
+      <div class="ucnote"><b>interrupted vs parked</b> — decided by <code>session_started_at</code> + <code>last_callback_at</code>: <code>running</code>, no live session, and no callback since the session started ⇒ interrupted, not parked.</div>
+    </div>
+
+    <h3><span class="hn">QR</span>Quick reference — when each fires · resulting <code>runbook_run.status</code></h3>
+    <div class="spectable-scroll"><table class="spectable">
+      <thead><tr><th>route</th><th>who fires it</th><th>when</th><th>status after</th><th>built?</th></tr></thead>
+      <tbody>
+        <tr><td><code>POST /api/runs</code></td><td>cityhall / skill / prospector</td><td>run kickoff (once)</td><td><code>queued → running</code></td><td><span class="none">Phase 2</span></td></tr>
+        <tr><td><code>POST /api/runs/:id/callback</code></td><td>the detached advance itself</td><td>every park (75) / exit (0·1)</td><td><code>→ awaiting_input | completed | failed</code></td><td><span class="none">Phase 2</span></td></tr>
+        <tr><td><code>POST /api/gates/:id/decide</code></td><td>cityhall answer endpoint</td><td>a human answers a gate</td><td><code>awaiting_input → queued</code></td><td><span class="w">#245</span></td></tr>
+        <tr><td><code>GET /api/cron/reconcile</code></td><td>Vercel Cron</td><td>every 2–5 min · backstop</td><td>repairs → <code>running</code> / resumes</td><td><span class="none">Phase 2</span></td></tr>
+      </tbody>
+    </table></div>
+
+    <div class="callout new"><span class="lab">the mental model</span> The <b>DB row is the whole state</b>; four triggers move it — a human <b>start</b> (launch), the run <b>reporting back</b> (callback), a human <b>answer</b> (decide), and a <b>timer that repairs</b> anything the first three dropped (reconcile). The hot fires inside launch &amp; decide are pure <i>latency</i> wins; reconcile guarantees forward progress even if every hot fire is lost. The <code>claimed_at</code> lease + a row-level lock stop a cron tick and a hot fire from double-advancing one run dir.</div>
+
+    <div class="xref">These three routes replace <code>substation/src/inngest/functions/runbook-run.ts</code>; they depend on Jason's persistent-sandbox <b>detached-command API</b> (out of scope here — spec §1.3/§5). Their DB-write halves already exist in <code>substation/src/lib/runbook-run.ts</code> (<code>createRunbookRun</code> / <code>updateRunbookRun</code> / <code>postCheckpoint</code> / <code>createHitlQuestion</code>). Detail in <code>DESIGN-SPEC.md</code> §5 + D51/D52.</div>
   </section>
 
   <section class="panel" id="lifecycle">
-    <h2><span class="eyebrow">Section 5</span>Question lifecycle &amp; the four gate kinds</h2>
+    <h2><span class="eyebrow">Section 6</span>Question lifecycle &amp; the four gate kinds</h2>
     <p class="lede">v2 merges v1's <code>input_type</code> and Jason's gate <code>kind</code> into one <b><code>kind</code></b> enum over four types. A derived <b><code>terminal</code></b> = <code>kind ≠ clarification</code>: terminal kinds advance the graph on answer; a <code>clarification</code> is answered by an agent but leaves the gate parked.</p>
 
     <div class="sm">
@@ -563,7 +656,7 @@ code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px s
 <script>
   const btns=document.querySelectorAll('nav.tabs button');
   const panels=document.querySelectorAll('.panel');
-  const IDS=['overview','data','local','cloud','lifecycle']; /* KEEP IN SYNC */
+  const IDS=['overview','data','local','cloud','routes','lifecycle']; /* KEEP IN SYNC */
   function show(id){
     btns.forEach(b=>b.classList.toggle('active',b.dataset.tab===id));
     panels.forEach(p=>p.classList.toggle('active',p.id===id));
