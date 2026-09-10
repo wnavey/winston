@@ -2,8 +2,10 @@
 
 **Status:** Draft v1
 **Date:** 2026-09-10
-**Repos touched:** `conductor2` (new `init` verb + a control-plane HTTP client), `substation` (`POST /api/runs` delegates to the shared `registerRun`), `claude-plugins` (the `conductor` skill drops its §6 DB verbs and calls `conductor init`)
-**Repos NOT touched:** `cityhall`, `bureau` (the `runbook_hitl_cli.py` local client is superseded but its removal is a follow-up, not this slice)
+**Repos touched:** `conductor2` (new `init` verb + a control-plane HTTP client), `substation` (`POST /api/runs` accepts projectless runs), `bureau` (`runbook_hitl_cli.py` drops `run-start`), `claude-plugins` (the `conductor` skill kicks off with `init` and drops its §6 DB register verb)
+**Repos NOT touched:** `cityhall`
+
+> **Implementation reconciliation (2026-09-10).** Two header/section claims were corrected against the code *after* substation **#257** landed (same day, just before implementation): (a) there is no `registerRun()` to "share" — #257 deleted the Inngest launcher and `registerRun`, so `POST /api/runs` is *already* the sole registration primitive; the real substation change is making `project_id` **optional** (projectless local/`smoke` runs). (b) `bureau` **is** touched — decision **D3** (delete `run-start`) supersedes the original "Repos NOT touched: bureau" line. See the Implementation section for the shipped PRs.
 
 > **Context.** This is a child of the `runbook-checkpoints` control-plane work (parent: `../DESIGN-SPEC.md` v2, `../reconcile-workstreams/DESIGN-SPEC.md` v3). It assumes those tables (`runbook_runs`, `runbook_checkpoints`, `runbook_hitl_questions`) and the cloud lane as of substation **#257** ("Retire the Inngest launcher: `POST /api/runs` is the only way a cloud run starts", merged 2026-09-10). It does **not** re-litigate the cloud lane or the DB-free stance of conductor2 — it makes the **local** lane initialize a run the same way the cloud lane already does.
 
@@ -55,7 +57,7 @@ Behavior:
 
 **The id lives in the file, not in the path.** Locally the path is a caller-chosen slug; the id-in-path scheme (`…/runs/<runbook>/<id>`) is a cloud-only convenience the launcher can afford because it mints the id first. Keeping the local path caller-chosen is what *makes* the D1 idempotency check possible — if the id drove the path, `init` could not look for an existing run before minting a new id, and every call would mint a fresh id → fresh path → never detect the re-run.
 
-The control-plane base URL is a **new env var** (proposed: `CONDUCTOR_CONTROL_PLANE_URL`) — the substation API host, distinct from `PUBLIC_SUPABASE_URL`. The service-role key reuses `SUPABASE_SERVICE_ROLE_KEY`.
+The control-plane base URL reuses the stack's existing **`SUBSTATION_URL`** (the internal substation API host — the same var `substationBaseUrl()` reads to build the callback URL; *not* `PUBLIC_SUBSTATION_URL`). Read straight from the process env, like the credential beside it — `SUPABASE_SERVICE_ROLE_KEY`. (An earlier draft proposed a new `CONDUCTOR_CONTROL_PLANE_URL`; rejected in favor of the canonical name.)
 
 ### `runbook-run-id.txt` as the lane signal
 
@@ -66,9 +68,11 @@ The control-plane base URL is a **new env var** (proposed: `CONDUCTOR_CONTROL_PL
 
 A file in the run dir is durable across the captain's tool calls in a way the env var never was. Verb choice sets the lane: `conductor init` → DB lane; `conductor setup` → in-chat lane.
 
-### The shared registration primitive (substation)
+### The registration primitive (substation)
 
-Refactor `POST /api/runs` to delegate to the same `registerRun()` the cloud path uses, instead of its own inline `insert` (`runs.ts:194`). One definition of "register a run": local `conductor init` reaches it over HTTP; the cloud reconcile path reaches it in-process. No behavior change to the endpoint's contract — same validation, same `queued` row, same bearer minting (`runs.ts:219`).
+`POST /api/runs` is *already* the single registration primitive: substation **#257** deleted the Inngest launcher and its `registerRun()`, leaving the route (`runs.ts:194`) as the sole inserter of `runbook_runs`. So there is nothing to dedup — the spec's original "share `registerRun`" item is moot.
+
+The change actually needed to make local `conductor init` work: **`createBody.project_id` must be optional.** Local runs — `smoke` above all — have no project, but the route required `project_id: z.string().uuid()` and hard-validated the project exists, while the column is now nullable (`20260909000000_reconcile_runbook_control_plane.sql:48`). So `project_id` becomes `.optional()`, the project-existence check runs only when it is present, and a projectless row inserts with `project_id: null`. A projectless run must be `metered` (no project to carry a subscription seat) — rejected by name otherwise. Everything else (attachments/seat validation, `host` from body, `queued` status, bearer minting at `runs.ts:219`) is unchanged.
 
 ### The `conductor` skill (claude-plugins)
 
@@ -106,6 +110,15 @@ The two steps `init` bundles are, in cloud, deliberately **decoupled across the 
 - **D8 — `conductor setup` stays public** — the deterministic no-DB primitive, exercised by offline runs and by the cloud reconcile `setup` carrier. `init` wraps it.
 - **D9 — Verb name: `init`.** (`start`/`drive` rejected — imply execution; `advance` runs the graph, `drive` is a stub at `main.rs:443`.)
 - **D10 — Bearer stored in the run dir, treated as optional.** `POST /api/runs` returns a `callback_token`; store it alongside the id file. It becomes load-bearing only if/when the deferred slice routes local writes through the bearer-authenticated routes instead of service-role PostgREST.
+
+## Implementation (shipped 2026-09-10, PRs open — not merged)
+
+- **conductor2 #65** (`feat/conductor-init`) — the `init` verb in a new `src/init.rs` (`[adopt-if-present] → [register unless --run-id] → verbs::setup → write runbook-run-id.txt`), a `ureq` control-plane client modeled on `gateway.rs`, `SUBSTATION_URL` + `SUPABASE_SERVICE_ROLE_KEY`, the D2 `guard_host` (refuses `vercel`), D6 degrade, D10 best-effort `.conductor/callback-token`. 214 tests pass (8 new, incl. a loopback-mock live-POST test asserting the `x-service-role-key` header + body); clippy clean; DB-free preserved (HTTP only).
+- **substation #258** (`feat/runs-project-optional`) — `POST /api/runs` `project_id` optional; project-existence check gated on presence; projectless subscription rejected (`no_project_for_subscription`); projectless row inserts `project_id: null`. 582 tests pass.
+- **bureau #1589** (`feat/hitl-cli-drop-run-start`) — `runbook_hitl_cli.py` drops the `run-start` verb; the run id now comes from `runbook-run-id.txt`; `upsert_runbook_run` retained for `run-update`. Tests green.
+- **claude-plugins #245** (`feat/conductor-skill-init`) — the `conductor` skill kicks off with `conductor init`; §5/§6 key the DB lane on `runbook-run-id.txt` presence; `CONDUCTOR_HITL_DB` and `run-start` removed; `setup` kept as the offline alternative.
+
+Contract verified across #65 ↔ #258: request body field names, the `x-service-role-key` header, and the `{ id, callback_token }` response shape match.
 
 ## Open questions
 
