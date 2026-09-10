@@ -7,6 +7,8 @@
 
 > **Context.** This is a child of the `runbook-checkpoints` control-plane work (parent: `../DESIGN-SPEC.md` v2, `../reconcile-workstreams/DESIGN-SPEC.md` v3). It assumes those tables (`runbook_runs`, `runbook_checkpoints`, `runbook_hitl_questions`) and the cloud lane as of substation **#257** ("Retire the Inngest launcher: `POST /api/runs` is the only way a cloud run starts", merged 2026-09-10). It does **not** re-litigate the cloud lane or the DB-free stance of conductor2 — it makes the **local** lane initialize a run the same way the cloud lane already does.
 
+> **Decisions locked (grill 2026-09-10):** D1 idempotency (marker-check first, id-in-file not id-in-path), D2 `host≠vercel` guard, D3 delete `run-start`, D4 service-role-key debt accepted, D5 ship init-only + file the follow-up, D6 POST-fails→degrade, D7 register against prod, D8 `setup` stays public, D9 name `init`, D10 bearer stored-optional. See Decisions section.
+
 ## Problem
 
 A runbook run needs two things to exist before it can advance: a **`runbook_runs` DB row** (so the run is observable in the cityhall console and answerable through the HITL routes) and a **set-up run directory** (`graph.json`, conventions, the `hitl/` dir — what `conductor setup` writes).
@@ -40,15 +42,20 @@ Settled earlier in this workspace and unchanged by #257:
 
 `conductor init <runbook-dir> <run-dir> [--run-id <id>]`
 
+`init` takes the **same positional args as `setup`** — the caller names the run dir (locally a human slug like `908-old-koenig`); `init` does not invent the path. It is "path-aware" only in that it checks and materializes the dir at the path it is handed, which is what `setup` already does.
+
 Behavior:
 
-1. **Register (conditional).** If `--run-id` is **absent** *and* a control-plane URL + credential are configured in the environment: `POST <control-plane>/api/runs` with `x-service-role-key`, body carrying at minimum `{ runbook, host, request?, project_id? }`. Take `{ id, callback_token }` from the response. If `--run-id` is **present**, skip the POST — the row already exists (this is the shape a caller uses when something else registered the run).
-2. **Set up.** Run the existing `setup` logic unchanged (`conductor2/src/verbs.rs:21-157`): compile the run dir, write conventions, create `hitl/`, git-init `runbooks/`.
+0. **Idempotency check (first).** `stat <run-dir>/runbook-run-id.txt`. If it **exists** → this path is already an initialized run: adopt that id and exit 0, skipping both register and setup. Registration is the **last** side effect and is reached only when the path is fresh, so re-running `init` (a retry, a resume, a fat-finger) never double-registers or orphans a row. (D1)
+1. **Register (conditional).** If `--run-id` is **absent** *and* a control-plane URL + credential are configured: `POST <control-plane>/api/runs` with `x-service-role-key`, body `{ runbook, host, request?, project_id? }`. Take `{ id, callback_token }` from the response. If `--run-id` is **present**, skip the POST — the row already exists. **`host` is forced to the local hostname; `init` refuses to send `host='vercel'`** — a locally-initialized run must never be claimable by the prod reconcile cron, which acts only on `host='vercel'`. A test asserts this. (D2)
+2. **Set up.** Run the existing `setup` logic unchanged (`conductor2/src/verbs.rs:21-157`): create + compile the run dir, write conventions, create `hitl/`, git-init `runbooks/`. `init` does not mkdir separately — `setup` creates the dir at the given path (`verbs.rs:31`).
 3. **Record the id.** Write the run id to **`<run-dir>/runbook-run-id.txt`** — a text file whose entire contents are the run id, nothing else. (If `--run-id` was given, write that.)
 
-`init` is a thin wrapper: `[register] → setup → write id file`. `conductor setup` remains a public verb, unchanged, for offline / no-DB / throwaway runs.
+`init` is a thin wrapper: `[adopt-if-present] → [register unless --run-id] → setup → write id file`. `conductor setup` remains a public verb, unchanged, for offline / no-DB / throwaway runs.
 
-The control-plane base URL is a **new env var** (proposed: `CONDUCTOR_CONTROL_PLANE_URL`) — the substation API host, which is distinct from `PUBLIC_SUPABASE_URL`. The service-role key reuses `SUPABASE_SERVICE_ROLE_KEY`.
+**The id lives in the file, not in the path.** Locally the path is a caller-chosen slug; the id-in-path scheme (`…/runs/<runbook>/<id>`) is a cloud-only convenience the launcher can afford because it mints the id first. Keeping the local path caller-chosen is what *makes* the D1 idempotency check possible — if the id drove the path, `init` could not look for an existing run before minting a new id, and every call would mint a fresh id → fresh path → never detect the re-run.
+
+The control-plane base URL is a **new env var** (proposed: `CONDUCTOR_CONTROL_PLANE_URL`) — the substation API host, distinct from `PUBLIC_SUPABASE_URL`. The service-role key reuses `SUPABASE_SERVICE_ROLE_KEY`.
 
 ### `runbook-run-id.txt` as the lane signal
 
@@ -66,7 +73,7 @@ Refactor `POST /api/runs` to delegate to the same `registerRun()` the cloud path
 ### The `conductor` skill (claude-plugins)
 
 - Skill §3 kickoff becomes `conductor init` (not `conductor setup`) for any run that should be observable/answerable in the app.
-- Skill §6's `run-start` / `run-update` / the `CONDUCTOR_HITL_DB` gate are removed. Checkpoint/ask/await-answer during the run are a **separate concern** left to the existing local HITL client for this slice (see Scope) — this spec only moves **initialization** off the LLM.
+- Skill §6's `CONDUCTOR_HITL_DB` gate is removed. **`run-start` is deleted** from `runbook_hitl_cli.py`, and the CLI instead **reads `<run-dir>/runbook-run-id.txt`** for the run id — so the row is created exactly once (by `init`), never a second time by the HITL client. (D3) `run-update` / `post-checkpoint` / `ask` / `await-answer` stay on the existing Python client for this slice but source the id from the file; moving *those* off the LLM is the deferred next slice. This spec moves **initialization** off the LLM.
 
 ## Cloud interaction (unchanged, stated for completeness)
 
@@ -80,17 +87,26 @@ The two steps `init` bundles are, in cloud, deliberately **decoupled across the 
 
 ## Scope
 
-**In scope (this slice):** the `init` verb (register + setup + id file); `runbook-run-id.txt` as the lane signal; retire `CONDUCTOR_HITL_DB`; `POST /api/runs` → shared `registerRun`; skill §3 switches to `init`.
+**In scope (this slice):** the `init` verb (adopt-if-present + register + setup + id file); the D1 idempotency check; the D2 `host≠vercel` guard; `runbook-run-id.txt` as the lane signal; retire `CONDUCTOR_HITL_DB`; delete `run-start` and have `runbook_hitl_cli.py` read the id file (D3); `POST /api/runs` → shared `registerRun`; skill §3 switches to `init`.
 
-**Deferred:**
+**Deferred (D5 — filed now as the immediate next slice):**
 - Moving the *rest* of the local DB writes (checkpoints, ask/await-answer) off the LLM — a later slice, likely a `conductor`-driven emit/callback contract mirroring the cloud callback. This spec deliberately does the smallest useful thing first: initialization.
-- Retiring `bureau/runbooks/lib/runbook_hitl_cli.py` / `app_client.py` — superseded over time, not deleted here.
+- Retiring `bureau/runbooks/lib/runbook_hitl_cli.py` / `app_client.py` — superseded over time, not deleted here (only `run-start` goes now).
 - Implementing the `--callback` / `--run-id`-into-advance contract in conductor2 (substation's cloud driver is coded against it but the binary does not yet speak it) — orthogonal to `init`.
+
+## Decisions (locked — grill 2026-09-10)
+
+- **D1 — Idempotency, path-first.** `init` shares `setup`'s positional args (caller names the run dir). It stats `<run-dir>/runbook-run-id.txt` first; if present, adopt + exit 0 (skip register + setup). Registration is the last side effect, reached only on a fresh path — so a re-run never double-registers. The id lives in the file, never in the local path.
+- **D2 — `host≠vercel` guard.** `init` forces `host` to the local hostname and refuses to send `host='vercel'`, so a locally-initialized row can never be claimed and launched (for money) by the prod reconcile cron, which acts only on `host='vercel'`. A test asserts it.
+- **D3 — Delete `run-start`.** As part of this slice, `runbook_hitl_cli.py` stops calling `run-start` and reads the run id from `runbook-run-id.txt`. The row is created exactly once (by `init`); no double-registration during the half-migrated interim.
+- **D4 — Service-role key on operator laptops: accepted, noted as debt.** No new exposure — the key is already in `~/.env` for `app_client.py`. The eventual hardening is to give *local* the allowlisted `SUBSTATION_SERVICE_API_KEY` (scoped to `/api/runs`) instead of the full RLS-bypass service-role key. Flagged, not fixed, in this slice.
+- **D5 — Ship initialization alone.** It's a testable milestone (row + dir + lane signal, deterministic, `smoke` exercises it end to end) and settles the run-id contract before the harder callback/emit work. The follow-up (checkpoints/ask-await off the LLM) is filed now as the immediate next slice, so this is a waypoint, not a resting state.
+- **D6 — POST fails locally → degrade, not hard-fail.** When `init` cannot reach the control plane (offline, bad URL, 5xx), it proceeds as a no-DB run (as if `setup` was called), warns, and writes no id file — so the run lands in the in-chat lane. "A HITL-infra outage never bricks a run" (`../DESIGN-SPEC.md:217`).
+- **D7 — Local registers against the prod control plane** (the deployment cityhall reads), so the row shows in the operator's console. `conductor setup` *is* the offline / no-register escape hatch — no separate `--no-register` flag.
+- **D8 — `conductor setup` stays public** — the deterministic no-DB primitive, exercised by offline runs and by the cloud reconcile `setup` carrier. `init` wraps it.
+- **D9 — Verb name: `init`.** (`start`/`drive` rejected — imply execution; `advance` runs the graph, `drive` is a stub at `main.rs:443`.)
+- **D10 — Bearer stored in the run dir, treated as optional.** `POST /api/runs` returns a `callback_token`; store it alongside the id file. It becomes load-bearing only if/when the deferred slice routes local writes through the bearer-authenticated routes instead of service-role PostgREST.
 
 ## Open questions
 
-- **Q1 — POST fails locally: hard-fail or degrade?** When `conductor init` cannot reach the control plane (offline, misconfigured URL, 5xx), should it (a) fail the command, or (b) fall back to a no-DB run (proceed as if `conductor setup` was called, no id file, in-chat lane) with a warning? Recommend **(b)** — the parent spec's principle is "a HITL-infra outage never bricks a run" (`../DESIGN-SPEC.md:217`); registration is best-effort, and the id file's absence already means "in-chat lane".
-- **Q2 — Which control plane does a *local* run register against?** For the row to appear in the operator's console it must hit the **same** substation deployment cityhall reads (prod). Confirm local dev runs registering prod rows is desired, and whether a `--no-register` / offline escape hatch is wanted for throwaway runs (vs. just calling `conductor setup`). Recommend: `conductor setup` *is* the escape hatch; `conductor init` always registers against the configured (prod) control plane.
-- **Q3 — Does `conductor setup` stay public, or become `init`-internal?** Recommend **stays public** — it is the deterministic no-DB primitive, exercised directly by offline runs and by the cloud reconcile carrier. `init` wraps it.
-- **Q4 — Verb name.** `init` vs `run-init` vs `register`. `start`/`drive` are rejected (imply execution; `advance` already runs the graph, `drive` is a stubbed verb at `main.rs:443`). Recommend **`init`**.
-- **Q5 — Does the bearer get used locally, or minted-and-ignored?** `POST /api/runs` returns a `callback_token`. Cloud injects it into the sandbox as `CONDUCTOR_CALLBACK_TOKEN`. Locally the operator's machine already holds real creds, so the captain does not strictly need the bearer to write. Recommend: **store it in the run dir** (e.g. alongside the id file) but treat it as optional — it becomes load-bearing only if/when the deferred "checkpoints off the LLM" slice routes local writes through the bearer-authenticated routes instead of service-role PostgREST.
+None outstanding — all grill decisions locked 2026-09-10 (D1–D10). New questions from an audit pass get numbered here.
