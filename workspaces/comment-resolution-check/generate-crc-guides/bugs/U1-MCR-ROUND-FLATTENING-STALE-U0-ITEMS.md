@@ -1,6 +1,6 @@
 # U1 MCR comment rounds are flattened: resolved and superseded U0 text becomes live CRC checklist items
 
-> **Status:** Diagnosed 2026-09-18. Fix **not implemented**. The 16 affected failed items on review `ccd1048e` were hand-triaged to `resolved` in `comment_triage`, with the note "Stale u0 comment, no longer applicable". The guides themselves (crc-guides gen `7/1`) are **not** corrected.
+> **Status:** Diagnosed 2026-09-18. **Fixed 2026-09-18** in noetic-inc/claude-plugins#256 (round-aware extraction + `resolve-comment-rounds.md` + strikethrough/highlight detection) and noetic-inc/bureau#1656 (runbook passes `--mcr-cycle`). Validated with 7 local, unpublished runbook runs graded against the IG report: all 39 should-not-exist items were absent from run 4 onward, and the best run matched 96 of 107 parents (residuals are listed in #256). **Production v7 guides (gen `7/1`) are still the pre-fix output** until v7 is re-processed and CRC is re-run. The 16 affected failed items on review `ccd1048e` were hand-triaged to `resolved` in `comment_triage`, with the note "Stale u0 comment, no longer applicable". The guides themselves (crc-guides gen `7/1`) are **not** corrected.
 >
 > **Root cause:** `claude-plugins` → `generate-crc-guides` (the Phase-2 extract prompt and the Phase-3 status filter). The runbook `bureau` → `process-city-response-docs` (MCR worker) does not pass the MCR's update cycle to the skill.
 >
@@ -223,7 +223,7 @@ SP-27.2  "≥75% of CTC net frontage is continuous façade built to the clear zo
 - **Logged:** only the "Resolved" subset appears in `decisions.md` and the readout, framed as a safe default. **The narrowed-but-pending majority fires silently.**
 - **Cheap detector (worst case):** for each parent in `source-map.json`, flag any whose MCR comment has two or more round markers (`/\bU\d+\s*:/` appearing twice or more in the comment's raw text span), or whose header status matches `/resolved|cleared/i`. On this MCR that flags every parent behind the 54 stale items. It also flags parents whose U1 keeps U0 open, so treat it as a review queue, not an auto-drop.
 
-## Fix directions (not yet implemented; directions for the implementer, not a mandate)
+## Fix directions (implemented in claude-plugins#256 / bureau#1656 — kept for the record)
 
 1. **Make the pipeline aware of the update cycle end to end (the principled fix).**
    - **Runbook:** in `mcr-worker.md`, pass the cycle to the skill, for example `--mcr-cycle U<city_submission_number-1>`. Cross-check it against the PDF header (`Update: U1` on page 1) and fail loudly if they disagree. Note the off-by-one: `city_submission_number = 2` is the **U1** MCR.
