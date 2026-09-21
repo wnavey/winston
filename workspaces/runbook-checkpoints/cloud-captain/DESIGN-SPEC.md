@@ -1,12 +1,21 @@
 # Cloud Captain — an Agent SDK captain inside the Vercel Sandbox
 
-**Status:** Draft v2
+**Status:** Draft v3
 **Date:** 2026-09-21
-**Repos touched:** `bureau` (the captain entrypoint; `runbook_hitl_cli.py` bearer transport; a `docs/runbooks.md` correction a human must make), `substation` (launch the captain as the carrier; two run-bearer gate routes; the per-run subscription token; billing defaults), `claude-plugins` (`/conductor` SKILL.md — every captain question becomes a DB row, on **both** lanes, D9), `conductor2` (nothing — §4, D4)
+**Repos touched:** `bureau` (the captain entrypoint; `runbook_hitl_cli.py` bearer transport), `substation` (launch the captain as the carrier; two run-bearer gate routes; the per-run subscription token; billing defaults), `claude-plugins` (`/conductor` SKILL.md — every captain question becomes a DB row, on **both** lanes, D9), `conductor2` (nothing — §4, D4)
 **Repos NOT touched:** `cityhall` (the console already renders the payload shape a captain writes — §3.4 is the point)
+**Sibling:** `../seat-resolution/DESIGN-SPEC.md` (§6 split out in v3)
 **Parent:** `../DESIGN-SPEC.md` v2 (runbook checkpoints + HITL control plane), `../reconcile-workstreams/DESIGN-SPEC.md` v3 (the converged tables and routes)
 **Corrects:** `../agentic-hitl/DESIGN-SPEC.md` §3, which records "the cloud lane has no agent in the loop at all" as an as-built fact without checking it against `bureau/docs/runbooks.md`. It is an unbuilt component, not an architectural property. This spec builds it.
 
+> **Revision note (v3, 2026-09-21).** Two changes, both from reality moving underneath v2.
+>
+> **§5.1 is resolved, not pending.** v2 said D6 "contradicts the constitution" and required a human to edit `docs/runbooks.md`. **bureau#1676 merged** (`ad7760400c`, 2026-09-21): the rule now reads "**Cloud runs also default to subscription** but they can use metered spend when we are running a lot of runs in a single week." D6 is aligned with the constitution rather than against it. The same PR deleted a **duplicated** "Runbook ecosystem" block, so v1/v2's citations to `:40`/`:42` are dead — the surviving statement is `docs/runbooks.md:12`, and every citation here is re-checked against the merged file.
+>
+> **§6 is now its own spec** — `../seat-resolution/DESIGN-SPEC.md`. It spans `dsd` + `substation`, carries its own five open questions, and D10 means it no longer blocks the captain. v2's **D16 and D17 move there** (as its D4 and D2); the numbering of D1–D15 is unchanged so earlier references still resolve.
+>
+> One consequence worth stating plainly: with #1676 merged, the constitution now says cloud runs default to subscription **while substation still has exactly one shared `CLAUDE_CODE_OAUTH_TOKEN`**, which `:74` forbids sharing. D10 is what makes that honest in the interim — the caller supplies their own seat — and the seat spec is what makes it automatic.
+>
 > **Revision note (v2, 2026-09-21).** Folds in a two-batch grill plus one factual correction.
 >
 > **Factual correction — v1's §4 premise was wrong.** v1 justified the new bearer routes with "the sandbox never holds a DB credential." It does: `buildRunbookEnv` injects `SUPABASE_RUN_TOKEN`, `SUPABASE_ANON_KEY` and, on a subscription run, `CLAUDE_CODE_OAUTH_TOKEN` (`substation/src/lib/runbook/env.ts`). The routes are still right, for a sharper reason verified in prod (`mgxqsrjutswbciyrltwd`, 2026-09-21): `runbook_hitl_ask` has `EXECUTE` granted to **`postgres` and `service_role` only** (substation#267 revoked it from `authenticated`), and all three control-plane tables carry a **SELECT-only** RLS policy with **no write policy at all**. The sandbox's run token therefore cannot open a question or read an answer *by design*, not by absence. §4 restated.
@@ -19,11 +28,11 @@
 
 ## Problem
 
-`bureau/docs/runbooks.md` — the constitution, human-edited, "the definitive overview of how our systems work" — specifies a captain on **both** lanes, and says so three times:
+`bureau/docs/runbooks.md` — the constitution, human-edited, "the definitive overview of how our systems work" — specifies a captain on **both** lanes:
 
-> **Cloud Runs** take place in Vercel Sandbox in isolated environments that we can pause and resume as needed. The captain agent run as a Claude Agent SDK wrapper around Conductor in this environment. (`docs/runbooks.md:12`, repeated `:42`)
+> **Cloud Runs** take place in Vercel Sandbox in isolated environments that we can pause and resume as needed. The captain agent run as a Claude Agent SDK wrapper around Conductor in this environment. (`docs/runbooks.md:12`)
 
-> For cloud runs the captain is an Agent SDK wrapper around Conductor inside the sandbox. For local runs it is the operator's own Claude Code session initiated with the `/conductor` skill. (`:40`)
+> The captain starts conductor, handles any problems, repairing it's copy of the runbook if needed, and validating that the runbook is actually done before closing out. What the captain decides itself and what it takes to a human is stated in the `/conductor` skill. (`:10`)
 
 It is **specified**, it is **provisioned** — the cloud image installs `claude-agent-sdk==0.2.144` (`conductor2/containers/Containerfile:90`) — and it is **not built**. `substation/src/lib/runbook/plan.ts` shells `conductor setup` (`:453`), `conductor advance` (`:506`) and `conductor run-step` (`:570`) directly, and `reconcile-loop.ts` launches those as detached commands with no wrapper. Every `captain` reference in bureau resolves to `runbooks/lib/runbook_hitl_cli.py`, whose own header calls it "the captain's **local-lane** HITL client".
 
@@ -39,7 +48,7 @@ So a cloud run today is a bare binary with a cron around it. Three consequences,
 
 | | status | evidence |
 |---|---|---|
-| Specified | ✅ | `bureau/docs/runbooks.md:12,40,42` |
+| Specified | ✅ | `bureau/docs/runbooks.md:10,12` (post-#1676) |
 | Provisioned | ✅ | `conductor2/containers/Containerfile:90` — `claude-agent-sdk==0.2.144` |
 | Behavioural contract written | ✅ | `claude-plugins/.../skills/conductor/SKILL.md` §5–§6, which `docs/runbooks.md:10` names as the statement of what the captain decides itself vs takes to a human |
 | Built | ❌ | nothing launches it |
@@ -131,11 +140,13 @@ Both sit under `/api/runs/:id/*`, so the bearer's authority stays intrinsic: `HM
 
 Rationale, and the constitution's: subscription accounts are ~30× cheaper for Anthropic models, and the volume that justifies metered is not here yet. Defaulting to the cheap lane and paying metered on purpose is the right way round.
 
-**Split by lane.** Local flips now — the local seat hook already picks the operator's own account, so there is no correctness problem. **Cloud's default flips when a seat is resolvable** (§6): until then, defaulting cloud to subscription would funnel every run onto substation's one shared `CLAUDE_CODE_OAUTH_TOKEN`, which `docs/runbooks.md:83` forbids outright.
+**Split by lane, for a shrinking reason.** Local flips now — the local seat hook already picks the operator's own account, so there is no correctness problem. **Cloud's default flips when a seat is resolvable** (`../seat-resolution/`): until then, defaulting cloud to subscription funnels every run onto substation's one shared `CLAUDE_CODE_OAUTH_TOKEN`, which `docs/runbooks.md:74` forbids outright. D10 (§5.2) is what lets a cloud run be subscription-billed *correctly* in the meantime, by having the caller supply their own seat.
 
-### 5.1 This contradicts the constitution; a human must fix it
+### 5.1 The constitution already agrees (bureau#1676, merged)
 
-`docs/runbooks.md:85` reads "**Cloud runs default to metered spend**…". D6 reverses it. `bureau/docs/CLAUDE.md` is explicit that a change making `docs/` untrue must be made by a human in parallel, so **shipping D6 requires Will to edit §Token Spend Rules**. Flagged, not done.
+v1 and v2 flagged this as a contradiction needing a human edit. It has one: **bureau#1676 merged 2026-09-21** (`ad7760400c`), and `docs/runbooks.md:76` now reads "**Cloud runs also default to subscription** but they can use metered spend when we are running a lot of runs in a single week." D6 implements the documented rule rather than diverging from it.
+
+What that merge does *not* fix is the mechanism: `:74` ("Subscription accounts are never shared") and `:76` ("the run can only use the accounts owned by the user requesting the run") both stand, while substation still holds exactly one token. So the documented default is now ahead of the implementation, and D10 plus `../seat-resolution/` are what close the distance.
 
 ### 5.2 The unblock — a per-run subscription token (D10)
 
@@ -153,23 +164,13 @@ This is not throwaway: when the registry lands, the resolver writes into the sam
 - **D12 — no token supplied ⇒ today's behaviour.** Fall back to substation's shared `CLAUDE_CODE_OAUTH_TOKEN` rather than failing, so D10 is purely additive and nothing that works today breaks.
 - **D13 — seat exhaustion mid-run parks.** conductor already parks with `seat_exhausted` on a 429. The captain opens an `operator` gate naming the seat and its reset time. **It must not auto-fall-back to metered**: silently switching to real dollars because a rate limit hit is the surprise the Token Spend Rules exist to prevent.
 
-## 6. Seat resolution — Phase 2
+## 6. Seat resolution — split out
 
-The mechanism, researched 2026-09-21.
+v2 carried the seat mechanism here. It is now **`../seat-resolution/DESIGN-SPEC.md`**: a service-role-only registry keyed by alias and owner, resolution in substation at launch from `runbook_runs.triggered_by`, an optional `seat` alias on the launch body, ownership enforced rather than documented, and an `operator` gate when nothing resolves.
 
-**The account table is a per-machine dotfile.** `~/.config/dsd/dsd.conf`, explicitly "NOT checked in": `account = <alias> <config_dir>` and `owner = <name> <accounts…>`. The **alias already exists** (`max-a`, `max-g`) and owners already map a person to their accounts.
+It is separable because **D10 unblocks subscription cloud runs without it** — the caller supplies their own token per run, which satisfies "accounts are never shared" by construction. The captain does not wait on it.
 
-**A seat is a `CLAUDE_CONFIG_DIR`, not a token** — a directory holding a logged-in Claude Code session. conductor2 concurs: "a mounted seat is how a container is seated… the dir is the only login such a child has."
-
-**`dsd seat pick` is a hook contract, not a library.** conductor runs `CONDUCTOR_SEAT_CMD` once per agent step and reads the first line of stdout — a path (the config dir), `-` (unset; the org seat), or empty (no opinion) — with exit `0` picked and **`75` no seat available, park the step**. Precedence: `--seat <account>` → the step preset's `seat:` (one account or a pool a fan-out spreads across) → the hook. The name travels as `CONDUCTOR_SEAT` "because the account table is dsd's". Leases live at `<cache>/seats/<account>.<pid>.<uniq>` and usage at `<cache>/usage-snapshots/<account>.json`, both per-machine files.
-
-**Why none of it ports as-is:** the table is a dotfile substation cannot read; a seat is a directory of credentials on a machine and a sandbox has neither; cloud uses a token, a different credential form; leases and usage are per-machine, so nothing stops two cloud runs picking one seat.
-
-**D17 — resolution belongs to substation, at launch**, before any sandbox exists. The run row exists at that point, so a gate can be opened with nothing spent — the cheapest place to discover a billing problem.
-
-**D16 — if no seat resolves, ask.** An `operator` gate with `continue metered` / `cancel`; cancel sets the run `cancelled`, which already exists in the status enum for exactly this — a human's decision, not a malfunction. Resolution runs on every cloud run; the gate fires only on failure.
-
-Open shape, deliberately not decided here: **Q3** (registry home and credential form), **Q4** (cross-run leases), **Q5** (alias at launch and whether you may name an account you do not own).
+The one fact worth keeping in view here: **none of the local seat machinery ports.** `dsd.conf` is a per-machine dotfile, a seat is a `CLAUDE_CONFIG_DIR` rather than a token, and `dsd seat pick` is a stdout hook contract with per-machine leases. What *does* port is conductor's seam — the `--seat`/preset/hook precedence and `CONDUCTOR_SEAT` — which the seat spec implements behind rather than replaces.
 
 ## 7. Sequencing
 
@@ -182,8 +183,8 @@ Open shape, deliberately not decided here: **Q3** (registry home and credential 
 | **R5** | `runbook_run_secret` + `claude_code_oauth_token` on the launch body (D10–D12) | substation | unblocks subscription cloud runs; independent of R3/R4 |
 | **R6** | The captain entrypoint + launch it as the carrier | bureau, substation | the substitution at `reconcile-loop.ts:416` |
 | **R7** | D9 on the local lane — every captain question becomes a row | claude-plugins, bureau | |
-| **R8** | Local billing default → subscription, + the `docs/runbooks.md` edit | substation, bureau (human) | |
-| **R9** | Seat registry + resolution (§6); cloud billing default flips | dsd, substation | Phase 2 |
+| **R8** | Local billing default → subscription | substation | the `docs/runbooks.md` half is already done — bureau#1676, merged |
+| **R9** | Seat registry + resolution; cloud billing default flips | dsd, substation | its own spec — `../seat-resolution/` |
 
 Independently useful, not blocking: `pass.log`'s last lines as a checkpoint on a non-0/75 exit, which `docs/runbook-lane.md` already promises and run `3b601464` did not get.
 
@@ -206,8 +207,8 @@ Independently useful, not blocking: `pass.log`'s last lines as a checkpoint on a
 - **D13** — Seat exhaustion parks on an `operator` gate; never auto-fall-back to metered. (§5.2)
 - **D14** — The captain narrates itself: a `note` checkpoint per action. (§3.3)
 - **D15** — Completion validation is minimal: `conductor status`, every contract passing, nothing stood aside. (§2)
-- **D16** — No seat resolves ⇒ an `operator` gate offering metered or cancel. (§6)
-- **D17** — Seat resolution belongs to substation at launch, before a sandbox exists. (§6)
+
+*(v2's **D16** and **D17** moved to `../seat-resolution/` as its D4 and D2. D1–D15 keep their numbers.)*
 
 **Non-goal, revisited:** converging the local Claude Code captain onto the SDK implementation. Not now — but keep the captain's logic in `bureau`, not in `substation`, so it stays possible.
 
@@ -215,8 +216,5 @@ Independently useful, not blocking: `pass.log`'s last lines as a checkpoint on a
 
 - **Q1 — what does the captain see of an earlier pass?** Park-and-exit means a relaunched captain is a fresh session with no memory of the one that parked. The run directory is the state, as always — but is the gate's own ask/answer history (preserved per-ask since `20260918180000`, `attempt` on `runbook_hitl_questions`) enough context for a captain resuming a `report_back`?
 - **Q2 — which model, at what effort, drives the captain?** It is an agent per pass on top of the steps. D5 caps its repair loop but not its model choice. A cheap model that misdiagnoses costs more than an expensive one that does not.
-- **Q3 — the seat registry's home and credential form.** A service-role-only Supabase table (`alias`, `owner_user_id`, token, `active`) that `dsd` pushes to, or substation calling dsd as a service? And a token per account, given a local seat is a config *directory*? (§6)
-- **Q4 — cross-run seat leases.** Local leases are per-machine files; nothing stops two cloud runs picking one seat and both stalling on the same rate limit. Ship leases in the registry, or accept the exposure in Phase 2? (§6)
-- **Q5 — naming an alias at launch, and who may.** `POST /api/runs` taking `seat: "max-g"` reuses conductor's existing precedence chain. Should substation refuse an alias not owned by `triggered_by` — turning `docs/runbooks.md:83` from a documented rule into an enforced one? (§6)
-- **Q6 — 24 h.** The sandbox session cap is 86,400,000 ms. With R1 a parked run is stopped and resumes from a snapshot, so the cap should not bite. Confirm a stopped-and-snapshotted sandbox survives past 24 h, and what happens to a session that *times out* while parked — the automatic snapshot is taken by `stop()`, and whether a timeout leaves one is unverified.
-- **Q7 — does §6 split into its own spec?** Seat resolution now spans `dsd` + `substation` and has its own four open questions. D10 means it no longer blocks the captain. Kept here for now; cleanly separable if it drags.
+- **Q3 — 24 h.** The sandbox session cap is 86,400,000 ms. With R1 a parked run is stopped and resumes from a snapshot, so the cap should not bite. Confirm a stopped-and-snapshotted sandbox survives past 24 h, and what happens to a session that *times out* while parked — the automatic snapshot is taken by `stop()`, and whether a timeout leaves one is unverified.
+- **Q4 — RESOLVED (v3).** v2 asked whether §6 should split. It has: `../seat-resolution/DESIGN-SPEC.md`, carrying its own D1–D6 and Q1–Q5. The captain no longer waits on it.
