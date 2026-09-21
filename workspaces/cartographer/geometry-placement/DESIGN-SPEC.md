@@ -6,6 +6,8 @@
 **Repos NOT touched:** `bureau`, `cityhall`, `conductor`/`conductor2`
 **Predecessor:** [`../geometry-extraction/DESIGN-SPEC.md`](../geometry-extraction/DESIGN-SPEC.md) (winston#266) — this lifts part of its §7 "Anchoring (D3)" deferral. SRID/WGS84 stays deferred.
 
+> **Revision note (2026-09-21, same PR):** Q1–Q5 resolved and folded in. Q1 becomes D8 (one positional tolerance in feet: accept at ≤ 0.5 ft, check passes at ≤ 1.0 ft). Q2 becomes D9 (only the worker proposes links). Q3 becomes D10 (the largest figure is the reference). Q4 is resolved in §3.2 (one placement worker per document). Q5 is resolved in §3.4 (a plat-defect flag at the top of the readout). §3.3 and §6 are updated to match.
+
 > Short spec. Extraction stays unanchored. A new phase decides, from evidence printed on the document, which figures belong to one drawing and where each sits relative to the others.
 
 ---
@@ -46,6 +48,13 @@ A plat's figures belong to one drawing. But one document can also list several u
 - **D5 — A frame is a connected component of evidence.** Figures are nodes, and accepted evidence links are edges. Each connected component is a **frame**, laid out relative to one reference figure at `(0,0)`. A figure with no links is a frame of one, which is valid and reported as unplaced, never dropped beside the others by guesswork.
 - **D6 — Translation only.** Figures in one frame share a basis of bearings, because they're drawn on one sheet. So placement is `(dx, dy)`, with no rotation. A frame that would need rotation is out of scope (§5).
 - **D7 — Frames are per file, per run.** No cross-file frames.
+- **D8 — Tolerance is one positional budget, in feet (was Q1).** These geometries need to be right to the foot; under a foot, imprecision is acceptable. So there is no separate bearing or length tolerance. A claim is judged by **where it puts things**: align the two segments and measure the endpoint gap. A bearing error of θ over a line of length L moves the far end by L·θ, so one budget in feet treats a 20 ft line and a 400 ft line correctly. (At 400 ft, 1 ft of drift is about 8½′ of bearing.)
+  - **Accept a shared-line claim when the endpoint gap is ≤ 0.5 ft.** That's half the budget, leaving the other half for error that builds up along a placement chain.
+  - **A check passes at ≤ 1.0 ft and fails above it.** Checks are the non-tree edges in §3.3 step 4.
+  - **Grounding:** LOT 1's west line, coordinate-derived `S 55°59'53" E 411.26'` vs printed `S 55°56'43" E 411.49'` (readout:89). That's 3′10″ of bearing apart but only **≈ 0.44 ft** of position, so it is accepted. A seconds-based bearing rule would have rejected a line that is fine for our purposes.
+  - Both numbers are constants in `place.ts`, named next to `SURVEY_CLOSE_TOLERANCE`.
+- **D9 — Only the worker proposes links (was Q2).** `place.ts` never searches for matching lines itself, because equal length plus reversed bearing is ambiguous: a rectangle's opposite sides match. It only verifies claims (D4).
+- **D10 — The reference figure is the largest by computed area (was Q3).** It sets the view's origin only, not correctness.
 
 ---
 
@@ -75,7 +84,7 @@ Ties become real courses, so the verbatim diff and parser checks cover them too.
 
 ### 3.2 Placement pass (new, vision): `prompts/place-figures.md`
 
-This runs once per page that carries two or more figures. It is skipped when the run has exactly one figure. The worker sees the page at survey resolution plus each figure's walked outline, and the numbered courses rendered in their `(0,0)` frames. It **reads no values**. It returns claims:
+This runs **once per document** (was Q4), and is skipped when the run has exactly one figure. One worker per page couldn't link figures printed on different pages, such as a deed's exhibits. The worker sees every page that carries a figure at survey resolution, plus each figure's walked outline and numbered courses rendered in their `(0,0)` frames. Figures with printed coordinates don't depend on this worker at all, because `place.ts` links them directly (§3.3 step 2). The worker exists for shared lines, ties, and figures without coordinates. It **reads no values**. It returns claims:
 
 ```jsonc
 {
@@ -95,13 +104,13 @@ This runs once per page that carries two or more figures. It is skipped when the
 
 ### 3.3 `scripts/place.ts` (new, zero LLM)
 
-1. **Check each claim.** A shared-line claim is accepted only if the two courses agree in length and bearing, with the bearing reversed when `sense` is reversed, within survey tolerance (`SURVEY_CLOSE_TOLERANCE` for length; bearing tolerance per Q1). A rejected claim is reported, not used.
+1. **Check each claim.** For a shared-line claim, align the two courses, reversing one when `sense` is reversed, and accept the claim when both endpoint gaps are ≤ 0.5 ft (D8). A rejected claim is reported with its gap, not used.
 2. **Build edges**, each giving a candidate `(dx, dy)` of B relative to A:
    - *shared line*: align the matched segment's endpoints
    - *tie*: walk the tie courses from the P.O.C. vertex to the figure's POB
    - *coordinates*: `(ΔE, ΔN)` between two figures' printed POBs, only when both carry them
-3. **Build frames.** Take the connected components over accepted edges. Within each, pick the reference figure (the largest parcel by computed area), then take a spanning tree preferring edge rank per D2.
-4. **Report every non-tree edge as a check**: the residual between the offset it implies and the placed one. A coordinate edge that disagrees with a shared-line placement is exactly how §1.1's 180° question gets answered, or flagged.
+3. **Build frames.** Take the connected components over accepted edges. Within each, pick the reference figure (the largest by computed area, D10), then take a spanning tree preferring edge rank per D2.
+4. **Report every non-tree edge as a check**: the residual between the offset it implies and the placed one, marked pass (≤ 1.0 ft) or fail (D8). A coordinate edge that fails against a shared-line placement is exactly how §1.1's 180° question gets answered, or flagged (§3.4).
 5. **Sanity check**: overlapping parcel or right-of-way interiors within a frame are reported. Easements are expected to overlie parcels, so they're exempt.
 6. **Write** `placement.json` and merge per-figure placement into `artifact.json`.
 
@@ -115,6 +124,8 @@ A new **Placement** section lists:
 - unplaced figures
 
 No new decision is asked for (D3).
+
+**Plat-defect flag (was Q5).** If any coordinate check fails (> 1.0 ft), the readout opens with one line above everything else: **"Printed coordinates disagree with the drawing"**, naming the figures and the worst residual. The shared line still places the figure (D2). The disagreement is a finding about the plat itself (§1.1's 180° boxes are the example). With no placement review stop (D3), the top of the readout is the one place a person is sure to see it.
 
 ---
 
@@ -159,9 +170,9 @@ Rows from before this change, with a null `frame_key`, render as today.
 
 1. All 8 figures land in **one frame** with LOT 1 as reference.
 2. R/W 3 is placed by its shared line with LOT 1, and R/W 2 by its shared line with R/W 1.
-3. LOT 1–3 share boundary lines with residual ≤ 0.01 ft.
+3. LOT 1–3's shared boundary lines are accepted (endpoint gap ≤ 0.5 ft, D8).
 4. The two easements are placed by tie, or reported unplaced if the P.O.C. can't be identified. Either outcome is acceptable, but it must be stated.
-5. The coordinate checks either agree with the shared-line placements or report the 180° disagreement with a residual.
+5. The coordinate checks either pass (≤ 1.0 ft) or raise the plat-defect flag (§3.4) with the residual.
 6. Visually, the `/processed` render matches the plat's layout (rotated per the existing 270° view).
 
 ---
@@ -179,8 +190,12 @@ Rows from before this change, with a null `frame_key`, render as today.
 
 ## 8. Open questions
 
-- **Q1 — Shared-line bearing tolerance.** Printed to the second, so an exact match is expected. But a line printed twice can differ by a rounding second (readout:89 shows coordinate-derived vs printed differing by ~3′). Start at ≤ 1″ and 0.01 ft, then tune on the car-wash re-run.
-- **Q2 — Can `place.ts` propose shared lines itself?** Equal length plus reversed bearing is cheap to find, but ambiguous: a rectangle's opposite sides match too. Proposed answer: no, it only verifies worker claims (D4). Revisit if workers miss obvious links.
-- **Q3 — Reference-figure choice.** Largest parcel by area, or the figure whose POB the plat marks as the parent tract's? It affects only the viewer's origin, not correctness.
-- **Q4 — Placement pass on single-figure-per-page documents.** A deed whose figures span several pages still needs cross-page claims. Run one worker per document instead of per page when the figures span pages?
-- **Q5 — Do rejected coordinate checks need their own readout flag** so the 180° class of plat defect is easy to spot across runs?
+All five v1 questions were resolved by Will on 2026-09-21:
+
+- **Q1 → D8.** One positional budget in feet: accept a shared line at ≤ 0.5 ft, and pass a check at ≤ 1.0 ft.
+- **Q2 → D9.** Only the worker proposes links.
+- **Q3 → D10.** The reference is the largest figure.
+- **Q4 → §3.2.** One placement worker per document. Printed coordinates cover cross-page figures without it.
+- **Q5 → §3.4.** Failed coordinate checks raise a top-of-readout plat-defect flag.
+
+No open questions remain. Revisit D8's two numbers after the car-wash re-run if real plats cluster near the 0.5 ft line.
