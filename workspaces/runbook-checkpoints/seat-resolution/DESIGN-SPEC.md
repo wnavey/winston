@@ -2,7 +2,7 @@
 
 **Status:** Draft v11 (consolidated for implementation)
 **Date:** 2026-09-22
-**Repos touched:** `substation` (the `subscription_seat` and `personal_api_key` tables, a `seat` column on `runbook_runs`, sealing the stored token, the `/api/seats` routes, personal-key auth, resolution and ownership enforcement at launch, recording who launched a run, the per-pass token fetch), `cityhall` (one signed-in page where a person creates their own API key), `conductor2` (`init` sends the operator's identity and, for a cloud subscription run, the personal key), `claude-plugins` (the `register-seat` skill and its upload script), `bureau` (nothing beyond what `../cloud-captain/` already names)
+**Repos touched:** `substation` (the `subscription_seat` and `personal_api_key` tables, a `seat` column on `runbook_runs`, sealing the stored token, the `/api/seats` routes, personal-key auth, resolution and ownership enforcement at launch, recording who launched a run, the per-pass token fetch), `cityhall` (a **Settings** item in the profile menu and a `/settings` page whose first section, **Keys**, creates and reveals the person's own API key — §3.4c), `conductor2` (`init` sends the operator's identity and, for a cloud subscription run, the personal key), `claude-plugins` (the `register-seat` skill and its upload script), `bureau` (nothing beyond what `../cloud-captain/` already names)
 **Repos NOT touched:** `dsd` — the skill reads `dsd.conf`; dsd gains no command
 **Manual steps:** one — `SEAT_TOKEN_KEY` set on substation's **production** Vercel environment before the code that reads it deploys (§3.1)
 **Sibling:** `../cloud-captain/DESIGN-SPEC.md`. That spec's **D10** (a per-run `claude_code_oauth_token` on the launch body, stored in `runbook_run_secret`) is the shipped interim this replaces; its **D12** (fall back to the shared token) is closed for cloud subscription runs by this spec's D13, and D10 itself is retired by D15.
@@ -185,7 +185,7 @@ Because the path carries the alias, an operator with several accounts can stage 
 
 **Lifetime: no expiry, revocable, `last_used_at` maintained.** A stolen key can launch runs as that person and burn that person's window; it cannot read any seat's token, because the key is accepted only on the allowlisted routes below. Revocation recovers that; an expiring credential would fail a runbook at 2am for no proportionate gain.
 
-**Creation is self-service in cityhall, signed in.** cityhall already authenticates the person through SSO and calls substation as them (`substationGet(path, token)`, `cityhall/src/lib/server/substation.ts`). New substation routes `GET /api/personal-keys`, `POST /api/personal-keys` (returns the key once), `DELETE /api/personal-keys/:id`, all deriving `user_id` from the caller's JWT — **a person can only ever mint their own key, enforced rather than asserted.** One cityhall page lists, creates and revokes.
+**Creation is self-service in cityhall, signed in.** cityhall already authenticates the person through SSO and calls substation as them (`substationGet(path, token)`, `cityhall/src/lib/server/substation.ts`). New substation routes `GET /api/personal-keys`, `POST /api/personal-keys` (returns the key once), `DELETE /api/personal-keys/:id`, all deriving `user_id` from the caller's JWT — **a person can only ever mint their own key, enforced rather than asserted.** The page is §3.4c.
 
 **Delivery: the operator's machine, never substation's environment.** The key lives in the operator's `~/.env` (which conductor and dsd already source) and travels as `Authorization: Bearer <key>` — the header arm `authMiddleware` already has. In `authMiddleware`, alongside the `SUBSTATION_SERVICE_API_KEY` string compare, a personal key is looked up by hash in `personal_api_key` (`revoked_at IS NULL`), yields `{ user: { id: user_id }, isServiceRole: false, viaPersonalKey: true }`, and is accepted **only** for routes in a `PERSONAL_API_ROUTES` allowlist: `POST /api/runs`, `GET /api/seats`, `PUT /api/seats/:alias`, `DELETE /api/seats/:alias`. Same shape as `SERVICE_API_ROUTES`. Update `last_used_at` on success.
 
@@ -204,6 +204,36 @@ So the personal key **never enters the sandbox**. `conductor init` sends it (ins
 **Scope: cloud subscription only.** Both existing subscription guards are cloud-only, and that scoping is what made the local default flip possible (substation#286). Metered launches keep `SUBSTATION_SERVICE_API_KEY` / `x-service-role-key`; local runs are untouched, because **substation is not the one spending** there — the seat is a directory on the operator's machine, `dsd seat pick` chooses it, and an operator cannot reach a colleague's account because that login is not on their machine. Cloud is the opposite: the sandbox has no logins, so substation must hand it a token, which means substation must choose *whose*. That choice is what needs to know who you are.
 
 **Naming.** `SUBSTATION_PERSONAL_API_KEY` pairs with `SUBSTATION_SERVICE_API_KEY` — personal vs service, yours vs shared. Not named for subscription billing: the key identifies a person, and the same key registers seats.
+
+#### 3.4c The Settings page in cityhall
+
+**Entry point.** The profile menu at the top right of the app header (`cityhall/src/routes/(app)/UserMenu.svelte`, today: the signed-in email, then **Masquerade** for those who can, then **Log Out**) gains a **Settings** item, placed above Masquerade. It links to `/settings`.
+
+**Who sees it.** Noetic members only, for now — `page.data.isNoetic`, which `(app)/+layout.server.ts` already computes and which gates the **Runs** nav link the same way. The only section the page has is for a credential a customer has no use for, and an empty settings page is worse than no menu item. When a customer-facing section arrives, the gate moves from the menu item to the individual section.
+
+**Layout.** A new route group `cityhall/src/routes/(app)/settings/`: a `+layout.svelte` with a **left nav** of sections and the chosen section filling the main area. One section to start:
+
+| left nav | route | what |
+|---|---|---|
+| **Keys** | `/settings/keys` (and `/settings` redirects here) | the personal substation API key |
+
+The layout's server load refuses a non-member with 403, checked in the load itself and not only at the menu item, so a direct URL is gated too — the same discipline `runbook-runs/+page.server.ts` follows.
+
+**The Keys section** does five things, top to bottom:
+
+1. **Explains what the key is**, in two or three sentences: it identifies *you* to substation; a cloud subscription run launched with it spends the subscription seats *you* registered and no one else's; it never expires, and revoking it here is how you retire it.
+2. **Generate.** A button, **Generate key**, calls `POST /api/personal-keys` through cityhall's server (`substationPost`, with the session JWT) and renders the result. Label defaults to "Personal key"; the person may edit it.
+3. **Shows the key, hidden by default.** The value renders as one dot per character in a monospace field. An **eye** icon toggles reveal; a **copy** icon writes the raw key to the clipboard (`navigator.clipboard.writeText`) and flashes "Copied". Copy works whether or not the field is currently hidden.
+4. **Says where it goes.** Directly under the field, the exact line to add to `~/.env` on the operator's machine, itself copyable:
+
+   ```
+   SUBSTATION_PERSONAL_API_KEY=<the key>
+   ```
+
+   with one sentence: conductor and dsd source `~/.env`, so the next `conductor init` picks it up; the `register-seat` skill (§3.3) needs it too.
+5. **Says it is shown once.** substation stores a hash (§3.4b), so a key that leaves this page cannot be shown again. The page says so beside the field, and the list below shows each existing key's label, `created_at`, `last_used_at` and a **Revoke** button (`DELETE /api/personal-keys/:id`) — never the value. Generating a second key does not revoke the first; a person may hold one per machine.
+
+**No new data path.** cityhall renders what the three `personal-keys` routes return and never reads `personal_api_key` itself — the table is service-role only (§3.4b), and the routes filter by the JWT's user id.
 
 ### 3.5 Resolution at launch (D2, D3, D4, D5, D12, D13, D14)
 
@@ -283,7 +313,7 @@ substation/src/lib/reconcile-loop.ts:416  →  buildLaunchEnv()  →  buildRunbo
 | 3 | `authMiddleware`: personal-key lookup + `PERSONAL_API_ROUTES`; `personal-keys` routes; `/api/seats` routes | substation | seats routes seal on write, never return the token |
 | 4 | `POST /api/runs`: write `triggered_by` (D7); `personal_key_required` refusal (D8); `seat` on the body (D3); resolution + `seat_not_owned` + `seat_not_registered` (D5, D11, D12, D13); write `runbook_runs.seat` | substation | cloud + subscription only; metered and local unchanged |
 | 5 | `buildLaunchEnv`: resolve from `subscription_seat` by `run.seat`, open the seal, set `CONDUCTOR_SEAT` (D9) | substation | per-run token still wins while `runbook_run_secret` exists |
-| 6 | Personal API key page | cityhall | after #3 deploys |
+| 6 | **Settings** menu item + `/settings/keys` (§3.4c) | cityhall | after #3 deploys |
 | 7 | `conductor init`: send `x-on-behalf-of`; send the personal key for a cloud subscription run; accept `--seat` and pass it on the body | conductor2 | after #4 deploys |
 | 8 | `register-seat` skill + upload script (§3.3) | claude-plugins | after #3 deploys |
 | 9 | Flip `defaultBilling('vercel')` to `subscription` (`../cloud-captain/` D6) | substation | after one registry-resolved run succeeds |
@@ -298,7 +328,7 @@ substation/src/lib/reconcile-loop.ts:416  →  buildLaunchEnv()  →  buildRunbo
 - **D5** — A `seat` alias not owned by the acting user is refused: `seat_not_owned`. Enforced, not documented. (§3.5)
 - **D6** — Leases, waiting and usage-aware picking are out of scope; D12 is the whole of spreading. (§3.5)
 - **D7** — `POST /api/runs` records the acting identity as `runbook_runs.triggered_by`: `conductor init` sends `x-on-behalf-of`, the route resolves it with the shipped `SERVICE_SENTINELS` pattern, the insert writes the column. (§3.4a)
-- **D8** — A cloud subscription launch authenticates with a per-user substation API key, `SUBSTATION_PERSONAL_API_KEY`: no expiry, revocable, `last_used_at`; minted self-service in cityhall under the person's own SSO session; stored hashed in `personal_api_key`; held on the operator's machine, never in substation's environment; accepted only for `PERSONAL_API_ROUTES`; needed on the launch call alone and never inside the sandbox. **Cloud + subscription + a shared credential ⇒ 403 `personal_key_required`.** Metered and local are untouched. (§3.4b)
+- **D8** — A cloud subscription launch authenticates with a per-user substation API key, `SUBSTATION_PERSONAL_API_KEY`: no expiry, revocable, `last_used_at`; minted self-service in cityhall on the **Settings → Keys** page (§3.4c), shown once, hidden by default with reveal and copy; stored hashed in `personal_api_key`; held on the operator's machine, never in substation's environment; accepted only for `PERSONAL_API_ROUTES`; needed on the launch call alone and never inside the sandbox. **Cloud + subscription + a shared credential ⇒ 403 `personal_key_required`.** Metered and local are untouched. (§3.4b)
 - **D9** — The seat's token is resolved fresh from `subscription_seat` on every pass, by `runbook_runs.seat`, in `buildLaunchEnv`, and opened with D16 there. A caller-supplied per-run token wins while `runbook_run_secret` exists. The sandbox receives it as an environment variable and can never read the table. (§3.6)
 - **D10** — The registry is populated by a shared `register-seat` skill in `claude-plugins`, one account at a time, through `GET`/`PUT`/`DELETE /api/seats[/:alias]` authenticated by the personal key and scoped to the caller. It reads `dsd.conf` for aliases and offers every account with no filtering; dsd gains no command. The operator stages the token in `~/.noetic-seat-tokens/<alias>` themselves — minting with `claude setup-token` in their own terminal when needed, never inside the session, because the command is an interactive UI that prints the token — and the skill names the file, never opens it, and the script deletes it on success. (§3.3)
 - **D11** — A launch whose resolved seat has no registered token is refused by name: `seat_not_registered`, pointing at the skill. (§3.3)
