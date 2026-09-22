@@ -1,13 +1,24 @@
 # Seat resolution — spending the right person's subscription account on a cloud run
 
-**Status:** Draft v11 (consolidated for implementation)
+**Status:** Draft v12 (as-built — implemented 2026-09-22; see the revision note)
 **Date:** 2026-09-22
-**Repos touched:** `substation` (the `subscription_seat` and `personal_api_key` tables, a `seat` column on `runbook_runs`, sealing the stored token, the `/api/seats` routes, personal-key auth, resolution and ownership enforcement at launch, recording who launched a run, the per-pass token fetch), `cityhall` (a **Settings** item in the profile menu and a `/settings` page whose first section, **Keys**, creates and reveals the person's own API key — §3.4c), `conductor2` (`init` sends the operator's identity and, for a cloud subscription run, the personal key), `claude-plugins` (the `register-seat` skill and its upload script), `bureau` (nothing beyond what `../cloud-captain/` already names)
+**Repos touched:** `substation` (the `subscription_seat` and `personal_api_key` tables, a `seat` column on `runbook_runs`, sealing the stored token, the `/api/seats` routes, personal-key auth, resolution and ownership enforcement at launch, recording who launched a run, the per-pass token fetch), `cityhall` (a **Settings** item in the profile menu and a `/settings` page whose first section, **Keys**, creates and reveals the person's own API key — §3.4c), `conductor2` (`init` sends the operator's identity as `x-on-behalf-of` from `NOETIC_USER_ID` — local attribution only; a cloud launch never goes through `init`), `claude-plugins` (the `register-seat` skill and its upload script), `bureau` (nothing beyond what `../cloud-captain/` already names)
 **Repos NOT touched:** `dsd` — the skill reads `dsd.conf`; dsd gains no command
 **Manual steps:** one — `SEAT_TOKEN_KEY` set on substation's **production** Vercel environment before the code that reads it deploys (§3.1)
 **Sibling:** `../cloud-captain/DESIGN-SPEC.md`. That spec's **D10** (a per-run `claude_code_oauth_token` on the launch body, stored in `runbook_run_secret`) is the shipped interim this replaces; its **D12** (fall back to the shared token) is closed for cloud subscription runs by this spec's D13, and D10 itself is retired by D15.
 
 > This version consolidates v1–v10 into one implementation-ready document. Decision numbers D1–D16 are stable because `../cloud-captain/` cites them; the change history is in the commits of winston#272. Open questions were renumbered here.
+
+> **Revision note (v12, 2026-09-22 — as built).** Implemented as substation#292 → #293 → #294 (stacked, in that order), cityhall#696, conductor2#109, claude-plugins (`register-seat`). Six places where the code that shipped differs from v11's text, each corrected in the body below:
+>
+> 1. **A cloud run is not launched by `conductor init`** (§3.4b, §3.8 step 7). `init` refuses `host=vercel` by design (`../conductor-init/` D2) and runs `conductor setup` locally, so it can never register a cloud run. A cloud run is one direct `POST /api/runs` — substation `docs/runbook-lane.md` — and the personal key is the `Authorization: Bearer` on that call. conductor2's whole change is `x-on-behalf-of` on local `init`; there is no `--seat` on `init`.
+> 2. **The operator's id comes from `NOETIC_USER_ID`** in `~/.env`, shown on the Settings → Keys page beside the key (§3.4c item 4). conductor2 had no notion of an operator identity.
+> 3. **`CONDUCTOR_SEAT_ACCOUNT`, not `CONDUCTOR_SEAT`** (§3.5, §3.6, D3). conductor's `seat_exhausted` report reads `CONDUCTOR_SEAT_ACCOUNT`; `CONDUCTOR_SEAT` is the seat hook's input, and the sandbox sets no hook.
+> 4. **The later-pass gate is built in substation and is a `decision` card** (§3.5 D4). The captain is not running when `buildLaunchEnv` finds a seat gone — the reconcile loop is — so `src/lib/seat-resolution.ts` parks and asks. It is `kind: decision` (Approve = continue metered, Revise = cancel) because the console's `operator` card is the void-a-step form and cannot answer "metered or cancel"; the decision card's two buttons map exactly with no console change.
+> 5. **`owner =` rows in `dsd.conf` take a pipe** between the person and the accounts (§2), per dsd's parser.
+> 6. **`PUT /api/seats/:alias`** is recorded in substation `docs/api-design.md` as the second documented exception to "never PUT".
+>
+> Also as built: a body `claude_code_oauth_token` (the D10 interim) skips registry resolution and records no alias, and naming a `seat` beside it is refused (`seat_with_per_run_token`); a `seat` on a metered run is `seat_on_metered_run` and on a local run `seat_not_applicable` (D17). The personal key is `nsk_` + 32 random bytes base64url, SHA-256 stored.
 
 ## Problem
 
@@ -39,7 +50,7 @@ Researched 2026-09-21 against `dsd` and `conductor2`.
 
 ```
 account = <alias> | <config_dir> | <bar color> | <text color>
-owner   = <name> <accounts…>
+owner   = <name> | <accounts…>
 ```
 
 So the **alias already exists** as a first-class concept (`max-a`, `max-g`, `will-noetic-inc`), and **owners already map a person to their accounts** — the relation this spec needs, in a file substation cannot read. **The file holds no token anywhere.**
@@ -197,7 +208,7 @@ Because the path carries the alias, an operator with several accounts can stage 
 | everything the sandbox then does | the per-run bearer substation mints (`../sandbox-api-tokens/`) |
 | answering a HITL question | the console's signed-in session |
 
-So the personal key **never enters the sandbox**. `conductor init` sends it (instead of `x-service-role-key`) when the run it is registering is `host=vercel, billing=subscription`; every other launch is unchanged.
+So the personal key **never enters the sandbox**. It is the `Authorization: Bearer` on the one direct `POST /api/runs` that starts a cloud run (substation `docs/runbook-lane.md`, "Launching a run"). `conductor init` never carries it: `init` registers **local** runs only (`../conductor-init/` D2 refuses `host=vercel`), with the service-role key, and contributes `x-on-behalf-of` for attribution (§3.4a). Every other launch is unchanged.
 
 **The refusal is the control.** A launch that is `host === 'vercel' && billing === 'subscription'` is **refused with 403 `personal_key_required`** when it authenticated with `x-service-role-key` or the shared `SUBSTATION_SERVICE_API_KEY`. A user JWT (cityhall) is a person and is accepted. Without the refusal, D8 is advisory and the old credential is a bypass. It sits beside the two existing cloud-only guards in `runs.ts`, for the reason their comments give: refusing at the door costs one field on this request; discovering it later costs a sandbox boot.
 
@@ -228,9 +239,10 @@ The layout's server load refuses a non-member with 403, checked in the load itse
 
    ```
    SUBSTATION_PERSONAL_API_KEY=<the key>
+   NOETIC_USER_ID=<the person's user id>
    ```
 
-   with one sentence: conductor and dsd source `~/.env`, so the next `conductor init` picks it up; the `register-seat` skill (§3.3) needs it too.
+   with one sentence: conductor and dsd source `~/.env`, so the next `conductor init` picks both up (the id becomes `x-on-behalf-of`, §3.4a); the `register-seat` skill (§3.3) needs the key too.
 5. **Says it is shown once.** substation stores a hash (§3.4b), so a key that leaves this page cannot be shown again. The page says so beside the field, and the list below shows each existing key's label, `created_at`, `last_used_at` and a **Revoke** button (`DELETE /api/personal-keys/:id`) — never the value. Generating a second key does not revoke the first; a person may hold one per machine.
 
 **No new data path.** cityhall renders what the three `personal-keys` routes return and never reads `personal_api_key` itself — the table is service-role only (§3.4b), and the routes filter by the JWT's user id.
@@ -257,7 +269,7 @@ The layout's server load refuses a non-member with 403, checked in the load itse
    `parked` does not count: a parked run is waiting on a human and spending nothing. Ties break on alias so the choice is stable and testable.
 3. **else nothing resolves → D4.**
 
-The chosen alias is written to `runbook_runs.seat` and passed into the sandbox as `CONDUCTOR_SEAT` (§3.6), so `seat_exhausted` callbacks can name the account.
+The chosen alias is written to `runbook_runs.seat` and passed into the sandbox as `CONDUCTOR_SEAT_ACCOUNT` (§3.6), so `seat_exhausted` callbacks can name the account.
 
 **D5 — ownership is enforced, not documented.** A `seat` alias whose `owner_user_id` is not the acting user is refused: 403 `seat_not_owned`, naming the alias. **D14 — there is no exception**: no admin override, no org seat. Registration is self-service, so an account someone cannot register is one that is not theirs, which is precisely the case `:74` describes. One rule, no exception path, nothing to audit.
 
@@ -268,9 +280,9 @@ The chosen alias is written to `runbook_runs.seat` and passed into the sandbox a
 | when | what happens | why |
 |---|---|---|
 | at `POST /api/runs` — the acting user has no registered active seat | **refused**, `seat_not_registered`, naming the way out (the skill, or `billing: metered`). D11 is this case. | nothing is queued and no sandbox exists; the operator is at `conductor init` reading the answer. A gate here would ask the person who just typed the command a question one screen away, after creating a row for nothing. |
-| at a later pass — the D9 read in `buildLaunchEnv` finds no active seat for `runbook_runs.seat` (retired or deleted after launch) | an **`operator` HITL gate** against the run: continue metered, or cancel (`cancelled` exists in the status enum for exactly this — a human's decision, not a malfunction) | the run has work behind it and may be days into a parked HITL; failing it over a billing lookup throws that away |
+| at a later pass — the D9 read in `buildLaunchEnv` finds no active seat for `runbook_runs.seat` (retired or deleted after launch) | a **`decision` HITL gate** against the run at pseudo-step `seat`: **Approve** = continue metered, **Revise** (with a note) = cancel (`cancelled` exists in the status enum for exactly this — a human's decision, not a malfunction) | the run has work behind it and may be days into a parked HITL; failing it over a billing lookup throws that away |
 
-The second row is the same gate shape `../cloud-captain/` D13 uses for seat exhaustion mid-run, with a different message; nothing new is built for it. It must not fall back to the shared token (D13) or silently to metered (`../cloud-captain/` D13).
+The second row is substation's own question, built in `substation/src/lib/seat-resolution.ts` (`parkForSeat` / `applySeatGateDecision`) and wired into the reconcile loop's `launch()`: the captain is not running when the pass is being built, so the loop parks and asks, and on the next pass acts on the answer — flipping `billing` to metered and clearing `seat`, or writing `cancelled`. It is a `decision` card rather than the `operator` kind `../cloud-captain/` D13 uses because the console's operator card is the void-a-step form and cannot answer "metered or cancel"; the decision card's Approve/Revise map exactly. It must not fall back to the shared token (D13) or silently to metered (`../cloud-captain/` D13).
 
 **D12 deliberately does not:** wait when every seat is busy (it picks the least-loaded), count consumption rather than runs (a seat carrying one review looks emptier than one carrying two `smoke` runs — real headroom needs the usage board, which is a client-side probe with no server endpoint), or protect against a deliberate overdraw (four runs on two seats will exhaust them; runbooks cost tokens and the people launching them know it). No `seat_lease` table: leases bring acquire/release/deadline/reaper, and local leases end on pid death, which substation cannot observe. **Their absence is the decision.** Motivation: 10 of 27 `runbook_runs` were non-terminal on 2026-09-22 with at least one overlapping pair, and a deterministic "first active seat" rule makes two back-to-back launches *always* share one seat and stall on the same 429.
 
@@ -291,7 +303,7 @@ substation/src/lib/reconcile-loop.ts:416  →  buildLaunchEnv()  →  buildRunbo
 
 **Transitional precedence.** While `runbook_run_secret` exists, a per-run token wins over the registry, so a one-off run on an unregistered seat keeps working. D15 deletes that branch.
 
-**The sandbox cannot read the table, by construction.** Its `SUPABASE_RUN_TOKEN` assumes `workflow_run`, which §3.1 revokes. The only path in is substation writing the environment. That is also why **the cloud spends one seat per run**: one token is injected per pass and every agent step inside it inherits it. The local lane spends one per *step* via `CONDUCTOR_SEAT_CMD`; the sandbox sets no such hook, and giving it one means the sandbox asking substation for a seat *during* a run, which is out of scope. `CONDUCTOR_SEAT=<alias>` is set in the env so conductor's `seat_exhausted` reporting can name the account.
+**The sandbox cannot read the table, by construction.** Its `SUPABASE_RUN_TOKEN` assumes `workflow_run`, which §3.1 revokes. The only path in is substation writing the environment. That is also why **the cloud spends one seat per run**: one token is injected per pass and every agent step inside it inherits it. The local lane spends one per *step* via `CONDUCTOR_SEAT_CMD`; the sandbox sets no such hook, and giving it one means the sandbox asking substation for a seat *during* a run, which is out of scope. `CONDUCTOR_SEAT_ACCOUNT=<alias>` is set in the env so conductor's `seat_exhausted` reporting can name the account (that is the variable `src/claude.rs` reads for it; `CONDUCTOR_SEAT` is the seat hook's input, and the sandbox sets no hook).
 
 ### 3.7 Retiring the interim (D15) — the last step
 
@@ -314,13 +326,13 @@ substation/src/lib/reconcile-loop.ts:416  →  buildLaunchEnv()  →  buildRunbo
 | # | what | repo | notes |
 |---|---|---|---|
 | 1 | Set `SEAT_TOKEN_KEY` on substation's Vercel env (§3.1) | ops | **before** #2 deploys |
-| 2 | Migration: `subscription_seat`, `personal_api_key`, `runbook_runs.seat`. `seat-crypto.ts` + tests | substation | copy `20260921200000`'s access model for both tables |
-| 3 | `authMiddleware`: personal-key lookup + `PERSONAL_API_ROUTES`; `personal-keys` routes; `/api/seats` routes | substation | seats routes seal on write, never return the token |
-| 4 | `POST /api/runs`: write `triggered_by` (D7); `personal_key_required` refusal (D8); `seat` on the body (D3); resolution + `seat_not_owned` + `seat_not_registered` (D5, D11, D12, D13); write `runbook_runs.seat` | substation | cloud + subscription only; metered and local unchanged |
-| 5 | `buildLaunchEnv`: resolve from `subscription_seat` by `run.seat`, open the seal, set `CONDUCTOR_SEAT` (D9) | substation | per-run token still wins while `runbook_run_secret` exists |
-| 6 | **Settings** menu item + `/settings/keys` (§3.4c) | cityhall | after #3 deploys |
-| 7 | `conductor init`: send `x-on-behalf-of`; send the personal key for a cloud subscription run; accept `--seat` and pass it on the body | conductor2 | after #4 deploys |
-| 8 | `register-seat` skill + upload script (§3.3) | claude-plugins | after #3 deploys |
+| 2 | Migration: `subscription_seat`, `personal_api_key`, `runbook_runs.seat`. `seat-crypto.ts` + tests | substation | substation#292 — copies `20260921200000`'s access model for both tables |
+| 3 | `authMiddleware`: personal-key lookup + `PERSONAL_API_ROUTES`; `personal-keys` routes; `/api/seats` routes | substation | substation#293 (stacked on #292) — seats routes seal on write, never return the token |
+| 4 | `POST /api/runs`: write `triggered_by` (D7); `personal_key_required` refusal (D8); `seat` on the body (D3); resolution + `seat_not_owned` + `seat_not_registered` (D5, D11, D12, D13); write `runbook_runs.seat` | substation | substation#294 (stacked on #293) — cloud + subscription only; metered and local unchanged |
+| 5 | `buildLaunchEnv`: resolve from `subscription_seat` by `run.seat`, open the seal, set `CONDUCTOR_SEAT_ACCOUNT` (D9); the D4 later-pass gate | substation | substation#294 — per-run token still wins while `runbook_run_secret` exists |
+| 6 | **Settings** menu item + `/settings/keys` (§3.4c) | cityhall | cityhall#696 — after #3 deploys |
+| 7 | `conductor init`: send `x-on-behalf-of` from `NOETIC_USER_ID` (local attribution). No personal key and no `--seat` on `init`: a cloud launch is a direct POST (revision note 1) | conductor2 | conductor2#109 |
+| 8 | `register-seat` skill + upload script (§3.3) | claude-plugins | claude-plugins `register-seat-skill` PR — after #3 deploys |
 | 9 | Flip `defaultBilling('vercel')` to `subscription` (`../cloud-captain/` D6) | substation | after one registry-resolved run succeeds |
 | 10 | D15: delete the interim | substation | after #9 |
 
@@ -328,8 +340,8 @@ substation/src/lib/reconcile-loop.ts:416  →  buildLaunchEnv()  →  buildRunbo
 
 - **D1** — A service-role-only registry table, **`subscription_seat`**, keyed by alias, owned by a user, its credential column `claude_code_oauth_token` held sealed (D16). RLS enabled, no policy; `workflow_run` revoked. (§3.1)
 - **D2** — Resolution happens in substation at `POST /api/runs`, before a sandbox exists. (§3.5)
-- **D3** — `POST /api/runs` takes an optional `seat` alias, stored on `runbook_runs.seat`, passed into the sandbox as `CONDUCTOR_SEAT`; it beats the lookup. (§3.5)
-- **D4** — Refuse at the door, gate later. No registered seat at `POST /api/runs` ⇒ `seat_not_registered` (D11 is that case). No active seat found at a later pass for a run that already exists ⇒ an `operator` gate offering metered or cancel, never a failed run. (§3.5)
+- **D3** — `POST /api/runs` takes an optional `seat` alias, stored on `runbook_runs.seat`, passed into the sandbox as `CONDUCTOR_SEAT_ACCOUNT`; it beats the lookup. (§3.5)
+- **D4** — Refuse at the door, gate later. No registered seat at `POST /api/runs` ⇒ `seat_not_registered` (D11 is that case). No active seat found at a later pass for a run that already exists ⇒ a substation-built `decision` gate at pseudo-step `seat` (Approve = metered, Revise = cancel), never a failed run. (§3.5)
 - **D5** — A `seat` alias not owned by the acting user is refused: `seat_not_owned`. Enforced, not documented. (§3.5)
 - **D6** — Leases, waiting and usage-aware picking are out of scope; D12 is the whole of spreading. (§3.5)
 - **D7** — `POST /api/runs` records the acting identity as `runbook_runs.triggered_by`: `conductor init` sends `x-on-behalf-of`, the route resolves it with the shipped `SERVICE_SENTINELS` pattern, the insert writes the column. (§3.4a)
