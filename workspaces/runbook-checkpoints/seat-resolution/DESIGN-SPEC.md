@@ -1,12 +1,20 @@
 # Seat resolution — spending the right person's subscription account on a cloud run
 
-**Status:** Draft v2
+**Status:** Draft v3
 **Date:** 2026-09-22
-**Repos touched:** `substation` (a seat registry to read, resolution at launch, ownership enforcement), `dsd` (publish a machine's accounts to the registry), `bureau` (nothing beyond what the captain spec already names)
-**Repos NOT touched:** `conductor2` (its seat hook contract is already right and is the model this borrows — §2), `cityhall`
+**Repos touched:** `substation` (a seat registry to read, resolution at launch, ownership enforcement, and recording who launched a run), `conductor2` (one header on `init`'s registration POST — §3.3a; its seat hook contract is untouched and is the model this borrows, §2), `dsd` (publish a machine's accounts to the registry), `bureau` (nothing beyond what the captain spec already names)
+**Repos NOT touched:** `cityhall`
 **Split from:** `../cloud-captain/DESIGN-SPEC.md` v2 §6. That spec's **D10** (a per-run `claude_code_oauth_token` on the launch body) is the interim that unblocks subscription cloud runs without this one, which is why this is separable.
 **Sibling:** `../cloud-captain/DESIGN-SPEC.md`
 
+> **Revision note (v3, 2026-09-22).** Adds **D7** — the run records who launched it — and says plainly what that does and does not buy. D1–D6 and Q1–Q5 keep their numbers and their meaning.
+>
+> **The premise D2 and D5 rest on was not true.** Both resolve against `runbook_runs.triggered_by`, and **that column is NULL on all 26 rows in prod** (`mgxqsrjutswbciyrltwd`, checked 2026-09-22, every host and both billing modes). `POST /api/runs` never writes it — the insert in `substation/src/routes/runs.ts` omits the column outright, even though `authMiddleware` has already resolved an identity by then. So v1 and v2 specified a lookup keyed on a value nothing produces. **§3.3a** is new and fixes it.
+>
+> **The mechanism already exists and is already in production.** `authMiddleware` reads an `x-on-behalf-of` header on the service-role path and sets `user.id` from it (`substation/src/middleware/auth.ts:80`), and `POST /api/runbook-hitl-questions/:id/answer` already uses exactly that to attribute a HITL answer to a real person, distinguishing it from an anonymous service call with a `SERVICE_SENTINELS` set (`substation/src/routes/runbook-hitl-questions.ts:61-66`). D7 reuses that shipped pattern rather than inventing an auth concept: `conductor init` sends one header, the runs insert writes one column.
+>
+> **What D7 is honestly worth, stated out loud.** `x-on-behalf-of` is trusted *because the caller holds the service-role key*, so the identity is **self-asserted**: the requester supplies both the seat and the person who supposedly owns it. D5 is therefore **mistake-prevention, not an authorization boundary** — and mistake-prevention is what `docs/runbooks.md` is actually asking for, since the failure it describes is an accident ("work simply lands on a colleague's account, and they find it on their own board, already burnt", `dsd.conf.example`). `dsd` on the operator's machine already knows who the operator is, so the header can be filled with the truth without anyone typing it. **The check does not change when the input becomes trustworthy** — a launch carrying a verified user JWT strengthens D5 for free. Closing that gap is **Q6**, new here, and is the next thing to decide.
+>
 > **Revision note (v2, 2026-09-22).** Naming only — no decision changes, no scope change, and every decision and open question keeps its number.
 >
 > **The registry table is `subscription_seat`.** v1 described it four times ("a service-role-only Supabase table", D1's "registry table in Supabase") and never named it, which left the reader one inference away from confusing it with `runbook_run_secret` — a *different*, already-shipped table (the captain spec's D10, migration `substation/supabase/migrations/20260921200000_runbook_run_secret.sql`, one row per run, deleted at terminal status). `subscription_seat` is the thing itself, it matches the `seat` vocabulary `dsd` and `conductor` already use, and it deliberately does not take a `runbook_` prefix: the registry outlives any run and is not runbook-scoped.
@@ -101,6 +109,22 @@ Order of precedence, mirroring conductor's:
 
 **D3** deliberately reuses the existing alias vocabulary end-to-end, so "run this on `max-g`" means the same thing locally and in the cloud.
 
+### 3.3a Who launched the run (D7)
+
+**D7 — `POST /api/runs` records the acting identity as `runbook_runs.triggered_by`.** Nothing writes it today, so §3.3's step 2 and §3.4's ownership check both resolve against NULL.
+
+Three pieces, none of them a new auth concept:
+
+| | change | where |
+|---|---|---|
+| a | `conductor init` sends `x-on-behalf-of: <operator's user id>` beside the service-role key it already sends | `conductor2/src/init.rs`, `register()` |
+| b | the route resolves the acting user, dropping the bare-service sentinels | `substation/src/routes/runs.ts`, reusing the `SERVICE_SENTINELS` / `actingUserId` pattern from `runbook-hitl-questions.ts:61-66` |
+| c | the insert writes `triggered_by` | `substation/src/routes/runs.ts`, the `.insert({…})` that currently omits it |
+
+(b) is the load-bearing one: `authMiddleware` resolves `user.id` from `x-on-behalf-of` already, so a launch that names a person *already* carries that person through to the handler — the route just throws it away. A bare service call (`user.id` of `service` or `substation-service-api-key`) records NULL, which is the honest value and is what **Q3** is about.
+
+**This is attribution, not authorization, and the spec says so rather than implying otherwise.** `x-on-behalf-of` is believed because the caller holds `SUPABASE_SERVICE_ROLE_KEY` — a credential strictly more powerful than the thing being gated, since anything holding it can write `runbook_runs` directly and bypass this route entirely. So a caller can name any person they like. That is acceptable for v1 on a stated threat model: the failure `docs/runbooks.md:83` exists to prevent is **a mistake**, not an attack, and the four people who hold the key are the four people who own the seats. What it is not is a control that survives the team growing, the key leaking, or anyone wanting a real answer to "who spent this window". **Q6** is how that gets closed, and D5's check does not change when it is — only the trust in its input goes up.
+
 ### 3.4 Ownership is enforced, not documented (D5)
 
 Substation refuses a `seat` alias whose `owner_user_id` is not `triggered_by`, at launch. `docs/runbooks.md:83` is a rule the system can enforce at the one point that knows both facts; leaving it to convention is how the shared-token problem happened in the first place.
@@ -127,6 +151,7 @@ Usage-aware picking (choosing the least-tired of a person's accounts, as a local
 - **D4** — Nothing resolves ⇒ an `operator` gate offering metered or cancel. Never a failed launch.
 - **D5** — Substation refuses an alias not owned by `triggered_by`. The rule is enforced, not documented.
 - **D6** — Leases and usage-aware picking are phase 2; v1 resolves one seat per run.
+- **D7** — `POST /api/runs` records the acting identity as `runbook_runs.triggered_by`: `conductor init` sends `x-on-behalf-of`, the route resolves it with the shipped `SERVICE_SENTINELS` pattern, the insert writes the column. Self-asserted, and labelled as such — mistake-prevention, not authorization (§3.3a, Q6).
 
 *(D2, D4 and D5 were `../cloud-captain/` v2's D17, D16 and part of §6 respectively, moved here in that spec's v3.)*
 
@@ -136,4 +161,5 @@ Usage-aware picking (choosing the least-tired of a person's accounts, as a local
 - **Q2 — cross-run leases.** Ship a `seat_lease` row in v1 after all, or accept that two concurrent cloud runs can collide on one account until phase 2? (§3.6)
 - **Q3 — the null and admin cases.** A cron- or API-triggered run has no `triggered_by`. Does that mean no seat (→ D4's gate), or the org seat? And is there ever a legitimate reason to let someone run on an account they do not own? (§3.4)
 - **Q4 — does the registry eventually feed the local lane too?** `dsd.conf` would become the editing surface and the registry its projection; or the registry becomes canonical and `dsd.conf` a cache. Not needed for cloud, but two sources of truth for "who owns which account" is the drift this spec is otherwise avoiding.
+- **Q6 — how does a launch prove who it is?** D7's `x-on-behalf-of` is believed because the caller holds the service-role key, so the identity is self-asserted and D5 enforces against a value the requester chose. Making it real means the launch carries a credential that *is* the person rather than one that outranks the question — a verified user JWT, or a per-operator substation key replacing the shared `SUPABASE_SERVICE_ROLE_KEY` that `conductor init` uses today (itself recorded as accepted debt in `../conductor-init/` D4). This also decides how §3.1's rows get written, since registering a seat needs the same trusted identity. **This is the next thing to settle.** (§3.3a)
 - **Q5 — retiring D10.** Once resolution works, does the captain spec's per-run `claude_code_oauth_token` stay as an escape hatch (a one-off run on a seat not in the registry), or is it removed so there is one path? (§Problem)
