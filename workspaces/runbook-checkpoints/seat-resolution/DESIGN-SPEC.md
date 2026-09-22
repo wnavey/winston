@@ -263,9 +263,14 @@ The chosen alias is written to `runbook_runs.seat` and passed into the sandbox a
 
 **D13 — the shared `CLAUDE_CODE_OAUTH_TOKEN` is not a fallback for a cloud subscription run.** Today `runs.ts` admits a cloud subscription launch with no per-run token whenever that variable is set (`../cloud-captain/` D12). With the registry that makes registration optional and D8 bypassable by never registering. So for `host=vercel, billing=subscription`, an acting user with no registered active seat gets **D11's `seat_not_registered`**, and the shared token is not consulted. The `no_subscription_seat` guard is replaced by this. (`../cloud-captain/` D12 stands wherever else it applies, until D15 removes the path entirely.)
 
-**D4 — when nothing resolves, an `operator` HITL question against the run offers continue metered or cancel.** Cancel sets the run `cancelled`, which exists in the status enum for exactly this — a human's decision, not a malfunction. The stated rationale: failing the launch outright is the wrong shape, because the work still needs doing and a billing-lane lookup is not a reason to lose a queued run.
+**D4 — refuse at the door, gate later.** "Nothing resolves" is two cases and they get two answers:
 
-> **Q1 — D4 and D11 both claim the "no seat" case at the door and disagree.** D11 (and D13, which says D11's refusal wins over the shared token) answers `POST /api/runs` with `seat_not_registered`; D4 says never fail the launch, open a gate instead. With the registry, "no registered token" and "nothing resolves" are the same condition, so an implementer has to pick. See §5.
+| when | what happens | why |
+|---|---|---|
+| at `POST /api/runs` — the acting user has no registered active seat | **refused**, `seat_not_registered`, naming the way out (the skill, or `billing: metered`). D11 is this case. | nothing is queued and no sandbox exists; the operator is at `conductor init` reading the answer. A gate here would ask the person who just typed the command a question one screen away, after creating a row for nothing. |
+| at a later pass — the D9 read in `buildLaunchEnv` finds no active seat for `runbook_runs.seat` (retired or deleted after launch) | an **`operator` HITL gate** against the run: continue metered, or cancel (`cancelled` exists in the status enum for exactly this — a human's decision, not a malfunction) | the run has work behind it and may be days into a parked HITL; failing it over a billing lookup throws that away |
+
+The second row is the same gate shape `../cloud-captain/` D13 uses for seat exhaustion mid-run, with a different message; nothing new is built for it. It must not fall back to the shared token (D13) or silently to metered (`../cloud-captain/` D13).
 
 **D12 deliberately does not:** wait when every seat is busy (it picks the least-loaded), count consumption rather than runs (a seat carrying one review looks emptier than one carrying two `smoke` runs — real headroom needs the usage board, which is a client-side probe with no server endpoint), or protect against a deliberate overdraw (four runs on two seats will exhaust them; runbooks cost tokens and the people launching them know it). No `seat_lease` table: leases bring acquire/release/deadline/reaper, and local leases end on pid death, which substation cannot observe. **Their absence is the decision.** Motivation: 10 of 27 `runbook_runs` were non-terminal on 2026-09-22 with at least one overlapping pair, and a deterministic "first active seat" rule makes two back-to-back launches *always* share one seat and stall on the same 429.
 
@@ -324,7 +329,7 @@ substation/src/lib/reconcile-loop.ts:416  →  buildLaunchEnv()  →  buildRunbo
 - **D1** — A service-role-only registry table, **`subscription_seat`**, keyed by alias, owned by a user, its credential column `claude_code_oauth_token` held sealed (D16). RLS enabled, no policy; `workflow_run` revoked. (§3.1)
 - **D2** — Resolution happens in substation at `POST /api/runs`, before a sandbox exists. (§3.5)
 - **D3** — `POST /api/runs` takes an optional `seat` alias, stored on `runbook_runs.seat`, passed into the sandbox as `CONDUCTOR_SEAT`; it beats the lookup. (§3.5)
-- **D4** — Nothing resolves ⇒ an `operator` gate offering metered or cancel; never a failed launch. **Conflicts with D11 at the door — see Q1.** (§3.5)
+- **D4** — Refuse at the door, gate later. No registered seat at `POST /api/runs` ⇒ `seat_not_registered` (D11 is that case). No active seat found at a later pass for a run that already exists ⇒ an `operator` gate offering metered or cancel, never a failed run. (§3.5)
 - **D5** — A `seat` alias not owned by the acting user is refused: `seat_not_owned`. Enforced, not documented. (§3.5)
 - **D6** — Leases, waiting and usage-aware picking are out of scope; D12 is the whole of spreading. (§3.5)
 - **D7** — `POST /api/runs` records the acting identity as `runbook_runs.triggered_by`: `conductor init` sends `x-on-behalf-of`, the route resolves it with the shipped `SERVICE_SENTINELS` pattern, the insert writes the column. (§3.4a)
@@ -344,4 +349,4 @@ substation/src/lib/reconcile-loop.ts:416  →  buildLaunchEnv()  →  buildRunbo
 
 ## 5. Open questions
 
-- **Q1 — D4 or D11 at the door?** Both were decided in earlier versions and they disagree on the same condition (§3.5). Recommended: **D11 at the door** — `POST /api/runs` refuses `seat_not_registered`, because the operator is present at `conductor init` to read the answer and nothing has been queued yet; **D4 at a later pass** — if the D9 read finds no active seat for a run that already exists (the seat was retired or deleted after launch), open the operator gate rather than fail a run with work behind it. That keeps both decisions' intent and gives each a case that is only its own. Confirm or overrule before #4 in §3.8.
+None. Every question raised during drafting is either a decision above or an accepted risk (D18).
