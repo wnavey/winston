@@ -1,13 +1,26 @@
 # Seat resolution — spending the right person's subscription account on a cloud run
 
-**Status:** Draft v9
+**Status:** Draft v10
 **Date:** 2026-09-22
-**Repos touched:** `substation` (a seat registry to read, resolution at launch, ownership enforcement, recording who launched a run, and per-user API keys), `cityhall` (one signed-in page where a person creates their own key — §3.3b), `conductor2` (`init` sends its credential; §3.3a, §3.3b — its seat hook contract is untouched and is the model this borrows, §2), `claude-plugins` (the `register-seat` skill and its upload script — §3.2a), `dsd` (nothing: the skill reads `dsd.conf`, dsd gains no command — §3.2a), `bureau` (nothing beyond what the captain spec already names)
+**Repos touched:** `substation` (a seat registry to read, resolution at launch, ownership enforcement, recording who launched a run, per-user API keys, and sealing the stored token — §3.1a), `cityhall` (one signed-in page where a person creates their own key — §3.3b), `conductor2` (`init` sends its credential; §3.3a, §3.3b — its seat hook contract is untouched and is the model this borrows, §2), `claude-plugins` (the `register-seat` skill and its upload script — §3.2a), `dsd` (nothing: the skill reads `dsd.conf`, dsd gains no command — §3.2a), `bureau` (nothing beyond what the captain spec already names)
 **Repos NOT touched:** none — this reaches every repo in the launch path, which is what identity costs
+**Manual steps:** exactly one — a `SEAT_TOKEN_KEY` set on substation's Vercel environment before the code that reads it deploys (§3.1a). No Supabase console work beyond applying the migration.
 **Split from:** `../cloud-captain/DESIGN-SPEC.md` v2 §6. That spec's **D10** (a per-run `claude_code_oauth_token` on the launch body) is the interim that unblocks subscription cloud runs without this one, which is why this is separable.
 **Sibling:** `../cloud-captain/DESIGN-SPEC.md`
 **Amends:** `../cloud-captain/DESIGN-SPEC.md` **D12** — its shared-token fallback is closed off for cloud subscription runs (§3.5a, D13) — and **D10**, whose per-run token path is retired as this spec's last step (§3.7, D15). That spec carries matching notes.
 
+> **Revision note (v10, 2026-09-22).** Adds **D16** — the stored token is sealed with a key substation alone holds — from a security audit of v9. D1–D15 and Q1–Q9 keep their numbers; **Q10** is new. Also corrects the record on D1 in §4 (below).
+>
+> **The audit's finding was one sentence in §3.1 that is not true.** "Nobody reads it but substation's service-role client." In practice the Supabase dashboard's SQL editor, the Supabase MCP `execute_sql` tool loaded in teammates' Claude Code sessions, the service-role key on four laptops, and every backup and PITR snapshot all read `claude_code_oauth_token` in the clear. RLS-with-no-policy denies `anon` and `authenticated`; it says nothing about any of those, because they all *are* `service_role` or sit underneath the database entirely.
+>
+> **`runbook_run_secret` got away with the same shape, and the reason it did is the reason this cannot.** A run secret lives hours and is deleted at terminal status. A seat token is a named employee's credential, minted by `claude setup-token` for a **year**, and revocation is a manual step in a browser — `setup-token` is mint-only, with no list and no revoke (anthropics/claude-code#48373). A database read that yields a run secret yields a run; one that yields a seat token yields a person's account until someone notices. The table's lifetime changed, so what it may hold in plaintext changed with it.
+>
+> **D16 is small because it follows a precedent substation already has.** `RUN_CALLBACK_SECRET` and `SUPABASE_JWT_SECRET` are both env-only secrets that never touch the database and are read by exactly one function each. `SEAT_TOKEN_KEY` is one more of those: AES-256-GCM in a ~40-line module, sealed on the `PUT /api/seats/:alias` write, opened in the D9 resolver, and nowhere else. The table, its RLS, its grants, the skill, the sandbox and cityhall are all unchanged. Afterwards a usable token requires the database *and* substation's Vercel environment — which is the property §3.1 claimed and did not have.
+>
+> **Why not Supabase Vault.** `vault.decrypted_secrets` is readable by `service_role`, so the set of readers does not shrink by one; the dashboard, the MCP and the laptops all still get plaintext. Vault protects against a disk image, which is the least likely of the four.
+>
+> **What is deliberately not done.** `runbook_run_secret` is not retrofitted — D15 deletes it. And the wire is unchanged: the skill still uploads plaintext over TLS and substation seals it, because the alternative is a key on every laptop, which is the shared-secret shape D8 exists to end.
+>
 > **Revision note (v9, 2026-09-22).** Answers **Q5** with **D15**: the interim is retired, and retiring it is this spec's last implementation step. D1–D14 and Q1–Q4, Q6–Q9 keep their numbers.
 >
 > **Two things called "fallback" are now cleanly separated.** D13 closed the *shared* token — substation's one `CLAUDE_CODE_OAUTH_TOKEN`, the thing everyone landed on by default. Q5 was about the other one: `../cloud-captain/` **D10**'s per-run `claude_code_oauth_token` on the launch body, which a caller supplies deliberately. **D15 removes it too**, so a cloud subscription run ends with exactly one way to get a seat.
@@ -149,12 +162,45 @@ A service-role-only Supabase table, **`subscription_seat`**:
 |---|---|
 | `alias` | `max-a`, `max-g` — the same names `dsd.conf` uses, so one vocabulary across lanes |
 | `owner_user_id` | FK → `auth.users`. The relation `dsd.conf`'s `owner =` lines already encode |
-| `claude_code_oauth_token` | the cloud-usable form (§3.2) — the token itself, named for what it is and for the environment variable it becomes |
+| `claude_code_oauth_token` | the cloud-usable form (§3.2) — the token itself, named for what it is and for the environment variable it becomes. **Stored sealed** (§3.1a, D16): the column holds ciphertext only substation can open |
 | `active` | a seat can be retired without losing its history |
 
-RLS enabled, **no read policy at all** — the same shape the captain spec's `runbook_run_secret` uses. Nobody reads it but substation's service-role client.
+RLS enabled, **no read policy at all** — the same shape the captain spec's `runbook_run_secret` uses. That denies `anon`, `authenticated` and the sandbox's `workflow_run` role. It does **not** make substation the only reader — see §3.1a for who else can, and D16 for why the column is therefore ciphertext.
 
 **`dsd` gains a command to publish a machine's accounts** into it, so `dsd.conf` stays the human-editable source and the registry is its projection. The alternative — substation calling `dsd` as a service — puts a new network dependency in the launch path and is rejected.
+
+### 3.1a Sealing the stored token (D16)
+
+**Who can actually read `subscription_seat`.** RLS with no policy stops the console, a noetic member's JWT, and the sandbox. It stops none of these, all of which read the column in plaintext today:
+
+| reader | how |
+|---|---|
+| the Supabase dashboard | SQL editor, table editor — anyone with dashboard access to `mgxqsrjutswbciyrltwd` |
+| the Supabase MCP | `execute_sql` runs as `service_role`; it is loaded in teammates' Claude Code sessions, where a transcript is plaintext JSONL on disk (§3.2a) |
+| four laptops | `SUPABASE_SERVICE_ROLE_KEY` is on every operator machine for `conductor init` (`../conductor-init/` D4, the debt v4 noted D8 does not retire) |
+| backups | every PITR snapshot and `pg_dump` carries the table as written |
+
+`runbook_run_secret` tolerates exactly this exposure, and correctly: a run secret is deleted at terminal status, so the window is hours. A seat token is a person's account for a **year**, and the only revocation path is a human in a browser. The lifetime changed; the plaintext cannot stay.
+
+**D16 — the column holds ciphertext, and only substation holds the key.**
+
+- **Algorithm:** AES-256-GCM, random 12-byte IV per seal, stored as one string `v1.<iv>.<tag>.<ciphertext>` (base64). GCM fails closed on tampering, so a corrupted row is a failed pass, never a wrong token. The `v1.` prefix is what lets the key or the algorithm rotate later without a second column.
+- **Key:** `SEAT_TOKEN_KEY`, 32 bytes base64, in substation's environment and nowhere else — the same discipline `RUN_CALLBACK_SECRET` (`substation/src/lib/run-bearer.ts`) and `SUPABASE_JWT_SECRET` (`run-token.ts`, "read only to MINT the run token and never leaves substation") already follow. Unset, the code throws, exactly as `mintRunBearer` does; a registry that cannot be sealed refuses at `PUT /api/seats/:alias`, not at the pass.
+- **Code:** one new module, `substation/src/lib/seat-crypto.ts` — `sealSeatToken(plain)` and `openSeatToken(sealed)`, roughly forty lines plus a test file (round trip, tamper detection, missing key throws). Two call sites, one line each: the `PUT /api/seats/:alias` route seals before its upsert (§3.2a), and the D9 resolver opens after its select (§3.3c). Nothing else in substation touches the column.
+
+**What it does not touch.** The `subscription_seat` migration is the same one §3.1 already needs — the column stays `text`, RLS, grants and the `workflow_run` revoke are as written, nothing is installed. The sandbox still receives plaintext in its environment, as today. conductor2, the `register-seat` skill, `GET /api/seats` ("whether a token is present" is a null check, not a decrypt), and cityhall are unchanged. `runbook_run_secret` is not retrofitted: D15 deletes it.
+
+**The one manual step.** Generate the key once and set it as a Vercel environment variable on the substation project, the same way `RUN_CALLBACK_SECRET` was set:
+
+```
+openssl rand -base64 32
+```
+
+Then `SEAT_TOKEN_KEY` goes into substation's production environment and each operator's local `substation/.env`. Vercel functions pick up environment changes on the next deploy, so **the variable lands before the PR that reads it deploys** — the same ordering every new substation secret has followed. Whether preview deployments need it too is **Q10**.
+
+**Two consequences, accepted.** Losing the key means every seat is re-registered — a re-run of the skill per person, and a fresh `setup-token` is what one would mint anyway. Rotating the key is either a small reseal pass run once by substation or the same re-registration; the `v1.` prefix makes either painless.
+
+**Why not Supabase Vault.** `vault.decrypted_secrets` is readable by `service_role`, so every reader in the table above still gets plaintext. Vault defends against the disk image, which is the least likely of the four; D16 defends against the other three.
 
 ### 3.2 The stored form — `claude_code_oauth_token` (Q1)
 
@@ -277,7 +323,7 @@ reconcile-loop.ts:416  →  buildLaunchEnv()  →  buildRunbookEnv()  →  env h
     once per pass)
 ```
 
-**The timing already exists.** `buildLaunchEnv` reads the seat at each pass today, with the service-role client, and its own comment gives the reason this decision keeps: park-and-exit rebuilds the environment every time, "including the resume that happens after a human answers a gate, days later. A seat supplied once and not re-read is a subscription run that cannot survive its own gate." So D9 changes **one thing** — the source. `getRunSecret(runId)` becomes a lookup in `subscription_seat` by the run's alias.
+**The timing already exists.** `buildLaunchEnv` reads the seat at each pass today, with the service-role client, and its own comment gives the reason this decision keeps: park-and-exit rebuilds the environment every time, "including the resume that happens after a human answers a gate, days later. A seat supplied once and not re-read is a subscription run that cannot survive its own gate." So D9 changes **one thing** — the source. `getRunSecret(runId)` becomes a lookup in `subscription_seat` by the run's alias, followed by `openSeatToken` (D16) so what reaches the environment is the token and what sat in the row was not.
 
 **Why fresh rather than copied.** A copy is frozen at launch. Re-issue a seat's token — a rotation, a revoke, a re-auth — and every parked run is holding a credential that no longer works, firing `../cloud-captain/` **D11**'s expired-token gate for a cause the system created itself. Resolving fresh heals them with no operator action, and the credential exists in exactly one row rather than one copy per run.
 
@@ -370,7 +416,7 @@ Until then D9's precedence stands and nothing that works today breaks — the sa
 
 ## 4. Decisions
 
-- **D1** — A service-role-only registry table in Supabase, **`subscription_seat`**, keyed by alias, owned by a user, its credential column named `claude_code_oauth_token`, published from `dsd.conf` by a `dsd` command. No read policy.
+- **D1** — A service-role-only registry table in Supabase, **`subscription_seat`**, keyed by alias, owned by a user, its credential column named `claude_code_oauth_token`, held sealed (D16). No read policy. *(v1's "published from `dsd.conf` by a `dsd` command" was overturned in v6 by D10 — `dsd.conf` holds no token — and this line said so only in §3.2a until v10; recorded here so the list agrees with the body.)*
 - **D2** — Resolution happens in substation at launch, before a sandbox exists.
 - **D3** — `POST /api/runs` takes an optional `seat` alias, stored on the run, passed through as `CONDUCTOR_SEAT`; it beats the `triggered_by` lookup.
 - **D4** — Nothing resolves ⇒ an `operator` gate offering metered or cancel. Never a failed launch.
@@ -384,6 +430,7 @@ Until then D9's precedence stands and nothing that works today breaks — the sa
 - **D12** — Resolution step 2 picks the caller's `active` seat with the **fewest runs in flight** — one `count(*)` over `runbook_runs` where `status in ('queued','running')`, ties broken on alias. `parked` does not count. No `seat_lease` table, no waiting, no headroom awareness, and no protection from a deliberate overdraw. (§3.6)
 - **D13** — For a cloud subscription run the shared `CLAUDE_CODE_OAUTH_TOKEN` is **not** a fallback: D11's `seat_not_registered` wins. Amends `../cloud-captain/` D12, whose fallback would otherwise make the registry optional and D8 bypassable. (§3.5a)
 - **D14** — No admin override and no org seat. D5 is absolute: nobody runs on an account they do not own, because registration is self-service and an account you cannot register is not yours. (§3.5a)
+- **D16** — `subscription_seat.claude_code_oauth_token` is stored **sealed**: AES-256-GCM under `SEAT_TOKEN_KEY`, an env-only secret substation alone holds, `v1.`-prefixed for rotation. Sealed on the `PUT /api/seats/:alias` write, opened in the D9 resolver, in one ~40-line module. RLS-with-no-policy does not stop the dashboard, the Supabase MCP, four laptops' service-role keys or backups; a year-long personal credential cannot sit in plaintext behind it the way an hours-long run secret could. Not Vault (`service_role` reads it decrypted), not retrofitted to `runbook_run_secret` (D15 deletes it). One manual step: the key on Vercel before the reading code deploys. (§3.1a)
 - **D15** — `../cloud-captain/` D10's per-run `claude_code_oauth_token` path is removed once the registry works — the field, its guards, `runbook_run_secret`, the secret helpers and D9's precedence branch. Gated on the first registry-resolved cloud subscription run completing end to end, not on a date, because no cloud subscription run has ever happened and the registry is the unproven path. **This is the spec's last step.** (§3.7)
 
 *(D2, D4 and D5 were `../cloud-captain/` v2's D17, D16 and part of §6 respectively, moved here in that spec's v3.)*
@@ -399,3 +446,4 @@ Until then D9's precedence stands and nothing that works today breaks — the sa
 - **Q7 — RESOLVED (v6)** by **D10** and **D11**. The answer is not a `dsd` publisher: `dsd.conf` holds no token, so a projection can carry the alias and owner and never the credential. Note the bridge v1 worried about — `dsd`'s owner names vs `auth.users` UUIDs — **does not arise**, because the skill authenticates as the person (D8) and substation resolves `owner_user_id` from the key rather than from anything `dsd` says.
 - **Q8 — does `claude setup-token` pipe?** §3.2a's mint path redirects its stdout into the staging file. It is a browser auth flow and may require a TTY, in which case minting is a copy-paste into the file rather than a redirect. One line of the skill, not a design change — but it should be tested rather than assumed.
 - **Q9 — can a token be verified against the alias it is registered under?** Nothing identifies a token's account, so the alias is asserted (§3.2a). One cheap check exists: probe the token once and compare its 5h/7d readings and reset time against the snapshot `dsd usage` already holds for that alias. Windows are account-scoped and reset times are specific, so matching numbers are strong evidence — not proof — that they are the same account. Both halves already exist. Worth it in v1, or is a self-inflicted mislabel inside one's own seats an acceptable failure?
+- **Q10 — do substation preview deployments share production's database?** If they do, a preview without `SEAT_TOKEN_KEY` cannot resolve a seat and a preview with the *wrong* one fails every cloud subscription pass it drives; if they do not, the key is production-only. Decide before the D16 PR deploys rather than discover it from a failed pass. (§3.1a)
