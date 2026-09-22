@@ -1,11 +1,17 @@
 # Seat resolution — spending the right person's subscription account on a cloud run
 
-**Status:** Draft v1
-**Date:** 2026-09-21
+**Status:** Draft v2
+**Date:** 2026-09-22
 **Repos touched:** `substation` (a seat registry to read, resolution at launch, ownership enforcement), `dsd` (publish a machine's accounts to the registry), `bureau` (nothing beyond what the captain spec already names)
 **Repos NOT touched:** `conductor2` (its seat hook contract is already right and is the model this borrows — §2), `cityhall`
 **Split from:** `../cloud-captain/DESIGN-SPEC.md` v2 §6. That spec's **D10** (a per-run `claude_code_oauth_token` on the launch body) is the interim that unblocks subscription cloud runs without this one, which is why this is separable.
 **Sibling:** `../cloud-captain/DESIGN-SPEC.md`
+
+> **Revision note (v2, 2026-09-22).** Naming only — no decision changes, no scope change, and every decision and open question keeps its number.
+>
+> **The registry table is `subscription_seat`.** v1 described it four times ("a service-role-only Supabase table", D1's "registry table in Supabase") and never named it, which left the reader one inference away from confusing it with `runbook_run_secret` — a *different*, already-shipped table (the captain spec's D10, migration `substation/supabase/migrations/20260921200000_runbook_run_secret.sql`, one row per run, deleted at terminal status). `subscription_seat` is the thing itself, it matches the `seat` vocabulary `dsd` and `conductor` already use, and it deliberately does not take a `runbook_` prefix: the registry outlives any run and is not runbook-scoped.
+>
+> **`credential` is renamed `claude_code_oauth_token`.** §3.2 already concluded that the stored form is a per-account `CLAUDE_CODE_OAUTH_TOKEN` injected where `env.ts` injects the shared one, so the generic column name only invited a `config_dir`, a refresh token or a session blob to be put there later. The new name matches `runbook_run_secret.claude_code_oauth_token` and the environment variable it becomes — one name for one thing, the same discipline §3.1 already applies to the `alias` vocabulary. **Q1 is unchanged**: naming the column does not say where its value comes from.
 
 ## Problem
 
@@ -64,20 +70,20 @@ with exit `0` picked and **`75` no seat available → park the step**. Precedenc
 
 ### 3.1 The registry (D1)
 
-A service-role-only Supabase table:
+A service-role-only Supabase table, **`subscription_seat`**:
 
 | column | notes |
 |---|---|
 | `alias` | `max-a`, `max-g` — the same names `dsd.conf` uses, so one vocabulary across lanes |
 | `owner_user_id` | FK → `auth.users`. The relation `dsd.conf`'s `owner =` lines already encode |
-| `credential` | the cloud-usable form (§3.2) |
+| `claude_code_oauth_token` | the cloud-usable form (§3.2) — the token itself, named for what it is and for the environment variable it becomes |
 | `active` | a seat can be retired without losing its history |
 
 RLS enabled, **no read policy at all** — the same shape the captain spec's `runbook_run_secret` uses. Nobody reads it but substation's service-role client.
 
 **`dsd` gains a command to publish a machine's accounts** into it, so `dsd.conf` stays the human-editable source and the registry is its projection. The alternative — substation calling `dsd` as a service — puts a new network dependency in the launch path and is rejected.
 
-### 3.2 The credential form (Q1)
+### 3.2 The stored form — `claude_code_oauth_token` (Q1)
 
 Local seats are config *directories*; the cloud consumes a *token*. Storing a per-account `CLAUDE_CODE_OAUTH_TOKEN` and injecting it exactly where `env.ts` injects the shared one today is the smallest change — the injection path, the subscription gating, and the "a metered run must never carry it" rule all already exist and are tested.
 
@@ -115,7 +121,7 @@ Usage-aware picking (choosing the least-tired of a person's accounts, as a local
 
 ## 4. Decisions
 
-- **D1** — A service-role-only registry table in Supabase, keyed by alias, owned by a user, published from `dsd.conf` by a `dsd` command. No read policy.
+- **D1** — A service-role-only registry table in Supabase, **`subscription_seat`**, keyed by alias, owned by a user, its credential column named `claude_code_oauth_token`, published from `dsd.conf` by a `dsd` command. No read policy.
 - **D2** — Resolution happens in substation at launch, before a sandbox exists.
 - **D3** — `POST /api/runs` takes an optional `seat` alias, stored on the run, passed through as `CONDUCTOR_SEAT`; it beats the `triggered_by` lookup.
 - **D4** — Nothing resolves ⇒ an `operator` gate offering metered or cancel. Never a failed launch.
