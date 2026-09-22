@@ -74,7 +74,7 @@ A service-role-only table. The name uses the `seat` vocabulary dsd and conductor
 | `owner_user_id` | `uuid` FK → `auth.users` NOT NULL | the relation `dsd.conf`'s `owner =` lines encode locally |
 | `claude_code_oauth_token` | `text` NOT NULL | the token from `claude setup-token` (§3.2), **stored sealed** (below) — the column holds ciphertext only substation can open |
 | `active` | `boolean` default true | a seat can be retired without losing its history |
-| `created_at`, `updated_at`, `last_verified_at` | `timestamptz` | `last_verified_at` is null until Q1 gives it a meaning |
+| `created_at`, `updated_at` | `timestamptz` | |
 
 **Access model — copy `20260921200000_runbook_run_secret.sql` exactly:** RLS enabled with **no policy at all**; `REVOKE ALL … FROM PUBLIC, anon, authenticated, workflow_run`; `GRANT ALL … TO service_role`; **not** added to `supabase_realtime`. `workflow_run` is the role the sandbox's `SUPABASE_RUN_TOKEN` assumes and is named explicitly because it holds broad grants elsewhere.
 
@@ -111,7 +111,7 @@ A per-account cloud credential is minted with **`claude setup-token`** ("Set up 
 - **Lifetime one year; scope `user:inference` only.** The token "can only make model requests" — it cannot open Remote Control sessions or fetch claude.ai connectors. That bounds what a leaked one is good for: spending the account's window, nothing else about the account.
 - **Mint-only.** There is no CLI list or revoke (anthropics/claude-code#48373); revocation is a manual step in a browser.
 
-**A token does not say whose account it is.** dsd's `/usage` probe returns the alias it was passed, not one the account reported. So the alias attached at registration is **asserted by the person registering**; D8 enforces that the row is *theirs*, and nothing can check *which* of their accounts a given token is. Getting that wrong is an accounting error inside one's own seats, not a cross-person one. Q1 is an optional way to get evidence.
+**A token does not say whose account it is.** dsd's `/usage` probe returns the alias it was passed, not one the account reported. So the alias attached at registration is **asserted by the person registering**; D8 enforces that the row is *theirs*, and nothing can check *which* of their accounts a given token is. Getting that wrong is an accounting error inside one's own seats, not a cross-person one — a run labelled `max-g` burns `max-a`'s window and D12 counts it against the wrong alias. **Accepted risk (D18):** a cheap check exists (probe the new token's 5h/7d windows and reset time and compare them with the `dsd usage` snapshot for that alias), but it needs a fresh local snapshot at registration time and protects only against a self-inflicted mislabel, so v1 does not build it. Rule 3 in §3.3 (the staging filename must match the alias) is the check that is built.
 
 ### 3.3 Populating the registry — the `register-seat` skill and `/api/seats` (D10, D11)
 
@@ -121,13 +121,13 @@ Registering a seat is rare, per-account, and has a browser step in the middle �
 
 | route | does | returns |
 |---|---|---|
-| `GET /api/seats` | list my seats | alias, `active`, whether a token is present, `created_at`, `last_verified_at` — **never the token** |
+| `GET /api/seats` | list my seats | alias, `active`, whether a token is present, `created_at`, `updated_at` — **never the token** |
 | `PUT /api/seats/:alias` | register or rotate my seat's token (body `{ claude_code_oauth_token }`) — seals with D16, upserts | confirmation only |
 | `DELETE /api/seats/:alias` | retire a seat (`active = false`) | — |
 
 **Step 0.** The skill checks for `SUBSTATION_PERSONAL_API_KEY` and, when absent, sends the operator to cityhall to mint one and stops (§3.4b). Without this the first call 401s and the error describes the wrong problem.
 
-**The loop.** For each `account =` row in `dsd.conf` — **every row, with no filtering** — the skill states whether a token is registered and when it was last verified, then offers: **do nothing · register a token** (one you already hold, or one you mint now — see below). Not dsd's own `owner =` ∩ `seat_allow` intersection: on this fleet a personally-named account (`will-navey-personal`) is used for company spending, so inferring policy from a name or a local allowlist would hide a seat its owner wants. The operator chooses; the skill infers nothing.
+**The loop.** For each `account =` row in `dsd.conf` — **every row, with no filtering** — the skill states whether a token is registered and when it was last updated, then offers: **do nothing · register a token** (one you already hold, or one you mint now — see below). Not dsd's own `owner =` ∩ `seat_allow` intersection: on this fleet a personally-named account (`will-navey-personal`) is used for company spending, so inferring policy from a name or a local allowlist would hide a seat its owner wants. The operator chooses; the skill infers nothing.
 
 **The credential moves around the agent, never through it.** Transcripts are plaintext JSONL on disk; `with-secrets` exists because on 2026-09-17 a session read a token file, a shell error echoed it into the transcript, and the token had to be rotated. So "paste it in the chat" and "run `setup-token` in the session" (it prints the token to stdout) are both ruled out. The token is staged in a file the skill *names but never opens*:
 
@@ -235,7 +235,7 @@ The chosen alias is written to `runbook_runs.seat` and passed into the sandbox a
 
 **D4 — when nothing resolves, an `operator` HITL question against the run offers continue metered or cancel.** Cancel sets the run `cancelled`, which exists in the status enum for exactly this — a human's decision, not a malfunction. The stated rationale: failing the launch outright is the wrong shape, because the work still needs doing and a billing-lane lookup is not a reason to lose a queued run.
 
-> **Q2 — D4 and D11 both claim the "no seat" case at the door and disagree.** D11 (and D13, which says D11's refusal wins over the shared token) answers `POST /api/runs` with `seat_not_registered`; D4 says never fail the launch, open a gate instead. With the registry, "no registered token" and "nothing resolves" are the same condition, so an implementer has to pick. See §5.
+> **Q1 — D4 and D11 both claim the "no seat" case at the door and disagree.** D11 (and D13, which says D11's refusal wins over the shared token) answers `POST /api/runs` with `seat_not_registered`; D4 says never fail the launch, open a gate instead. With the registry, "no registered token" and "nothing resolves" are the same condition, so an implementer has to pick. See §5.
 
 **D12 deliberately does not:** wait when every seat is busy (it picks the least-loaded), count consumption rather than runs (a seat carrying one review looks emptier than one carrying two `smoke` runs — real headroom needs the usage board, which is a client-side probe with no server endpoint), or protect against a deliberate overdraw (four runs on two seats will exhaust them; runbooks cost tokens and the people launching them know it). No `seat_lease` table: leases bring acquire/release/deadline/reaper, and local leases end on pid death, which substation cannot observe. **Their absence is the decision.** Motivation: 10 of 27 `runbook_runs` were non-terminal on 2026-09-22 with at least one overlapping pair, and a deterministic "first active seat" rule makes two back-to-back launches *always* share one seat and stall on the same 429.
 
@@ -294,7 +294,7 @@ substation/src/lib/reconcile-loop.ts:416  →  buildLaunchEnv()  →  buildRunbo
 - **D1** — A service-role-only registry table, **`subscription_seat`**, keyed by alias, owned by a user, its credential column `claude_code_oauth_token` held sealed (D16). RLS enabled, no policy; `workflow_run` revoked. (§3.1)
 - **D2** — Resolution happens in substation at `POST /api/runs`, before a sandbox exists. (§3.5)
 - **D3** — `POST /api/runs` takes an optional `seat` alias, stored on `runbook_runs.seat`, passed into the sandbox as `CONDUCTOR_SEAT`; it beats the lookup. (§3.5)
-- **D4** — Nothing resolves ⇒ an `operator` gate offering metered or cancel; never a failed launch. **Conflicts with D11 at the door — see Q2.** (§3.5)
+- **D4** — Nothing resolves ⇒ an `operator` gate offering metered or cancel; never a failed launch. **Conflicts with D11 at the door — see Q1.** (§3.5)
 - **D5** — A `seat` alias not owned by the acting user is refused: `seat_not_owned`. Enforced, not documented. (§3.5)
 - **D6** — Leases, waiting and usage-aware picking are out of scope; D12 is the whole of spreading. (§3.5)
 - **D7** — `POST /api/runs` records the acting identity as `runbook_runs.triggered_by`: `conductor init` sends `x-on-behalf-of`, the route resolves it with the shipped `SERVICE_SENTINELS` pattern, the insert writes the column. (§3.4a)
@@ -307,11 +307,11 @@ substation/src/lib/reconcile-loop.ts:416  →  buildLaunchEnv()  →  buildRunbo
 - **D14** — No admin override and no org seat. D5 is absolute. (§3.5)
 - **D15** — `../cloud-captain/` D10's per-run token path is removed — the body field, its guards, `runbook_run_secret`, the secret helpers and the precedence branch — once the first registry-resolved cloud subscription run completes end to end. The spec's last step. (§3.7)
 - **D17** — **Cloud only.** The registry never feeds the local lane: `dsd.conf` stays the local source of truth for accounts and owners, and `subscription_seat` is the cloud's. No sync in either direction. (§1)
+- **D18** — **Token-to-alias correctness is asserted, not verified.** A token does not identify its account; the alias a person registers it under is taken at their word. The failure is a mislabel inside that person's own seats, so no verification probe is built. (§3.2)
 - **D16** — `subscription_seat.claude_code_oauth_token` is stored sealed: AES-256-GCM under `SEAT_TOKEN_KEY`, an env-only secret substation alone holds, `v1.`-prefixed. Sealed on the `PUT /api/seats/:alias` write, opened in the D9 resolver, in one module. Not Vault; not retrofitted to `runbook_run_secret`. One manual step: the key on Vercel before the reading code deploys. (§3.1)
 
 *(D2, D4 and D5 originated in `../cloud-captain/` v2 as its D17, D16 and part of §6 and moved here in that spec's v3.)*
 
 ## 5. Open questions
 
-- **Q1 — can a token be verified against the alias it is registered under?** Nothing identifies a token's account (§3.2). One cheap check: probe the token once and compare its 5h/7d readings and reset time against the snapshot `dsd usage` holds for that alias — strong evidence, not proof. Would populate `last_verified_at`. Worth building, or is a mislabel inside one's own seats an acceptable failure?
-- **Q2 — D4 or D11 at the door?** Both were decided in earlier versions and they disagree on the same condition (§3.5). Recommended: **D11 at the door** — `POST /api/runs` refuses `seat_not_registered`, because the operator is present at `conductor init` to read the answer and nothing has been queued yet; **D4 at a later pass** — if the D9 read finds no active seat for a run that already exists (the seat was retired or deleted after launch), open the operator gate rather than fail a run with work behind it. That keeps both decisions' intent and gives each a case that is only its own. Confirm or overrule before #4 in §3.8.
+- **Q1 — D4 or D11 at the door?** Both were decided in earlier versions and they disagree on the same condition (§3.5). Recommended: **D11 at the door** — `POST /api/runs` refuses `seat_not_registered`, because the operator is present at `conductor init` to read the answer and nothing has been queued yet; **D4 at a later pass** — if the D9 read finds no active seat for a run that already exists (the seat was retired or deleted after launch), open the operator gate rather than fail a run with work behind it. That keeps both decisions' intent and gives each a case that is only its own. Confirm or overrule before #4 in §3.8.
