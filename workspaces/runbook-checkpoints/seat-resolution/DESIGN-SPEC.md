@@ -1,13 +1,23 @@
 # Seat resolution — spending the right person's subscription account on a cloud run
 
-**Status:** Draft v8
+**Status:** Draft v9
 **Date:** 2026-09-22
 **Repos touched:** `substation` (a seat registry to read, resolution at launch, ownership enforcement, recording who launched a run, and per-user API keys), `cityhall` (one signed-in page where a person creates their own key — §3.3b), `conductor2` (`init` sends its credential; §3.3a, §3.3b — its seat hook contract is untouched and is the model this borrows, §2), `claude-plugins` (the `register-seat` skill and its upload script — §3.2a), `dsd` (nothing: the skill reads `dsd.conf`, dsd gains no command — §3.2a), `bureau` (nothing beyond what the captain spec already names)
 **Repos NOT touched:** none — this reaches every repo in the launch path, which is what identity costs
 **Split from:** `../cloud-captain/DESIGN-SPEC.md` v2 §6. That spec's **D10** (a per-run `claude_code_oauth_token` on the launch body) is the interim that unblocks subscription cloud runs without this one, which is why this is separable.
 **Sibling:** `../cloud-captain/DESIGN-SPEC.md`
-**Amends:** `../cloud-captain/DESIGN-SPEC.md` **D12** — its shared-token fallback is closed off for cloud subscription runs (§3.5a, D13). That spec carries a matching note.
+**Amends:** `../cloud-captain/DESIGN-SPEC.md` **D12** — its shared-token fallback is closed off for cloud subscription runs (§3.5a, D13) — and **D10**, whose per-run token path is retired as this spec's last step (§3.7, D15). That spec carries matching notes.
 
+> **Revision note (v9, 2026-09-22).** Answers **Q5** with **D15**: the interim is retired, and retiring it is this spec's last implementation step. D1–D14 and Q1–Q4, Q6–Q9 keep their numbers.
+>
+> **Two things called "fallback" are now cleanly separated.** D13 closed the *shared* token — substation's one `CLAUDE_CODE_OAUTH_TOKEN`, the thing everyone landed on by default. Q5 was about the other one: `../cloud-captain/` **D10**'s per-run `claude_code_oauth_token` on the launch body, which a caller supplies deliberately. **D15 removes it too**, so a cloud subscription run ends with exactly one way to get a seat.
+>
+> **Why it goes.** A raw token on the body carries no alias, so there is no `owner_user_id` for **D5** to check — the ownership rule simply does not apply to that path. And nothing records *which* account paid, so "who spent this window?" is unanswerable for those runs. Two paths to one outcome is how the rule and the record both end up with a hole in them.
+>
+> **Why it is not urgent, stated so the sequencing is not mistaken for indecision.** This is a milder hole than the shared token was. The shared token was *everyone lands there by accident*; supplying a raw token means somebody deliberately obtained a credential, which is not the failure `docs/runbooks.md:83` describes.
+>
+> **And why it is gated rather than scheduled.** **Zero cloud subscription runs have ever happened** — all cloud runs in prod are metered. So D10 is currently the only *proven* path and the registry is the unproven one. Retiring a working mechanism before its replacement has run once is how you end up with neither, so D15 fires on evidence: the first registry-resolved cloud subscription run that completes end to end.
+>
 > **Revision note (v8, 2026-09-22).** Answers **Q3** with **D13** and **D14**. Most of Q3 dissolved on inspection; what was left underneath it was a hole in D8. D1–D12 and Q1, Q2, Q4–Q9 keep their numbers.
 >
 > **There is no such thing as a cron-triggered run.** Q3 assumed one. `GET /api/cron/reconcile` only *advances* runs — it selects, leases and updates, and neither `cron-reconcile.ts` nor `reconcile-loop.ts` contains an insert; the sole mention of the word is a comment pointing at "a row inserted by `POST /api/runs`". Every run is born at that route with whoever launched it, and the cron pushes along a run that already has a `triggered_by`. (`POST /api/runs` also has exactly one caller in the codebase today — `conductor init`. The route's own comment names cityhall and prospector too; neither posts to it.)
@@ -273,7 +283,7 @@ reconcile-loop.ts:416  →  buildLaunchEnv()  →  buildRunbookEnv()  →  env h
 
 **The sandbox cannot read it, by construction.** The sandbox's `SUPABASE_RUN_TOKEN` assumes the `workflow_run` role; migration `20260921200000` revokes that role from `runbook_run_secret`, and `subscription_seat` carries the same revoke. The only path into the sandbox is substation writing the environment.
 
-**`runbook_run_secret` stays, and wins where present.** A caller-supplied per-run token (`../cloud-captain/` D10) is checked before the registry, so a one-off run on a seat that is not registered still works. Whether that escape hatch is kept permanently or removed for a single path is **Q5**, unchanged — D9 defines the precedence while both exist, it does not decide that question.
+**`runbook_run_secret` wins where present — until D15 removes it.** A caller-supplied per-run token (`../cloud-captain/` D10) is checked before the registry, so a one-off run on an unregistered seat keeps working while both exist. That precedence is transitional by design: **D15** (§3.7) deletes the path once the registry has been exercised, after which the registry is the only source and this branch goes with it.
 
 **A consequence worth naming:** because one token is injected into the environment per pass, every agent step inside that pass inherits the same seat. The cloud therefore spends **one seat per run**, where the local lane spends one per *step* — `CONDUCTOR_SEAT_CMD` runs per agent-step invocation and spreads a fan-out across a pool (§2). Substation sets no such hook in the sandbox. Giving the cloud per-step spreading means the sandbox asking substation for a seat *during* the run, which is a different shape and is out of v1; it is downstream of **Q7**.
 
@@ -336,6 +346,28 @@ group by seat
 
 **And it deliberately does not stop a deliberate overdraw.** An operator who launches four runs against two seats will exhaust them, and that is their call: runbooks cost tokens and the people launching them know it. D12 removes the *accidental* funnel — the one created by resolving "first active seat" deterministically — and nothing more. **Their absence is the decision**, not an unfinished edge.
 
+### 3.7 Retiring the interim (D15, resolving Q5) — the last step
+
+**D15 — once the registry is working, `../cloud-captain/` D10's per-run token path is removed.** This is the spec's final implementation step, and it is deliberately last.
+
+**What goes:**
+
+| | where |
+|---|---|
+| `claude_code_oauth_token` on the `POST /api/runs` body, and its `seat_on_metered_run` guard | `substation/src/routes/runs.ts` |
+| the `no_subscription_seat` guard's per-run-token arm, superseded by D11's `seat_not_registered` | `substation/src/routes/runs.ts` |
+| `putRunSecret` / `getRunSecret` / `deleteRunSecret` and their call sites | `substation/src/lib/control-plane.ts`, `runs.ts`, `reconcile-loop.ts` |
+| the `runbook_run_secret` table | a migration dropping it |
+| D9's per-run-token precedence branch | `substation/src/lib/runbook/launch.ts` |
+
+**Why it goes at all.** A raw token on the launch body carries **no alias**, so there is no `owner_user_id` and **D5 has nothing to check** — the ownership rule does not apply to that path at all. And because no alias is recorded, nothing can say which account paid for the run, so the question D7 and D12 both exist to make answerable ("who spent this window?") has a permanent blind spot. Two paths to one outcome is how a rule and a record each end up holed.
+
+**Why it is not urgent.** This is a milder hole than the one D13 closed. The shared token was the path everyone landed on *by accident*; supplying a raw token is a deliberate act by someone who already obtained a credential — not the failure `docs/runbooks.md:83` is about. Treating the two as equally pressing would be wrong.
+
+**Why it is gated on evidence rather than scheduled.** **No cloud subscription run has ever happened** — every cloud run in prod is metered — so D10 is today the only *proven* way to bill a cloud run to a seat, and the registry is the unproven one. The trigger for D15 is therefore a fact, not a date: **the first registry-resolved cloud subscription run that completes end to end.** Retiring the working mechanism before its replacement has run once is how a lane ends up with neither.
+
+Until then D9's precedence stands and nothing that works today breaks — the same additive property `../cloud-captain/` D12 was written for, spent deliberately one last time.
+
 ## 4. Decisions
 
 - **D1** — A service-role-only registry table in Supabase, **`subscription_seat`**, keyed by alias, owned by a user, its credential column named `claude_code_oauth_token`, published from `dsd.conf` by a `dsd` command. No read policy.
@@ -352,6 +384,7 @@ group by seat
 - **D12** — Resolution step 2 picks the caller's `active` seat with the **fewest runs in flight** — one `count(*)` over `runbook_runs` where `status in ('queued','running')`, ties broken on alias. `parked` does not count. No `seat_lease` table, no waiting, no headroom awareness, and no protection from a deliberate overdraw. (§3.6)
 - **D13** — For a cloud subscription run the shared `CLAUDE_CODE_OAUTH_TOKEN` is **not** a fallback: D11's `seat_not_registered` wins. Amends `../cloud-captain/` D12, whose fallback would otherwise make the registry optional and D8 bypassable. (§3.5a)
 - **D14** — No admin override and no org seat. D5 is absolute: nobody runs on an account they do not own, because registration is self-service and an account you cannot register is not yours. (§3.5a)
+- **D15** — `../cloud-captain/` D10's per-run `claude_code_oauth_token` path is removed once the registry works — the field, its guards, `runbook_run_secret`, the secret helpers and D9's precedence branch. Gated on the first registry-resolved cloud subscription run completing end to end, not on a date, because no cloud subscription run has ever happened and the registry is the unproven path. **This is the spec's last step.** (§3.7)
 
 *(D2, D4 and D5 were `../cloud-captain/` v2's D17, D16 and part of §6 respectively, moved here in that spec's v3.)*
 
@@ -361,7 +394,7 @@ group by seat
 - **Q2 — RESOLVED (v7)** by **D12**. Neither option as v1 framed them: not a `seat_lease` table, and not accepting the collision. Resolution step 2 spreads on a `count(*)` of in-flight runs per alias, which removes the deterministic funnel without any lease lifecycle. Waiting, headroom-aware picking and protection from a deliberate overdraw are all explicitly out. (§3.6)
 - **Q3 — RESOLVED (v8)** by **D13** and **D14**. The premise was half wrong: there is no cron-triggered run (the cron only advances; every run is created at `POST /api/runs`), and after D8 a NULL `triggered_by` is impossible on exactly the runs that resolve a seat. What remained underneath was a hole in D8 — the shared token was still a silent fallback, making the registry optional — now closed. No org seat, no admin exception. (§3.5a)
 - **Q4 — does the registry eventually feed the local lane too?** `dsd.conf` would become the editing surface and the registry its projection; or the registry becomes canonical and `dsd.conf` a cache. Not needed for cloud, but two sources of truth for "who owns which account" is the drift this spec is otherwise avoiding.
-- **Q5 — retiring `../cloud-captain/` D10** (that spec's, not this one's). Once resolution works, does the captain spec's per-run `claude_code_oauth_token` stay as an escape hatch (a one-off run on a seat not in the registry), or is it removed so there is one path? (§Problem)
+- **Q5 — RESOLVED (v9)** by **D15**: removed, not kept. A raw token carries no alias, so D5 has nothing to check and nothing records which account paid. Gated on the first registry-resolved cloud subscription run rather than scheduled, because none has ever happened and D10 is currently the only proven path. (§3.7)
 - **Q6 — RESOLVED (v4).** A launch proves who it is with **D8**, a per-user substation API key required for cloud subscription launches and refused-if-absent. Not the verified-JWT option, which needs an interactive login on a CLI that also runs headless, plus refresh machinery. Not a replacement for the shared service key either: metered is untouched, so `../conductor-init/` D4's service-role debt stands. (§3.3b)
 - **Q7 — RESOLVED (v6)** by **D10** and **D11**. The answer is not a `dsd` publisher: `dsd.conf` holds no token, so a projection can carry the alias and owner and never the credential. Note the bridge v1 worried about — `dsd`'s owner names vs `auth.users` UUIDs — **does not arise**, because the skill authenticates as the person (D8) and substation resolves `owner_user_id` from the key rather than from anything `dsd` says.
 - **Q8 — does `claude setup-token` pipe?** §3.2a's mint path redirects its stdout into the staging file. It is a browser auth flow and may require a TTY, in which case minting is a copy-paste into the file rather than a redirect. One line of the skill, not a design change — but it should be tested rather than assumed.
