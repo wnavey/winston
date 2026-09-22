@@ -1,12 +1,22 @@
 # Seat resolution — spending the right person's subscription account on a cloud run
 
-**Status:** Draft v6
+**Status:** Draft v7
 **Date:** 2026-09-22
 **Repos touched:** `substation` (a seat registry to read, resolution at launch, ownership enforcement, recording who launched a run, and per-user API keys), `cityhall` (one signed-in page where a person creates their own key — §3.3b), `conductor2` (`init` sends its credential; §3.3a, §3.3b — its seat hook contract is untouched and is the model this borrows, §2), `claude-plugins` (the `register-seat` skill and its upload script — §3.2a), `dsd` (nothing: the skill reads `dsd.conf`, dsd gains no command — §3.2a), `bureau` (nothing beyond what the captain spec already names)
 **Repos NOT touched:** none — this reaches every repo in the launch path, which is what identity costs
 **Split from:** `../cloud-captain/DESIGN-SPEC.md` v2 §6. That spec's **D10** (a per-run `claude_code_oauth_token` on the launch body) is the interim that unblocks subscription cloud runs without this one, which is why this is separable.
 **Sibling:** `../cloud-captain/DESIGN-SPEC.md`
 
+> **Revision note (v7, 2026-09-22).** Answers **Q2** with **D12**, and in doing so declines to build the thing v1 assumed it would. D1–D11 and Q1, Q3–Q9 keep their numbers.
+>
+> **The problem is not a race, it is a guarantee.** §3.3's step 2 resolves "the first `active` account owned by `triggered_by`", which is deterministic — so two cloud runs launched back to back do not *sometimes* collide on one seat, they *always* do. Both then draw on the same 5h and 7d windows, neither knows the other exists, and both stall when it is gone (`seat_exhausted`, a 429, already a path conductor has). The unit of damage is large: `docs/runbooks.md` puts a single review run at "up to 1 full week of subscription usage for a 20x Max account".
+>
+> **It is already real at today's volume.** 10 of 27 `runbook_runs` are non-terminal right now (3 `queued`, 1 `running`, 6 `parked`), and the clean record holds a genuine overlapping pair from 2026-09-22 — the cloud `smoke` run and a `prospector` run in flight together. (`finished_at` is unreliable — several `done` rows have it null — so only pairs with both ends recorded could be measured; the true count is higher, not lower.)
+>
+> **D12 changes the resolution order instead of adding a lease table.** Step 2 becomes *the caller's `active` seat with the fewest runs in flight* — one `count(*)` over `runbook_runs` grouped by alias. No new table, no lease lifecycle, no deadlines, no reaper for a sandbox that dies without reporting. It is also not a workaround: dsd's own picker breaks ties on **fewest live leases** first, "so concurrent launches spread across seats first", so the two lanes agree in spirit.
+>
+> **What v1 deliberately does not do, and why.** No waiting, no parking on contention, no headroom awareness. If an operator exhausts their own seats, that is their call — **runbooks cost tokens and the people launching them know it**. Spreading removes the *accidental* funnel; it does not try to save anyone from a deliberate one. This sentence exists so that a later reader does not reintroduce leases as an obvious missing piece: their absence is the decision.
+>
 > **Revision note (v6, 2026-09-22).** Answers **Q7** with **D10** and **D11**, and closes **Q1**, which v1 called the question that gates implementation. Adds **Q8** and **Q9**. D1–D9 and Q2–Q6 keep their numbers.
 >
 > *(Numbering note: this spec's D10/D11 are its own. Every reference to the captain spec's decisions stays written as `../cloud-captain/` D10 etc., as it has since v1.)*
@@ -185,7 +195,7 @@ Because the path carries the alias, an operator with several accounts can stage 
 Order of precedence, mirroring conductor's:
 
 1. `seat` named on the `POST /api/runs` body (**D3** — an optional alias, stored on `runbook_runs`, passed through as `CONDUCTOR_SEAT`)
-2. else the first `active` account owned by `triggered_by`
+2. else the `active` account owned by `triggered_by` with the **fewest runs in flight** (**D12** — §3.6); ties break on alias, so the choice is stable and testable
 3. else nothing resolves → **D4**
 
 **D3** deliberately reuses the existing alias vocabulary end-to-end, so "run this on `max-g`" means the same thing locally and in the cloud.
@@ -268,11 +278,30 @@ An `operator` HITL question against the run, offering **continue metered** or **
 
 Resolution runs on every cloud run; the gate fires only on failure. Failing the launch outright is the wrong shape: the work still needs doing, and a billing-lane lookup is not a reason to lose a queued run.
 
-### 3.6 Leases and usage (Q2, deferred)
+### 3.6 Spreading, and the leases we are not building (D12, resolving Q2)
 
-Local leases stop two launches on one seat. Nothing does that across cloud runs, so two runs on one Max account will hit the same rate limit and both stall. A `seat_lease` row per active run, checked at launch, is the obvious port — **deferred to phase 2** so single-seat cloud runs can ship first.
+**D12 — resolution step 2 picks the caller's `active` seat with the fewest runs in flight.** One query, no new state:
 
-Usage-aware picking (choosing the least-tired of a person's accounts, as a local pick does from `usage-snapshots/`) is **out of v1**. Those snapshots are produced by local machinery watching local sessions; replicating it server-side is its own project, and a cloud run that picks a tired seat degrades to a park, not a wrong answer.
+```sql
+-- runs currently spending a seat, per alias
+select seat, count(*) from runbook_runs
+where seat is not null and status in ('queued', 'running')
+group by seat
+```
+
+**`parked` does not count.** A parked run is waiting on a human and spending nothing, so counting it would make a seat look busy while it is idle — and D9 re-resolves fresh on every pass, so a parked run naturally re-picks the least-loaded seat when it resumes. The exclusion is self-correcting rather than a gap. `done`, `failed` and `cancelled` are terminal and obviously excluded.
+
+**A named alias still wins.** D3's explicit `seat` is a choice, and spreading never overrides one — the same way dsd's `--seat` pin beats its picker.
+
+**Why this and not a `seat_lease` table.** v1 called leases "the obvious port" of the local mechanism. They are, and they bring a lifecycle with them: acquire, release, a deadline, and a reaper for the sandbox that dies without ever reporting — local leases end on **pid death**, and substation has no pid to watch. Counting rows that already exist has none of that and solves the stated problem, which is that two concurrent launches should land on different seats. dsd's picker agrees about what matters most: among eligible seats its leading tie-break is **fewest live leases**, "so concurrent launches spread across seats first".
+
+**Three things D12 does not do, named so nobody mistakes them for oversights:**
+
+1. **It never waits.** When every seat of yours is busy it picks the least-bad one rather than parking. A lease system could hold run B until a window rolls; this does not.
+2. **It counts runs, not consumption.** A seat carrying one large review looks emptier than one carrying two `smoke` runs, which is wrong in the way that matters. Real headroom needs the usage board, and that board is a **client-side probe** — `dsd usage` runs `claude -p "/usage"` per account with `CLAUDE_CONFIG_DIR` set (`dsd/launcher/src/usage/probe.rs`). There is no server-side endpoint to query, so substation cannot build one; it would need snapshots published to it, or runs reporting their own `rate_limit_event` readings back. Out of v1, and related to **Q9**.
+3. **It does nothing for a one-seat operator**, which is most people here today.
+
+**And it deliberately does not stop a deliberate overdraw.** An operator who launches four runs against two seats will exhaust them, and that is their call: runbooks cost tokens and the people launching them know it. D12 removes the *accidental* funnel — the one created by resolving "first active seat" deterministically — and nothing more. **Their absence is the decision**, not an unfinished edge.
 
 ## 4. Decisions
 
@@ -287,13 +316,14 @@ Usage-aware picking (choosing the least-tired of a person's accounts, as a local
 - **D9** — The seat's `claude_code_oauth_token` is resolved fresh from `subscription_seat` on every pass, by the alias on the run, in substation's `buildLaunchEnv` — not copied into `runbook_run_secret` at launch. A caller-supplied per-run token still wins where present (Q5 unchanged). The sandbox receives it as an environment variable and can never read the table. (§3.3c)
 - **D10** — The registry is populated by a shared `register-seat` Claude Code skill in `claude-plugins`, one account at a time, through `GET`/`PUT`/`DELETE /api/seats[/:alias]` authenticated by `SUBSTATION_PERSONAL_API_KEY` and scoped to the caller. It reads `dsd.conf` for aliases and **offers every account with no filtering**; `dsd` gains no command. The token is staged in `~/.noetic-seat-tokens/<alias>`, which the skill names and never opens, and the script deletes on success. (§3.2a)
 - **D11** — A launch whose resolved seat has no registered token is refused by name: `seat_not_registered`, naming the alias and pointing at the skill. (§3.2a)
+- **D12** — Resolution step 2 picks the caller's `active` seat with the **fewest runs in flight** — one `count(*)` over `runbook_runs` where `status in ('queued','running')`, ties broken on alias. `parked` does not count. No `seat_lease` table, no waiting, no headroom awareness, and no protection from a deliberate overdraw. (§3.6)
 
 *(D2, D4 and D5 were `../cloud-captain/` v2's D17, D16 and part of §6 respectively, moved here in that spec's v3.)*
 
 ## 5. Open questions
 
 - **Q1 — RESOLVED (v6).** `claude setup-token`, in the shipped CLI, run under the account's `CLAUDE_CONFIG_DIR`. Nothing is extracted from a seat; a token is minted beside one by the human who owns it, and reaches the registry through §3.2a. (§3.2)
-- **Q2 — cross-run leases.** Ship a `seat_lease` row in v1 after all, or accept that two concurrent cloud runs can collide on one account until phase 2? (§3.6)
+- **Q2 — RESOLVED (v7)** by **D12**. Neither option as v1 framed them: not a `seat_lease` table, and not accepting the collision. Resolution step 2 spreads on a `count(*)` of in-flight runs per alias, which removes the deterministic funnel without any lease lifecycle. Waiting, headroom-aware picking and protection from a deliberate overdraw are all explicitly out. (§3.6)
 - **Q3 — the null and admin cases.** A cron- or API-triggered run has no `triggered_by`. Does that mean no seat (→ D4's gate), or the org seat? And is there ever a legitimate reason to let someone run on an account they do not own? (§3.4)
 - **Q4 — does the registry eventually feed the local lane too?** `dsd.conf` would become the editing surface and the registry its projection; or the registry becomes canonical and `dsd.conf` a cache. Not needed for cloud, but two sources of truth for "who owns which account" is the drift this spec is otherwise avoiding.
 - **Q5 — retiring `../cloud-captain/` D10** (that spec's, not this one's). Once resolution works, does the captain spec's per-run `claude_code_oauth_token` stay as an escape hatch (a one-off run on a seat not in the registry), or is it removed so there is one path? (§Problem)
