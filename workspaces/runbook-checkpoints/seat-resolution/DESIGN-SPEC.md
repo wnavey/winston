@@ -1,12 +1,20 @@
 # Seat resolution — spending the right person's subscription account on a cloud run
 
-**Status:** Draft v4
+**Status:** Draft v5
 **Date:** 2026-09-22
 **Repos touched:** `substation` (a seat registry to read, resolution at launch, ownership enforcement, recording who launched a run, and per-user API keys), `cityhall` (one signed-in page where a person creates their own key — §3.3b), `conductor2` (`init` sends its credential; §3.3a, §3.3b — its seat hook contract is untouched and is the model this borrows, §2), `dsd` (publish a machine's accounts to the registry), `bureau` (nothing beyond what the captain spec already names)
 **Repos NOT touched:** none — this reaches every repo in the launch path, which is what identity costs
 **Split from:** `../cloud-captain/DESIGN-SPEC.md` v2 §6. That spec's **D10** (a per-run `claude_code_oauth_token` on the launch body) is the interim that unblocks subscription cloud runs without this one, which is why this is separable.
 **Sibling:** `../cloud-captain/DESIGN-SPEC.md`
 
+> **Revision note (v5, 2026-09-22).** Adds **D9** — when and where the seat's token is fetched. D1–D8 and Q1–Q5, Q7 keep their numbers and meaning.
+>
+> **The seat token is resolved fresh on every pass, from `subscription_seat`, by the alias on the run — not copied into `runbook_run_secret` at launch.** A cloud run parks on a human and can resume days later; a token copied at launch is frozen there, so re-issuing a seat's token strands every parked run holding a dead credential and fires cloud-captain D11's expired-token gate for a reason we created ourselves. Fresh resolution heals those runs automatically, and the credential stays in one place instead of being copied per run.
+>
+> **This is already the shape of what shipped** — `buildLaunchEnv` (`substation/src/lib/runbook/launch.ts:71`, called from `reconcile-loop.ts:416`) already reads the seat at each pass with the service-role client, and the comment above it already argues for exactly this: "A seat supplied once and not re-read is a subscription run that cannot survive its own gate." **Only the source changes**: `getRunSecret(runId)` reading the per-run copy becomes a lookup in `subscription_seat` by the alias stored on the run. Same function, same timing, same client.
+>
+> **It is substation's code, never the sandbox's.** The sandbox receives the token as an environment variable and could not fetch it if we wanted it to: its `SUPABASE_RUN_TOKEN` assumes the `workflow_run` role, which migration `20260921200000` explicitly revokes from `runbook_run_secret` and which `subscription_seat` must revoke too. That is also *why the cloud seat is per-run rather than per-step* — one token is injected into the environment at each pass and every agent step inside that pass inherits it, with no equivalent of the local `dsd seat pick` that runs once per step. Closing that is downstream of **Q7** and is not in this spec's v1.
+>
 > **Revision note (v4, 2026-09-22).** Answers **Q6** with **D8**, a per-user substation API key. D1–D7 and Q1–Q5 keep their numbers and meaning; Q6 is marked RESOLVED and **Q7** is new.
 >
 > **Why a credential change at all.** D7 records who launched a run from `x-on-behalf-of`, which substation believes *because the caller holds `SUPABASE_SERVICE_ROLE_KEY`*. You cannot gate a caller holding a credential more powerful than the thing being gated — anything with that key can write `runbook_runs` and read `subscription_seat` directly, bypassing the route. So no validation on the header buys anything. The launch has to carry a credential that **is** the person.
@@ -165,6 +173,28 @@ So the personal key **never enters the sandbox**, which is the one place a perso
 
 **Naming.** `SUBSTATION_PERSONAL_API_KEY` reads as a deliberate pair with `SUBSTATION_SERVICE_API_KEY` — personal vs. service, which is exactly the yours-vs-shared distinction that matters — and matches the universal "personal access token" convention. `SUBSTATION_API_KEY` is unused across every repo, but sits one word from the shared key and would be mistyped for it. It is not named for subscription billing on purpose: the key identifies **a person**, not a billing mode, and the same key is the natural credential for registering a seat (**Q7**) or reading one's own runs.
 
+### 3.3c When the token is fetched (D9)
+
+**D9 — the seat's `claude_code_oauth_token` is resolved fresh on every pass, from `subscription_seat`, keyed by the alias D3 stores on the run.** It is not copied into `runbook_run_secret` at launch.
+
+**Where:** substation, not the sandbox.
+
+```
+reconcile-loop.ts:416  →  buildLaunchEnv()  →  buildRunbookEnv()  →  env handed to the sandbox
+   (substation's cron,        launch.ts:71        env.ts:202
+    once per pass)
+```
+
+**The timing already exists.** `buildLaunchEnv` reads the seat at each pass today, with the service-role client, and its own comment gives the reason this decision keeps: park-and-exit rebuilds the environment every time, "including the resume that happens after a human answers a gate, days later. A seat supplied once and not re-read is a subscription run that cannot survive its own gate." So D9 changes **one thing** — the source. `getRunSecret(runId)` becomes a lookup in `subscription_seat` by the run's alias.
+
+**Why fresh rather than copied.** A copy is frozen at launch. Re-issue a seat's token — a rotation, a revoke, a re-auth — and every parked run is holding a credential that no longer works, firing `../cloud-captain/` **D11**'s expired-token gate for a cause the system created itself. Resolving fresh heals them with no operator action, and the credential exists in exactly one row rather than one copy per run.
+
+**The sandbox cannot read it, by construction.** The sandbox's `SUPABASE_RUN_TOKEN` assumes the `workflow_run` role; migration `20260921200000` revokes that role from `runbook_run_secret`, and `subscription_seat` carries the same revoke. The only path into the sandbox is substation writing the environment.
+
+**`runbook_run_secret` stays, and wins where present.** A caller-supplied per-run token (`../cloud-captain/` D10) is checked before the registry, so a one-off run on a seat that is not registered still works. Whether that escape hatch is kept permanently or removed for a single path is **Q5**, unchanged — D9 defines the precedence while both exist, it does not decide that question.
+
+**A consequence worth naming:** because one token is injected into the environment per pass, every agent step inside that pass inherits the same seat. The cloud therefore spends **one seat per run**, where the local lane spends one per *step* — `CONDUCTOR_SEAT_CMD` runs per agent-step invocation and spreads a fan-out across a pool (§2). Substation sets no such hook in the sandbox. Giving the cloud per-step spreading means the sandbox asking substation for a seat *during* the run, which is a different shape and is out of v1; it is downstream of **Q7**.
+
 ### 3.4 Ownership is enforced, not documented (D5)
 
 Substation refuses a `seat` alias whose `owner_user_id` is not `triggered_by`, at launch. `docs/runbooks.md:83` is a rule the system can enforce at the one point that knows both facts; leaving it to convention is how the shared-token problem happened in the first place.
@@ -193,6 +223,7 @@ Usage-aware picking (choosing the least-tired of a person's accounts, as a local
 - **D6** — Leases and usage-aware picking are phase 2; v1 resolves one seat per run.
 - **D7** — `POST /api/runs` records the acting identity as `runbook_runs.triggered_by`: `conductor init` sends `x-on-behalf-of`, the route resolves it with the shipped `SERVICE_SENTINELS` pattern, the insert writes the column. Self-asserted on every launch D8 does not cover — mistake-prevention, not authorization (§3.3a).
 - **D8** — A cloud subscription launch authenticates with a per-user substation API key, `SUBSTATION_PERSONAL_API_KEY`: no expiry, revocable, `last_used_at`; minted self-service in cityhall under the person's own SSO session and stored hashed in `personal_api_key`; held on the operator's machine in `~/.env`, never in substation's environment; required on the launch call alone and never inside the sandbox. **Cloud + subscription + a shared credential is refused 403** — the refusal is what makes D5 and D7 real. Additive: metered keeps `SUBSTATION_SERVICE_API_KEY`, local is untouched. (§3.3b)
+- **D9** — The seat's `claude_code_oauth_token` is resolved fresh from `subscription_seat` on every pass, by the alias on the run, in substation's `buildLaunchEnv` — not copied into `runbook_run_secret` at launch. A caller-supplied per-run token still wins where present (Q5 unchanged). The sandbox receives it as an environment variable and can never read the table. (§3.3c)
 
 *(D2, D4 and D5 were `../cloud-captain/` v2's D17, D16 and part of §6 respectively, moved here in that spec's v3.)*
 
