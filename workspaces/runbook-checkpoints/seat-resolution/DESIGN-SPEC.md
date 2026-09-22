@@ -1,12 +1,26 @@
 # Seat resolution — spending the right person's subscription account on a cloud run
 
-**Status:** Draft v5
+**Status:** Draft v6
 **Date:** 2026-09-22
-**Repos touched:** `substation` (a seat registry to read, resolution at launch, ownership enforcement, recording who launched a run, and per-user API keys), `cityhall` (one signed-in page where a person creates their own key — §3.3b), `conductor2` (`init` sends its credential; §3.3a, §3.3b — its seat hook contract is untouched and is the model this borrows, §2), `dsd` (publish a machine's accounts to the registry), `bureau` (nothing beyond what the captain spec already names)
+**Repos touched:** `substation` (a seat registry to read, resolution at launch, ownership enforcement, recording who launched a run, and per-user API keys), `cityhall` (one signed-in page where a person creates their own key — §3.3b), `conductor2` (`init` sends its credential; §3.3a, §3.3b — its seat hook contract is untouched and is the model this borrows, §2), `claude-plugins` (the `register-seat` skill and its upload script — §3.2a), `dsd` (nothing: the skill reads `dsd.conf`, dsd gains no command — §3.2a), `bureau` (nothing beyond what the captain spec already names)
 **Repos NOT touched:** none — this reaches every repo in the launch path, which is what identity costs
 **Split from:** `../cloud-captain/DESIGN-SPEC.md` v2 §6. That spec's **D10** (a per-run `claude_code_oauth_token` on the launch body) is the interim that unblocks subscription cloud runs without this one, which is why this is separable.
 **Sibling:** `../cloud-captain/DESIGN-SPEC.md`
 
+> **Revision note (v6, 2026-09-22).** Answers **Q7** with **D10** and **D11**, and closes **Q1**, which v1 called the question that gates implementation. Adds **Q8** and **Q9**. D1–D9 and Q2–Q6 keep their numbers.
+>
+> *(Numbering note: this spec's D10/D11 are its own. Every reference to the captain spec's decisions stays written as `../cloud-captain/` D10 etc., as it has since v1.)*
+>
+> **Q1 — RESOLVED. A per-account token comes from `claude setup-token`**, which is in the shipped CLI ("Set up a long-lived authentication token (requires Claude subscription)"), run under that account's `CLAUDE_CONFIG_DIR`. v1 could not answer this and correctly refused to guess. It is not extracted from a seat — it is minted beside one.
+>
+> **D1 is overturned in its mechanism, not its intent.** v1 said `dsd` gains a command to publish a machine's accounts, "so `dsd.conf` stays the human-editable source and the registry is its projection." That cannot work for the credential half: **`dsd.conf` contains no token at all** — an account row is `account = <alias> | <config_dir> | <bar color> | <text color>`, and the config dir holds a logged-in *session*, not a value anything can read out and post. So a projection can carry the alias and the owner and can never carry the credential. **D10 replaces it**: a shared Claude Code skill, one account at a time, through three new substation routes. `dsd` gains nothing; the skill only *reads* `dsd.conf` for the alias list.
+>
+> **A token does not say whose account it is.** Checked against the one thing that could have told us: dsd's `/usage` probe yields `{account, kind, status, poll_updated_at, plan_type, five_hour, seven_day}`, and that `account` is the alias dsd passed *in*, not something the panel reported back. So the alias attached at registration is **asserted by the person registering**, and nothing can verify it. D8 still enforces that the row is *yours*; what it cannot check is which of your own accounts a given token is. **Q9** is an optional way to get real evidence.
+>
+> **The credential never passes through the agent, and that is a decision, not a style note.** Transcripts are plaintext JSONL on disk. `with-secrets` exists because on 2026-09-17 a session read a token file, a shell error echoed the token into its transcript, and the token had to be rotated. So "paste it in the chat" and "run `claude setup-token` in the session" are both ruled out — the second because `setup-token` prints the token to stdout. §3.2a's staging directory is how the value moves around the agent instead of through it.
+>
+> **All accounts are offered, with no filtering.** Not dsd's own `owner =` ∩ `seat_allow` intersection, which an earlier draft of this proposed: on this fleet a personally-named account (`will-navey-personal`) is used for company spending, so inferring policy from a name or a local allowlist would hide a seat its owner wants. The operator chooses; the skill does not.
+>
 > **Revision note (v5, 2026-09-22).** Adds **D9** — when and where the seat's token is fetched. D1–D8 and Q1–Q5, Q7 keep their numbers and meaning.
 >
 > **The seat token is resolved fresh on every pass, from `subscription_seat`, by the alias on the run — not copied into `runbook_run_secret` at launch.** A cloud run parks on a human and can resume days later; a token copied at launch is frozen there, so re-issuing a seat's token strands every parked run holding a dead credential and fires cloud-captain D11's expired-token gate for a reason we created ourselves. Fresh resolution heals those runs automatically, and the credential stays in one place instead of being copied per run.
@@ -115,7 +129,54 @@ RLS enabled, **no read policy at all** — the same shape the captain spec's `ru
 
 Local seats are config *directories*; the cloud consumes a *token*. Storing a per-account `CLAUDE_CODE_OAUTH_TOKEN` and injecting it exactly where `env.ts` injects the shared one today is the smallest change — the injection path, the subscription gating, and the "a metered run must never carry it" rule all already exist and are tested.
 
-**Unresolved:** where that token comes from. A `config_dir` is a logged-in session, not a token a human types. Whether one can be extracted from a seat, or must be issued separately per account, is **Q1** and gates this spec's implementation the way seat resolution gates the billing flip.
+**Resolved (v6).** It comes from **`claude setup-token`** — in the shipped CLI, "Set up a long-lived authentication token (requires Claude subscription)" — run with `CLAUDE_CONFIG_DIR` pointed at that account's directory. Nothing is extracted from a seat; a token is *minted beside* one, by the human who owns it. §3.2a is how it reaches the registry.
+
+### 3.2a Populating the registry (D10, D11, resolving Q7)
+
+**D1's mechanism does not survive contact with the file.** `dsd.conf` holds `account = <alias> | <config_dir> | <bar color> | <text color>` and **no token anywhere**; a config dir is a logged-in session, not a value a publisher can read and post. A projection of `dsd.conf` can therefore carry the alias and the owner and can never carry the credential. That half needs a deliberate human act per account, which is what this section builds.
+
+**D10 — a shared Claude Code skill, `register-seat`, in `claude-plugins`, working one account at a time.** Registering a seat is rare, per-account, and has a browser step in the middle: exactly the shape a skill is good at and a publisher command is not. `dsd` gains nothing; the skill *reads* `dsd.conf` for the alias list.
+
+**Three new substation routes**, authenticated with `SUBSTATION_PERSONAL_API_KEY` (D8) and scoped to the caller's own identity, so a person can only ever see and write their own seats:
+
+| route | does | returns |
+|---|---|---|
+| `GET /api/seats` | list my seats | alias, `active`, **whether a token is present**, created / last-verified — **never the token** |
+| `PUT /api/seats/:alias` | register or rotate my seat's token | confirmation only |
+| `DELETE /api/seats/:alias` | retire a seat | — |
+
+This is the second job the personal key does, and the reason §3.3b named it for a *person* rather than for subscription billing.
+
+**Step 0, before any account.** The skill checks for `SUBSTATION_PERSONAL_API_KEY` and, when it is absent, sends the operator to cityhall to mint one and stops. Without this the first call 401s and the error describes the wrong problem.
+
+**The loop.** For each `account =` row in `dsd.conf` — **every row, with no filtering** (see below) — the skill states whether a token is already registered and when it was last verified, then offers three things: **do nothing · supply a token you already have · mint a new one**. Then the next account.
+
+**The credential moves around the agent, never through it.** Transcripts are plaintext JSONL on disk; `with-secrets` exists because on 2026-09-17 a session read a token file, a shell error echoed it into the transcript, and the token had to be rotated. So the token is staged in a file the skill *names but never opens*:
+
+```
+~/.noetic-seat-tokens/<alias>          # dir 700, files 600
+```
+
+- **Supply one you have** → the operator writes the token into that path themselves, one line, raw value, no `KEY=` prefix and no quotes; the script trims whitespace.
+- **Mint a new one** → `CLAUDE_CONFIG_DIR=<account dir> claude setup-token > ~/.noetic-seat-tokens/<alias>` fills the same file (**Q8**: `setup-token` is a browser flow and may require a TTY, in which case this is a copy-paste into the file rather than a redirect — the design is unchanged either way).
+
+Both paths converge on one upload: the script reads the file, calls `PUT /api/seats/:alias`, and **deletes the file on success**. The transcript holds the path, the command and `registered seat <alias>` — never a value.
+
+Five rules the script and skill carry, each earning its place:
+
+1. **The staging directory is outside the credentials folder.** The guard hook denies any tool call that *names* a file in `~/.config/ida/`, and the skill must name this one. (That folder exists on some machines in this fleet and not others, which is also why the skill cannot assume where an existing token lives.)
+2. **The skill never reads the file** — no `cat`, `head`, `grep`, `echo`. An agent's instinct after asking for a file is to check it; that instinct is the leak. Safe substitutes give the same reassurance: `test -f` for existence, `wc -c` for a byte count, `stat` for permissions.
+3. **The filename must match the `--alias` being uploaded.** This is the one check that catches writing `max-g`'s token into the slot uploaded as `max-a` — two accounts, two windows, and nothing downstream would ever reveal the swap.
+4. **The alias is validated against `[A-Za-z0-9._-]` before it is interpolated into a path.** Aliases come from a human-edited config, so nobody is attacking anyone with it, but one containing `/` or `..` turns a filename into path traversal.
+5. **The file is deleted on success, and the script refuses a world-readable one.** Otherwise a token in a transcript has been traded for a token sitting in `$HOME` indefinitely.
+
+Because the path carries the alias, an operator with several accounts can stage them all in advance and the skill can offer to upload what it finds in one pass instead of walking each interactively — which is the difference between a two-minute job and a twenty-minute one at eight accounts.
+
+**Every account is offered, with no filtering (D10).** Not dsd's own `owner =` ∩ `seat_allow` intersection (`Pool::candidates`), which an earlier draft proposed by analogy. On this fleet a personally-named account — `will-navey-personal` — is used for company spending, so inferring policy from a name, or from a local allowlist written for local automation, would hide a seat its owner wants registered. The operator chooses; the skill offers everything and infers nothing.
+
+**What is asserted, and what is enforced.** D8 enforces that the row being written is *yours* — the personal key resolves to your user id and the route scopes to it. What nothing can check is *which* of your accounts a given token is, because a token does not identify its account (the `/usage` probe reports back only the alias it was given). Getting that wrong is a self-inflicted accounting error inside your own seats rather than a cross-person one, which is why v1 ships without solving it; **Q9** is the optional way to get real evidence.
+
+**D11 — a launch that resolves a seat with no registered token is refused by name.** `POST /api/runs` answers `seat_not_registered`, naming the alias and pointing at the skill. `substation/src/routes/runs.ts` already refuses in exactly this register — `no_project_for_subscription` and `no_subscription_seat` both name the field and list the ways out — and this is what makes the whole feature discoverable instead of tribal knowledge.
 
 ### 3.3 Resolution (D2, D3)
 
@@ -224,15 +285,19 @@ Usage-aware picking (choosing the least-tired of a person's accounts, as a local
 - **D7** — `POST /api/runs` records the acting identity as `runbook_runs.triggered_by`: `conductor init` sends `x-on-behalf-of`, the route resolves it with the shipped `SERVICE_SENTINELS` pattern, the insert writes the column. Self-asserted on every launch D8 does not cover — mistake-prevention, not authorization (§3.3a).
 - **D8** — A cloud subscription launch authenticates with a per-user substation API key, `SUBSTATION_PERSONAL_API_KEY`: no expiry, revocable, `last_used_at`; minted self-service in cityhall under the person's own SSO session and stored hashed in `personal_api_key`; held on the operator's machine in `~/.env`, never in substation's environment; required on the launch call alone and never inside the sandbox. **Cloud + subscription + a shared credential is refused 403** — the refusal is what makes D5 and D7 real. Additive: metered keeps `SUBSTATION_SERVICE_API_KEY`, local is untouched. (§3.3b)
 - **D9** — The seat's `claude_code_oauth_token` is resolved fresh from `subscription_seat` on every pass, by the alias on the run, in substation's `buildLaunchEnv` — not copied into `runbook_run_secret` at launch. A caller-supplied per-run token still wins where present (Q5 unchanged). The sandbox receives it as an environment variable and can never read the table. (§3.3c)
+- **D10** — The registry is populated by a shared `register-seat` Claude Code skill in `claude-plugins`, one account at a time, through `GET`/`PUT`/`DELETE /api/seats[/:alias]` authenticated by `SUBSTATION_PERSONAL_API_KEY` and scoped to the caller. It reads `dsd.conf` for aliases and **offers every account with no filtering**; `dsd` gains no command. The token is staged in `~/.noetic-seat-tokens/<alias>`, which the skill names and never opens, and the script deletes on success. (§3.2a)
+- **D11** — A launch whose resolved seat has no registered token is refused by name: `seat_not_registered`, naming the alias and pointing at the skill. (§3.2a)
 
 *(D2, D4 and D5 were `../cloud-captain/` v2's D17, D16 and part of §6 respectively, moved here in that spec's v3.)*
 
 ## 5. Open questions
 
-- **Q1 — where does a per-account cloud credential come from?** A local seat is a `CLAUDE_CONFIG_DIR` holding a logged-in session, not a token. Can a usable `CLAUDE_CODE_OAUTH_TOKEN` be extracted from one, or must each account be provisioned a token separately? **This gates implementation.** (§3.2)
+- **Q1 — RESOLVED (v6).** `claude setup-token`, in the shipped CLI, run under the account's `CLAUDE_CONFIG_DIR`. Nothing is extracted from a seat; a token is minted beside one by the human who owns it, and reaches the registry through §3.2a. (§3.2)
 - **Q2 — cross-run leases.** Ship a `seat_lease` row in v1 after all, or accept that two concurrent cloud runs can collide on one account until phase 2? (§3.6)
 - **Q3 — the null and admin cases.** A cron- or API-triggered run has no `triggered_by`. Does that mean no seat (→ D4's gate), or the org seat? And is there ever a legitimate reason to let someone run on an account they do not own? (§3.4)
 - **Q4 — does the registry eventually feed the local lane too?** `dsd.conf` would become the editing surface and the registry its projection; or the registry becomes canonical and `dsd.conf` a cache. Not needed for cloud, but two sources of truth for "who owns which account" is the drift this spec is otherwise avoiding.
+- **Q5 — retiring `../cloud-captain/` D10** (that spec's, not this one's). Once resolution works, does the captain spec's per-run `claude_code_oauth_token` stay as an escape hatch (a one-off run on a seat not in the registry), or is it removed so there is one path? (§Problem)
 - **Q6 — RESOLVED (v4).** A launch proves who it is with **D8**, a per-user substation API key required for cloud subscription launches and refused-if-absent. Not the verified-JWT option, which needs an interactive login on a CLI that also runs headless, plus refresh machinery. Not a replacement for the shared service key either: metered is untouched, so `../conductor-init/` D4's service-role debt stands. (§3.3b)
-- **Q7 — who writes the `subscription_seat` rows, and how?** D8 supplies the trusted identity that makes self-service registration possible, and the same signed-in cityhall surface is the obvious home — but the credential itself cannot come from `dsd.conf`, which holds `account = <alias> | <config_dir> | <colors>` and **no token at all**. So D1's "publish from `dsd.conf`" can project the alias and the owner and structurally cannot project the credential: that has to be minted deliberately per account (`claude setup-token`, an interactive flow, run under that account's `CLAUDE_CONFIG_DIR`) and handed over once. Also unresolved inside this: `dsd` knows owners as names (`will`, `jason`) while `owner_user_id` is an `auth.users` UUID, so something must bridge them. **This is the next thing to settle.** (§3.1, §3.2)
-- **Q5 — retiring D10.** Once resolution works, does the captain spec's per-run `claude_code_oauth_token` stay as an escape hatch (a one-off run on a seat not in the registry), or is it removed so there is one path? (§Problem)
+- **Q7 — RESOLVED (v6)** by **D10** and **D11**. The answer is not a `dsd` publisher: `dsd.conf` holds no token, so a projection can carry the alias and owner and never the credential. Note the bridge v1 worried about — `dsd`'s owner names vs `auth.users` UUIDs — **does not arise**, because the skill authenticates as the person (D8) and substation resolves `owner_user_id` from the key rather than from anything `dsd` says.
+- **Q8 — does `claude setup-token` pipe?** §3.2a's mint path redirects its stdout into the staging file. It is a browser auth flow and may require a TTY, in which case minting is a copy-paste into the file rather than a redirect. One line of the skill, not a design change — but it should be tested rather than assumed.
+- **Q9 — can a token be verified against the alias it is registered under?** Nothing identifies a token's account, so the alias is asserted (§3.2a). One cheap check exists: probe the token once and compare its 5h/7d readings and reset time against the snapshot `dsd usage` already holds for that alias. Windows are account-scoped and reset times are specific, so matching numbers are strong evidence — not proof — that they are the same account. Both halves already exist. Worth it in v1, or is a self-inflicted mislabel inside one's own seats an acceptable failure?
