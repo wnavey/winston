@@ -160,6 +160,7 @@ It must persist because **park-and-exit rebuilds the sandbox env on every pass**
 
 This is not throwaway: when the registry lands, the resolver writes into the same slot instead of the caller supplying it. The injection path, the subscription gating and the "a metered run must never carry it" rule are unchanged.
 
+- **D12 is amended by `../seat-resolution/` D13 (2026-09-22).** Once the seat registry exists, a **cloud subscription** run no longer falls back to substation's shared `CLAUDE_CODE_OAUTH_TOKEN`: it is refused with `seat_not_registered`. Falling back was strictly better than failing when there was nothing to resolve against; with a registry it makes registration optional and the ownership check bypassable, which is what `docs/runbooks.md:74` forbids. D12 stands unchanged everywhere else, and until the registry lands.
 - **D11 — an expired token opens an `operator` gate**: "this run's seat token is no longer valid — supply a new one, or continue metered." Same gate shape as D16, no new concept.
 - **D12 — no token supplied ⇒ today's behaviour.** Fall back to substation's shared `CLAUDE_CODE_OAUTH_TOKEN` rather than failing, so D10 is purely additive and nothing that works today breaks.
 - **D13 — seat exhaustion mid-run parks.** conductor already parks with `seat_exhausted` on a 429. The captain opens an `operator` gate naming the seat and its reset time. **It must not auto-fall-back to metered**: silently switching to real dollars because a rate limit hit is the surprise the Token Spend Rules exist to prevent.
@@ -203,7 +204,7 @@ Independently useful, not blocking: `pass.log`'s last lines as a checkpoint on a
 - **D9** — Every captain question is a `runbook_hitl_questions` row, **both lanes**. A local answer may still arrive in chat (`channel='session'`); the row always exists. Puts `claude-plugins` SKILL.md in scope. (§2)
 - **D10** — Per-run `claude_code_oauth_token` on the launch body, never in `request`, stored write-only in `runbook_run_secret`, injected each pass, deleted at terminal status. (§5.2)
 - **D11** — An expired token opens an `operator` gate. (§5.2)
-- **D12** — No token supplied ⇒ today's shared-token behaviour. Purely additive. (§5.2)
+- **D12** — No token supplied ⇒ today's shared-token behaviour. Purely additive. (§5.2) **Amended by `../seat-resolution/` D13:** not for a cloud subscription run once the registry exists — that case is refused instead.
 - **D13** — Seat exhaustion parks on an `operator` gate; never auto-fall-back to metered. (§5.2)
 - **D14** — The captain narrates itself: a `note` checkpoint per action. (§3.3)
 - **D15** — Completion validation is minimal: `conductor status`, every contract passing, nothing stood aside. (§2)

@@ -1,12 +1,23 @@
 # Seat resolution — spending the right person's subscription account on a cloud run
 
-**Status:** Draft v7
+**Status:** Draft v8
 **Date:** 2026-09-22
 **Repos touched:** `substation` (a seat registry to read, resolution at launch, ownership enforcement, recording who launched a run, and per-user API keys), `cityhall` (one signed-in page where a person creates their own key — §3.3b), `conductor2` (`init` sends its credential; §3.3a, §3.3b — its seat hook contract is untouched and is the model this borrows, §2), `claude-plugins` (the `register-seat` skill and its upload script — §3.2a), `dsd` (nothing: the skill reads `dsd.conf`, dsd gains no command — §3.2a), `bureau` (nothing beyond what the captain spec already names)
 **Repos NOT touched:** none — this reaches every repo in the launch path, which is what identity costs
 **Split from:** `../cloud-captain/DESIGN-SPEC.md` v2 §6. That spec's **D10** (a per-run `claude_code_oauth_token` on the launch body) is the interim that unblocks subscription cloud runs without this one, which is why this is separable.
 **Sibling:** `../cloud-captain/DESIGN-SPEC.md`
+**Amends:** `../cloud-captain/DESIGN-SPEC.md` **D12** — its shared-token fallback is closed off for cloud subscription runs (§3.5a, D13). That spec carries a matching note.
 
+> **Revision note (v8, 2026-09-22).** Answers **Q3** with **D13** and **D14**. Most of Q3 dissolved on inspection; what was left underneath it was a hole in D8. D1–D12 and Q1, Q2, Q4–Q9 keep their numbers.
+>
+> **There is no such thing as a cron-triggered run.** Q3 assumed one. `GET /api/cron/reconcile` only *advances* runs — it selects, leases and updates, and neither `cron-reconcile.ts` nor `reconcile-loop.ts` contains an insert; the sole mention of the word is a comment pointing at "a row inserted by `POST /api/runs`". Every run is born at that route with whoever launched it, and the cron pushes along a run that already has a `triggered_by`. (`POST /api/runs` also has exactly one caller in the codebase today — `conductor init`. The route's own comment names cityhall and prospector too; neither posts to it.)
+>
+> **And after D8 the null case is unreachable where it matters.** `triggered_by` is NULL only for a caller authenticated with a bare service credential, and D8 refuses a cloud subscription launch that authenticated with a shared credential. So a NULL survives only on cloud-metered and local runs — neither of which resolves a seat. Q3's "no seat, or the org seat?" never has to be answered, because **a run that resolves a seat always has a person**.
+>
+> **What was left underneath Q3 is a real hole, and it is in D8.** Q3 asked whether NULL should mean "the org seat". We already have an org seat: substation's shared `CLAUDE_CODE_OAUTH_TOKEN`, which `runs.ts` still admits whenever it is configured — `../cloud-captain/` **D12**, "no token supplied ⇒ today's shared-token behaviour". So an operator holding a personal key but no registered seat would be handed the shared account instead of D11's refusal, which means **D8's enforcement is bypassable by simply never registering a seat**, and everyone lands back on one shared account. **D13 closes it**: for a cloud subscription run the shared token is not a fallback, and D11's refusal wins. An optional control is not a control.
+>
+> **D14 — no admin override.** Q3's second half asked whether anyone should ever run on an account they do not own. No: registration is self-service (§3.2a), so anyone can register any account they hold a token for, and an account they *cannot* register is one that is not theirs — precisely the case `docs/runbooks.md:83` is about. An override would be a way to spend a colleague's week without their knowledge, and nothing in the workflow needs it. D5 stays absolute: one rule, no exception path, nothing to audit.
+>
 > **Revision note (v7, 2026-09-22).** Answers **Q2** with **D12**, and in doing so declines to build the thing v1 assumed it would. D1–D11 and Q1, Q3–Q9 keep their numbers.
 >
 > **The problem is not a race, it is a guarantee.** §3.3's step 2 resolves "the first `active` account owned by `triggered_by`", which is deterministic — so two cloud runs launched back to back do not *sometimes* collide on one seat, they *always* do. Both then draw on the same 5h and 7d windows, neither knows the other exists, and both stall when it is gone (`seat_exhausted`, a 429, already a path conductor has). The unit of damage is large: `docs/runbooks.md` puts a single review run at "up to 1 full week of subscription usage for a 20x Max account".
@@ -270,13 +281,35 @@ reconcile-loop.ts:416  →  buildLaunchEnv()  →  buildRunbookEnv()  →  env h
 
 Substation refuses a `seat` alias whose `owner_user_id` is not `triggered_by`, at launch. `docs/runbooks.md:83` is a rule the system can enforce at the one point that knows both facts; leaving it to convention is how the shared-token problem happened in the first place.
 
-**Open:** whether a deliberate exception is ever wanted (an admin running on the org seat), and whether `triggered_by` being null — a cron- or API-triggered run — means "no seat" or "the org seat". See **Q3**.
+**Resolved (v8, D14): there is no exception.** Not for an admin, not for the org seat, not for a run whose `triggered_by` is null. See §3.5a.
 
 ### 3.5 When nothing resolves (D4)
 
 An `operator` HITL question against the run, offering **continue metered** or **cancel**; cancel sets the run `cancelled`, which already exists in the status enum for exactly this — a human's decision, not a malfunction.
 
 Resolution runs on every cloud run; the gate fires only on failure. Failing the launch outright is the wrong shape: the work still needs doing, and a billing-lane lookup is not a reason to lose a queued run.
+
+### 3.5a No org seat, and no admin exception (D13, D14, resolving Q3)
+
+**Q3's premise was half wrong.** It worried about a run with no `triggered_by` — "a cron- or API-triggered run". There is no cron-triggered run: `GET /api/cron/reconcile` only advances runs, and contains no insert. Every run is created at `POST /api/runs` by whoever launched it. And a NULL `triggered_by` requires a bare service credential, which D8 refuses for exactly the runs that resolve a seat:
+
+| run | can `triggered_by` be NULL? | does it matter? |
+|---|---|---|
+| cloud + subscription | **no** — D8 makes it impossible | — |
+| cloud + metered | yes | no seat is resolved at all |
+| local, either billing | yes | the seat comes from the operator's own machine (§2) |
+
+**A run that resolves a seat always has a person.** That is the whole of Q3's first half.
+
+**D13 — the shared `CLAUDE_CODE_OAUTH_TOKEN` is not a fallback for a cloud subscription run.** Substation still holds one, and `runs.ts` today admits a cloud subscription launch with no per-run token whenever that variable is configured — `../cloud-captain/` **D12**, written when the registry did not exist and falling back was strictly better than failing.
+
+With the registry it stops being better. An operator holding a personal key but no registered seat would be handed the shared account rather than D11's `seat_not_registered`, so **the registry becomes optional and D8's enforcement becomes bypassable by never registering**. Everyone lands back on one shared account, which is the condition this spec exists to end, and `docs/runbooks.md:83` forbids by name.
+
+So for `cloud && billing === 'subscription'`, **D11's refusal wins and the shared token is not consulted.** This amends `../cloud-captain/` D12 rather than deleting it: that fallback stays wherever else it applies, but it is no longer reachable as an unregistered-seat backstop. Whether the shared token should exist at all afterwards is **Q5**.
+
+**D14 — there is no admin override.** Q3 asked whether anyone should ever be allowed to run on an account they do not own. No. Registration is self-service (§3.2a): anyone can register any account they hold a token for, so an account someone *cannot* register is one that is not theirs — which is the case `:83` describes rather than an edge it forgot. An override would be a supported way to spend a colleague's week without their knowledge.
+
+D5 therefore stays absolute. One rule, no exception path, nothing to audit — and no second code path that has to be kept correct as everything around it changes.
 
 ### 3.6 Spreading, and the leases we are not building (D12, resolving Q2)
 
@@ -317,6 +350,8 @@ group by seat
 - **D10** — The registry is populated by a shared `register-seat` Claude Code skill in `claude-plugins`, one account at a time, through `GET`/`PUT`/`DELETE /api/seats[/:alias]` authenticated by `SUBSTATION_PERSONAL_API_KEY` and scoped to the caller. It reads `dsd.conf` for aliases and **offers every account with no filtering**; `dsd` gains no command. The token is staged in `~/.noetic-seat-tokens/<alias>`, which the skill names and never opens, and the script deletes on success. (§3.2a)
 - **D11** — A launch whose resolved seat has no registered token is refused by name: `seat_not_registered`, naming the alias and pointing at the skill. (§3.2a)
 - **D12** — Resolution step 2 picks the caller's `active` seat with the **fewest runs in flight** — one `count(*)` over `runbook_runs` where `status in ('queued','running')`, ties broken on alias. `parked` does not count. No `seat_lease` table, no waiting, no headroom awareness, and no protection from a deliberate overdraw. (§3.6)
+- **D13** — For a cloud subscription run the shared `CLAUDE_CODE_OAUTH_TOKEN` is **not** a fallback: D11's `seat_not_registered` wins. Amends `../cloud-captain/` D12, whose fallback would otherwise make the registry optional and D8 bypassable. (§3.5a)
+- **D14** — No admin override and no org seat. D5 is absolute: nobody runs on an account they do not own, because registration is self-service and an account you cannot register is not yours. (§3.5a)
 
 *(D2, D4 and D5 were `../cloud-captain/` v2's D17, D16 and part of §6 respectively, moved here in that spec's v3.)*
 
@@ -324,7 +359,7 @@ group by seat
 
 - **Q1 — RESOLVED (v6).** `claude setup-token`, in the shipped CLI, run under the account's `CLAUDE_CONFIG_DIR`. Nothing is extracted from a seat; a token is minted beside one by the human who owns it, and reaches the registry through §3.2a. (§3.2)
 - **Q2 — RESOLVED (v7)** by **D12**. Neither option as v1 framed them: not a `seat_lease` table, and not accepting the collision. Resolution step 2 spreads on a `count(*)` of in-flight runs per alias, which removes the deterministic funnel without any lease lifecycle. Waiting, headroom-aware picking and protection from a deliberate overdraw are all explicitly out. (§3.6)
-- **Q3 — the null and admin cases.** A cron- or API-triggered run has no `triggered_by`. Does that mean no seat (→ D4's gate), or the org seat? And is there ever a legitimate reason to let someone run on an account they do not own? (§3.4)
+- **Q3 — RESOLVED (v8)** by **D13** and **D14**. The premise was half wrong: there is no cron-triggered run (the cron only advances; every run is created at `POST /api/runs`), and after D8 a NULL `triggered_by` is impossible on exactly the runs that resolve a seat. What remained underneath was a hole in D8 — the shared token was still a silent fallback, making the registry optional — now closed. No org seat, no admin exception. (§3.5a)
 - **Q4 — does the registry eventually feed the local lane too?** `dsd.conf` would become the editing surface and the registry its projection; or the registry becomes canonical and `dsd.conf` a cache. Not needed for cloud, but two sources of truth for "who owns which account" is the drift this spec is otherwise avoiding.
 - **Q5 — retiring `../cloud-captain/` D10** (that spec's, not this one's). Once resolution works, does the captain spec's per-run `claude_code_oauth_token` stay as an escape hatch (a one-off run on a seat not in the registry), or is it removed so there is one path? (§Problem)
 - **Q6 — RESOLVED (v4).** A launch proves who it is with **D8**, a per-user substation API key required for cloud subscription launches and refused-if-absent. Not the verified-JWT option, which needs an interactive login on a CLI that also runs headless, plus refresh machinery. Not a replacement for the shared service key either: metered is untouched, so `../conductor-init/` D4's service-role debt stands. (§3.3b)
