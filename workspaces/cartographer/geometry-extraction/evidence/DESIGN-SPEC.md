@@ -7,6 +7,8 @@
 **Prod:** Supabase project **Noetic App** (`mgxqsrjutswbciyrltwd`), bucket `cartographer-files`
 **Predecessors:** [`../DESIGN-SPEC.md`](../DESIGN-SPEC.md) (winston#266) — the runbook this instruments · [`../../geometry-placement/DESIGN-SPEC.md`](../../geometry-placement/DESIGN-SPEC.md) (winston#270) — frames and placement evidence
 
+**Companion:** [`entity-model.html`](entity-model.html) — the visual data model (entities · the crop chain · the bidirectional trace · cascade behaviour · what a box means)
+
 > A published figure is currently unfalsifiable. It carries bearings and distances with no record of where on the page they were read, what the ink actually looked like, or how much of the reading was a guess. This adds that record, and a view that draws it back onto the source PDF.
 
 ---
