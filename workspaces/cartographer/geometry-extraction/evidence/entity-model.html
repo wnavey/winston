@@ -331,7 +331,7 @@ code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px s
         <div class="row hi"><span class="b b-fk">FK</span><span class="b b-nn">NN</span><span class="nm">geometry_id</span><span class="ty">→ geometries · CASCADE</span></div>
         <div class="row"><span class="b b-fk">FK</span><span class="nm">crop_id</span><span class="ty">→ crops · nullable</span></div>
         <div class="row"><span class="b b-nn">NN</span><span class="nm">role</span><span class="ty">course · tie · pob · commencement · stated_area · context</span></div>
-        <div class="row hi"><span class="nm">course_index</span><span class="ty">int · index into mete.courses</span></div>
+        <div class="row hi"><span class="nm">course_index</span><span class="ty">int · index into mete.courses (a tie: into the commencement walk)</span></div>
         <div class="row"><span class="nm">reversed</span><span class="ty">bool · walked backwards</span></div>
         <div class="row"><span class="b b-nn">NN</span><span class="nm">source_kind</span><span class="ty">line_table_row · curve_table_row · drawing_label · coordinate_box · marker · area_statement · region</span></div>
         <div class="row"><span class="b b-nn">NN</span><span class="nm">verbatim</span><span class="ty">text · N ??°0?'19" W 36.09' · NOT NULL (Q7)</span></div>
@@ -357,6 +357,7 @@ code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px s
         <div class="row"><span class="nm">transform</span><span class="ty">jsonb · erode / threshold + args</span></div>
         <div class="row"><span class="b b-nn">NN</span><span class="nm">storage_path</span><span class="ty">text · cartographer-files</span></div>
         <div class="row"><span class="b b-nn">NN</span><span class="nm">delivered_px</span><span class="ty">jsonb · what the model saw</span></div>
+        <div class="row"><span class="b b-nn">NN</span><span class="nm">page_width_pt, page_height_pt</span><span class="ty">double · D3, same as evidence</span></div>
         <div class="note">One row per image a worker actually looked at.</div>
       </div>
 
@@ -467,7 +468,7 @@ code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px s
       <thead><tr><th>role</th><th>course_index</th><th>Means</th></tr></thead>
       <tbody>
         <tr><td><code>course</code></td><td><span class="w">required</span></td><td>a side of the figure — it drew a segment</td></tr>
-        <tr><td><code>tie</code></td><td><span class="none">null</span></td><td>a walk from the point of commencement to the start point (CA16, CA17)</td></tr>
+        <tr><td><code>tie</code></td><td><span class="w">required</span></td><td>a walk from the point of commencement to the start point (CA16, CA17) — the index is into that walk, not into <code>mete.courses</code></td></tr>
         <tr><td><code>pob</code></td><td><span class="none">null</span></td><td>the start point itself, usually a printed coordinate box</td></tr>
         <tr><td><code>commencement</code></td><td><span class="none">null</span></td><td>the monument the ties start from — the iron rod</td></tr>
         <tr><td><code>stated_area</code></td><td><span class="none">null</span></td><td>the printed area the computed area is checked against</td></tr>
@@ -475,7 +476,7 @@ code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px s
       </tbody>
     </table></div>
 
-    <div class="callout"><span class="lab">the constraint</span> A <code>course</code> row must carry an index, and nothing else may: <code>CHECK ((role = 'course' AND course_index IS NOT NULL) OR (role &lt;&gt; 'course' AND course_index IS NULL))</code>.</div>
+    <div class="callout"><span class="lab">the constraint</span> A <code>course</code> or <code>tie</code> row must carry an index, and nothing else may: <code>CHECK ((role IN ('course','tie') AND course_index IS NOT NULL) OR (role NOT IN ('course','tie') AND course_index IS NULL))</code>.</div>
   </section>
 
   <section class="panel" id="life">
@@ -522,7 +523,7 @@ code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px s
       </div>
     </div>
 
-    <div class="storage"><b>Storage:</b> bucket <code>cartographer-files</code> · path <code>&lt;file_id&gt;/geometry/&lt;geometry_id&gt;/crops/&lt;crop_id&gt;.jpg</code> — keyed by geometry so the sweep path is obvious</div>
+    <div class="storage"><b>Storage:</b> bucket <code>cartographer-files</code> · path <code>&lt;file_id&gt;/geometry/&lt;geometry_id&gt;/crops/&lt;crop_id&gt;.jpg</code> — keyed by geometry so the sweep path is obvious. The migration adds <code>image/jpeg</code> to the bucket's allowed types; it was created for PDFs and PNG thumbnails only.</div>
 
     <div class="callout ember"><span class="lab">open</span> Q6 — placement can be redone without re-reading the plat (winston#270 D1), but <code>publish.ts</code> deletes and reinserts figures wholesale. A placement-only re-run would destroy and rewrite evidence it never looked at.</div>
   </section>
