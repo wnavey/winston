@@ -1,7 +1,9 @@
 # Schema-driven HITL answer form — the gate step dictates the card
 
-**Status:** Draft v1
+**Status:** Draft v1.1
 **Date:** 2026-09-23
+
+> **Revision note (v1.1, same day).** Folded the cityhall#700 review: one `variants` construct instead of `variants` + `discriminated` (D2); the no-schema fallback is a synthesized schema through the same form (D6); `--allow-freeform` means an optional notes box (D5); `--schema-json` named (D5). substation's `SEAT_GATE_SCHEMA` gains `notes` so its "revise with a note" prompt has a field to receive it (PR 4).
 **Repos touched:** `cityhall` (render the answer form from the gate row's `schema`; post the schema's own shape), `bureau` (`runbook_hitl_cli.py ask` emits a schema from `--options`; `answer` writes `status`; `captain.py` forwards the step's schema; `decision.schema.json` generated from each gate contract's zod, with a CI drift check; `review/steps/3.12-deliver` gets its missing schema), `claude-plugins` (conductor skill §6: options are rendered, drop the notes-box workaround), `substation` (retire the `choice` → `status` translation once cityhall posts `status`)
 **Repos NOT touched:** `conductor2` (already ferries `decision.schema.json` to the gate row on both lanes — nothing to change), `dsd`, `inspector-general`
 **Builds on:** `../DESIGN-SPEC.md` (runbook checkpoints v2, the `schema` column and ajv arm), `../data-model-spec.html` tab 07 (winston#259, as-built findings on the six statements of the answer shape), `../cloud-captain/DESIGN-SPEC.md` (D9: every captain question is a row), `../agentic-hitl/DESIGN-SPEC.md`
@@ -55,8 +57,7 @@ Structured where understood, raw JSON where not, ajv at the door as the backstop
 | `number` / `integer` / `boolean` | input / checkbox |
 | `const` | not rendered; stamped into the answer |
 | nested `object` | a fieldset, recursively (sir's `publish` plan) |
-| `oneOf` / `anyOf` of objects that all carry the same `const` property | that property becomes the choice buttons; the chosen branch's other fields render below (what zod emits for a `discriminatedUnion`, D7) |
-| `oneOf` / `anyOf` of objects with no shared const (sir's `organization: by id \| by name`) | a small segmented "which" chooser naming each branch by its `title`, then that branch's fields |
+| `oneOf` / `anyOf` of objects (sir's `organization: by id \| by name`; what zod emits for a `discriminatedUnion`, D7) | one `variants` construct: a button per branch, titled by the branch's `title`, else its sole string `const` (so a zod union reads "approved / revise"), else "Option n"; the chosen branch's fields render below and its consts are stamped. A discriminated union is a variants list whose consts differ, not a second construct |
 | `if` / `then` and `allOf[{if, then}]` at the object level whose `if` is a single-property `const` | conditional `required` (+ `minLength` overrides) applied when that property holds that value |
 | anything else (`array`, `$ref`, `patternProperties`, `not`, …) | a raw JSON textarea for that property, labelled with the property's title, validated as parseable JSON only |
 
@@ -90,11 +91,11 @@ The console posts `{ status, notes?, publish?, … }` — the schema's shape. `p
   "required": ["status", "decided_by"] }
 ```
 
-`--allow-freeform` adds `notes` to `required`. With neither `--options` nor `--schema-file` the schema stays null and the console falls back (D6). `captain.py park()` passes the step's `decision.schema.json` through `ask --schema-file` when the file exists, so a captain-authored card at a declared gate keeps the gate's form.
+`--allow-freeform` adds an optional `notes` property ("allow" reads as optional; without it the card is a pure pick). With neither `--options` nor `--schema-file`/`--schema-json` the schema stays null and the console falls back (D6). `--schema-json` is the inline twin of `--schema-file`, for a shape the captain improvises on the spot: no schema is ever mandatory. `captain.py park()` passes the step's `decision.schema.json` through `ask --schema-file` when the file exists, so a captain-authored card at a declared gate keeps the gate's form.
 
 ### D6 — Fallbacks for rows that carry no schema
 
-When `schema` is null: if the payload carries `options`, the console synthesizes the D5 shape client-side and renders it; otherwise it renders today's Approve / Request revision pair. Every row already in prod stays answerable. Superseded and answered cards render the same form read-only, filled from the recorded decision (cityhall#699's toggle).
+When `schema` is null: if the payload carries `options`, the console synthesizes the D5 shape client-side; otherwise it synthesizes `{status: enum[approved, revise], notes, if revise then notes required}` — today's pair, expressed as a schema. Both render through the same `DecisionForm`, so there is one decision UI and one set of rules; a legacy row gives up one-click Approve for it (the same trade schema rows make). Every row already in prod stays answerable. Superseded and answered cards render the same form read-only, filled from the recorded decision (cityhall#699's toggle).
 
 ### D7 — `decision.schema.json` is generated from the contract zod
 
