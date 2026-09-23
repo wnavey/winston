@@ -115,6 +115,9 @@ Two consequences for the contracts, both intended:
 
 ## Implementation order (five PRs)
 
+As opened on 2026-09-23: 1 = cityhall#700 (merged), 2 = bureau#1693, 3 = claude-plugins#284, 4 = substation#298, 5 = bureau#1694. All reviewed by the agentic reviewer; every code suggestion was aligned with this spec and folded in place.
+
+
 | # | repo | change | deploy constraint |
 |---|---|---|---|
 | 1 | cityhall | select `schema`; `DecisionForm.svelte` (D1–D3); D6 fallbacks; post `status`; browser tests over the four real schemas | first |
