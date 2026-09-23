@@ -318,11 +318,11 @@ code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px s
         <div class="row"><span class="gut"></span><span class="b b-fk">FK</span><span class="b b-nn">NN</span><span class="nm">file_id</span><span class="ty">→ cartographer_files</span></div>
         <div class="row"><span class="gut"></span><span class="nm">label</span><span class="ty">text · "LOT 1"</span></div>
         <div class="row hi"><span class="gut"></span><span class="nm">mete</span><span class="ty">jsonb · the courses</span></div>
-        <div class="row add"><span class="gut">+</span><span class="b b-new">NEW</span><span class="nm">mete.courses[].verbatim</span><span class="ty">text · as printed</span></div>
+        <div class="row add"><span class="gut">+</span><span class="b b-new">NEW</span><span class="nm">mete.courses[].verbatim</span><span class="ty">text · <b>optional</b> — absent when not read from a printed call</span></div>
         <div class="row add"><span class="gut">+</span><span class="b b-new">NEW</span><span class="nm">mete.courses[].unreadable</span><span class="ty">bool · a guessed digit</span></div>
         <div class="row"><span class="gut"></span><span class="nm">polygon</span><span class="ty">jsonb · walked vertices</span></div>
         <div class="row"><span class="gut"></span><span class="nm">frame_key, offset_x/y</span><span class="ty">winston#270</span></div>
-        <div class="note">D9 needs no migration — <code>mete</code> is already jsonb.</div>
+        <div class="note">D9 needs no migration — <code>mete</code> is already jsonb. Both new fields are optional: a figure built from a coordinate table has no printed call to quote.</div>
       </div>
 
       <div class="ent newt">
@@ -334,7 +334,7 @@ code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px s
         <div class="row hi"><span class="nm">course_index</span><span class="ty">int · index into mete.courses</span></div>
         <div class="row"><span class="nm">reversed</span><span class="ty">bool · walked backwards</span></div>
         <div class="row"><span class="b b-nn">NN</span><span class="nm">source_kind</span><span class="ty">line_table_row · curve_table_row · drawing_label · coordinate_box · marker · area_statement · region</span></div>
-        <div class="row"><span class="b b-nn">NN</span><span class="nm">verbatim</span><span class="ty">text · N ??°0?'19" W 36.09'</span></div>
+        <div class="row"><span class="b b-nn">NN</span><span class="nm">verbatim</span><span class="ty">text · N ??°0?'19" W 36.09' · NOT NULL (Q7)</span></div>
         <div class="row"><span class="nm">value</span><span class="ty">jsonb · bearing + distance</span></div>
         <div class="row"><span class="nm">confidence</span><span class="ty">jsonb · unreadable, damagedFields, grounds</span></div>
         <div class="row"><span class="b b-nn">NN</span><span class="nm">page</span><span class="ty">int</span></div>
@@ -371,6 +371,8 @@ code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px s
       <span class="rl">cartographer_geometry_crops <span class="cf">‖──&lt;</span> cartographer_geometry_crops <span class="tag-new">[NEW]</span> <span class="cmt">— self, via parent_id: a crop cut from a crop (D6)</span></span>
       <span class="rl">evidence.course_index <span class="cf">──?</span> mete.courses[i] <span class="cmt">— positional, not a foreign key; the bidirectional trace (tab 3)</span></span>
     </div>
+
+    <div class="callout ember"><span class="lab">verbatim is optional on a course</span> <code>mete.courses[].verbatim</code> is absent whenever a figure was not built from metes-and-bounds strings — a coordinate-table reconstruction, a side computed to close a ring, an imported geometry. Absent means <i>not read from a printed call</i>; <code>unreadable</code> means <i>read, but a digit was destroyed</i>. Different things. On <b>evidence</b> the field stays NOT NULL, because a row with nothing read is not evidence — open as Q7.</div>
 
     <div class="callout"><span class="lab">why two tables</span> They have different cardinality. Twenty-one table rows are read from <b>one</b> crop, and one crop may be cut from another crop. Folding crops into an evidence column would duplicate the image metadata per row and leave nowhere to record the chain.</div>
 

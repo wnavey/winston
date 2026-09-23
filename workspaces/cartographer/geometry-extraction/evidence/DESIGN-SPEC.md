@@ -79,7 +79,7 @@ The drawing-tile fields (`location`, `alongLine`, `cutOff`, `distanceOnly`, `coo
 - **D6 — Crops form a chain, and evidence cites the leaf.** `parent_id` walks page → region crop → cell cut → eroded variant. The UI renders the chain as a breadcrumb (§9.3).
 - **D7 — Store the image the model actually saw.** The harness downsamples to roughly 1568 px on the long edge before a model sees anything (`tile.ts:34`). Uploading the full-resolution crop would show a reader something no worker ever looked at. The delivered image is both smaller and the honest artifact. The full-resolution recipe is stored alongside it (§3.4), so a re-render is always available.
 - **D8 — Only crops cited by published evidence are uploaded.** Run 3 produced 62 MB of crops and 5.7 MB of tiles for one two-page plat. The cited subset is roughly 17 images.
-- **D9 — `mete.courses` gains `verbatim` and `unreadable`.** The join is the rich path, but a course should be legible without one, and these two fields alone answer "how much of this figure was guessed". This ships first and independently (§10, Phase 0).
+- **D9 — `mete.courses` gains `verbatim` and `unreadable`, both optional.** The join is the rich path, but a course should be legible without one, and these two fields alone answer "how much of this figure was guessed". This ships first and independently (§10, Phase 0). **Optional is load-bearing: not every figure comes from metes-and-bounds strings.** A figure reconstructed from a coordinate table, a side computed to close a ring with no printed row anywhere, or geometry imported from a non-document source all yield courses with nothing printed to quote. `verbatim` absent means "not read from a printed call", which is different from `unreadable`, meaning "read, but a digit was destroyed". A consumer must treat a missing `verbatim` as normal, never as a defect. `mete` is one `jsonb` column, so there is no column-level nullability to set — the zod schema in §5.1 is the only enforcement, and it marks both fields optional.
 - **D10 — The honesty boundary of winston#270 D4 holds.** A vision worker reports what it read and where it read it. Scripts compute every coordinate transform. No model is asked to convert a tile box into a page box by hand — that is what `remapToPage` is for, once §1.4 is fixed.
 - **D11 — Evidence is additive and nullable.** Figures published before this exists show "no evidence recorded", never a fabricated box. The `/processed` tile is unchanged for them.
 - **D12 — The per-geometry view is a new route, not a panel.** `/processed` stays a whole-file view; `/geometry/[id]` is one figure, its shape, its evidence and its source page, and it opens in a new tab so a reader can hold it beside the plat.
@@ -311,7 +311,7 @@ CREATE TABLE public.cartographer_geometry_evidence (
   reversed       boolean NOT NULL DEFAULT false,
   source_kind    text NOT NULL,
   label          text,
-  verbatim       text NOT NULL,
+  verbatim       text NOT NULL,   -- an evidence row IS a reading; a computed course has no evidence row (§11 Q7)
   value          jsonb,
   confidence     jsonb NOT NULL DEFAULT '{}'::jsonb,
   page           int NOT NULL,
@@ -409,6 +409,7 @@ Phase 0 is worth shipping on its own: it is the difference between a figure that
 - **Q3 — Delivered-resolution crops, or full-resolution?** D7 says delivered, on the grounds that it is what the worker saw. A reviewer wanting to adjudicate a damaged digit themselves would want the 600-DPI cut. Storing both doubles the objects and is defensible.
 - **Q4 — Does the evidence view need the whole page, or the region?** On a 24×36 sheet a table region is a small fraction of the page, and pdf.js must render the full page at a scale where the highlight is findable. A "zoom to region" default may be needed rather than fit-to-width.
 - **Q5 — Do forensic transform variants get their own crop rows?** D5/D6 say yes, which makes the eroded image first-class and visible. The cost is more rows and more uploads for images that are diagnostic rather than evidentiary.
+- **Q7 — Should `evidence.verbatim` be nullable too?** It is `NOT NULL` on the reasoning that an evidence row is by definition what a worker read from a rectangle, so a row with nothing read is not evidence — a computed course simply has no evidence row, and the view says "no evidence recorded" for that segment. The alternative is a nullable `verbatim` carrying derived courses as evidence with a `confidence` block explaining the derivation, which keeps every course in one list at the cost of blurring what "evidence" means.
 - **Q6 — What happens to evidence when placement is re-run?** Placement can be redone without re-reading the plat (winston#270 D1), but `publish.ts` deletes and reinserts figures wholesale, so a placement-only re-run currently destroys and rewrites evidence too. A placement-only path would need to preserve it.
 
 ---
