@@ -2,12 +2,12 @@
 
 **Status:** Draft v1
 **Date:** 2026-09-24
-**Repos touched:** `surveyor` (read and report each layer's native spatial reference; per-county registry), `bureau` (`site-research` resolve-site records `native_sr`; `arcgis_query.py`; new `anchor-geometry` runbook), `substation` (`sir_add_parcel_geo` fills `geom_local`; `cartographer_files` gets a link to where the document came from; new `cartographer_anchors` table; RPC that writes anchored geometries into `geo`), `cartographer` (`src/lib/geometry/anchor.ts` solvers; extraction records basis-of-bearings, units and scale factor)
+**Repos touched:** `surveyor` (read and report each layer's native spatial reference; per-county registry), `bureau` (`site-research` resolve-site records `native_sr`; `arcgis_query.py`; new `anchor-geometry` runbook), `substation` (`sir_add_parcel_geo` fills `geom_local`; `cartographer_files` gets a link to where the document came from; new `cartographer_anchors` table; RPC that writes anchored geometries into `geo`), `cartographer` (`src/lib/geometry/anchor.ts` solvers; extraction records basis-of-bearings, units and scale factor; **`VISION.md` updated to include anchoring**, §3.9)
 **Repos NOT touched:** `cityhall` (the map already draws `geo.geom_wgs84`; a viewer for anchored geometries comes later, §8), `conductor2`, `claude-plugins`
 **Prod:** Supabase **Noetic App** (`mgxqsrjutswbciyrltwd`)
 **Predecessors:** [`../geometry-extraction/DESIGN-SPEC.md`](../geometry-extraction/DESIGN-SPEC.md) (winston#266, which deferred anchoring as "D3"), [`../geometry-placement/DESIGN-SPEC.md`](../geometry-placement/DESIGN-SPEC.md) (winston#270: frames, translation only, "SRID/WGS84 stays deferred"), [`../geometry-extraction/evidence/DESIGN-SPEC.md`](../geometry-extraction/evidence/DESIGN-SPEC.md) (winston#274)
 **Siblings:** [`../../diligence/sir-geometry/geom-local/GEOM_LOCAL_ITERATION_SPEC.md`](../../diligence/sir-geometry/geom-local/GEOM_LOCAL_ITERATION_SPEC.md) (**§3.2 reverses its §2 conclusion**), [`../../diligence/sir-geometry/ingesting-supporting-docs-3089/SPEC.md`](../../diligence/sir-geometry/ingesting-supporting-docs-3089/SPEC.md) (prior art: building a plat from its printed State Plane coordinates, done by hand)
-**Research:** IG report `2026-09-23-sir-geometry-source-survey` (inspector-general catalog)
+**Research (read this first for context):** Inspector General report **"SIR geometry source survey — how geometry is defined across the last 10 SIRs"**, <https://inspector-general-gamma.vercel.app/reports/view/2026-09-23-sir-geometry-source-survey/> (slug `2026-09-23-sir-geometry-source-survey`). §1.2's numbers come from it; §1.5 describes what it contains.
 **Source of truth for anchoring and `srid_local`.** This spec supersedes or amends the following; each now carries a dated pointer here:
 - geometry-extraction §7 "Anchoring (D3)" and "Coordinate-table primary reconstruction": no longer deferred.
 - evidence §9 "Anchoring … still deferred": no longer deferred.
@@ -83,6 +83,18 @@ The 2026-09-23 survey (every supporting document of the 10 newest SIRs: 645 `sir
 
 - **geom-local §2 (2026-08-12)** showed that choosing a State Plane zone *from a point location* is ambiguous: area-of-use boxes overlap (a Katy point matches TX Central and South Central; a Louisville point matches Indiana East), and some places have two legitimate systems (KY North vs KY Single Zone). It concluded "for the county path there is no non-arbitrary `srid_local`" and made `geom_local` optional. That was true of the inputs available then. **§3.2 supplies a non-arbitrary answer: the system the county's own parcel layer is stored in.**
 - The **3089 spec** built the car-wash plat (Jefferson County KY, instrument 2024178771) from its printed State Plane monuments, **by hand** (`geo` rows with `method='traverse'` and `'estimated'`, `srid_local=3089`). The same plat is Cartographer's only file today, and its placement already uses printed northing/easting differences (`placement_method='coordinates'`). **It is our ground truth** (§3.8).
+
+### 1.5 The research behind this spec (Inspector General report)
+
+The scoping was done as an exploratory spike on 2026-09-23 and published as an IG report: <https://inspector-general-gamma.vercel.app/reports/view/2026-09-23-sir-geometry-source-survey/>. Future sessions should read it before changing this spec's direction. What it contains:
+- **Scope.** The 10 most recently created SIRs, at their current version, all `supporting_document` artifacts: 645 `sir_artifact` rows, 445 unique files by name+size, about 6,800 pages. The three 2026-09-17 Conroe SIRs share one identical 100-file set.
+- **Method.** A text layer + regex pre-screen, then 10 parallel agents that examined *every* document: text search on text-layer PDFs, and page-by-page vision on the 301 scanned files and 39 TIFFs, zooming into exhibits. A merge agent then deduplicated across split batches. Each geometry was classified with a multi-label taxonomy of 18 classes (metes and bounds, State Plane coordinates, lat/long, UTM, PLSS aliquot, lot/block, TX abstract/survey reference, strip along a line, station and offset, aerial overlay, GIS figure, …), plus a best **reconstructability** (anchored / closed shape with no position / by reference / approximate / none).
+- **Summary page.** Total geometries (315 unique; 451 counted per SIR); what they define (easements 85, tracts 57, lots 31, …); the classification distribution; reconstructability; a classification × site heatmap.
+- **Coordinate systems found.** A table of every zone, datum and frame seen (TX Central 4203 NAD83; FL East 0901 NAD83(2011); FL West 0902 NAD83(1990)/(2011)/pre-1983; an ND North that's likely but unstated; UTM 13N; lat/long NAD27/NAD83), and whether each is usable as an anchor.
+- **Parser implications.** The metes-and-bounds edge cases seen in real documents: "beginning for reference" preambles, "less and except" subtraction, varas, spelled-out bearings, prose vs plat-label curves, river meanders, station equations, and OCR-garbled bearings.
+- **Per-SIR detail.** For every SIR: project name, SIR id, every document id (`sir_artifact.id`) with its type and whether it defines geometry, and every geometry with its classifications, source document ids and pages, and coordinate system or basis of bearings.
+- **Raw data.** `data.json` next to the report (inspector-general bucket, `reports/2026-09-23-sir-geometry-source-survey/data.json`) has every geometry and source in machine-readable form, keyed to `sir_artifact` ids. It's the natural seed for P3 triage and for choosing P2 pilot documents.
+- **Side findings.** SIR `ffbcbcc9` has 32 `sir_artifact` rows whose storage objects are missing. The three Conroe SIRs are the same run published three times.
 
 ---
 
@@ -228,6 +240,29 @@ A `gis_fit` anchor combines a survey-exact shape with a position that's only as 
 - **Palm Bay Lot 7** (ALTA survey with a FL East NAD83(2011) grid basis): `fitToRing` should give θ ≈ 0. A large rotation means a bad fit or a bad ring.
 - **One Conroe tract** (TxDOT right-of-way-map basis): no grid basis, so θ is a real unknown. This tests the ambiguity metric.
 
+### 3.9 Piece G: `cartographer/VISION.md` records the anchoring direction
+
+`VISION.md` (repo root, cartographer main `58ac25e`) is where this initiative's high-level direction lives. Today it says only that the near-term focus is SRID:0 display and that WGS84 display with MapLibre comes "eventually". It says nothing about how an SRID:0 shape *becomes* an anchored one.
+
+**D15.** The first cartographer PR of this work (P0c or P1, whichever lands first) updates `VISION.md` with a short, spec-independent section. Draft:
+
+> **From shapes to places (anchoring).** Cartographer's shapes are exact but
+> float: SRID:0, feet, oriented to the plat's own north. The SIR pipeline
+> already knows roughly where the land is: the county's parcel polygon. We
+> anchor a shape by solving one rotation + translation (+ scale) that lays it
+> onto the county's own State Plane grid: from printed coordinates when the plat
+> has them (rare), from named corners and lines when the description ties to
+> them, and otherwise by fitting it to the county parcel. Every anchored shape
+> carries how it was anchored and how much to trust its position. Anchored shapes
+> land in the same `geo` table the SIR map reads, so easements, lots and rights-of-way
+> appear on the map beside the parcel. Why this approach: across the 10 newest
+> SIRs, metes and bounds defined 42% of 315 geometries, while printed State Plane
+> coordinates appeared in about 1%
+> ([IG survey](https://inspector-general-gamma.vercel.app/reports/view/2026-09-23-sir-geometry-source-survey/)).
+> Design: winston `workspaces/cartographer/anchoring-geometries/DESIGN-SPEC.md`.
+
+It also edits "Eventually" so WGS84/MapLibre display is described as the viewer for *anchored* geometries (P3), not a separate goal. VISION.md stays high-level: no tables, no decision numbers.
+
 ---
 
 ## 4. Phases
@@ -236,7 +271,7 @@ A `gis_fit` anchor combines a survey-exact shape with a position that's only as 
 |---|---|---|
 | **P0a Native SR** (surveyor, bureau, substation) | D1–D4: helper + registry + tool; the SIR-path parcel tools and `arcgis_query.py` emit `native_sr`; resolve-site requires it; `sir_add_parcel_geo` fills `geom_local`; curated fallback table for the states we've seen (TX, FL, ND, KY); one-off backfill of the 21 existing rows | A new SIR's parcel rows have `srid_local` = the county layer's `latestWkid`; the Austin, Bexar and Travis cases come out 2277/2278 |
 | **P0b Linking** (substation, cartographer) | D5: columns + hash-deduplicating importer | One SIR supporting document imported; importing it from a second SIR reuses the same file |
-| **P0c Extraction metadata** (cartographer) | D6 | Car-wash re-extraction publishes its basis of bearings and its printed coordinates at non-POB corners |
+| **P0c Extraction metadata** (cartographer) | D6; D15 `VISION.md` update if this is the first cartographer PR | Car-wash re-extraction publishes its basis of bearings and its printed coordinates at non-POB corners |
 | **P1 Math** (cartographer) | D7–D9 + tests | Synthetic round trips recover θ/t/s; the car-wash `survey` vs `gis_fit` gap is measured and written into this spec as v2 |
 | **P2 Runbook + storage** (bureau, substation) | D10–D14 | Car-wash (KY), Palm Bay Lot 7 + its plat easements (FL), one Conroe tract (TX) anchored, operator-accepted, and drawn on the SIR map |
 | **P3 Scale** (later) | Triage using the spike's classifier; automatic import; an optional SIR step; a MapLibre/cityhall view with accuracy styling | Anchored easements appear in a SIR without anyone launching them |
@@ -261,7 +296,7 @@ P0a, P0b and P0c are independent and can run in parallel. P1 needs only P0c's fi
 
 ## 6. Decisions index
 
-D1 the county layer declares the zone (reverses geom-local §2 for the county path) · D2 generic function + registry, prospector fills entries · D3 fallback chain with a curated county table, no point-in-box · D4 resolve-site/RPC wiring · D5 content-hash linking · D6 extraction records basis/units/scale/control points · D7 three solvers · D8 shared metrics incl. ambiguity · D9 one anchor per frame · D10 separate manual runbook · D11 auto-accept suggestion only · D12 anchors table, no geometry FK · D13 `geo` rows produced as `method='anchored'` · D14 staleness never deletes.
+D1 the county layer declares the zone (reverses geom-local §2 for the county path) · D2 generic function + registry, prospector fills entries · D3 fallback chain with a curated county table, no point-in-box · D4 resolve-site/RPC wiring · D5 content-hash linking · D6 extraction records basis/units/scale/control points · D7 three solvers · D8 shared metrics incl. ambiguity · D9 one anchor per frame · D10 separate manual runbook · D11 auto-accept suggestion only · D12 anchors table, no geometry FK · D13 `geo` rows produced as `method='anchored'` · D14 staleness never deletes · D15 `cartographer/VISION.md` gains an anchoring section in the first cartographer PR.
 
 ## 7. Coordination and risks
 
@@ -282,4 +317,4 @@ Automatic anchoring inside the SIR run (P3, after accuracy is measured) · batch
 - cartographer main `58ac25e`: `src/lib/geometry/traverse.ts:42`, `types.ts:4-7`, `placement.ts`, `runbooks/extract-geometry/scripts/publish.ts`.
 - surveyor main `674ef84`: `src/lib/gis-client.ts:34,606-649`, `src/lib/gis-layer-identity.ts`, the parcel tools cited in §1.3.
 - claude-plugins: `parcel-geo-location-resolution` was deleted in `9ea95ae` (#226, 2026-09-01); its logic now lives in `site-research` resolve-site + `bin/`. There's a stale mention at `plugins/noetic-tools/skills/upload-sir/SKILL.md:77`.
-- Survey data: IG `2026-09-23-sir-geometry-source-survey` (`data.json` has every geometry with its source `sir_artifact` ids).
+- Survey data: IG report <https://inspector-general-gamma.vercel.app/reports/view/2026-09-23-sir-geometry-source-survey/> (§1.5). `data.json` has every geometry with its source `sir_artifact` ids.
