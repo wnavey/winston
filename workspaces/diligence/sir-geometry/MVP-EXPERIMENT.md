@@ -6,6 +6,7 @@
 **Repos NOT touched:** `bureau` (the SIR/diligence pipeline is unchanged — geometry is uploaded out-of-band), `conductor`
 **PRs:** substation#202 (merged), cityhall#624 (merged), cityhall#625 (open — map controls + geo-type tabs)
 **Prod:** Supabase project **Noetic App** (`mgxqsrjutswbciyrltwd`)
+**Later (2026-09-24):** for `geom_local`/`srid_local` and for new non-parcel `geo` rows (`method='anchored'`), see [`../../cartographer/anchoring-geometries/DESIGN-SPEC.md`](../../cartographer/anchoring-geometries/DESIGN-SPEC.md), which is the source of truth for both. (D1/D2 here were already revised by `geom-local/GEOM_LOCAL_ITERATION_SPEC.md`.)
 
 > This is an intentionally small, throwaway-friendly experiment to answer one question: *can we store real parcel geometry in the DB and render it interactively on the SIR page?* Yes. It is behind a Vercel flag (`sir-enable-map-view`, default off in prod) and is not wired into the bureau pipeline. "Perfection is the enemy of progress" was the explicit operating principle — several correct-but-larger designs were deliberately deferred (see §7).
 

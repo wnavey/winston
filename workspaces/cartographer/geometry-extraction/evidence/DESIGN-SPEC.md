@@ -436,4 +436,4 @@ Phase 0 is worth shipping on its own: it is the difference between a figure that
 - Re-reading the plat to improve the damaged digits. §1.2 establishes there is no resolution headroom; a better scan is the only fix, and this spec records uncertainty rather than reducing it.
 - The two sides of the cross-access easement the plat never printed (CA7, CA12). That is a document defect, already recorded in the figure's `notes`.
 - A run registry / evidence history across runs. winston#266 D5 deliberately has no undo, and D1 follows it.
-- Anchoring to real-world coordinates (SRID), still deferred from winston#266 §7.
+- Anchoring to real-world coordinates (SRID), still deferred from winston#266 §7. *(2026-09-24: now designed in [`../../anchoring-geometries/DESIGN-SPEC.md`](../../anchoring-geometries/DESIGN-SPEC.md), which is the source of truth. It asks extraction to also publish basis of bearings, units, scale factor and non-POB coordinate boxes as evidence, D6.)*

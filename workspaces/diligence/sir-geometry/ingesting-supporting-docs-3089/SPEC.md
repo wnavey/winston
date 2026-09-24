@@ -4,6 +4,8 @@
 **Date:** 2026-08-07
 **Repos touched (by the eventual skill):** none structurally — the skill *writes rows* to the prod `geo` table (Supabase project **Noetic App** `mgxqsrjutswbciyrltwd`) and reads a source PDF from disk/storage. Rendering already exists (see §7).
 **Repos NOT touched:** `bureau`, `conductor`, `substation` schema (the `geo` table + `sir_parcels` RPC already shipped), `cityhall` app code (dynamic per-kind tabs + colors shipped in cityhall#627).
+**Superseded (2026-09-24):** the repeatable pipeline this concept anticipated is [`../../../cartographer/anchoring-geometries/DESIGN-SPEC.md`](../../../cartographer/anchoring-geometries/DESIGN-SPEC.md), which is the source of truth. This spec's printed-coordinate method becomes its `fromPrintedCoordinates` solver (D7). Its IoU/centroid gate against county parcels becomes the shared metrics (D8). This plat (2024178771) is the ground-truth fixture (§3.8). The rest of this document is kept as the worked hand example.
+
 **Sibling doc:** [`../MVP-EXPERIMENT.md`](../MVP-EXPERIMENT.md) — the `geo` table + map-view experiment this builds on.
 
 > This is a concept spec for a **future Claude Code skill**, not a finished design. It captures the methodology proven out by hand on one real SIR so a later session can turn it into a repeatable skill. Deliberately high-level; §8 is the worked reference so the concepts are concrete.

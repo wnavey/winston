@@ -8,6 +8,8 @@
 **Predecessor:** [`../app/DESIGN-SPEC.md`](../app/DESIGN-SPEC.md) (winston#265) — the file intake this consumes
 **Prior art:** [`../../diligence/sir-geometry/ingesting-supporting-docs-3089/SPEC.md`](../../diligence/sir-geometry/ingesting-supporting-docs-3089/SPEC.md) — the same reconstruction done by hand, on the same document
 
+> **Superseded in part (2026-09-24):** anchoring is no longer deferred. Its design, and what extraction must now record for it (basis of bearings, units, scale factor, control points), are in [`../anchoring-geometries/DESIGN-SPEC.md`](../anchoring-geometries/DESIGN-SPEC.md), which is the source of truth for anchoring. §7's "Anchoring (D3)" and "Coordinate-table primary reconstruction" bullets defer to it.
+
 > Scaffolding, not a finished extractor. The goal is water through the pipes: a Claude Code session takes a `cartographer_files.id`, reads the plat, and lands renderable SRID:0 geometry in the database. Curves, closure enforcement, and anchoring are all explicitly deferred (§7).
 
 ---
@@ -215,10 +217,10 @@ Open figures draw as unfilled polylines (`Shape.open`) — the misclosure gap is
 ## 7. Deliberately deferred
 
 - **Curves** (D2). Arcs are approximated by their printed chord bearing + distance, `isChord: true`, `has_approximated_curves` on the row, flagged in the readout. Real arc support means extending `Course` in the geometry library — its own PR, and it changes the traverse engine, not this runbook.
-- **Anchoring** (D3). SRID:0 only. Printed State Plane coordinates are recorded in `notes` if seen, and drive nothing. Placing these figures in WGS84 is the bridge to the `geo` table, later.
+- **Anchoring** (D3). SRID:0 only. Printed State Plane coordinates are recorded in `notes` if seen, and drive nothing. Placing these figures in WGS84 is the bridge to the `geo` table, later. *(2026-09-24: now designed in [`../anchoring-geometries/DESIGN-SPEC.md`](../anchoring-geometries/DESIGN-SPEC.md): a per-frame similarity transform into the county's native State Plane, then produced as `geo` rows with `method='anchored'`. Extraction itself stays SRID:0.)*
 - **Closure enforcement** (D4). Reported, never required.
 - **Versioned runs** (D5). Republish deletes.
-- **Coordinate-table primary reconstruction** — the 3089 spec's method. Worth it when anchoring lands; unnecessary while unanchored.
+- **Coordinate-table primary reconstruction** — the 3089 spec's method. Worth it when anchoring lands; unnecessary while unanchored. *(2026-09-24: this is the `fromPrintedCoordinates` solver in [`../anchoring-geometries/DESIGN-SPEC.md`](../anchoring-geometries/DESIGN-SPEC.md) D7.)*
 - **Automatic triggering.** A human runs this from a Claude Code session. No Inngest, no queue, no button in the app.
 
 ---
