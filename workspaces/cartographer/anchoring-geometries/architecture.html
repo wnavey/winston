@@ -54,17 +54,22 @@ nav.tabs button.active{color:#fff;border-bottom-color:var(--ember);background:rg
 /* ---------- layout ---------- */
 main{max-width:1140px;margin:0 auto;padding:30px 26px 90px}
 .panel{display:none;animation:fade .25s ease}
+main [id]{scroll-margin-top:74px} /* deep-link targets clear the sticky tab bar */
 .panel.active{display:block}
 @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 
-h2{font-family:var(--serif);font-weight:600;font-size:23px;margin:34px 0 6px;color:var(--p900)}
+/* Section heading: the h2 text is the PLAIN NAME of the thing the tab is about (v5.1 — it used to
+   carry a tagline while the small eyebrow carried the name; that was backwards). .eyebrow = the
+   tab number / section label, small. .sub = one plain sentence saying what is on the tab. */
+h2{font-family:var(--serif);font-weight:700;font-size:30px;line-height:1.15;letter-spacing:-.01em;margin:34px 0 10px;color:var(--p950)}
 h2:first-child{margin-top:4px}
-h2 .eyebrow{display:block;font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--p500);font-weight:400;margin-bottom:3px}
+h2 .eyebrow{display:block;font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--p500);font-weight:400;margin-bottom:6px}
+h2 .sub{display:block;font-family:var(--sans);font-size:14px;font-weight:400;letter-spacing:0;line-height:1.5;color:var(--muted);margin-top:6px}
 h3{font-size:16px;font-weight:600;margin:28px 0 8px;color:var(--p800);display:flex;align-items:center;gap:9px}
 h3 .hn{font-family:var(--mono);font-size:12px;color:#fff;background:var(--p600);border-radius:5px;padding:2px 8px}
 h4{font-size:14px;font-weight:600;margin:18px 0 6px;color:var(--p800)}
 p{margin:.55em 0}
-.lede{font-size:16px;color:var(--p800);border-left:3px solid var(--ember);padding-left:16px;margin:14px 0 20px}
+.lede{font-size:15px;color:var(--p800);border-left:3px solid var(--ember);padding-left:16px;margin:12px 0 20px}
 ul{margin:.4em 0;padding-left:22px}li{margin:.28em 0}
 code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px solid var(--p100);border-radius:4px;padding:1px 5px;color:var(--p800)}
 
@@ -442,7 +447,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 
 <!-- ============================================================ 01 OVERVIEW -->
 <section class="panel active" id="overview">
-<h2><span class="eyebrow">The initiative in two pictures</span>Two pipelines that never meet, then the bridge</h2>
+<h2><span class="eyebrow">01 · overview</span>The systems this spec touches<span class="sub">Today, after this spec, and the order the phases land in.</span></h2>
 <p class="lede">Read the maps left to right from the trigger. White is what exists today, amber is what this spec changes, green is what it adds. The red box on the first map is the gap the second map closes.</p>
 
 <h3><span class="hn">Today</span>Verified 2026-09-24</h3>
@@ -560,7 +565,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 
 <!-- ============================================================ 02 HOW IT WORKS -->
 <section class="panel" id="how">
-<h2><span class="eyebrow">The mechanism</span>One similarity transform per frame</h2>
+<h2><span class="eyebrow">02 · how it works</span>The anchor transform<span class="sub">One similarity transform per frame; which solver is tried when, where the target system comes from, and the status of an anchor row.</span></h2>
 <p class="lede"><code>E,N = s·R(θ)·(x,y)·k<sub>units</sub> + (t<sub>E</sub>, t<sub>N</sub>)</code>. θ rotates the plat's basis of bearings onto grid north, (t<sub>E</sub>, t<sub>N</sub>) puts the point of beginning on the ground, s is 1 unless the plat states a combined scale factor, and k<sub>units</sub> converts feet (or varas) into the target system's units.</p>
 
 <figure class="concept">
@@ -660,7 +665,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 
 <!-- ============================================================ 03 WHO DOES WHAT WHEN -->
 <section class="panel" id="who">
-<h2><span class="eyebrow">The anchor-geometry runbook</span>Scripts do the math, an agent names correspondences, an operator signs off</h2>
+<h2><span class="eyebrow">03 · who does what when</span>The anchor-geometry runbook<span class="sub">Step order, the operator gate, and who calls whom.</span></h2>
 <p class="lede">A separate runbook from extract-geometry-v2 (D10, Q3), launched by hand with <code>{file, sir_id}</code>, shelling out to cartographer scripts as v2 does. It re-runs whenever the parcel data or the extraction changes.</p>
 
 <h3 id="detail-runbook"><span class="hn">steps</span>Run order, with the operator's redo as a loop</h3>
@@ -720,7 +725,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 
 <!-- ============================================================ 04 WHAT'S STORED -->
 <section class="panel" id="stored">
-<h2><span class="eyebrow">Storage</span>The transform is the record; geo rows are produced from it</h2>
+<h2><span class="eyebrow">04 · what's stored</span>Storage<span class="sub">The anchors table, the per-county registry, the modified tables, and the geo rows an anchor produces.</span></h2>
 <p class="lede">Two new tables (the anchors table and the per-county registry), one curated lookup table, three modified ones. Anchors carry no FK to geometry ids because Cartographer's publish deletes and re-inserts a file's geometries; the <code>(file_id, run_slug, frame_key)</code> key survives that.</p>
 
 <h3 id="detail-anchors"><span class="hn">ER</span>New tables</h3>
@@ -826,7 +831,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 
 <!-- ============================================================ 05 ROLLOUT -->
 <section class="panel" id="rollout">
-<h2><span class="eyebrow">Rollout</span>Phases, exit tests, decisions and open questions</h2>
+<h2><span class="eyebrow">05 · rollout</span>Rollout<span class="sub">Phases with their exit tests, decisions D1–D15, open questions Q1–Q11.</span></h2>
 <p class="lede">The dependency graph is on the Overview tab. Here is what each phase must prove before the next one starts, and the index an auditor can reference by number.</p>
 
 <div class="spectable-scroll"><table class="spectable"><thead><tr><th>Phase</th><th>Repos</th><th>Scope</th><th>Exit test</th></tr></thead><tbody>
@@ -1004,26 +1009,26 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 <script>
   const btns=document.querySelectorAll('nav.tabs button');
   const panels=document.querySelectorAll('.panel');
-  const IDS=['overview','how','who','stored','rollout']; /* KEEP IN SYNC with the data-tab / panel ids above */
-  function show(id,scroll=true){
+  IDS=['overview','how','who','stored','rollout']; /* KEEP IN SYNC with the data-tab / panel ids above */
+  function show(id,opts={}){
     btns.forEach(b=>b.classList.toggle('active',b.dataset.tab===id));
     panels.forEach(p=>p.classList.toggle('active',p.id===id));
-    if(scroll){
-      if(location.hash.slice(1)!==id) history.replaceState(null,'','#'+id);
-      window.scrollTo({top:0,behavior:scroll==='instant'?'auto':'smooth'});
-    }
-  }
-  /* deep links to a zoom-in on another tab (#detail-…): switch to that tab, then scroll to the target */
-  function goto(hash,initial=false){
-    const id=(hash||'').slice(1); if(!id) return;
-    if(IDS.includes(id)){show(id,initial?'instant':true);return;}
-    const el=document.getElementById(id); if(!el) return;
-    const p=el.closest('.panel'); if(p&&!p.classList.contains('active')) show(p.id,false);
-    requestAnimationFrame(()=>el.scrollIntoView({block:'start',behavior:'smooth'}));
+    if(!opts.keepHash&&location.hash.slice(1)!==id) history.replaceState(null,'','#'+id);
+    if(!opts.noScroll) window.scrollTo({top:0,behavior:opts.instant?'auto':'smooth'});
   }
   btns.forEach(b=>b.addEventListener('click',()=>show(b.dataset.tab)));
-  window.addEventListener('hashchange',()=>goto(location.hash));
-  goto(location.hash,true);
+  /* a hash can be a tab id, or an element inside a tab (a zoom-in target such as #detail-p2):
+     switch to that element's panel, then scroll to it. Runs on load and on every hash change. */
+  function goHash(instant){
+    const h=decodeURIComponent(location.hash.slice(1)); if(!h) return;
+    if(IDS.includes(h)){show(h,{instant});return;}
+    const el=document.getElementById(h); if(!el) return;
+    const panel=el.closest('.panel'); if(panel&&!panel.classList.contains('active')) show(panel.id,{keepHash:true,noScroll:true});
+    el.scrollIntoView({block:'start',behavior:instant?'auto':'smooth'});
+  }
+  goHash(true);
+  window.addEventListener('load',()=>goHash(true));   // the browser's own fragment jump lands after this script; redo ours
+  window.addEventListener('hashchange',()=>goHash(false));
 </script>
 </body>
 </html>
