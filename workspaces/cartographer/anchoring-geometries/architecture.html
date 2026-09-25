@@ -431,7 +431,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
   <div class="kicker">CARTOGRAPHER · ANCHORING GEOMETRIES</div>
   <h1>Anchoring extracted geometries to the county parcel</h1>
   <p>Architecture companion to <code>DESIGN-SPEC.md</code> (winston#279). Cartographer's shapes are survey-exact but float (SRID:0, feet, the plat's own north); the SIR's county parcel ring is on the map but only tax-map-grade. This spec joins the two with one similarity transform per frame. Research: <a href="https://inspector-general-gamma.vercel.app/reports/view/2026-09-23-sir-geometry-source-survey/" style="color:inherit">IG geometry source survey</a>.</p>
-  <div class="meta">Draft v1 · 2026-09-24 · companion rebuilt 2026-09-25 on spec-kit v5.1 · click a tab ↓</div>
+  <div class="meta">Draft v1.1 · 2026-09-25 (v1 2026-09-24) · companion on spec-kit v5.1 · click a tab ↓</div>
   <a class="spec-link" href="DESIGN-SPEC.html">📖 read the spec</a>
 </header>
 
@@ -565,7 +565,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 
 <!-- ============================================================ 02 HOW IT WORKS -->
 <section class="panel" id="how">
-<h2><span class="eyebrow">02 · how it works</span>The anchor transform<span class="sub">One similarity transform per frame; which solver is tried when, where the target system comes from, and the status of an anchor row.</span></h2>
+<h2><span class="eyebrow">02 · how it works</span>The anchor transform<span class="sub">One similarity transform per frame; how 3.1 solve picks a solver, what each solver computes, where the target system comes from, and the status of an anchor row.</span></h2>
 <p class="lede"><code>E,N = s·R(θ)·(x,y)·k<sub>units</sub> + (t<sub>E</sub>, t<sub>N</sub>)</code>. θ rotates the plat's basis of bearings onto grid north, (t<sub>E</sub>, t<sub>N</sub>) puts the point of beginning on the ground, s is 1 unless the plat states a combined scale factor, and k<sub>units</sub> converts feet (or varas) into the target system's units.</p>
 
 <figure class="concept">
@@ -614,17 +614,37 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
   <figcaption><b>Claim (§3.1, D7, §3.8):</b> the shape never changes, only its place: one rotation θ, one translation (t<sub>E</sub>, t<sub>N</sub>), scale fixed at 1. The green polygon is the anchored figure; its gap to the dashed county ring is the gis_fit residual, so a fitted position is only as good as the county's tax-map drawing. A grid basis of bearings means θ should come out near 0, a free check on every fit (D6).</figcaption>
 </figure>
 
-<h3 id="detail-solvers"><span class="hn">D7</span>Which solver: tried in order of trust</h3>
+<h3 id="detail-solvers"><span class="hn">D7a</span>Which solver 3.1 solve picks: the eligibility ladder</h3>
+<p class="lede">Run once per frame by <code>3.1 solve</code>, a script. It reads what <code>2.1 correspond</code> supplied (control points, ties, ring matches, all by id and index) and the D6 evidence (basis of bearings, units, scale factor), and takes the first rung whose inputs are present. The agent never names a solver.</p>
 <div class="dflow">
-  <div class="dq"><span class="q">At least 2 figure vertices have printed N/E with a stated or inferred zone?</span><span class="yes">yes →</span><span class="out">fromPrintedCoordinates · least-squares similarity · class survey</span></div>
-  <div class="dno">no ↓ (about 1% of documents have them)</div>
-  <div class="dq"><span class="q">The description ties named corners or lines to located features? (2 points, or 1 point + θ from a grid basis)</span><span class="yes">yes →</span><span class="out">fromTies · vertex/edge ↔ parcel vertex/edge · class tied</span></div>
-  <div class="dno">no ↓</div>
-  <div class="dq"><span class="q">The frame has a county ring to fit to (the parcel, or its neighbours)?</span><span class="yes">yes →</span><span class="out warn">fitToRing · bearings → centroid → boundary-distance refine · class gis_fit</span></div>
-  <div class="dno">no ↓ (an unplaced figure is its own frame and needs its own correspondence)</div>
+  <div class="dq"><span class="q">2.1 matched at least 2 figure vertices to printed N/E boxes, and the zone is stated on the plat or target_srid passes the sanity gate?</span><span class="yes">yes →</span><span class="out">fromPrintedCoordinates · rigid least squares, scale fixed · class survey</span></div>
+  <div class="dno">no ↓ · also when a control point's residual fails the 1 ft gate: the rung is demoted and the readout says so (Q12)</div>
+  <div class="dq"><span class="q">2.1's ties fix all three unknowns θ, tE, tN? (2 vertex ties · 1 vertex + 1 edge tie · 1 vertex + a grid basis)</span><span class="yes">yes →</span><span class="out">fromTies · θ from the edges or the grid, then t from the vertices · class tied</span></div>
+  <div class="dno">no ↓ · a lone edge tie or a grid basis still fixes θ and is handed down as a constraint</div>
+  <div class="dq"><span class="q">A figure in the frame has a same_as or union_of ring match?</span><span class="yes">yes →</span><span class="out warn">fitToRing · bearing votes → centroid → boundary-distance refine · class gis_fit</span></div>
+  <div class="dno">no ↓ · an easement-only frame matched within has nothing to fit</div>
   <div class="dq end"><span class="q">otherwise</span><span class="yes"></span><span class="out fail">unanchorable · never guessed</span></div>
 </div>
-<p class="claim"><b>Claim (D7, D9):</b> three solvers "tried in order of trust"; the anchor applies to the whole frame, so an easement inherits its lot's anchor; with no correspondence at all a figure is "reported unanchorable, never guessed".</p>
+<p class="claim"><b>Claim (D7, D9):</b> "the highest rung whose inputs are present is the one that runs"; "the class is the rung, never the score"; ties that cannot fix the transform "pass down as constraints"; with no correspondence at all a figure is "reported unanchorable, never guessed".</p>
+
+<h3 id="detail-solver-steps"><span class="hn">D7b–D7d</span>What each solver needs and computes</h3>
+<div class="spectable-scroll"><table class="spectable"><thead><tr><th>Solver</th><th>Needs (from 2.1 + D6)</th><th>Solves</th><th>Held fixed</th><th>Its own gate</th><th>Class</th></tr></thead><tbody>
+<tr><td><code>fromPrintedCoordinates</code></td><td>≥ 2 control points (figure vertex ↔ printed N/E) · the zone, transformed into target_srid when it differs · units · scale factor</td><td>θ, t<sub>E</sub>, t<sub>N</sub> in closed form: centre both point sets, θ = atan2(Σ(x′N′ − y′E′), Σ(x′E′ + y′N′)), t = target centroid − s·R(θ)·local centroid</td><td>s = 1 or the stated combined factor · k<sub>units</sub></td><td>largest control-point residual ≤ 1 ft, else demoted</td><td>survey</td></tr>
+<tr><td><code>fromTies</code></td><td>vertex ties (figure vertex ↔ parcel vertex) · edge ties (course ↔ parcel edge, with sense) · a grid basis</td><td>θ first, from the edge ties or the grid basis (or jointly from 2+ vertex ties); then t by least squares over the vertex ties and each edge's normal</td><td>s · any unknown already fixed</td><td>residual ≤ 1 ft to a monument · ≤ 10 ft to county linework (Q13)</td><td>tied</td></tr>
+<tr><td><code>fitToRing</code></td><td>the fit figures (same_as or union_of matches) · the target = union of the matched geo rows' geom_local · any constraint handed down</td><td>θ, t<sub>E</sub>, t<sub>N</sub>, minus what is constrained; steps below</td><td>s = 1 · a free-scale re-solve is reported only</td><td>none of its own: the operator judges IoU, mean distance and ambiguity against D11</td><td>gis_fit</td></tr>
+</tbody></table></div>
+<p class="claim"><b>Claim (D7, §3.1):</b> scale is "usually fixed at 1" and set "to the stated combined factor when the plat converts surface to grid distances"; every solver solves rotation and translation only, and the free-scale solve is "reported only as a diagnostic" (D8).</p>
+
+<h3 id="detail-fit"><span class="hn">D7d</span>fitToRing, step by step</h3>
+<div class="spectable-scroll"><table class="spectable"><thead><tr><th>Step</th><th>What</th><th>Why</th></tr></thead><tbody>
+<tr><td><span class="sn">a</span></td><td>Units: each fit figure's ring + its frame offset, times k<sub>units</sub></td><td>varas read as feet would scale the shape 2.78×</td></tr>
+<tr><td><span class="sn">b</span></td><td>Candidate rotations: every (figure edge, target edge) pair votes Δθ = ring bearing − figure bearing, weighted by min length ÷ (1 + length gap), into a 1° histogram; the top 4 peaks are the candidates; θ = 0 is always one on a grid basis; a handed-down θ is the only one</td><td>a rectangle votes for 0° and 180° equally: the ambiguity is found before any fit</td></tr>
+<tr><td><span class="sn">c</span></td><td>Initial translation: rotate, then move the fit figures' area centroid onto the target's centroid</td><td>a start close enough for a local minimizer</td></tr>
+<tr><td><span class="sn">d</span></td><td>Refine (θ, t<sub>E</sub>, t<sub>N</sub>) by Nelder–Mead on the symmetric mean boundary distance: sample both outlines every 2 ft, nearest distance each way, mean of both; stop under 0.01 ft and 0.001°</td><td>symmetric, so an extra or missing county vertex costs a little instead of derailing the fit</td></tr>
+<tr><td><span class="sn">e</span></td><td>Pick and score: the lowest refined score wins; ambiguity = best ÷ second-best (1.0 is a coin flip; flagged above 0.8)</td><td>look-alikes are reported, never chosen silently</td></tr>
+<tr><td><span class="sn">f</span></td><td>Diagnostics: one free-scale re-solve from the winner; IoU, Hausdorff, mean distance, area ratio, θ vs grid (D8)</td><td>a scale drifting past 1% means wrong units or a wrong ring</td></tr>
+</tbody></table></div>
+<p class="claim"><b>Claim (D7):</b> "candidate rotations from matching edge bearings and lengths; initial translation from aligning centroids; refine (θ, tE, tN) by minimizing symmetric boundary distance … which tolerates county rings with extra or missing vertices; scale fixed".</p>
 
 <div class="spectable-scroll"><table class="spectable"><thead><tr><th>Every solve reports (D8)</th><th>Why it's there</th></tr></thead><tbody>
 <tr><td>IoU · Hausdorff · mean boundary distance (ft)</td><td>how well the shape sits on the county linework</td></tr>
@@ -633,6 +653,8 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 <tr><td>residual per control point or edge</td><td>only for printed coordinates and ties</td></tr>
 <tr><td>ambiguity: how close the second-best solution scored</td><td>rectangles and symmetric lots have 90° and 180° look-alikes; a tie breaks the tie</td></tr>
 <tr><td>free-scale solve, as a diagnostic only</td><td>scale stays fixed at 1 in the fit; a drifting scale means bad units or a bad ring</td></tr>
+<tr><td>demoted_from</td><td>the rung that had its inputs but failed its own residual gate (Q12)</td></tr>
+<tr><td>tie_source: county_parcel · monument</td><td>a tie to county linework is only as accurate as the county drawing (Q13)</td></tr>
 </tbody></table></div>
 
 <h3 id="detail-native-sr"><span class="hn">D3</span>Where the target system comes from: the native-SR fallback chain</h3>
@@ -665,14 +687,14 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 
 <!-- ============================================================ 03 WHO DOES WHAT WHEN -->
 <section class="panel" id="who">
-<h2><span class="eyebrow">03 · who does what when</span>The anchor-geometry runbook<span class="sub">Step order, the operator gate, and who calls whom.</span></h2>
+<h2><span class="eyebrow">03 · who does what when</span>The anchor-geometry runbook<span class="sub">Step order, which step does which part of the anchoring math, the operator gate, and who calls whom.</span></h2>
 <p class="lede">A separate runbook from extract-geometry-v2 (D10, Q3), launched by hand with <code>{file, sir_id}</code>, shelling out to cartographer scripts as v2 does. It re-runs whenever the parcel data or the extraction changes.</p>
 
 <h3 id="detail-runbook"><span class="hn">steps</span>Run order, with the operator's redo as a loop</h3>
 <div class="sysmap" style="grid-template-columns:repeat(6,1fr)">
   <div class="sys" id="rb-1" style="grid-area:2/1"><span class="k">script</span><span class="t">1.1 inputs · 1.2 fetch</span><span class="d">geometries + evidence · SIR geo parcels · target_srid</span></div>
-  <div class="sys" id="rb-2" style="grid-area:2/2"><span class="k">agent</span><span class="t">2.1 correspond</span><span class="d">figure ↔ parcel · vertex ↔ corner · only ids and indices</span></div>
-  <div class="sys" id="rb-3" style="grid-area:2/3"><span class="k">script</span><span class="t">3.1 solve · 3.2 render</span><span class="d">anchor.ts per frame · overlay PNG over aerial</span></div>
+  <div class="sys" id="rb-2" style="grid-area:2/2"><span class="k">agent</span><span class="t">2.1 correspond</span><span class="d">ring matches · ties · control points · ids only, never a solver</span></div>
+  <div class="sys" id="rb-3" style="grid-area:2/3"><a class="ref" href="#detail-solvers">D7 ↓</a><span class="k">script</span><span class="t">3.1 solve · 3.2 render</span><span class="d">picks the rung per frame, solves it · overlay PNG over aerial</span></div>
   <div class="sys" id="rb-4" style="grid-area:2/4"><span class="k">agent</span><span class="t">3.3 check</span><span class="d">vision: right place, right way round?</span></div>
   <div class="sys" id="rb-5" style="grid-area:2/5"><span class="k">gate</span><span class="t">4.1 operator</span><span class="d">accept · reject · redo with a note, per frame</span></div>
   <div class="sys store" id="rb-6" style="grid-area:2/6"><span class="k">script</span><span class="t">5.1 publish</span><span class="d">cartographer_anchors + geo rows</span></div>
@@ -683,7 +705,22 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
   <a class="sys-edge" data-from="rb-5" data-to="rb-6">accept</a>
   <a class="sys-edge loop" data-from="rb-5" data-to="rb-2">redo with a note</a>
 </div>
-<p class="claim"><b>Claim (D10, D11):</b> "v1 always stops at the HITL step"; the auto-accept threshold (IoU ≥ 0.9, mean boundary distance ≤ 5 ft, clear ambiguity margin, θ ≈ 0 on a grid basis) is applied "only in the readout". A redo returns to correspond, never to solve.</p>
+<div class="sys-refs">
+  <a class="refrow" data-ref="D7"><span class="chip">D7</span><span class="txt">the eligibility ladder (D7a) and the three solvers (D7b printed coordinates, D7c ties, D7d ring fit), all run by 3.1 solve</span></a>
+</div>
+<p class="claim"><b>Claim (D7, D10, D11):</b> "choosing the solver and running it are both done by 3.1 solve … with no agent in the loop"; "v1 always stops at the HITL step"; the auto-accept threshold (IoU ≥ 0.9, mean boundary distance ≤ 5 ft, clear ambiguity margin, θ ≈ 0 on a grid basis) is applied "only in the readout". A redo returns to correspond, never to solve.</p>
+
+<h3 id="detail-steps-d7"><span class="hn">§3.6</span>Which step does which part of the anchoring</h3>
+<div class="spectable-scroll"><table class="spectable"><thead><tr><th>Step</th><th>Runner</th><th>Its part</th><th>Output</th></tr></thead><tbody>
+<tr><td><span class="sn">1.2</span> fetch</td><td>script</td><td>the raw material: the SIR's geo parcel rows in target_srid (the located features for ties, the targets for a fit), adjoining rings re-queried when the plat lot spans more than the subject parcel, the D6 evidence</td><td>geo rows · evidence</td></tr>
+<tr><td><span class="sn">2.1</span> correspond</td><td>agent</td><td>supplies what a rung needs, by id and index: control points for rung 1, vertex and edge ties for rung 2, ring matches (same_as · union_of · within) for rung 3. Never a number, never a solver name</td><td>correspondences.json</td></tr>
+<tr><td><span class="sn">3.1</span> solve</td><td>script</td><td>per frame: walk the ladder to the highest eligible rung · run that solver · demote and record on a failed residual gate · ring metrics whenever a ring match exists · apply the transform to every figure in the frame</td><td>anchors.json</td></tr>
+<tr><td><span class="sn">3.2</span> render</td><td>script</td><td>the overlay the check and the operator judge: nearby county rings, anchored figures, POB markers, over an aerial</td><td>overlay PNG per frame</td></tr>
+<tr><td><span class="sn">3.3</span> check</td><td>agent</td><td>the judgment on the overlay; check.md is the readout 4.1 shows, carrying each frame's solver, class, metrics against the D11 threshold and any demotion</td><td>check.md</td></tr>
+<tr><td><span class="sn">4.1</span> operator</td><td>gate</td><td>accept · reject · redo with a note, per frame</td><td>decision</td></tr>
+<tr><td><span class="sn">5.1</span> publish</td><td>script</td><td>writes the accepted transforms and the geo rows they produce</td><td>cartographer_anchors · geo</td></tr>
+</tbody></table></div>
+<p class="claim"><b>Claim (§3.6):</b> "no step chooses a solver except 3.1 solve, and it does so by inspection of its inputs"; 2.1 returns "only indices and ids, never numbers, never a solver name".</p>
 
 <h3 id="detail-gate"><span class="hn">4.1</span>What each gate outcome does</h3>
 <div class="dflow">
@@ -709,8 +746,8 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 <div class="seq-num" style="grid-row:1">1</div><div class="seq-msg" style="grid-row:1;grid-column:2/4"><div class="mt"><span class="m">conductor init anchor-geometry</span><span class="m2">{file, sir_id, run_slug?}</span></div><span class="dir">▸</span></div>
 <div class="seq-num" style="grid-row:2">2</div><div class="seq-msg" style="grid-row:2;grid-column:3/6"><div class="mt"><span class="m">1.2 fetch</span><span class="m2">re-query adjoining rings from the county when needed</span></div><span class="dir">▸</span></div>
 <div class="seq-num" style="grid-row:3">3</div><div class="seq-msg ret" style="grid-row:3;grid-column:5/8"><span class="dir">◂</span><div class="mt"><span class="m">geometries + evidence + geo parcel rows</span><span class="m2">geom_local in native State Plane · target_srid</span></div></div>
-<div class="seq-num" style="grid-row:4">4</div><div class="seq-msg event" style="grid-row:4;grid-column:3/5"><div class="mt"><span class="m">2.1 correspond</span><span class="m2">correspondences.json · ids only, never numbers</span></div><span class="dir">▸</span></div>
-<div class="seq-num" style="grid-row:5">5</div><div class="seq-msg self" style="grid-row:5;grid-column:5/6"><div class="mt"><span class="m">3.1 solve</span><span class="m2">anchor.ts → anchors.json: solver, class, metrics</span></div></div>
+<div class="seq-num" style="grid-row:4">4</div><div class="seq-msg event" style="grid-row:4;grid-column:3/5"><div class="mt"><span class="m">2.1 correspond</span><span class="m2">correspondences.json: control points · ties · ring matches · ids only</span></div><span class="dir">▸</span></div>
+<div class="seq-num" style="grid-row:5">5</div><div class="seq-msg self" style="grid-row:5;grid-column:5/6"><div class="mt"><span class="m">3.1 solve</span><span class="m2">ladder per frame → the rung's solver → anchors.json: solver, class, metrics</span></div></div>
 <div class="seq-num" style="grid-row:6">6</div><div class="seq-msg" style="grid-row:6;grid-column:5/7"><div class="mt"><span class="m">3.2 render overlay PNG per frame</span></div><span class="dir">▸</span></div>
 <div class="seq-num" style="grid-row:7">7</div><div class="seq-msg event" style="grid-row:7;grid-column:4/7"><span class="dir">◂</span><div class="mt"><span class="m">3.3 vision check</span><span class="m2">check.md: does the easement sit where the sketch says?</span></div></div>
 <div class="seq-num" style="grid-row:8">8</div><div class="seq-msg ret" style="grid-row:8;grid-column:2/4"><span class="dir">◂</span><div class="mt"><span class="m">4.1 HITL: accept · reject · redo with a note</span><span class="m2">per frame</span></div></div>
@@ -740,7 +777,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
     <div class="row"><span class="nm">method</span><span class="ty">printed_coordinates · ties · ring_fit · manual</span></div>
     <div class="row hi"><span class="nm">accuracy_class</span><span class="ty">survey · tied · gis_fit · approximate</span></div>
     <div class="row"><span class="nm">params</span><span class="ty">jsonb {theta_rad, scale, t_e, t_n, k_units}</span></div>
-    <div class="row"><span class="nm">metrics</span><span class="ty">jsonb {iou, hausdorff_ft, mean_dist_ft, theta_vs_grid_deg, area_ratio, ambiguity, residuals[]}</span></div>
+    <div class="row"><span class="nm">metrics</span><span class="ty">jsonb {iou, hausdorff_ft, mean_dist_ft, theta_vs_grid_deg, area_ratio, ambiguity, residuals[], demoted_from?, tie_source?}</span></div>
     <div class="row"><span class="nm">evidence</span><span class="ty">jsonb · correspondences + overlay path</span></div>
     <div class="row hi"><span class="nm">status</span><span class="ty">proposed · accepted · rejected · stale</span></div>
     <div class="row"><span class="nm">anchor_run_slug · decided_by · created_at</span><span class="ty">text · uuid · timestamptz</span></div>
@@ -831,7 +868,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 
 <!-- ============================================================ 05 ROLLOUT -->
 <section class="panel" id="rollout">
-<h2><span class="eyebrow">05 · rollout</span>Rollout<span class="sub">Phases with their exit tests, decisions D1–D15, open questions Q1–Q11.</span></h2>
+<h2><span class="eyebrow">05 · rollout</span>Rollout<span class="sub">Phases with their exit tests, decisions D1–D15, open questions Q1–Q13.</span></h2>
 <p class="lede">The dependency graph is on the Overview tab. Here is what each phase must prove before the next one starts, and the index an auditor can reference by number.</p>
 
 <div class="spectable-scroll"><table class="spectable"><thead><tr><th>Phase</th><th>Repos</th><th>Scope</th><th>Exit test</th></tr></thead><tbody>
@@ -863,8 +900,8 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 <tr><td><span class="sn">D4</span></td><td>resolve-site requires <code>native_sr</code> and <code>source_layer</code>; <code>sir_add_parcel_geo</code> fills <code>geom_local</code>; fetch the subject ring in its native system (Q6)</td></tr>
 <tr><td><span class="sn">D5</span></td><td><code>cartographer_files</code>: content_sha256, source_sir_artifact_id, project_id; hash-deduplicating importer</td></tr>
 <tr><td><span class="sn">D6</span></td><td>Extraction publishes basis of bearings, units, grid/surface + scale factor, POB description, non-POB control points</td></tr>
-<tr><td><span class="sn">D7</span></td><td>Three solvers in order of trust: fromPrintedCoordinates › fromTies › fitToRing (default)</td></tr>
-<tr><td><span class="sn">D8</span></td><td>Shared metrics: IoU, Hausdorff, mean boundary distance, θ vs grid, area ratio, residuals, ambiguity</td></tr>
+<tr><td><span class="sn">D7</span></td><td>One ladder (D7a), run per frame by 3.1 solve, picks the highest rung whose inputs are present: D7b fromPrintedCoordinates › D7c fromTies › D7d fitToRing; a rung that fails its own residual gate is demoted and reported; insufficient ties pass down as constraints</td></tr>
+<tr><td><span class="sn">D8</span></td><td>Shared metrics: IoU, Hausdorff, mean boundary distance, θ vs grid, area ratio, residuals, ambiguity, demoted_from, tie_source</td></tr>
 <tr><td><span class="sn">D9</span></td><td>One anchor per frame; an unplaced figure needs its own correspondence or is reported unanchorable</td></tr>
 <tr><td><span class="sn">D10</span></td><td>Separate, manually launched <code>anchor-geometry</code> runbook, inputs {file, sir_id, run_slug?}</td></tr>
 <tr><td><span class="sn">D11</span></td><td>Auto-accept threshold in the readout only; v1 always stops at the operator</td></tr>
@@ -887,6 +924,8 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 <tr><td><span class="sn">Q9</span></td><td>Curves as chords acceptable for v1 fits?</td><td>yes; has_approximated_curves caps the class at gis_fit</td></tr>
 <tr><td><span class="sn">Q10</span></td><td>geo.kind vocabulary for anchored rows: reuse Cartographer's kind or namespace it?</td><td>open</td></tr>
 <tr><td><span class="sn">Q11</span></td><td>Backfilling the 21 existing county_api rows</td><td>open: re-read source_layer (mostly absent) or re-resolve by county</td></tr>
+<tr><td><span class="sn">Q12</span></td><td>Demote on a failed residual gate, or anchor and flag?</td><td>demote: a survey class on a misread box is a false accuracy claim; the failure is reported</td></tr>
+<tr><td><span class="sn">Q13</span></td><td>Does tied to county linework outrank gis_fit?</td><td>keep rung 2 above rung 3 (a tie removes the rotation ambiguity), record tie_source, gate 1 ft monument · 10 ft county</td></tr>
 </tbody></table></div>
 
 <div class="xref">Grounding: <code>DESIGN-SPEC.md</code> (source of truth) · research: <a href="https://inspector-general-gamma.vercel.app/reports/view/2026-09-23-sir-geometry-source-survey/">IG report 2026-09-23-sir-geometry-source-survey</a> · bureau d153049f1d · substation 316ecae · cartographer 58ac25e · surveyor 674ef84.</div>

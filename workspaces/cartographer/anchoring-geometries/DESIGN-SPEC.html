@@ -425,7 +425,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 
 </style>
 </head>
-<body class="reader" data-back="architecture.html" data-spec-sha="1730c61733d7fe90">
+<body class="reader" data-back="architecture.html" data-spec-sha="5cf0a427ad316d8c">
 
 <header class="masthead">
   <div class="kicker">SPEC · READER</div>
@@ -442,15 +442,15 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 <script type="text/markdown" id="spec-md">
 # Cartographer — anchoring extracted geometries to the county parcel
 
-**Status:** Draft v1
-**Date:** 2026-09-24
+**Status:** Draft v1.1
+**Date:** 2026-09-25 (v1 2026-09-24)
 **Repos touched:** `surveyor` (read and report each layer's native spatial reference; per-county registry), `bureau` (`site-research` resolve-site records `native_sr`; `arcgis_query.py`; new `anchor-geometry` runbook), `substation` (`sir_add_parcel_geo` fills `geom_local`; `cartographer_files` gets a link to where the document came from; new `cartographer_anchors` table; RPC that writes anchored geometries into `geo`), `cartographer` (`src/lib/geometry/anchor.ts` solvers; extraction records basis-of-bearings, units and scale factor; **`VISION.md` updated to include anchoring**, §3.9)
 **Repos NOT touched:** `cityhall` (the map already draws `geo.geom_wgs84`; a viewer for anchored geometries comes later, §8), `conductor2`, `claude-plugins`
 **Prod:** Supabase **Noetic App** (`mgxqsrjutswbciyrltwd`)
 **Predecessors:** [`../geometry-extraction/DESIGN-SPEC.md`](../geometry-extraction/DESIGN-SPEC.md) (winston#266, which deferred anchoring as "D3"), [`../geometry-placement/DESIGN-SPEC.md`](../geometry-placement/DESIGN-SPEC.md) (winston#270: frames, translation only, "SRID/WGS84 stays deferred"), [`../geometry-extraction/evidence/DESIGN-SPEC.md`](../geometry-extraction/evidence/DESIGN-SPEC.md) (winston#274)
 **Siblings:** [`../../diligence/sir-geometry/geom-local/GEOM_LOCAL_ITERATION_SPEC.md`](../../diligence/sir-geometry/geom-local/GEOM_LOCAL_ITERATION_SPEC.md) (**§3.2 reverses its §2 conclusion**), [`../../diligence/sir-geometry/ingesting-supporting-docs-3089/SPEC.md`](../../diligence/sir-geometry/ingesting-supporting-docs-3089/SPEC.md) (prior art: building a plat from its printed State Plane coordinates, done by hand)
 **Research (read this first for context):** Inspector General report **"SIR geometry source survey — how geometry is defined across the last 10 SIRs"**, <https://inspector-general-gamma.vercel.app/reports/view/2026-09-23-sir-geometry-source-survey/> (slug `2026-09-23-sir-geometry-source-survey`). §1.2's numbers come from it; §1.5 describes what it contains.
-**Architecture diagrams:** [`architecture.html`](architecture.html) (spec-kit v5) — five tabs in reader order: **Overview** (Today/After system maps with the gap and the bridge, plus the phase DAG), **How it works** (the anchor-transform figure, the D7 solver and D3 native-SR decision flows, the D12 anchor status lifecycle), **Who does what when** (the `anchor-geometry` runbook graph with the HITL loop, the 4.1 gate outcomes, the call sequence), **What's stored** (ER diffs for `geo`, `cartographer_files`, evidence; the new `cartographer_anchors` and registry tables; what `sir_put_anchored_geo` writes), **Rollout** (phases, exit tests, decisions and open questions). [`DESIGN-SPEC.html`](DESIGN-SPEC.html) is this markdown rendered as a page for the diagrams to deep-link into. Open them in a browser; this markdown wins if they differ.
+**Architecture diagrams:** [`architecture.html`](architecture.html) (spec-kit v5) — five tabs in reader order: **Overview** (Today/After system maps with the gap and the bridge, plus the phase DAG), **How it works** (the anchor-transform figure, the D7a eligibility ladder, what each solver needs and computes, fitToRing step by step, the D3 native-SR decision flow, the D12 anchor status lifecycle), **Who does what when** (the `anchor-geometry` runbook graph with the HITL loop, which step does which part of D7, the 4.1 gate outcomes, the call sequence), **What's stored** (ER diffs for `geo`, `cartographer_files`, evidence; the new `cartographer_anchors` and registry tables; what `sir_put_anchored_geo` writes), **Rollout** (phases, exit tests, decisions and open questions). [`DESIGN-SPEC.html`](DESIGN-SPEC.html) is this markdown rendered as a page for the diagrams to deep-link into. Open them in a browser; this markdown wins if they differ.
 **Source of truth for anchoring and `srid_local`.** This spec supersedes or amends the following; each now carries a dated pointer here:
 - geometry-extraction §7 "Anchoring (D3)" and "Coordinate-table primary reconstruction": no longer deferred.
 - evidence §9 "Anchoring … still deferred": no longer deferred.
@@ -458,6 +458,8 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 - geom-local §2's conclusion: reversed. Its D5 (county rows WGS84 only) is amended by D4 here. Its §5 on-demand comparison moves into the `anchor-geometry` runbook.
 - ingesting-supporting-docs-3089: becomes the `fromPrintedCoordinates` solver and the ground-truth fixture.
 - MVP-EXPERIMENT: pointer only.
+
+> **Revision note (v1.1, 2026-09-25).** Clarification only; no decision is reversed. D7 is split into **D7a**, the eligibility ladder that picks the solver, and **D7b–D7d**, what each of the three solvers computes, step by step. Both run inside `3.1 solve`, a script, with no agent in the loop. §3.6 now says which runbook step does which part of D7, gives the `correspondences.json` shape that `2.1 correspond` must produce, and lists what `3.1 solve` does per frame. **Q12** (demote on a failed residual gate) and **Q13** (`tied` to county linework) are new. The D8/D12 metrics gain `demoted_from` and `tie_source`. Tolerances named here are proposals to be set by P1's tests.
 
 > **In one paragraph.** Cartographer turns metes-and-bounds descriptions into
 > exact shapes with no position on the ground: SRID:0, feet, with the point of
@@ -616,18 +618,49 @@ This touches extract-geometry-v2 (just merged, still under active work). Coordin
 
 These are pure functions next to `placement.ts`, imported by runbook scripts. As in geometry-extraction D6, there's no second copy. Agents never produce coordinates (extract-geometry AGENTS.md rule 1).
 
-**D7. Three solvers, tried in order of trust:**
-1. **`fromPrintedCoordinates`:** at least 2 figure vertices with printed N/E and a stated or inferred zone. Least-squares similarity fit. Class `survey`.
-2. **`fromTies`:** correspondences between figure vertices or edges and located features, e.g. "POB = NE corner of Lot 11" ↔ a parcel vertex, or "along the north line of Lot 7" ↔ a parcel edge. Two points fix the transform. One point is enough if θ is known from a grid basis (D6). Class `tied`.
-3. **`fitToRing`** (the default): fit the frame's figure or figures to the target county ring or rings.
-   - (a) candidate rotations from matching edge bearings and lengths;
-   - (b) initial translation from aligning centroids;
-   - (c) refine (θ, tE, tN) by minimizing symmetric boundary distance (sampled boundary-to-boundary nearest distances), which tolerates county rings with extra or missing vertices;
-   - (d) scale **fixed**, with a free-scale solve reported only as a diagnostic.
+**D7. One ladder, three solvers.** Choosing the solver and running it are both done by `3.1 solve` (§3.6), a script, once per frame, with no agent in the loop. The agent step before it, `2.1 correspond`, never names a solver. It supplies the *inputs* a rung needs (control points, ties, ring matches), and the highest rung whose inputs are present is the one that runs. D7a is the choice. D7b, D7c and D7d are the three solvers. Every tolerance below is a proposal; P1's tests set the real values.
 
-   Class `gis_fit`.
+**D7a. Choosing the solver: the eligibility ladder.** Per frame, `3.1 solve` gathers the frame's inputs. From `correspondences.json` (2.1): the control points, the ties and the ring matches, all by figure id and vertex or course index. From the published evidence (D6): the basis of bearings, the distance units and the combined scale factor. Then it takes the first rung whose inputs are present:
 
-**D8. Every solve reports the same metrics:** IoU, Hausdorff and mean boundary distance (ft), rotation θ (and its gap from 0 when the basis is grid), area ratio, residual per control point or edge, and **ambiguity**: how close the second-best solution scored. Rectangles and symmetric lots have 90° and 180° look-alikes, and a tie breaks the tie.
+| Rung | Runs when the frame has | Solver | Class |
+|---|---|---|---|
+| 1 | at least 2 control points (a figure vertex matched to a printed N/E box) **and** a zone: stated on the plat (D6 `basis_of_bearings.zone`), or, failing that, `target_srid` confirmed by the sanity gate in D7b | `fromPrintedCoordinates` | `survey` |
+| 2 | ties that fix all three unknowns (θ, tE, tN): 2 vertex ties, or 1 vertex tie + 1 edge tie, or 1 vertex tie + a grid basis of bearings | `fromTies` | `tied` |
+| 3 | a `same_as` or `union_of` ring match for at least one figure in the frame | `fitToRing` | `gis_fit` |
+| none | none of the above, e.g. an easement-only frame whose only match is `within` | none | `unanchorable` (D9) |
+
+Rules:
+- **A rung's own residual gate decides eligibility, not just the presence of inputs.** Rung 1 with a control point whose residual exceeds `PRINTED_COORD_ACCEPT_FT` (proposed 1.0 ft, the placement check budget) is ineligible: its inputs are inconsistent, from a misread box or a plat defect such as geometry-placement §1.1's 180° boxes. The frame drops to the next rung, and the failure is written to `metrics.demoted_from` and shown in the readout (Q12). Rung 2 behaves the same at its gate (D7c).
+- **Ties that cannot fix the transform are not thrown away. They pass down as constraints.** An edge tie alone fixes θ. A grid basis fixes θ ≈ 0. A single vertex tie fixes (tE, tN) once θ is known. Rung 3 then solves only the unknowns that are still free.
+- **Every anchor gets the ring metrics when a ring match exists**, whatever rung solved it. A `survey` anchor whose IoU against the county ring is poor is still `survey` (the county drawing is the less accurate side), but the readout says so. That gap is the §3.8 measurement.
+- **The class is the rung, never the score.** A perfect-looking `gis_fit` is still `gis_fit`.
+
+**D7b. `fromPrintedCoordinates` (rung 1).** Inputs: control points `{figure, vertex, n, e}` (D6's `control_point` evidence plus the POB's printed coordinates, matched to vertices by 2.1), the zone, `distance_units`, `combined_scale_factor`.
+1. **Bring the printed coordinates into `target_srid`.** If the plat's zone, resolved to an EPSG code, is not `target_srid`, transform the printed (E, N) into `target_srid` first (`ST_Transform` or proj). Record both codes on the anchor (§7 datum realizations); never silently mix them. If the plat states no zone, assume `target_srid` and run the **sanity gate** from the 3089 spec: one control point transformed to WGS84 must land inside the SIR parcel ring's bounding box grown by 500 ft. If it does not, rung 1 is ineligible.
+2. **Local side.** Each control point's frame position is its figure's `ring[vertex] + (offset_x, offset_y)` (placement's frame coordinates), times `k_units` into the target's units (D6 `distance_units`: feet stay feet for a ftUS zone; varas × 2.7778; metres × 3.2808).
+3. **Solve the rigid transform** (θ, tE, tN) with scale fixed at `s` = 1, or the stated combined scale factor. Closed form, the 2D Helmert or orthogonal Procrustes fit: centre both point sets on their centroids, `θ = atan2(Σ(x′N′ − y′E′), Σ(x′E′ + y′N′))`, then `(tE, tN) = target centroid − s·R(θ)·local centroid`. With exactly 2 points this is still over-determined by one (the two points' separation must match in both frames), so the residual means something from the first plat on.
+4. **Residual per control point** = `|s·R(θ)·p·k_units + t − q|` in target units. The largest must pass `PRINTED_COORD_ACCEPT_FT` for the rung to hold (D7a).
+5. **Free-scale diagnostic.** Re-solve with `s` free (`s = Σ q′·R(θ)p′ / Σ|p′|²`). Reported, never applied. A value far from 1, or from the stated factor, means wrong units, a wrong zone or a misread box.
+6. **Metrics (D8)**, including the ring metrics when 2.1 also gave a ring match.
+
+**D7c. `fromTies` (rung 2).** Inputs: vertex ties (`{figure, vertex}` ↔ a located point (E, N)) and edge ties (`{figure, course}` ↔ a located line, with `sense`), both in `target_srid`. In v1 a located feature is a vertex or an edge of one of the SIR's `geo` parcel rows (`geom_local`). A monument with published coordinates is the same input from a later source (§8). Unknowns: θ, tE, tN, with `s` fixed as in D7b. What each input contributes: a vertex tie gives two equations (both translation components, once θ is known); an edge tie gives θ (the located line's bearing minus the course's local bearing, after `sense`) plus one equation (the perpendicular offset), with the position along the line free; a grid basis gives θ ≈ 0.
+1. **θ first.** From edge ties: the mean of (located bearing − local bearing) over the edge ties. From 2 or more vertex ties with no edge tie: the D7b closed form gives θ and t together. From a grid basis alone: θ = 0.
+2. **t second.** With θ fixed, each vertex tie gives `t = q − s·R(θ)·p·k_units`; each edge tie constrains `t` along the line's normal. Least squares over all of them.
+3. **Residual gate.** The largest vertex residual and the largest edge perpendicular residual must pass `TIE_ACCEPT_FT`, which depends on what the tie is to: proposed 1.0 ft for a monument, 10 ft for county linework (Q13). Written to `metrics.residuals[]` and `metrics.tie_source`.
+4. **Insufficient ties** never anchor by themselves. They pass down to rung 3 as constraints (D7a).
+
+**D7d. `fitToRing` (rung 3).** Inputs: the frame's **fit figures**, meaning every figure with a `same_as` match (one parcel row) or a `union_of` match (several rows); the **target**, the union of the matched rows' `geom_local` (`ST_Union`, one polygon in `target_srid`); and any constraint handed down from rung 2 (θ fixed, or `t` confined to a line). Figures matched only `within` (an easement inside the lot) ride on the frame's transform (D9) and take no part in the fit. Steps:
+- (a) **Units.** Each fit figure's ring, plus its frame offset, times `k_units`.
+- (b) **Candidate rotations.** Every (fit-figure edge i, target edge j) pair votes `Δθ = bearing_j − bearing_i`, with weight `min(len_i, len_j) / (1 + |len_i − len_j|)`, into a 1° histogram over [0°, 360°). The top 4 peaks (each refined to the weighted mean inside its bin) are the candidates. On a grid basis θ = 0 is always a candidate and wins a near-tie. If θ came down as a constraint, it is the only candidate. Chords of curves vote like any other edge, weakly, because they are short.
+- (c) **Initial translation.** Rotate the fit figures by the candidate θ, then move their area-weighted centroid onto the target's centroid.
+- (d) **Refine** (θ, tE, tN), or only the ones still free, by minimizing the **symmetric mean boundary distance**: sample both outlines at a fixed spacing (every 2 ft, and at least 200 samples per ring), take each sample's nearest distance to the other polyline, and average both directions. Nelder–Mead on three parameters, stopping when a step is under 0.01 ft and 0.001°. Symmetric, so a county ring with an extra vertex (a dogleg the plat lacks) or a missing one (a merged neighbour) costs a little instead of derailing the fit.
+- (e) **Pick and score.** The candidate with the lowest refined score wins. `ambiguity` = best score ÷ second-best score after refinement (1.0 is a coin flip; the readout flags anything above 0.8, proposed). A rectangle has a 180° look-alike, a square has 90° ones. Only a tie or a grid basis breaks them; the ladder never picks silently.
+- (f) **Scale stays fixed** at 1, or the stated factor. One free-scale re-solve from the winning solution is reported as a diagnostic (D8): a drift past 1% points at wrong units (varas read as feet is 2.78×) or a wrong ring.
+- (g) **Metrics (D8)** from the winning transform: IoU (polygon intersection over union), Hausdorff, mean boundary distance, area ratio (fit figures ÷ target), θ against grid.
+
+Class `gis_fit`.
+
+**D8. Every solve reports the same metrics:** IoU, Hausdorff and mean boundary distance (ft), rotation θ (and its gap from 0 when the basis is grid), area ratio, residual per control point or edge, and **ambiguity**: how close the second-best solution scored. Rectangles and symmetric lots have 90° and 180° look-alikes, and a tie breaks the tie. Two bookkeeping fields: `demoted_from`, the rung that was eligible but failed its own residual gate (D7a, Q12), and `tie_source`, `county_parcel` or `monument`, for a `tied` anchor (D7c, Q13).
 
 **D9. The anchor applies to the whole frame.** A lot and its easements that placement put in the same frame share one transform, so an easement inherits its lot's anchor. A figure placement left `unplaced` is its own frame and needs its own correspondence. With none, it's reported `unanchorable`, never guessed.
 
@@ -638,12 +671,33 @@ These are pure functions next to `placement.ts`, imported by runbook scripts. As
 | Step | Runner | Output |
 |---|---|---|
 | 1.1 inputs / 1.2 fetch | script | the file's published geometries + evidence + frame offsets; the SIR's `geo` parcel rows (`geom_local` in native State Plane, or transformed through the D3 fallback); adjoining rings re-queried from the county when needed; `target_srid` |
-| 2.1 correspond | **agent** (judgment) | `correspondences.json`: figure ↔ parcel (`same_as`, `within`, `union_of`), vertex/edge ↔ parcel vertex/edge, printed coordinates ↔ vertex. It reads labels ("LOT 7"), POB descriptions, legal descriptions and parcel properties. **Only indices and ids, never numbers.** |
-| 3.1 solve | script | `anchors.json`: one transform per frame, with solver, class and D8 metrics |
+| 2.1 correspond | **agent** (judgment) | `correspondences.json`: ring matches (figure ↔ parcel: `same_as`, `within`, `union_of`), vertex and edge ties (figure vertex or course ↔ parcel vertex or edge), control points (figure vertex ↔ printed coordinate box). It reads labels ("LOT 7"), POB descriptions, legal descriptions and parcel properties. **Only indices and ids, never numbers, never a solver name.** These are the inputs D7a's rungs test for. |
+| 3.1 solve | script | `anchors.json`: one transform per frame, with solver, class and D8 metrics. **This is where D7 runs**: the ladder (D7a) picks the rung, then the rung's solver (D7b, D7c or D7d) computes the transform |
 | 3.2 render | script | overlay PNG per frame: county rings (all nearby), anchored figures, POB markers, over an aerial where available |
-| 3.3 check | **agent** (vision) | `check.md`: does the easement sit where the sketch says; is the lot in the right place and the right way round; flags |
+| 3.3 check | **agent** (vision) | `check.md`: does the easement sit where the sketch says; is the lot in the right place and the right way round; flags. `check.md` is also the readout 4.1 shows, so it carries each frame's solver, class, metrics against D11's threshold and any demotion (D7a) |
 | 4.1 hitl | none | operator accepts, rejects, or sends it back to 2.1 with a note, per frame |
 | 5.1 publish | script | `cartographer_anchors` rows + materialized `geo` rows (§3.7) |
+
+**Which step does which part of D7.** No step chooses a solver except `3.1 solve`, and it does so by inspection of its inputs:
+- **1.2 fetch** (script) supplies the raw material: the SIR's `geo` parcel rows in `target_srid` (rung 2's located features and rung 3's targets), adjoining rings re-queried from the county when the plat lot spans more than the subject parcel, and the D6 evidence (basis of bearings, units, scale factor, control-point boxes).
+- **2.1 correspond** (agent) supplies what a rung needs, by id and index: control points for rung 1, vertex and edge ties for rung 2, ring matches for rung 3. It writes one block per frame:
+
+  ```jsonc
+  {
+    "frames": [{
+      "frame_key": "frame-1",
+      "ring_matches":   [{ "figure": "figure-1", "relation": "same_as", "geo_ids": ["<geo.id>"], "evidence": "label LOT 7 = parcel 0412-07" }],
+      "vertex_ties":    [{ "figure": "figure-1", "vertex": 0, "geo_id": "<geo.id>", "ring_vertex": 3, "evidence": "POB is called as the NE corner of Lot 11" }],
+      "edge_ties":      [{ "figure": "figure-1", "course": 2, "geo_id": "<geo.id>", "ring_edge": 5, "sense": "reversed", "evidence": "along the north line of Lot 7" }],
+      "control_points": [{ "figure": "figure-1", "vertex": 4, "evidence_id": "<cartographer_geometry_evidence.id>" }],
+      "unmatched":      [{ "figure": "figure-9", "why": "separate exhibit; no parcel, corner or coordinate on the sheet" }]
+    }]
+  }
+  ```
+
+  `relation` is `same_as` (the figure is this parcel), `union_of` (the figure is these parcels together, a replat) or `within` (the figure lies inside this parcel, an easement). A `within` match anchors nothing by itself; it tells 3.2 which rings to draw. Vertex indices and course numbers are the geometry's (course k runs from vertex k−1 to vertex k; vertex 0 is the POB); `ring_vertex` and `ring_edge` index the parcel row's `geom_local` exterior ring.
+- **3.1 solve** (script), per frame: (1) gather the frame's inputs from `correspondences.json` and the evidence; (2) walk the ladder (D7a) to the highest eligible rung; (3) run that rung's solver (D7b, D7c or D7d); (4) if the rung's own residual gate fails, record `demoted_from` and take the next rung; (5) compute the ring metrics whenever a ring match exists; (6) apply the transform to every figure in the frame, `within` figures included (D9); (7) write `anchors.json`: `{frame_key, solver, accuracy_class, params, metrics, constraints_used, demoted_from}`.
+- **3.2 render** and **3.3 check** judge the result; **4.1** is the operator's call; **5.1** writes it. None of them touches the transform.
 
 **D11. A proposed auto-accept threshold, applied only in the readout.** For example: IoU ≥ 0.9, mean boundary distance ≤ 5 ft, ambiguity margin clear, and θ ≈ 0 when the basis is grid. v1 always stops at the HITL step (Q8).
 
@@ -657,7 +711,7 @@ sir_id → site_intelligence_report, target_geo_ids uuid[],   -- the parcel rows
 target_srid int, method text check (printed_coordinates|ties|ring_fit|manual),
 accuracy_class text check (survey|tied|gis_fit|approximate),
 params jsonb  {theta_rad, scale, t_e, t_n, k_units},
-metrics jsonb {iou, hausdorff_ft, mean_dist_ft, theta_vs_grid_deg, area_ratio, ambiguity, residuals[]},
+metrics jsonb {iou, hausdorff_ft, mean_dist_ft, theta_vs_grid_deg, area_ratio, ambiguity, residuals[], demoted_from?, tie_source?},
 evidence jsonb (correspondences + overlay path), status text check (proposed|accepted|rejected|stale),
 anchor_run_slug text, decided_by uuid, created_at
 ```
@@ -736,10 +790,12 @@ P0a, P0b and P0c are independent and can run in parallel. P1 needs only P0c's fi
 - **Q9. Curves as chords:** acceptable for v1 fits? Proposed: yes; `has_approximated_curves` caps the class at `gis_fit` and lowers the auto-accept threshold.
 - **Q10. `geo.kind` vocabulary for anchored rows:** reuse Cartographer's `kind`, or namespace it (e.g. `anchored_easement`) so today's consumers that filter on `kind='parcel'` never pick them up by mistake?
 - **Q11. Backfilling existing `county_api` rows:** a one-off script that re-reads `native_sr` from each row's `source_layer` (most rows don't have one) or re-resolves by county? `sir_add_parcel_geo` never updates rows.
+- **Q12. Demote on a failed residual gate, or anchor and flag?** When rung 1's control points disagree with the walked shape by more than `PRINTED_COORD_ACCEPT_FT`, D7a drops to the next rung and reports it. The alternative is geometry-placement D2's rule: the higher-ranked evidence places the figure and the disagreement is reported. Proposed: demote. A `survey` class on a misread box is a false accuracy claim the map cannot show, while a `gis_fit` with a note is honest, and the operator can send the frame back to 2.1.
+- **Q13. Does `tied` to county linework outrank `gis_fit`?** In v1 every located feature is a county parcel vertex or edge, so a `tied` anchor's position is only as good as the county's drawing, the same as `gis_fit`. Proposed: keep rung 2 above rung 3, because a named tie removes the rotation ambiguity a fit has, but record `metrics.tie_source` and gate residuals per source (1 ft for a monument, 10 ft for county linework). A consumer that needs position accuracy treats `tied` + `county_parcel` like `gis_fit`.
 
 ## 6. Decisions index
 
-D1 the county layer declares the zone (reverses geom-local §2 for the county path) · D2 generic function + registry, prospector fills entries · D3 fallback chain with a curated county table, no point-in-box · D4 resolve-site/RPC wiring · D5 content-hash linking · D6 extraction records basis/units/scale/control points · D7 three solvers · D8 shared metrics incl. ambiguity · D9 one anchor per frame · D10 separate manual runbook · D11 auto-accept suggestion only · D12 anchors table, no geometry FK · D13 `geo` rows produced as `method='anchored'` · D14 staleness never deletes · D15 `cartographer/VISION.md` gains an anchoring section in the first cartographer PR.
+D1 the county layer declares the zone (reverses geom-local §2 for the county path) · D2 generic function + registry, prospector fills entries · D3 fallback chain with a curated county table, no point-in-box · D4 resolve-site/RPC wiring · D5 content-hash linking · D6 extraction records basis/units/scale/control points · D7 one ladder (D7a, run by 3.1 solve) and three solvers (D7b printed coordinates, D7c ties, D7d ring fit) · D8 shared metrics incl. ambiguity, demoted_from, tie_source · D9 one anchor per frame · D10 separate manual runbook · D11 auto-accept suggestion only · D12 anchors table, no geometry FK · D13 `geo` rows produced as `method='anchored'` · D14 staleness never deletes · D15 `cartographer/VISION.md` gains an anchoring section in the first cartographer PR.
 
 ## 7. Coordination and risks
 
