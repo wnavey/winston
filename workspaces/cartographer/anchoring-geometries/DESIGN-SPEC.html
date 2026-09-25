@@ -442,7 +442,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 <script type="text/markdown" id="spec-md">
 # Cartographer — anchoring extracted geometries to the county parcel
 
-**Status:** Draft v2 (implemented P0a–P2; awaiting merge and the P2 exit runs)
+**Status:** Draft v2 (P0a–P2 merged except cartographer#30, held for the prod apply; P2 exit runs pending)
 **Date:** 2026-09-25 (v1 2026-09-24)
 **Repos touched:** `surveyor` (read and report each layer's native spatial reference; `native_sr` recorded in each module's `layer-identity.json`), `bureau` (`site-research` resolve-site records `native_sr`; `arcgis_query.py`; new `anchor-geometry` runbook), `substation` (`sir_add_parcel_geo` fills `geom_local`; `cartographer_files` gets a link to where the document came from; new `cartographer_anchors` table; RPC that writes anchored geometries into `geo`), `cartographer` (`src/lib/geometry/anchor.ts` solvers; extraction records basis-of-bearings, units and scale factor; **`VISION.md` updated to include anchoring**, §3.9)
 **Repos NOT touched:** `cityhall` (the map already draws `geo.geom_wgs84`; a viewer for anchored geometries comes later, §8), `conductor2`, `claude-plugins`
@@ -800,7 +800,7 @@ It also edits "Eventually" so WGS84/MapLibre display is described as the viewer 
 
 P0a, P0b and P0c are independent and can run in parallel. P1 needs only P0c's fixtures. P2 needs all of them.
 
-**Implementation status (v2, 2026-09-25).** All open, none merged; merging and every run is Will's call. Deploy order within a phase: substation migration first, then the code that reads it; `supabase/functions/geo_helpers.sql` needs a hand apply to prod after substation#307 and again after #310 (non-overlapping hunks in one file).
+**Implementation status (v2, 2026-09-25, evening).** Every PR was reviewed by the foreman bot, its required changes addressed, and **merged**, except cartographer#30, which is approved but **held until substation#309 is applied to prod** (its publish writes the five new columns on every geometry row, so merging first would fail every extract-geometry publish with PGRST204). Substation has no workflow that applies migrations to prod on merge: #308, #309 and #310 still need applying, and `supabase/functions/geo_helpers.sql` needs its hand apply (#307 and #310 both changed it). cartographer#32 was auto-closed when #31's branch was deleted at merge; cartographer#33 is the same branch rebased and merged.
 
 | Phase | PRs |
 |---|---|
@@ -808,7 +808,7 @@ P0a, P0b and P0c are independent and can run in parallel. P1 needs only P0c's fi
 | P0b | substation#308 (`cartographer_files` provenance columns) · cartographer#29 (`import-sir-artifact`, upload-path hash, `VISION.md` D15) |
 | P0c | substation#309 (evidence roles + metadata columns) · cartographer#30 (transcribe prompt, assemble, publish) · bureau#1813 (v2 prompt + contracts, `plat_notes` region kind) |
 | P1 | cartographer#31 (`anchor.ts`, 35 tests, car-wash fixture) |
-| P2 | substation#310 (`cartographer_anchors`, four RPCs) · cartographer#32 (anchor-geometry scripts: fetch/solve/render/publish, D14 wired into geometry publish; stacked on #31) · bureau#1815 (`anchor-geometry` runbook, 8 steps; revise = void 2.1 with the ruling as findings) |
+| P2 | substation#310 (`cartographer_anchors`, four RPCs) · cartographer#33 (anchor-geometry scripts: fetch/solve/render/publish, D14 wired into geometry publish; replaces #32) · bureau#1815 (`anchor-geometry` runbook, 8 steps; revise = void 2.1 with the ruling as findings) |
 
 Still to do after merge, each its own go: apply `geo_helpers.sql` to prod; the Q11 backfill of the 26 `county_api` rows; re-extract the car-wash plat (P0c exit test); the three P2 anchor runs (car-wash KY, Palm Bay Lot 7 FL, one Conroe tract TX); write their numbers into §3.8.
 
