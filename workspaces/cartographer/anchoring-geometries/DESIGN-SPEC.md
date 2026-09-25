@@ -17,7 +17,7 @@
 - ingesting-supporting-docs-3089: becomes the `fromPrintedCoordinates` solver and the ground-truth fixture.
 - MVP-EXPERIMENT: pointer only.
 
-> **Revision note (v1.1, 2026-09-25).** Clarification only; no decision is reversed. D7 is split into **D7a**, the eligibility ladder that picks the solver, and **D7b–D7d**, what each of the three solvers computes, step by step. Both run inside `3.1 solve`, a script, with no agent in the loop. §3.6 now says which runbook step does which part of D7, gives the `correspondences.json` shape that `2.1 correspond` must produce, and lists what `3.1 solve` does per frame. **Q12** (demote on a failed residual gate) and **Q13** (`tied` to county linework) are new. The D8/D12 metrics gain `demoted_from` and `tie_source`. Tolerances named here are proposals to be set by P1's tests.
+> **Revision note (v1.1, 2026-09-25).** Clarification only; no decision is reversed. D7 is split into **D7a**, the eligibility ladder that picks the solver, and **D7b–D7d**, what each of the three solvers computes, step by step. Both run inside `3.1 solve`, a script, with no agent in the loop. §3.6 now says which runbook step does which part of D7, gives the `correspondences.json` shape that `2.1 correspond` must produce, and lists what `3.1 solve` does per frame. **Q12** (demote on a failed residual gate) and **Q13** (`tied` to county linework) are new. The D8/D12 metrics gain `demoted_from` and `tie_source`. Tolerances named here are proposals to be set by P1's tests. §2 gains a **Purpose** paragraph naming what the initiative is for: `geom_local` on every geometry so polygon-versus-polygon questions are PostGIS operations.
 
 > **In one paragraph.** Cartographer turns metes-and-bounds descriptions into
 > exact shapes with no position on the ground: SRID:0, feet, with the point of
@@ -102,6 +102,10 @@ The scoping was done as an exploratory spike on 2026-09-23 and published as an I
 ---
 
 ## 2. Goals and non-goals
+
+**Purpose.** Populate `geo.geom_local` for every geometry we hold about a site (the county parcel, and the plats, lots, recorded easements and rights-of-way Cartographer extracts) in one projected system per SIR, so that questions about how those shapes relate can be answered as PostGIS operations on `geom_local`: what share of the parcel a recorded easement takes up (`ST_Area(ST_Intersection(...))`), the shortest distance from an easement to the parcel edge (`ST_Distance`), whether two easements overlap. Everything below serves that. Two consequences worth stating up front:
+- **Shapes from the same frame answer exactly**, whatever the anchor's accuracy class: placement (winston#270) already fixes their relative position to the foot, and one anchor moves them together. A lot and its easements from one plat are the common case.
+- **Shapes from different sources answer to the accuracy class** of the anchors between them. Easement versus county ring at `gis_fit` is as good as the county drawing; two independently anchored frames add their errors. Any consumer that reports a distance or a share must carry the class with it (Q4).
 
 **Goals**
 1. Every SIR parcel ring records the county layer's native spatial reference, and gets a `geom_local` in it when that system is a projected State Plane (or other projected) system.
