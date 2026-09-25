@@ -1,0 +1,1070 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cartographer — anchoring geometries · architecture</title>
+<style>
+/* ============================================================
+   spec-kit v5.1  —  winston HTML spec design system
+   Inline the ENTIRE contents of this file into the spec's style block.
+   Canonical source: ~/.claude/skills/winston-spec/assets/spec-kit.css
+   When you change this file, bump the version above and in COMPONENTS.md.
+   v4: + sequence diagram (.seq*), + data table (.spectable), + prompt block (.prompt)
+   v5: + system map (.sysmap/.sys, edges drawn by spec-kit.js), + decision flow (.dflow),
+       + concept figure (figure.concept), + claim caption (.claim), + reference chip rows (.sys-refs),
+       + spec reader page (body.reader; DESIGN-SPEC.md rendered by marked, built by inline-kit.py --spec)
+   v5.1: pass-2 friction fixes — long identifiers wrap (.sys .t, .uc .nt, .ent .ty), .sysmap-scroll for
+       6+ columns, state-neutral .sm pills, .dflow jump outcomes, legend 'new trigger' dot
+       Colour rule: fill/border = change state only; kind = badge text + shape; legend is the
+       complete list of colour meanings on the page.
+   ============================================================ */
+
+:root{
+  /* steel-blue ramp (matches cityhall / Noetic report surfaces) */
+  --p50:#f0f5f9;--p100:#dce8f1;--p200:#b9d2e5;--p300:#8cb4d1;--p400:#6397b8;
+  --p500:#517e9e;--p600:#3f6582;--p700:#35526b;--p800:#2d4559;--p900:#273b4b;--p950:#182530;
+  --bg:#f9f9f9;--card:#ffffff;--divider:#dfdfdf;--ink:#1f2937;--muted:#6b7280;--ember:#bb4d00;
+  /* semantic: new / changed / retired */
+  --new:#15803d;--newbg:#f0fdf4;--newbd:#bbf7d0;
+  --chg:#b45309;--chgbg:#fffbeb;--chgbd:#fde68a;
+  --ret:#b91c1c;--retbg:#fef2f2;--retbd:#fecaca;
+  --sans:'Lexend',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  --serif:'Lora',Georgia,'Times New Roman',serif;
+  --mono:'Fira Code','SF Mono',ui-monospace,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.55;font-size:15px}
+
+/* ---------- masthead ---------- */
+header.masthead{background:linear-gradient(135deg,var(--p800),var(--p600));color:#fff;padding:34px 32px 30px;position:relative;overflow:hidden}
+header.masthead::after{content:"";position:absolute;inset:0;background-image:repeating-linear-gradient(115deg,rgba(255,255,255,.06) 0 1px,transparent 1px 26px);pointer-events:none}
+header.masthead .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--p200)}
+header.masthead h1{font-family:var(--serif);font-weight:600;margin:.35em 0 .2em;font-size:29px;position:relative}
+header.masthead p{margin:0;color:var(--p100);max-width:880px;font-size:15px}
+header.masthead .meta{margin-top:14px;font-size:12.5px;color:var(--p200);font-family:var(--mono)}
+
+/* ---------- tabs ---------- */
+nav.tabs{position:sticky;top:0;z-index:20;display:flex;gap:2px;background:var(--p950);padding:0 20px;box-shadow:0 2px 8px rgba(0,0,0,.12);flex-wrap:wrap}
+nav.tabs button{appearance:none;border:0;background:transparent;color:var(--p200);font-family:var(--sans);font-size:14px;font-weight:500;padding:14px 18px;cursor:pointer;border-bottom:3px solid transparent;transition:all .15s}
+nav.tabs button .n{font-family:var(--mono);font-size:11px;opacity:.7;margin-right:7px}
+nav.tabs button:hover{color:#fff;background:rgba(255,255,255,.04)}
+nav.tabs button.active{color:#fff;border-bottom-color:var(--ember);background:rgba(255,255,255,.06)}
+
+/* ---------- layout ---------- */
+main{max-width:1140px;margin:0 auto;padding:30px 26px 90px}
+.panel{display:none;animation:fade .25s ease}
+main [id]{scroll-margin-top:74px} /* deep-link targets clear the sticky tab bar */
+.panel.active{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* Section heading: the h2 text is the PLAIN NAME of the thing the tab is about (v5.1 — it used to
+   carry a tagline while the small eyebrow carried the name; that was backwards). .eyebrow = the
+   tab number / section label, small. .sub = one plain sentence saying what is on the tab. */
+h2{font-family:var(--serif);font-weight:700;font-size:30px;line-height:1.15;letter-spacing:-.01em;margin:34px 0 10px;color:var(--p950)}
+h2:first-child{margin-top:4px}
+h2 .eyebrow{display:block;font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--p500);font-weight:400;margin-bottom:6px}
+h2 .sub{display:block;font-family:var(--sans);font-size:14px;font-weight:400;letter-spacing:0;line-height:1.5;color:var(--muted);margin-top:6px}
+h3{font-size:16px;font-weight:600;margin:28px 0 8px;color:var(--p800);display:flex;align-items:center;gap:9px}
+h3 .hn{font-family:var(--mono);font-size:12px;color:#fff;background:var(--p600);border-radius:5px;padding:2px 8px}
+h4{font-size:14px;font-weight:600;margin:18px 0 6px;color:var(--p800)}
+p{margin:.55em 0}
+.lede{font-size:15px;color:var(--p800);border-left:3px solid var(--ember);padding-left:16px;margin:12px 0 20px}
+ul{margin:.4em 0;padding-left:22px}li{margin:.28em 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px solid var(--p100);border-radius:4px;padding:1px 5px;color:var(--p800)}
+
+/* ---------- callout ---------- */
+.callout{background:var(--p50);border:1px solid var(--p200);border-left:4px solid var(--p500);border-radius:8px;padding:13px 17px;margin:16px 0}
+.callout.ember{background:#fdf6f0;border-color:#f0cba8;border-left-color:var(--ember)}
+.callout.new{background:var(--newbg);border-color:var(--newbd);border-left-color:var(--new)}
+.callout .lab{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--p600);font-weight:600;display:block;margin-bottom:3px}
+.callout.ember .lab{color:var(--ember)} .callout.new .lab{color:var(--new)}
+
+/* ---------- legend ---------- */
+.legend{display:flex;flex-wrap:wrap;gap:9px 16px;background:#fff;border:1px solid var(--divider);border-radius:10px;padding:12px 16px;margin:16px 0;font-size:12px;align-items:center}
+.legend .k{display:inline-flex;align-items:center;gap:6px}
+.swatch{width:26px;height:14px;border-radius:3px;display:inline-block;border:1px solid rgba(0,0,0,.15)}
+
+/* ---------- shared field badges (used by entity rows + legend) ---------- */
+.b{font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.04em;padding:1px 4px;border-radius:3px;text-transform:uppercase;white-space:nowrap}
+.b-pk{background:#fef3c7;color:#92600a;border:1px solid #fde68a}
+.b-fk{background:#e0edfb;color:#2456a8;border:1px solid #c3d8f2}
+.b-nn{background:#eef1f4;color:#4b5563;border:1px solid #d7dde3}
+.b-new{background:var(--newbg);color:var(--new);border:1px solid var(--newbd)}
+
+/* ============================================================
+   ER / UML entity boxes
+   ============================================================ */
+.erd{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start;margin:16px 0;background:#fbfcfd;border:1px solid var(--divider);border-radius:12px;padding:18px}
+.ent{border:1px solid var(--divider);border-radius:9px;overflow:hidden;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.05);min-width:236px;flex:0 1 auto}
+.ent .eh{padding:7px 12px;color:#fff;display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.ent .eh .en{font-family:var(--mono);font-size:12.5px;font-weight:700;letter-spacing:.02em}
+.ent .eh .stereo{font-size:9.5px;font-family:var(--mono);opacity:.85;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}
+.ent.exist .eh{background:var(--p700)}
+.ent.newt .eh{background:var(--new)}
+.ent.changed .eh{background:var(--chg)}
+.ent.retired .eh{background:#9ca3af}
+.ent.retired{opacity:.72}
+.ent .row{display:flex;align-items:center;gap:7px;padding:4px 11px;font-size:11.5px;border-top:1px solid #eef1f4}
+.ent .row:first-of-type{border-top:0}
+.ent .row .nm{font-family:var(--mono);font-size:11.5px;color:var(--p900);font-weight:600}
+.ent .row .ty{font-family:var(--mono);font-size:10px;color:var(--muted);margin-left:auto;text-align:right;max-width:60%;overflow-wrap:anywhere}
+.ent .row.hi{background:#fff9f2}
+.ent .row.strk .nm{text-decoration:line-through;color:var(--muted)}
+.ent .note{padding:5px 11px;font-size:10px;color:var(--muted);font-style:italic;border-top:1px dashed #e5e9ee;background:#fbfcfd}
+/* diff rows — show a table modification (column added / removed), git-style.
+   Put a "+"/"−" marker in a .gut span at the start of the row. */
+.ent .row .gut{flex:0 0 10px;width:10px;text-align:center;font-family:var(--mono);font-size:11px;font-weight:700;color:var(--muted)}
+.ent .row.add{background:var(--newbg);box-shadow:inset 3px 0 0 var(--new)}
+.ent .row.add .gut{color:var(--new)}
+.ent .row.add .nm{color:#166534}
+.ent .row.del{background:var(--retbg);box-shadow:inset 3px 0 0 var(--ret)}
+.ent .row.del .gut{color:var(--ret)}
+.ent .row.del .nm{color:var(--ret);text-decoration:line-through}
+
+/* relationships panel — crow's-foot text notation */
+.rels{background:#fff;border:1px solid var(--divider);border-radius:10px;padding:12px 16px;margin:14px 0;font-family:var(--mono);font-size:12px;line-height:1.9}
+.rels .rl{display:block;color:var(--p800)}
+.rels .rl b{color:var(--ember)}
+.rels .cf{color:var(--p500);font-weight:700}
+.rels .cmt{color:var(--muted);font-style:normal;font-family:var(--sans);font-size:11.5px}
+.rels .tag-new{color:var(--new);font-weight:700}
+.rels .tag-ret{color:var(--ret);font-weight:700}
+.rels-h{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--p600);font-weight:700;margin-bottom:6px}
+
+/* ============================================================
+   Use-case scene  (an action + its boxes-and-arrows diagram)
+   ============================================================ */
+.uc{margin:16px 0 22px;border:1px solid var(--divider);border-radius:12px;overflow:hidden;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.uc .uch{display:flex;align-items:center;gap:13px;padding:11px 16px;background:linear-gradient(135deg,var(--p700),var(--p600));color:#fff}
+.uc .uch .ucn{flex:0 0 30px;height:30px;border-radius:50%;background:rgba(255,255,255,.2);font-family:var(--mono);font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.uc .uch .uctxt{flex:1}
+.uc .uch .actor{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--p100);display:block;margin-bottom:1px}
+.uc .uch .uct{font-weight:600;font-size:15.5px;font-family:var(--serif)}
+.uc .ucsub{padding:9px 16px;font-size:12.5px;color:var(--p800);background:var(--p50);border-bottom:1px solid var(--p100)}
+.uc .ucdiag{padding:20px 16px 14px}
+.ucnote{padding:2px 16px 14px;font-size:11.5px;color:var(--muted)}
+.ucnote b{color:var(--p700);font-family:var(--mono);font-size:10.5px}
+
+/* ============================================================
+   Boxes-and-arrows flow
+   Robustness rules baked in:
+   - .dfg WRAPS (flex-wrap:wrap) so long chains never clip / never
+     need horizontal scroll. Arrows reflow with the nodes.
+   - .node is a flex COLUMN: the op-badge is an in-flow header row
+     (never position:absolute), and .nt / .nf are block-level, so a
+     table name and its fields can never smush onto one line.
+   ============================================================ */
+.dfg{display:flex;flex-wrap:wrap;align-items:stretch;gap:8px 0;margin:0}
+.node{flex:0 0 auto;width:156px;background:#fff;border:1.5px solid var(--p300);border-radius:8px;padding:9px 11px;display:flex;flex-direction:column;gap:3px}
+.node .op{align-self:flex-start;font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:1px 6px;border-radius:3px;border:1px solid;color:#fff;margin-bottom:2px}
+.node .nt{display:block;font-family:var(--mono);font-weight:700;font-size:12px;color:var(--p900);line-height:1.3;overflow-wrap:anywhere}
+.node .nf{display:block;font-family:var(--mono);font-size:10px;color:var(--muted);line-height:1.45;word-break:break-word}
+.node.created{border-color:var(--new);background:var(--newbg)} .node.created .op{background:var(--new);border-color:var(--new)}
+.node.read{border-color:var(--p400);background:#eef4fb} .node.read .op{background:var(--p500);border-color:var(--p500)}
+.node.event{border-color:var(--ember);background:#fdf6f0} .node.event .op{background:var(--ember);border-color:var(--ember)}
+.node.store{border-style:dashed;border-color:var(--p500);background:#eef3f7} .node.store .op{background:var(--p700);border-color:var(--p700)}
+.edge{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:70px;max-width:104px;padding:0 4px}
+.edge .el{font-size:9px;color:var(--p600);font-family:var(--mono);text-align:center;line-height:1.3;margin-bottom:2px}
+.edge .ar{color:var(--p400);font-size:20px;font-weight:700;line-height:1}
+
+/* ============================================================
+   Card grid  (keep / change / drop comparisons)
+   ============================================================ */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:820px){.grid2{grid-template-columns:1fr}.erd{padding:12px}}
+.card{background:var(--card);border:1px solid var(--divider);border-radius:9px;padding:14px 16px}
+.card.keep{border-top:3px solid var(--new)} .card.change{border-top:3px solid var(--chg)} .card.drop{border-top:3px solid var(--ret)}
+.card strong{display:block;margin-bottom:4px;font-size:13.5px}
+.card ul{font-size:12.5px;margin:2px 0}
+
+/* ============================================================
+   Lifecycle / state machine
+   ============================================================ */
+.sm{display:flex;flex-wrap:wrap;gap:7px;align-items:center;margin:14px 0}
+.sm .s{border:1px solid var(--p300);background:var(--p50);border-radius:20px;padding:5px 12px;font-size:11.5px;font-weight:600;color:var(--p800);font-family:var(--mono)}
+.sm .s .who{display:block;font-size:9px;font-family:var(--mono);color:var(--muted);font-weight:400;text-transform:uppercase;letter-spacing:.03em}
+.sm .s.client{border-color:var(--newbd);background:var(--newbg)}
+.sm .s.cc{border-color:#f0cba8;background:#fdf6f0}
+.sm .s.spec{border-color:var(--chgbd);background:var(--chgbg)}
+.sm .a{color:var(--p400);font-weight:700}
+/* state-neutral variants (v5.1): terminal-good / terminal-stop / dimmed. The .client/.cc/.spec
+   colours mean "whose court" and need a legend if used. */
+.sm .s.ok{border-color:var(--newbd);background:var(--newbg);color:var(--new)}
+.sm .s.stop{border-color:var(--retbd);background:var(--retbg);color:var(--ret)}
+.sm .s.dim{opacity:.6;border-style:dashed}
+
+/* ============================================================
+   Use-case catalog — grouped list of candidate use cases
+   (a scoped list, NOT a diagram — for "what would we build" inventories)
+   ============================================================ */
+.catgrp{border:1px solid var(--divider);border-radius:10px;overflow:hidden;margin:14px 0;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.catgrp .cath{background:var(--p700);color:#fff;padding:8px 14px;font-family:var(--serif);font-weight:600;font-size:14.5px;display:flex;align-items:center;gap:10px}
+.catgrp .cath .cgl{font-family:var(--mono);font-size:12px;font-weight:700;background:rgba(255,255,255,.2);border-radius:5px;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;flex:0 0 22px}
+.uci{display:flex;gap:9px;align-items:baseline;padding:7px 13px;border-top:1px solid #eef1f4;font-size:13px}
+.uci .uid{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--p600);flex:0 0 26px}
+.uci .utxt{flex:1;color:var(--ink);line-height:1.45}
+.uci .utxt b{color:var(--p900)}
+.uci .star{color:var(--ember);font-weight:700;font-size:12px;flex:0 0 auto;letter-spacing:-1px}
+.uci.later{opacity:.66}
+.utag{font-family:var(--mono);font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;text-transform:uppercase;letter-spacing:.03em;white-space:nowrap;flex:0 0 auto}
+.utag.t-orig{background:#e0edfb;color:#2456a8;border:1px solid #c3d8f2}
+.utag.t-add{background:var(--newbg);color:var(--new);border:1px solid var(--newbd)}
+
+/* ============================================================
+   Misc: storage strip, cross-reference box
+   ============================================================ */
+.storage{background:#eef3f7;border:1px dashed var(--p300);border-radius:8px;padding:9px 13px;font-family:var(--mono);font-size:12px;color:var(--p800);margin:12px 0}
+.storage b{color:var(--ember)}
+.xref{font-size:12px;color:var(--p600);background:var(--p50);border:1px solid var(--p100);border-radius:6px;padding:8px 12px;margin:10px 0}
+.foot{margin-top:44px;padding-top:18px;border-top:1px solid var(--divider);color:var(--muted);font-size:12px;font-family:var(--mono)}
+
+/* actor / repo chips (optional, for inline actor tags in prose) */
+.rc{display:inline-block;font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;padding:1px 6px;border-radius:5px;border:1px solid;vertical-align:middle;white-space:nowrap}
+.r-ch{background:#eef4fb;color:#2456a8;border-color:#c3d8f2}
+.r-sub{background:#f3eefb;color:#6b3fa0;border-color:#dcccf0}
+.r-fa{background:#e9f7f2;color:#0f7a5f;border-color:#bfe8db}
+.r-db{background:#eaeef2;color:#2d4559;border-color:#c7d2dd}
+.r-store{background:#e6eef3;color:#35526b;border-color:#bcd0dd}
+.r-user{background:#eefaf0;color:#15803d;border-color:#bbf7d0}
+.r-mcp{background:#fdf0e6;color:#b5590d;border-color:#f2d3b3}
+
+/* ============================================================
+   Sequence diagram — swimlane message flow
+   A CSS grid: col 1 = step number, then one column per actor lane.
+   Each message is a grid item that SPANS grid-columns from its
+   source lane to its target lane, so it always sits under the right
+   headers and never smushes. Continuous lifelines are grid items
+   spanning all rows (grid-row:1/-1) — so set .seq-body's
+   grid-template-rows to repeat(STEP_COUNT, auto) for -1 to resolve.
+   Wide diagrams scroll inside .seq-scroll, never the page body.
+   Direction is an in-flow glyph (.dir ◂/▸) pushed to the target edge
+   by justify-content:space-between — never position:absolute.
+   ============================================================ */
+.seq-scroll{overflow-x:auto;margin:16px 0;border:1px solid var(--divider);border-radius:12px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.seq{min-width:840px}
+.seq-head,.seq-body{display:grid;grid-template-columns:30px repeat(6,minmax(104px,1fr))}
+.seq-head{background:linear-gradient(135deg,var(--p800),var(--p700));padding:11px 12px}
+.seq-h{display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;padding:0 4px}
+.seq-h .role{font-family:var(--mono);font-size:8.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--p200)}
+.seq-h .who{font-family:var(--mono);font-size:11px;font-weight:700;color:#fff;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.24);border-radius:6px;padding:3px 9px}
+.seq-body{position:relative;row-gap:11px;padding:16px 12px 20px}
+.seq-life{width:2px;background:var(--p100);justify-self:center;border-radius:2px;z-index:0}
+.seq-num{grid-column:1;justify-self:center;align-self:center;font-family:var(--mono);font-size:10px;font-weight:700;color:#fff;background:var(--p600);min-width:19px;height:19px;padding:0 3px;border-radius:10px;display:flex;align-items:center;justify-content:center;z-index:1}
+.seq-msg{align-self:center;display:flex;flex-direction:row;align-items:center;gap:8px;justify-content:space-between;background:#fff;border:1.5px solid var(--p300);border-radius:7px;padding:5px 10px;z-index:1;min-width:0}
+.seq-msg .mt{display:flex;flex-direction:column;gap:1px;min-width:0}
+.seq-msg .m{font-family:var(--mono);font-size:10.5px;color:var(--p900);font-weight:700;line-height:1.32;word-break:break-word}
+.seq-msg .m2{font-family:var(--mono);font-size:9.5px;color:var(--muted);line-height:1.3;word-break:break-word}
+.seq-msg .dir{font-size:14px;font-weight:700;color:var(--p500);flex:0 0 auto}
+.seq-msg.write{border-color:var(--new);background:var(--newbg)} .seq-msg.write .dir{color:var(--new)}
+.seq-msg.event{border-color:var(--ember);background:#fdf6f0} .seq-msg.event .dir{color:var(--ember)}
+.seq-msg.ret{border-style:dashed;background:#f6f9fb} .seq-msg.ret .m{font-weight:500;color:var(--p600)}
+.seq-msg.self{border-style:dashed;border-color:var(--p400);background:#eef3f7}
+.seq-foot{display:flex;flex-wrap:wrap;gap:8px 15px;padding:9px 14px;border-top:1px solid var(--divider);background:#fbfcfd;font-size:10.5px;font-family:var(--mono);color:var(--muted);align-items:center}
+.seq-foot .sw{display:inline-block;width:20px;height:11px;border-radius:3px;border:1.5px solid var(--p300);vertical-align:middle;margin-right:5px}
+.seq-foot .sw.write{border-color:var(--new);background:var(--newbg)} .seq-foot .sw.event{border-color:var(--ember);background:#fdf6f0}
+.seq-foot .sw.ret{border-style:dashed;background:#f6f9fb} .seq-foot .sw.self{border-style:dashed;border-color:var(--p400);background:#eef3f7}
+
+/* ============================================================
+   Data table — for step→entity maps and any tabular spec content.
+   Wrap in .spectable-scroll so wide tables scroll, not the page.
+   ============================================================ */
+.spectable-scroll{overflow-x:auto;margin:14px 0}
+.spectable{width:100%;border-collapse:collapse;font-size:12.5px;background:#fff;border:1px solid var(--divider);border-radius:10px;overflow:hidden}
+.spectable thead th{background:var(--p700);color:#fff;font-family:var(--mono);font-size:10px;letter-spacing:.04em;text-transform:uppercase;text-align:left;padding:8px 12px;font-weight:700;white-space:nowrap}
+.spectable tbody td{padding:7px 12px;border-top:1px solid #eef1f4;vertical-align:top;line-height:1.5}
+.spectable tbody tr:nth-child(even){background:#fbfcfd}
+.spectable td .sn{font-family:var(--mono);font-weight:700;color:#fff;background:var(--p600);border-radius:9px;padding:1px 7px;font-size:10.5px}
+.spectable td code{font-size:11px}
+.spectable td .none{color:var(--muted);font-style:italic;font-family:var(--sans)}
+.spectable td .w{color:var(--new);font-weight:700} /* write */
+.spectable td .r{color:var(--p500);font-weight:700} /* read/return */
+
+/* ============================================================
+   Prompt / code block — a readable mono block (LLM prompts, snippets).
+   White-space preserved; scrolls horizontally inside itself.
+   ============================================================ */
+.prompt{background:#fbfcfd;border:1px solid var(--p200);border-left:4px solid var(--p500);border-radius:8px;padding:12px 15px;margin:12px 0;font-family:var(--mono);font-size:11.5px;line-height:1.6;color:var(--p900);white-space:pre-wrap;overflow-x:auto}
+.prompt .ph{display:block;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--p600);font-weight:700;margin-bottom:6px}
+
+
+/* ============================================================
+   System map (.sysmap)  —  the Overview diagram.  v5
+   A CSS grid of nodes placed with grid-area:row/col. Column 1 is
+   always the TRIGGER (a start-dot, no box). Edges are authored as
+   hidden <a class="sys-edge" data-from data-to>label</a> and drawn as
+   SVG by spec-kit.js after layout (no hand-typed coordinates).
+   COLOUR = CHANGE STATE ONLY: white exists · amber .chg · green .new ·
+   red-dashed .gap. KIND = badge TEXT + shape (.ext dashed, .store
+   cylinder bottom, .trig dot). Badges are one colour except on
+   changed/new nodes, where they take the node's change colour.
+   ============================================================ */
+.sysmap{position:relative;display:grid;gap:40px 64px;padding:28px 16px 22px;background:#fff;border:1px solid var(--divider);border-radius:12px;margin:14px 0 6px}
+.sysmap-scroll{overflow-x:auto;margin:14px 0 6px} .sysmap-scroll .sysmap{margin:0;min-width:max-content} /* 6+ columns: use grid-template-columns:repeat(N,minmax(150px,1fr)) inside .sysmap-scroll */
+.sysmap .colh{font-family:var(--mono);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--p500);text-align:center;padding-bottom:6px;border-bottom:1px dashed var(--p200);align-self:end}
+.sys{position:relative;z-index:2;background:#fff;border:1.5px solid var(--p300);border-radius:9px;padding:9px 11px 8px;min-height:64px;display:flex;flex-direction:column;gap:2px;align-self:center}
+.sys .k{align-self:flex-start;font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:1px 6px;border-radius:3px;color:#fff;background:var(--p500);margin-bottom:2px}
+.sys .t{font-weight:600;font-size:12.5px;line-height:1.3;color:var(--p900);overflow-wrap:anywhere}
+.sys .d{font-family:var(--mono);font-size:9.5px;color:var(--muted);line-height:1.4}
+.sys.ext{border-style:dashed}
+.sys.store{border-radius:4px 4px 14px 14px}
+.sys.new{border-color:var(--new);background:var(--newbg);box-shadow:0 0 0 3px #dcfce7}.sys.new .k{background:var(--new)}
+.sys.chg{border-color:var(--chg);background:var(--chgbg)}.sys.chg .k{background:var(--chg)}
+/* trigger: a start-dot + label, never a box. Declared AFTER .new/.chg so it wins on order. */
+.sys.trig{border:none;background:none;box-shadow:none;padding:0;min-height:0;align-items:flex-start;justify-self:start;gap:5px;max-width:150px}
+.sys.trig .dot{width:16px;height:16px;border-radius:50%;background:var(--p700);border:3px solid #fff;box-shadow:0 0 0 1.5px var(--p700)}
+.sys.trig.new .dot{background:var(--new);box-shadow:0 0 0 1.5px var(--new)}
+.sys.trig.chg .dot{background:var(--chg);box-shadow:0 0 0 1.5px var(--chg)}
+.sys.trig .t{font-size:11.5px;font-weight:600;color:var(--p800);line-height:1.25}
+.sys.trig .d{font-size:9.5px}
+.sys.gap{border:1.5px dashed var(--ret);background:var(--retbg);color:var(--ret);align-items:center;justify-content:center;text-align:center;font-family:var(--mono);font-size:10.5px;min-height:40px}
+/* floating spec-reference tag above the box; an <a href="#detail-id"> deep-link to the zoom-in diagram */
+.sys .ref{position:absolute;top:-11px;right:8px;text-decoration:none;font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.04em;padding:1px 7px;border-radius:10px;background:#fff;border:1px solid var(--p300);color:var(--p700);white-space:nowrap}
+.sys.chg .ref{border-color:var(--chg);color:var(--chg)}.sys.new .ref{border-color:var(--new);color:var(--new)}
+.sys .ref:hover{background:var(--p50)}
+.sys-edge{display:none} /* authored edge; rendered as SVG by spec-kit.js */
+.sysmap svg.edges{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1;overflow:visible}
+.sysmap svg .e{fill:none;stroke:var(--p400);stroke-width:1.6}
+.sysmap svg .e.new{stroke:var(--new);stroke-width:2.2}
+.sysmap svg .e.chg{stroke:var(--chg);stroke-width:2}
+.sysmap svg .e.gap{stroke:var(--ret);stroke-dasharray:5 4}
+.sysmap svg .e.loop{stroke:var(--p400);stroke-dasharray:4 3}
+.sysmap svg .lbl{font:9.5px var(--mono);fill:var(--p700)}
+.sysmap svg .lbl.new{fill:var(--new);font-weight:700}.sysmap svg .lbl.chg{fill:var(--chg);font-weight:700}.sysmap svg .lbl.gap{fill:var(--ret)}
+.sysmap svg .lblbg{fill:#fff;stroke:none;opacity:.94}
+/* reference footer: stacked CHIP ROWS, one per reference, each a link into the spec reader page.
+   Markup: <div class="sys-refs"><a class="refrow" data-ref="P0a"><span class="chip">P0a</span><span class="txt">…</span></a>…</div>
+   spec-kit.js fills href = <main data-spec>#<token>. */
+.sys-refs{display:flex;flex-direction:column;gap:6px;margin:12px 0 0}
+.sys-refs .refrow{display:flex;align-items:baseline;gap:12px;padding:7px 12px;border:1px solid var(--divider);border-radius:9px;background:#fff;text-decoration:none;color:var(--p800);font-size:12.5px;line-height:1.45;transition:border-color .12s,background .12s}
+.sys-refs .refrow:hover{border-color:var(--p400);background:var(--p50)}
+.sys-refs .refrow .chip{flex:0 0 auto;font-family:var(--mono);font-size:10.5px;font-weight:700;color:var(--p700);background:var(--p50);border:1px solid var(--p200);border-radius:6px;padding:2px 8px;min-width:44px;text-align:center}
+.sys-refs .refrow.chg .chip{color:var(--chg);border-color:var(--chgbd);background:var(--chgbg)}
+.sys-refs .refrow.new .chip{color:var(--new);border-color:var(--newbd);background:var(--newbg)}
+.sys-refs .refrow .txt{flex:1}
+.sys-refs .refrow .go{flex:0 0 auto;font-family:var(--mono);font-size:10px;color:var(--p500)}
+.sys-refs .refrow[href] .go::after{content:"read §"}
+.sys-refs .refrow:not([href]) .go::after{content:"no spec reader";color:var(--muted)}
+/* citation links inside claims and ref tags (filled in by spec-kit.js) */
+.claim a.cite,.sys .ref a{color:inherit;text-decoration:underline dotted;text-underline-offset:2px}
+.claim a.cite:hover{color:var(--ember)}
+/* "read the spec" masthead link */
+header.masthead a.spec-link{display:inline-block;margin-top:12px;font-family:var(--mono);font-size:12px;color:#fff;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);border-radius:7px;padding:5px 11px;text-decoration:none;position:relative}
+header.masthead a.spec-link:hover{background:rgba(255,255,255,.24)}
+
+/* legend for a system map: the COMPLETE list of colour meanings on the page */
+.sys-legend{display:flex;flex-wrap:wrap;gap:14px;font-size:11.5px;color:var(--p800);margin:8px 4px 0}
+.sys-legend i{display:inline-block;width:22px;height:3px;vertical-align:middle;margin-right:5px;background:var(--p400)}
+.sys-legend i.new{background:var(--new)} .sys-legend i.dot{width:10px;height:10px;border-radius:50%;background:var(--p700)} .sys-legend i.dot.new{background:var(--new)}.sys-legend i.chg{background:var(--chg)}.sys-legend i.gap{background:var(--ret)}.sys-legend i.loop{background:repeating-linear-gradient(90deg,var(--p400) 0 4px,transparent 4px 7px)}
+
+/* ============================================================
+   Claim caption  —  under every diagram. Cites the spec section or
+   decision it paraphrases. "Reading:" for the author's own observation.
+   ============================================================ */
+.claim{font-size:12.5px;color:var(--p800);margin:8px 0 26px;padding:8px 12px;border-left:3px solid var(--ember);background:#fff}
+.claim b{color:var(--p900)}
+
+/* ============================================================
+   Decision flow (.dflow)  —  "try X, else Y, else Z" / gate outcomes.
+   A vertical list of question rows; "yes" exits right to an outcome,
+   "no" falls through to the next row. Text-first, no SVG.
+   ============================================================ */
+.dflow{margin:14px 0;border:1px solid var(--divider);border-radius:12px;background:#fff;padding:14px 16px 10px}
+.dflow .dq{display:grid;grid-template-columns:minmax(200px,1.4fr) auto minmax(160px,1fr);gap:10px;align-items:center}
+.dflow .dq .q{font-size:12.5px;font-weight:600;color:var(--p900);border:1.5px solid var(--p300);border-radius:8px;padding:7px 11px;background:#fff}
+.dflow .dq .yes{font-family:var(--mono);font-size:10px;font-weight:700;color:var(--new);white-space:nowrap}
+.dflow .dq .out{font-family:var(--mono);font-size:11px;color:var(--p800);border:1.5px solid var(--newbd);background:var(--newbg);border-radius:8px;padding:6px 10px}
+.dflow .dq .out.warn{border-color:var(--chgbd);background:var(--chgbg)}
+.dflow .dq .out.fail{border-color:var(--retbd);background:var(--retbg);color:var(--ret)}
+.dflow .dno{font-family:var(--mono);font-size:9.5px;color:var(--muted);padding:3px 0 3px 18px}
+.dflow .dq.end .q{border-style:dashed;font-weight:500;color:var(--p700)}
+.dflow .dq .out a,.dflow .dq a.out{color:inherit;text-decoration:underline dotted;text-underline-offset:2px}
+.dflow .dq .out.jump::after{content:" ↗";color:var(--p500)} /* an outcome that jumps to another step/diagram */
+
+/* ============================================================
+   Concept figure  —  a hand-drawn inline SVG for the one mechanism
+   prose can't carry (a transform, a timeline, a shape). One figure,
+   one claim in the figcaption. See COMPONENTS.md for SVG rules.
+   ============================================================ */
+figure.concept{margin:16px 0;padding:16px 16px 10px;background:#fff;border:1px solid var(--divider);border-radius:12px;color:var(--p800)}
+figure.concept svg{display:block;max-width:100%;height:auto;margin:0 auto}
+figure.concept figcaption{font-size:12.5px;color:var(--p800);margin-top:10px;padding:8px 12px;border-left:3px solid var(--ember);background:#fbfcfd}
+figure.concept figcaption b{color:var(--p900)}
+
+
+/* ============================================================
+   Spec reader page (body.reader) — DESIGN-SPEC.md rendered by marked,
+   generated by inline-kit.py --spec. Sticky TOC + body; :target glow.
+   ============================================================ */
+body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom:1px solid rgba(255,255,255,.4)}
+.reader-wrap{display:grid;grid-template-columns:250px minmax(0,1fr);gap:34px;max-width:1240px;margin:0 auto;padding:28px 26px 90px}
+@media(max-width:900px){.reader-wrap{grid-template-columns:1fr}.toc{position:static}}
+.toc{position:sticky;top:18px;align-self:start;max-height:calc(100vh - 36px);overflow:auto;font-size:12.5px;border-right:1px solid var(--divider);padding-right:14px}
+.toc .toc-h{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--p600);font-weight:700;margin-bottom:8px}
+.toc a{display:block;color:var(--p800);text-decoration:none;padding:3px 0;line-height:1.35}
+.toc a.toc-h3{padding-left:14px;font-size:12px;color:var(--p700)}
+.toc a:hover{color:var(--ember)}
+.reader-body{max-width:860px;font-size:15px;line-height:1.6}
+.reader-body h2{margin-top:44px;padding-top:18px;border-top:1px solid var(--divider)}
+.reader-body h3{display:block;margin-top:30px;font-size:17px}
+.reader-body h4{margin-top:22px}
+.reader-body blockquote{margin:14px 0;padding:10px 16px;border-left:4px solid var(--p500);background:var(--p50);border-radius:0 8px 8px 0;color:var(--p800)}
+.reader-body blockquote p{margin:.3em 0}
+.reader-body pre{background:#fbfcfd;border:1px solid var(--p200);border-left:4px solid var(--p500);border-radius:8px;padding:12px 15px;font-family:var(--mono);font-size:11.5px;line-height:1.55;overflow-x:auto}
+.reader-body pre code{background:none;border:0;padding:0;font-size:inherit}
+.reader-body a{color:var(--p600)}
+.reader-body hr{border:0;border-top:1px solid var(--divider);margin:26px 0}
+.reader-body .spectable-scroll{margin:12px 0}
+.reader-body .spectable td code{white-space:normal}
+.reader-body .anchor{display:block;position:relative;top:-14px;height:0}
+.reader-body strong.tok{scroll-margin-top:24px}
+.reader-body :target{scroll-margin-top:18px}
+.reader-body h2:target,.reader-body h3:target,.reader-body h4:target{background:#fff8ec;box-shadow:-12px 0 0 #fff8ec,12px 0 0 #fff8ec;border-radius:3px}
+.reader-body strong.tok:target{background:#fff1cc;border-radius:3px;padding:0 3px;box-shadow:0 0 0 2px #fde68a}
+.reader-body .anchor:target + h2,.reader-body .anchor:target + h3{background:#fff8ec;box-shadow:-12px 0 0 #fff8ec,12px 0 0 #fff8ec;border-radius:3px}
+
+</style>
+</head>
+<body>
+
+<header class="masthead">
+  <div class="kicker">CARTOGRAPHER · ANCHORING GEOMETRIES</div>
+  <h1>Anchoring extracted geometries to the county parcel</h1>
+  <p>Architecture companion to <code>DESIGN-SPEC.md</code> (winston#279). Cartographer's shapes are survey-exact but float (SRID:0, feet, the plat's own north); the SIR's county parcel ring is on the map but only tax-map-grade. This spec joins the two with one similarity transform per frame. Research: <a href="https://inspector-general-gamma.vercel.app/reports/view/2026-09-23-sir-geometry-source-survey/" style="color:inherit">IG geometry source survey</a>.</p>
+  <div class="meta">Draft v1.2 · 2026-09-25 (v1 2026-09-24) · companion on spec-kit v5.1 · click a tab ↓</div>
+  <a class="spec-link" href="DESIGN-SPEC.html">📖 read the spec</a>
+</header>
+
+<nav class="tabs">
+  <button data-tab="overview" class="active"><span class="n">01</span>Overview</button>
+  <button data-tab="how"><span class="n">02</span>How it works</button>
+  <button data-tab="who"><span class="n">03</span>Who does what when</button>
+  <button data-tab="stored"><span class="n">04</span>What's stored</button>
+  <button data-tab="rollout"><span class="n">05</span>Rollout</button>
+</nav>
+
+<main data-spec="DESIGN-SPEC.html">
+
+<!-- ============================================================ 01 OVERVIEW -->
+<section class="panel active" id="overview">
+<h2><span class="eyebrow">01 · overview</span>The systems this spec touches<span class="sub">Today, after this spec, and the order the phases land in.</span></h2>
+<p class="lede">Read the maps left to right from the trigger. White is what exists today, amber is what this spec changes, green is what it adds. The red box on the first map is the gap the second map closes.</p>
+
+<h3><span class="hn">Today</span>Verified 2026-09-24</h3>
+<div class="sysmap" style="grid-template-columns:.55fr repeat(5,1fr);column-gap:44px">
+  <div class="colh" style="grid-area:1/1">trigger</div>
+  <div class="colh" style="grid-area:1/2">sources</div>
+  <div class="colh" style="grid-area:1/3">surveyor</div>
+  <div class="colh" style="grid-area:1/4">bureau</div>
+  <div class="colh" style="grid-area:1/5">postgres</div>
+  <div class="colh" style="grid-area:1/6">cityhall</div>
+
+  <div class="sys trig" id="a-t1" style="grid-area:2/1"><span class="dot"></span><span class="t">SIR run launched</span><span class="d">for an address</span></div>
+  <div class="sys ext" id="a-src" style="grid-area:2/2"><span class="k">external</span><span class="t">County parcel layer</span><span class="d">ArcGIS · stored in State Plane</span></div>
+  <div class="sys" id="a-tool" style="grid-area:2/3"><span class="k">tool</span><span class="t">County parcel tool</span><span class="d">asks for WGS84 · reports no SR</span></div>
+  <div class="sys" id="a-step" style="grid-area:2/4"><span class="k">runbook step</span><span class="t">resolve-site</span><span class="d">WGS84 ring · native SR discarded</span></div>
+  <div class="sys store" id="a-geo" style="grid-area:2/5"><span class="k">table</span><span class="t">geo (parcel)</span><span class="d">geom_wgs84 · geom_local NULL</span></div>
+  <div class="sys" id="a-ui" style="grid-area:2/6"><span class="k">ui</span><span class="t">SIR map</span><span class="d">draws geom_wgs84</span></div>
+
+  <div class="sys gap" id="a-gap" style="grid-area:3/5">no shared coordinate system<br>no key between the two</div>
+
+  <div class="sys trig" id="a-t2" style="grid-area:4/1"><span class="dot"></span><span class="t">Operator uploads a plat</span><span class="d">runs extract-geometry</span></div>
+  <div class="sys ext" id="a-pdf" style="grid-area:4/2"><span class="k">external</span><span class="t">Recorded plat PDF</span><span class="d">metes &amp; bounds · manual upload</span></div>
+  <div class="sys" id="a-ex" style="grid-area:4/4"><span class="k">runbook</span><span class="t">extract-geometry</span><span class="d">SRID:0 feet · POB at (0,0)</span></div>
+  <div class="sys store" id="a-cg" style="grid-area:4/5"><span class="k">table</span><span class="t">cartographer_geometries</span><span class="d">polygon jsonb · no SIR link</span></div>
+
+  <a class="sys-edge" data-from="a-t1" data-to="a-src"></a>
+  <a class="sys-edge" data-from="a-src" data-to="a-tool">outSR=4326</a>
+  <a class="sys-edge" data-from="a-tool" data-to="a-step">WGS84 ring</a>
+  <a class="sys-edge" data-from="a-step" data-to="a-geo">sir_add_parcel_geo</a>
+  <a class="sys-edge" data-from="a-geo" data-to="a-ui">sir_parcels()</a>
+  <a class="sys-edge" data-from="a-t2" data-to="a-pdf"></a>
+  <a class="sys-edge" data-from="a-pdf" data-to="a-ex">vision transcribe</a>
+  <a class="sys-edge" data-from="a-ex" data-to="a-cg">publish</a>
+  <a class="sys-edge gap" data-from="a-geo" data-to="a-gap"></a>
+  <a class="sys-edge gap" data-from="a-cg" data-to="a-gap"></a>
+</div>
+<div class="sys-legend"><span><i></i>exists today</span><span><i class="chg"></i>changed by this spec</span><span><i class="new"></i>net-new</span><span><i class="gap"></i>the gap</span><span><i class="loop"></i>loop back</span></div>
+<p class="claim"><b>Claim (§1.1):</b> the county ring knows roughly <i>where</i> the land is, Cartographer knows exactly what <i>shape</i> it is, and "the two sides meet nowhere": no shared coordinate system, and <code>cartographer_files</code> has no link to a SIR.</p>
+
+<h3><span class="hn">After</span>What this spec changes and adds</h3>
+<div class="sysmap" style="grid-template-columns:.55fr repeat(5,1fr);column-gap:44px">
+  <div class="colh" style="grid-area:1/1">trigger</div>
+  <div class="colh" style="grid-area:1/2">sources</div>
+  <div class="colh" style="grid-area:1/3">surveyor</div>
+  <div class="colh" style="grid-area:1/4">bureau</div>
+  <div class="colh" style="grid-area:1/5">postgres</div>
+  <div class="colh" style="grid-area:1/6">cityhall</div>
+
+  <div class="sys trig" id="b-t1" style="grid-area:2/1"><span class="dot"></span><span class="t">SIR run launched</span><span class="d">for an address</span></div>
+  <div class="sys ext" id="b-src" style="grid-area:2/2"><span class="k">external</span><span class="t">County parcel layer</span><span class="d">?f=json says its latestWkid</span></div>
+  <div class="sys chg" id="b-tool" style="grid-area:2/3"><a class="ref" href="#detail-native-sr">P0a · D2–D3 ↓</a><span class="k">surveyor module</span><span class="t">County parcel tool</span><span class="d">now returns native_sr from its layer-identity.json, checked live</span></div>
+  <div class="sys chg" id="b-step" style="grid-area:2/4"><a class="ref" href="#detail-native-sr">P0a · D1–D4 ↓</a><span class="k">runbook step</span><span class="t">resolve-site</span><span class="d">now requires native_sr on every ring</span></div>
+  <div class="sys store chg" id="b-geo" style="grid-area:2/5"><a class="ref" href="#detail-geo">P0a · D4 ↓</a><span class="k">table</span><span class="t">geo (parcel)</span><span class="d">gains geom_local in the county's State Plane</span></div>
+  <div class="sys" id="b-ui" style="grid-area:2/6"><span class="k">ui</span><span class="t">SIR map</span><span class="d">unchanged</span></div>
+
+  <div class="sys trig new" id="b-t2" style="grid-area:3/1"><span class="dot"></span><span class="t">Operator launches anchor-geometry</span><span class="d">{file, sir_id}</span></div>
+  <div class="sys" id="b-op" style="grid-area:3/2"><span class="k">human</span><span class="t">Operator</span><span class="d">accept · reject · redo, per frame</span></div>
+  <div class="sys new" id="b-rb" style="grid-area:3/4"><a class="ref" href="#detail-runbook">P2 · D10–D11 ↓</a><span class="k">runbook</span><span class="t">anchor-geometry</span><span class="d">correspond → solve → overlay → check</span></div>
+  <div class="sys store new" id="b-anc" style="grid-area:3/5"><a class="ref" href="#detail-anchors">P2 · D12 ↓</a><span class="k">table</span><span class="t">cartographer_anchors</span><span class="d">one transform per frame</span></div>
+
+  <div class="sys store new" id="b-geo2" style="grid-area:4/5"><a class="ref" href="#detail-put">P2 · D13 ↓</a><span class="k">table rows</span><span class="t">geo (anchored)</span><span class="d">easements · lots · right-of-way</span></div>
+
+  <div class="sys trig" id="b-t3" style="grid-area:5/1"><span class="dot"></span><span class="t">Operator imports a document</span><span class="d">then runs extract-geometry</span></div>
+  <div class="sys ext chg" id="b-pdf" style="grid-area:5/2"><a class="ref" href="#detail-files">P0b · D5 ↓</a><span class="k">external</span><span class="t">SIR supporting document</span><span class="d">now imported by content hash</span></div>
+  <div class="sys chg" id="b-ex" style="grid-area:5/4"><a class="ref" href="#detail-evidence">P0c · D6 ↓</a><span class="k">runbook</span><span class="t">extract-geometry</span><span class="d">now records basis of bearings, units</span></div>
+  <div class="sys store" id="b-cg" style="grid-area:5/5"><span class="k">table</span><span class="t">cartographer_geometries</span><span class="d">unchanged · polygon jsonb · frame_key, offset_x/y</span></div>
+
+  <a class="sys-edge" data-from="b-t1" data-to="b-src"></a>
+  <a class="sys-edge chg" data-from="b-src" data-to="b-tool">+ ?f=json</a>
+  <a class="sys-edge chg" data-from="b-tool" data-to="b-step">native_sr</a>
+  <a class="sys-edge chg" data-from="b-step" data-to="b-geo">geom_local</a>
+  <a class="sys-edge" data-from="b-geo" data-to="b-ui"></a>
+  <a class="sys-edge new" data-from="b-t2" data-to="b-op">launch</a>
+  <a class="sys-edge new" data-from="b-op" data-to="b-rb">HITL</a>
+  <a class="sys-edge new" data-from="b-geo" data-to="b-rb">target ring</a>
+  <a class="sys-edge new" data-from="b-rb" data-to="b-anc">transform</a>
+  <a class="sys-edge new" data-from="b-cg" data-to="b-rb">frames</a>
+  <a class="sys-edge new" data-from="b-anc" data-to="b-geo2">sir_put_anchored_geo</a>
+  <a class="sys-edge" data-from="b-geo2" data-to="b-ui"></a>
+  <a class="sys-edge" data-from="b-t3" data-to="b-pdf"></a>
+  <a class="sys-edge" data-from="b-pdf" data-to="b-ex">transcribe</a>
+  <a class="sys-edge" data-from="b-ex" data-to="b-cg"></a>
+</div>
+<div class="sys-refs">
+  <a class="refrow chg" data-ref="P0a"><span class="chip">P0a</span><span class="txt">capture the county layer's native spatial reference when the parcel is looked up (D1 the layer declares the zone, we record it · D2 getLayerSpatialReference + native_sr recorded in the module's layer-identity.json · D3 fallback chain · D4 resolve-site requires it and the RPC fills geom_local)</span></a>
+  <a class="refrow chg" data-ref="P0b"><span class="chip">P0b</span><span class="txt">link a Cartographer file to the SIR document it came from (D5 content-hash deduplicating importer, nullable source_sir_artifact_id and project_id)</span></a>
+  <a class="refrow chg" data-ref="P0c"><span class="chip">P0c</span><span class="txt">extraction records what anchoring needs (D6 basis of bearings, distance units, scale factor, printed coordinates at non-POB corners)</span></a>
+  <a class="refrow new" data-ref="P2"><span class="chip">P2</span><span class="txt">the anchor-geometry runbook and its storage (D10 a separate manual runbook that shells out to the P1 solvers · D11 auto-accept shown in the readout only · D12 the anchors table · D13 geo rows produced with method='anchored')</span></a>
+</div>
+<div class="sys-legend"><span><i></i>exists today</span><span><i class="chg"></i>changed by this spec</span><span><i class="new"></i>net-new</span><span><i class="gap"></i>the gap</span><span><i class="loop"></i>loop back</span></div>
+<p class="claim"><b>Claim (D13):</b> anchored rows land in the same <code>geo</code> table the SIR map already reads, so cityhall changes nothing in this spec. <b>Claim (§3.2):</b> the bridge can only stand because the parcel ring finally carries the county's own State Plane code, "which every pipeline currently discards".</p>
+
+<h3><span class="hn">Phases</span>Dependency order</h3>
+<div class="sysmap" style="grid-template-columns:repeat(4,1fr)">
+  <div class="sys" id="ph-0a" style="grid-area:1/1"><span class="k">surveyor · bureau · substation</span><span class="t">P0a native SR</span><span class="d">layer helper + native_sr in layer-identity.json + RPC · backfill 21 rows</span></div>
+  <div class="sys" id="ph-0b" style="grid-area:2/1"><span class="k">substation · cartographer</span><span class="t">P0b linking</span><span class="d">content-hash importer</span></div>
+  <div class="sys" id="ph-0c" style="grid-area:3/1"><span class="k">cartographer</span><span class="t">P0c extraction metadata</span><span class="d">basis, units, control points · VISION.md</span></div>
+  <div class="sys" id="ph-1" style="grid-area:3/2"><span class="k">cartographer</span><span class="t">P1 math</span><span class="d">anchor.ts + tests · car-wash gap measured</span></div>
+  <div class="sys" id="ph-2" style="grid-area:2/3"><span class="k">bureau · substation</span><span class="t">P2 runbook + storage</span><span class="d">three pilots on the SIR map</span></div>
+  <div class="sys" id="ph-3" style="grid-area:2/4"><span class="k">later</span><span class="t">P3 scale</span><span class="d">triage · automation · viewer</span></div>
+  <a class="sys-edge" data-from="ph-0c" data-to="ph-1">fixtures</a>
+  <a class="sys-edge" data-from="ph-0a" data-to="ph-2"></a>
+  <a class="sys-edge" data-from="ph-0b" data-to="ph-2"></a>
+  <a class="sys-edge" data-from="ph-1" data-to="ph-2"></a>
+  <a class="sys-edge" data-from="ph-2" data-to="ph-3">after accuracy measured</a>
+</div>
+<p class="claim"><b>Claim (§4):</b> "P0a, P0b and P0c are independent and can run in parallel. P1 needs only P0c's fixtures. P2 needs all of them." P3 waits until §3.8 has measured how good a gis_fit really is.</p>
+
+<div class="grid2">
+  <div class="card change"><strong>Why fit-to-parcel is the workhorse</strong><p>Across the 10 newest SIRs (315 geometries): metes and bounds <b>42%</b>, closed shapes with no position <b>51%</b>, printed State Plane values in only <b>about 1%</b>. Printed coordinates and corner ties are upgrades where they exist (§1.2).</p></div>
+  <div class="card keep"><strong>Honesty boundary</strong><p>Agents never produce coordinates. They name correspondences (ids and indices) and judge overlays. Every number comes from <code>anchor.ts</code>, and every anchor carries an accuracy class: survey / tied / gis_fit / approximate (§3.1, D7).</p></div>
+</div>
+<div class="callout new"><span class="lab">source of truth</span><code>DESIGN-SPEC.md</code> in this folder (📖 link in the masthead). This page is the visual companion; where they differ, the markdown wins.</div>
+</section>
+
+<!-- ============================================================ 02 HOW IT WORKS -->
+<section class="panel" id="how">
+<h2><span class="eyebrow">02 · how it works</span>The anchor transform<span class="sub">One similarity transform per frame; how 3.1 solve picks a solver, what each solver computes, where the target system comes from, and the status of an anchor row.</span></h2>
+<p class="lede"><code>E,N = s·R(θ)·(x,y)·k<sub>units</sub> + (t<sub>E</sub>, t<sub>N</sub>)</code>. θ rotates the plat's basis of bearings onto grid north, (t<sub>E</sub>, t<sub>N</sub>) puts the point of beginning on the ground, s is 1 unless the plat states a combined scale factor, and k<sub>units</sub> converts feet (or varas) into the target system's units.</p>
+
+<figure class="concept">
+  <svg viewBox="0 0 800 316" role="img" aria-label="A metes-and-bounds shape in its local frame, with the point of beginning at the origin, is rotated by theta and translated by (tE, tN) onto the county parcel ring in State Plane; the gap between the anchored shape and the county ring is the gis_fit residual">
+    <defs><marker id="cf-ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
+    <g fill="none" stroke="currentColor" stroke-width="1.4">
+      <!-- local frame: axes with POB at the origin -->
+      <line x1="60" y1="250" x2="60" y2="70" marker-end="url(#cf-ar)"/>
+      <line x1="60" y1="250" x2="240" y2="250" marker-end="url(#cf-ar)"/>
+      <polygon points="60,250 190,250 215,180 140,120 75,160" stroke-width="2.2"/>
+      <circle cx="60" cy="250" r="4" fill="currentColor"/>
+      <!-- the transform -->
+      <path d="M268 175 C 305 120, 395 120, 432 175" marker-end="url(#cf-ar)" stroke-dasharray="5 4" stroke-width="1.6"/>
+      <!-- county ring (wobbly, dashed) with one extra vertex -->
+      <polygon points="494,262 568,251 636,236 648,140 550,92 488,160" stroke-dasharray="5 3" stroke-width="1.4"/>
+      <!-- anchored shape: the one coloured element -->
+      <polygon points="500,245 627,218 637,144 551,101 496,154" stroke="var(--new)" stroke-width="2.4"/>
+      <circle cx="500" cy="245" r="4" fill="var(--new)" stroke="none"/>
+      <!-- gis_fit residual: a dimension between the anchored edge and the ring edge -->
+      <line x1="632" y1="180" x2="643" y2="180" stroke-width="1"/>
+      <line x1="632" y1="175" x2="632" y2="185" stroke-width="1"/>
+      <line x1="643" y1="175" x2="643" y2="185" stroke-width="1"/>
+      <!-- grid north vs plat north, the angle theta between them -->
+      <line x1="745" y1="150" x2="745" y2="88" marker-end="url(#cf-ar)"/>
+      <line x1="745" y1="150" x2="731" y2="90" marker-end="url(#cf-ar)" stroke-dasharray="3 3"/>
+      <path d="M745 120 A30 30 0 0 0 738.8 120.7" stroke-width="1"/>
+    </g>
+    <g font-family="ui-monospace,Menlo,monospace" font-size="11.5" fill="currentColor">
+      <text x="60" y="44" font-weight="700">local frame · SRID:0 · feet</text>
+      <text x="64" y="66">plat N</text>
+      <text x="222" y="268">x</text>
+      <text x="30" y="272">POB (0,0)</text>
+      <text x="60" y="292">shape exact · position unknown</text>
+      <text x="350" y="112" text-anchor="middle" font-weight="700">rotate θ · translate (tE, tN)</text>
+      <text x="350" y="128" text-anchor="middle">s = 1 · k_units</text>
+      <text x="350" y="200" text-anchor="middle">one transform per frame</text>
+      <text x="494" y="44" font-weight="700">county State Plane · target_srid</text>
+      <text x="470" y="284">POB → (tE, tN)</text>
+      <text x="650" y="184">gis_fit residual</text>
+      <text x="600" y="304" text-anchor="middle">county ring (dashed) · anchored shape (green)</text>
+      <text x="752" y="84">grid N</text>
+      <text x="694" y="84">plat N</text>
+      <text x="726" y="118">θ</text>
+    </g>
+  </svg>
+  <figcaption><b>Claim (§3.1, D7, §3.8):</b> the shape never changes, only its place: one rotation θ, one translation (t<sub>E</sub>, t<sub>N</sub>), scale fixed at 1. The green polygon is the anchored figure; its gap to the dashed county ring is the gis_fit residual, so a fitted position is only as good as the county's tax-map drawing. A grid basis of bearings means θ should come out near 0, a free check on every fit (D6).</figcaption>
+</figure>
+
+<h3 id="detail-solvers"><span class="hn">D7a</span>Which solver 3.1 solve picks: the eligibility ladder</h3>
+<p class="lede">Run once per frame by <code>3.1 solve</code>, a script. It reads what <code>2.1 correspond</code> supplied (control points, ties, ring matches, all by id and index) and the D6 evidence (basis of bearings, units, scale factor), and takes the first rung whose inputs are present. The agent never names a solver.</p>
+<div class="dflow">
+  <div class="dq"><span class="q">2.1 matched at least 2 figure vertices to printed N/E boxes, and the zone is stated on the plat or target_srid passes the sanity gate?</span><span class="yes">yes →</span><span class="out">fromPrintedCoordinates · rigid least squares, scale fixed · class survey</span></div>
+  <div class="dno">no ↓ · also when a control point's residual fails the 1 ft gate: the rung is demoted and the readout says so (Q12)</div>
+  <div class="dq"><span class="q">2.1's ties fix all three unknowns θ, tE, tN? (2 vertex ties · 1 vertex + 1 edge tie · 1 vertex + a grid basis)</span><span class="yes">yes →</span><span class="out">fromTies · θ from the edges or the grid, then t from the vertices · class tied</span></div>
+  <div class="dno">no ↓ · a lone edge tie or a grid basis still fixes θ and is handed down as a constraint</div>
+  <div class="dq"><span class="q">A figure in the frame has a same_as or union_of ring match?</span><span class="yes">yes →</span><span class="out warn">fitToRing · bearing votes → centroid → boundary-distance refine · class gis_fit</span></div>
+  <div class="dno">no ↓ · an easement-only frame matched within has nothing to fit</div>
+  <div class="dq end"><span class="q">otherwise</span><span class="yes"></span><span class="out fail">unanchorable · never guessed</span></div>
+</div>
+<p class="claim"><b>Claim (D7, D9):</b> "the highest rung whose inputs are present is the one that runs"; "the class is the rung, never the score"; ties that cannot fix the transform "pass down as constraints"; with no correspondence at all a figure is "reported unanchorable, never guessed".</p>
+
+<h3 id="detail-solver-steps"><span class="hn">D7b–D7d</span>What each solver needs and computes</h3>
+<div class="spectable-scroll"><table class="spectable"><thead><tr><th>Solver</th><th>Needs (from 2.1 + D6)</th><th>Solves</th><th>Held fixed</th><th>Its own gate</th><th>Class</th></tr></thead><tbody>
+<tr><td><code>fromPrintedCoordinates</code></td><td>≥ 2 control points (figure vertex ↔ printed N/E) · the zone, transformed into target_srid when it differs · units · scale factor</td><td>θ, t<sub>E</sub>, t<sub>N</sub> in closed form: centre both point sets, θ = atan2(Σ(x′N′ − y′E′), Σ(x′E′ + y′N′)), t = target centroid − s·R(θ)·local centroid</td><td>s = 1 or the stated combined factor · k<sub>units</sub></td><td>largest control-point residual ≤ 1 ft, else demoted</td><td>survey</td></tr>
+<tr><td><code>fromTies</code></td><td>vertex ties (figure vertex ↔ parcel vertex) · edge ties (course ↔ parcel edge, with sense) · a grid basis</td><td>θ first, from the edge ties or the grid basis (or jointly from 2+ vertex ties); then t by least squares over the vertex ties and each edge's normal</td><td>s · any unknown already fixed</td><td>residual ≤ 1 ft to a monument · ≤ 10 ft to county linework (Q13)</td><td>tied</td></tr>
+<tr><td><code>fitToRing</code></td><td>the fit figures (same_as or union_of matches) · the target = union of the matched geo rows' geom_local · any constraint handed down</td><td>θ, t<sub>E</sub>, t<sub>N</sub>, minus what is constrained; steps below</td><td>s = 1 · a free-scale re-solve is reported only</td><td>none of its own: the operator judges IoU, mean distance and ambiguity against D11</td><td>gis_fit</td></tr>
+</tbody></table></div>
+<p class="claim"><b>Claim (D7, §3.1):</b> scale is "usually fixed at 1" and set "to the stated combined factor when the plat converts surface to grid distances"; every solver solves rotation and translation only, and the free-scale solve is "reported only as a diagnostic" (D8).</p>
+
+<h3 id="detail-fit"><span class="hn">D7d</span>fitToRing, step by step</h3>
+<div class="spectable-scroll"><table class="spectable"><thead><tr><th>Step</th><th>What</th><th>Why</th></tr></thead><tbody>
+<tr><td><span class="sn">a</span></td><td>Units: each fit figure's ring + its frame offset, times k<sub>units</sub></td><td>varas read as feet would scale the shape 2.78×</td></tr>
+<tr><td><span class="sn">b</span></td><td>Candidate rotations: every (figure edge, target edge) pair votes Δθ = ring bearing − figure bearing, weighted by min length ÷ (1 + length gap), into a 1° histogram; the top 4 peaks are the candidates; θ = 0 is always one on a grid basis; a handed-down θ is the only one</td><td>a rectangle votes for 0° and 180° equally: the ambiguity is found before any fit</td></tr>
+<tr><td><span class="sn">c</span></td><td>Initial translation: rotate, then move the fit figures' area centroid onto the target's centroid</td><td>a start close enough for a local minimizer</td></tr>
+<tr><td><span class="sn">d</span></td><td>Refine (θ, t<sub>E</sub>, t<sub>N</sub>) by Nelder–Mead on the symmetric mean boundary distance: sample both outlines every 2 ft, nearest distance each way, mean of both; stop under 0.01 ft and 0.001°</td><td>symmetric, so an extra or missing county vertex costs a little instead of derailing the fit</td></tr>
+<tr><td><span class="sn">e</span></td><td>Pick and score: the lowest refined score wins; ambiguity = best ÷ second-best (1.0 is a coin flip; flagged above 0.8)</td><td>look-alikes are reported, never chosen silently</td></tr>
+<tr><td><span class="sn">f</span></td><td>Diagnostics: one free-scale re-solve from the winner; IoU, Hausdorff, mean distance, area ratio, θ vs grid (D8)</td><td>a scale drifting past 1% means wrong units or a wrong ring</td></tr>
+</tbody></table></div>
+<p class="claim"><b>Claim (D7):</b> "candidate rotations from matching edge bearings and lengths; initial translation from aligning centroids; refine (θ, tE, tN) by minimizing symmetric boundary distance … which tolerates county rings with extra or missing vertices; scale fixed".</p>
+
+<div class="spectable-scroll"><table class="spectable"><thead><tr><th>Every solve reports (D8)</th><th>Why it's there</th></tr></thead><tbody>
+<tr><td>IoU · Hausdorff · mean boundary distance (ft)</td><td>how well the shape sits on the county linework</td></tr>
+<tr><td>θ, and its gap from 0 when the basis is grid</td><td>a grid-based plat should need no rotation</td></tr>
+<tr><td>area ratio</td><td>catches replats and multi-parcel mismatches (Q8)</td></tr>
+<tr><td>residual per control point or edge</td><td>only for printed coordinates and ties</td></tr>
+<tr><td>ambiguity: how close the second-best solution scored</td><td>rectangles and symmetric lots have 90° and 180° look-alikes; a tie breaks the tie</td></tr>
+<tr><td>free-scale solve, as a diagnostic only</td><td>scale stays fixed at 1 in the fit; a drifting scale means bad units or a bad ring</td></tr>
+<tr><td>demoted_from</td><td>the rung that had its inputs but failed its own residual gate (Q12)</td></tr>
+<tr><td>tie_source: county_parcel · monument</td><td>a tie to county linework is only as accurate as the county drawing (Q13)</td></tr>
+</tbody></table></div>
+
+<h3 id="detail-native-sr"><span class="hn">D3</span>Where the target system comes from: the native-SR fallback chain</h3>
+<p>The county's parcel layer is stored in some coordinate system. It says which in one metadata request (<code>?f=json</code> → <code>latestWkid</code>: Austin 2277, Bexar 2278). <code>getLayerSpatialReference(layerUrl)</code> reads that listing (already fetched once per service by the layer-identity guard) and compares it to the <code>native_sr</code> the module recorded in its <code>layer-identity.json</code>; resolve-site then requires <code>native_sr</code> on every ring it writes, and <code>sir_add_parcel_geo</code> fills <code>geom_local</code> from it.</p>
+<div class="dflow">
+  <div class="dq"><span class="q">The layer's live ?f=json gives a projected latestWkid (else wkid)?</span><span class="yes">yes →</span><span class="out">use it · srid_local = latestWkid · drifted from the module's recorded native_sr? flag the module for a prospector refresh</span></div>
+  <div class="dno">no ↓ · Web Mercator (3857/102100), geographic (4326) and custom-WKT layers land here directly</div>
+  <div class="dq"><span class="q">Curated county → State Plane table (FIPS → EPSG, units, basis) has an entry?</span><span class="yes">yes →</span><span class="out warn">use it · basis = ngs_zone or observed_layer</span></div>
+  <div class="dno">no ↓</div>
+  <div class="dq end"><span class="q">otherwise</span><span class="yes"></span><span class="out fail">geom_local NULL + flag it</span></div>
+</div>
+<p class="claim"><b>Claim (D1, D3):</b> "the county's parcel layer declares the zone; we record it, we don't choose it." The curated table is built per county from NGS zone definitions, "not by point-in-box lookup", which geom-local §2 showed to be ambiguous.</p>
+
+<h3 id="detail-status"><span class="hn">D12</span>The life of one anchor row</h3>
+<div class="sm">
+  <span class="s">proposed<span class="who">3.1 solve writes it</span></span><span class="a">→</span>
+  <span class="s">accepted<span class="who">operator, 4.1</span></span><span class="a">→</span>
+  <span class="s">stale<span class="who">the file is re-extracted</span></span>
+</div>
+<div class="sm">
+  <span class="s">proposed<span class="who">3.1 solve writes it</span></span><span class="a">→</span>
+  <span class="s">rejected<span class="who">operator, 4.1 · no geo rows</span></span>
+</div>
+<p class="claim"><b>Claim (D12, D14):</b> an anchor whose <code>run_slug</code> ≠ the file's <code>metadata.lastGeometryRun</code> is stale by definition; "staleness never deletes anything": the geo rows stay, flagged <code>properties.stale=true</code>, until an anchor run on the new run_slug replaces them. A redo from the operator does not change status; it re-runs 2.1 in the same run.</p>
+
+<div class="callout ember"><span class="lab">watch out</span>A bad county ring gives a confidently wrong anchor. Mitigations (§7): always show neighbouring rings in the overlay, check θ against a grid basis, report ambiguity, and in v1 always stop at the operator.</div>
+</section>
+
+<!-- ============================================================ 03 WHO DOES WHAT WHEN -->
+<section class="panel" id="who">
+<h2><span class="eyebrow">03 · who does what when</span>The anchor-geometry runbook<span class="sub">Step order, which step does which part of the anchoring math, the operator gate, and who calls whom.</span></h2>
+<p class="lede">A separate runbook from extract-geometry-v2 (D10, Q3), launched by hand with <code>{file, sir_id}</code>, shelling out to cartographer scripts as v2 does. It re-runs whenever the parcel data or the extraction changes.</p>
+
+<h3 id="detail-runbook"><span class="hn">steps</span>Run order, with the operator's redo as a loop</h3>
+<div class="sysmap" style="grid-template-columns:repeat(6,1fr)">
+  <div class="sys" id="rb-1" style="grid-area:2/1"><span class="k">script</span><span class="t">1.1 inputs · 1.2 fetch</span><span class="d">geometries + evidence · SIR geo parcels · target_srid</span></div>
+  <div class="sys" id="rb-2" style="grid-area:2/2"><span class="k">agent</span><span class="t">2.1 correspond</span><span class="d">ring matches · ties · control points · ids only, never a solver</span></div>
+  <div class="sys" id="rb-3" style="grid-area:2/3"><a class="ref" href="#detail-solvers">D7 ↓</a><span class="k">script</span><span class="t">3.1 solve · 3.2 render</span><span class="d">picks the rung per frame, solves it · overlay PNG over aerial</span></div>
+  <div class="sys" id="rb-4" style="grid-area:2/4"><span class="k">agent</span><span class="t">3.3 check</span><span class="d">vision: right place, right way round?</span></div>
+  <div class="sys" id="rb-5" style="grid-area:2/5"><span class="k">gate</span><span class="t">4.1 operator</span><span class="d">accept · reject · redo with a note, per frame</span></div>
+  <div class="sys store" id="rb-6" style="grid-area:2/6"><span class="k">script</span><span class="t">5.1 publish</span><span class="d">cartographer_anchors + geo rows</span></div>
+  <a class="sys-edge" data-from="rb-1" data-to="rb-2"></a>
+  <a class="sys-edge" data-from="rb-2" data-to="rb-3">correspondences</a>
+  <a class="sys-edge" data-from="rb-3" data-to="rb-4">overlay</a>
+  <a class="sys-edge" data-from="rb-4" data-to="rb-5">check.md</a>
+  <a class="sys-edge" data-from="rb-5" data-to="rb-6">accept</a>
+  <a class="sys-edge loop" data-from="rb-5" data-to="rb-2">redo with a note</a>
+</div>
+<div class="sys-refs">
+  <a class="refrow" data-ref="D7"><span class="chip">D7</span><span class="txt">the eligibility ladder (D7a) and the three solvers (D7b printed coordinates, D7c ties, D7d ring fit), all run by 3.1 solve</span></a>
+</div>
+<p class="claim"><b>Claim (D7, D10, D11):</b> "choosing the solver and running it are both done by 3.1 solve … with no agent in the loop"; "v1 always stops at the HITL step"; the auto-accept threshold (IoU ≥ 0.9, mean boundary distance ≤ 5 ft, clear ambiguity margin, θ ≈ 0 on a grid basis) is applied "only in the readout". A redo returns to correspond, never to solve.</p>
+
+<h3 id="detail-steps-d7"><span class="hn">§3.6</span>Which step does which part of the anchoring</h3>
+<div class="spectable-scroll"><table class="spectable"><thead><tr><th>Step</th><th>Runner</th><th>Its part</th><th>Output</th></tr></thead><tbody>
+<tr><td><span class="sn">1.2</span> fetch</td><td>script</td><td>the raw material: the SIR's geo parcel rows in target_srid (the located features for ties, the targets for a fit), adjoining rings re-queried when the plat lot spans more than the subject parcel, the D6 evidence</td><td>geo rows · evidence</td></tr>
+<tr><td><span class="sn">2.1</span> correspond</td><td>agent</td><td>supplies what a rung needs, by id and index: control points for rung 1, vertex and edge ties for rung 2, ring matches (same_as · union_of · within) for rung 3. Never a number, never a solver name</td><td>correspondences.json</td></tr>
+<tr><td><span class="sn">3.1</span> solve</td><td>script</td><td>per frame: walk the ladder to the highest eligible rung · run that solver · demote and record on a failed residual gate · ring metrics whenever a ring match exists · apply the transform to every figure in the frame</td><td>anchors.json</td></tr>
+<tr><td><span class="sn">3.2</span> render</td><td>script</td><td>the overlay the check and the operator judge: nearby county rings, anchored figures, POB markers, over an aerial</td><td>overlay PNG per frame</td></tr>
+<tr><td><span class="sn">3.3</span> check</td><td>agent</td><td>the judgment on the overlay; check.md is the readout 4.1 shows, carrying each frame's solver, class, metrics against the D11 threshold and any demotion</td><td>check.md</td></tr>
+<tr><td><span class="sn">4.1</span> operator</td><td>gate</td><td>accept · reject · redo with a note, per frame</td><td>decision</td></tr>
+<tr><td><span class="sn">5.1</span> publish</td><td>script</td><td>writes the accepted transforms and the geo rows they produce</td><td>cartographer_anchors · geo</td></tr>
+</tbody></table></div>
+<p class="claim"><b>Claim (§3.6):</b> "no step chooses a solver except 3.1 solve, and it does so by inspection of its inputs"; 2.1 returns "only indices and ids, never numbers, never a solver name".</p>
+
+<h3 id="detail-gate"><span class="hn">4.1</span>What each gate outcome does</h3>
+<div class="dflow">
+  <div class="dq"><span class="q">Operator accepts the frame's transform?</span><span class="yes">yes →</span><span class="out">status=accepted · 5.1 writes the anchor + its geo rows</span></div>
+  <div class="dno">no ↓</div>
+  <div class="dq"><span class="q">Operator sends it back with a note?</span><span class="yes">yes →</span><span class="out warn">2.1 correspond re-runs with the note · same run</span></div>
+  <div class="dno">no ↓</div>
+  <div class="dq end"><span class="q">otherwise: rejected</span><span class="yes"></span><span class="out fail">status=rejected · no geo rows</span></div>
+</div>
+<p class="claim"><b>Claim (§3.6, Q8):</b> replats and multi-parcel mismatches (plat lot ≠ today's county parcel) always go to the operator in v1; a low IoU never auto-rejects. The row states this drives are on the <a href="#detail-status">How it works</a> tab.</p>
+
+<h3><span class="hn">seq</span>Who calls whom</h3>
+<div class="seq-scroll"><div class="seq">
+<div class="seq-head"><div></div>
+<div class="seq-h"><span class="role">user</span><span class="who">Operator</span></div>
+<div class="seq-h"><span class="role">runner</span><span class="who">conductor2</span></div>
+<div class="seq-h"><span class="role">agent</span><span class="who">Claude worker</span></div>
+<div class="seq-h"><span class="role">script</span><span class="who">cartographer scripts</span></div>
+<div class="seq-h"><span class="role">store</span><span class="who">Storage</span></div>
+<div class="seq-h"><span class="role">db</span><span class="who">Postgres</span></div></div>
+<div class="seq-body" style="grid-template-rows:repeat(9,auto)">
+<div class="seq-life" style="grid-column:2;grid-row:1/-1"></div><div class="seq-life" style="grid-column:3;grid-row:1/-1"></div><div class="seq-life" style="grid-column:4;grid-row:1/-1"></div><div class="seq-life" style="grid-column:5;grid-row:1/-1"></div><div class="seq-life" style="grid-column:6;grid-row:1/-1"></div><div class="seq-life" style="grid-column:7;grid-row:1/-1"></div>
+<div class="seq-num" style="grid-row:1">1</div><div class="seq-msg" style="grid-row:1;grid-column:2/4"><div class="mt"><span class="m">conductor init anchor-geometry</span><span class="m2">{file, sir_id, run_slug?}</span></div><span class="dir">▸</span></div>
+<div class="seq-num" style="grid-row:2">2</div><div class="seq-msg" style="grid-row:2;grid-column:3/6"><div class="mt"><span class="m">1.2 fetch</span><span class="m2">re-query adjoining rings from the county when needed</span></div><span class="dir">▸</span></div>
+<div class="seq-num" style="grid-row:3">3</div><div class="seq-msg ret" style="grid-row:3;grid-column:5/8"><span class="dir">◂</span><div class="mt"><span class="m">geometries + evidence + geo parcel rows</span><span class="m2">geom_local in native State Plane · target_srid</span></div></div>
+<div class="seq-num" style="grid-row:4">4</div><div class="seq-msg event" style="grid-row:4;grid-column:3/5"><div class="mt"><span class="m">2.1 correspond</span><span class="m2">correspondences.json: control points · ties · ring matches · ids only</span></div><span class="dir">▸</span></div>
+<div class="seq-num" style="grid-row:5">5</div><div class="seq-msg self" style="grid-row:5;grid-column:5/6"><div class="mt"><span class="m">3.1 solve</span><span class="m2">ladder per frame → the rung's solver → anchors.json: solver, class, metrics</span></div></div>
+<div class="seq-num" style="grid-row:6">6</div><div class="seq-msg" style="grid-row:6;grid-column:5/7"><div class="mt"><span class="m">3.2 render overlay PNG per frame</span></div><span class="dir">▸</span></div>
+<div class="seq-num" style="grid-row:7">7</div><div class="seq-msg event" style="grid-row:7;grid-column:4/7"><span class="dir">◂</span><div class="mt"><span class="m">3.3 vision check</span><span class="m2">check.md: does the easement sit where the sketch says?</span></div></div>
+<div class="seq-num" style="grid-row:8">8</div><div class="seq-msg ret" style="grid-row:8;grid-column:2/4"><span class="dir">◂</span><div class="mt"><span class="m">4.1 HITL: accept · reject · redo with a note</span><span class="m2">per frame</span></div></div>
+<div class="seq-num" style="grid-row:9">9</div><div class="seq-msg write" style="grid-row:9;grid-column:5/8"><div class="mt"><span class="m">5.1 publish</span><span class="m2">cartographer_anchors rows · sir_put_anchored_geo(anchor_id)</span></div><span class="dir">▸</span></div>
+</div>
+<div class="seq-foot"><span><span class="sw"></span> call</span><span><span class="sw write"></span> DB write</span><span><span class="sw event"></span> agent step</span><span><span class="sw ret"></span> return</span><span><span class="sw self"></span> compute</span></div>
+</div></div>
+<p class="claim"><b>Claim (§3.5, §3.6):</b> "agents never produce coordinates": steps 4 and 7 are the only agent steps and they return ids, indices and a judgment; every number is computed in step 5 by <code>anchor.ts</code>, imported by the runbook script with "no second copy".</p>
+
+<div class="callout"><span class="lab">P0a, at SIR time</span>The parcel side has no new runbook. Inside the existing SIR run, step 1.2 → site-research resolve-site now asks the county parcel tool (or <code>arcgis_query.py</code>) for <code>native_sr</code> and <code>source_layer</code> alongside the WGS84 ring, and step 4.1-upload's call to <code>sir_add_parcel_geo</code> fills <code>geom_local</code>. See the <a href="#detail-native-sr">fallback chain</a> and the <a href="#detail-geo">geo diff</a>.</div>
+</section>
+
+<!-- ============================================================ 04 WHAT'S STORED -->
+<section class="panel" id="stored">
+<h2><span class="eyebrow">04 · what's stored</span>Storage<span class="sub">The anchors table, the curated county table, the modified tables and files, and the geo rows an anchor produces.</span></h2>
+<p class="lede">One new table (the anchors table), one curated lookup table, three modified tables and one modified file (each surveyor module's <code>layer-identity.json</code>). Anchors carry no FK to geometry ids because Cartographer's publish deletes and re-inserts a file's geometries; the <code>(file_id, run_slug, frame_key)</code> key survives that.</p>
+
+<h3 id="detail-anchors"><span class="hn">ER</span>New tables</h3>
+<div class="erd">
+  <div class="ent newt"><div class="eh"><span class="en">cartographer_anchors</span><span class="stereo">NEW · substation</span></div>
+    <div class="row"><span class="b b-pk">PK</span><span class="nm">id</span><span class="ty">uuid</span></div>
+    <div class="row"><span class="b b-fk">FK</span><span class="b b-nn">NN</span><span class="nm">file_id</span><span class="ty">→ cartographer_files</span></div>
+    <div class="row"><span class="b b-nn">NN</span><span class="nm">run_slug · frame_key</span><span class="ty">text · text (key with file_id)</span></div>
+    <div class="row"><span class="b b-fk">FK</span><span class="b b-nn">NN</span><span class="nm">sir_id</span><span class="ty">→ site_intelligence_report</span></div>
+    <div class="row"><span class="nm">target_geo_ids</span><span class="ty">uuid[] · the parcel rows fitted or tied to</span></div>
+    <div class="row"><span class="b b-nn">NN</span><span class="nm">target_srid</span><span class="ty">int · EPSG</span></div>
+    <div class="row"><span class="nm">method</span><span class="ty">printed_coordinates · ties · ring_fit · manual</span></div>
+    <div class="row hi"><span class="nm">accuracy_class</span><span class="ty">survey · tied · gis_fit · approximate</span></div>
+    <div class="row"><span class="nm">params</span><span class="ty">jsonb {theta_rad, scale, t_e, t_n, k_units}</span></div>
+    <div class="row"><span class="nm">metrics</span><span class="ty">jsonb {iou, hausdorff_ft, mean_dist_ft, theta_vs_grid_deg, area_ratio, ambiguity, residuals[], demoted_from?, tie_source?}</span></div>
+    <div class="row"><span class="nm">evidence</span><span class="ty">jsonb · correspondences + overlay path</span></div>
+    <div class="row hi"><span class="nm">status</span><span class="ty">proposed · accepted · rejected · stale</span></div>
+    <div class="row"><span class="nm">anchor_run_slug · decided_by · created_at</span><span class="ty">text · uuid · timestamptz</span></div>
+    <div class="note">no FK to geometry ids: publish deletes and re-inserts them. run_slug ≠ the file's metadata.lastGeometryRun ⇒ stale (D12).</div>
+  </div>
+  <div class="ent newt"><div class="eh"><span class="en">county → State Plane table</span><span class="stereo">NEW · curated (D3)</span></div>
+    <div class="row"><span class="b b-pk">PK</span><span class="nm">county_fips</span><span class="ty">text</span></div>
+    <div class="row"><span class="nm">epsg · units</span><span class="ty">int · ftUS | m</span></div>
+    <div class="row"><span class="nm">basis</span><span class="ty">ngs_zone · observed_layer</span></div>
+    <div class="note">from NGS SPCS83 zone definitions, never point-in-box; starts with TX, FL, ND, KY</div>
+  </div>
+</div>
+
+<h3 id="detail-geo"><span class="hn">ER</span>Modified tables and files</h3>
+<div class="erd">
+  <div class="ent changed"><div class="eh"><span class="en">layer-identity.json · parcel layer entry</span><span class="stereo">MODIFIED · surveyor, per module (D2, Q7)</span></div>
+    <div class="row"><span class="gut"></span><span class="nm">service · id · name</span><span class="ty">the pinned layer and the name it had when the module was built</span></div>
+    <div class="row"><span class="gut"></span><span class="nm">recorded_at · note</span><span class="ty">date · which constant pins it</span></div>
+    <div class="row add"><span class="gut">+</span><span class="b b-new">NEW</span><span class="nm">native_sr</span><span class="ty">{wkid, latestWkid, wkt?, recorded_at} · e.g. 102739 / 2277 for TCAD parcels</span></div>
+    <div class="note">this is the whole registry: prospector writes the file when it builds a module; the layer-identity guard already fetches ?f=json per service and now compares the live spatial reference to this value (drifted); 135 modules carry the file today</div>
+  </div>
+  <div class="ent changed"><div class="eh"><span class="en">geo</span><span class="stereo">MODIFIED · filled + new rows</span></div>
+    <div class="row"><span class="gut"></span><span class="b b-pk">PK</span><span class="nm">id</span><span class="ty">uuid</span></div>
+    <div class="row"><span class="gut"></span><span class="b b-fk">FK</span><span class="b b-nn">NN</span><span class="nm">sir_id</span><span class="ty">→ site_intelligence_report</span></div>
+    <div class="row"><span class="gut"></span><span class="nm">kind · label</span><span class="ty">parcel today</span></div>
+    <div class="row add"><span class="gut">+</span><span class="b b-new">NEW</span><span class="nm">kind = easement · lot · right_of_way …</span><span class="ty">Cartographer's kind (Q10)</span></div>
+    <div class="row"><span class="gut"></span><span class="nm">method</span><span class="ty">county_api · traverse · estimated</span></div>
+    <div class="row add"><span class="gut">+</span><span class="b b-new">NEW</span><span class="nm">method = 'anchored'</span><span class="ty">written only by sir_put_anchored_geo</span></div>
+    <div class="row"><span class="gut"></span><span class="nm">geom_wgs84</span><span class="ty">authoritative for county_api · derived for anchored</span></div>
+    <div class="row hi"><span class="gut"></span><span class="nm">geom_local · srid_local</span><span class="ty">county_api: now ST_Transform(geom_wgs84, latestWkid) (D4) · anchored: authoritative in target_srid (D13)</span></div>
+    <div class="row"><span class="gut"></span><span class="nm">closure_error · stated_area</span><span class="ty">from the geometry</span></div>
+    <div class="row add"><span class="gut">+</span><span class="b b-new">NEW</span><span class="nm">properties.native_sr · source_layer</span><span class="ty">parcel rows (D4)</span></div>
+    <div class="row add"><span class="gut">+</span><span class="b b-new">NEW</span><span class="nm">properties.anchor_id · frame_key · run_slug · file_id · accuracy_class · method</span><span class="ty">anchored rows (D13)</span></div>
+    <div class="row add"><span class="gut">+</span><span class="b b-new">NEW</span><span class="nm">properties.stale</span><span class="ty">true after re-extraction (D14)</span></div>
+    <div class="note">sir_add_parcel_geo is insert-once on (sir_id, kind, label) and never updates: the 21 existing county_api rows need a one-off backfill (Q11)</div>
+  </div>
+  <div class="ent changed" id="detail-files"><div class="eh"><span class="en">cartographer_files</span><span class="stereo">MODIFIED (D5)</span></div>
+    <div class="row"><span class="gut"></span><span class="b b-pk">PK</span><span class="nm">id</span><span class="ty">uuid</span></div>
+    <div class="row add"><span class="gut">+</span><span class="b b-new">NEW</span><span class="nm">content_sha256</span><span class="ty">text · the identity</span></div>
+    <div class="row add"><span class="gut">+</span><span class="b b-fk">FK</span><span class="b b-new">NEW</span><span class="nm">source_sir_artifact_id</span><span class="ty">uuid · nullable → sir_artifact</span></div>
+    <div class="row add"><span class="gut">+</span><span class="b b-fk">FK</span><span class="b b-new">NEW</span><span class="nm">project_id</span><span class="ty">uuid · nullable → project</span></div>
+    <div class="row"><span class="gut"></span><span class="nm">metadata</span><span class="ty">jsonb · lastGeometryRun</span></div>
+    <div class="note">import-sir-artifact &lt;sir_artifact_id&gt; copies the object from sir-artifacts into cartographer-files and reuses the row when the hash exists: the three Conroe SIRs share one identical 100-file set (Q2)</div>
+  </div>
+  <div class="ent changed" id="detail-evidence"><div class="eh"><span class="en">cartographer_geometry_evidence</span><span class="stereo">MODIFIED (D6)</span></div>
+    <div class="row"><span class="gut"></span><span class="nm">role</span><span class="ty">course · tie · pob · …</span></div>
+    <div class="row add"><span class="gut">+</span><span class="b b-new">NEW</span><span class="nm">role = 'basis_of_bearings'</span><span class="ty">verbatim + {kind: grid|record_plat|row_map|magnetic|assumed, zone?, datum?}</span></div>
+    <div class="row add"><span class="gut">+</span><span class="b b-new">NEW</span><span class="nm">role = 'distance_units'</span><span class="ty">ft · ftUS · varas · m</span></div>
+    <div class="row add"><span class="gut">+</span><span class="b b-new">NEW</span><span class="nm">role = 'grid_or_surface' + combined_scale_factor</span><span class="ty">verbatim + parsed</span></div>
+    <div class="row add"><span class="gut">+</span><span class="b b-new">NEW</span><span class="nm">role = 'control_point'</span><span class="ty">{n, e} at non-POB vertices · today only the POB is published</span></div>
+    <div class="note">lands through the extract-geometry-v2 workstream, not around it (§7)</div>
+  </div>
+</div>
+
+<div class="rels"><div class="rels-h">Relationships today</div>
+  <span class="rl">site_intelligence_report <span class="cf">‖──&lt;</span> geo <span class="cmt">— via sir_id (parcel rows only)</span></span>
+  <span class="rl">cartographer_files <span class="cf">‖──&lt;</span> cartographer_geometries <span class="cmt">— via file_id; publish deletes and re-inserts</span></span>
+  <span class="rl">cartographer_files <span class="cf">──?</span> sir_artifact / project / geo <span class="cmt">— no link at all</span></span>
+</div>
+<div class="rels"><div class="rels-h">Relationships after P0b + P2</div>
+  <span class="rl">cartographer_files <span class="cf">&gt;──‖</span> sir_artifact · project <span class="tag-new">[NEW]</span> <span class="cmt">— nullable provenance; identity is content_sha256</span></span>
+  <span class="rl">cartographer_files <span class="cf">‖──&lt;</span> cartographer_anchors <span class="tag-new">[NEW]</span> <span class="cmt">— one per (run_slug, frame_key)</span></span>
+  <span class="rl">site_intelligence_report <span class="cf">‖──&lt;</span> cartographer_anchors <span class="tag-new">[NEW]</span> <span class="cmt">— the SIR the anchor is solved for</span></span>
+  <span class="rl">cartographer_anchors <span class="cf">‖──&lt;</span> geo (method=anchored) <span class="tag-new">[NEW]</span> <span class="cmt">— via properties.anchor_id, not an FK</span></span>
+  <span class="rl">cartographer_anchors <span class="cf">──?</span> cartographer_geometries <span class="cmt">— deliberately no FK (D12)</span></span>
+</div>
+<p class="claim"><b>Claim (Q1, D12):</b> the anchors table holds the transform and <code>geo</code> holds the output rows; the alternative (PostGIS columns on <code>cartographer_geometries</code>) would leave the SIR map reading two tables.</p>
+
+<h3 id="detail-put"><span class="hn">RPC</span>What <code>sir_put_anchored_geo(anchor_id)</code> writes</h3>
+<div class="legend"><span class="k"><span class="swatch" style="background:var(--p500)"></span> read</span><span class="k"><span class="swatch" style="background:var(--ember)"></span> compute</span><span class="k"><span class="swatch" style="background:var(--new)"></span> write</span></div>
+<div class="uc">
+  <div class="uch"><div class="ucn">5.1</div><div class="uctxt"><span class="actor">publish step · one accepted anchor</span><span class="uct">Replace the anchor's geo rows</span></div></div>
+  <div class="ucsub">Unlike sir_add_parcel_geo, this RPC is not insert-once: it replaces every geo row for that anchor.</div>
+  <div class="ucdiag"><div class="dfg">
+    <div class="node read"><span class="op">read</span><span class="nt">cartographer_anchors</span><span class="nf">status=accepted<br>params · target_srid · sir_id</span></div>
+    <div class="edge"><span class="el">frame_key</span><span class="ar">→</span></div>
+    <div class="node read"><span class="op">read</span><span class="nt">cartographer_geometries</span><span class="nf">the frame's figures<br>polygon + offset_x/y · kind · label</span></div>
+    <div class="edge"><span class="el">apply params</span><span class="ar">→</span></div>
+    <div class="node event"><span class="op">compute</span><span class="nt">transform</span><span class="nf">s·R(θ)·(x,y)·k + (tE, tN)<br>then ST_Transform(…, 4326)</span></div>
+    <div class="edge"><span class="el">delete + insert</span><span class="ar">→</span></div>
+    <div class="node created"><span class="op">replace</span><span class="nt">geo</span><span class="nf">method=anchored · kind, label<br>geom_local (authoritative)<br>geom_wgs84 · closure_error<br>stated_area · properties</span></div>
+  </div></div>
+  <div class="ucnote"><b>D14</b> — re-extracting the file marks its anchors <code>stale</code> and sets <code>properties.stale=true</code> on these rows; nothing is deleted until an anchor run on the new run_slug calls this RPC again. <b>Reading:</b> the spec leaves open whether the polygon math runs in SQL or is precomputed by the 5.1 script; the row contents are the same either way.</div>
+</div>
+<p class="claim"><b>Claim (D13):</b> each anchored row gets <code>method='anchored'</code>, <code>geom_local</code> authoritative in <code>target_srid</code> ("the traverse direction from geom-local §1") and <code>geom_wgs84 = ST_Transform(geom_local, 4326)</code>.</p>
+</section>
+
+<!-- ============================================================ 05 ROLLOUT -->
+<section class="panel" id="rollout">
+<h2><span class="eyebrow">05 · rollout</span>Rollout<span class="sub">Phases with their exit tests, decisions D1–D15, open questions Q1–Q13.</span></h2>
+<p class="lede">The dependency graph is on the Overview tab. Here is what each phase must prove before the next one starts, and the index an auditor can reference by number.</p>
+
+<div class="spectable-scroll"><table class="spectable"><thead><tr><th>Phase</th><th>Repos</th><th>Scope</th><th>Exit test</th></tr></thead><tbody>
+<tr><td><span class="sn">P0a</span></td><td>surveyor · bureau · substation</td><td>D1–D4: getLayerSpatialReference + native_sr backfilled into layer-identity.json for the SIR-path modules; SIR-path parcel tools and <code>arcgis_query.py</code> emit <code>native_sr</code>; resolve-site requires it; <code>sir_add_parcel_geo</code> fills <code>geom_local</code>; curated fallback table for TX, FL, ND, KY; one-off backfill of the 21 existing rows</td><td>A new SIR's parcel rows have <code>srid_local</code> = the county layer's <code>latestWkid</code>; Austin, Bexar and Travis come out 2277/2278</td></tr>
+<tr><td><span class="sn">P0b</span></td><td>substation · cartographer</td><td>D5: columns + hash-deduplicating importer</td><td>One SIR supporting document imported; importing it from a second SIR reuses the same file</td></tr>
+<tr><td><span class="sn">P0c</span></td><td>cartographer</td><td>D6; D15 <code>VISION.md</code> update if this is the first cartographer PR</td><td>Car-wash re-extraction publishes its basis of bearings and its printed coordinates at non-POB corners</td></tr>
+<tr><td><span class="sn">P1</span></td><td>cartographer</td><td>D7–D9 + tests</td><td>Synthetic round trips recover θ/t/s; the car-wash survey-vs-gis_fit gap is measured and written into this spec as v2</td></tr>
+<tr><td><span class="sn">P2</span></td><td>bureau · substation</td><td>D10–D14</td><td>Car-wash (KY), Palm Bay Lot 7 + its plat easements (FL), one Conroe tract (TX) anchored, operator-accepted, drawn on the SIR map</td></tr>
+<tr><td><span class="sn">P3</span></td><td>later</td><td>Triage with the spike's classifier; automatic import; an optional SIR step; a MapLibre/cityhall view with accuracy styling</td><td>Anchored easements appear in a SIR without anyone launching them</td></tr>
+</tbody></table></div>
+
+<div class="grid2">
+  <div class="card keep"><strong>How accuracy gets measured (§3.8)</strong><ul>
+    <li><b>Car-wash plat 2024178771</b> (KY 3089): solve with printed coordinates (truth), then pretend there are none and fit to the Jefferson County ring. The per-vertex gap is the first real gis_fit error number.</li>
+    <li><b>Palm Bay Lot 7</b> (ALTA survey, FL East NAD83(2011) grid basis): fitToRing should give θ ≈ 0.</li>
+    <li><b>One Conroe tract</b> (TxDOT right-of-way-map basis): θ is a real unknown; this tests the ambiguity metric.</li></ul></div>
+  <div class="card change"><strong>Coordination and risks (§7)</strong><ul>
+    <li>extract-geometry-v2 is under active work by another session; P0c lands through that workstream.</li>
+    <li>Cartographer publish deletes geometry ids; D12/D14 exist so anchors survive as <code>stale</code> instead of vanishing through cascades.</li>
+    <li>Datum realizations (NAD83 vs NAD83(2011) vs WGS84) differ by 1–2 m: invisible at gis_fit accuracy, material for survey. Record them on the anchor; never silently mix.</li>
+    <li>Prod side note: <code>SELECT * FROM geometry_columns</code> errors because PostGIS parses <code>geo_srid_local_matches</code> as a typmod hint. Harmless to our code; a substation follow-up.</li></ul></div>
+</div>
+
+<h3><span class="hn">index</span>Decisions</h3>
+<div class="spectable-scroll"><table class="spectable"><thead><tr><th>#</th><th>Decision</th></tr></thead><tbody>
+<tr><td><span class="sn">D1</span></td><td>The county parcel layer declares the zone; record it, never guess (reverses geom-local §2 for the county path)</td></tr>
+<tr><td><span class="sn">D2</span></td><td><code>getLayerSpatialReference(layerUrl)</code> + a <code>native_sr</code> field on the parcel layer's entry in the module's <code>layer-identity.json</code>; prospector fills it, the identity guard and canary flag drift; no county-keyed lookup</td></tr>
+<tr><td><span class="sn">D3</span></td><td>Fallback: the layer's recorded/live value → curated county table → NULL + flag; never point-in-box</td></tr>
+<tr><td><span class="sn">D4</span></td><td>resolve-site requires <code>native_sr</code> and <code>source_layer</code>; <code>sir_add_parcel_geo</code> fills <code>geom_local</code>; fetch the subject ring in its native system (Q6)</td></tr>
+<tr><td><span class="sn">D5</span></td><td><code>cartographer_files</code>: content_sha256, source_sir_artifact_id, project_id; hash-deduplicating importer</td></tr>
+<tr><td><span class="sn">D6</span></td><td>Extraction publishes basis of bearings, units, grid/surface + scale factor, POB description, non-POB control points</td></tr>
+<tr><td><span class="sn">D7</span></td><td>One ladder (D7a), run per frame by 3.1 solve, picks the highest rung whose inputs are present: D7b fromPrintedCoordinates › D7c fromTies › D7d fitToRing; a rung that fails its own residual gate is demoted and reported; insufficient ties pass down as constraints</td></tr>
+<tr><td><span class="sn">D8</span></td><td>Shared metrics: IoU, Hausdorff, mean boundary distance, θ vs grid, area ratio, residuals, ambiguity, demoted_from, tie_source</td></tr>
+<tr><td><span class="sn">D9</span></td><td>One anchor per frame; an unplaced figure needs its own correspondence or is reported unanchorable</td></tr>
+<tr><td><span class="sn">D10</span></td><td>Separate, manually launched <code>anchor-geometry</code> runbook, inputs {file, sir_id, run_slug?}</td></tr>
+<tr><td><span class="sn">D11</span></td><td>Auto-accept threshold in the readout only; v1 always stops at the operator</td></tr>
+<tr><td><span class="sn">D12</span></td><td><code>cartographer_anchors</code> keyed on (file_id, run_slug, frame_key), no FK to geometry ids; stale when run_slug ≠ lastGeometryRun</td></tr>
+<tr><td><span class="sn">D13</span></td><td><code>sir_put_anchored_geo(anchor_id)</code> replaces the anchor's geo rows: method='anchored', geom_local authoritative, geom_wgs84 derived</td></tr>
+<tr><td><span class="sn">D14</span></td><td>Staleness never deletes: rows stay with properties.stale=true until replaced</td></tr>
+<tr><td><span class="sn">D15</span></td><td>cartographer <code>VISION.md</code> gains an anchoring section in the first cartographer PR</td></tr>
+</tbody></table></div>
+
+<h3><span class="hn">index</span>Open questions</h3>
+<div class="spectable-scroll"><table class="spectable"><thead><tr><th>#</th><th>Question</th><th>Proposed</th></tr></thead><tbody>
+<tr><td><span class="sn">Q1</span></td><td>Where do anchored results live?</td><td>anchors table + geo rows (D12/D13)</td></tr>
+<tr><td><span class="sn">Q2</span></td><td>Link granularity: sir_artifact, project, or content hash?</td><td>content hash for identity, source_sir_artifact_id as provenance, sir_id at anchor time</td></tr>
+<tr><td><span class="sn">Q3</span></td><td>Separate runbook, or stage 8 of extract-geometry-v2?</td><td>separate (D10)</td></tr>
+<tr><td><span class="sn">Q4</span></td><td>Does a gis_fit anchor count as "anchored"?</td><td>yes, always carrying accuracy_class; consumers must show it</td></tr>
+<tr><td><span class="sn">Q5</span></td><td>Target system: native latestWkid, the plat's stated zone, or one canonical EPSG per county?</td><td>native latestWkid; when plat and county disagree, record both</td></tr>
+<tr><td><span class="sn">Q6</span></td><td>Fetch the subject ring in its native system?</td><td>yes (D4)</td></tr>
+<tr><td><span class="sn">Q7</span></td><td>Where does the registry live, and who fills it?</td><td>answered v1.2: no registry; native_sr in the module's layer-identity.json, which prospector already writes</td></tr>
+<tr><td><span class="sn">Q8</span></td><td>Replats and multi-parcel mismatches: allow union_of/within, auto-reject on low IoU?</td><td>always the operator in v1</td></tr>
+<tr><td><span class="sn">Q9</span></td><td>Curves as chords acceptable for v1 fits?</td><td>yes; has_approximated_curves caps the class at gis_fit</td></tr>
+<tr><td><span class="sn">Q10</span></td><td>geo.kind vocabulary for anchored rows: reuse Cartographer's kind or namespace it?</td><td>open</td></tr>
+<tr><td><span class="sn">Q11</span></td><td>Backfilling the 21 existing county_api rows</td><td>open: re-read source_layer (mostly absent) or re-resolve by county</td></tr>
+<tr><td><span class="sn">Q12</span></td><td>Demote on a failed residual gate, or anchor and flag?</td><td>demote: a survey class on a misread box is a false accuracy claim; the failure is reported</td></tr>
+<tr><td><span class="sn">Q13</span></td><td>Does tied to county linework outrank gis_fit?</td><td>keep rung 2 above rung 3 (a tie removes the rotation ambiguity), record tie_source, gate 1 ft monument · 10 ft county</td></tr>
+</tbody></table></div>
+
+<div class="xref">Grounding: <code>DESIGN-SPEC.md</code> (source of truth) · research: <a href="https://inspector-general-gamma.vercel.app/reports/view/2026-09-23-sir-geometry-source-survey/">IG report 2026-09-23-sir-geometry-source-survey</a> · bureau d153049f1d · substation 316ecae · cartographer 58ac25e · surveyor 674ef84.</div>
+<div class="foot">Supersedes the anchoring deferrals in geometry-extraction §7, the evidence spec, geometry-placement §5 and geom-local §2/D5; the 3089 concept spec becomes the printed-coordinates solver and the ground-truth fixture.</div>
+</section>
+
+</main>
+
+<script data-spec-kit-js>
+/* spec-kit v5.1 — system-map edge renderer.
+   Inline the ENTIRE contents of this file into the spec's
+   <script data-spec-kit-js> block (do not <script src>).
+   Reads every .sysmap, and for each hidden <a class="sys-edge"
+   data-from="idA" data-to="idB">label</a> draws an SVG path between the
+   two nodes' nearest sides. Routing:
+     side-to-side   when A and B share a row (label rides in the row gap ABOVE the boxes)
+     top-to-bottom  when A and B share a column (label sits right of the line)
+     orthogonal     otherwise: leave A vertically into the gap beside A's whole ROW (tags
+                    included), run, drop into B (label hugs the source); a backward edge
+                    in the same row goes over the top, .loop higher still.
+   Labels clear the source's floating .ref tag, stay inside the map, and nudge up off
+   any label drawn earlier.
+   Redraws on load, font load, resize, and whenever a tab panel becomes visible. */
+(function(){
+  const NS='http://www.w3.org/2000/svg';
+  const COL={std:'#6397b8',new:'#15803d',chg:'#b45309',gap:'#b91c1c',loop:'#6397b8'};
+  const KINDS=['new','chg','gap','loop'];
+  function el(tag,attrs){const n=document.createElementNS(NS,tag);for(const k in attrs)n.setAttribute(k,attrs[k]);return n;}
+  function draw(map){
+    let svg=map.querySelector('svg.edges');
+    if(!svg){
+      svg=el('svg',{class:'edges'});
+      const defs=el('defs',{});
+      for(const k in COL){
+        const m=el('marker',{id:'ah-'+k,viewBox:'0 0 10 10',refX:'9',refY:'5',markerWidth:'7',markerHeight:'7',orient:'auto-start-reverse'});
+        m.appendChild(el('path',{d:'M0 0L10 5L0 10z',fill:COL[k]}));defs.appendChild(m);
+      }
+      svg.appendChild(defs);map.appendChild(svg);
+    }
+    svg.querySelectorAll('g').forEach(g=>g.remove());
+    const mr=map.getBoundingClientRect(); if(mr.width===0) return;   // hidden tab: nothing to measure
+    const paths=el('g',{class:'paths'}), labels=el('g',{class:'labels'});
+    const rect=r=>({l:r.left-mr.left,t:r.top-mr.top,r:r.right-mr.left,b:r.bottom-mr.top,cx:(r.left+r.right)/2-mr.left,cy:(r.top+r.bottom)/2-mr.top});
+    const box=n=>rect((n.querySelector('.dot')||n).getBoundingClientRect());
+    const nodes=[...map.querySelectorAll('.sys')].map(n=>({n,b:box(n),ref:n.querySelector('.ref')?rect(n.querySelector('.ref').getBoundingClientRect()):null}));
+    // the vertical band a node's ROW occupies: every node overlapping it vertically, tags included
+    const band=a=>{let t=a.t,b=a.b;nodes.forEach(o=>{if(Math.min(a.b,o.b.b)-Math.max(a.t,o.b.t)>0){t=Math.min(t,o.b.t,o.ref?o.ref.t:o.b.t);b=Math.max(b,o.b.b);}});return {t,b};};
+    const placed=[];   // label boxes already drawn, for collision nudging
+    map.querySelectorAll('.sys-edge').forEach(e=>{
+      const A=map.querySelector('#'+CSS.escape(e.dataset.from||'')), B=map.querySelector('#'+CSS.escape(e.dataset.to||''));
+      if(!A||!B){console.warn('sysmap edge: missing node',e.dataset.from,e.dataset.to);return;}
+      const a=box(A), b=box(B), aRef=A.querySelector('.ref'), aRefR=aRef?rect(aRef.getBoundingClientRect()):null;
+      const kind=KINDS.find(k=>e.classList.contains(k))||'std';
+      const sameRow=Math.min(a.b,b.b)-Math.max(a.t,b.t)>0, sameCol=Math.min(a.r,b.r)-Math.max(a.l,b.l)>0;
+      const forward=b.l>=a.r;
+      let d,lx,ly,anchor='middle';
+      const clamp=(v,lo,hi)=>Math.max(lo,Math.min(hi,v));
+      if(sameRow&&forward&&kind!=='loop'){        // side to side, left→right
+        const x1=a.r,x2=b.l,y1=a.cy,mx=(x1+x2)/2;
+        const y2=A.querySelector('.dot')?clamp(y1,b.t+10,b.b-10):b.cy;
+        d=`M${x1} ${y1}C${mx} ${y1},${mx} ${y2},${x2} ${y2}`;
+        lx=mx; ly=Math.min(a.t,b.t)-6;
+        if(aRefR&&ly>aRefR.t-2&&ly<aRefR.b+12){lx=aRefR.r+6;anchor='start';}   // clear the source's floating tag
+      }else if(sameCol&&!sameRow){               // top to bottom; label just past the source end, right of the line
+        const down=b.t>=a.b, y1=down?a.b:a.t, y2=down?b.t:b.b, x1=a.cx, x2=b.cx, my=(y1+y2)/2;
+        d=`M${x1} ${y1}C${x1} ${my},${x2} ${my},${x2} ${y2}`;
+        // label just past the SOURCE end going down; just past the TARGET end going up (a source's
+        // top-right is where its floating tag lives)
+        lx=x1+8; ly=down?y1+14:y2+14; anchor='start';
+      }else{                                     // orthogonal, through the gap beside A's ROW (not A's box)
+        const rb=band(a); let y1,yr,y2;
+        if(sameRow){ y1=a.t; yr=rb.t-(kind==='loop'?34:22); y2=b.t; }      // backward / loop: over the whole row + its labels
+        else if(b.cy>a.cy){ y1=a.b; yr=rb.b+12; y2=b.t; }                   // down: gap below the row
+        else { y1=a.t; yr=rb.t-12; y2=b.b; }                                // up: gap above the row (above tags)
+        d=`M${a.cx} ${y1}L${a.cx} ${yr}L${b.cx} ${yr}L${b.cx} ${y2}`;
+        const rightward=b.cx>a.cx; lx=a.cx+(rightward?22:-22); anchor=rightward?'start':'end'; ly=yr-4;
+      }
+      paths.appendChild(el('path',{d,class:'e '+kind,'marker-end':`url(#ah-${kind})`}));
+      const txt=e.textContent.trim();
+      if(txt){
+        const t=el('text',{x:lx,y:ly,'text-anchor':anchor,class:'lbl '+kind}); t.textContent=txt;
+        const bg=el('rect',{class:'lblbg',rx:3}); labels.appendChild(bg); labels.appendChild(t);
+        svg.appendChild(labels);
+        let tb=t.getBBox();
+        if(tb.x+tb.width>mr.width-6){t.setAttribute('text-anchor','end');t.setAttribute('x',anchor==='start'?lx-16:lx);tb=t.getBBox();}   // keep inside the map
+        for(let i=0;i<4;i++){const hit=placed.find(p=>!(tb.x>p.x+p.width+2||p.x>tb.x+tb.width+2||tb.y>p.y+p.height+1||p.y>tb.y+tb.height+1));if(!hit)break;t.setAttribute('y',+t.getAttribute('y')-(tb.height+3));tb=t.getBBox();}  // nudge up off an earlier label
+        placed.push(tb);
+        bg.setAttribute('x',tb.x-4);bg.setAttribute('y',tb.y-2);bg.setAttribute('width',tb.width+8);bg.setAttribute('height',tb.height+4);
+      }
+    });
+    svg.appendChild(paths); svg.appendChild(labels);   // labels above paths
+  }
+  // long identifiers break cleanly after underscores instead of mid-word
+  function softBreaks(){document.querySelectorAll('.sys .t, .uc .nt').forEach(t=>{if(t.dataset.wbr||!/_/.test(t.textContent))return;t.innerHTML=t.innerHTML.replace(/_/g,'_<wbr>');t.dataset.wbr='1';});}
+  const all=()=>{softBreaks();document.querySelectorAll('.sysmap').forEach(draw);};
+  /* ---- spec links: when <main data-spec="DESIGN-SPEC.html"> is set, every reference token
+     becomes a link into the reader page: P0a → #P0a, D12 → #D12, Q6 → #Q6, §3.2 → #s3-2 */
+  function linkSpec(){
+    const main=document.querySelector('main[data-spec]'); if(!main) return;
+    const spec=main.dataset.spec;
+    const tokHref=t=>spec+'#'+(t.startsWith('§')?'s'+t.slice(1).replace(/\./g,'-'):t);
+    document.querySelectorAll('.sys-refs .refrow').forEach(r=>{
+      const tok=r.dataset.ref||(r.querySelector('.chip')||{}).textContent||''; if(!tok.trim()) return;
+      if(!r.getAttribute('href')) r.setAttribute('href',tokHref(tok.trim()));
+      if(!r.querySelector('.go')){const g=document.createElement('span');g.className='go';r.appendChild(g);}
+    });
+    document.querySelectorAll('.claim b, figure.concept figcaption b').forEach(b=>{
+      if(b.querySelector('a')) return;
+      b.innerHTML=b.innerHTML.replace(/(§\d+(?:\.\d+)*)|\b(P\d[a-z]?|D\d+|Q\d+)\b/g,m=>`<a class="cite" href="${tokHref(m)}" title="read this section of the spec">${m}</a>`);
+    });
+  }
+  window.addEventListener('DOMContentLoaded',linkSpec);
+  window.addEventListener('load',all);
+  if(document.fonts&&document.fonts.ready) document.fonts.ready.then(all);
+  window.addEventListener('resize',all);
+  new MutationObserver(all).observe(document.documentElement,{attributes:true,subtree:true,attributeFilter:['class']});
+})();
+
+</script>
+<script>
+  const btns=document.querySelectorAll('nav.tabs button');
+  const panels=document.querySelectorAll('.panel');
+  IDS=['overview','how','who','stored','rollout']; /* KEEP IN SYNC with the data-tab / panel ids above */
+  function show(id,opts={}){
+    btns.forEach(b=>b.classList.toggle('active',b.dataset.tab===id));
+    panels.forEach(p=>p.classList.toggle('active',p.id===id));
+    if(!opts.keepHash&&location.hash.slice(1)!==id) history.replaceState(null,'','#'+id);
+    if(!opts.noScroll) window.scrollTo({top:0,behavior:opts.instant?'auto':'smooth'});
+  }
+  btns.forEach(b=>b.addEventListener('click',()=>show(b.dataset.tab)));
+  /* a hash can be a tab id, or an element inside a tab (a zoom-in target such as #detail-p2):
+     switch to that element's panel, then scroll to it. Runs on load and on every hash change. */
+  function goHash(instant){
+    const h=decodeURIComponent(location.hash.slice(1)); if(!h) return;
+    if(IDS.includes(h)){show(h,{instant});return;}
+    const el=document.getElementById(h); if(!el) return;
+    const panel=el.closest('.panel'); if(panel&&!panel.classList.contains('active')) show(panel.id,{keepHash:true,noScroll:true});
+    el.scrollIntoView({block:'start',behavior:instant?'auto':'smooth'});
+  }
+  goHash(true);
+  window.addEventListener('load',()=>goHash(true));   // the browser's own fragment jump lands after this script; redo ours
+  window.addEventListener('hashchange',()=>goHash(false));
+</script>
+</body>
+</html>

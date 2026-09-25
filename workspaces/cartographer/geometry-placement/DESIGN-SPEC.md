@@ -4,7 +4,7 @@
 **Date:** 2026-09-21
 **Repos touched:** `cartographer` (runbook: one new phase + prompt + script, transcribe/assemble schema; `/processed` rendering), `substation` (one additive migration on `cartographer_geometries`)
 **Repos NOT touched:** `bureau`, `cityhall`, `conductor`/`conductor2`
-**Predecessor:** [`../geometry-extraction/DESIGN-SPEC.md`](../geometry-extraction/DESIGN-SPEC.md) (winston#266) — this lifts part of its §7 "Anchoring (D3)" deferral. SRID/WGS84 stays deferred.
+**Predecessor:** [`../geometry-extraction/DESIGN-SPEC.md`](../geometry-extraction/DESIGN-SPEC.md) (winston#266) — this lifts part of its §7 "Anchoring (D3)" deferral. SRID/WGS84 stays deferred. **Successor (2026-09-24):** [`../anchoring-geometries/DESIGN-SPEC.md`](../anchoring-geometries/DESIGN-SPEC.md) is the source of truth for real-world anchoring. It builds on this spec's frames: one transform per frame (its D9).
 
 > **Revision note (2026-09-21, same PR):** Q1–Q5 resolved and folded in. Q1 becomes D8 (one positional tolerance in feet: accept at ≤ 0.5 ft, check passes at ≤ 1.0 ft). Q2 becomes D9 (only the worker proposes links). Q3 becomes D10 (the largest figure is the reference). Q4 is resolved in §3.2 (one placement worker per document). Q5 is resolved in §3.4 (a plat-defect flag at the top of the readout). §3.3 and §6 are updated to match.
 
@@ -158,7 +158,7 @@ Rows from before this change, with a null `frame_key`, render as today.
 
 ## 5. Deliberately deferred
 
-- **Real-world anchoring** (SRID / WGS84 / `geo` table). Frames stay local, in feet. Printed coordinates are used only as relative evidence (`ΔE`, `ΔN`).
+- **Real-world anchoring** (SRID / WGS84 / `geo` table). Frames stay local, in feet. Printed coordinates are used only as relative evidence (`ΔE`, `ΔN`). *(2026-09-24: designed in [`../anchoring-geometries/DESIGN-SPEC.md`](../anchoring-geometries/DESIGN-SPEC.md). A frame gets a rotation + translation (+ scale) into State Plane there; placement itself stays translation-only.)*
 - **Rotation between figures** (D6). This would matter for figures from different bases of bearings, which also means different documents (D7).
 - **Cross-file frames** (D7).
 - **Curved shared lines.** Curves are still chords (winston#266 D2). A shared curve matches chord-to-chord, which works when both figures walk the same chord (LOT 1 and LOT 2 do, C3/C4 vs C1/C2). It fails when they chord it differently, and that's reported as a rejected claim.

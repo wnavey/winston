@@ -5,6 +5,12 @@
 **Repos touched:** `substation` (one `geo`-table migration — nullable local geometry, geodesic `computed_area`), `claude-plugins` (the `upload-sir` skill gains a parcel-geo write step)
 **Repos NOT touched:** `cityhall` (the `sir_parcels` RPC + map read `geom_wgs84` only — unaffected), `bureau`, `conductor`
 **Prod:** Supabase project **Noetic App** (`mgxqsrjutswbciyrltwd`)
+**Superseded in part (2026-09-24):** [`../../../cartographer/anchoring-geometries/DESIGN-SPEC.md`](../../../cartographer/anchoring-geometries/DESIGN-SPEC.md) is now the source of truth for `srid_local` on county parcels and for anchoring plat geometry. Specifically:
+- It **reverses §2's conclusion.** The zone isn't guessed from a point location; it's read from the system the county's own parcel layer is stored in (ArcGIS layer metadata `latestWkid`, e.g. TCAD 2277, Bexar 2278), with a curated per-county fallback table.
+- It **amends D5.** `sir_add_parcel_geo` fills `geom_local = ST_Transform(geom_wgs84, native)` when the layer's system is projected.
+
+D1 (`geom_wgs84` authoritative for `county_api` rows), D2–D4 and D6 still stand.
+
 **Siblings:** [`../MVP-EXPERIMENT.md`](../MVP-EXPERIMENT.md) (the `geo` table + map as-built), [`../ingesting-supporting-docs-3089/SPEC.md`](../ingesting-supporting-docs-3089/SPEC.md) (the plat → `geo` reconstruction skill this must stay compatible with)
 
 > This is an iteration spec, not a greenfield design. It records findings from a live session (uploading the Katy, TX VA parcel to `geo`) and turns them into a small, safe schema change plus one skill wiring. The thesis: **for county-sourced parcels, WGS84 is the authoritative datum and any local projection is derivable — so we should stop forcing a `geom_local` (and the arbitrary SRID choice behind it) at write time.**
@@ -57,7 +63,9 @@ Two independent problems:
 1. **Area-of-use boxes overlap.** They're rectangles; zones are irregular. So a Houston point "contains-matches" Texas *Central* and a Louisville point matches *Indiana* East. The query cannot pick.
 2. **Multiple zones legitimately cover the same point.** Both KY North (2246) and KY Single Zone (3089) are valid for Louisville. The existing rows use **3089 — not from any lookup, but because the recorded plat cited "KY State Plane Single Zone,"** and that propagated to the county rows too. **A plat-less, automated path cannot rederive that choice from geometry.** It is a convention, not a coordinate fact.
 
-**Conclusion:** for the county path there is no non-arbitrary `srid_local`. Rather than encode a convention, drop the requirement — store WGS84, derive a local only when something authoritative demands a specific zone.
+> **2026-09-24: reversed.** There *is* a non-arbitrary answer: the county's parcel layer declares its own spatial reference. See [`../../../cartographer/anchoring-geometries/DESIGN-SPEC.md`](../../../cartographer/anchoring-geometries/DESIGN-SPEC.md) §1.3 and D1–D3.
+
+**Conclusion (as of 2026-08-12):** for the county path there is no non-arbitrary `srid_local`. Rather than encode a convention, drop the requirement — store WGS84, derive a local only when something authoritative demands a specific zone.
 
 ### 2.1 We don't even need a projection to get area
 
@@ -98,7 +106,7 @@ constraint geo_srid_local_matches check (extensions.st_srid(geom_local) = srid_l
 - **D3 — `computed_area` regenerated from `st_area(geom_wgs84::geography)` → canonical m² across all kinds.** Resolves MVP Q1. Units become square meters everywhere (previously ftUS or m² depending on `srid_local`), so any consumer converts once. `stated_area` still holds the source document's figure for cross-checks; `computed_area` is now a source-independent sanity number that exists for every row.
   - **Postgres note:** a generated column's expression cannot be `ALTER`ed in place — the migration must `DROP COLUMN computed_area` then re-add it. That recomputes it (geodesic) for all rows.
 - **D4 — `geo_local_pairing` check: `(geom_local is null) = (srid_local is null)`.** Prevents a local geometry with no SRID, or an orphan SRID with no geometry. The existing `geo_srid_local_matches` check still holds: when both are NULL it evaluates to `st_srid(null)=null` → NULL → passes; when both present it enforces agreement.
-- **D5 — County-API write path stores WGS84 only.** No `ST_Transform`, no `srid_local`, no convention. One `INSERT` per parcel feature: `geom_wgs84 = ST_SetSRID(ST_GeomFromGeoJSON(feature.geometry), 4326)`, `geom_local` / `srid_local` left NULL, `method='county_api'`, `source_doc='parcel-rings.geojson'`.
+- **D5 — County-API write path stores WGS84 only.** *(Amended 2026-09-24 by [`../../../cartographer/anchoring-geometries/DESIGN-SPEC.md`](../../../cartographer/anchoring-geometries/DESIGN-SPEC.md) D4: also store `geom_local` in the county layer's native projected system when `properties.native_sr` provides one; otherwise as below.)* No `ST_Transform`, no `srid_local`, no convention. One `INSERT` per parcel feature: `geom_wgs84 = ST_SetSRID(ST_GeomFromGeoJSON(feature.geometry), 4326)`, `geom_local` / `srid_local` left NULL, `method='county_api'`, `source_doc='parcel-rings.geojson'`.
 - **D6 — Plat / `supporting_doc` path is unchanged.** The sibling SPEC's §7 write path keeps building an authoritative `geom_local` via `ST_GeomFromText(<wkt>, <srid>)` (SRID = the plat's cited zone, a fact off the sheet) and `geom_wgs84 = ST_Transform(...)`. Nothing in this spec touches that path; the nullable columns simply stop *requiring* it of everyone else.
 
 ---
@@ -123,6 +131,8 @@ Row `bbbba332-…` was uploaded this session the *old* way (WGS84 + a derived `g
 ---
 
 ## 5. Follow-up: on-demand / cached `geom_local` for supporting-doc comparison
+
+> **2026-09-24:** plat-to-county comparison and placement are now the `anchor-geometry` runbook in [`../../../cartographer/anchoring-geometries/DESIGN-SPEC.md`](../../../cartographer/anchoring-geometries/DESIGN-SPEC.md). County parcels get a stored `geom_local` in their native system (D4 there). When the target zone differs, the transform still happens on demand, as described here.
 
 The original reason to store `geom_local` was to have a **reference object in the plat's local CRS** so a recorded plat's ftUS coordinates (e.g. `N:3955342.11 E:4953669`) could be reconstructed and compared against the county "source-of-truth" parcel. That comparison **does not require a pre-stored county `geom_local`**:
 
