@@ -6,7 +6,7 @@
 <title>Cartographer — anchoring geometries · architecture</title>
 <style>
 /* ============================================================
-   spec-kit v5  —  winston HTML spec design system
+   spec-kit v5.1  —  winston HTML spec design system
    Inline the ENTIRE contents of this file into the spec's style block.
    Canonical source: ~/.claude/skills/winston-spec/assets/spec-kit.css
    When you change this file, bump the version above and in COMPONENTS.md.
@@ -14,6 +14,8 @@
    v5: + system map (.sysmap/.sys, edges drawn by spec-kit.js), + decision flow (.dflow),
        + concept figure (figure.concept), + claim caption (.claim), + reference chip rows (.sys-refs),
        + spec reader page (body.reader; DESIGN-SPEC.md rendered by marked, built by inline-kit.py --spec)
+   v5.1: pass-2 friction fixes — long identifiers wrap (.sys .t, .uc .nt, .ent .ty), .sysmap-scroll for
+       6+ columns, state-neutral .sm pills, .dflow jump outcomes, legend 'new trigger' dot
        Colour rule: fill/border = change state only; kind = badge text + shape; legend is the
        complete list of colour meanings on the page.
    ============================================================ */
@@ -101,7 +103,7 @@ code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px s
 .ent .row{display:flex;align-items:center;gap:7px;padding:4px 11px;font-size:11.5px;border-top:1px solid #eef1f4}
 .ent .row:first-of-type{border-top:0}
 .ent .row .nm{font-family:var(--mono);font-size:11.5px;color:var(--p900);font-weight:600}
-.ent .row .ty{font-family:var(--mono);font-size:10px;color:var(--muted);margin-left:auto;white-space:nowrap}
+.ent .row .ty{font-family:var(--mono);font-size:10px;color:var(--muted);margin-left:auto;text-align:right;max-width:60%;overflow-wrap:anywhere}
 .ent .row.hi{background:#fff9f2}
 .ent .row.strk .nm{text-decoration:line-through;color:var(--muted)}
 .ent .note{padding:5px 11px;font-size:10px;color:var(--muted);font-style:italic;border-top:1px dashed #e5e9ee;background:#fbfcfd}
@@ -151,7 +153,7 @@ code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px s
 .dfg{display:flex;flex-wrap:wrap;align-items:stretch;gap:8px 0;margin:0}
 .node{flex:0 0 auto;width:156px;background:#fff;border:1.5px solid var(--p300);border-radius:8px;padding:9px 11px;display:flex;flex-direction:column;gap:3px}
 .node .op{align-self:flex-start;font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:1px 6px;border-radius:3px;border:1px solid;color:#fff;margin-bottom:2px}
-.node .nt{display:block;font-family:var(--mono);font-weight:700;font-size:12px;color:var(--p900);line-height:1.3;word-break:break-word}
+.node .nt{display:block;font-family:var(--mono);font-weight:700;font-size:12px;color:var(--p900);line-height:1.3;overflow-wrap:anywhere}
 .node .nf{display:block;font-family:var(--mono);font-size:10px;color:var(--muted);line-height:1.45;word-break:break-word}
 .node.created{border-color:var(--new);background:var(--newbg)} .node.created .op{background:var(--new);border-color:var(--new)}
 .node.read{border-color:var(--p400);background:#eef4fb} .node.read .op{background:var(--p500);border-color:var(--p500)}
@@ -181,6 +183,11 @@ code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px s
 .sm .s.cc{border-color:#f0cba8;background:#fdf6f0}
 .sm .s.spec{border-color:var(--chgbd);background:var(--chgbg)}
 .sm .a{color:var(--p400);font-weight:700}
+/* state-neutral variants (v5.1): terminal-good / terminal-stop / dimmed. The .client/.cc/.spec
+   colours mean "whose court" and need a legend if used. */
+.sm .s.ok{border-color:var(--newbd);background:var(--newbg);color:var(--new)}
+.sm .s.stop{border-color:var(--retbd);background:var(--retbg);color:var(--ret)}
+.sm .s.dim{opacity:.6;border-style:dashed}
 
 /* ============================================================
    Use-case catalog — grouped list of candidate use cases
@@ -288,10 +295,11 @@ code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px s
    changed/new nodes, where they take the node's change colour.
    ============================================================ */
 .sysmap{position:relative;display:grid;gap:40px 64px;padding:28px 16px 22px;background:#fff;border:1px solid var(--divider);border-radius:12px;margin:14px 0 6px}
+.sysmap-scroll{overflow-x:auto;margin:14px 0 6px} .sysmap-scroll .sysmap{margin:0;min-width:max-content} /* 6+ columns: use grid-template-columns:repeat(N,minmax(150px,1fr)) inside .sysmap-scroll */
 .sysmap .colh{font-family:var(--mono);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--p500);text-align:center;padding-bottom:6px;border-bottom:1px dashed var(--p200);align-self:end}
 .sys{position:relative;z-index:2;background:#fff;border:1.5px solid var(--p300);border-radius:9px;padding:9px 11px 8px;min-height:64px;display:flex;flex-direction:column;gap:2px;align-self:center}
 .sys .k{align-self:flex-start;font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:1px 6px;border-radius:3px;color:#fff;background:var(--p500);margin-bottom:2px}
-.sys .t{font-weight:600;font-size:12.5px;line-height:1.3;color:var(--p900)}
+.sys .t{font-weight:600;font-size:12.5px;line-height:1.3;color:var(--p900);overflow-wrap:anywhere}
 .sys .d{font-family:var(--mono);font-size:9.5px;color:var(--muted);line-height:1.4}
 .sys.ext{border-style:dashed}
 .sys.store{border-radius:4px 4px 14px 14px}
@@ -342,7 +350,7 @@ header.masthead a.spec-link:hover{background:rgba(255,255,255,.24)}
 /* legend for a system map: the COMPLETE list of colour meanings on the page */
 .sys-legend{display:flex;flex-wrap:wrap;gap:14px;font-size:11.5px;color:var(--p800);margin:8px 4px 0}
 .sys-legend i{display:inline-block;width:22px;height:3px;vertical-align:middle;margin-right:5px;background:var(--p400)}
-.sys-legend i.new{background:var(--new)}.sys-legend i.chg{background:var(--chg)}.sys-legend i.gap{background:var(--ret)}.sys-legend i.loop{background:repeating-linear-gradient(90deg,var(--p400) 0 4px,transparent 4px 7px)}
+.sys-legend i.new{background:var(--new)} .sys-legend i.dot{width:10px;height:10px;border-radius:50%;background:var(--p700)} .sys-legend i.dot.new{background:var(--new)}.sys-legend i.chg{background:var(--chg)}.sys-legend i.gap{background:var(--ret)}.sys-legend i.loop{background:repeating-linear-gradient(90deg,var(--p400) 0 4px,transparent 4px 7px)}
 
 /* ============================================================
    Claim caption  —  under every diagram. Cites the spec section or
@@ -365,6 +373,8 @@ header.masthead a.spec-link:hover{background:rgba(255,255,255,.24)}
 .dflow .dq .out.fail{border-color:var(--retbd);background:var(--retbg);color:var(--ret)}
 .dflow .dno{font-family:var(--mono);font-size:9.5px;color:var(--muted);padding:3px 0 3px 18px}
 .dflow .dq.end .q{border-style:dashed;font-weight:500;color:var(--p700)}
+.dflow .dq .out a,.dflow .dq a.out{color:inherit;text-decoration:underline dotted;text-underline-offset:2px}
+.dflow .dq .out.jump::after{content:" ↗";color:var(--p500)} /* an outcome that jumps to another step/diagram */
 
 /* ============================================================
    Concept figure  —  a hand-drawn inline SVG for the one mechanism
@@ -416,7 +426,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
   <div class="kicker">CARTOGRAPHER · ANCHORING GEOMETRIES</div>
   <h1>Anchoring extracted geometries to the county parcel</h1>
   <p>Architecture companion to <code>DESIGN-SPEC.md</code> (winston#279). Cartographer's shapes are survey-exact but float (SRID:0, feet, the plat's own north); the SIR's county parcel ring is on the map but only tax-map-grade. This spec joins the two with one similarity transform per frame. Research: <a href="https://inspector-general-gamma.vercel.app/reports/view/2026-09-23-sir-geometry-source-survey/" style="color:inherit">IG geometry source survey</a>.</p>
-  <div class="meta">Draft v1 · 2026-09-24 · companion rebuilt 2026-09-25 on spec-kit v5 · click a tab ↓</div>
+  <div class="meta">Draft v1 · 2026-09-24 · companion rebuilt 2026-09-25 on spec-kit v5.1 · click a tab ↓</div>
   <a class="spec-link" href="DESIGN-SPEC.html">📖 read the spec</a>
 </header>
 
@@ -881,7 +891,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 </main>
 
 <script data-spec-kit-js>
-/* spec-kit v5 — system-map edge renderer.
+/* spec-kit v5.1 — system-map edge renderer.
    Inline the ENTIRE contents of this file into the spec's
    <script data-spec-kit-js> block (do not <script src>).
    Reads every .sysmap, and for each hidden <a class="sys-edge"
@@ -889,9 +899,11 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
    two nodes' nearest sides. Routing:
      side-to-side   when A and B share a row (label rides in the row gap ABOVE the boxes)
      top-to-bottom  when A and B share a column (label sits right of the line)
-     orthogonal     otherwise: leave A vertically into the row gap beside it, run, drop
-                    into B (label above the run); a backward edge in the same row goes
-                    over the top (use it for .loop back-edges)
+     orthogonal     otherwise: leave A vertically into the gap beside A's whole ROW (tags
+                    included), run, drop into B (label hugs the source); a backward edge
+                    in the same row goes over the top, .loop higher still.
+   Labels clear the source's floating .ref tag, stay inside the map, and nudge up off
+   any label drawn earlier.
    Redraws on load, font load, resize, and whenever a tab panel becomes visible. */
 (function(){
   const NS='http://www.w3.org/2000/svg';
@@ -912,35 +924,39 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
     svg.querySelectorAll('g').forEach(g=>g.remove());
     const mr=map.getBoundingClientRect(); if(mr.width===0) return;   // hidden tab: nothing to measure
     const paths=el('g',{class:'paths'}), labels=el('g',{class:'labels'});
-    const box=n=>{const r=(n.querySelector('.dot')||n).getBoundingClientRect();
-      return {l:r.left-mr.left,t:r.top-mr.top,r:r.right-mr.left,b:r.bottom-mr.top,cx:(r.left+r.right)/2-mr.left,cy:(r.top+r.bottom)/2-mr.top};};
+    const rect=r=>({l:r.left-mr.left,t:r.top-mr.top,r:r.right-mr.left,b:r.bottom-mr.top,cx:(r.left+r.right)/2-mr.left,cy:(r.top+r.bottom)/2-mr.top});
+    const box=n=>rect((n.querySelector('.dot')||n).getBoundingClientRect());
+    const nodes=[...map.querySelectorAll('.sys')].map(n=>({n,b:box(n),ref:n.querySelector('.ref')?rect(n.querySelector('.ref').getBoundingClientRect()):null}));
+    // the vertical band a node's ROW occupies: every node overlapping it vertically, tags included
+    const band=a=>{let t=a.t,b=a.b;nodes.forEach(o=>{if(Math.min(a.b,o.b.b)-Math.max(a.t,o.b.t)>0){t=Math.min(t,o.b.t,o.ref?o.ref.t:o.b.t);b=Math.max(b,o.b.b);}});return {t,b};};
+    const placed=[];   // label boxes already drawn, for collision nudging
     map.querySelectorAll('.sys-edge').forEach(e=>{
       const A=map.querySelector('#'+CSS.escape(e.dataset.from||'')), B=map.querySelector('#'+CSS.escape(e.dataset.to||''));
       if(!A||!B){console.warn('sysmap edge: missing node',e.dataset.from,e.dataset.to);return;}
-      const a=box(A), b=box(B);
+      const a=box(A), b=box(B), aRef=A.querySelector('.ref'), aRefR=aRef?rect(aRef.getBoundingClientRect()):null;
       const kind=KINDS.find(k=>e.classList.contains(k))||'std';
       const sameRow=Math.min(a.b,b.b)-Math.max(a.t,b.t)>0, sameCol=Math.min(a.r,b.r)-Math.max(a.l,b.l)>0;
-      const forward=b.l>=a.r, backward=b.r<=a.l;
+      const forward=b.l>=a.r;
       let d,lx,ly,anchor='middle';
       const clamp=(v,lo,hi)=>Math.max(lo,Math.min(hi,v));
-      if(sameRow&&forward){                      // side to side, left→right
+      if(sameRow&&forward&&kind!=='loop'){        // side to side, left→right
         const x1=a.r,x2=b.l,y1=a.cy,mx=(x1+x2)/2;
-        // from a trigger dot: enter the target at the dot's own height so the line
-        // stays horizontal and never crosses the dot's label below it
         const y2=A.querySelector('.dot')?clamp(y1,b.t+10,b.b-10):b.cy;
         d=`M${x1} ${y1}C${mx} ${y1},${mx} ${y2},${x2} ${y2}`;
-        lx=mx; ly=Math.min(a.t,b.t)-6;           // label in the row gap just above the boxes
-      }else if(sameCol&&!sameRow){               // top to bottom
+        lx=mx; ly=Math.min(a.t,b.t)-6;
+        if(aRefR&&ly>aRefR.t-2&&ly<aRefR.b+12){lx=aRefR.r+6;anchor='start';}   // clear the source's floating tag
+      }else if(sameCol&&!sameRow){               // top to bottom; label just past the source end, right of the line
         const down=b.t>=a.b, y1=down?a.b:a.t, y2=down?b.t:b.b, x1=a.cx, x2=b.cx, my=(y1+y2)/2;
         d=`M${x1} ${y1}C${x1} ${my},${x2} ${my},${x2} ${y2}`;
-        lx=Math.max(x1,x2)+8; ly=my+3; anchor='start';
-      }else{                                     // orthogonal, through a row gap
-        let y1,yr,y2;
-        if(sameRow){ y1=a.t; yr=a.t-24; y2=b.t; }            // backward in the same row: over the top
-        else if(b.cy>a.cy){ y1=a.b; yr=a.b+12; y2=b.t; }     // down: gap below A
-        else { y1=a.t; yr=a.t-12; y2=b.b; }                  // up: gap above A
+        // label just past the SOURCE end going down; just past the TARGET end going up (a source's
+        // top-right is where its floating tag lives)
+        lx=x1+8; ly=down?y1+14:y2+14; anchor='start';
+      }else{                                     // orthogonal, through the gap beside A's ROW (not A's box)
+        const rb=band(a); let y1,yr,y2;
+        if(sameRow){ y1=a.t; yr=rb.t-(kind==='loop'?34:22); y2=b.t; }      // backward / loop: over the whole row + its labels
+        else if(b.cy>a.cy){ y1=a.b; yr=rb.b+12; y2=b.t; }                   // down: gap below the row
+        else { y1=a.t; yr=rb.t-12; y2=b.b; }                                // up: gap above the row (above tags)
         d=`M${a.cx} ${y1}L${a.cx} ${yr}L${b.cx} ${yr}L${b.cx} ${y2}`;
-        // label hugs the source box (above/below it), leaving the between-box gap to side-to-side labels
         const rightward=b.cx>a.cx; lx=a.cx+(rightward?22:-22); anchor=rightward?'start':'end'; ly=yr-4;
       }
       paths.appendChild(el('path',{d,class:'e '+kind,'marker-end':`url(#ah-${kind})`}));
@@ -948,13 +964,19 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
       if(txt){
         const t=el('text',{x:lx,y:ly,'text-anchor':anchor,class:'lbl '+kind}); t.textContent=txt;
         const bg=el('rect',{class:'lblbg',rx:3}); labels.appendChild(bg); labels.appendChild(t);
-        svg.appendChild(labels);                 // must be in the DOM for getBBox
-        const tb=t.getBBox(); bg.setAttribute('x',tb.x-4);bg.setAttribute('y',tb.y-2);bg.setAttribute('width',tb.width+8);bg.setAttribute('height',tb.height+4);
+        svg.appendChild(labels);
+        let tb=t.getBBox();
+        if(tb.x+tb.width>mr.width-6){t.setAttribute('text-anchor','end');t.setAttribute('x',anchor==='start'?lx-16:lx);tb=t.getBBox();}   // keep inside the map
+        for(let i=0;i<4;i++){const hit=placed.find(p=>!(tb.x>p.x+p.width+2||p.x>tb.x+tb.width+2||tb.y>p.y+p.height+1||p.y>tb.y+tb.height+1));if(!hit)break;t.setAttribute('y',+t.getAttribute('y')-(tb.height+3));tb=t.getBBox();}  // nudge up off an earlier label
+        placed.push(tb);
+        bg.setAttribute('x',tb.x-4);bg.setAttribute('y',tb.y-2);bg.setAttribute('width',tb.width+8);bg.setAttribute('height',tb.height+4);
       }
     });
     svg.appendChild(paths); svg.appendChild(labels);   // labels above paths
   }
-  const all=()=>document.querySelectorAll('.sysmap').forEach(draw);
+  // long identifiers break cleanly after underscores instead of mid-word
+  function softBreaks(){document.querySelectorAll('.sys .t, .uc .nt').forEach(t=>{if(t.dataset.wbr||!/_/.test(t.textContent))return;t.innerHTML=t.innerHTML.replace(/_/g,'_<wbr>');t.dataset.wbr='1';});}
+  const all=()=>{softBreaks();document.querySelectorAll('.sysmap').forEach(draw);};
   /* ---- spec links: when <main data-spec="DESIGN-SPEC.html"> is set, every reference token
      becomes a link into the reader page: P0a → #P0a, D12 → #D12, Q6 → #Q6, §3.2 → #s3-2 */
   function linkSpec(){

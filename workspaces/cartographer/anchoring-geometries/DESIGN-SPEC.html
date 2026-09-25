@@ -6,14 +6,16 @@
 <title>Cartographer — anchoring extracted geometries to the county parcel</title>
 <style>
 /* ============================================================
-   spec-kit v5  —  winston HTML spec design system
+   spec-kit v5.1  —  winston HTML spec design system
    Inline the ENTIRE contents of this file into the spec's style block.
    Canonical source: ~/.claude/skills/winston-spec/assets/spec-kit.css
    When you change this file, bump the version above and in COMPONENTS.md.
    v4: + sequence diagram (.seq*), + data table (.spectable), + prompt block (.prompt)
    v5: + system map (.sysmap/.sys, edges drawn by spec-kit.js), + decision flow (.dflow),
        + concept figure (figure.concept), + claim caption (.claim), + reference chip rows (.sys-refs),
-       + spec reader page (body.reader; DESIGN-DESIGN-SPEC.md rendered by marked, built by inline-kit.py --spec)
+       + spec reader page (body.reader; DESIGN-SPEC.md rendered by marked, built by inline-kit.py --spec)
+   v5.1: pass-2 friction fixes — long identifiers wrap (.sys .t, .uc .nt, .ent .ty), .sysmap-scroll for
+       6+ columns, state-neutral .sm pills, .dflow jump outcomes, legend 'new trigger' dot
        Colour rule: fill/border = change state only; kind = badge text + shape; legend is the
        complete list of colour meanings on the page.
    ============================================================ */
@@ -101,7 +103,7 @@ code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px s
 .ent .row{display:flex;align-items:center;gap:7px;padding:4px 11px;font-size:11.5px;border-top:1px solid #eef1f4}
 .ent .row:first-of-type{border-top:0}
 .ent .row .nm{font-family:var(--mono);font-size:11.5px;color:var(--p900);font-weight:600}
-.ent .row .ty{font-family:var(--mono);font-size:10px;color:var(--muted);margin-left:auto;white-space:nowrap}
+.ent .row .ty{font-family:var(--mono);font-size:10px;color:var(--muted);margin-left:auto;text-align:right;max-width:60%;overflow-wrap:anywhere}
 .ent .row.hi{background:#fff9f2}
 .ent .row.strk .nm{text-decoration:line-through;color:var(--muted)}
 .ent .note{padding:5px 11px;font-size:10px;color:var(--muted);font-style:italic;border-top:1px dashed #e5e9ee;background:#fbfcfd}
@@ -151,7 +153,7 @@ code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px s
 .dfg{display:flex;flex-wrap:wrap;align-items:stretch;gap:8px 0;margin:0}
 .node{flex:0 0 auto;width:156px;background:#fff;border:1.5px solid var(--p300);border-radius:8px;padding:9px 11px;display:flex;flex-direction:column;gap:3px}
 .node .op{align-self:flex-start;font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:1px 6px;border-radius:3px;border:1px solid;color:#fff;margin-bottom:2px}
-.node .nt{display:block;font-family:var(--mono);font-weight:700;font-size:12px;color:var(--p900);line-height:1.3;word-break:break-word}
+.node .nt{display:block;font-family:var(--mono);font-weight:700;font-size:12px;color:var(--p900);line-height:1.3;overflow-wrap:anywhere}
 .node .nf{display:block;font-family:var(--mono);font-size:10px;color:var(--muted);line-height:1.45;word-break:break-word}
 .node.created{border-color:var(--new);background:var(--newbg)} .node.created .op{background:var(--new);border-color:var(--new)}
 .node.read{border-color:var(--p400);background:#eef4fb} .node.read .op{background:var(--p500);border-color:var(--p500)}
@@ -181,6 +183,11 @@ code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px s
 .sm .s.cc{border-color:#f0cba8;background:#fdf6f0}
 .sm .s.spec{border-color:var(--chgbd);background:var(--chgbg)}
 .sm .a{color:var(--p400);font-weight:700}
+/* state-neutral variants (v5.1): terminal-good / terminal-stop / dimmed. The .client/.cc/.spec
+   colours mean "whose court" and need a legend if used. */
+.sm .s.ok{border-color:var(--newbd);background:var(--newbg);color:var(--new)}
+.sm .s.stop{border-color:var(--retbd);background:var(--retbg);color:var(--ret)}
+.sm .s.dim{opacity:.6;border-style:dashed}
 
 /* ============================================================
    Use-case catalog — grouped list of candidate use cases
@@ -288,10 +295,11 @@ code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px s
    changed/new nodes, where they take the node's change colour.
    ============================================================ */
 .sysmap{position:relative;display:grid;gap:40px 64px;padding:28px 16px 22px;background:#fff;border:1px solid var(--divider);border-radius:12px;margin:14px 0 6px}
+.sysmap-scroll{overflow-x:auto;margin:14px 0 6px} .sysmap-scroll .sysmap{margin:0;min-width:max-content} /* 6+ columns: use grid-template-columns:repeat(N,minmax(150px,1fr)) inside .sysmap-scroll */
 .sysmap .colh{font-family:var(--mono);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--p500);text-align:center;padding-bottom:6px;border-bottom:1px dashed var(--p200);align-self:end}
 .sys{position:relative;z-index:2;background:#fff;border:1.5px solid var(--p300);border-radius:9px;padding:9px 11px 8px;min-height:64px;display:flex;flex-direction:column;gap:2px;align-self:center}
 .sys .k{align-self:flex-start;font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:1px 6px;border-radius:3px;color:#fff;background:var(--p500);margin-bottom:2px}
-.sys .t{font-weight:600;font-size:12.5px;line-height:1.3;color:var(--p900)}
+.sys .t{font-weight:600;font-size:12.5px;line-height:1.3;color:var(--p900);overflow-wrap:anywhere}
 .sys .d{font-family:var(--mono);font-size:9.5px;color:var(--muted);line-height:1.4}
 .sys.ext{border-style:dashed}
 .sys.store{border-radius:4px 4px 14px 14px}
@@ -342,7 +350,7 @@ header.masthead a.spec-link:hover{background:rgba(255,255,255,.24)}
 /* legend for a system map: the COMPLETE list of colour meanings on the page */
 .sys-legend{display:flex;flex-wrap:wrap;gap:14px;font-size:11.5px;color:var(--p800);margin:8px 4px 0}
 .sys-legend i{display:inline-block;width:22px;height:3px;vertical-align:middle;margin-right:5px;background:var(--p400)}
-.sys-legend i.new{background:var(--new)}.sys-legend i.chg{background:var(--chg)}.sys-legend i.gap{background:var(--ret)}.sys-legend i.loop{background:repeating-linear-gradient(90deg,var(--p400) 0 4px,transparent 4px 7px)}
+.sys-legend i.new{background:var(--new)} .sys-legend i.dot{width:10px;height:10px;border-radius:50%;background:var(--p700)} .sys-legend i.dot.new{background:var(--new)}.sys-legend i.chg{background:var(--chg)}.sys-legend i.gap{background:var(--ret)}.sys-legend i.loop{background:repeating-linear-gradient(90deg,var(--p400) 0 4px,transparent 4px 7px)}
 
 /* ============================================================
    Claim caption  —  under every diagram. Cites the spec section or
@@ -365,6 +373,8 @@ header.masthead a.spec-link:hover{background:rgba(255,255,255,.24)}
 .dflow .dq .out.fail{border-color:var(--retbd);background:var(--retbg);color:var(--ret)}
 .dflow .dno{font-family:var(--mono);font-size:9.5px;color:var(--muted);padding:3px 0 3px 18px}
 .dflow .dq.end .q{border-style:dashed;font-weight:500;color:var(--p700)}
+.dflow .dq .out a,.dflow .dq a.out{color:inherit;text-decoration:underline dotted;text-underline-offset:2px}
+.dflow .dq .out.jump::after{content:" ↗";color:var(--p500)} /* an outcome that jumps to another step/diagram */
 
 /* ============================================================
    Concept figure  —  a hand-drawn inline SVG for the one mechanism
@@ -378,7 +388,7 @@ figure.concept figcaption b{color:var(--p900)}
 
 
 /* ============================================================
-   Spec reader page (body.reader) — DESIGN-DESIGN-SPEC.md rendered by marked,
+   Spec reader page (body.reader) — DESIGN-SPEC.md rendered by marked,
    generated by inline-kit.py --spec. Sticky TOC + body; :target glow.
    ============================================================ */
 body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom:1px solid rgba(255,255,255,.4)}
@@ -432,8 +442,8 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 **Repos touched:** `surveyor` (read and report each layer's native spatial reference; per-county registry), `bureau` (`site-research` resolve-site records `native_sr`; `arcgis_query.py`; new `anchor-geometry` runbook), `substation` (`sir_add_parcel_geo` fills `geom_local`; `cartographer_files` gets a link to where the document came from; new `cartographer_anchors` table; RPC that writes anchored geometries into `geo`), `cartographer` (`src/lib/geometry/anchor.ts` solvers; extraction records basis-of-bearings, units and scale factor; **`VISION.md` updated to include anchoring**, §3.9)
 **Repos NOT touched:** `cityhall` (the map already draws `geo.geom_wgs84`; a viewer for anchored geometries comes later, §8), `conductor2`, `claude-plugins`
 **Prod:** Supabase **Noetic App** (`mgxqsrjutswbciyrltwd`)
-**Predecessors:** [`../geometry-extraction/DESIGN-DESIGN-SPEC.md`](../geometry-extraction/DESIGN-DESIGN-SPEC.md) (winston#266, which deferred anchoring as "D3"), [`../geometry-placement/DESIGN-DESIGN-SPEC.md`](../geometry-placement/DESIGN-DESIGN-SPEC.md) (winston#270: frames, translation only, "SRID/WGS84 stays deferred"), [`../geometry-extraction/evidence/DESIGN-DESIGN-SPEC.md`](../geometry-extraction/evidence/DESIGN-DESIGN-SPEC.md) (winston#274)
-**Siblings:** [`../../diligence/sir-geometry/geom-local/GEOM_LOCAL_ITERATION_DESIGN-SPEC.md`](../../diligence/sir-geometry/geom-local/GEOM_LOCAL_ITERATION_DESIGN-SPEC.md) (**§3.2 reverses its §2 conclusion**), [`../../diligence/sir-geometry/ingesting-supporting-docs-3089/DESIGN-SPEC.md`](../../diligence/sir-geometry/ingesting-supporting-docs-3089/DESIGN-SPEC.md) (prior art: building a plat from its printed State Plane coordinates, done by hand)
+**Predecessors:** [`../geometry-extraction/DESIGN-SPEC.md`](../geometry-extraction/DESIGN-SPEC.md) (winston#266, which deferred anchoring as "D3"), [`../geometry-placement/DESIGN-SPEC.md`](../geometry-placement/DESIGN-SPEC.md) (winston#270: frames, translation only, "SRID/WGS84 stays deferred"), [`../geometry-extraction/evidence/DESIGN-SPEC.md`](../geometry-extraction/evidence/DESIGN-SPEC.md) (winston#274)
+**Siblings:** [`../../diligence/sir-geometry/geom-local/GEOM_LOCAL_ITERATION_SPEC.md`](../../diligence/sir-geometry/geom-local/GEOM_LOCAL_ITERATION_SPEC.md) (**§3.2 reverses its §2 conclusion**), [`../../diligence/sir-geometry/ingesting-supporting-docs-3089/SPEC.md`](../../diligence/sir-geometry/ingesting-supporting-docs-3089/SPEC.md) (prior art: building a plat from its printed State Plane coordinates, done by hand)
 **Research (read this first for context):** Inspector General report **"SIR geometry source survey — how geometry is defined across the last 10 SIRs"**, <https://inspector-general-gamma.vercel.app/reports/view/2026-09-23-sir-geometry-source-survey/> (slug `2026-09-23-sir-geometry-source-survey`). §1.2's numbers come from it; §1.5 describes what it contains.
 **Architecture diagrams:** [`architecture.html`](architecture.html) (spec-kit v5) — five tabs in reader order: **Overview** (Today/After system maps with the gap and the bridge, plus the phase DAG), **How it works** (the anchor-transform figure, the D7 solver and D3 native-SR decision flows, the D12 anchor status lifecycle), **Who does what when** (the `anchor-geometry` runbook graph with the HITL loop, the 4.1 gate outcomes, the call sequence), **What's stored** (ER diffs for `geo`, `cartographer_files`, evidence; the new `cartographer_anchors` and registry tables; what `sir_put_anchored_geo` writes), **Rollout** (phases, exit tests, decisions and open questions). [`DESIGN-SPEC.html`](DESIGN-SPEC.html) is this markdown rendered as a page for the diagrams to deep-link into. Open them in a browser; this markdown wins if they differ.
 **Source of truth for anchoring and `srid_local`.** This spec supersedes or amends the following; each now carries a dated pointer here:
@@ -687,7 +697,7 @@ A `gis_fit` anchor combines a survey-exact shape with a position that's only as 
 > SIRs, metes and bounds defined 42% of 315 geometries, while printed State Plane
 > coordinates appeared in about 1%
 > ([IG survey](https://inspector-general-gamma.vercel.app/reports/view/2026-09-23-sir-geometry-source-survey/)).
-> Design: winston `workspaces/cartographer/anchoring-geometries/DESIGN-DESIGN-SPEC.md`.
+> Design: winston `workspaces/cartographer/anchoring-geometries/DESIGN-SPEC.md`.
 
 It also edits "Eventually" so WGS84/MapLibre display is described as the viewer for *anchored* geometries (P3), not a separate goal. VISION.md stays high-level: no tables, no decision numbers.
 
@@ -859,8 +869,8 @@ if(__exports != exports)module.exports = exports;return module.exports}));
   // TOC from h2/h3
   const toc=document.getElementById('toc');
   body.querySelectorAll('h2,h3').forEach(h=>{const a=document.createElement('a');a.href='#'+h.id;a.textContent=h.textContent;a.className='toc-'+h.tagName.toLowerCase();toc.appendChild(a);});
-  // sibling .md links → their reader pages
-  body.querySelectorAll('a[href$=".md"]').forEach(a=>{a.href=a.getAttribute('href').replace(/\.md$/,'.html');a.title='opens that spec\'s reader page (build it with inline-kit.py --spec)';});
+  // sibling .md links stay .md (GitHub renders them; a reader for them may not be built). If a
+  // sibling reader IS built, link to it explicitly from the markdown as .html.
   // scroll to :target after ids exist
   if(location.hash){const t=document.getElementById(decodeURIComponent(location.hash.slice(1)));if(t)t.scrollIntoView({block:'start'});}
 })();
