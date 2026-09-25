@@ -431,7 +431,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
   <div class="kicker">CARTOGRAPHER · ANCHORING GEOMETRIES</div>
   <h1>Anchoring extracted geometries to the county parcel</h1>
   <p>Architecture companion to <code>DESIGN-SPEC.md</code> (winston#279). Cartographer's shapes are survey-exact but float (SRID:0, feet, the plat's own north); the SIR's county parcel ring is on the map but only tax-map-grade. This spec joins the two with one similarity transform per frame. Research: <a href="https://inspector-general-gamma.vercel.app/reports/view/2026-09-23-sir-geometry-source-survey/" style="color:inherit">IG geometry source survey</a>.</p>
-  <div class="meta">Draft v1.1 · 2026-09-25 (v1 2026-09-24) · companion on spec-kit v5.1 · click a tab ↓</div>
+  <div class="meta">Draft v1.2 · 2026-09-25 (v1 2026-09-24) · companion on spec-kit v5.1 · click a tab ↓</div>
   <a class="spec-link" href="DESIGN-SPEC.html">📖 read the spec</a>
 </header>
 
@@ -498,7 +498,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 
   <div class="sys trig" id="b-t1" style="grid-area:2/1"><span class="dot"></span><span class="t">SIR run launched</span><span class="d">for an address</span></div>
   <div class="sys ext" id="b-src" style="grid-area:2/2"><span class="k">external</span><span class="t">County parcel layer</span><span class="d">?f=json says its latestWkid</span></div>
-  <div class="sys new" id="b-tool" style="grid-area:2/3"><a class="ref" href="#detail-native-sr">P0a · D2–D3 ↓</a><span class="k">tool + registry</span><span class="t">resolve_native_sr</span><span class="d">per-county registry · prospector fills, canary checks</span></div>
+  <div class="sys chg" id="b-tool" style="grid-area:2/3"><a class="ref" href="#detail-native-sr">P0a · D2–D3 ↓</a><span class="k">surveyor module</span><span class="t">County parcel tool</span><span class="d">now returns native_sr from its layer-identity.json, checked live</span></div>
   <div class="sys chg" id="b-step" style="grid-area:2/4"><a class="ref" href="#detail-native-sr">P0a · D1–D4 ↓</a><span class="k">runbook step</span><span class="t">resolve-site</span><span class="d">now requires native_sr on every ring</span></div>
   <div class="sys store chg" id="b-geo" style="grid-area:2/5"><a class="ref" href="#detail-geo">P0a · D4 ↓</a><span class="k">table</span><span class="t">geo (parcel)</span><span class="d">gains geom_local in the county's State Plane</span></div>
   <div class="sys" id="b-ui" style="grid-area:2/6"><span class="k">ui</span><span class="t">SIR map</span><span class="d">unchanged</span></div>
@@ -532,7 +532,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
   <a class="sys-edge" data-from="b-ex" data-to="b-cg"></a>
 </div>
 <div class="sys-refs">
-  <a class="refrow chg" data-ref="P0a"><span class="chip">P0a</span><span class="txt">capture the county layer's native spatial reference when the parcel is looked up (D1 the layer declares the zone, we record it · D2 one generic tool + a per-county registry · D3 fallback chain · D4 resolve-site requires it and the RPC fills geom_local)</span></a>
+  <a class="refrow chg" data-ref="P0a"><span class="chip">P0a</span><span class="txt">capture the county layer's native spatial reference when the parcel is looked up (D1 the layer declares the zone, we record it · D2 getLayerSpatialReference + native_sr recorded in the module's layer-identity.json · D3 fallback chain · D4 resolve-site requires it and the RPC fills geom_local)</span></a>
   <a class="refrow chg" data-ref="P0b"><span class="chip">P0b</span><span class="txt">link a Cartographer file to the SIR document it came from (D5 content-hash deduplicating importer, nullable source_sir_artifact_id and project_id)</span></a>
   <a class="refrow chg" data-ref="P0c"><span class="chip">P0c</span><span class="txt">extraction records what anchoring needs (D6 basis of bearings, distance units, scale factor, printed coordinates at non-POB corners)</span></a>
   <a class="refrow new" data-ref="P2"><span class="chip">P2</span><span class="txt">the anchor-geometry runbook and its storage (D10 a separate manual runbook that shells out to the P1 solvers · D11 auto-accept shown in the readout only · D12 the anchors table · D13 geo rows produced with method='anchored')</span></a>
@@ -542,7 +542,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 
 <h3><span class="hn">Phases</span>Dependency order</h3>
 <div class="sysmap" style="grid-template-columns:repeat(4,1fr)">
-  <div class="sys" id="ph-0a" style="grid-area:1/1"><span class="k">surveyor · bureau · substation</span><span class="t">P0a native SR</span><span class="d">tool + registry + RPC · backfill 21 rows</span></div>
+  <div class="sys" id="ph-0a" style="grid-area:1/1"><span class="k">surveyor · bureau · substation</span><span class="t">P0a native SR</span><span class="d">layer helper + native_sr in layer-identity.json + RPC · backfill 21 rows</span></div>
   <div class="sys" id="ph-0b" style="grid-area:2/1"><span class="k">substation · cartographer</span><span class="t">P0b linking</span><span class="d">content-hash importer</span></div>
   <div class="sys" id="ph-0c" style="grid-area:3/1"><span class="k">cartographer</span><span class="t">P0c extraction metadata</span><span class="d">basis, units, control points · VISION.md</span></div>
   <div class="sys" id="ph-1" style="grid-area:3/2"><span class="k">cartographer</span><span class="t">P1 math</span><span class="d">anchor.ts + tests · car-wash gap measured</span></div>
@@ -658,11 +658,9 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 </tbody></table></div>
 
 <h3 id="detail-native-sr"><span class="hn">D3</span>Where the target system comes from: the native-SR fallback chain</h3>
-<p>The county's parcel layer is stored in some coordinate system. It says which in one metadata request (<code>?f=json</code> → <code>latestWkid</code>: Austin 2277, Bexar 2278). <code>resolve_native_sr</code> looks the county up in the per-county registry, reads the live value and says whether they agree; resolve-site then requires <code>native_sr</code> on every ring it writes, and <code>sir_add_parcel_geo</code> fills <code>geom_local</code> from it.</p>
+<p>The county's parcel layer is stored in some coordinate system. It says which in one metadata request (<code>?f=json</code> → <code>latestWkid</code>: Austin 2277, Bexar 2278). <code>getLayerSpatialReference(layerUrl)</code> reads that listing (already fetched once per service by the layer-identity guard) and compares it to the <code>native_sr</code> the module recorded in its <code>layer-identity.json</code>; resolve-site then requires <code>native_sr</code> on every ring it writes, and <code>sir_add_parcel_geo</code> fills <code>geom_local</code> from it.</p>
 <div class="dflow">
-  <div class="dq"><span class="q">Per-county registry has a projected code for this county?</span><span class="yes">yes →</span><span class="out">use it · srid_local = registry native_sr</span></div>
-  <div class="dno">no ↓</div>
-  <div class="dq"><span class="q">Live layer ?f=json gives a projected latestWkid (else wkid)?</span><span class="yes">yes →</span><span class="out">use it · record it in the registry</span></div>
+  <div class="dq"><span class="q">The layer's live ?f=json gives a projected latestWkid (else wkid)?</span><span class="yes">yes →</span><span class="out">use it · srid_local = latestWkid · drifted from the module's recorded native_sr? flag the module for a prospector refresh</span></div>
   <div class="dno">no ↓ · Web Mercator (3857/102100), geographic (4326) and custom-WKT layers land here directly</div>
   <div class="dq"><span class="q">Curated county → State Plane table (FIPS → EPSG, units, basis) has an entry?</span><span class="yes">yes →</span><span class="out warn">use it · basis = ngs_zone or observed_layer</span></div>
   <div class="dno">no ↓</div>
@@ -762,8 +760,8 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 
 <!-- ============================================================ 04 WHAT'S STORED -->
 <section class="panel" id="stored">
-<h2><span class="eyebrow">04 · what's stored</span>Storage<span class="sub">The anchors table, the per-county registry, the modified tables, and the geo rows an anchor produces.</span></h2>
-<p class="lede">Two new tables (the anchors table and the per-county registry), one curated lookup table, three modified ones. Anchors carry no FK to geometry ids because Cartographer's publish deletes and re-inserts a file's geometries; the <code>(file_id, run_slug, frame_key)</code> key survives that.</p>
+<h2><span class="eyebrow">04 · what's stored</span>Storage<span class="sub">The anchors table, the curated county table, the modified tables and files, and the geo rows an anchor produces.</span></h2>
+<p class="lede">One new table (the anchors table), one curated lookup table, three modified tables and one modified file (each surveyor module's <code>layer-identity.json</code>). Anchors carry no FK to geometry ids because Cartographer's publish deletes and re-inserts a file's geometries; the <code>(file_id, run_slug, frame_key)</code> key survives that.</p>
 
 <h3 id="detail-anchors"><span class="hn">ER</span>New tables</h3>
 <div class="erd">
@@ -783,13 +781,6 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
     <div class="row"><span class="nm">anchor_run_slug · decided_by · created_at</span><span class="ty">text · uuid · timestamptz</span></div>
     <div class="note">no FK to geometry ids: publish deletes and re-inserts them. run_slug ≠ the file's metadata.lastGeometryRun ⇒ stale (D12).</div>
   </div>
-  <div class="ent newt"><div class="eh"><span class="en">per-county registry</span><span class="stereo">NEW · surveyor (Q7)</span></div>
-    <div class="row"><span class="b b-pk">PK</span><span class="nm">county_fips / jurisdiction</span><span class="ty">text</span></div>
-    <div class="row"><span class="nm">parcel_layer_url</span><span class="ty">text</span></div>
-    <div class="row hi"><span class="nm">native_sr</span><span class="ty">{wkid, latestWkid, wkt?}</span></div>
-    <div class="row"><span class="nm">checked_at</span><span class="ty">timestamptz</span></div>
-    <div class="note">prospector writes an entry when it builds a county's parcel tool; the daily canary re-reads ?f=json and flags drift (D2)</div>
-  </div>
   <div class="ent newt"><div class="eh"><span class="en">county → State Plane table</span><span class="stereo">NEW · curated (D3)</span></div>
     <div class="row"><span class="b b-pk">PK</span><span class="nm">county_fips</span><span class="ty">text</span></div>
     <div class="row"><span class="nm">epsg · units</span><span class="ty">int · ftUS | m</span></div>
@@ -798,8 +789,14 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
   </div>
 </div>
 
-<h3 id="detail-geo"><span class="hn">ER</span>Modified tables</h3>
+<h3 id="detail-geo"><span class="hn">ER</span>Modified tables and files</h3>
 <div class="erd">
+  <div class="ent changed"><div class="eh"><span class="en">layer-identity.json · parcel layer entry</span><span class="stereo">MODIFIED · surveyor, per module (D2, Q7)</span></div>
+    <div class="row"><span class="gut"></span><span class="nm">service · id · name</span><span class="ty">the pinned layer and the name it had when the module was built</span></div>
+    <div class="row"><span class="gut"></span><span class="nm">recorded_at · note</span><span class="ty">date · which constant pins it</span></div>
+    <div class="row add"><span class="gut">+</span><span class="b b-new">NEW</span><span class="nm">native_sr</span><span class="ty">{wkid, latestWkid, wkt?, recorded_at} · e.g. 102739 / 2277 for TCAD parcels</span></div>
+    <div class="note">this is the whole registry: prospector writes the file when it builds a module; the layer-identity guard already fetches ?f=json per service and now compares the live spatial reference to this value (drifted); 135 modules carry the file today</div>
+  </div>
   <div class="ent changed"><div class="eh"><span class="en">geo</span><span class="stereo">MODIFIED · filled + new rows</span></div>
     <div class="row"><span class="gut"></span><span class="b b-pk">PK</span><span class="nm">id</span><span class="ty">uuid</span></div>
     <div class="row"><span class="gut"></span><span class="b b-fk">FK</span><span class="b b-nn">NN</span><span class="nm">sir_id</span><span class="ty">→ site_intelligence_report</span></div>
@@ -872,7 +869,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 <p class="lede">The dependency graph is on the Overview tab. Here is what each phase must prove before the next one starts, and the index an auditor can reference by number.</p>
 
 <div class="spectable-scroll"><table class="spectable"><thead><tr><th>Phase</th><th>Repos</th><th>Scope</th><th>Exit test</th></tr></thead><tbody>
-<tr><td><span class="sn">P0a</span></td><td>surveyor · bureau · substation</td><td>D1–D4: helper + registry + tool; SIR-path parcel tools and <code>arcgis_query.py</code> emit <code>native_sr</code>; resolve-site requires it; <code>sir_add_parcel_geo</code> fills <code>geom_local</code>; curated fallback table for TX, FL, ND, KY; one-off backfill of the 21 existing rows</td><td>A new SIR's parcel rows have <code>srid_local</code> = the county layer's <code>latestWkid</code>; Austin, Bexar and Travis come out 2277/2278</td></tr>
+<tr><td><span class="sn">P0a</span></td><td>surveyor · bureau · substation</td><td>D1–D4: getLayerSpatialReference + native_sr backfilled into layer-identity.json for the SIR-path modules; SIR-path parcel tools and <code>arcgis_query.py</code> emit <code>native_sr</code>; resolve-site requires it; <code>sir_add_parcel_geo</code> fills <code>geom_local</code>; curated fallback table for TX, FL, ND, KY; one-off backfill of the 21 existing rows</td><td>A new SIR's parcel rows have <code>srid_local</code> = the county layer's <code>latestWkid</code>; Austin, Bexar and Travis come out 2277/2278</td></tr>
 <tr><td><span class="sn">P0b</span></td><td>substation · cartographer</td><td>D5: columns + hash-deduplicating importer</td><td>One SIR supporting document imported; importing it from a second SIR reuses the same file</td></tr>
 <tr><td><span class="sn">P0c</span></td><td>cartographer</td><td>D6; D15 <code>VISION.md</code> update if this is the first cartographer PR</td><td>Car-wash re-extraction publishes its basis of bearings and its printed coordinates at non-POB corners</td></tr>
 <tr><td><span class="sn">P1</span></td><td>cartographer</td><td>D7–D9 + tests</td><td>Synthetic round trips recover θ/t/s; the car-wash survey-vs-gis_fit gap is measured and written into this spec as v2</td></tr>
@@ -895,8 +892,8 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 <h3><span class="hn">index</span>Decisions</h3>
 <div class="spectable-scroll"><table class="spectable"><thead><tr><th>#</th><th>Decision</th></tr></thead><tbody>
 <tr><td><span class="sn">D1</span></td><td>The county parcel layer declares the zone; record it, never guess (reverses geom-local §2 for the county path)</td></tr>
-<tr><td><span class="sn">D2</span></td><td>Generic <code>getLayerSpatialReference</code> + <code>resolve_native_sr</code> tool + per-county registry; prospector adds entries, the canary checks drift</td></tr>
-<tr><td><span class="sn">D3</span></td><td>Fallback: registry → live layer → curated county table → NULL + flag; never point-in-box</td></tr>
+<tr><td><span class="sn">D2</span></td><td><code>getLayerSpatialReference(layerUrl)</code> + a <code>native_sr</code> field on the parcel layer's entry in the module's <code>layer-identity.json</code>; prospector fills it, the identity guard and canary flag drift; no county-keyed lookup</td></tr>
+<tr><td><span class="sn">D3</span></td><td>Fallback: the layer's recorded/live value → curated county table → NULL + flag; never point-in-box</td></tr>
 <tr><td><span class="sn">D4</span></td><td>resolve-site requires <code>native_sr</code> and <code>source_layer</code>; <code>sir_add_parcel_geo</code> fills <code>geom_local</code>; fetch the subject ring in its native system (Q6)</td></tr>
 <tr><td><span class="sn">D5</span></td><td><code>cartographer_files</code>: content_sha256, source_sir_artifact_id, project_id; hash-deduplicating importer</td></tr>
 <tr><td><span class="sn">D6</span></td><td>Extraction publishes basis of bearings, units, grid/surface + scale factor, POB description, non-POB control points</td></tr>
@@ -919,7 +916,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 <tr><td><span class="sn">Q4</span></td><td>Does a gis_fit anchor count as "anchored"?</td><td>yes, always carrying accuracy_class; consumers must show it</td></tr>
 <tr><td><span class="sn">Q5</span></td><td>Target system: native latestWkid, the plat's stated zone, or one canonical EPSG per county?</td><td>native latestWkid; when plat and county disagree, record both</td></tr>
 <tr><td><span class="sn">Q6</span></td><td>Fetch the subject ring in its native system?</td><td>yes (D4)</td></tr>
-<tr><td><span class="sn">Q7</span></td><td>Where does the per-county registry live, and who fills it?</td><td>surveyor jurisdiction data; prospector adds, canary checks</td></tr>
+<tr><td><span class="sn">Q7</span></td><td>Where does the registry live, and who fills it?</td><td>answered v1.2: no registry; native_sr in the module's layer-identity.json, which prospector already writes</td></tr>
 <tr><td><span class="sn">Q8</span></td><td>Replats and multi-parcel mismatches: allow union_of/within, auto-reject on low IoU?</td><td>always the operator in v1</td></tr>
 <tr><td><span class="sn">Q9</span></td><td>Curves as chords acceptable for v1 fits?</td><td>yes; has_approximated_curves caps the class at gis_fit</td></tr>
 <tr><td><span class="sn">Q10</span></td><td>geo.kind vocabulary for anchored rows: reuse Cartographer's kind or namespace it?</td><td>open</td></tr>
