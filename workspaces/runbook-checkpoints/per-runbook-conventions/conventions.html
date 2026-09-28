@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Per-runbook conventions — fragments and answer posture</title>
+<title>Agent rules — before and after</title>
 <style>
 /* ============================================================
    spec-kit v4  —  winston HTML spec design system
@@ -275,302 +275,122 @@ code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px s
 <body>
 <header class="masthead">
   <div class="kicker">RUNBOOK CHECKPOINTS · PER-RUNBOOK CONVENTIONS</div>
-  <h1>Each runbook chooses its conventions; the run declares its answer posture</h1>
-  <p>Today every conductor2 run gets all 21 AGENTS-core rules, and the only override available is to contradict one. This proposal splits the core into fragments each runbook opts into (option A), and replaces rule 19's single bar with a posture declared per runbook and inherited strictest-wins down the run chain (option C). Companion to <code>DESIGN-SPEC.md</code>.</p>
-  <div class="meta">Draft v1 · 2026-09-28 · click a tab ↓</div>
+  <h1>Agent rules: before and after</h1>
+  <p>Today one rulebook, <code>AGENTS-core.md</code>, is put in front of every agent in every runbook. After this change each runbook picks which parts of it apply, and declares whether its agents may read "the answers". Companion to <code>DESIGN-SPEC.md</code>.</p>
+  <div class="meta">Draft v1.1 · 2026-09-28 · two tabs ↓</div>
 </header>
 
 <nav class="tabs">
-  <button data-tab="today" class="active"><span class="n">01</span>Today</button>
-  <button data-tab="audit"><span class="n">02</span>Rule audit</button>
-  <button data-tab="proposal"><span class="n">03</span>Proposal</button>
-  <button data-tab="nesting"><span class="n">04</span>Nesting</button>
-  <button data-tab="cases"><span class="n">05</span>Worked cases</button>
-  <button data-tab="rollout"><span class="n">06</span>Rollout &amp; alternatives</button>
+  <button data-tab="before" class="active"><span class="n">01</span>Before</button>
+  <button data-tab="after"><span class="n">02</span>After</button>
 </nav>
 
 <main>
 
-<!-- ============================================================ TODAY -->
-<section class="panel active" id="today">
-  <h2><span class="eyebrow">01 · Today</span>One rulebook, concatenated in front of every runbook</h2>
-  <p class="lede"><code>conductor2/src/verbs/mod.rs:219</code> <code>write_conventions()</code> builds every run root's <code>AGENTS.md</code> the same way, for top-level runs and sub-runs alike. Nothing in <code>runbook.yaml</code> can change it.</p>
+<!-- ============================================================ BEFORE -->
+<section class="panel active" id="before">
+  <h2><span class="eyebrow">Before · today</span>One rulebook for every runbook</h2>
+  <p class="lede">Two kinds of rule file sit in bureau. When a run starts, conductor copies them into the run folder, glues them into one <code>AGENTS.md</code> at the run's root, and every agent in the run reads that file.</p>
 
+  <h3><span class="hn">1</span>The files, in the bureau repo</h3>
+  <div class="prompt"><span class="ph">bureau/runbooks/</span>lib/
+  AGENTS-core.md          21 rules, the same for every runbook
+review/
+  AGENTS.md               review's own rules (optional file)
+preprocessing-v4/
+  AGENTS.md               PPv4's own rules
+anchor-geometry/
+  AGENTS.md               …and so on, one per runbook that has one</div>
+
+  <h3><span class="hn">2</span>What happens when you run a runbook</h3>
   <div class="uc">
-    <div class="uch"><div class="ucn">1</div><div class="uctxt">
-      <span class="actor">conductor setup · every run and sub-run</span>
-      <span class="uct">Assemble the run's conventions</span>
+    <div class="uch"><div class="ucn">▶</div><div class="uctxt">
+      <span class="actor">conductor setup · local and cloud, the same code</span>
+      <span class="uct">Start a run of, say, preprocessing-v4</span>
     </div></div>
-    <div class="ucsub">Two files concatenated, unconditionally.</div>
+    <div class="ucsub">The rules are copied into the run, glued together, and found by every agent on its own.</div>
     <div class="ucdiag"><div class="dfg">
-      <div class="node read"><span class="op">read</span><span class="nt">lib/AGENTS-core.md</span><span class="nf">21 rules, 42 lines<br>same for every runbook</span></div>
-      <div class="edge"><span class="el">+</span><span class="ar">→</span></div>
-      <div class="node read"><span class="op">read</span><span class="nt">&lt;runbook&gt;/AGENTS.md</span><span class="nf">optional<br>"where we disagree,<br>this file wins"</span></div>
-      <div class="edge"><span class="el">concat</span><span class="ar">→</span></div>
-      <div class="node created"><span class="op">write</span><span class="nt">&lt;run&gt;/AGENTS.md</span><span class="nf">+ CLAUDE.md = @AGENTS.md</span></div>
-      <div class="edge"><span class="el">every step<br>reads it</span><span class="ar">→</span></div>
-      <div class="node event"><span class="op">model</span><span class="nt">agent</span><span class="nf">breaks any tie<br>between the two<br>at read time</span></div>
+      <div class="node read"><span class="op">copy</span><span class="nt">bureau/runbooks/</span><span class="nf">the runbook + lib/<br>(AGENTS-core.md with it)</span></div>
+      <div class="edge"><span class="el">① snapshot<br>into the run</span><span class="ar">→</span></div>
+      <div class="node store"><span class="op">put</span><span class="nt">&lt;run&gt;/runbooks/</span><span class="nf">the run's own frozen<br>copy of both files</span></div>
+      <div class="edge"><span class="el">② glue:<br>core + own</span><span class="ar">→</span></div>
+      <div class="node created"><span class="op">write</span><span class="nt">&lt;run&gt;/AGENTS.md</span><span class="nf">all 21 core rules,<br>then PPv4's rules<br>+ CLAUDE.md = @AGENTS.md</span></div>
+      <div class="edge"><span class="el">③ every step's<br>agent finds it</span><span class="ar">→</span></div>
+      <div class="node event"><span class="op">agent</span><span class="nt">each step</span><span class="nf">works in a folder under<br>&lt;run&gt;/; Claude Code loads<br>CLAUDE.md from above it</span></div>
     </div></div>
-    <div class="ucnote"><b>note</b>: the only override a runbook has is to contradict a core rule. A contradiction is a tie the model has to break, and it breaks it differently from run to run.</div>
+    <div class="ucnote"><b>note</b>: a sub-runbook (site-research inside review, for example) gets the same treatment in its own sub-run folder: core plus <i>its</i> own AGENTS.md. Where a step runs isolated (<code>--safe-mode</code>), conductor pastes the same file into the prompt instead. Code: <code>conductor2/src/verbs/setup.rs:119</code>, <code>mod.rs:219</code>, <code>harness.rs:523</code>.</div>
   </div>
 
-  <h3><span class="hn">!</span>Where the core already contradicts a runbook's job</h3>
+  <h3><span class="hn">3</span>What's inside AGENTS-core.md: four kinds of rule in one file</h3>
+  <div class="spectable-scroll"><table class="spectable">
+    <thead><tr><th>Kind</th><th>In plain words</th><th>Who it's really for</th></tr></thead>
+    <tbody>
+      <tr><td><b>How to work</b> (9 rules)</td><td>use scripts for math, count back delegated work, log tool bugs, don't invent results, finish in the session</td><td>everyone</td></tr>
+      <tr><td><b>How to research</b> (9 rules)</td><td>check GIS numbers, prove a "none found", cite what you actually read</td><td>research runbooks (SIR, review, site-research, prospector)</td></tr>
+      <tr><td><b>Client wording</b> (1 rule)</td><td>"regulations" not "laws"; no internal jargon</td><td>client deliverables (SIR, review)</td></tr>
+      <tr><td><b>Don't read the answers</b> (rules 19–20)</td><td>no earlier Noetic output on this project, and no city review comments on this case</td><td>runs we measure accuracy on (review, SIR, site-research)</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="callout ember"><span class="lab">the problem</span> Every runbook gets all four kinds. The only way a runbook can get out of a rule is to contradict it in its own AGENTS.md, and then the agent has to pick which one to follow. That's how the PPv4 reader ended up reading the Valley View MCR on some runs and refusing it on others. anchor-geometry reads the SIR, which rule 19 forbids. process-city-response-docs, whose job is reading city comments, will hit the same wall once it moves to conductor.</div>
+</section>
+
+<!-- ============================================================ AFTER -->
+<section class="panel" id="after">
+  <h2><span class="eyebrow">After · proposed</span>Each runbook picks its rules</h2>
+  <p class="lede">The same four kinds of rule, now in separate files. Each runbook says in two lines of <code>runbook.yaml</code> which it wants. The trip into the run is the same as today; conductor just picks files before gluing.</p>
+
+  <h3><span class="hn">1</span>The files, in the bureau repo</h3>
   <div class="grid2">
-    <div class="card drop">
-      <strong>preprocessing-v4 · rule 19</strong>
-      <p>Rule 19 bars "the jurisdiction's own review comments on this case", and in the same sentence says every document the applicant filed is in bounds. Valley View's MCR is both. Across four runs the reader <b>read / refused / read / withheld</b> it. A refusal fails the ≥50%-verbatim contract and parks the run.</p>
-    </div>
-    <div class="card drop">
-      <strong>anchor-geometry · rule 19</strong>
-      <p>It fits frames "to the SIR's county parcel" (<code>runbook.yaml:3</code>). Rule 19 names "a previous … SIR" as barred prior Noetic output about the property. So far the model has resolved this tie in the runbook's favour.</p>
-    </div>
-    <div class="card drop">
-      <strong>process-city-response-docs · rule 19 (at port)</strong>
-      <p>Its whole job is to turn the city's MCR and redlines into CRC guides. It's a prose <code>RUNBOOK.md</code> today, so it doesn't get the core yet. It will contradict rule 19 on the day it moves to conductor2.</p>
-    </div>
-    <div class="card change">
-      <strong>smoke, geometry, PPv4 · rules 2–6, 8, 9, 13, 15, 21</strong>
-      <p>GIS magnitude checks, headed-vs-headless browsing, sampling strata, and "regulations, never laws" land on test fixtures and plat readers that never go near them. They're noise at best.</p>
-    </div>
+    <div class="card drop"><strong>Goes away</strong><div class="prompt">lib/AGENTS-core.md</div></div>
+    <div class="card keep"><strong>Comes in</strong><div class="prompt">lib/conventions/
+  craft.md                 how to work       (always)
+  sourcing.md              how to research   (opt in)
+  client-register.md       client wording    (opt in)
+  answers-barred.md        don't read the answers
+  answers-prior-output.md  don't read earlier Noetic
+                           output; city docs are fine</div></div>
+  </div>
+  <div class="prompt"><span class="ph">each runbook.yaml gains two lines · e.g. preprocessing-v4</span>conventions: []            # which opt-in files: sourcing, client-register
+answers: prior-output      # barred | prior-output | open   (left out = today's rules)</div>
+  <p>Each runbook's own <code>AGENTS.md</code> stays as it is, minus the "where we disagree, this file wins" line.</p>
+
+  <h3><span class="hn">2</span>What happens when you run a runbook</h3>
+  <div class="uc">
+    <div class="uch"><div class="ucn">▶</div><div class="uctxt">
+      <span class="actor">conductor setup · local and cloud, the same code</span>
+      <span class="uct">Start a run of preprocessing-v4</span>
+    </div></div>
+    <div class="ucsub">Same trip as today. The only new step is choosing which files to glue.</div>
+    <div class="ucdiag"><div class="dfg">
+      <div class="node read"><span class="op">copy</span><span class="nt">bureau/runbooks/</span><span class="nf">the runbook +<br>lib/conventions/</span></div>
+      <div class="edge"><span class="el">① snapshot</span><span class="ar">→</span></div>
+      <div class="node read"><span class="op">choose</span><span class="nt">runbook.yaml</span><span class="nf">craft (always)<br>+ listed files<br>+ answers-&lt;posture&gt;.md</span></div>
+      <div class="edge"><span class="el">② glue + own<br>AGENTS.md</span><span class="ar">→</span></div>
+      <div class="node created"><span class="op">write</span><span class="nt">&lt;run&gt;/AGENTS.md</span><span class="nf">first line says what<br>was included and why</span></div>
+      <div class="edge"><span class="el">③ same as<br>today</span><span class="ar">→</span></div>
+      <div class="node event"><span class="op">agent</span><span class="nt">each step</span><span class="nf">reads only the rules<br>its runbook chose</span></div>
+    </div></div>
+    <div class="ucnote"><b>also</b>: conductor writes the answers setting to <code>&lt;run&gt;/.conductor/conventions.json</code>, so scripts (not just agents) can check it later. <b>Sub-runs can't loosen it:</b> a sub-run takes the strictest setting anywhere above it, so site-research inside a review stays barred, and PPv4 would be barred if a review ever ran it.</div>
   </div>
 
-  <div class="callout ember"><span class="lab">the wrinkle</span> The bar is a property of the <b>run</b>, not of the runbook. site-research runs inside review and inside sir and must be barred in both. guide-training runs inside prospector. conductor already solves this shape for the OS sandbox: <code>sandbox_enabled()</code> reads the outermost run's <code>runbook.yaml</code> (<code>mod.rs:239-262</code>).</div>
-</section>
-
-<!-- ============================================================ AUDIT -->
-<section class="panel" id="audit">
-  <h2><span class="eyebrow">02 · Rule audit</span>The core is four rulebooks</h2>
-  <p class="lede">Grouping the 21 rules by what they govern, then asking which runbooks each group is actually for.</p>
-
+  <h3><span class="hn">3</span>The agent rules each runbook ends up with</h3>
   <div class="spectable-scroll"><table class="spectable">
-    <thead><tr><th>Group → fragment</th><th>Core rules</th><th>What they govern</th></tr></thead>
+    <thead><tr><th>Runbook</th><th>How to work</th><th>How to research</th><th>Client wording</th><th>Answers</th></tr></thead>
     <tbody>
-      <tr><td><code>craft</code></td><td>1, 7, 10, 11, 12, 14, 16, 17, 18</td><td>no prose arithmetic · reuse on-disk data · <code>SUPERSEDES:</code> · append long files · count back delegated work · <code>tool-bugs.md</code> · <code>scratch/</code> · gaps, never inventions · finish inside the session</td></tr>
-      <tr><td><code>sourcing</code></td><td>2, 3, 4, 5, 6, 8, 9, 13, 15</td><td>GIS magnitude + domains · zero with a control · "not published" needs an attempt · headless/headed · expected vs got · PDF table rows · cite what you read · retrieve documents named by number · sampling</td></tr>
-      <tr><td><code>answers-*</code></td><td>19, 20</td><td>never read this run's answers: <b>prior Noetic output</b> about the project <i>and</i> the <b>jurisdiction's comments on this case</b></td></tr>
-      <tr><td><code>client-register</code></td><td>21</td><td>"regulations" not "laws"; no process vocabulary in client text</td></tr>
+      <tr><td><b>review</b>, <b>sir</b></td><td>✓</td><td>✓</td><td>✓</td><td><b>barred</b>: no earlier Noetic output, no city comments on this case</td></tr>
+      <tr><td><b>site-research</b></td><td>✓</td><td>✓</td><td>—</td><td><b>barred</b></td></tr>
+      <tr><td><b>preprocessing-v4</b></td><td>✓</td><td>—</td><td>—</td><td><b>prior-output</b>: read every document staged, city MCR included</td></tr>
+      <tr><td><b>process-city-response-docs</b> (once ported)</td><td>✓</td><td>—</td><td>—</td><td><b>prior-output</b>: the city's comments are its input</td></tr>
+      <tr><td><b>guide-training</b></td><td>✓</td><td>✓</td><td>—</td><td><b>prior-output</b>: keeps its answer key (<code>atomic-mcr*</code>) off-limits</td></tr>
+      <tr><td><b>anchor-geometry</b>, <b>extract-geometry-v2</b></td><td>✓</td><td>—</td><td>—</td><td><b>open</b>: may read the SIR</td></tr>
+      <tr><td><b>prospector</b>, <b>smoke</b></td><td>✓</td><td>✓ / —</td><td>—</td><td><b>open</b></td></tr>
     </tbody>
   </table></div>
 
-  <h3><span class="hn">⊞</span>Which runbook needs which (the proposal's assignment)</h3>
-  <div class="legend">
-    <span class="k"><b>✓</b> gets it</span>
-    <span class="k"><b>—</b> left out</span>
-    <span class="k"><b>★</b> changes what agents do vs today</span>
-  </div>
-  <div class="spectable-scroll"><table class="spectable">
-    <thead><tr><th>Runbook</th><th>craft</th><th>sourcing</th><th>client-register</th><th>answers</th><th>Why</th></tr></thead>
-    <tbody>
-      <tr><td>review</td><td>✓</td><td>✓</td><td>✓</td><td><code>barred</code></td><td>its evals are why the bar exists</td></tr>
-      <tr><td>sir</td><td>✓</td><td>✓</td><td>✓</td><td><code>barred</code></td><td>client deliverable</td></tr>
-      <tr><td>site-research</td><td>✓</td><td>✓</td><td>—</td><td><code>barred</code></td><td>writes "for the next agent, not for a client"</td></tr>
-      <tr><td>preprocessing-v4 ★</td><td>✓</td><td>—</td><td>—</td><td><code>prior-output</code></td><td>reads every staged document; keeps "don't stage the old reading layer" (<code>stage.py:22</code>)</td></tr>
-      <tr><td>extract-geometry-v2</td><td>✓</td><td>—</td><td>—</td><td><code>open</code></td><td>reads one plat; has its own register rule</td></tr>
-      <tr><td>anchor-geometry ★</td><td>✓</td><td>—</td><td>—</td><td><code>open</code></td><td>reads the SIR's parcel rings by design</td></tr>
-      <tr><td>guide-training ★</td><td>✓</td><td>✓</td><td>—</td><td><code>prior-output</code></td><td>no "this case"; keeps <code>atomic-mcr*</code> barred</td></tr>
-      <tr><td>prospector + 11 sub-runbooks</td><td>✓</td><td>✓</td><td>—</td><td><code>open</code></td><td>public jurisdictions, no client work (Q5: comment-harvest)</td></tr>
-      <tr><td>smoke, smoke-package</td><td>✓</td><td>—</td><td>—</td><td><code>open</code></td><td>fixtures: "do the least work"</td></tr>
-      <tr><td>process-city-response-docs (at port)</td><td>✓</td><td>—</td><td>—</td><td><code>prior-output</code></td><td>the MCR <i>is</i> its input (Q4: prior guides)</td></tr>
-    </tbody>
-  </table></div>
-</section>
+  <div class="callout new"><span class="lab">in one line</span> Before: every agent gets all 21 rules and resolves the conflicts itself. After: every agent gets "how to work", plus only the other rule files its runbook chose, and the rules no longer contradict each other.</div>
 
-<!-- ============================================================ PROPOSAL -->
-<section class="panel" id="proposal">
-  <h2><span class="eyebrow">03 · Proposal</span>Fragments plus a posture, and conductor picks the files</h2>
-  <p class="lede">No template engine. <code>runbook.yaml</code> names fragments and a posture; conductor2 concatenates the matching files and writes down what it chose.</p>
-
-  <div class="uc">
-    <div class="uch"><div class="ucn">1</div><div class="uctxt">
-      <span class="actor">conductor setup · every run and sub-run</span>
-      <span class="uct">Assemble the run's conventions (new <code>write_conventions</code>)</span>
-    </div></div>
-    <div class="ucsub">Read the declaration, resolve the posture up the run chain, concatenate, and record it.</div>
-    <div class="ucdiag"><div class="dfg">
-      <div class="node read"><span class="op">read</span><span class="nt">runbook.yaml</span><span class="nf">conventions: [sourcing]<br>answers: prior-output<br>(absent = today)</span></div>
-      <div class="edge"><span class="el">① walk up<br>the run chain</span><span class="ar">→</span></div>
-      <div class="node read"><span class="op">resolve</span><span class="nt">effective posture</span><span class="nf">strictest of every<br>ancestor's answers:<br>barred › prior-output › open</span></div>
-      <div class="edge"><span class="el">② pick files</span><span class="ar">→</span></div>
-      <div class="node read"><span class="op">read</span><span class="nt">lib/conventions/</span><span class="nf">craft.md (always)<br>+ listed fragments<br>+ answers-&lt;posture&gt;.md</span></div>
-      <div class="edge"><span class="el">③ + runbook's<br>own AGENTS.md</span><span class="ar">→</span></div>
-      <div class="node created"><span class="op">write</span><span class="nt">&lt;run&gt;/AGENTS.md</span><span class="nf">generated header says<br>what was assembled</span></div>
-      <div class="edge"><span class="el">④ machine copy</span><span class="ar">→</span></div>
-      <div class="node created"><span class="op">write</span><span class="nt">.conductor/conventions.json</span><span class="nf">fragments, answers,<br>declared, source runbook</span></div>
-    </div></div>
-    <div class="ucnote"><b>note</b>: step ④ is what lets deterministic code (review's <code>stage_submission.py</code>) enforce the bar later. No <code>AGENTS.md</code> ever reaches a Python script.</div>
-  </div>
-
-  <h3><span class="hn">▤</span>The files</h3>
-  <div class="prompt"><span class="ph">bureau/runbooks/lib/conventions/</span>craft.md                  rules 1, 7, 10, 11, 12, 14, 16, 17, 18    always prepended
-sourcing.md               rules 2, 3, 4, 5, 6, 8, 9, 13, 15          opt-in
-client-register.md        rule 21                                    opt-in
-answers-barred.md         rules 19 + 20, today's text                chosen by posture
-answers-prior-output.md   the prior-output half of 19                chosen by posture
-                          + "the case's documents are in bounds"
-(answers: open)           no file</div>
-
-  <h3><span class="hn">✎</span>What a runbook writes</h3>
-  <div class="grid2">
-    <div class="card keep"><strong>review/runbook.yaml</strong><div class="prompt">conventions: [sourcing, client-register]
-answers: barred</div></div>
-    <div class="card change"><strong>preprocessing-v4/runbook.yaml</strong><div class="prompt">conventions: []
-answers: prior-output</div></div>
-    <div class="card change"><strong>anchor-geometry/runbook.yaml</strong><div class="prompt">conventions: []
-answers: open</div></div>
-    <div class="card keep"><strong>a runbook that says nothing</strong><div class="prompt"># absent keys = today's behaviour
-# conventions → [sourcing, client-register]
-# answers     → barred</div></div>
-  </div>
-
-  <h3><span class="hn">✂</span>Why the bar is split in two (D4)</h3>
-  <div class="spectable-scroll"><table class="spectable">
-    <thead><tr><th>Half of rule 19</th><th>Covers</th><th>barred</th><th>prior-output</th><th>open</th></tr></thead>
-    <tbody>
-      <tr><td><b>prior output</b></td><td>previous comment reports, SIRs, review tables, <code>eval/</code>, anything named ground truth or answer key</td><td>✓</td><td>✓</td><td>—</td></tr>
-      <tr><td><b>case comments</b></td><td>the jurisdiction's review comments on this case, its case file, staff report, the applicant's comment-response letter</td><td>✓</td><td><b>in bounds, said explicitly</b></td><td>—</td></tr>
-    </tbody>
-  </table></div>
-  <div class="callout new"><span class="lab">what C adds that A can't</span> <code>prior-output</code> isn't only a smaller set of rules. It includes one <b>affirmative</b> line: <i>"The jurisdiction's documents on this case, its comment reports and completeness results included, are in bounds: read every document you are staged. Whether a later consumer may see them is enforced where that consumer stages its inputs."</i> Without that line a PPv4 reader facing an MCR still has to decide for itself.</div>
-
-  <h3><span class="hn">#</span>Rule ids, not numbers (D5)</h3>
-  <div class="prompt"><span class="ph">before → after</span>12. When you delegate N pieces of work, count N …
-- **[craft.count-back]** When you delegate N pieces of work, count N …
-
-"AGENTS-core rule 12"  →  "[craft.count-back]"      13 live citations to sweep (examples/ stay frozen)</div>
-  <p>The "runbook file wins where they disagree" line is deleted (D6). A rule that doesn't fit a runbook is left out of <code>conventions:</code>, never contradicted.</p>
-</section>
-
-<!-- ============================================================ NESTING -->
-<section class="panel" id="nesting">
-  <h2><span class="eyebrow">04 · Nesting</span>The posture is inherited strictest-wins</h2>
-  <p class="lede">A sub-run can tighten the posture but never loosen it, in either direction. That's why the rule is "strictest in the chain", not "outermost wins" like the sandbox.</p>
-
-  <div class="sm">
-    <span class="s client">barred<span class="who">both halves</span></span><span class="a">›</span>
-    <span class="s cc">prior-output<span class="who">prior Noetic output only</span></span><span class="a">›</span>
-    <span class="s spec">open<span class="who">no bar</span></span>
-  </div>
-
-  <div class="uc">
-    <div class="uch"><div class="ucn">1</div><div class="uctxt"><span class="actor">review → 1.4-site-research</span><span class="uct">A barred parent, a barred child</span></div></div>
-    <div class="ucsub">Unchanged from today.</div>
-    <div class="ucdiag"><div class="dfg">
-      <div class="node read"><span class="op">declared</span><span class="nt">review</span><span class="nf">barred</span></div>
-      <div class="edge"><span class="el">runner: runbook</span><span class="ar">→</span></div>
-      <div class="node read"><span class="op">declared</span><span class="nt">site-research</span><span class="nf">barred</span></div>
-      <div class="edge"><span class="el">max</span><span class="ar">→</span></div>
-      <div class="node created"><span class="op">effective</span><span class="nt">site-research sub-run</span><span class="nf">barred</span></div>
-    </div></div>
-  </div>
-
-  <div class="uc">
-    <div class="uch"><div class="ucn">2</div><div class="uctxt"><span class="actor">prospector → review-guides → 3-train → guide-training</span><span class="uct">An open parent can't loosen a child</span></div></div>
-    <div class="ucsub">guide-training keeps its prior-output bar (<code>atomic-mcr*</code>) inside an open prospector run.</div>
-    <div class="ucdiag"><div class="dfg">
-      <div class="node read"><span class="op">declared</span><span class="nt">prospector</span><span class="nf">open</span></div>
-      <div class="edge"><span class="el">runner: runbook</span><span class="ar">→</span></div>
-      <div class="node read"><span class="op">declared</span><span class="nt">prospector/review-guides</span><span class="nf">open</span></div>
-      <div class="edge"><span class="el">runner: runbook</span><span class="ar">→</span></div>
-      <div class="node read"><span class="op">declared</span><span class="nt">guide-training</span><span class="nf">prior-output</span></div>
-      <div class="edge"><span class="el">max</span><span class="ar">→</span></div>
-      <div class="node created"><span class="op">effective</span><span class="nt">guide-training sub-run</span><span class="nf">prior-output</span></div>
-    </div></div>
-  </div>
-
-  <div class="uc">
-    <div class="uch"><div class="ucn">3</div><div class="uctxt"><span class="actor">hypothetical · review nests preprocessing-v4</span><span class="uct">A barred parent can't be loosened by an open child</span></div></div>
-    <div class="ucsub">PPv4 alone may read the MCR; PPv4 inside a review may not.</div>
-    <div class="ucdiag"><div class="dfg">
-      <div class="node read"><span class="op">declared</span><span class="nt">review</span><span class="nf">barred</span></div>
-      <div class="edge"><span class="el">runner: runbook</span><span class="ar">→</span></div>
-      <div class="node read"><span class="op">declared</span><span class="nt">preprocessing-v4</span><span class="nf">prior-output</span></div>
-      <div class="edge"><span class="el">max</span><span class="ar">→</span></div>
-      <div class="node created"><span class="op">effective</span><span class="nt">PPv4 sub-run</span><span class="nf">barred<br>(header says: from review)</span></div>
-    </div></div>
-    <div class="ucnote"><b>note</b>: outermost-wins (the sandbox rule) would get case 3 right but case 2 wrong: it would open guide-training's answer key under prospector. Strictest-in-chain gets both right.</div>
-  </div>
-</section>
-
-<!-- ============================================================ CASES -->
-<section class="panel" id="cases">
-  <h2><span class="eyebrow">05 · Worked cases</span>What an agent reads, before and after</h2>
-
-  <div class="uc">
-    <div class="uch"><div class="ucn">A</div><div class="uctxt"><span class="actor">preprocessing-v4 · Valley View v3 · 2.3-documents/read</span><span class="uct">The reader is handed the city's Master Comment Report</span></div></div>
-    <div class="ucsub">Before: a tie the model breaks per run. After: the rules say one thing.</div>
-    <div class="ucdiag"><div class="dfg">
-      <div class="node read"><span class="op">today</span><span class="nt">rule 19 + prompt</span><span class="nf">"bar the city's comments"<br>vs "applicant's filings<br>always in bounds"</span></div>
-      <div class="edge"><span class="el">model picks</span><span class="ar">→</span></div>
-      <div class="node event"><span class="op">outcome</span><span class="nt">read / refuse / read / withhold</span><span class="nf">refusal → contract fails<br>→ captain → human</span></div>
-    </div></div>
-    <div class="ucdiag"><div class="dfg">
-      <div class="node read"><span class="op">proposed</span><span class="nt">answers-prior-output.md</span><span class="nf">"the case's documents<br>are in bounds: read every<br>document you are staged"</span></div>
-      <div class="edge"><span class="el">no tie</span><span class="ar">→</span></div>
-      <div class="node created"><span class="op">outcome</span><span class="nt">read, every run</span><span class="nf">acceptance: two runs,<br>both read, no park</span></div>
-    </div></div>
-    <div class="ucnote"><b>note</b>: this fixes the PPv4 park, not the review leak. Review staging still copies the upload-time sections until the data fix uses the posture (tab 06).</div>
-  </div>
-
-  <div class="uc">
-    <div class="uch"><div class="ucn">B</div><div class="uctxt"><span class="actor">anchor-geometry · 1.x-correspond</span><span class="uct">The agent matches frames to the SIR's parcel rings</span></div></div>
-    <div class="ucsub">Before: reading an SIR is literally barred prior output. After: <code>open</code>, no bar in the file.</div>
-    <div class="ucdiag"><div class="dfg">
-      <div class="node read"><span class="op">today</span><span class="nt">rule 19</span><span class="nf">"a previous … SIR"<br>is barred</span></div>
-      <div class="edge"><span class="el">vs</span><span class="ar">→</span></div>
-      <div class="node read"><span class="op">today</span><span class="nt">anchor-geometry/AGENTS.md</span><span class="nf">"using the SIR's parcel<br>rings as the thing<br>to fit to"</span></div>
-      <div class="edge"><span class="el">proposed</span><span class="ar">→</span></div>
-      <div class="node created"><span class="op">assembled</span><span class="nt">craft + own AGENTS.md</span><span class="nf">answers: open<br>nothing to contradict</span></div>
-    </div></div>
-  </div>
-
-  <div class="uc">
-    <div class="uch"><div class="ucn">C</div><div class="uctxt"><span class="actor">process-city-response-docs · ported to conductor2</span><span class="uct">An MCR worker reads the city's comments into CRC guides</span></div></div>
-    <div class="ucsub">Its whole job, with <code>answers: prior-output</code> from day one.</div>
-    <div class="ucdiag"><div class="dfg">
-      <div class="node read"><span class="op">declared</span><span class="nt">runbook.yaml</span><span class="nf">conventions: []<br>answers: prior-output</span></div>
-      <div class="edge"><span class="el">assemble</span><span class="ar">→</span></div>
-      <div class="node created"><span class="op">assembled</span><span class="nt">craft + prior-output bar</span><span class="nf">MCR in bounds, explicitly<br>(Q4: prior CRC guides?)</span></div>
-    </div></div>
-  </div>
-</section>
-
-<!-- ============================================================ ROLLOUT -->
-<section class="panel" id="rollout">
-  <h2><span class="eyebrow">06 · Rollout &amp; alternatives</span>Ship the reader first, then the split, then the declarations</h2>
-
-  <div class="spectable-scroll"><table class="spectable">
-    <thead><tr><th>#</th><th>Repo</th><th>Change</th><th>Behaviour change?</th></tr></thead>
-    <tbody>
-      <tr><td><span class="sn">1</span></td><td>conductor2</td><td>read <code>lib/conventions/</code> if present, else <code>AGENTS-core.md</code> byte for byte · <code>conventions:</code>/<code>answers:</code> with today's defaults · strictest-wins inheritance · header + <code>conventions.json</code> · validation in <code>setup</code>/<code>check</code> · rebuild cloud image</td><td><span class="none">none</span></td></tr>
-      <tr><td><span class="sn">2</span></td><td>bureau PR 1</td><td>split into <code>lib/conventions/*.md</code> with ids · sweep 13 citations · delete <code>AGENTS-core.md</code></td><td><span class="none">none: diff each runbook's <code>conductor setup</code> output before and after, ignoring ids</span></td></tr>
-      <tr><td><span class="sn">3</span></td><td>bureau PR 2</td><td>per-runbook <code>conventions:</code> + <code>answers:</code> · delete the 5 "this file wins" preambles</td><td><span class="w">yes</span> PPv4, anchor-geometry, guide-training</td></tr>
-      <tr><td><span class="sn">4</span></td><td>acceptance</td><td>PPv4 on Valley View v3 cut to the two city documents, twice</td><td>both read, no park</td></tr>
-    </tbody>
-  </table></div>
-  <div class="callout ember"><span class="lab">ordering</span> Step 1 must reach the cloud image before step 2 merges. An old conductor2 on a bureau checkout without <code>AGENTS-core.md</code> would assemble runs with no core at all.</div>
-
-  <h3><span class="hn">→</span>Where this meets the bug doc's data fix (a separate spec)</h3>
-  <div class="uc">
-    <div class="uch"><div class="ucn">·</div><div class="uctxt"><span class="actor">review · 1.2-stage-submission (future)</span><span class="uct">Staging enforces the bar in code</span></div></div>
-    <div class="ucdiag"><div class="dfg">
-      <div class="node read"><span class="op">read</span><span class="nt">.conductor/conventions.json</span><span class="nf">answers: barred</span></div>
-      <div class="edge"><span class="el">and</span><span class="ar">→</span></div>
-      <div class="node read"><span class="op">read</span><span class="nt">document.&lt;role&gt;</span><span class="nf">future field:<br>answer-bearing?</span></div>
-      <div class="edge"><span class="el">exclude</span><span class="ar">→</span></div>
-      <div class="node created"><span class="op">stage</span><span class="nt">supplementary-docs/</span><span class="nf">no MCR, no CC results<br>no response letter</span></div>
-    </div></div>
-    <div class="ucnote"><b>note</b>: this spec only provides the switch. The role field, the backfill and where authorship is decided are bug-doc Q2–Q5.</div>
-  </div>
-
-  <h3><span class="hn">✕</span>Alternatives not chosen</h3>
-  <div class="grid2">
-    <div class="card drop"><strong>B · one template, <code>omit:</code>/<code>replace:</code></strong><p>Finest control, but it's a small patch language. Nobody can read a runbook's effective rules without assembling them, and a <code>replace:</code> goes stale silently when the core rule under it changes.</p></div>
-    <div class="card drop"><strong>C alone · posture only</strong><p>Fixes rule 19, which is the important half, so it's kept. But the other 19 rules stay on every runbook.</p></div>
-    <div class="card drop"><strong>D · no shared core, plus a consistency test</strong><p>The most honest assembled file, but ten copies of the craft rules. A test catches drift but not a forgotten update.</p></div>
-    <div class="card drop"><strong>Data fix only</strong><p>Necessary, not sufficient. anchor-geometry's contradiction with the SIR isn't a data problem, and PPv4's reader would still have a tie to break.</p></div>
-  </div>
-
-  <div class="xref">Grounding: <code>conductor2/src/verbs/mod.rs:219-262</code> (write_conventions, sandbox_enabled) · <code>bureau/runbooks/lib/AGENTS-core.md</code> · every <code>bureau/runbooks/*/runbook.yaml</code> and <code>AGENTS.md</code> · <code>workspaces/runbook-checkpoints/bugs/AGENT-RULE-19-BUG.md</code>. Open questions Q1–Q7 are in <code>DESIGN-SPEC.md</code> §7.</div>
+  <div class="xref">Detail, decisions D1–D8 and open questions Q1–Q7: <code>DESIGN-SPEC.md</code> in this folder. Rollout: conductor2 learns to read the new files first (with no change to any run), then bureau splits the file, then each runbook declares its two lines.</div>
 </section>
 
 </main>
@@ -578,7 +398,7 @@ answers: open</div></div>
 <script>
   const btns=document.querySelectorAll('nav.tabs button');
   const panels=document.querySelectorAll('.panel');
-  const IDS=['today','audit','proposal','nesting','cases','rollout'];
+  const IDS=['before','after'];
   function show(id){
     btns.forEach(b=>b.classList.toggle('active',b.dataset.tab===id));
     panels.forEach(p=>p.classList.toggle('active',p.id===id));
