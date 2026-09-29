@@ -431,7 +431,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
   <div class="kicker">COMPLETENESS CHECK · BLOCK NAMES</div>
   <h1>Block names</h1>
   <p>A nullable <code>name</code> column on <code>content_block</code>, written by the preprocessing-v4 sheet reader from now on and by a small <code>name-blocks</code> runbook for the 17,723 blocks that exist today, so an evidence chip can say <code>S14 · Dimensional Control &amp; Site Plan · Compatibility Setback Table</code> instead of <code>· Block 5</code>. Companion to <code>DESIGN-SPEC.md</code>.</p>
-  <div class="meta">Draft v2 · 2026-09-29 · click a tab ↓</div>
+  <div class="meta">Draft v3 · 2026-09-29 · click a tab ↓</div>
   <a class="spec-link" href="DESIGN-SPEC.html">📖 read the spec</a>
 </header>
 
@@ -746,6 +746,8 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
     </table></div>
     <p class="claim"><b>Claim (D11):</b> consumers show the name when it exists and nothing when it is null; a null name renders <code>S{n} · {sheet label}</code>, exactly what cityhall#714 renders today.</p>
 
+    <div class="callout"><span class="lab">one join, in a script (D15)</span> The review agent emits <code>{documentId, sheetNumber, blockNumber, label}</code> and never a name. After it finishes, <code>block-number-gate.ts</code>, which already loads the block manifest conductor built from the database, copies <code>manifest.blockNames[blockNumber]</code> onto the reference. Chips and the PDF read that field; only the lightbox queries <code>content_block</code>, and it already does for the bounding box.</div>
+
     <div class="callout new"><span class="lab">two workspace builders</span> Review agents get their sheet workspace from conductor's downloader on cloud runs and from bureau's Python stager on runbook runs. Both render the <code>## Block N:</code> heading the review prompts tell agents to cite, so both change or agents on one lane never see the name (§7.1).</div>
   </section>
 
@@ -789,8 +791,8 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
       </tbody>
     </table></div>
 
-    <div class="callout ember"><span class="lab">open questions</span> Resolved 2026-09-29: Q1 searchable as phase 2 (P5) · Q2 legacy writer left alone · Q3 Sonnet 5 · Q4 Title Case · Q5 title_block named too · Q7 no fallback when name is null · Q8 record the artifact patch in execution_metadata. Still open: Q6, stamp at write time vs resolve at read time (recommendation: stamp only). Detail in §9.</div>
-    <div class="foot">Companion to <code>workspaces/completeness-check/block-names/DESIGN-SPEC.md</code> · Draft v2 · 2026-09-29</div>
+    <div class="callout ember"><span class="lab">open questions</span> Resolved 2026-09-29: Q1 searchable as phase 2 (P5) · Q2 legacy writer left alone · Q3 Sonnet 5 · Q4 Title Case · Q5 title_block named too · Q7 no fallback when name is null · Q8 record the artifact patch in execution_metadata. Q6 stamp at write time only (D15): the evidence gate copies the name from the block manifest onto each sheet reference; the agent never writes it; consumers read one field. All eight resolved; detail in §9.</div>
+    <div class="foot">Companion to <code>workspaces/completeness-check/block-names/DESIGN-SPEC.md</code> · Draft v3 · 2026-09-29</div>
   </section>
 
 </main>
