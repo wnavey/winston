@@ -431,7 +431,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
   <div class="kicker">COMPLETENESS CHECK · BLOCK NAMES</div>
   <h1>Block names</h1>
   <p>A nullable <code>name</code> column on <code>content_block</code>, written by the preprocessing-v4 sheet reader from now on and by a small <code>name-blocks</code> runbook for the 17,723 blocks that exist today, so an evidence chip can say <code>S14 · Dimensional Control &amp; Site Plan · Compatibility Setback Table</code> instead of <code>· Block 5</code>. Companion to <code>DESIGN-SPEC.md</code>.</p>
-  <div class="meta">Draft v1 · 2026-09-29 · click a tab ↓</div>
+  <div class="meta">Draft v2 · 2026-09-29 · click a tab ↓</div>
   <a class="spec-link" href="DESIGN-SPEC.html">📖 read the spec</a>
 </header>
 
@@ -540,7 +540,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
   · Two blocks on one sheet may share a name only when they are genuinely the same kind of
     element ("General Notes" continued in a second column); otherwise qualify them
     ("General Notes 1–11", "General Notes 12–20").</div>
-    <p class="claim"><b>Claim (§1.4):</b> drafting practice and Austin's own reviewers name the element, not the position; position words are a renderer fallback, not stored.</p>
+    <p class="claim"><b>Claim (§1.4):</b> drafting practice and Austin's own reviewers name the element, not the position; position words are not used at all.</p>
 
     <h3 id="detail-reader"><span class="hn">READ 3</span>What the sheet reader emits per block</h3>
     <div class="spectable-scroll"><table class="spectable">
@@ -568,7 +568,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
         <tr><td>S55 · 9</td><td>notes</td><td>A certificate signed and sealed by a Registered Professional Land Surveyor, certifying the accuracy of the plat and survey.</td><td><b>Surveyor's Certificate</b></td></tr>
       </tbody>
     </table></div>
-    <p class="claim"><b>Claim (§3.2):</b> the chip is composed at render time as <code>S{sheet_number} · {sheet_version.label} · {content_block.name}</code>; when name is null the renderer falls back to the agent's label, then to a position word from the bounding box, and stores neither.</p>
+    <p class="claim"><b>Claim (§3.2):</b> the chip is composed as <code>S{sheet_number} · {sheet_version.label} · {content_block.name}</code>; when name is null it is <code>S{sheet_number} · {sheet_version.label}</code> and stops there.</p>
 
     <div class="callout"><span class="lab">mechanical checks (§3.3)</span> non-empty · ≤ 60 chars · 2–6 words (one word only for Legend / Notes / Table / Seal / Schedule) · Title Case except of/and/for/to/the/on/in · no <code>block \d</code> · not the sheet's label · none of crop / read N / step / contract / worker · no terminal period. The reader contract and the backfill validator run the same list.</div>
   </section>
@@ -597,7 +597,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
     </table></div>
     <p class="claim"><b>Claim (D4):</b> the name flows through the assemble → normalize → publish chain by explicit addition at every whitelist.</p>
 
-    <div class="callout ember"><span class="lab">why not embed it</span> <code>embedding_text</code> is pinned field-for-field to substation's embedder so vectors land in the same space; adding the name means re-embedding every block for consistency and moving a contract IG checks. It stays out (D5); whether the name should be keyword-searchable is Q1.</div>
+    <div class="callout ember"><span class="lab">why not embed it</span> <code>embedding_text</code> is pinned field-for-field to substation's embedder so vectors land in the same space; adding the name means re-embedding every block for consistency and moving a contract IG checks. It stays out (D5). Keyword search over the name is phase 2 (D14, P5), after the backfill has filled the column.</div>
   </section>
 
   <!-- ─────────────────────────────── 04 STORAGE ─────────────────────────────── -->
@@ -682,7 +682,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 
       <div class="sys" id="nb-inputs" style="grid-area:2/1"><span class="k">none</span><span class="t">inputs</span><span class="d">scope: unnamed | ids · patch_artifacts</span></div>
       <div class="sys" id="nb-roster" style="grid-area:2/2"><span class="k">script</span><span class="t">roster</span><span class="d">one item per sheet version with a null name</span></div>
-      <div class="sys" id="nb-name" style="grid-area:2/3"><span class="k">agent · gateway</span><span class="t">name</span><span class="d">one call per sheet version, all its blocks at once</span></div>
+      <div class="sys" id="nb-name" style="grid-area:2/3"><span class="k">agent · sonnet 5</span><span class="t">name</span><span class="d">one call per sheet version, all its blocks at once</span></div>
       <div class="sys" id="nb-check" style="grid-area:2/4"><span class="k">script</span><span class="t">check</span><span class="d">§3.3 mechanical checks; nulls the offenders</span></div>
       <div class="sys" id="nb-hitl" style="grid-area:2/5"><span class="k">gate</span><span class="t">hitl</span><span class="d">30-row sample + failure list</span></div>
       <div class="sys" id="nb-apply" style="grid-area:3/5"><span class="k">script · control plane</span><span class="t">apply</span><span class="d">PATCH by id; patch stored artifacts</span></div>
@@ -744,7 +744,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
         <tr><td>inspector-general <code>src/lib/types/preprocessing.ts:18-26</code> · <code>compute/preprocessing-validation.ts:81-100, 258-291</code> · <code>api/preprocessing/compare/+server.ts:86-89</code></td><td>artifact ↔ DB parity on count and short_id</td><td><span class="w">EDIT</span> + name present and rule-valid on v4 artifacts; artifact name = DB name (D13)</td></tr>
       </tbody>
     </table></div>
-    <p class="claim"><b>Claim (D11):</b> the block name is canonical data, so chips, the lightbox title and the PDF read it from the row or from the blockName the gate stamps, rather than asking the review agent to write it into label.</p>
+    <p class="claim"><b>Claim (D11):</b> consumers show the name when it exists and nothing when it is null; a null name renders <code>S{n} · {sheet label}</code>, exactly what cityhall#714 renders today.</p>
 
     <div class="callout new"><span class="lab">two workspace builders</span> Review agents get their sheet workspace from conductor's downloader on cloud runs and from bureau's Python stager on runbook runs. Both render the <code>## Block N:</code> heading the review prompts tell agents to cite, so both change or agents on one lane never see the name (§7.1).</div>
   </section>
@@ -785,11 +785,12 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
         <tr><td><b>P2</b></td><td>conductor</td><td>§7.1 downloader select, rendering, manifest · gen:types</td><td>P0</td></tr>
         <tr><td><b>P3</b></td><td>bureau</td><td>§6.2 name-blocks runbook; first run scoped to Lamar + Collier v4 with the HITL sample, then scope: unnamed with patch_artifacts</td><td>P0, P1</td></tr>
         <tr><td><b>P4</b></td><td>cityhall · substation PDF · IG</td><td>§7.4 · §7.5 · §7.6 · db:types</td><td>P0; P3 for names on old reviews</td></tr>
+        <tr><td><b>P5</b> · phase 2</td><td>substation</td><td>D14: <code>COALESCE(name,'')</code> into both search RPCs' tsvector and the GIN index</td><td>P3 complete</td></tr>
       </tbody>
     </table></div>
 
-    <div class="callout ember"><span class="lab">open questions</span> Q1 keyword-searchable name · Q2 the legacy writer's exemption · Q3 backfill model (Sonnet vs Haiku class) · Q4 Title Case vs as-printed · Q5 name on the dropped title_block · Q6 stamp at write time vs resolve at read time · Q7 position-word fallback stays out of storage · Q8 patching stored artifacts. Recommendations are in §9.</div>
-    <div class="foot">Companion to <code>workspaces/completeness-check/block-names/DESIGN-SPEC.md</code> · Draft v1 · 2026-09-29</div>
+    <div class="callout ember"><span class="lab">open questions</span> Resolved 2026-09-29: Q1 searchable as phase 2 (P5) · Q2 legacy writer left alone · Q3 Sonnet 5 · Q4 Title Case · Q5 title_block named too · Q7 no fallback when name is null · Q8 record the artifact patch in execution_metadata. Still open: Q6, stamp at write time vs resolve at read time (recommendation: stamp only). Detail in §9.</div>
+    <div class="foot">Companion to <code>workspaces/completeness-check/block-names/DESIGN-SPEC.md</code> · Draft v2 · 2026-09-29</div>
   </section>
 
 </main>

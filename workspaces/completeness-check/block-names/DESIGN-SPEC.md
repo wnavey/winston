@@ -1,10 +1,12 @@
 # Block names: a drafter-style name on every content block
 
-**Status:** Draft v1
+**Status:** Draft v2
 **Date:** 2026-09-29
 **Companion:** `block-names.html` (same folder): the diagrams for everything below.
 **Prompted by:** the CC PDF redesign (Will's mockup, 2026-09-29): evidence chips read `S37 · Site Details (1 of 2) · Block 4`, and the report goes to the City of Austin as a PDF with no link back to the app, so "Block 4" is meaningless to its reader.
 **Repos touched:** `substation` (one column, the publish RPC, the carry-forward copy, both search RPCs, generated types), `bureau` (the preprocessing-v4 sheet reader emits `name`; the assemble → normalize → publish chain carries it; a new `name-blocks` backfill runbook; conductor-side and Python-side workspace renderers show it), `conductor` (block select + `blocks.md` rendering + manifest), `cityhall` (lightbox title, sheet page, evidence-chip name; generated types), `inspector-general` (artifact type + one parity check).
+> **Revision note (v2, 2026-09-29, Will's answers to §9):** Q1 → searchable, but as a **phase 2** (new P5, D14): not in the first batch. Q2 → PPv4 is the preprocessing convention; the legacy Inngest writer is left alone and its retirement is out of scope (D8 stands). Q3 → the backfill's model is **Sonnet 5** (§6.2 `namer`). Q4 → **Title Case**, not as-printed caps (D2 stands). Q5 → yes, the reader names the `title_block` too (D3 amended). Q7 → **no fallback**: a null name renders the chip as `S{n} · {sheet label}` and nothing else; the label-then-position fallback in v1 §3.2 is removed (D11 amended). Q8 → the backfill records itself in `execution_metadata` (D10 amended). Q6 is still open pending Will's pick.
+
 **Repos NOT touched:** `claude-plugins`, `radar`, `navalbase`, `quarry`, `dsd` (the RDS chip partial is the PDF-redesign spec's job; this spec only makes the name available to it).
 
 ---
@@ -43,7 +45,7 @@ Review agents cite it a third way: roughly half of today's evidence labels alrea
 
 ### 1.4 How reviewers name a place on a sheet
 
-Drafting practice names the element, not the position: the **title block** (the strip along the right or bottom carrying firm, seal, sheet number and the revision block), the **legend**, the **notes** column, **key map**, **north arrow**, and **details** by number. Austin's own reviewers, in the requirements behind the CRC v5 run (`review ed5e7ba9-…`), write "the Site Plan Approval block on the cover sheet", "in the Legend", "on detail conforming to City standard 430S-1", and reach for position only when the element has no name ("in the lower right-hand corner reserved for the permitting batch stamp"). The National CAD Standard's coordinate grid ("A1") only works when the set draws the grid, which Austin civil sets do not; "NW quadrant" is a site-geography term and would read as a place on the ground. So the chip's third segment is a **name**, and position words are a fallback the renderer can derive from the bounding box, not something to store.
+Drafting practice names the element, not the position: the **title block** (the strip along the right or bottom carrying firm, seal, sheet number and the revision block), the **legend**, the **notes** column, **key map**, **north arrow**, and **details** by number. Austin's own reviewers, in the requirements behind the CRC v5 run (`review ed5e7ba9-…`), write "the Site Plan Approval block on the cover sheet", "in the Legend", "on detail conforming to City standard 430S-1", and reach for position only when the element has no name ("in the lower right-hand corner reserved for the permitting batch stamp"). The National CAD Standard's coordinate grid ("A1") only works when the set draws the grid, which Austin civil sets do not; "NW quadrant" is a site-geography term and would read as a place on the ground. So the chip's third segment is a **name**; position words are not used at all (D11).
 
 ---
 
@@ -53,7 +55,7 @@ Drafting practice names the element, not the position: the **title block** (the 
 
 **D2. The name rule.** A short noun phrase a drafter would use for the element, in Title Case, 2–6 words: the element's **printed heading when it has one** ("Sheet Index", "General Notes", "Legend", "Meter Notice", "Compatibility Setback Table", "Detail 3-A Valley Gutter"), otherwise the **drafter's name for what it is** ("Engineer's Seal", "Site Plan Release Form", "Revision Table", "Vicinity Map", "Curve Table"). Never `Block N`, never the sheet's own title, never a sentence, never this runbook's process vocabulary (`AGENTS.md` rule 16 applies to `name` as it does to `description`). A bare category word ("Notes") is allowed only when the block really has no heading and no better name. The full rule text is §3.1 and is shared by the v4 reader prompt and the backfill prompt (D9).
 
-**D3. Produced in Read 3 of the v4 sheet reader, next to `description`.** Read 2a (discover) only sees the whole sheet at low resolution and records `category` + a rough box; Read 3 (transcribe) reads each block from a 300-DPI crop, which is where the printed heading is legible. `name` is **required, non-null** in the reader's output contract (`contract.test.ts:15-20` `Block` zod object gains `name: z.string().min(1).max(60)` plus a Title Case check modelled on the `label` rule at lines 84-87). In the published artifact schema it is `["string","null"]` and **not required**, so artifacts written before this spec still validate (§4).
+**D3. Produced in Read 3 of the v4 sheet reader, next to `description`.** Read 2a (discover) only sees the whole sheet at low resolution and records `category` + a rough box; Read 3 (transcribe) reads each block from a 300-DPI crop, which is where the printed heading is legible. `name` is **required, non-null** in the reader's output contract (`contract.test.ts:15-20` `Block` zod object gains `name: z.string().min(1).max(60)` plus a Title Case check modelled on the `label` rule at lines 84-87). In the published artifact schema it is `["string","null"]` and **not required**, so artifacts written before this spec still validate (§4). The reader names every block it discovers, the `title_block` included (it is dropped with the rest at publish, `prompt.md:38`; naming it keeps the contract uniform — Q5, resolved yes).
 
 **D4. The name flows through the assemble → normalize → publish chain by explicit addition at every whitelist.** Four places silently drop unknown block keys today and each is edited: `assemble.py:34` `BLOCK_KEYS`, `lib/parity.ts` `RawBlock`/`OrderedBlock` + `normalizeAndOrderBlocks`, `normalize.ts:42-50`, `lib/artifact.ts` `ArtifactBlock`; and `artifact-schema.json` `definitions/block` (`additionalProperties:false` at line 59) gains the property. `preprocessing-v3/artifact-schema.json` is byte-identical and v3 runs v4's `scripts/`, so it gets the same edit (§4).
 
@@ -67,13 +69,15 @@ Drafting practice names the element, not the position: the **title block** (the 
 
 **D9. Backfill = a bespoke `name-blocks` runbook, not a partial preprocessing-v4 run.** A scoped v4 run cannot do it (§6.1): v4 has no from-step or re-caption mode, every in-scope sheet gets all four reads from pixels on Opus (2 h budget per sheet, `runbook.yaml:11`), and staging the existing blocks is barred by design (`steps/1.2-stage/step.yaml:6-7`, core rule 19). The backfill reads existing rows, names them with the same rule (§3.1) on a Sonnet-class model, validates, and writes by id. It never touches boxes, descriptions or embeddings.
 
-**D10. The backfill also patches the stored artifact of every registered run it names.** Publish clears and re-inserts blocks (`publish.ts:14-15`, README:72), so a re-publish of a registered run from its stored `artifact.json` (`publish.ts --run <id>`) would wipe DB-only names. The backfill writes `name` into the artifact's `sheets[].content_blocks[]` by `short_id` for the 20 registered runs (3,338 blocks) and re-uploads it; the other 14,385 blocks have no artifact to keep in sync.
+**D10. The backfill also patches the stored artifact of every registered run it names.** Publish clears and re-inserts blocks (`publish.ts:14-15`, README:72), so a re-publish of a registered run from its stored `artifact.json` (`publish.ts --run <id>`) would wipe DB-only names. The backfill writes `name` into the artifact's `sheets[].content_blocks[]` by `short_id` for the 20 registered runs (3,338 blocks) and re-uploads it; the other 14,385 blocks have no artifact to keep in sync. Each patched run records `execution_metadata.names_backfilled_at` and the `name-blocks` run id (Q8, resolved).
 
-**D11. Consumers resolve the name from the database at render time; the agent's `label` does not change.** The block name is canonical data, so chips, the lightbox title and the PDF read it from `content_block` (or from a `blockName` the bureau gate stamps onto `sheetReferences` from the manifest, §7.3) rather than asking the review agent to write it into `label`. `blocks.md` headings render the name so agents see it, which improves the labels they already write, but nothing downstream depends on that.
+**D11. Consumers show the name when it exists and nothing when it is null; the agent's `label` does not change.** The block name is canonical data, so chips, the lightbox title and the PDF read it from `content_block` (or from a `blockName` the bureau gate stamps onto `sheetReferences` from the manifest, §7.3) rather than asking the review agent to write it into `label`. `blocks.md` headings render the name so agents see it, which improves the labels they already write, but nothing downstream depends on that. **No fallback**: when `name` is null the chip is `S{n} · {sheet label}`, exactly what cityhall#714 renders today; no label-derived or position-derived third segment is ever synthesised (Q7, resolved).
 
-**D12. Both search RPCs return `name`.** `search_content_blocks_hybrid` / `_keyword` gain a `name text` column in `RETURNS TABLE`. Adding a column changes the return type, which `CREATE OR REPLACE` rejects, so the migration drops and recreates both, then restores the grants, `search_path` and ownership that three later migrations set (§5.4). `name` is **not** added to the tsvector or the GIN index (Q1).
+**D12. Both search RPCs return `name`.** `search_content_blocks_hybrid` / `_keyword` gain a `name text` column in `RETURNS TABLE`. Adding a column changes the return type, which `CREATE OR REPLACE` rejects, so the migration drops and recreates both, then restores the grants, `search_path` and ownership that three later migrations set (§5.4). `name` is **not** added to the tsvector or the GIN index in the first batch; that is D14.
 
 **D13. IG's run-validation suite checks the name.** `inspector-general` `preprocessing-validation.ts` adds: every v4 artifact block has a non-empty `name` that passes the rule's mechanical checks (word count, Title Case, no `Block N`), and artifact `name` equals DB `name` after publish.
+
+**D14. The name becomes keyword-searchable in a second phase (P5), after the backfill has run.** `COALESCE(name,'')` joins the tsvector expression in both search RPCs and the GIN index `idx_content_block_text_search`, so the hybrid RPC's keyword leg finds "Meter Notice" by its heading. Sequenced after P3 so the index is built over real names, not 17,723 nulls (Q1, resolved: yes, phase 2).
 
 ---
 
@@ -113,7 +117,7 @@ Applied by hand to the §1.2 rows, so the reader can judge the target:
 | S29 · 5 | diagram | Detention Vault Section |
 | S55 · 9 | notes | Surveyor's Certificate |
 
-And the chip the PDF redesign wants, composed at render time from data this spec makes available: `S{sheet_number} · {sheet_version.label} · {content_block.name}` → `S14 · Dimensional Control & Site Plan (1 of 2) · Compatibility Setback Table`. When `name` is null (pre-backfill rows, legacy-writer rows) the renderer falls back to the agent's label, then to a position word derived from `bounding_box` ("lower right"); neither fallback is stored.
+And the chip the PDF redesign wants, composed at render time from data this spec makes available: `S{sheet_number} · {sheet_version.label} · {content_block.name}` → `S14 · Dimensional Control & Site Plan (1 of 2) · Compatibility Setback Table`. When `name` is null (pre-backfill rows, legacy-writer rows) the chip is `S{sheet_number} · {sheet_version.label}` and stops there (D11). Position words from the bounding box are not derived anywhere.
 
 ### 3.3 Mechanical checks (the contract and the backfill validator share them)
 
@@ -208,12 +212,12 @@ So the organic path (D3) names every block **from now on**, and a separate, chea
 |---|---|---|---|
 | `1.1-inputs` | none | `request.json`: `{scope: "unnamed" \| {submission_version_ids[]} \| {sheet_version_ids[]}, publish: {allowed}, patch_artifacts: bool}` | `request.json` |
 | `1.2-roster` | script | Reads `sheet_version` + `sheet.label` + `content_block(id, short_id, category, description, content, bounding_box)` for every sheet version in scope where any block has `name IS NULL` (`runbooks/lib/submission_db.py:266-282` `content_blocks()` already does the block read). Writes one item file per sheet version with `content` capped at 1,500 chars per block. | `items/<sheet_version_id>.json` |
-| `2.1-name/<sheet_version_id>` | `namer` = `{harness: gateway, model: <Sonnet-class>}` | One call per sheet version: the §3.1 fragment + the sheet label + the block list (short_id, category, description, content head, bbox as "upper-left / right margin / …" words). Returns `{ "<block id>": "<name>" }` for every block. Sees the whole sheet's blocks at once so sibling blocks get distinct names (rule's last bullet). | `names.json` |
+| `2.1-name/<sheet_version_id>` | `namer` = `{harness: gateway, model: claude-sonnet-5}` (Q3, resolved) | One call per sheet version: the §3.1 fragment + the sheet label + the block list (short_id, category, description, content head, bbox as "upper-left / right margin / …" words). Returns `{ "<block id>": "<name>" }` for every block. Sees the whole sheet's blocks at once so sibling blocks get distinct names (rule's last bullet). | `names.json` |
 | `2.2-check` | script | §3.3 mechanical checks per name; a failure rewrites the offender as `null` and lists it in `check.md`; a sheet with > 20 % failures is voided back to `2.1-name` once (`conductor void … --findings`) with the failures as notes. | `checked/<sheet_version_id>.json`, `check.md` |
 | `2.3-hitl` | none | A sample: 30 random (sheet, block, name) rows with the block crop path, plus the failure list. `approved \| revise`. Skippable by `directives.decide` for unattended runs after the first few. | `decision.md` |
 | `3.1-apply` | script, `control_plane: true` | `PATCH content_block?id=eq.<id> {name}` through PostgREST with the service role, 200 rows per batch, idempotent (`name IS DISTINCT FROM` guard in a preceding read). For every touched `sheet_version.preprocessing_run_id`, download that run's `artifact.json` from `runbook_output_storage_path`, set `sheets[].content_blocks[].name` by `short_id`, re-upload (D10). | `apply-record.json` |
 
-Roster and cost, from prod on 2026-09-29: 1,655 sheet versions, 17,723 blocks, average 10.7 blocks per sheet version, `content` averaging 611 chars. With content capped at 1,500 chars a sheet call is roughly 5 k input tokens and 200 output, so the whole corpus is on the order of **8 M input tokens**: tens of dollars at Sonnet-class pricing, single digits on a Haiku-class model (Q3). Wall-clock is bounded by concurrency, not tokens; 1,655 short calls at 10-wide fan-out is under an hour.
+Roster and cost, from prod on 2026-09-29: 1,655 sheet versions, 17,723 blocks, average 10.7 blocks per sheet version, `content` averaging 611 chars. With content capped at 1,500 chars a sheet call is roughly 5 k input tokens and 200 output, so the whole corpus is on the order of **8 M input tokens**: tens of dollars at Sonnet 5 pricing. Wall-clock is bounded by concurrency, not tokens; 1,655 short calls at 10-wide fan-out is under an hour.
 
 Rule-19 posture: this runbook's input **is** Noetic's prior output, by design; it derives a label from a transcription, it does not answer a review question. Under the per-runbook conventions spec (winston#285) it declares the core fragments it takes and leaves the answer-bar fragment out; until that lands, its `AGENTS.md` says so in one line.
 
@@ -255,7 +259,7 @@ The heading is what the review prompts tell agents to cite (`blockNumber` "from 
 
 ### 7.5 The CC PDF (substation)
 
-`src/pdf/cc-report-logic.ts:21-25` `CcSheetReference` `+ blockNumber?, blockName?`; `cc-report-data.ts:89-104` `parseSheetRefs` keeps both instead of dropping `blockNumber`; `completeness-check-report.tsx:108-115` composes `S{n} · {label} · {blockName}` per reference (today: `Reference Docs: ` + labels joined). The RDS chip partial that draws it belongs to the PDF-redesign spec; this spec only guarantees the data is on the ref. Because §7.3 stamps `blockName` at write time, the PDF needs no extra query for new reviews; for reviews written before P2, the renderer's fallback is the agent label.
+`src/pdf/cc-report-logic.ts:21-25` `CcSheetReference` `+ blockNumber?, blockName?`; `cc-report-data.ts:89-104` `parseSheetRefs` keeps both instead of dropping `blockNumber`; `completeness-check-report.tsx:108-115` composes `S{n} · {label} · {blockName}` per reference (today: `Reference Docs: ` + labels joined). The RDS chip partial that draws it belongs to the PDF-redesign spec; this spec only guarantees the data is on the ref. Because §7.3 stamps `blockName` at write time, the PDF needs no extra query for new reviews; for reviews written before the gate stamps it, the ref has no `blockName` and the chip is `S{n} · {label}` (D11).
 
 ### 7.6 inspector-general
 
@@ -272,28 +276,29 @@ The heading is what the review prompts tell agents to cite (`blockNumber` "from 
 | **P2** | conductor | §7.1 downloader select, rendering, manifest · `gen:types`. | P0 |
 | **P3** | bureau | §6.2 `name-blocks` runbook. First run: `scope: {submission_version_ids: [Lamar + Collier v4]}` with the HITL sample; then `scope: "unnamed"` over the corpus with `patch_artifacts: true`. | P0, P1 (shares the rule fragment) |
 | **P4** | cityhall · substation PDF · IG | §7.4 · §7.5 · §7.6; `db:types`. Ships behind nothing: every site is null-tolerant. | P0; P3 for names to show on old reviews |
+| **P5** (phase 2) | substation | D14: `COALESCE(name,'')` into both search RPCs' tsvector and the GIN index; one migration. | P3 complete (index built over real names) |
 
-Deploy order that matters: **P0 before P1** (a v4 publish carrying `name` against a database without the column fails the INSERT); **P0 before P2/P4** (selecting a column that does not exist errors). P3 and P4 are independent of each other.
+Deploy order that matters: **P0 before P1** (a v4 publish carrying `name` against a database without the column fails the INSERT); **P0 before P2/P4** (selecting a column that does not exist errors). P3 and P4 are independent of each other; P5 waits for P3.
 
 ---
 
 ## 9. Open questions
 
-**Q1. Should `name` be searchable?** Not embedded (D5) and not in the tsvector (D12) in v1. Adding it to the keyword tsvector and the GIN index (`COALESCE(name,'')`) is cheap and the hybrid RPC's keyword leg would then find "Meter Notice" by its heading. Recommend: yes, as a P0 follow-up once names exist, so the index isn't built over nulls.
+**Q1. Should `name` be searchable?** **Resolved (Will, 2026-09-29): yes, as phase 2.** Not in the first batch; D14 / P5, after the backfill.
 
-**Q2. Retire the legacy Inngest block writer's exemption (D8)?** If the Inngest plan-set path is still creating sheet versions in prod after PPv2 is the default, teach `sheet.logic.ts` to name (its block-details prompt already writes `description`). Recommend: no until preprocessing-v2 cutover is confirmed; the standing backfill re-run covers it.
+**Q2. Retire the legacy Inngest block writer's exemption (D8)?** **Resolved: no.** Preprocessing-v4 is the convention; retiring legacy paths is not this spec's job. The standing backfill re-run covers anything the legacy writer still creates.
 
-**Q3. Backfill model.** Sonnet-class on the gateway is the safe default; the task is short-text labelling from a transcription and Haiku-class may be adequate at a fifth the cost. Recommend: run the Lamar + Collier first pass on both, compare in the HITL sample, pick.
+**Q3. Backfill model.** **Resolved: Sonnet 5** (`namer` runner, §6.2).
 
-**Q4. Title Case vs as-printed.** Sheets print headings in caps ("METER NOTICE"). D2 normalises to Title Case to match `sheet_version.label`'s existing rule. Alternative: store as printed and let renderers case it. Recommend: Title Case; one rule, one contract test.
+**Q4. Title Case vs as-printed.** **Resolved: Title Case**, never the sheet's all-caps (D2 stands; one rule, one contract test).
 
-**Q5. Should the reader emit `name` for the `title_block` block?** It is discovered but dropped from the published blocks (`prompt.md:38`). Recommend: yes for consistency of the contract; it costs nothing and is dropped with the rest.
+**Q5. Should the reader emit `name` for the `title_block` block?** **Resolved: yes** (D3 amended).
 
-**Q6. `blockName` stamped at write time (§7.3) versus resolved at read time everywhere (D11 as stated).** Stamping means old reviews never get names unless re-run; resolving means every reader does the sheet-version walk. Recommend: both, as specified: stamp for new reviews (zero read cost), lightbox resolves live (it already walks the chain), PDF falls back to label for pre-P2 reviews.
+**Q6. `blockName` stamped at write time (§7.3) versus resolved at read time.** *Open.* Stamping: the evidence gate copies the name into `sheetReferences[].blockName` when the review is written; chips and the PDF read it from the comment with no lookup; reviews written before the gate ships never show names unless re-run, and a rename does not propagate. Resolving: cityhall and the PDF look up `content_block.name` by sheet version + `short_id` at render; always current, old reviews light up after the backfill, but every render joins and the cityhall loader gains a query. Recommend, for simplicity: **stamp only**; the lightbox keeps its own live lookup (it already fetches the bbox) and reads `name` in the same query.
 
-**Q7. Position fallback words.** §3.2 mentions a bbox-derived "lower right" fallback for null names. That belongs to the renderer (PDF-redesign spec), not to storage. Confirm it is not wanted in `content_block`.
+**Q7. Position fallback words.** **Resolved: no fallback of any kind.** A null name renders `S{n} · {sheet label}` (D11 amended, §3.2 rewritten).
 
-**Q8. Artifact patch scope (D10).** Patching 20 stored artifacts keeps re-publish consistent, but it edits a run's published output after the fact. Alternative: leave artifacts alone and accept that a re-publish of a pre-spec run reintroduces nulls that the standing backfill re-run fixes. Recommend: patch, and record it in the run's `execution_metadata` (`names_backfilled_at`).
+**Q8. Artifact patch scope (D10).** **Resolved: patch, and record it** in `execution_metadata` (`names_backfilled_at` + the `name-blocks` run id).
 
 ---
 
@@ -303,3 +308,5 @@ Deploy order that matters: **P0 before P1** (a v4 publish carrying `name` agains
 - Block-level evidence on non-plan-set documents: `content_block` is sheet-only (`sheet_version_id NOT NULL`), documents have `document_section` with no geometry; a separate spec (parked 2026-09-29).
 - Range chips (`S2–3`), grouping consecutive sheet references: renderer logic, no data change.
 - Renaming or re-boxing existing blocks; changing `category` vocabulary across the legacy long tail.
+- Retiring the legacy Inngest block writer or any other pre-PPv4 path (Q2).
+- Any synthesised third chip segment when `name` is null: no label parsing, no bounding-box position words (Q7).
