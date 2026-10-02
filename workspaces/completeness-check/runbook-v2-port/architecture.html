@@ -54,17 +54,22 @@ nav.tabs button.active{color:#fff;border-bottom-color:var(--ember);background:rg
 /* ---------- layout ---------- */
 main{max-width:1140px;margin:0 auto;padding:30px 26px 90px}
 .panel{display:none;animation:fade .25s ease}
+main [id]{scroll-margin-top:74px} /* deep-link targets clear the sticky tab bar */
 .panel.active{display:block}
 @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 
-h2{font-family:var(--serif);font-weight:600;font-size:23px;margin:34px 0 6px;color:var(--p900)}
+/* Section heading: the h2 text is the PLAIN NAME of the thing the tab is about (v5.1 — it used to
+   carry a tagline while the small eyebrow carried the name; that was backwards). .eyebrow = the
+   tab number / section label, small. .sub = one plain sentence saying what is on the tab. */
+h2{font-family:var(--serif);font-weight:700;font-size:30px;line-height:1.15;letter-spacing:-.01em;margin:34px 0 10px;color:var(--p950)}
 h2:first-child{margin-top:4px}
-h2 .eyebrow{display:block;font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--p500);font-weight:400;margin-bottom:3px}
+h2 .eyebrow{display:block;font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--p500);font-weight:400;margin-bottom:6px}
+h2 .sub{display:block;font-family:var(--sans);font-size:14px;font-weight:400;letter-spacing:0;line-height:1.5;color:var(--muted);margin-top:6px}
 h3{font-size:16px;font-weight:600;margin:28px 0 8px;color:var(--p800);display:flex;align-items:center;gap:9px}
 h3 .hn{font-family:var(--mono);font-size:12px;color:#fff;background:var(--p600);border-radius:5px;padding:2px 8px}
 h4{font-size:14px;font-weight:600;margin:18px 0 6px;color:var(--p800)}
 p{margin:.55em 0}
-.lede{font-size:16px;color:var(--p800);border-left:3px solid var(--ember);padding-left:16px;margin:14px 0 20px}
+.lede{font-size:15px;color:var(--p800);border-left:3px solid var(--ember);padding-left:16px;margin:12px 0 20px}
 ul{margin:.4em 0;padding-left:22px}li{margin:.28em 0}
 code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px solid var(--p100);border-radius:4px;padding:1px 5px;color:var(--p800)}
 
@@ -797,7 +802,7 @@ dropped:  model · effort · uncertainExplanationModel · maxWorkers · uncertai
     <div class="grid2">
       <div class="card keep"><h4>Tier 0 · contracts</h4><p><code>npm test</code> runs every step contract over the curated example <code>lamar-v4-cc1-cc21</code>. No run, no tokens.</p></div>
       <div class="card keep"><h4>Tier 1 · self-replay</h4><p><code>conductor stage 2.2 --scenario …</code>, then advance through 2.10 with <code>publish:false</code>. The curated 2.1 output must reproduce the curated <code>review-comments.json</code>. It catches wiring regressions while bugs are being fixed.</p></div>
-      <div class="card change"><h4>Tier 2 · the compare loop</h4><p><b>Baseline:</b> A = Opus 5 review <code>41a49412</code>, B = Sonnet 5.5 review <code>196de05b</code> (D28). <b>compare.ts</b> filters A and B to the v2 run's guides and sorts each item into agree / keyed / unresolved / guide-drift. <b>Adjudicate</b> one Opus cell per guide with unresolved items, under blind labels. <b>Scorecard</b> merges verdicts into the answer key and reports per guide, with cause tags (D29).</p></div>
+      <div class="card change"><h4>Tier 2 · the compare loop</h4><p><b>Baseline:</b> A = Opus 5 review <code>41a49412</code>, B = Sonnet 5.5 review <code>196de05b</code> (D28). <b>compare.ts</b> filters A and B to the v2 run's guides and sorts each item into agree / keyed / unresolved / guide-drift / forced. It reads A and B from review_comments, and the loop runs at runs=1 like both baselines. <b>Adjudicate</b> one Opus cell per guide with unresolved items, under blind labels. <b>Scorecard</b> merges verdicts into the answer key and reports per guide, with cause tags (D29).</p></div>
       <div class="card change"><h4>Unit tests</h4><p><b>conductor2:</b> config (including logs), globs, dedupe, never-fail (mock server). <b>cityhall-new:</b> route validation, the 200 cap, too_large, admission. <b>bureau:</b> lane B flags, resolve, grouping injection, the table-only id parser, 2.11 over a recorded stream, compare.ts.</p></div>
     </div>
 
@@ -838,14 +843,14 @@ dropped:  model · effort · uncertainExplanationModel · maxWorkers · uncertai
   <!-- ───────────────────────── 06 QUESTIONS ───────────────────────── -->
   <section class="panel" id="questions">
     <h2><span class="eyebrow">Open questions</span>What's still undecided</h2>
-    <p class="lede">Most of v1's questions were resolved on 2026-10-02. Two remain: Q9 needs database reads, and Q8 only matters before legacy retires.</p>
+    <p class="lede">Every question but one was resolved on 2026-10-02. Q9 was answered from database reads. Only Q8 remains, and it only matters before legacy retires.</p>
     <div class="catgrp">
       <div class="cath"><span class="cgl">!</span> Still open</div>
-      <div class="uci"><span class="uid">Q9</span><span class="star">★</span><span class="utxt"><b>Baseline facts compare.ts depends on.</b> Both reviews are on sv 6b9b85ed (confirmed). Still to read from the DB: does review_comments hold every item, passes included? Which guide commit, runs count and effort did each use? Queries are in spec §11.1.</span></div>
       <div class="uci later"><span class="uid">Q8</span><span class="utxt"><b>Legacy-trail readers.</b> audit-cc-run and IG read workflow_runs and the workflow-runs bucket, and need a v2 path before legacy retires. Also: does anything read the review_comments.agent_trace column v2 no longer writes (D30)?</span></div>
     </div>
     <div class="catgrp">
       <div class="cath"><span class="cgl">✓</span> Resolved</div>
+      <div class="uci"><span class="uid">Q9</span><span class="utxt"><b>Baseline facts.</b> From the DB: each baseline has 192 rows, one per item including passes and N/As, keyed by sourceFindings[0].ref. Both ran v2.7-trimmed at runs=1 with effort unset and nothing forced. The guide tree is identical at both bureau commits, so there is no drift between A and B (spec §11.1).</span></div>
       <div class="uci"><span class="uid">Q1</span><span class="utxt"><b>Rule 19 vs facts.md.</b> The CC prompt names facts.md as in bounds (D31).</span></div>
       <div class="uci"><span class="uid">Q10</span><span class="utxt"><b>Judging agent vs rule 19.</b> The adjudicate prompt names the legacy findings as in bounds; the answer key stays barred to review agents (D31).</span></div>
       <div class="uci"><span class="uid">Q2</span><span class="utxt"><b>Bucket.</b> A new private runbook-runs bucket with its own limit and lifecycle.</span></div>
@@ -853,7 +858,7 @@ dropped:  model · effort · uncertainExplanationModel · maxWorkers · uncertai
       <div class="uci"><span class="uid">Q3</span><span class="utxt"><b>Vision CLI credentials.</b> Run token first, service-role as a local fallback; AI_GATEWAY_API_KEY doesn't trip the subscription guard; gateway calls tagged with runbook_run_id.</span></div>
       <div class="uci"><span class="uid">Q6</span><span class="utxt"><b>No question at 1.1-inputs.</b> Confirmed: only open gates are reported.</span></div>
       <div class="uci"><span class="uid">Q7</span><span class="utxt"><b>Inch-mark JSON.</b> No repair step; resume with the parse error and count resumes.</span></div>
-      <div class="uci later"><span class="uid">Q4</span><span class="utxt"><b>Effort.</b> Folded into Q9: match whatever the baselines ran with.</span></div>
+      <div class="uci later"><span class="uid">Q4</span><span class="utxt"><b>Effort.</b> Folded into Q9: both baselines ran with effort unset, so the presets leave it unset.</span></div>
     </div>
   </section>
 
