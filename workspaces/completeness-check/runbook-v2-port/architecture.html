@@ -842,14 +842,11 @@ dropped:  model · effort · uncertainExplanationModel · maxWorkers · uncertai
 
   <!-- ───────────────────────── 06 QUESTIONS ───────────────────────── -->
   <section class="panel" id="questions">
-    <h2><span class="eyebrow">Open questions</span>What's still undecided</h2>
-    <p class="lede">Every question but one was resolved on 2026-10-02. Q9 was answered from database reads. Only Q8 remains, and it only matters before legacy retires.</p>
-    <div class="catgrp">
-      <div class="cath"><span class="cgl">!</span> Still open</div>
-      <div class="uci later"><span class="uid">Q8</span><span class="utxt"><b>Legacy-trail readers.</b> IG reads workflow_runs and the workflow-runs bucket, and needs a v2 path before legacy retires. The audit-cc-run skill is out of scope and may go stale. Also: does anything read the review_comments.agent_trace column v2 no longer writes (D30)?</span></div>
-    </div>
+    <h2><span class="eyebrow">Open questions</span>Questions and answers</h2>
+    <p class="lede">Every question was resolved on 2026-10-02. Q9 was answered from database reads, and Q8 was ruled out of scope for the port.</p>
     <div class="catgrp">
       <div class="cath"><span class="cgl">✓</span> Resolved</div>
+      <div class="uci"><span class="uid">Q8</span><span class="utxt"><b>Legacy-trail readers.</b> Out of scope for the port: Inspector General and audit-cc-run may go stale, and IG for v2 is a follow-up. Nothing reads the review_comments.agent_trace column, so D30 is harmless.</span></div>
       <div class="uci"><span class="uid">Q9</span><span class="utxt"><b>Baseline facts.</b> From the DB: each baseline has 192 rows, one per item including passes and N/As, keyed by sourceFindings[0].ref. Both ran v2.7-trimmed at runs=1 with effort unset and nothing forced. The guide tree is identical at both bureau commits, so there is no drift between A and B (spec §11.1).</span></div>
       <div class="uci"><span class="uid">Q1</span><span class="utxt"><b>Rule 19 vs facts.md.</b> The CC prompt names facts.md as in bounds (D31).</span></div>
       <div class="uci"><span class="uid">Q10</span><span class="utxt"><b>Judging agent vs rule 19.</b> The adjudicate prompt names the legacy findings as in bounds; the answer key stays barred to review agents (D31).</span></div>
