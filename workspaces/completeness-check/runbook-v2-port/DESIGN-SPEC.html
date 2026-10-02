@@ -1,0 +1,844 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Completeness Check → Runbook v2 (feature-parity port)</title>
+<style>
+/* ============================================================
+   spec-kit v5.1  —  winston HTML spec design system
+   Inline the ENTIRE contents of this file into the spec's style block.
+   Canonical source: ~/.claude/skills/winston-spec/assets/spec-kit.css
+   When you change this file, bump the version above and in COMPONENTS.md.
+   v4: + sequence diagram (.seq*), + data table (.spectable), + prompt block (.prompt)
+   v5: + system map (.sysmap/.sys, edges drawn by spec-kit.js), + decision flow (.dflow),
+       + concept figure (figure.concept), + claim caption (.claim), + reference chip rows (.sys-refs),
+       + spec reader page (body.reader; DESIGN-SPEC.md rendered by marked, built by inline-kit.py --spec)
+   v5.1: pass-2 friction fixes — long identifiers wrap (.sys .t, .uc .nt, .ent .ty), .sysmap-scroll for
+       6+ columns, state-neutral .sm pills, .dflow jump outcomes, legend 'new trigger' dot
+       Colour rule: fill/border = change state only; kind = badge text + shape; legend is the
+       complete list of colour meanings on the page.
+   ============================================================ */
+
+:root{
+  /* steel-blue ramp (matches cityhall / Noetic report surfaces) */
+  --p50:#f0f5f9;--p100:#dce8f1;--p200:#b9d2e5;--p300:#8cb4d1;--p400:#6397b8;
+  --p500:#517e9e;--p600:#3f6582;--p700:#35526b;--p800:#2d4559;--p900:#273b4b;--p950:#182530;
+  --bg:#f9f9f9;--card:#ffffff;--divider:#dfdfdf;--ink:#1f2937;--muted:#6b7280;--ember:#bb4d00;
+  /* semantic: new / changed / retired */
+  --new:#15803d;--newbg:#f0fdf4;--newbd:#bbf7d0;
+  --chg:#b45309;--chgbg:#fffbeb;--chgbd:#fde68a;
+  --ret:#b91c1c;--retbg:#fef2f2;--retbd:#fecaca;
+  --sans:'Lexend',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  --serif:'Lora',Georgia,'Times New Roman',serif;
+  --mono:'Fira Code','SF Mono',ui-monospace,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.55;font-size:15px}
+
+/* ---------- masthead ---------- */
+header.masthead{background:linear-gradient(135deg,var(--p800),var(--p600));color:#fff;padding:34px 32px 30px;position:relative;overflow:hidden}
+header.masthead::after{content:"";position:absolute;inset:0;background-image:repeating-linear-gradient(115deg,rgba(255,255,255,.06) 0 1px,transparent 1px 26px);pointer-events:none}
+header.masthead .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--p200)}
+header.masthead h1{font-family:var(--serif);font-weight:600;margin:.35em 0 .2em;font-size:29px;position:relative}
+header.masthead p{margin:0;color:var(--p100);max-width:880px;font-size:15px}
+header.masthead .meta{margin-top:14px;font-size:12.5px;color:var(--p200);font-family:var(--mono)}
+
+/* ---------- tabs ---------- */
+nav.tabs{position:sticky;top:0;z-index:20;display:flex;gap:2px;background:var(--p950);padding:0 20px;box-shadow:0 2px 8px rgba(0,0,0,.12);flex-wrap:wrap}
+nav.tabs button{appearance:none;border:0;background:transparent;color:var(--p200);font-family:var(--sans);font-size:14px;font-weight:500;padding:14px 18px;cursor:pointer;border-bottom:3px solid transparent;transition:all .15s}
+nav.tabs button .n{font-family:var(--mono);font-size:11px;opacity:.7;margin-right:7px}
+nav.tabs button:hover{color:#fff;background:rgba(255,255,255,.04)}
+nav.tabs button.active{color:#fff;border-bottom-color:var(--ember);background:rgba(255,255,255,.06)}
+
+/* ---------- layout ---------- */
+main{max-width:1140px;margin:0 auto;padding:30px 26px 90px}
+.panel{display:none;animation:fade .25s ease}
+.panel.active{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+h2{font-family:var(--serif);font-weight:600;font-size:23px;margin:34px 0 6px;color:var(--p900)}
+h2:first-child{margin-top:4px}
+h2 .eyebrow{display:block;font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--p500);font-weight:400;margin-bottom:3px}
+h3{font-size:16px;font-weight:600;margin:28px 0 8px;color:var(--p800);display:flex;align-items:center;gap:9px}
+h3 .hn{font-family:var(--mono);font-size:12px;color:#fff;background:var(--p600);border-radius:5px;padding:2px 8px}
+h4{font-size:14px;font-weight:600;margin:18px 0 6px;color:var(--p800)}
+p{margin:.55em 0}
+.lede{font-size:16px;color:var(--p800);border-left:3px solid var(--ember);padding-left:16px;margin:14px 0 20px}
+ul{margin:.4em 0;padding-left:22px}li{margin:.28em 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px solid var(--p100);border-radius:4px;padding:1px 5px;color:var(--p800)}
+
+/* ---------- callout ---------- */
+.callout{background:var(--p50);border:1px solid var(--p200);border-left:4px solid var(--p500);border-radius:8px;padding:13px 17px;margin:16px 0}
+.callout.ember{background:#fdf6f0;border-color:#f0cba8;border-left-color:var(--ember)}
+.callout.new{background:var(--newbg);border-color:var(--newbd);border-left-color:var(--new)}
+.callout .lab{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--p600);font-weight:600;display:block;margin-bottom:3px}
+.callout.ember .lab{color:var(--ember)} .callout.new .lab{color:var(--new)}
+
+/* ---------- legend ---------- */
+.legend{display:flex;flex-wrap:wrap;gap:9px 16px;background:#fff;border:1px solid var(--divider);border-radius:10px;padding:12px 16px;margin:16px 0;font-size:12px;align-items:center}
+.legend .k{display:inline-flex;align-items:center;gap:6px}
+.swatch{width:26px;height:14px;border-radius:3px;display:inline-block;border:1px solid rgba(0,0,0,.15)}
+
+/* ---------- shared field badges (used by entity rows + legend) ---------- */
+.b{font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.04em;padding:1px 4px;border-radius:3px;text-transform:uppercase;white-space:nowrap}
+.b-pk{background:#fef3c7;color:#92600a;border:1px solid #fde68a}
+.b-fk{background:#e0edfb;color:#2456a8;border:1px solid #c3d8f2}
+.b-nn{background:#eef1f4;color:#4b5563;border:1px solid #d7dde3}
+.b-new{background:var(--newbg);color:var(--new);border:1px solid var(--newbd)}
+
+/* ============================================================
+   ER / UML entity boxes
+   ============================================================ */
+.erd{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start;margin:16px 0;background:#fbfcfd;border:1px solid var(--divider);border-radius:12px;padding:18px}
+.ent{border:1px solid var(--divider);border-radius:9px;overflow:hidden;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.05);min-width:236px;flex:0 1 auto}
+.ent .eh{padding:7px 12px;color:#fff;display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.ent .eh .en{font-family:var(--mono);font-size:12.5px;font-weight:700;letter-spacing:.02em}
+.ent .eh .stereo{font-size:9.5px;font-family:var(--mono);opacity:.85;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}
+.ent.exist .eh{background:var(--p700)}
+.ent.newt .eh{background:var(--new)}
+.ent.changed .eh{background:var(--chg)}
+.ent.retired .eh{background:#9ca3af}
+.ent.retired{opacity:.72}
+.ent .row{display:flex;align-items:center;gap:7px;padding:4px 11px;font-size:11.5px;border-top:1px solid #eef1f4}
+.ent .row:first-of-type{border-top:0}
+.ent .row .nm{font-family:var(--mono);font-size:11.5px;color:var(--p900);font-weight:600}
+.ent .row .ty{font-family:var(--mono);font-size:10px;color:var(--muted);margin-left:auto;text-align:right;max-width:60%;overflow-wrap:anywhere}
+.ent .row.hi{background:#fff9f2}
+.ent .row.strk .nm{text-decoration:line-through;color:var(--muted)}
+.ent .note{padding:5px 11px;font-size:10px;color:var(--muted);font-style:italic;border-top:1px dashed #e5e9ee;background:#fbfcfd}
+/* diff rows — show a table modification (column added / removed), git-style.
+   Put a "+"/"−" marker in a .gut span at the start of the row. */
+.ent .row .gut{flex:0 0 10px;width:10px;text-align:center;font-family:var(--mono);font-size:11px;font-weight:700;color:var(--muted)}
+.ent .row.add{background:var(--newbg);box-shadow:inset 3px 0 0 var(--new)}
+.ent .row.add .gut{color:var(--new)}
+.ent .row.add .nm{color:#166534}
+.ent .row.del{background:var(--retbg);box-shadow:inset 3px 0 0 var(--ret)}
+.ent .row.del .gut{color:var(--ret)}
+.ent .row.del .nm{color:var(--ret);text-decoration:line-through}
+
+/* relationships panel — crow's-foot text notation */
+.rels{background:#fff;border:1px solid var(--divider);border-radius:10px;padding:12px 16px;margin:14px 0;font-family:var(--mono);font-size:12px;line-height:1.9}
+.rels .rl{display:block;color:var(--p800)}
+.rels .rl b{color:var(--ember)}
+.rels .cf{color:var(--p500);font-weight:700}
+.rels .cmt{color:var(--muted);font-style:normal;font-family:var(--sans);font-size:11.5px}
+.rels .tag-new{color:var(--new);font-weight:700}
+.rels .tag-ret{color:var(--ret);font-weight:700}
+.rels-h{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--p600);font-weight:700;margin-bottom:6px}
+
+/* ============================================================
+   Use-case scene  (an action + its boxes-and-arrows diagram)
+   ============================================================ */
+.uc{margin:16px 0 22px;border:1px solid var(--divider);border-radius:12px;overflow:hidden;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.uc .uch{display:flex;align-items:center;gap:13px;padding:11px 16px;background:linear-gradient(135deg,var(--p700),var(--p600));color:#fff}
+.uc .uch .ucn{flex:0 0 30px;height:30px;border-radius:50%;background:rgba(255,255,255,.2);font-family:var(--mono);font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.uc .uch .uctxt{flex:1}
+.uc .uch .actor{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--p100);display:block;margin-bottom:1px}
+.uc .uch .uct{font-weight:600;font-size:15.5px;font-family:var(--serif)}
+.uc .ucsub{padding:9px 16px;font-size:12.5px;color:var(--p800);background:var(--p50);border-bottom:1px solid var(--p100)}
+.uc .ucdiag{padding:20px 16px 14px}
+.ucnote{padding:2px 16px 14px;font-size:11.5px;color:var(--muted)}
+.ucnote b{color:var(--p700);font-family:var(--mono);font-size:10.5px}
+
+/* ============================================================
+   Boxes-and-arrows flow
+   Robustness rules baked in:
+   - .dfg WRAPS (flex-wrap:wrap) so long chains never clip / never
+     need horizontal scroll. Arrows reflow with the nodes.
+   - .node is a flex COLUMN: the op-badge is an in-flow header row
+     (never position:absolute), and .nt / .nf are block-level, so a
+     table name and its fields can never smush onto one line.
+   ============================================================ */
+.dfg{display:flex;flex-wrap:wrap;align-items:stretch;gap:8px 0;margin:0}
+.node{flex:0 0 auto;width:156px;background:#fff;border:1.5px solid var(--p300);border-radius:8px;padding:9px 11px;display:flex;flex-direction:column;gap:3px}
+.node .op{align-self:flex-start;font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:1px 6px;border-radius:3px;border:1px solid;color:#fff;margin-bottom:2px}
+.node .nt{display:block;font-family:var(--mono);font-weight:700;font-size:12px;color:var(--p900);line-height:1.3;overflow-wrap:anywhere}
+.node .nf{display:block;font-family:var(--mono);font-size:10px;color:var(--muted);line-height:1.45;word-break:break-word}
+.node.created{border-color:var(--new);background:var(--newbg)} .node.created .op{background:var(--new);border-color:var(--new)}
+.node.read{border-color:var(--p400);background:#eef4fb} .node.read .op{background:var(--p500);border-color:var(--p500)}
+.node.event{border-color:var(--ember);background:#fdf6f0} .node.event .op{background:var(--ember);border-color:var(--ember)}
+.node.store{border-style:dashed;border-color:var(--p500);background:#eef3f7} .node.store .op{background:var(--p700);border-color:var(--p700)}
+.edge{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:70px;max-width:104px;padding:0 4px}
+.edge .el{font-size:9px;color:var(--p600);font-family:var(--mono);text-align:center;line-height:1.3;margin-bottom:2px}
+.edge .ar{color:var(--p400);font-size:20px;font-weight:700;line-height:1}
+
+/* ============================================================
+   Card grid  (keep / change / drop comparisons)
+   ============================================================ */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:820px){.grid2{grid-template-columns:1fr}.erd{padding:12px}}
+.card{background:var(--card);border:1px solid var(--divider);border-radius:9px;padding:14px 16px}
+.card.keep{border-top:3px solid var(--new)} .card.change{border-top:3px solid var(--chg)} .card.drop{border-top:3px solid var(--ret)}
+.card strong{display:block;margin-bottom:4px;font-size:13.5px}
+.card ul{font-size:12.5px;margin:2px 0}
+
+/* ============================================================
+   Lifecycle / state machine
+   ============================================================ */
+.sm{display:flex;flex-wrap:wrap;gap:7px;align-items:center;margin:14px 0}
+.sm .s{border:1px solid var(--p300);background:var(--p50);border-radius:20px;padding:5px 12px;font-size:11.5px;font-weight:600;color:var(--p800);font-family:var(--mono)}
+.sm .s .who{display:block;font-size:9px;font-family:var(--mono);color:var(--muted);font-weight:400;text-transform:uppercase;letter-spacing:.03em}
+.sm .s.client{border-color:var(--newbd);background:var(--newbg)}
+.sm .s.cc{border-color:#f0cba8;background:#fdf6f0}
+.sm .s.spec{border-color:var(--chgbd);background:var(--chgbg)}
+.sm .a{color:var(--p400);font-weight:700}
+/* state-neutral variants (v5.1): terminal-good / terminal-stop / dimmed. The .client/.cc/.spec
+   colours mean "whose court" and need a legend if used. */
+.sm .s.ok{border-color:var(--newbd);background:var(--newbg);color:var(--new)}
+.sm .s.stop{border-color:var(--retbd);background:var(--retbg);color:var(--ret)}
+.sm .s.dim{opacity:.6;border-style:dashed}
+
+/* ============================================================
+   Use-case catalog — grouped list of candidate use cases
+   (a scoped list, NOT a diagram — for "what would we build" inventories)
+   ============================================================ */
+.catgrp{border:1px solid var(--divider);border-radius:10px;overflow:hidden;margin:14px 0;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.catgrp .cath{background:var(--p700);color:#fff;padding:8px 14px;font-family:var(--serif);font-weight:600;font-size:14.5px;display:flex;align-items:center;gap:10px}
+.catgrp .cath .cgl{font-family:var(--mono);font-size:12px;font-weight:700;background:rgba(255,255,255,.2);border-radius:5px;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;flex:0 0 22px}
+.uci{display:flex;gap:9px;align-items:baseline;padding:7px 13px;border-top:1px solid #eef1f4;font-size:13px}
+.uci .uid{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--p600);flex:0 0 26px}
+.uci .utxt{flex:1;color:var(--ink);line-height:1.45}
+.uci .utxt b{color:var(--p900)}
+.uci .star{color:var(--ember);font-weight:700;font-size:12px;flex:0 0 auto;letter-spacing:-1px}
+.uci.later{opacity:.66}
+.utag{font-family:var(--mono);font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;text-transform:uppercase;letter-spacing:.03em;white-space:nowrap;flex:0 0 auto}
+.utag.t-orig{background:#e0edfb;color:#2456a8;border:1px solid #c3d8f2}
+.utag.t-add{background:var(--newbg);color:var(--new);border:1px solid var(--newbd)}
+
+/* ============================================================
+   Misc: storage strip, cross-reference box
+   ============================================================ */
+.storage{background:#eef3f7;border:1px dashed var(--p300);border-radius:8px;padding:9px 13px;font-family:var(--mono);font-size:12px;color:var(--p800);margin:12px 0}
+.storage b{color:var(--ember)}
+.xref{font-size:12px;color:var(--p600);background:var(--p50);border:1px solid var(--p100);border-radius:6px;padding:8px 12px;margin:10px 0}
+.foot{margin-top:44px;padding-top:18px;border-top:1px solid var(--divider);color:var(--muted);font-size:12px;font-family:var(--mono)}
+
+/* actor / repo chips (optional, for inline actor tags in prose) */
+.rc{display:inline-block;font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;padding:1px 6px;border-radius:5px;border:1px solid;vertical-align:middle;white-space:nowrap}
+.r-ch{background:#eef4fb;color:#2456a8;border-color:#c3d8f2}
+.r-sub{background:#f3eefb;color:#6b3fa0;border-color:#dcccf0}
+.r-fa{background:#e9f7f2;color:#0f7a5f;border-color:#bfe8db}
+.r-db{background:#eaeef2;color:#2d4559;border-color:#c7d2dd}
+.r-store{background:#e6eef3;color:#35526b;border-color:#bcd0dd}
+.r-user{background:#eefaf0;color:#15803d;border-color:#bbf7d0}
+.r-mcp{background:#fdf0e6;color:#b5590d;border-color:#f2d3b3}
+
+/* ============================================================
+   Sequence diagram — swimlane message flow
+   A CSS grid: col 1 = step number, then one column per actor lane.
+   Each message is a grid item that SPANS grid-columns from its
+   source lane to its target lane, so it always sits under the right
+   headers and never smushes. Continuous lifelines are grid items
+   spanning all rows (grid-row:1/-1) — so set .seq-body's
+   grid-template-rows to repeat(STEP_COUNT, auto) for -1 to resolve.
+   Wide diagrams scroll inside .seq-scroll, never the page body.
+   Direction is an in-flow glyph (.dir ◂/▸) pushed to the target edge
+   by justify-content:space-between — never position:absolute.
+   ============================================================ */
+.seq-scroll{overflow-x:auto;margin:16px 0;border:1px solid var(--divider);border-radius:12px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.seq{min-width:840px}
+.seq-head,.seq-body{display:grid;grid-template-columns:30px repeat(6,minmax(104px,1fr))}
+.seq-head{background:linear-gradient(135deg,var(--p800),var(--p700));padding:11px 12px}
+.seq-h{display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;padding:0 4px}
+.seq-h .role{font-family:var(--mono);font-size:8.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--p200)}
+.seq-h .who{font-family:var(--mono);font-size:11px;font-weight:700;color:#fff;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.24);border-radius:6px;padding:3px 9px}
+.seq-body{position:relative;row-gap:11px;padding:16px 12px 20px}
+.seq-life{width:2px;background:var(--p100);justify-self:center;border-radius:2px;z-index:0}
+.seq-num{grid-column:1;justify-self:center;align-self:center;font-family:var(--mono);font-size:10px;font-weight:700;color:#fff;background:var(--p600);min-width:19px;height:19px;padding:0 3px;border-radius:10px;display:flex;align-items:center;justify-content:center;z-index:1}
+.seq-msg{align-self:center;display:flex;flex-direction:row;align-items:center;gap:8px;justify-content:space-between;background:#fff;border:1.5px solid var(--p300);border-radius:7px;padding:5px 10px;z-index:1;min-width:0}
+.seq-msg .mt{display:flex;flex-direction:column;gap:1px;min-width:0}
+.seq-msg .m{font-family:var(--mono);font-size:10.5px;color:var(--p900);font-weight:700;line-height:1.32;word-break:break-word}
+.seq-msg .m2{font-family:var(--mono);font-size:9.5px;color:var(--muted);line-height:1.3;word-break:break-word}
+.seq-msg .dir{font-size:14px;font-weight:700;color:var(--p500);flex:0 0 auto}
+.seq-msg.write{border-color:var(--new);background:var(--newbg)} .seq-msg.write .dir{color:var(--new)}
+.seq-msg.event{border-color:var(--ember);background:#fdf6f0} .seq-msg.event .dir{color:var(--ember)}
+.seq-msg.ret{border-style:dashed;background:#f6f9fb} .seq-msg.ret .m{font-weight:500;color:var(--p600)}
+.seq-msg.self{border-style:dashed;border-color:var(--p400);background:#eef3f7}
+.seq-foot{display:flex;flex-wrap:wrap;gap:8px 15px;padding:9px 14px;border-top:1px solid var(--divider);background:#fbfcfd;font-size:10.5px;font-family:var(--mono);color:var(--muted);align-items:center}
+.seq-foot .sw{display:inline-block;width:20px;height:11px;border-radius:3px;border:1.5px solid var(--p300);vertical-align:middle;margin-right:5px}
+.seq-foot .sw.write{border-color:var(--new);background:var(--newbg)} .seq-foot .sw.event{border-color:var(--ember);background:#fdf6f0}
+.seq-foot .sw.ret{border-style:dashed;background:#f6f9fb} .seq-foot .sw.self{border-style:dashed;border-color:var(--p400);background:#eef3f7}
+
+/* ============================================================
+   Data table — for step→entity maps and any tabular spec content.
+   Wrap in .spectable-scroll so wide tables scroll, not the page.
+   ============================================================ */
+.spectable-scroll{overflow-x:auto;margin:14px 0}
+.spectable{width:100%;border-collapse:collapse;font-size:12.5px;background:#fff;border:1px solid var(--divider);border-radius:10px;overflow:hidden}
+.spectable thead th{background:var(--p700);color:#fff;font-family:var(--mono);font-size:10px;letter-spacing:.04em;text-transform:uppercase;text-align:left;padding:8px 12px;font-weight:700;white-space:nowrap}
+.spectable tbody td{padding:7px 12px;border-top:1px solid #eef1f4;vertical-align:top;line-height:1.5}
+.spectable tbody tr:nth-child(even){background:#fbfcfd}
+.spectable td .sn{font-family:var(--mono);font-weight:700;color:#fff;background:var(--p600);border-radius:9px;padding:1px 7px;font-size:10.5px}
+.spectable td code{font-size:11px}
+.spectable td .none{color:var(--muted);font-style:italic;font-family:var(--sans)}
+.spectable td .w{color:var(--new);font-weight:700} /* write */
+.spectable td .r{color:var(--p500);font-weight:700} /* read/return */
+
+/* ============================================================
+   Prompt / code block — a readable mono block (LLM prompts, snippets).
+   White-space preserved; scrolls horizontally inside itself.
+   ============================================================ */
+.prompt{background:#fbfcfd;border:1px solid var(--p200);border-left:4px solid var(--p500);border-radius:8px;padding:12px 15px;margin:12px 0;font-family:var(--mono);font-size:11.5px;line-height:1.6;color:var(--p900);white-space:pre-wrap;overflow-x:auto}
+.prompt .ph{display:block;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--p600);font-weight:700;margin-bottom:6px}
+
+
+/* ============================================================
+   System map (.sysmap)  —  the Overview diagram.  v5
+   A CSS grid of nodes placed with grid-area:row/col. Column 1 is
+   always the TRIGGER (a start-dot, no box). Edges are authored as
+   hidden <a class="sys-edge" data-from data-to>label</a> and drawn as
+   SVG by spec-kit.js after layout (no hand-typed coordinates).
+   COLOUR = CHANGE STATE ONLY: white exists · amber .chg · green .new ·
+   red-dashed .gap. KIND = badge TEXT + shape (.ext dashed, .store
+   cylinder bottom, .trig dot). Badges are one colour except on
+   changed/new nodes, where they take the node's change colour.
+   ============================================================ */
+.sysmap{position:relative;display:grid;gap:40px 64px;padding:28px 16px 22px;background:#fff;border:1px solid var(--divider);border-radius:12px;margin:14px 0 6px}
+.sysmap-scroll{overflow-x:auto;margin:14px 0 6px} .sysmap-scroll .sysmap{margin:0;min-width:max-content} /* 6+ columns: use grid-template-columns:repeat(N,minmax(150px,1fr)) inside .sysmap-scroll */
+.sysmap .colh{font-family:var(--mono);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--p500);text-align:center;padding-bottom:6px;border-bottom:1px dashed var(--p200);align-self:end}
+.sys{position:relative;z-index:2;background:#fff;border:1.5px solid var(--p300);border-radius:9px;padding:9px 11px 8px;min-height:64px;display:flex;flex-direction:column;gap:2px;align-self:center}
+.sys .k{align-self:flex-start;font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:1px 6px;border-radius:3px;color:#fff;background:var(--p500);margin-bottom:2px}
+.sys .t{font-weight:600;font-size:12.5px;line-height:1.3;color:var(--p900);overflow-wrap:anywhere}
+.sys .d{font-family:var(--mono);font-size:9.5px;color:var(--muted);line-height:1.4}
+.sys.ext{border-style:dashed}
+.sys.store{border-radius:4px 4px 14px 14px}
+.sys.new{border-color:var(--new);background:var(--newbg);box-shadow:0 0 0 3px #dcfce7}.sys.new .k{background:var(--new)}
+.sys.chg{border-color:var(--chg);background:var(--chgbg)}.sys.chg .k{background:var(--chg)}
+/* trigger: a start-dot + label, never a box. Declared AFTER .new/.chg so it wins on order. */
+.sys.trig{border:none;background:none;box-shadow:none;padding:0;min-height:0;align-items:flex-start;justify-self:start;gap:5px;max-width:150px}
+.sys.trig .dot{width:16px;height:16px;border-radius:50%;background:var(--p700);border:3px solid #fff;box-shadow:0 0 0 1.5px var(--p700)}
+.sys.trig.new .dot{background:var(--new);box-shadow:0 0 0 1.5px var(--new)}
+.sys.trig.chg .dot{background:var(--chg);box-shadow:0 0 0 1.5px var(--chg)}
+.sys.trig .t{font-size:11.5px;font-weight:600;color:var(--p800);line-height:1.25}
+.sys.trig .d{font-size:9.5px}
+.sys.gap{border:1.5px dashed var(--ret);background:var(--retbg);color:var(--ret);align-items:center;justify-content:center;text-align:center;font-family:var(--mono);font-size:10.5px;min-height:40px}
+/* floating spec-reference tag above the box; an <a href="#detail-id"> deep-link to the zoom-in diagram */
+.sys .ref{position:absolute;top:-11px;right:8px;text-decoration:none;font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.04em;padding:1px 7px;border-radius:10px;background:#fff;border:1px solid var(--p300);color:var(--p700);white-space:nowrap}
+.sys.chg .ref{border-color:var(--chg);color:var(--chg)}.sys.new .ref{border-color:var(--new);color:var(--new)}
+.sys .ref:hover{background:var(--p50)}
+.sys-edge{display:none} /* authored edge; rendered as SVG by spec-kit.js */
+.sysmap svg.edges{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1;overflow:visible}
+.sysmap svg .e{fill:none;stroke:var(--p400);stroke-width:1.6}
+.sysmap svg .e.new{stroke:var(--new);stroke-width:2.2}
+.sysmap svg .e.chg{stroke:var(--chg);stroke-width:2}
+.sysmap svg .e.gap{stroke:var(--ret);stroke-dasharray:5 4}
+.sysmap svg .e.loop{stroke:var(--p400);stroke-dasharray:4 3}
+.sysmap svg .lbl{font:9.5px var(--mono);fill:var(--p700)}
+.sysmap svg .lbl.new{fill:var(--new);font-weight:700}.sysmap svg .lbl.chg{fill:var(--chg);font-weight:700}.sysmap svg .lbl.gap{fill:var(--ret)}
+.sysmap svg .lblbg{fill:#fff;stroke:none;opacity:.94}
+/* reference footer: stacked CHIP ROWS, one per reference, each a link into the spec reader page.
+   Markup: <div class="sys-refs"><a class="refrow" data-ref="P0a"><span class="chip">P0a</span><span class="txt">…</span></a>…</div>
+   spec-kit.js fills href = <main data-spec>#<token>. */
+.sys-refs{display:flex;flex-direction:column;gap:6px;margin:12px 0 0}
+.sys-refs .refrow{display:flex;align-items:baseline;gap:12px;padding:7px 12px;border:1px solid var(--divider);border-radius:9px;background:#fff;text-decoration:none;color:var(--p800);font-size:12.5px;line-height:1.45;transition:border-color .12s,background .12s}
+.sys-refs .refrow:hover{border-color:var(--p400);background:var(--p50)}
+.sys-refs .refrow .chip{flex:0 0 auto;font-family:var(--mono);font-size:10.5px;font-weight:700;color:var(--p700);background:var(--p50);border:1px solid var(--p200);border-radius:6px;padding:2px 8px;min-width:44px;text-align:center}
+.sys-refs .refrow.chg .chip{color:var(--chg);border-color:var(--chgbd);background:var(--chgbg)}
+.sys-refs .refrow.new .chip{color:var(--new);border-color:var(--newbd);background:var(--newbg)}
+.sys-refs .refrow .txt{flex:1}
+.sys-refs .refrow .go{flex:0 0 auto;font-family:var(--mono);font-size:10px;color:var(--p500)}
+.sys-refs .refrow[href] .go::after{content:"read §"}
+.sys-refs .refrow:not([href]) .go::after{content:"no spec reader";color:var(--muted)}
+/* citation links inside claims and ref tags (filled in by spec-kit.js) */
+.claim a.cite,.sys .ref a{color:inherit;text-decoration:underline dotted;text-underline-offset:2px}
+.claim a.cite:hover{color:var(--ember)}
+/* "read the spec" masthead link */
+header.masthead a.spec-link{display:inline-block;margin-top:12px;font-family:var(--mono);font-size:12px;color:#fff;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);border-radius:7px;padding:5px 11px;text-decoration:none;position:relative}
+header.masthead a.spec-link:hover{background:rgba(255,255,255,.24)}
+
+/* legend for a system map: the COMPLETE list of colour meanings on the page */
+.sys-legend{display:flex;flex-wrap:wrap;gap:14px;font-size:11.5px;color:var(--p800);margin:8px 4px 0}
+.sys-legend i{display:inline-block;width:22px;height:3px;vertical-align:middle;margin-right:5px;background:var(--p400)}
+.sys-legend i.new{background:var(--new)} .sys-legend i.dot{width:10px;height:10px;border-radius:50%;background:var(--p700)} .sys-legend i.dot.new{background:var(--new)}.sys-legend i.chg{background:var(--chg)}.sys-legend i.gap{background:var(--ret)}.sys-legend i.loop{background:repeating-linear-gradient(90deg,var(--p400) 0 4px,transparent 4px 7px)}
+
+/* ============================================================
+   Claim caption  —  under every diagram. Cites the spec section or
+   decision it paraphrases. "Reading:" for the author's own observation.
+   ============================================================ */
+.claim{font-size:12.5px;color:var(--p800);margin:8px 0 26px;padding:8px 12px;border-left:3px solid var(--ember);background:#fff}
+.claim b{color:var(--p900)}
+
+/* ============================================================
+   Decision flow (.dflow)  —  "try X, else Y, else Z" / gate outcomes.
+   A vertical list of question rows; "yes" exits right to an outcome,
+   "no" falls through to the next row. Text-first, no SVG.
+   ============================================================ */
+.dflow{margin:14px 0;border:1px solid var(--divider);border-radius:12px;background:#fff;padding:14px 16px 10px}
+.dflow .dq{display:grid;grid-template-columns:minmax(200px,1.4fr) auto minmax(160px,1fr);gap:10px;align-items:center}
+.dflow .dq .q{font-size:12.5px;font-weight:600;color:var(--p900);border:1.5px solid var(--p300);border-radius:8px;padding:7px 11px;background:#fff}
+.dflow .dq .yes{font-family:var(--mono);font-size:10px;font-weight:700;color:var(--new);white-space:nowrap}
+.dflow .dq .out{font-family:var(--mono);font-size:11px;color:var(--p800);border:1.5px solid var(--newbd);background:var(--newbg);border-radius:8px;padding:6px 10px}
+.dflow .dq .out.warn{border-color:var(--chgbd);background:var(--chgbg)}
+.dflow .dq .out.fail{border-color:var(--retbd);background:var(--retbg);color:var(--ret)}
+.dflow .dno{font-family:var(--mono);font-size:9.5px;color:var(--muted);padding:3px 0 3px 18px}
+.dflow .dq.end .q{border-style:dashed;font-weight:500;color:var(--p700)}
+.dflow .dq .out a,.dflow .dq a.out{color:inherit;text-decoration:underline dotted;text-underline-offset:2px}
+.dflow .dq .out.jump::after{content:" ↗";color:var(--p500)} /* an outcome that jumps to another step/diagram */
+
+/* ============================================================
+   Concept figure  —  a hand-drawn inline SVG for the one mechanism
+   prose can't carry (a transform, a timeline, a shape). One figure,
+   one claim in the figcaption. See COMPONENTS.md for SVG rules.
+   ============================================================ */
+figure.concept{margin:16px 0;padding:16px 16px 10px;background:#fff;border:1px solid var(--divider);border-radius:12px;color:var(--p800)}
+figure.concept svg{display:block;max-width:100%;height:auto;margin:0 auto}
+figure.concept figcaption{font-size:12.5px;color:var(--p800);margin-top:10px;padding:8px 12px;border-left:3px solid var(--ember);background:#fbfcfd}
+figure.concept figcaption b{color:var(--p900)}
+
+
+/* ============================================================
+   Spec reader page (body.reader) — DESIGN-SPEC.md rendered by marked,
+   generated by inline-kit.py --spec. Sticky TOC + body; :target glow.
+   ============================================================ */
+body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom:1px solid rgba(255,255,255,.4)}
+.reader-wrap{display:grid;grid-template-columns:250px minmax(0,1fr);gap:34px;max-width:1240px;margin:0 auto;padding:28px 26px 90px}
+@media(max-width:900px){.reader-wrap{grid-template-columns:1fr}.toc{position:static}}
+.toc{position:sticky;top:18px;align-self:start;max-height:calc(100vh - 36px);overflow:auto;font-size:12.5px;border-right:1px solid var(--divider);padding-right:14px}
+.toc .toc-h{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--p600);font-weight:700;margin-bottom:8px}
+.toc a{display:block;color:var(--p800);text-decoration:none;padding:3px 0;line-height:1.35}
+.toc a.toc-h3{padding-left:14px;font-size:12px;color:var(--p700)}
+.toc a:hover{color:var(--ember)}
+.reader-body{max-width:860px;font-size:15px;line-height:1.6}
+.reader-body h2{margin-top:44px;padding-top:18px;border-top:1px solid var(--divider)}
+.reader-body h3{display:block;margin-top:30px;font-size:17px}
+.reader-body h4{margin-top:22px}
+.reader-body blockquote{margin:14px 0;padding:10px 16px;border-left:4px solid var(--p500);background:var(--p50);border-radius:0 8px 8px 0;color:var(--p800)}
+.reader-body blockquote p{margin:.3em 0}
+.reader-body pre{background:#fbfcfd;border:1px solid var(--p200);border-left:4px solid var(--p500);border-radius:8px;padding:12px 15px;font-family:var(--mono);font-size:11.5px;line-height:1.55;overflow-x:auto}
+.reader-body pre code{background:none;border:0;padding:0;font-size:inherit}
+.reader-body a{color:var(--p600)}
+.reader-body hr{border:0;border-top:1px solid var(--divider);margin:26px 0}
+.reader-body .spectable-scroll{margin:12px 0}
+.reader-body .spectable td code{white-space:normal}
+.reader-body .anchor{display:block;position:relative;top:-14px;height:0}
+.reader-body strong.tok{scroll-margin-top:24px}
+.reader-body :target{scroll-margin-top:18px}
+.reader-body h2:target,.reader-body h3:target,.reader-body h4:target{background:#fff8ec;box-shadow:-12px 0 0 #fff8ec,12px 0 0 #fff8ec;border-radius:3px}
+.reader-body strong.tok:target{background:#fff1cc;border-radius:3px;padding:0 3px;box-shadow:0 0 0 2px #fde68a}
+.reader-body .anchor:target + h2,.reader-body .anchor:target + h3{background:#fff8ec;box-shadow:-12px 0 0 #fff8ec,12px 0 0 #fff8ec;border-radius:3px}
+
+</style>
+</head>
+<body class="reader" data-back="architecture.html" data-spec-sha="991ded68b4a7b7b1">
+
+<header class="masthead">
+  <div class="kicker">SPEC · READER</div>
+  <h1 id="reader-title">Completeness Check → Runbook v2 (feature-parity port)</h1>
+  <p><a class="back" href="architecture.html">← back to the diagrams</a> · rendered from <code>DESIGN-SPEC.md</code> · the markdown is the source of truth</p>
+  <div class="meta" id="reader-meta"></div>
+</header>
+
+<div class="reader-wrap">
+  <nav class="toc" id="toc"><div class="toc-h">Contents</div></nav>
+  <main class="reader-body" id="spec-body"></main>
+</div>
+
+<script type="text/markdown" id="spec-md">
+# Completeness Check → Runbook v2 (feature-parity port)
+
+**Status:** Draft v1
+**Date:** 2026-10-02
+**Repos touched:** `bureau` (new `runbooks/completeness-check/`, two agent-tool CLIs, `publish_review_cli.py` lane B flags, a compare script), `conductor2` (opt-in per-step persistence to Storage), `cityhall-new` (new `POST /api/runs/:runId/step-files` signing route)
+**Repos NOT touched:** `conductor` (legacy TS lane stays frozen), `substation` (retired as the API home; `cityhall-new` owns `/api/runs/*`), `cityhall`, `claude-plugins` (the `/conductor` captain skill drives any runbook already)
+
+Grilled with Will on 2026-10-02. Every decision below is numbered `D<n>`; open questions are `Q<n>`.
+
+## 1. Problem
+
+The completeness check (CC) runs on the legacy conductor-1 lane: `bureau/workflows/completeness-check/workflow.yaml` (v1.4.0, 10 steps), executed by the TypeScript `conduct` CLI in `~/noetic/conductor`. That lane:
+
+- writes a `workflow_runs` row and nothing else to the run control plane. There are no `runbook_runs`, no `runbook_checkpoints` and no `runbook_hitl_questions`, so the cityhall console can't watch a CC run and there is no structured way to ask a human anything.
+- keeps all progress in one workspace until the end. Artifacts go to the `workflow-runs` bucket only in the final upload (`conductor/src/orchestrator/engine.ts:442-524`). An expensive review fan-out followed by a crash in a cheap late step loses everything on a cloud box.
+- can't run a subset of guides. `initializeChecklist` globs `<checklistsDir>/*.md` with no filter (`conductor/src/orchestrator/checklist-manager.ts:196-200`), so every iteration on one guide pays for all 14 (v2.7-trimmed). At `runs=3`, that is 42 Sonnet sessions.
+
+The review workflow already moved to runbook v2 (`bureau/runbooks/review/`, run by the Rust `conductor2`). That move was a **redesign**, not a port (IG report `2026-10-01-reviews-workflow-vs-runbook-v2`). This spec is deliberately the opposite: a **mostly feature-parity port**. The same steps produce the same files, the same `review-comments.json` envelope and the same DB rows. The only gains are the runbook-v2 benefits (DB run row, per-step checkpoints, HITL plumbing for later) plus two new capabilities: running a subset of guides with `reviewFiles`, and persisting each step's output to Storage.
+
+### 1.1 Verified facts this spec rests on
+
+| Fact | Where |
+|---|---|
+| Legacy steps: `review` (agent, fan-out guides × runs) → `cross-run-consolidate-cc` → `apply-forced-outcomes` (script that **calls an LLM** via the gateway) → `prepare-uncertain-explanation-inputs` → `explain-uncertain` (agent fan-out, `continueOnFailure`) → `collect-uncertain-explanations` → `enrich-findings` → `format-reports` (agent) → `build-review-comments` → `validate-review-output` | `workflow.yaml:178-357` |
+| All 9 scripts are TS, run as `npx tsx scripts/<name>.ts --k=v` | `conductor/src/tools/script.ts:219-232` |
+| Downstream scripts **iterate findings files** and use the guide dir only as a lookup, so a guide subset flows through unchanged | `enrich-findings.ts:141-175`, `apply-forced-outcomes.ts:334-360` |
+| `apply-forced-outcomes` errors when a forced ref has no organic finding | `apply-forced-outcomes.ts:356-360` |
+| Review agents get `vision` (Gemini 3.1 Pro via gateway) and `semantic-search-blocks` as in-process MCP tools; conductor2 has no in-process tools | `conductor/src/tools/index.ts:323`, `tools/vision/index.ts:90-210` |
+| The structured-output emit schema omits `grouping`; conductor-1 injects it from the cell filename | `conductor/src/agent/structured-output-repair.ts:266-336` |
+| conductor2 fan-out is `foreach:` with `briefs` / `sh:` / `scan:` rosters. Rosters are one-dimensional: there is no `runs: N` | `conductor2/src/model.rs:438-455` |
+| conductor2 has no `if:`. Optional steps are a roster that prints nothing, a `SKIPPED.md` marker, or a vacuously-passing contract | `runbooks/smoke/steps/2.5-animal`, `lib/contract-helpers.ts:397-401` |
+| Run inputs are a zod `Request` in `1.1-inputs/contract.test.ts` (arrays allowed). There is no scalar-only typed input block | `runbooks/review/steps/1.1-inputs/contract.test.ts:14-44` |
+| The scheduler posts a `status` checkpoint at every step's enter/exit, plus one rollup per fan-out family | `conductor2/src/sched.rs:1223-1300`, `substation_client.rs:1-18` |
+| `runbook_checkpoints` has **no** payload column (only `client_token` was added later) | `substation/supabase/migrations/20260909000000…sql:96-115`, `20260911000000…sql:13` |
+| Nothing in conductor2 uploads step output anywhere | `conductor2/src/callback.rs:61-69` (TODO) |
+| `cityhall-new` owns `/api/runs/*` (ported from substation `6fde815`) and has a signed-URL `gate-files` route whose bytes never cross the function | `cityhall-new/AGENTS.md:346-364`, `src/app/api/runs/[runId]/gate-files/route.ts`, `bureau/runbooks/lib/app_client.py:645-682` |
+| `publish_review_cli.py` lane B (v2 envelope, CC/CRC) exists but no runbook calls it. It has no `prior_review_id` and always takes over `is_current` | `publish_review_cli.py:11-16, 254-370, 301, 333-341` |
+| Legacy `setCurrent` (default true): when false, insert `is_current=false` and skip retiring the prior reviews. Legacy retire scope = project + department (+ submission_version when known), which matches lane B's | `conductor/src/shared/review-saver.ts:139, 473-505` |
+| `stage_submission.py` stages the same `sheet-NN/{guide,blocks}.md`, `block-manifest.json` and `README.md` (with `documentId`s), plus binaries, but **no `facts.md`**, on purpose | `runbooks/lib/stage_submission.py:1000-1012`, `workspace.py:759` |
+| Guides: `bureau/jurisdictions/austin/completeness-check/CURRENT_VERSION` = `v2.7-trimmed`, 14 guides (cc-1, 2, 3, 5, 6, 10, 13, 15, 19, 20, 21, 22, 23, 24) + 4 TSVs | on disk, bureau `05bc24ab4d` |
+
+## 2. Goals and non-goals
+
+**Goals**
+1. A `completeness-check` runbook that a local captain (`/conductor completeness-check`) drives with conductor2, writing `runbook_runs`, `runbook_checkpoints` and (when a gate parks) `runbook_hitl_questions`.
+2. One runbook step per legacy step, each separately checkpointed (D2).
+3. Same intermediate file schemas, same `review-comments.json` envelope (`reviewType: completeness_check`), same `reviews` / `review_comments` rows (`output_schema = 2026-03-completeness-check`) (D1).
+4. `reviewFiles: ["cc-1","cc-21"]` runs only those guides end to end (D7).
+5. Opt-in, filterable per-step persistence of run-produced files to Supabase Storage, so an interrupted run loses nothing (D13–D19).
+6. Easily testable: deterministic replays of the downstream steps for zero tokens, plus a compare script for legacy-vs-v2 and v2-vs-v2 loops (§8).
+
+**Non-goals (deferred, with reason)**
+- **Cloud lane.** v1 is local captain only (D4). The persistence feature is built lane-agnostic so cloud can come next.
+- **Resume on another box from Storage.** v1 only *writes* a complete, manifest-indexed copy. The resume reader is a follow-up (§10).
+- **A HITL publish gate.** Will: a gate before publish only earns its place behind a run-health audit that surfaces a concern. That audit is a new feature (§10). v1 auto-publishes like legacy (D9).
+- **Retiring legacy CC** and switching cityhall's trigger. This happens after the acceptance bar (§8.4) is met.
+- **Experiment overlays** (`vision-check` router, `inspect-drawing`, `enabledVisionSpecialists`). No prod caller was found, so they're dropped (D12).
+- **Behaviour changes the new review made** (Opus, native image reading, prose guides, no `facts.md`). Each is a separate, measured experiment once parity is shown.
+
+## 3. Decisions
+
+### Parity and shape
+- **D1 Parity bar = same envelope + same DB rows.** Every intermediate keeps its legacy schema (`runs/*/findings/*.json`, `consolidated-findings.json`, `findings/`, `forced-outcomes-receipt.json`, `uncertain-explanations.json`, `enriched-findings.json`, `rephrased-items.json`, `review-comments.json`), so the legacy scripts run **unchanged**.
+- **D2 One checkpointed step per legacy step**, plus explicit steps for what conductor-1 did implicitly: inputs, staging, facts, resolve and publish (§4).
+- **D3 Reference legacy code in place.** Script steps call `$BUREAU/workflows/completeness-check/scripts/*.ts`. Prompts are copied once into the runbook, because the substitutions are mechanical (§5.2). Both lanes run the same scripts while we compare. Moving the scripts is part of retiring legacy.
+- **D4 Local captain first.** Cloud is a later phase.
+
+### Inputs and models
+- **D5 Request, not typed inputs.** `1.1-inputs/request.json` is validated by a zod `Request` (§6). `runner: none`: the captain writes the request before the first `advance`, so the contract passes and no question is asked.
+- **D6 Models live in `runners:` presets**, not in the request: `review`, `explain` and `format`, all `claude` / `sonnet-5.5` (legacy defaults). A/B tests use `--runner`. Dropped request fields: `model`, `effort`, `uncertainExplanationModel`, `maxWorkers`, `uncertainExplanationMaxWorkers`, `departmentCode` (always `cc`), `enabledVisionSpecialists`.
+- **D7 `reviewFiles`** is an optional non-empty array of guide basenames (`cc-1` or `cc-1.md`, normalized to no extension). `1.1-inputs` rejects unknown names, listing what exists. `1.4-resolve` filters the roster. Everything downstream sees only those guides' findings.
+- **D8 `forceOutcomes` with a subset:** the `2.3` wrapper drops forced rows whose grouping isn't in the roster, logs them in `dropped-forced-outcomes.json`, then calls the legacy script.
+
+### Publish
+- **D9 Auto-publish, no gate.** `3.1-publish` writes its own `decision.json` (`status: approved`, `publish.project.id` from the staged manifest, `versioning: iterate`, `label` = `cc <checklistVersion> <reviewFiles or "all">`) and calls lane B. `request.publish: false` writes `SKIPPED.md` instead (test loops).
+- **D10 Subsets publish too.** Exposure is gated by `setCurrent`, not by refusing to publish. `request.setCurrent` (default true, like legacy) maps to a new lane B flag `--no-set-current`: insert `is_current=false`, skip the retire. A test review is reachable only by its id.
+- **D11 Lane B gains `--prior-review-id`** (writes `reviews.prior_review_id`). Legacy's other `priorReviewId` behaviour, pinning guides to the prior review's bureau commit, is dropped. Retire scope stays lane B's (project + department + submission_version), which matches legacy when the submission version is known.
+
+### Agent behaviour
+- **D12 Drop the experiment overlays.** Baseline `review.md` only.
+- **D20 Port both agent tools as CLIs** the agent calls through Bash:
+  - `runbooks/completeness-check/bin/vision.ts` is a port of `conductor/src/tools/vision/index.ts`: same Gemini model, same `prompt.md` (copied), same params (`--document-id`, `--sheet`, `--prompt`, `--item-ids`), sheet image fetched from `submission-data` via `plan_set_version`/`sheet_version`. It appends `{ts, itemIds, documentId, sheet, prompt, response}` to `$OUT/vision-log.jsonl`. Logging the prompt and item ids closes the long-standing baseline prompt-traceability gap at no extra cost.
+  - `semantic-search-blocks` already is a CLI (`workflows/completeness-check/scripts/semantic-search-blocks.ts`). The step passes `--projectId` explicitly, because the script's `projects/<one dir>` inference doesn't hold in a runbook run dir, and logs to `$OUT/search-log.jsonl`.
+- **D21 Tool allowlist for parity.** The `review` preset's `permission:` allows Read/Glob/Grep over `$RUN/1.2-stage-submission`, `$RUN/1.3-facts` and `$RUN/1.4-resolve/checklist`; Bash only for the two CLIs; Write only in its own item folder. Legacy agents could read files, so Read and Grep are parity, but arbitrary Bash isn't.
+- **D22 Every item resolves exactly once.** The review worker's contract parses its guide's item ids and `[BLOCKING]`-requires a 1:1 match with `findings[].checklistItemId`. A miss resumes the session with the missing ids. Legacy never enforced this; it only catches drops.
+- **D23 explain-uncertain keeps legacy tolerance.** A worker may finish with `FAILED.md` instead of `result.json` (the contract accepts either). `2.6` treats `FAILED.md` as a null explanation, so the >50%-null tripwire in `collect-uncertain-explanations.ts` still fails the run on systemic failure.
+- **D24 Staging = `stage_submission.py`, plus a facts step for parity.** `1.3-facts` renders `facts.md` from `project_facts` exactly as conductor-1 did (`conductor/src/shared/project-downloader.ts:874-890`), so the parity comparison measures only the runner change. Dropping `facts.md` (the runbook stance, `stage_submission.py:1000-1012`) is the first post-parity experiment. **See Q1: this conflicts with AGENTS-core rule 19.**
+
+### Trails
+- **D25 Drop `workflow_runs` and the `workflow-runs` bucket upload.** `runbook_runs` is the run row; persisted step files are the artifacts. The readers that need a v2 path later are listed in Q8.
+
+### Step persistence (conductor2 + cityhall-new)
+- **D13 Lives in conductor2, off by default, generic to every runbook.** Only `completeness-check/runbook.yaml` turns it on in v1.
+- **D14 Config** is a `persist:` block in `runbook.yaml` (§7.1). Absent means off. `CONDUCTOR_PERSIST=off|on` overrides it for one run.
+- **D15 What gets persisted defaults to the step's declared `outputs:`** minus `scratch/`, narrowed by per-step `include`/`exclude` globs.
+- **D16 Only run-produced files.** CC persists everything **except** `1.2-stage-submission` and `1.3-facts`, which are DB data pulled into the run (Will).
+- **D17 Fan-out items upload as each item's contract passes**, not once per family. A crash 10 cells into 14 loses nothing.
+- **D18 Recording: a deterministic path plus a manifest, no DB change.** Paths are `runbook-runs/<runbook_run_id>/steps/<step>[/<item>]/<relpath>` in the `submission-data` bucket, beside the gate files. `persisted.json` sits at the run prefix and at `<run>/.conductor/persisted.json`.
+- **D19 Never a failure path.** An upload error is printed once and recorded in the manifest, and the run continues, on the same rule as checkpoints (`substation_client.rs:10-13`).
+- **D26 Transport = signed-URL batches from cityhall-new.** `POST /api/runs/:runId/step-files` signs ≤200 paths per call; conductor2 streams each file from disk with a PUT (4–8 at once). The Vercel function never holds file bytes, so the 2–4 GB sandbox memory limit doesn't apply. Files over the bucket's per-object limit are recorded as `too_large`.
+
+## 4. The runbook graph
+
+`bureau/runbooks/completeness-check/`. Each row is one step folder under `steps/`. "Legacy" names the `workflow.yaml` step it reproduces.
+
+| Step | Runner | Legacy | Reads | Writes (step folder) | Persisted |
+|---|---|---|---|---|---|
+| `1.1-inputs` | `none` | (kickoff inputs) | — | `request.json` | yes |
+| `1.2-stage-submission` | script | `resources.submissionVersion` | 1.1 | same as review's 1.2 (`README.md`, `block-manifest.json`, `download-manifest.json`, `primary-site-plan/`, `supplementary-docs/?`, `_health.json`) | **no** |
+| `1.3-facts` | script | `project-downloader` facts.md | 1.2 | `facts.md` | **no** |
+| `1.4-resolve` | script | `resolve-jurisdiction.ts`, `engine.ts:107-174`, `resources.bureau` | 1.1, 1.2 | `resolved.json` (jurisdiction, checklistVersion, guides[], bureauCommitHash, projectId, submissionVersionId), `roster.txt`, `checklist/` (copy of the guide dir: provenance + pinning) | yes |
+| `2.1-review/` → `review` | `review` (foreach `sh: cat roster.txt`) | `review` | 1.2, 1.3, 1.4 | `<guide>--r<k>/findings.json` (emit shape), `vision-log.jsonl?`, `search-log.jsonl?` | yes, per item |
+| `2.2-consolidate` | script | `cross-run-consolidate-cc` | 1.4, 2.1 | `findings/<guide>.md.json`, `consolidated-findings.json?`, `consolidation-summary.json` | yes |
+| `2.3-forced-outcomes` | script | `apply-forced-outcomes` | 1.1, 1.4, 2.2 | `findings/` (copy, patched), `forced-outcomes-receipt.json?`, `dropped-forced-outcomes.json?` | yes |
+| `2.4-uncertain-inputs` | script | `prepare-uncertain-explanation-inputs` | 1.1, 1.4, 2.2, 2.3 | `<ref-slug>.json*` (possibly none) | yes |
+| `2.5-explain/` → `explain` | `explain` (foreach `sh: ls 2.4/*.json \|\| true`) | `explain-uncertain` | 2.4 | `<input>/result.json` or `<input>/FAILED.md` | yes, per item |
+| `2.6-uncertain-collect` | script | `collect-uncertain-explanations` | 2.4, 2.5 | `uncertain-explanations.json` (`{}` when none) | yes |
+| `2.7-enrich` | script | `enrich-findings` | 1.4, 2.2, 2.3 | `enriched-findings.json` (+ summary sidecar) | yes |
+| `2.8-format` | `format` | `format-reports` | 1.4, 2.7 | `rephrased-items.json`, `completeness-check-consolidated-report.md`, `reports/<grouping>.md` | yes |
+| `2.9-comments` | script | `build-review-comments` | 1.1, 1.2, 1.4, 2.2, 2.6, 2.7, 2.8 | `review-comments.json` | yes |
+| `2.10-validate` | script | `validate-review-output` | 2.7, 2.9 | `validation.json` | yes |
+| `3.1-publish` | script | `review:` + `review-saver.ts` | 1.1, 1.2, 1.4, 2.7, 2.9, 2.10 | `decision.json` + `publish.log`, or `SKIPPED.md`; `$RUN/review-publishing-record.json` | yes |
+
+Notes:
+- **`runs`** is folded into the roster: `1.4-resolve` prints one line per `<guide>--r<k>` for k = 1..runs. `2.2` lays the items out as the legacy `runs/run-<k>/findings/<guide>.md.json` tree under `scratch/`, **injecting `grouping`** from the item name (the canonicalization conductor-1 did, `structured-output-repair.ts:266-336`), then calls the legacy script unchanged. `runs=1` follows the script's own passthrough branch (`cross-run-consolidate-cc.ts:163-186`).
+- **Copy-forward.** A script step never mutates an upstream folder. `2.3` copies `2.2/findings/` into its own folder before patching. That is a behaviour change from legacy, which patched in place, and it is what keeps each persisted step meaningful on its own.
+- **Optional steps** (`forceOutcomes` absent, `explainUncertain: false`, `publish: false`) write `SKIPPED.md` with every output marked `?`, and contracts use `expectFilesOrMarker`. `2.5` with zero inputs is a valid empty fan-out (the common case, matching `allowEmptyChecklist`).
+- **Adapters for path assumptions** live in each step's `cmd`:
+  - `build-review-comments --projectsDir` expects `projects/<id>/block-manifest.json`. `2.9` symlinks `scratch/projects/<projectId>` → `1.2-stage-submission`.
+  - `--bureauCommitHash` comes from `resolved.json`.
+  - `commentNumberingMapFile` is passed only when the request names one, which replaces the dotted-section templating.
+- **Concurrency.** `CONDUCTOR_CONCURRENCY` (default 16) replaces `maxWorkers`. The 40 cap was a 4-vCPU sandbox limit (winston#188), which doesn't apply on the local lane.
+- **Retries.** An agent step resumes its own session up to `MAX_RETRIES=2` on a red contract (`conductor2/src/harness.rs:26`), which replaces legacy `retries: 1` (fresh session) and `3`. A script step has no retry, so a red script parks the run for the captain.
+- **Lane B paths are flags.** Its docstring's `2.4-enrich / 2.6-comments / 2.7-deliver` were a sketch with no runbook behind them. `3.1` passes `--review-comments $RUN/2.9-comments/review-comments.json --valid-refs $RUN/2.7-enrich/enriched-findings.json`, and the docstring is updated to match.
+
+## 5. Agent steps
+
+### 5.1 Contracts
+
+| Step | Contract |
+|---|---|
+| `2.1-review/review` | `findings.json` parses against a zod port of `completeness.emit.schema.json`. `[BLOCKING]` item coverage 1:1 against the guide (D22). `evidenceLocations[].blockNumber`, if present, is an integer. The family contract is `expectSameSet(roster, childDirs)` + `expectNoStrays`. |
+| `2.5-explain/explain` | `result.json` parses against a zod port of `uncertain-explanation.emit.schema.json`, its `ref` equals the input's ref, **or** `FAILED.md` exists (D23). |
+| `2.8-format` | `rephrased-items.json` has a key for every `{grouping}:{checklistItemId}` in `enriched-findings.json` and no extra keys (the provenance check that `2.10` re-runs as the step of record); one `reports/<grouping>.md` per grouping. |
+
+Script steps' contracts check their declared files exist and parse (zod over the same legacy JSON schemas). `2.10` passes only on `validation.json.ok === true`.
+
+### 5.2 Prompt port (mechanical)
+
+Copy `prompts/{review,explain-uncertain,format-reports}.md` into the step folders and substitute:
+- `{{ WORKSPACE_PATH }}/projects/{{ input.projectId }}/` → `$RUN/1.2-stage-submission/`, with `facts.md` at `$RUN/1.3-facts/facts.md`. Also fix the stale `site-plans` line (`review.md:14`).
+- `{{ checklistItem }}` → the guide derived from `{{ITEM}}` (`cc-21--r2` → `$RUN/1.4-resolve/checklist/cc-21.md`).
+- The `vision` / `semantic-search-blocks` tool descriptions → the two CLI invocations (D20). Arguments, logging and the "pass `checklistItemIds`" rule are unchanged.
+- `{{ untrustedInputContract }}` → inlined verbatim from `workflows/shared/untrusted-content.md`. A test in the runbook's `npm test` asserts the inlined block still equals the shared file, so the two can't drift silently.
+- The standard-notes URL → read from `request.json`.
+- The output instruction "emit structured output" → "write `findings.json` to your item folder", with the emit schema quoted.
+
+## 6. Request (`1.1-inputs/contract.test.ts`)
+
+```ts
+export const Request = z.object({
+  submission: z.object({ submission_version_id: z.string().uuid() }),
+  jurisdiction: z.string().optional(),            // must match project.jurisdiction_slug (1.4 hard-fails otherwise)
+  checklistVersion: z.string().optional(),        // default: jurisdictions/<j>/completeness-check/CURRENT_VERSION
+  checklistsDir: z.string().optional(),           // bureau-relative override, e.g. an experimental guide dir
+  reviewFiles: z.array(z.string().regex(/^cc-\d+(\.md)?$/)).nonempty().optional(),
+  runs: z.number().int().min(1).max(5).default(1),
+  uncertainThreshold: z.number().min(0).max(1).default(0.35),
+  explainUncertain: z.boolean().default(true),
+  forceOutcomes: z.string().optional(),           // TSV filename in the checklist dir
+  commentNumberingMap: z.string().optional(),     // TSV filename in the checklist dir
+  standardNotesReferenceUrl: z.string().url().default(
+    'https://austin.widen.net/s/vxznrtmfwf/sp_consolidatedsiteplanapplication_notestemplates'),
+  priorReviewId: z.string().uuid().optional(),
+  publish: z.boolean().default(true),
+  setCurrent: z.boolean().default(true),
+})
+```
+
+Example for the iteration loop:
+
+```json
+{ "submission": { "submission_version_id": "6b9b85ed-e992-4906-a222-b24ee836910c" },
+  "reviewFiles": ["cc-1", "cc-21"], "runs": 1, "setCurrent": false }
+```
+
+## 7. Step persistence
+
+### 7.1 Config (conductor2, `runbook.yaml`)
+
+```yaml
+persist:
+  steps: all                      # all | [step ids]; absent block = off
+  skip: [1.2-stage-submission, 1.3-facts]
+  rules:                          # optional, step-id globs → path filters (relative to the step folder)
+    "2.1-review/*": { exclude: ["**/*.tmp"] }
+```
+
+- Effective set per step = declared `outputs:` globs ∩ `include` (default `**`) − `exclude` − `scratch/**`.
+- `CONDUCTOR_PERSIST=off` disables it for a run, and `=on` enables it with the runbook's config, or with `steps: all` if the runbook has none.
+- Sub-runbooks inherit nothing: the parent's `runner: runbook` step persists its own folder, matching how checkpoints stay silent inside a sub-runbook.
+
+### 7.2 Mechanics (conductor2)
+
+1. **When:** on a node's successful exit (contract green), from the same place `emit_step_event` fires (`sched.rs:1223`). Fan-out members are persisted individually (D17). A `runner: none` gate persists when its contract passes.
+2. **Not on the critical path:** uploads go to a bounded background worker pool (4–8 PUTs). The scheduler moves on, and the outer `advance` drains the pool, with a timeout, before its callback.
+3. **Dedupe:** the local manifest is keyed by `(step, item, relpath)` → sha256. If the bytes are unchanged, nothing is sent. A retried step with new bytes upserts the same path.
+4. **Batch:** one `step-files` call per ≤200 files, then a streaming PUT per file from disk (no full read into memory).
+5. **Manifest:** `<run>/.conductor/persisted.json` is rewritten after each batch and uploaded to `runbook-runs/<id>/persisted.json`. Entries are `{step, item?, relpath, storage_path, sha256, bytes, attempt, status: uploaded|unchanged|too_large|failed, error?, at}`.
+6. **Auth:** the run bearer that `init` already leaves for the checkpoint lane (`substation_client.rs:341-377`), on both lanes. With no bearer or id it's a no-op with one warning, like checkpoints.
+7. **Endpoint base:** the same `SUBSTATION_URL` env var `init` uses (`init.rs:25-29`), which now points at cityhall-new.
+
+### 7.3 Route (cityhall-new)
+
+`POST /api/runs/:runId/step-files`. Admission is `requireBearerOrService` (as in `gate-files`).
+
+```jsonc
+// request
+{ "files": [ { "step": "2.1-review", "item": "cc-21--r1", "path": "findings.json",
+               "sha256": "…", "bytes": 48213, "content_type": "application/json" } ] }   // ≤ 200
+// response
+{ "files": [ { "path": "findings.json", "item": "cc-21--r1",
+               "storage_path": "runbook-runs/<runId>/steps/2.1-review/cc-21--r1/findings.json",
+               "status": "upload", "upload_url": "https://…signed…" } ] }                 // or status: "too_large"
+```
+
+- Validates `step`, `item` and `path` segments (`[A-Za-z0-9._-]`, no `..`, no leading `/`). Rejects batches over 200 entries.
+- `createSignedUploadUrl(path, { upsert: true })`. `bytes` greater than the bucket's limit gives `too_large` and no URL.
+- The `_run` pseudo-step is reserved for `persisted.json`.
+- Contract and ported tests go into `tests/api/runs-contract.test.ts` style. The route is **additive**, so no existing machine-lane contract changes (`AGENTS.md:346-355`).
+
+## 8. Testing
+
+### 8.1 Tier 0: contracts (no run)
+`npm test` in `runbooks/lib` runs every contract over `completeness-check/examples/<scenario>/`. The first scenario, `lamar-v4-cc1-cc21`, is curated from the first accepted subset run (binaries offloaded per the examples rules).
+
+### 8.2 Tier 1: deterministic downstream replay (no LLM except 2.3 / 2.8)
+`conductor stage 2.2-consolidate --scenario examples/lamar-v4-cc1-cc21`, then `advance` through `2.10` with `publish: false`. Two checks:
+- **Self-replay:** the curated `2.1` output reproduces the curated `2.9-comments/review-comments.json`, modulo timestamps and the two LLM-written fields (forced narratives, rephrased titles).
+- **Cross-lane replay:** a helper converts a **legacy** run's `output/runs/` into `2.1-review/<guide>--r<k>/findings.json`. That legacy run is pulled from the `workflow-runs` bucket, or produced with the subset-checklist-dir trick (§8.3). Replaying `2.2→2.9` must reproduce the legacy `review-comments.json` on the same terms. This proves the wiring is at parity with the LLM variance taken out.
+
+### 8.3 Tier 2: live loops
+- **Legacy subset run:** `scripts/legacy-subset-dir.sh cc-1 cc-21` builds a temporary checklist dir (the chosen guides + TSVs) on a scratch bureau branch and passes `checklistsDir`. There is no conductor-1 change.
+- **v2 subset run:** `/conductor completeness-check` with the §6 request.
+- **Compare:** `runbooks/completeness-check/scripts/compare.ts <a> <b>…`. It accepts any mix of legacy output dirs, v2 run dirs and persisted v2 prefixes, and writes per-item status agreement, the confusion matrix, count deltas and per-item evidence diffs as JSON plus a markdown table. This one tool serves both loops Will named: legacy vs v2 on the same submission, and v2 vs v2.
+
+### 8.4 Acceptance bar (port done)
+On both fixtures, with `reviewFiles: ["cc-1","cc-21"]`:
+1. N=3 legacy runs and N=3 v2 runs at `runs=1`. v2-vs-legacy per-item agreement must be ≥ legacy-vs-legacy agreement − 5 points.
+2. One v2 run at `runs=3` that yields ≥1 uncertain item, exercising `2.4–2.6` end to end. If neither fixture produces one naturally, raise `uncertainThreshold`.
+3. Tier 1 cross-lane replay is green.
+4. A publish with `setCurrent: false`: a `reviews` row with `output_schema = 2026-03-completeness-check`, `is_current = false`, the prior current row untouched, and the comments rendering in cityhall by review id.
+5. `persisted.json` lists every run-produced file, the prefix is complete, and `1.2` / `1.3` are absent.
+
+**Fixtures:** primary is 1700 S Lamar (Lamar + Collier) v4, project `23301a8a-4cdb-4751-ac0c-93b97f0f5c12`, sv `6b9b85ed-e992-4906-a222-b24ee836910c`, PPv4 run `b918e8c1`, which has `1700-s-lamar-forced-outcomes.tsv`. Secondary is 2008 San Antonio v1, project `7746ac2f`, sv `624309c1`, PPv4 runs `b876caad` / `57e0b2f6`.
+
+### 8.5 Unit tests
+- **conductor2:** persist config parsing, glob filtering, dedupe, and the never-fail path, against the existing mock server (`substation_client.rs:409-454`).
+- **cityhall-new:** route validation, the 200 cap, `too_large`, admission.
+- **bureau:** lane B `--no-set-current` / `--prior-review-id` in `test_publish_review_cli.py`; `1.4-resolve` (CURRENT_VERSION, mismatch hard-fail, reviewFiles filter, runs roster); the `2.3` TSV filter; the `2.2` grouping injection.
+
+## 9. Delivery order
+
+1. **cityhall-new:** `step-files` route + tests.
+2. **conductor2:** `persist:` + uploader. Inert until a runbook opts in, and harmless before step 1 deploys (404 → one warning).
+3. **bureau:** the runbook, the vision CLI, lane B flags, `compare.ts`, the legacy-subset helper, and the Tier 0 / 1 tests.
+4. **Acceptance runs (§8.4)**, then curate `examples/lamar-v4-cc1-cc21`.
+
+## 10. Follow-ups (out of scope)
+
+- **Run-health audit → conditional publish gate.** A deterministic `2.11-health` step scores the run: failed or `FAILED.md` cells, null-explanation share, vision/search error rates, item-coverage resumes, `too_large` uploads. Only when it flags something does a `runner: none` `2.12-deliver` gate ask in the console whether to publish. Otherwise its contract passes vacuously and no question is created.
+- **Resume from Storage:** `conductor hydrate <runbook_run_id> $RUN` rebuilds a run dir from `persisted.json` and re-stages `1.2` / `1.3` from the DB, then `advance` continues. This is the cloud payoff of D13–D26.
+- **Cloud lane** (`trigger-cloud-runbook`), then retiring legacy CC and moving its scripts into the runbook.
+- **Post-parity experiments:** drop `facts.md`, native image reading instead of the Gemini `vision` CLI, Opus for `review`.
+
+## 11. Open questions
+
+- **Q1 AGENTS-core rule 19 vs `facts.md` (D24).** conductor2 prepends `runbooks/lib/AGENTS-core.md` to every step. Rule 19 bars "any prior Noetic output about this project", and `project_facts` carries prior-review-derived directives (the very reason `stage_submission.py:1000-1012` dropped it). A Sonnet worker may refuse `facts.md`, or read it inconsistently, which is exactly the variance parity can't tolerate. Options: (a) accept and measure; (b) depend on the per-runbook-conventions spec (winston scratch-pad #2) and give CC `answers: open`; (c) reverse D24 and drop `facts.md` now. **The whole 21-rule preamble is itself a parity delta**, because legacy agents saw none of it, so (b) may be needed regardless.
+- **Q2 Bucket and size limit.** Should persisted files share `submission-data` (beside the gate files, D18), or go to a dedicated private `runbook-runs` bucket with its own lifecycle and size limit? The `submission-data` per-object limit is unverified.
+- **Q3 Vision CLI credentials on the local lane.** The sheet fetch needs `submission-data` read, and the gateway call needs `AI_GATEWAY_API_KEY`. Which key does the review worker's env carry (run JWT vs service role)? And is gateway attribution keyed by `runbook_run_id` (legacy used `WORKFLOW_RUN_ID` / `RUN_LABEL`)?
+- **Q4 Effort level for the presets.** Legacy left `effort` unset (the SDK default); the Claude Code harness has its own default. Pin it to whatever legacy actually got.
+- **Q5 Harness system prompt.** The Claude Code CLI (conductor2 `claude` harness) and the Agent SDK (conductor-1) give the model different system prompts and tool descriptions. That difference is inherent to the port and is part of what §8.4 measures. Is that acceptable, or should the harness run with a minimal system prompt?
+- **Q6 `1.1-inputs` with no question.** Confirm that a `runner: none` step whose `request.json` exists before the first `advance` passes without opening a `runbook_hitl_questions` row, which is the behaviour review's kickoff relies on.
+- **Q7 Inch-mark JSON.** Legacy hit content-determined emit failures (unescaped `"`) under SDK structured output. With a file-writing agent plus a zod contract, a malformed file resumes the session with the parse error. Is that expected to suffice, or should we add a tolerant-parse repair (`tryRepairStructuredOutput`) in `2.2`?
+- **Q8 Legacy-trail readers.** The `audit-cc-run` skill and IG read `workflow_runs` / the `workflow-runs` bucket. They need a v2 path (the `runbook_runs` id + persisted prefix) before legacy retires.
+
+</script>
+<script data-marked>
+/**
+ * marked v15.0.12 - a markdown parser
+ * Copyright (c) 2011-2025, Christopher Jeffrey. (MIT Licensed)
+ * https://github.com/markedjs/marked
+ */
+
+/**
+ * DO NOT EDIT THIS FILE
+ * The code in this file is generated from files in ./src/
+ */
+(function(g,f){if(typeof exports=="object"&&typeof module<"u"){module.exports=f()}else if("function"==typeof define && define.amd){define("marked",f)}else {g["marked"]=f()}}(typeof globalThis < "u" ? globalThis : typeof self < "u" ? self : this,function(){var exports={};var __exports=exports;var module={exports};
+"use strict";var H=Object.defineProperty;var be=Object.getOwnPropertyDescriptor;var Te=Object.getOwnPropertyNames;var we=Object.prototype.hasOwnProperty;var ye=(l,e)=>{for(var t in e)H(l,t,{get:e[t],enumerable:!0})},Re=(l,e,t,n)=>{if(e&&typeof e=="object"||typeof e=="function")for(let s of Te(e))!we.call(l,s)&&s!==t&&H(l,s,{get:()=>e[s],enumerable:!(n=be(e,s))||n.enumerable});return l};var Se=l=>Re(H({},"__esModule",{value:!0}),l);var kt={};ye(kt,{Hooks:()=>L,Lexer:()=>x,Marked:()=>E,Parser:()=>b,Renderer:()=>$,TextRenderer:()=>_,Tokenizer:()=>S,defaults:()=>w,getDefaults:()=>z,lexer:()=>ht,marked:()=>k,options:()=>it,parse:()=>pt,parseInline:()=>ct,parser:()=>ut,setOptions:()=>ot,use:()=>lt,walkTokens:()=>at});module.exports=Se(kt);function z(){return{async:!1,breaks:!1,extensions:null,gfm:!0,hooks:null,pedantic:!1,renderer:null,silent:!1,tokenizer:null,walkTokens:null}}var w=z();function N(l){w=l}var I={exec:()=>null};function h(l,e=""){let t=typeof l=="string"?l:l.source,n={replace:(s,i)=>{let r=typeof i=="string"?i:i.source;return r=r.replace(m.caret,"$1"),t=t.replace(s,r),n},getRegex:()=>new RegExp(t,e)};return n}var m={codeRemoveIndent:/^(?: {1,4}| {0,3}\t)/gm,outputLinkReplace:/\\([\[\]])/g,indentCodeCompensation:/^(\s+)(?:```)/,beginningSpace:/^\s+/,endingHash:/#$/,startingSpaceChar:/^ /,endingSpaceChar:/ $/,nonSpaceChar:/[^ ]/,newLineCharGlobal:/\n/g,tabCharGlobal:/\t/g,multipleSpaceGlobal:/\s+/g,blankLine:/^[ \t]*$/,doubleBlankLine:/\n[ \t]*\n[ \t]*$/,blockquoteStart:/^ {0,3}>/,blockquoteSetextReplace:/\n {0,3}((?:=+|-+) *)(?=\n|$)/g,blockquoteSetextReplace2:/^ {0,3}>[ \t]?/gm,listReplaceTabs:/^\t+/,listReplaceNesting:/^ {1,4}(?=( {4})*[^ ])/g,listIsTask:/^\[[ xX]\] /,listReplaceTask:/^\[[ xX]\] +/,anyLine:/\n.*\n/,hrefBrackets:/^<(.*)>$/,tableDelimiter:/[:|]/,tableAlignChars:/^\||\| *$/g,tableRowBlankLine:/\n[ \t]*$/,tableAlignRight:/^ *-+: *$/,tableAlignCenter:/^ *:-+: *$/,tableAlignLeft:/^ *:-+ *$/,startATag:/^<a /i,endATag:/^<\/a>/i,startPreScriptTag:/^<(pre|code|kbd|script)(\s|>)/i,endPreScriptTag:/^<\/(pre|code|kbd|script)(\s|>)/i,startAngleBracket:/^</,endAngleBracket:/>$/,pedanticHrefTitle:/^([^'"]*[^\s])\s+(['"])(.*)\2/,unicodeAlphaNumeric:/[\p{L}\p{N}]/u,escapeTest:/[&<>"']/,escapeReplace:/[&<>"']/g,escapeTestNoEncode:/[<>"']|&(?!(#\d{1,7}|#[Xx][a-fA-F0-9]{1,6}|\w+);)/,escapeReplaceNoEncode:/[<>"']|&(?!(#\d{1,7}|#[Xx][a-fA-F0-9]{1,6}|\w+);)/g,unescapeTest:/&(#(?:\d+)|(?:#x[0-9A-Fa-f]+)|(?:\w+));?/ig,caret:/(^|[^\[])\^/g,percentDecode:/%25/g,findPipe:/\|/g,splitPipe:/ \|/,slashPipe:/\\\|/g,carriageReturn:/\r\n|\r/g,spaceLine:/^ +$/gm,notSpaceStart:/^\S*/,endingNewline:/\n$/,listItemRegex:l=>new RegExp(`^( {0,3}${l})((?:[	 ][^\\n]*)?(?:\\n|$))`),nextBulletRegex:l=>new RegExp(`^ {0,${Math.min(3,l-1)}}(?:[*+-]|\\d{1,9}[.)])((?:[ 	][^\\n]*)?(?:\\n|$))`),hrRegex:l=>new RegExp(`^ {0,${Math.min(3,l-1)}}((?:- *){3,}|(?:_ *){3,}|(?:\\* *){3,})(?:\\n+|$)`),fencesBeginRegex:l=>new RegExp(`^ {0,${Math.min(3,l-1)}}(?:\`\`\`|~~~)`),headingBeginRegex:l=>new RegExp(`^ {0,${Math.min(3,l-1)}}#`),htmlBeginRegex:l=>new RegExp(`^ {0,${Math.min(3,l-1)}}<(?:[a-z].*>|!--)`,"i")},$e=/^(?:[ \t]*(?:\n|$))+/,_e=/^((?: {4}| {0,3}\t)[^\n]+(?:\n(?:[ \t]*(?:\n|$))*)?)+/,Le=/^ {0,3}(`{3,}(?=[^`\n]*(?:\n|$))|~{3,})([^\n]*)(?:\n|$)(?:|([\s\S]*?)(?:\n|$))(?: {0,3}\1[~`]* *(?=\n|$)|$)/,O=/^ {0,3}((?:-[\t ]*){3,}|(?:_[ \t]*){3,}|(?:\*[ \t]*){3,})(?:\n+|$)/,ze=/^ {0,3}(#{1,6})(?=\s|$)(.*)(?:\n+|$)/,F=/(?:[*+-]|\d{1,9}[.)])/,ie=/^(?!bull |blockCode|fences|blockquote|heading|html|table)((?:.|\n(?!\s*?\n|bull |blockCode|fences|blockquote|heading|html|table))+?)\n {0,3}(=+|-+) *(?:\n+|$)/,oe=h(ie).replace(/bull/g,F).replace(/blockCode/g,/(?: {4}| {0,3}\t)/).replace(/fences/g,/ {0,3}(?:`{3,}|~{3,})/).replace(/blockquote/g,/ {0,3}>/).replace(/heading/g,/ {0,3}#{1,6}/).replace(/html/g,/ {0,3}<[^\n>]+>\n/).replace(/\|table/g,"").getRegex(),Me=h(ie).replace(/bull/g,F).replace(/blockCode/g,/(?: {4}| {0,3}\t)/).replace(/fences/g,/ {0,3}(?:`{3,}|~{3,})/).replace(/blockquote/g,/ {0,3}>/).replace(/heading/g,/ {0,3}#{1,6}/).replace(/html/g,/ {0,3}<[^\n>]+>\n/).replace(/table/g,/ {0,3}\|?(?:[:\- ]*\|)+[\:\- ]*\n/).getRegex(),Q=/^([^\n]+(?:\n(?!hr|heading|lheading|blockquote|fences|list|html|table| +\n)[^\n]+)*)/,Pe=/^[^\n]+/,U=/(?!\s*\])(?:\\.|[^\[\]\\])+/,Ae=h(/^ {0,3}\[(label)\]: *(?:\n[ \t]*)?([^<\s][^\s]*|<.*?>)(?:(?: +(?:\n[ \t]*)?| *\n[ \t]*)(title))? *(?:\n+|$)/).replace("label",U).replace("title",/(?:"(?:\\"?|[^"\\])*"|'[^'\n]*(?:\n[^'\n]+)*\n?'|\([^()]*\))/).getRegex(),Ee=h(/^( {0,3}bull)([ \t][^\n]+?)?(?:\n|$)/).replace(/bull/g,F).getRegex(),v="address|article|aside|base|basefont|blockquote|body|caption|center|col|colgroup|dd|details|dialog|dir|div|dl|dt|fieldset|figcaption|figure|footer|form|frame|frameset|h[1-6]|head|header|hr|html|iframe|legend|li|link|main|menu|menuitem|meta|nav|noframes|ol|optgroup|option|p|param|search|section|summary|table|tbody|td|tfoot|th|thead|title|tr|track|ul",K=/<!--(?:-?>|[\s\S]*?(?:-->|$))/,Ce=h("^ {0,3}(?:<(script|pre|style|textarea)[\\s>][\\s\\S]*?(?:</\\1>[^\\n]*\\n+|$)|comment[^\\n]*(\\n+|$)|<\\?[\\s\\S]*?(?:\\?>\\n*|$)|<![A-Z][\\s\\S]*?(?:>\\n*|$)|<!\\[CDATA\\[[\\s\\S]*?(?:\\]\\]>\\n*|$)|</?(tag)(?: +|\\n|/?>)[\\s\\S]*?(?:(?:\\n[ 	]*)+\\n|$)|<(?!script|pre|style|textarea)([a-z][\\w-]*)(?:attribute)*? */?>(?=[ \\t]*(?:\\n|$))[\\s\\S]*?(?:(?:\\n[ 	]*)+\\n|$)|</(?!script|pre|style|textarea)[a-z][\\w-]*\\s*>(?=[ \\t]*(?:\\n|$))[\\s\\S]*?(?:(?:\\n[ 	]*)+\\n|$))","i").replace("comment",K).replace("tag",v).replace("attribute",/ +[a-zA-Z:_][\w.:-]*(?: *= *"[^"\n]*"| *= *'[^'\n]*'| *= *[^\s"'=<>`]+)?/).getRegex(),le=h(Q).replace("hr",O).replace("heading"," {0,3}#{1,6}(?:\\s|$)").replace("|lheading","").replace("|table","").replace("blockquote"," {0,3}>").replace("fences"," {0,3}(?:`{3,}(?=[^`\\n]*\\n)|~{3,})[^\\n]*\\n").replace("list"," {0,3}(?:[*+-]|1[.)]) ").replace("html","</?(?:tag)(?: +|\\n|/?>)|<(?:script|pre|style|textarea|!--)").replace("tag",v).getRegex(),Ie=h(/^( {0,3}> ?(paragraph|[^\n]*)(?:\n|$))+/).replace("paragraph",le).getRegex(),X={blockquote:Ie,code:_e,def:Ae,fences:Le,heading:ze,hr:O,html:Ce,lheading:oe,list:Ee,newline:$e,paragraph:le,table:I,text:Pe},re=h("^ *([^\\n ].*)\\n {0,3}((?:\\| *)?:?-+:? *(?:\\| *:?-+:? *)*(?:\\| *)?)(?:\\n((?:(?! *\\n|hr|heading|blockquote|code|fences|list|html).*(?:\\n|$))*)\\n*|$)").replace("hr",O).replace("heading"," {0,3}#{1,6}(?:\\s|$)").replace("blockquote"," {0,3}>").replace("code","(?: {4}| {0,3}	)[^\\n]").replace("fences"," {0,3}(?:`{3,}(?=[^`\\n]*\\n)|~{3,})[^\\n]*\\n").replace("list"," {0,3}(?:[*+-]|1[.)]) ").replace("html","</?(?:tag)(?: +|\\n|/?>)|<(?:script|pre|style|textarea|!--)").replace("tag",v).getRegex(),Oe={...X,lheading:Me,table:re,paragraph:h(Q).replace("hr",O).replace("heading"," {0,3}#{1,6}(?:\\s|$)").replace("|lheading","").replace("table",re).replace("blockquote"," {0,3}>").replace("fences"," {0,3}(?:`{3,}(?=[^`\\n]*\\n)|~{3,})[^\\n]*\\n").replace("list"," {0,3}(?:[*+-]|1[.)]) ").replace("html","</?(?:tag)(?: +|\\n|/?>)|<(?:script|pre|style|textarea|!--)").replace("tag",v).getRegex()},Be={...X,html:h(`^ *(?:comment *(?:\\n|\\s*$)|<(tag)[\\s\\S]+?</\\1> *(?:\\n{2,}|\\s*$)|<tag(?:"[^"]*"|'[^']*'|\\s[^'"/>\\s]*)*?/?> *(?:\\n{2,}|\\s*$))`).replace("comment",K).replace(/tag/g,"(?!(?:a|em|strong|small|s|cite|q|dfn|abbr|data|time|code|var|samp|kbd|sub|sup|i|b|u|mark|ruby|rt|rp|bdi|bdo|span|br|wbr|ins|del|img)\\b)\\w+(?!:|[^\\w\\s@]*@)\\b").getRegex(),def:/^ *\[([^\]]+)\]: *<?([^\s>]+)>?(?: +(["(][^\n]+[")]))? *(?:\n+|$)/,heading:/^(#{1,6})(.*)(?:\n+|$)/,fences:I,lheading:/^(.+?)\n {0,3}(=+|-+) *(?:\n+|$)/,paragraph:h(Q).replace("hr",O).replace("heading",` *#{1,6} *[^
+]`).replace("lheading",oe).replace("|table","").replace("blockquote"," {0,3}>").replace("|fences","").replace("|list","").replace("|html","").replace("|tag","").getRegex()},qe=/^\\([!"#$%&'()*+,\-./:;<=>?@\[\]\\^_`{|}~])/,ve=/^(`+)([^`]|[^`][\s\S]*?[^`])\1(?!`)/,ae=/^( {2,}|\\)\n(?!\s*$)/,De=/^(`+|[^`])(?:(?= {2,}\n)|[\s\S]*?(?:(?=[\\<!\[`*_]|\b_|$)|[^ ](?= {2,}\n)))/,D=/[\p{P}\p{S}]/u,W=/[\s\p{P}\p{S}]/u,ce=/[^\s\p{P}\p{S}]/u,Ze=h(/^((?![*_])punctSpace)/,"u").replace(/punctSpace/g,W).getRegex(),pe=/(?!~)[\p{P}\p{S}]/u,Ge=/(?!~)[\s\p{P}\p{S}]/u,He=/(?:[^\s\p{P}\p{S}]|~)/u,Ne=/\[[^[\]]*?\]\((?:\\.|[^\\\(\)]|\((?:\\.|[^\\\(\)])*\))*\)|`[^`]*?`|<[^<>]*?>/g,ue=/^(?:\*+(?:((?!\*)punct)|[^\s*]))|^_+(?:((?!_)punct)|([^\s_]))/,je=h(ue,"u").replace(/punct/g,D).getRegex(),Fe=h(ue,"u").replace(/punct/g,pe).getRegex(),he="^[^_*]*?__[^_*]*?\\*[^_*]*?(?=__)|[^*]+(?=[^*])|(?!\\*)punct(\\*+)(?=[\\s]|$)|notPunctSpace(\\*+)(?!\\*)(?=punctSpace|$)|(?!\\*)punctSpace(\\*+)(?=notPunctSpace)|[\\s](\\*+)(?!\\*)(?=punct)|(?!\\*)punct(\\*+)(?!\\*)(?=punct)|notPunctSpace(\\*+)(?=notPunctSpace)",Qe=h(he,"gu").replace(/notPunctSpace/g,ce).replace(/punctSpace/g,W).replace(/punct/g,D).getRegex(),Ue=h(he,"gu").replace(/notPunctSpace/g,He).replace(/punctSpace/g,Ge).replace(/punct/g,pe).getRegex(),Ke=h("^[^_*]*?\\*\\*[^_*]*?_[^_*]*?(?=\\*\\*)|[^_]+(?=[^_])|(?!_)punct(_+)(?=[\\s]|$)|notPunctSpace(_+)(?!_)(?=punctSpace|$)|(?!_)punctSpace(_+)(?=notPunctSpace)|[\\s](_+)(?!_)(?=punct)|(?!_)punct(_+)(?!_)(?=punct)","gu").replace(/notPunctSpace/g,ce).replace(/punctSpace/g,W).replace(/punct/g,D).getRegex(),Xe=h(/\\(punct)/,"gu").replace(/punct/g,D).getRegex(),We=h(/^<(scheme:[^\s\x00-\x1f<>]*|email)>/).replace("scheme",/[a-zA-Z][a-zA-Z0-9+.-]{1,31}/).replace("email",/[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+(@)[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+(?![-_])/).getRegex(),Je=h(K).replace("(?:-->|$)","-->").getRegex(),Ve=h("^comment|^</[a-zA-Z][\\w:-]*\\s*>|^<[a-zA-Z][\\w-]*(?:attribute)*?\\s*/?>|^<\\?[\\s\\S]*?\\?>|^<![a-zA-Z]+\\s[\\s\\S]*?>|^<!\\[CDATA\\[[\\s\\S]*?\\]\\]>").replace("comment",Je).replace("attribute",/\s+[a-zA-Z:_][\w.:-]*(?:\s*=\s*"[^"]*"|\s*=\s*'[^']*'|\s*=\s*[^\s"'=<>`]+)?/).getRegex(),q=/(?:\[(?:\\.|[^\[\]\\])*\]|\\.|`[^`]*`|[^\[\]\\`])*?/,Ye=h(/^!?\[(label)\]\(\s*(href)(?:(?:[ \t]*(?:\n[ \t]*)?)(title))?\s*\)/).replace("label",q).replace("href",/<(?:\\.|[^\n<>\\])+>|[^ \t\n\x00-\x1f]*/).replace("title",/"(?:\\"?|[^"\\])*"|'(?:\\'?|[^'\\])*'|\((?:\\\)?|[^)\\])*\)/).getRegex(),ke=h(/^!?\[(label)\]\[(ref)\]/).replace("label",q).replace("ref",U).getRegex(),ge=h(/^!?\[(ref)\](?:\[\])?/).replace("ref",U).getRegex(),et=h("reflink|nolink(?!\\()","g").replace("reflink",ke).replace("nolink",ge).getRegex(),J={_backpedal:I,anyPunctuation:Xe,autolink:We,blockSkip:Ne,br:ae,code:ve,del:I,emStrongLDelim:je,emStrongRDelimAst:Qe,emStrongRDelimUnd:Ke,escape:qe,link:Ye,nolink:ge,punctuation:Ze,reflink:ke,reflinkSearch:et,tag:Ve,text:De,url:I},tt={...J,link:h(/^!?\[(label)\]\((.*?)\)/).replace("label",q).getRegex(),reflink:h(/^!?\[(label)\]\s*\[([^\]]*)\]/).replace("label",q).getRegex()},j={...J,emStrongRDelimAst:Ue,emStrongLDelim:Fe,url:h(/^((?:ftp|https?):\/\/|www\.)(?:[a-zA-Z0-9\-]+\.?)+[^\s<]*|^email/,"i").replace("email",/[A-Za-z0-9._+-]+(@)[a-zA-Z0-9-_]+(?:\.[a-zA-Z0-9-_]*[a-zA-Z0-9])+(?![-_])/).getRegex(),_backpedal:/(?:[^?!.,:;*_'"~()&]+|\([^)]*\)|&(?![a-zA-Z0-9]+;$)|[?!.,:;*_'"~)]+(?!$))+/,del:/^(~~?)(?=[^\s~])((?:\\.|[^\\])*?(?:\\.|[^\s~\\]))\1(?=[^~]|$)/,text:/^([`~]+|[^`~])(?:(?= {2,}\n)|(?=[a-zA-Z0-9.!#$%&'*+\/=?_`{\|}~-]+@)|[\s\S]*?(?:(?=[\\<!\[`*~_]|\b_|https?:\/\/|ftp:\/\/|www\.|$)|[^ ](?= {2,}\n)|[^a-zA-Z0-9.!#$%&'*+\/=?_`{\|}~-](?=[a-zA-Z0-9.!#$%&'*+\/=?_`{\|}~-]+@)))/},nt={...j,br:h(ae).replace("{2,}","*").getRegex(),text:h(j.text).replace("\\b_","\\b_| {2,}\\n").replace(/\{2,\}/g,"*").getRegex()},B={normal:X,gfm:Oe,pedantic:Be},P={normal:J,gfm:j,breaks:nt,pedantic:tt};var st={"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"},fe=l=>st[l];function R(l,e){if(e){if(m.escapeTest.test(l))return l.replace(m.escapeReplace,fe)}else if(m.escapeTestNoEncode.test(l))return l.replace(m.escapeReplaceNoEncode,fe);return l}function V(l){try{l=encodeURI(l).replace(m.percentDecode,"%")}catch{return null}return l}function Y(l,e){let t=l.replace(m.findPipe,(i,r,o)=>{let a=!1,c=r;for(;--c>=0&&o[c]==="\\";)a=!a;return a?"|":" |"}),n=t.split(m.splitPipe),s=0;if(n[0].trim()||n.shift(),n.length>0&&!n.at(-1)?.trim()&&n.pop(),e)if(n.length>e)n.splice(e);else for(;n.length<e;)n.push("");for(;s<n.length;s++)n[s]=n[s].trim().replace(m.slashPipe,"|");return n}function A(l,e,t){let n=l.length;if(n===0)return"";let s=0;for(;s<n;){let i=l.charAt(n-s-1);if(i===e&&!t)s++;else if(i!==e&&t)s++;else break}return l.slice(0,n-s)}function de(l,e){if(l.indexOf(e[1])===-1)return-1;let t=0;for(let n=0;n<l.length;n++)if(l[n]==="\\")n++;else if(l[n]===e[0])t++;else if(l[n]===e[1]&&(t--,t<0))return n;return t>0?-2:-1}function me(l,e,t,n,s){let i=e.href,r=e.title||null,o=l[1].replace(s.other.outputLinkReplace,"$1");n.state.inLink=!0;let a={type:l[0].charAt(0)==="!"?"image":"link",raw:t,href:i,title:r,text:o,tokens:n.inlineTokens(o)};return n.state.inLink=!1,a}function rt(l,e,t){let n=l.match(t.other.indentCodeCompensation);if(n===null)return e;let s=n[1];return e.split(`
+`).map(i=>{let r=i.match(t.other.beginningSpace);if(r===null)return i;let[o]=r;return o.length>=s.length?i.slice(s.length):i}).join(`
+`)}var S=class{options;rules;lexer;constructor(e){this.options=e||w}space(e){let t=this.rules.block.newline.exec(e);if(t&&t[0].length>0)return{type:"space",raw:t[0]}}code(e){let t=this.rules.block.code.exec(e);if(t){let n=t[0].replace(this.rules.other.codeRemoveIndent,"");return{type:"code",raw:t[0],codeBlockStyle:"indented",text:this.options.pedantic?n:A(n,`
+`)}}}fences(e){let t=this.rules.block.fences.exec(e);if(t){let n=t[0],s=rt(n,t[3]||"",this.rules);return{type:"code",raw:n,lang:t[2]?t[2].trim().replace(this.rules.inline.anyPunctuation,"$1"):t[2],text:s}}}heading(e){let t=this.rules.block.heading.exec(e);if(t){let n=t[2].trim();if(this.rules.other.endingHash.test(n)){let s=A(n,"#");(this.options.pedantic||!s||this.rules.other.endingSpaceChar.test(s))&&(n=s.trim())}return{type:"heading",raw:t[0],depth:t[1].length,text:n,tokens:this.lexer.inline(n)}}}hr(e){let t=this.rules.block.hr.exec(e);if(t)return{type:"hr",raw:A(t[0],`
+`)}}blockquote(e){let t=this.rules.block.blockquote.exec(e);if(t){let n=A(t[0],`
+`).split(`
+`),s="",i="",r=[];for(;n.length>0;){let o=!1,a=[],c;for(c=0;c<n.length;c++)if(this.rules.other.blockquoteStart.test(n[c]))a.push(n[c]),o=!0;else if(!o)a.push(n[c]);else break;n=n.slice(c);let p=a.join(`
+`),u=p.replace(this.rules.other.blockquoteSetextReplace,`
+    $1`).replace(this.rules.other.blockquoteSetextReplace2,"");s=s?`${s}
+${p}`:p,i=i?`${i}
+${u}`:u;let d=this.lexer.state.top;if(this.lexer.state.top=!0,this.lexer.blockTokens(u,r,!0),this.lexer.state.top=d,n.length===0)break;let g=r.at(-1);if(g?.type==="code")break;if(g?.type==="blockquote"){let T=g,f=T.raw+`
+`+n.join(`
+`),y=this.blockquote(f);r[r.length-1]=y,s=s.substring(0,s.length-T.raw.length)+y.raw,i=i.substring(0,i.length-T.text.length)+y.text;break}else if(g?.type==="list"){let T=g,f=T.raw+`
+`+n.join(`
+`),y=this.list(f);r[r.length-1]=y,s=s.substring(0,s.length-g.raw.length)+y.raw,i=i.substring(0,i.length-T.raw.length)+y.raw,n=f.substring(r.at(-1).raw.length).split(`
+`);continue}}return{type:"blockquote",raw:s,tokens:r,text:i}}}list(e){let t=this.rules.block.list.exec(e);if(t){let n=t[1].trim(),s=n.length>1,i={type:"list",raw:"",ordered:s,start:s?+n.slice(0,-1):"",loose:!1,items:[]};n=s?`\\d{1,9}\\${n.slice(-1)}`:`\\${n}`,this.options.pedantic&&(n=s?n:"[*+-]");let r=this.rules.other.listItemRegex(n),o=!1;for(;e;){let c=!1,p="",u="";if(!(t=r.exec(e))||this.rules.block.hr.test(e))break;p=t[0],e=e.substring(p.length);let d=t[2].split(`
+`,1)[0].replace(this.rules.other.listReplaceTabs,Z=>" ".repeat(3*Z.length)),g=e.split(`
+`,1)[0],T=!d.trim(),f=0;if(this.options.pedantic?(f=2,u=d.trimStart()):T?f=t[1].length+1:(f=t[2].search(this.rules.other.nonSpaceChar),f=f>4?1:f,u=d.slice(f),f+=t[1].length),T&&this.rules.other.blankLine.test(g)&&(p+=g+`
+`,e=e.substring(g.length+1),c=!0),!c){let Z=this.rules.other.nextBulletRegex(f),te=this.rules.other.hrRegex(f),ne=this.rules.other.fencesBeginRegex(f),se=this.rules.other.headingBeginRegex(f),xe=this.rules.other.htmlBeginRegex(f);for(;e;){let G=e.split(`
+`,1)[0],C;if(g=G,this.options.pedantic?(g=g.replace(this.rules.other.listReplaceNesting,"  "),C=g):C=g.replace(this.rules.other.tabCharGlobal,"    "),ne.test(g)||se.test(g)||xe.test(g)||Z.test(g)||te.test(g))break;if(C.search(this.rules.other.nonSpaceChar)>=f||!g.trim())u+=`
+`+C.slice(f);else{if(T||d.replace(this.rules.other.tabCharGlobal,"    ").search(this.rules.other.nonSpaceChar)>=4||ne.test(d)||se.test(d)||te.test(d))break;u+=`
+`+g}!T&&!g.trim()&&(T=!0),p+=G+`
+`,e=e.substring(G.length+1),d=C.slice(f)}}i.loose||(o?i.loose=!0:this.rules.other.doubleBlankLine.test(p)&&(o=!0));let y=null,ee;this.options.gfm&&(y=this.rules.other.listIsTask.exec(u),y&&(ee=y[0]!=="[ ] ",u=u.replace(this.rules.other.listReplaceTask,""))),i.items.push({type:"list_item",raw:p,task:!!y,checked:ee,loose:!1,text:u,tokens:[]}),i.raw+=p}let a=i.items.at(-1);if(a)a.raw=a.raw.trimEnd(),a.text=a.text.trimEnd();else return;i.raw=i.raw.trimEnd();for(let c=0;c<i.items.length;c++)if(this.lexer.state.top=!1,i.items[c].tokens=this.lexer.blockTokens(i.items[c].text,[]),!i.loose){let p=i.items[c].tokens.filter(d=>d.type==="space"),u=p.length>0&&p.some(d=>this.rules.other.anyLine.test(d.raw));i.loose=u}if(i.loose)for(let c=0;c<i.items.length;c++)i.items[c].loose=!0;return i}}html(e){let t=this.rules.block.html.exec(e);if(t)return{type:"html",block:!0,raw:t[0],pre:t[1]==="pre"||t[1]==="script"||t[1]==="style",text:t[0]}}def(e){let t=this.rules.block.def.exec(e);if(t){let n=t[1].toLowerCase().replace(this.rules.other.multipleSpaceGlobal," "),s=t[2]?t[2].replace(this.rules.other.hrefBrackets,"$1").replace(this.rules.inline.anyPunctuation,"$1"):"",i=t[3]?t[3].substring(1,t[3].length-1).replace(this.rules.inline.anyPunctuation,"$1"):t[3];return{type:"def",tag:n,raw:t[0],href:s,title:i}}}table(e){let t=this.rules.block.table.exec(e);if(!t||!this.rules.other.tableDelimiter.test(t[2]))return;let n=Y(t[1]),s=t[2].replace(this.rules.other.tableAlignChars,"").split("|"),i=t[3]?.trim()?t[3].replace(this.rules.other.tableRowBlankLine,"").split(`
+`):[],r={type:"table",raw:t[0],header:[],align:[],rows:[]};if(n.length===s.length){for(let o of s)this.rules.other.tableAlignRight.test(o)?r.align.push("right"):this.rules.other.tableAlignCenter.test(o)?r.align.push("center"):this.rules.other.tableAlignLeft.test(o)?r.align.push("left"):r.align.push(null);for(let o=0;o<n.length;o++)r.header.push({text:n[o],tokens:this.lexer.inline(n[o]),header:!0,align:r.align[o]});for(let o of i)r.rows.push(Y(o,r.header.length).map((a,c)=>({text:a,tokens:this.lexer.inline(a),header:!1,align:r.align[c]})));return r}}lheading(e){let t=this.rules.block.lheading.exec(e);if(t)return{type:"heading",raw:t[0],depth:t[2].charAt(0)==="="?1:2,text:t[1],tokens:this.lexer.inline(t[1])}}paragraph(e){let t=this.rules.block.paragraph.exec(e);if(t){let n=t[1].charAt(t[1].length-1)===`
+`?t[1].slice(0,-1):t[1];return{type:"paragraph",raw:t[0],text:n,tokens:this.lexer.inline(n)}}}text(e){let t=this.rules.block.text.exec(e);if(t)return{type:"text",raw:t[0],text:t[0],tokens:this.lexer.inline(t[0])}}escape(e){let t=this.rules.inline.escape.exec(e);if(t)return{type:"escape",raw:t[0],text:t[1]}}tag(e){let t=this.rules.inline.tag.exec(e);if(t)return!this.lexer.state.inLink&&this.rules.other.startATag.test(t[0])?this.lexer.state.inLink=!0:this.lexer.state.inLink&&this.rules.other.endATag.test(t[0])&&(this.lexer.state.inLink=!1),!this.lexer.state.inRawBlock&&this.rules.other.startPreScriptTag.test(t[0])?this.lexer.state.inRawBlock=!0:this.lexer.state.inRawBlock&&this.rules.other.endPreScriptTag.test(t[0])&&(this.lexer.state.inRawBlock=!1),{type:"html",raw:t[0],inLink:this.lexer.state.inLink,inRawBlock:this.lexer.state.inRawBlock,block:!1,text:t[0]}}link(e){let t=this.rules.inline.link.exec(e);if(t){let n=t[2].trim();if(!this.options.pedantic&&this.rules.other.startAngleBracket.test(n)){if(!this.rules.other.endAngleBracket.test(n))return;let r=A(n.slice(0,-1),"\\");if((n.length-r.length)%2===0)return}else{let r=de(t[2],"()");if(r===-2)return;if(r>-1){let a=(t[0].indexOf("!")===0?5:4)+t[1].length+r;t[2]=t[2].substring(0,r),t[0]=t[0].substring(0,a).trim(),t[3]=""}}let s=t[2],i="";if(this.options.pedantic){let r=this.rules.other.pedanticHrefTitle.exec(s);r&&(s=r[1],i=r[3])}else i=t[3]?t[3].slice(1,-1):"";return s=s.trim(),this.rules.other.startAngleBracket.test(s)&&(this.options.pedantic&&!this.rules.other.endAngleBracket.test(n)?s=s.slice(1):s=s.slice(1,-1)),me(t,{href:s&&s.replace(this.rules.inline.anyPunctuation,"$1"),title:i&&i.replace(this.rules.inline.anyPunctuation,"$1")},t[0],this.lexer,this.rules)}}reflink(e,t){let n;if((n=this.rules.inline.reflink.exec(e))||(n=this.rules.inline.nolink.exec(e))){let s=(n[2]||n[1]).replace(this.rules.other.multipleSpaceGlobal," "),i=t[s.toLowerCase()];if(!i){let r=n[0].charAt(0);return{type:"text",raw:r,text:r}}return me(n,i,n[0],this.lexer,this.rules)}}emStrong(e,t,n=""){let s=this.rules.inline.emStrongLDelim.exec(e);if(!s||s[3]&&n.match(this.rules.other.unicodeAlphaNumeric))return;if(!(s[1]||s[2]||"")||!n||this.rules.inline.punctuation.exec(n)){let r=[...s[0]].length-1,o,a,c=r,p=0,u=s[0][0]==="*"?this.rules.inline.emStrongRDelimAst:this.rules.inline.emStrongRDelimUnd;for(u.lastIndex=0,t=t.slice(-1*e.length+r);(s=u.exec(t))!=null;){if(o=s[1]||s[2]||s[3]||s[4]||s[5]||s[6],!o)continue;if(a=[...o].length,s[3]||s[4]){c+=a;continue}else if((s[5]||s[6])&&r%3&&!((r+a)%3)){p+=a;continue}if(c-=a,c>0)continue;a=Math.min(a,a+c+p);let d=[...s[0]][0].length,g=e.slice(0,r+s.index+d+a);if(Math.min(r,a)%2){let f=g.slice(1,-1);return{type:"em",raw:g,text:f,tokens:this.lexer.inlineTokens(f)}}let T=g.slice(2,-2);return{type:"strong",raw:g,text:T,tokens:this.lexer.inlineTokens(T)}}}}codespan(e){let t=this.rules.inline.code.exec(e);if(t){let n=t[2].replace(this.rules.other.newLineCharGlobal," "),s=this.rules.other.nonSpaceChar.test(n),i=this.rules.other.startingSpaceChar.test(n)&&this.rules.other.endingSpaceChar.test(n);return s&&i&&(n=n.substring(1,n.length-1)),{type:"codespan",raw:t[0],text:n}}}br(e){let t=this.rules.inline.br.exec(e);if(t)return{type:"br",raw:t[0]}}del(e){let t=this.rules.inline.del.exec(e);if(t)return{type:"del",raw:t[0],text:t[2],tokens:this.lexer.inlineTokens(t[2])}}autolink(e){let t=this.rules.inline.autolink.exec(e);if(t){let n,s;return t[2]==="@"?(n=t[1],s="mailto:"+n):(n=t[1],s=n),{type:"link",raw:t[0],text:n,href:s,tokens:[{type:"text",raw:n,text:n}]}}}url(e){let t;if(t=this.rules.inline.url.exec(e)){let n,s;if(t[2]==="@")n=t[0],s="mailto:"+n;else{let i;do i=t[0],t[0]=this.rules.inline._backpedal.exec(t[0])?.[0]??"";while(i!==t[0]);n=t[0],t[1]==="www."?s="http://"+t[0]:s=t[0]}return{type:"link",raw:t[0],text:n,href:s,tokens:[{type:"text",raw:n,text:n}]}}}inlineText(e){let t=this.rules.inline.text.exec(e);if(t){let n=this.lexer.state.inRawBlock;return{type:"text",raw:t[0],text:t[0],escaped:n}}}};var x=class l{tokens;options;state;tokenizer;inlineQueue;constructor(e){this.tokens=[],this.tokens.links=Object.create(null),this.options=e||w,this.options.tokenizer=this.options.tokenizer||new S,this.tokenizer=this.options.tokenizer,this.tokenizer.options=this.options,this.tokenizer.lexer=this,this.inlineQueue=[],this.state={inLink:!1,inRawBlock:!1,top:!0};let t={other:m,block:B.normal,inline:P.normal};this.options.pedantic?(t.block=B.pedantic,t.inline=P.pedantic):this.options.gfm&&(t.block=B.gfm,this.options.breaks?t.inline=P.breaks:t.inline=P.gfm),this.tokenizer.rules=t}static get rules(){return{block:B,inline:P}}static lex(e,t){return new l(t).lex(e)}static lexInline(e,t){return new l(t).inlineTokens(e)}lex(e){e=e.replace(m.carriageReturn,`
+`),this.blockTokens(e,this.tokens);for(let t=0;t<this.inlineQueue.length;t++){let n=this.inlineQueue[t];this.inlineTokens(n.src,n.tokens)}return this.inlineQueue=[],this.tokens}blockTokens(e,t=[],n=!1){for(this.options.pedantic&&(e=e.replace(m.tabCharGlobal,"    ").replace(m.spaceLine,""));e;){let s;if(this.options.extensions?.block?.some(r=>(s=r.call({lexer:this},e,t))?(e=e.substring(s.raw.length),t.push(s),!0):!1))continue;if(s=this.tokenizer.space(e)){e=e.substring(s.raw.length);let r=t.at(-1);s.raw.length===1&&r!==void 0?r.raw+=`
+`:t.push(s);continue}if(s=this.tokenizer.code(e)){e=e.substring(s.raw.length);let r=t.at(-1);r?.type==="paragraph"||r?.type==="text"?(r.raw+=`
+`+s.raw,r.text+=`
+`+s.text,this.inlineQueue.at(-1).src=r.text):t.push(s);continue}if(s=this.tokenizer.fences(e)){e=e.substring(s.raw.length),t.push(s);continue}if(s=this.tokenizer.heading(e)){e=e.substring(s.raw.length),t.push(s);continue}if(s=this.tokenizer.hr(e)){e=e.substring(s.raw.length),t.push(s);continue}if(s=this.tokenizer.blockquote(e)){e=e.substring(s.raw.length),t.push(s);continue}if(s=this.tokenizer.list(e)){e=e.substring(s.raw.length),t.push(s);continue}if(s=this.tokenizer.html(e)){e=e.substring(s.raw.length),t.push(s);continue}if(s=this.tokenizer.def(e)){e=e.substring(s.raw.length);let r=t.at(-1);r?.type==="paragraph"||r?.type==="text"?(r.raw+=`
+`+s.raw,r.text+=`
+`+s.raw,this.inlineQueue.at(-1).src=r.text):this.tokens.links[s.tag]||(this.tokens.links[s.tag]={href:s.href,title:s.title});continue}if(s=this.tokenizer.table(e)){e=e.substring(s.raw.length),t.push(s);continue}if(s=this.tokenizer.lheading(e)){e=e.substring(s.raw.length),t.push(s);continue}let i=e;if(this.options.extensions?.startBlock){let r=1/0,o=e.slice(1),a;this.options.extensions.startBlock.forEach(c=>{a=c.call({lexer:this},o),typeof a=="number"&&a>=0&&(r=Math.min(r,a))}),r<1/0&&r>=0&&(i=e.substring(0,r+1))}if(this.state.top&&(s=this.tokenizer.paragraph(i))){let r=t.at(-1);n&&r?.type==="paragraph"?(r.raw+=`
+`+s.raw,r.text+=`
+`+s.text,this.inlineQueue.pop(),this.inlineQueue.at(-1).src=r.text):t.push(s),n=i.length!==e.length,e=e.substring(s.raw.length);continue}if(s=this.tokenizer.text(e)){e=e.substring(s.raw.length);let r=t.at(-1);r?.type==="text"?(r.raw+=`
+`+s.raw,r.text+=`
+`+s.text,this.inlineQueue.pop(),this.inlineQueue.at(-1).src=r.text):t.push(s);continue}if(e){let r="Infinite loop on byte: "+e.charCodeAt(0);if(this.options.silent){console.error(r);break}else throw new Error(r)}}return this.state.top=!0,t}inline(e,t=[]){return this.inlineQueue.push({src:e,tokens:t}),t}inlineTokens(e,t=[]){let n=e,s=null;if(this.tokens.links){let o=Object.keys(this.tokens.links);if(o.length>0)for(;(s=this.tokenizer.rules.inline.reflinkSearch.exec(n))!=null;)o.includes(s[0].slice(s[0].lastIndexOf("[")+1,-1))&&(n=n.slice(0,s.index)+"["+"a".repeat(s[0].length-2)+"]"+n.slice(this.tokenizer.rules.inline.reflinkSearch.lastIndex))}for(;(s=this.tokenizer.rules.inline.anyPunctuation.exec(n))!=null;)n=n.slice(0,s.index)+"++"+n.slice(this.tokenizer.rules.inline.anyPunctuation.lastIndex);for(;(s=this.tokenizer.rules.inline.blockSkip.exec(n))!=null;)n=n.slice(0,s.index)+"["+"a".repeat(s[0].length-2)+"]"+n.slice(this.tokenizer.rules.inline.blockSkip.lastIndex);let i=!1,r="";for(;e;){i||(r=""),i=!1;let o;if(this.options.extensions?.inline?.some(c=>(o=c.call({lexer:this},e,t))?(e=e.substring(o.raw.length),t.push(o),!0):!1))continue;if(o=this.tokenizer.escape(e)){e=e.substring(o.raw.length),t.push(o);continue}if(o=this.tokenizer.tag(e)){e=e.substring(o.raw.length),t.push(o);continue}if(o=this.tokenizer.link(e)){e=e.substring(o.raw.length),t.push(o);continue}if(o=this.tokenizer.reflink(e,this.tokens.links)){e=e.substring(o.raw.length);let c=t.at(-1);o.type==="text"&&c?.type==="text"?(c.raw+=o.raw,c.text+=o.text):t.push(o);continue}if(o=this.tokenizer.emStrong(e,n,r)){e=e.substring(o.raw.length),t.push(o);continue}if(o=this.tokenizer.codespan(e)){e=e.substring(o.raw.length),t.push(o);continue}if(o=this.tokenizer.br(e)){e=e.substring(o.raw.length),t.push(o);continue}if(o=this.tokenizer.del(e)){e=e.substring(o.raw.length),t.push(o);continue}if(o=this.tokenizer.autolink(e)){e=e.substring(o.raw.length),t.push(o);continue}if(!this.state.inLink&&(o=this.tokenizer.url(e))){e=e.substring(o.raw.length),t.push(o);continue}let a=e;if(this.options.extensions?.startInline){let c=1/0,p=e.slice(1),u;this.options.extensions.startInline.forEach(d=>{u=d.call({lexer:this},p),typeof u=="number"&&u>=0&&(c=Math.min(c,u))}),c<1/0&&c>=0&&(a=e.substring(0,c+1))}if(o=this.tokenizer.inlineText(a)){e=e.substring(o.raw.length),o.raw.slice(-1)!=="_"&&(r=o.raw.slice(-1)),i=!0;let c=t.at(-1);c?.type==="text"?(c.raw+=o.raw,c.text+=o.text):t.push(o);continue}if(e){let c="Infinite loop on byte: "+e.charCodeAt(0);if(this.options.silent){console.error(c);break}else throw new Error(c)}}return t}};var $=class{options;parser;constructor(e){this.options=e||w}space(e){return""}code({text:e,lang:t,escaped:n}){let s=(t||"").match(m.notSpaceStart)?.[0],i=e.replace(m.endingNewline,"")+`
+`;return s?'<pre><code class="language-'+R(s)+'">'+(n?i:R(i,!0))+`</code></pre>
+`:"<pre><code>"+(n?i:R(i,!0))+`</code></pre>
+`}blockquote({tokens:e}){return`<blockquote>
+${this.parser.parse(e)}</blockquote>
+`}html({text:e}){return e}heading({tokens:e,depth:t}){return`<h${t}>${this.parser.parseInline(e)}</h${t}>
+`}hr(e){return`<hr>
+`}list(e){let t=e.ordered,n=e.start,s="";for(let o=0;o<e.items.length;o++){let a=e.items[o];s+=this.listitem(a)}let i=t?"ol":"ul",r=t&&n!==1?' start="'+n+'"':"";return"<"+i+r+`>
+`+s+"</"+i+`>
+`}listitem(e){let t="";if(e.task){let n=this.checkbox({checked:!!e.checked});e.loose?e.tokens[0]?.type==="paragraph"?(e.tokens[0].text=n+" "+e.tokens[0].text,e.tokens[0].tokens&&e.tokens[0].tokens.length>0&&e.tokens[0].tokens[0].type==="text"&&(e.tokens[0].tokens[0].text=n+" "+R(e.tokens[0].tokens[0].text),e.tokens[0].tokens[0].escaped=!0)):e.tokens.unshift({type:"text",raw:n+" ",text:n+" ",escaped:!0}):t+=n+" "}return t+=this.parser.parse(e.tokens,!!e.loose),`<li>${t}</li>
+`}checkbox({checked:e}){return"<input "+(e?'checked="" ':"")+'disabled="" type="checkbox">'}paragraph({tokens:e}){return`<p>${this.parser.parseInline(e)}</p>
+`}table(e){let t="",n="";for(let i=0;i<e.header.length;i++)n+=this.tablecell(e.header[i]);t+=this.tablerow({text:n});let s="";for(let i=0;i<e.rows.length;i++){let r=e.rows[i];n="";for(let o=0;o<r.length;o++)n+=this.tablecell(r[o]);s+=this.tablerow({text:n})}return s&&(s=`<tbody>${s}</tbody>`),`<table>
+<thead>
+`+t+`</thead>
+`+s+`</table>
+`}tablerow({text:e}){return`<tr>
+${e}</tr>
+`}tablecell(e){let t=this.parser.parseInline(e.tokens),n=e.header?"th":"td";return(e.align?`<${n} align="${e.align}">`:`<${n}>`)+t+`</${n}>
+`}strong({tokens:e}){return`<strong>${this.parser.parseInline(e)}</strong>`}em({tokens:e}){return`<em>${this.parser.parseInline(e)}</em>`}codespan({text:e}){return`<code>${R(e,!0)}</code>`}br(e){return"<br>"}del({tokens:e}){return`<del>${this.parser.parseInline(e)}</del>`}link({href:e,title:t,tokens:n}){let s=this.parser.parseInline(n),i=V(e);if(i===null)return s;e=i;let r='<a href="'+e+'"';return t&&(r+=' title="'+R(t)+'"'),r+=">"+s+"</a>",r}image({href:e,title:t,text:n,tokens:s}){s&&(n=this.parser.parseInline(s,this.parser.textRenderer));let i=V(e);if(i===null)return R(n);e=i;let r=`<img src="${e}" alt="${n}"`;return t&&(r+=` title="${R(t)}"`),r+=">",r}text(e){return"tokens"in e&&e.tokens?this.parser.parseInline(e.tokens):"escaped"in e&&e.escaped?e.text:R(e.text)}};var _=class{strong({text:e}){return e}em({text:e}){return e}codespan({text:e}){return e}del({text:e}){return e}html({text:e}){return e}text({text:e}){return e}link({text:e}){return""+e}image({text:e}){return""+e}br(){return""}};var b=class l{options;renderer;textRenderer;constructor(e){this.options=e||w,this.options.renderer=this.options.renderer||new $,this.renderer=this.options.renderer,this.renderer.options=this.options,this.renderer.parser=this,this.textRenderer=new _}static parse(e,t){return new l(t).parse(e)}static parseInline(e,t){return new l(t).parseInline(e)}parse(e,t=!0){let n="";for(let s=0;s<e.length;s++){let i=e[s];if(this.options.extensions?.renderers?.[i.type]){let o=i,a=this.options.extensions.renderers[o.type].call({parser:this},o);if(a!==!1||!["space","hr","heading","code","table","blockquote","list","html","paragraph","text"].includes(o.type)){n+=a||"";continue}}let r=i;switch(r.type){case"space":{n+=this.renderer.space(r);continue}case"hr":{n+=this.renderer.hr(r);continue}case"heading":{n+=this.renderer.heading(r);continue}case"code":{n+=this.renderer.code(r);continue}case"table":{n+=this.renderer.table(r);continue}case"blockquote":{n+=this.renderer.blockquote(r);continue}case"list":{n+=this.renderer.list(r);continue}case"html":{n+=this.renderer.html(r);continue}case"paragraph":{n+=this.renderer.paragraph(r);continue}case"text":{let o=r,a=this.renderer.text(o);for(;s+1<e.length&&e[s+1].type==="text";)o=e[++s],a+=`
+`+this.renderer.text(o);t?n+=this.renderer.paragraph({type:"paragraph",raw:a,text:a,tokens:[{type:"text",raw:a,text:a,escaped:!0}]}):n+=a;continue}default:{let o='Token with "'+r.type+'" type was not found.';if(this.options.silent)return console.error(o),"";throw new Error(o)}}}return n}parseInline(e,t=this.renderer){let n="";for(let s=0;s<e.length;s++){let i=e[s];if(this.options.extensions?.renderers?.[i.type]){let o=this.options.extensions.renderers[i.type].call({parser:this},i);if(o!==!1||!["escape","html","link","image","strong","em","codespan","br","del","text"].includes(i.type)){n+=o||"";continue}}let r=i;switch(r.type){case"escape":{n+=t.text(r);break}case"html":{n+=t.html(r);break}case"link":{n+=t.link(r);break}case"image":{n+=t.image(r);break}case"strong":{n+=t.strong(r);break}case"em":{n+=t.em(r);break}case"codespan":{n+=t.codespan(r);break}case"br":{n+=t.br(r);break}case"del":{n+=t.del(r);break}case"text":{n+=t.text(r);break}default:{let o='Token with "'+r.type+'" type was not found.';if(this.options.silent)return console.error(o),"";throw new Error(o)}}}return n}};var L=class{options;block;constructor(e){this.options=e||w}static passThroughHooks=new Set(["preprocess","postprocess","processAllTokens"]);preprocess(e){return e}postprocess(e){return e}processAllTokens(e){return e}provideLexer(){return this.block?x.lex:x.lexInline}provideParser(){return this.block?b.parse:b.parseInline}};var E=class{defaults=z();options=this.setOptions;parse=this.parseMarkdown(!0);parseInline=this.parseMarkdown(!1);Parser=b;Renderer=$;TextRenderer=_;Lexer=x;Tokenizer=S;Hooks=L;constructor(...e){this.use(...e)}walkTokens(e,t){let n=[];for(let s of e)switch(n=n.concat(t.call(this,s)),s.type){case"table":{let i=s;for(let r of i.header)n=n.concat(this.walkTokens(r.tokens,t));for(let r of i.rows)for(let o of r)n=n.concat(this.walkTokens(o.tokens,t));break}case"list":{let i=s;n=n.concat(this.walkTokens(i.items,t));break}default:{let i=s;this.defaults.extensions?.childTokens?.[i.type]?this.defaults.extensions.childTokens[i.type].forEach(r=>{let o=i[r].flat(1/0);n=n.concat(this.walkTokens(o,t))}):i.tokens&&(n=n.concat(this.walkTokens(i.tokens,t)))}}return n}use(...e){let t=this.defaults.extensions||{renderers:{},childTokens:{}};return e.forEach(n=>{let s={...n};if(s.async=this.defaults.async||s.async||!1,n.extensions&&(n.extensions.forEach(i=>{if(!i.name)throw new Error("extension name required");if("renderer"in i){let r=t.renderers[i.name];r?t.renderers[i.name]=function(...o){let a=i.renderer.apply(this,o);return a===!1&&(a=r.apply(this,o)),a}:t.renderers[i.name]=i.renderer}if("tokenizer"in i){if(!i.level||i.level!=="block"&&i.level!=="inline")throw new Error("extension level must be 'block' or 'inline'");let r=t[i.level];r?r.unshift(i.tokenizer):t[i.level]=[i.tokenizer],i.start&&(i.level==="block"?t.startBlock?t.startBlock.push(i.start):t.startBlock=[i.start]:i.level==="inline"&&(t.startInline?t.startInline.push(i.start):t.startInline=[i.start]))}"childTokens"in i&&i.childTokens&&(t.childTokens[i.name]=i.childTokens)}),s.extensions=t),n.renderer){let i=this.defaults.renderer||new $(this.defaults);for(let r in n.renderer){if(!(r in i))throw new Error(`renderer '${r}' does not exist`);if(["options","parser"].includes(r))continue;let o=r,a=n.renderer[o],c=i[o];i[o]=(...p)=>{let u=a.apply(i,p);return u===!1&&(u=c.apply(i,p)),u||""}}s.renderer=i}if(n.tokenizer){let i=this.defaults.tokenizer||new S(this.defaults);for(let r in n.tokenizer){if(!(r in i))throw new Error(`tokenizer '${r}' does not exist`);if(["options","rules","lexer"].includes(r))continue;let o=r,a=n.tokenizer[o],c=i[o];i[o]=(...p)=>{let u=a.apply(i,p);return u===!1&&(u=c.apply(i,p)),u}}s.tokenizer=i}if(n.hooks){let i=this.defaults.hooks||new L;for(let r in n.hooks){if(!(r in i))throw new Error(`hook '${r}' does not exist`);if(["options","block"].includes(r))continue;let o=r,a=n.hooks[o],c=i[o];L.passThroughHooks.has(r)?i[o]=p=>{if(this.defaults.async)return Promise.resolve(a.call(i,p)).then(d=>c.call(i,d));let u=a.call(i,p);return c.call(i,u)}:i[o]=(...p)=>{let u=a.apply(i,p);return u===!1&&(u=c.apply(i,p)),u}}s.hooks=i}if(n.walkTokens){let i=this.defaults.walkTokens,r=n.walkTokens;s.walkTokens=function(o){let a=[];return a.push(r.call(this,o)),i&&(a=a.concat(i.call(this,o))),a}}this.defaults={...this.defaults,...s}}),this}setOptions(e){return this.defaults={...this.defaults,...e},this}lexer(e,t){return x.lex(e,t??this.defaults)}parser(e,t){return b.parse(e,t??this.defaults)}parseMarkdown(e){return(n,s)=>{let i={...s},r={...this.defaults,...i},o=this.onError(!!r.silent,!!r.async);if(this.defaults.async===!0&&i.async===!1)return o(new Error("marked(): The async option was set to true by an extension. Remove async: false from the parse options object to return a Promise."));if(typeof n>"u"||n===null)return o(new Error("marked(): input parameter is undefined or null"));if(typeof n!="string")return o(new Error("marked(): input parameter is of type "+Object.prototype.toString.call(n)+", string expected"));r.hooks&&(r.hooks.options=r,r.hooks.block=e);let a=r.hooks?r.hooks.provideLexer():e?x.lex:x.lexInline,c=r.hooks?r.hooks.provideParser():e?b.parse:b.parseInline;if(r.async)return Promise.resolve(r.hooks?r.hooks.preprocess(n):n).then(p=>a(p,r)).then(p=>r.hooks?r.hooks.processAllTokens(p):p).then(p=>r.walkTokens?Promise.all(this.walkTokens(p,r.walkTokens)).then(()=>p):p).then(p=>c(p,r)).then(p=>r.hooks?r.hooks.postprocess(p):p).catch(o);try{r.hooks&&(n=r.hooks.preprocess(n));let p=a(n,r);r.hooks&&(p=r.hooks.processAllTokens(p)),r.walkTokens&&this.walkTokens(p,r.walkTokens);let u=c(p,r);return r.hooks&&(u=r.hooks.postprocess(u)),u}catch(p){return o(p)}}}onError(e,t){return n=>{if(n.message+=`
+Please report this to https://github.com/markedjs/marked.`,e){let s="<p>An error occurred:</p><pre>"+R(n.message+"",!0)+"</pre>";return t?Promise.resolve(s):s}if(t)return Promise.reject(n);throw n}}};var M=new E;function k(l,e){return M.parse(l,e)}k.options=k.setOptions=function(l){return M.setOptions(l),k.defaults=M.defaults,N(k.defaults),k};k.getDefaults=z;k.defaults=w;k.use=function(...l){return M.use(...l),k.defaults=M.defaults,N(k.defaults),k};k.walkTokens=function(l,e){return M.walkTokens(l,e)};k.parseInline=M.parseInline;k.Parser=b;k.parser=b.parse;k.Renderer=$;k.TextRenderer=_;k.Lexer=x;k.lexer=x.lex;k.Tokenizer=S;k.Hooks=L;k.parse=k;var it=k.options,ot=k.setOptions,lt=k.use,at=k.walkTokens,ct=k.parseInline,pt=k,ut=b.parse,ht=x.lex;
+
+if(__exports != exports)module.exports = exports;return module.exports}));
+
+</script>
+<script data-reader>
+/* spec-kit v5 — spec reader. Renders the embedded markdown (#spec-md) with marked, assigns
+   deep-link ids, builds the TOC, and highlights the :target.
+   ids assigned:
+     headings   → GitHub-style slug of the text, PLUS an alias  s<number> for numbered headings
+                  ("### 3.2 Piece A" → #s3-2, "## 1. Problem" → #s1)
+     tokens     → the first <strong> whose text starts with P0a / D12 / Q6 gets id="P0a" etc.
+   So a companion page can link to  SPEC.html#s3-2 , #D12 , #P0a , #Q6 . */
+(function(){
+  const raw=document.getElementById('spec-md').textContent.replace(/<\\\/script/g,'</script').trim();
+  const body=document.getElementById('spec-body');
+  marked.use({gfm:true,breaks:false});
+  // a run of **Label:** lines (the spec header block) is meant to stack: give each a hard break
+  const md=raw.replace(/^(\*\*[^*\n]+:\*\*[^\n]*)$/gm,'$1  ');
+  body.innerHTML=marked.parse(md);
+  const used=new Set();
+  const slug=t=>t.toLowerCase().replace(/[^\w\s-]/g,'').trim().replace(/\s+/g,'-');
+  const uniq=id=>{let i=id,n=1;while(used.has(i))i=id+'-'+(n++);used.add(i);return i;};
+  // headings
+  body.querySelectorAll('h1,h2,h3,h4').forEach(h=>{
+    const text=h.textContent.trim();
+    h.id=uniq(slug(text));
+    const m=text.match(/^(\d+(?:\.\d+)*)\.?\s/);
+    if(m){const a=document.createElement('span');a.id=uniq('s'+m[1].replace(/\./g,'-'));a.className='anchor';h.before(a);}
+  });
+  // tokens: **D4.** / **P0a …** / **Q6.**
+  body.querySelectorAll('strong,b').forEach(s=>{
+    const m=s.textContent.trim().match(/^(P\d[a-z]?|D\d+|Q\d+)\b/);
+    if(m&&!used.has(m[1])){s.id=m[1];used.add(m[1]);s.classList.add('tok');}
+  });
+  // tables scroll instead of the page
+  body.querySelectorAll('table').forEach(t=>{t.classList.add('spectable');const w=document.createElement('div');w.className='spectable-scroll';t.before(w);w.appendChild(t);});
+  // title + meta
+  const h1=body.querySelector('h1'); if(h1){document.getElementById('reader-title').textContent=h1.textContent;document.title=h1.textContent;h1.remove();}
+  const status=raw.match(/\*\*Status:\*\*\s*([^\n]+)/),date=raw.match(/\*\*Date:\*\*\s*([^\n]+)/);
+  document.getElementById('reader-meta').textContent=[status&&status[1],date&&date[1]].filter(Boolean).join(' · ');
+  // TOC from h2/h3
+  const toc=document.getElementById('toc');
+  body.querySelectorAll('h2,h3').forEach(h=>{const a=document.createElement('a');a.href='#'+h.id;a.textContent=h.textContent;a.className='toc-'+h.tagName.toLowerCase();toc.appendChild(a);});
+  // sibling .md links → their reader pages
+  body.querySelectorAll('a[href$=".md"]').forEach(a=>{a.href=a.getAttribute('href').replace(/\.md$/,'.html');a.title='opens that spec\'s reader page (build it with inline-kit.py --spec)';});
+  // scroll to :target after ids exist
+  if(location.hash){const t=document.getElementById(decodeURIComponent(location.hash.slice(1)));if(t)t.scrollIntoView({block:'start'});}
+})();
+
+</script>
+</body>
+</html>
