@@ -420,7 +420,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 
 </style>
 </head>
-<body class="reader" data-back="architecture.html" data-spec-sha="57c70e9c9590a9ec">
+<body class="reader" data-back="architecture.html" data-spec-sha="c21a73a1c2f7499b">
 
 <header class="masthead">
   <div class="kicker">SPEC · READER</div>
@@ -760,8 +760,43 @@ persist:
 - **Q6 `1.1-inputs` with no question. RESOLVED from code.** Only open gates are reported (`conductor2/src/callback.rs:425`), so a `runner: none` step whose contract already passes opens no `runbook_hitl_questions` row.
 - **Q7 Inch-mark JSON. RESOLVED (default):** no tolerant-parse repair. A malformed `findings.json` resumes the session with the parse error, and `2.11-tool-usage` counts resumes per cell. Revisit only if cells exhaust `MAX_RETRIES` on parse errors.
 - **Q8 Legacy-trail readers.** The `audit-cc-run` skill and IG read `workflow_runs` / the `workflow-runs` bucket. They need a v2 path (the `runbook_runs` id + persisted prefix, including the D27 logs and D21 `tool-usage.json`) before legacy retires. v2 also asks whether anything reads `review_comments.agent_trace` (the column, not `output_json`), which v2 no longer writes (D30).
-- **Q9 Baseline facts `compare.ts` depends on (v2, unverified: no DB access in the auditing session).** (a) Are A (`41a49412`) and B (`196de05b`) both on sv `6b9b85ed` and the data PPv4 `b918e8c1` published? (b) Does `review_comments` hold a row for **every** item, including passes, or only for non-passing ones? If only non-passing, a missing item means pass, or the comparison reads the legacy `enriched-findings.json` from the `workflow-runs` bucket. (c) Which checklist version and bureau commit did each run against? v2 pins that commit's guides, and A-vs-B disagreements caused by different guide text are set aside. (d) What `runs` count did each use? A `runs=3` review can say `uncertain`, which a `runs=1` v2 run can't, so either match the count or treat `uncertain` as a wildcard. (e) What `effort` did each run with (from Q4)?
+- **Q9 Baseline facts `compare.ts` depends on. PARTLY ANSWERED.** (a) Will confirmed on 2026-10-02 that both baselines are on sv `6b9b85ed-e992-4906-a222-b24ee836910c`. (b)–(e) need DB reads, handed off to a Supabase-authenticated session in §11.1.
 - **Q10 The judging agent vs rule 19. RESOLVED → D31.** `2.1-adjudicate` must read prior Noetic output (the legacy reviews), so its prompt overrides rule 19 the same way as Q1.
+
+### 11.1 Q9 handoff (for a Supabase-authenticated session)
+
+Project: Noetic App (`mgxqsrjutswbciyrltwd`). Read only. **A** = `41a49412-a422-485f-8f6c-16e28df94a4c` (Opus 5), **B** = `196de05b-3d19-4e83-8fd7-6e4a4dfc5c3c` (Sonnet 5.5). Answer each item for A and B separately, write the answers into Q9 in place (keep the queries), and move every answered item's consequence into the decision it names.
+
+```sql
+-- 0. The rows, their run, and the metadata the answers come from
+select r.id, r.submission_version_id, r.output_schema, r.workflow_run_id, r.created_at,
+       r.metadata->>'checklistVersion' as checklist_version,
+       r.metadata->>'bureauCommitHash'  as bureau_commit,
+       r.metadata->>'runLabel'          as run_label,
+       wr.workflow_version,
+       wr.inputs->>'runs' as runs, wr.inputs->>'effort' as effort, wr.inputs->>'model' as model,
+       wr.inputs->>'checklistsDir' as checklists_dir, wr.inputs->>'reviewFiles' as review_files,
+       wr.inputs->>'forceOutcomes' as force_outcomes, wr.inputs->>'uncertainThreshold' as uncertain_threshold,
+       wr.outputs_path
+from reviews r left join workflow_runs wr on wr.id = r.workflow_run_id
+where r.id in ('41a49412-a422-485f-8f6c-16e28df94a4c','196de05b-3d19-4e83-8fd7-6e4a4dfc5c3c');
+
+-- (b) Is every item a comment row? Status mix per review.
+select review_id, output_json->>'status' as status, count(*)
+from review_comments
+where review_id in ('41a49412-a422-485f-8f6c-16e28df94a4c','196de05b-3d19-4e83-8fd7-6e4a4dfc5c3c')
+group by 1,2 order by 1,2;
+-- If metadata.keys don't include the names above: select jsonb_object_keys(metadata) from reviews where id = '…';
+-- and select jsonb_object_keys(output_json) from review_comments where review_id = '…' limit 50;
+```
+
+| Item | What to report | What it decides |
+|---|---|---|
+| (b) passes stored | Do rows with `status = 'pass'` and `'not-applicable'` exist, and does the per-review row count equal the item count of the guides it ran (v2.7-trimmed table rows: cc-1 33, cc-2 6, cc-3 11, cc-5 14, cc-6 3, cc-10 4, cc-13 37, cc-15 14, cc-19 22, cc-20 6, cc-21 8, cc-22 14, cc-23 11, cc-24 9)? Also report which `output_json` key carries the item ref (e.g. `checklistItemId` + grouping/section). | **Yes →** `compare.ts` reads statuses from `review_comments`. **No →** it reads `enriched-findings.json` from the `workflow-runs` bucket under `outputs_path` (check it still exists), or treats a missing item as `pass` (record which). |
+| (c) guide version + commit | `checklist_version`, `bureau_commit`, `checklists_dir`, `review_files` for each. | v2's `1.4-resolve` is pinned to that commit's guide dir for the loop (D28). If A and B differ, items whose guide text differs between the two commits are set aside as `guide-drift` (D29). |
+| (d) runs | `runs` for each (null = workflow default, 1). | Equal to 1 → v2 loops at `runs=1`. 3 → v2 matches it, or `compare.ts` treats `uncertain` as a wildcard (record which). |
+| (e) effort | `effort` and `model` for each (null = unset, the SDK default). | The `review` / `explain` / `format` presets set the same effort as B, or leave it unset if B did (D6). |
+| (also) | `force_outcomes`, `uncertain_threshold`. | v2's request uses the same values whenever the loop covers those guides. |
 
 </script>
 <script data-marked>
