@@ -426,7 +426,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
   <div class="kicker">COMPLETENESS CHECK · RUNBOOK V2 PORT</div>
   <h1>Completeness Check → Runbook v2</h1>
   <p>A feature-parity port of the legacy completeness-check workflow to a conductor2 runbook. The port keeps the same steps, the same files and the same review rows. It adds a database run row, a checkpoint per step, a <code>reviewFiles</code> subset input, and opt-in persistence of each step's output to Storage. Companion to <code>DESIGN-SPEC.md</code>.</p>
-  <div class="meta">Draft v1 · 2026-10-02 · click a tab ↓</div>
+  <div class="meta">Draft v2 · 2026-10-02 · click a tab ↓</div>
   <a class="spec-link" href="DESIGN-SPEC.html">📖 read the spec</a>
 </header>
 
@@ -519,15 +519,16 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
       <div class="sys trig" id="p-t" style="grid-area:2/1"><span class="dot"></span><span class="t">spec approved</span></div>
       <div class="sys new" id="p-1" style="grid-area:2/2"><a class="ref" href="#detail-route">D26 ↓</a><span class="k">cityhall-new</span><span class="t">step-files route</span><span class="d">additive, with tests</span></div>
       <div class="sys chg" id="p-2" style="grid-area:2/3"><a class="ref" href="#detail-persist">D13 ↓</a><span class="k">conductor2</span><span class="t">persist block + uploader</span><span class="d">inert until a runbook opts in</span></div>
-      <div class="sys new" id="p-3" style="grid-area:2/4"><a class="ref" href="#detail-graph">D2 ↓</a><span class="k">bureau</span><span class="t">runbook, vision CLI, lane B flags</span><span class="d">plus compare script</span></div>
-      <div class="sys new" id="p-4" style="grid-area:2/5"><a class="ref" href="#detail-accept">D22 ↓</a><span class="k">bureau</span><span class="t">acceptance runs</span><span class="d">then curate the example</span></div>
+      <div class="sys new" id="p-3" style="grid-area:2/4"><a class="ref" href="#detail-graph">D2 ↓</a><span class="k">bureau</span><span class="t">runbook, vision CLI, lane B flags</span><span class="d">plus the cc-compare runbook</span></div>
+      <div class="sys new" id="p-4" style="grid-area:2/5"><a class="ref" href="#detail-accept">D29 ↓</a><span class="k">bureau</span><span class="t">compare loops</span><span class="d">until the acceptance bar holds</span></div>
       <a class="sys-edge" data-from="p-t" data-to="p-1"></a>
       <a class="sys-edge" data-from="p-1" data-to="p-2"></a>
       <a class="sys-edge" data-from="p-2" data-to="p-3"></a>
       <a class="sys-edge" data-from="p-3" data-to="p-4"></a>
     </div>
     <div class="sys-refs">
-      <a class="refrow new" data-ref="D22"><span class="chip">D22</span><span class="txt">every guide item must resolve to exactly one status; the acceptance runs check this along with the variance bar</span></a>
+      <a class="refrow new" data-ref="D29"><span class="chip">D29</span><span class="txt">compare v2 against the two existing legacy reviews, adjudicating only the disagreements</span></a>
+      <a class="refrow new" data-ref="D22"><span class="chip">D22</span><span class="txt">every guide item must resolve to exactly one status, with ids read from the checklist table only; the compare loop attributes the items legacy dropped</span></a>
     </div>
     <p class="claim"><b>Claim (§9):</b> conductor2's uploader is harmless before the route deploys, because a 404 just prints one warning, so the four pieces can ship in this order without a coordinated cutover.</p>
   </section>
@@ -535,7 +536,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
   <!-- ───────────────────────── 02 RUNBOOK ───────────────────────── -->
   <section class="panel" id="runbook">
     <h2><span class="eyebrow">The runbook</span>One step per legacy step</h2>
-    <p class="lede">Fifteen step folders under <code>bureau/runbooks/completeness-check/steps/</code>. Five of them make explicit what conductor-1 did implicitly: inputs, staging, facts, resolve and publish. The other ten wrap the legacy steps and call the legacy scripts unchanged.</p>
+    <p class="lede">Sixteen step folders under <code>bureau/runbooks/completeness-check/steps/</code>. Five make explicit what conductor-1 did implicitly: inputs, staging, facts, resolve and publish. One is new: <code>2.11-tool-usage</code> reports what each agent actually did. The other ten wrap the legacy steps and call the legacy scripts unchanged.</p>
 
     <h3 id="detail-graph">Runbook graph</h3>
     <div class="sysmap" style="grid-template-columns:.6fr repeat(4,1fr)">
@@ -562,7 +563,8 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
       <div class="sys trig" id="g-td" style="grid-area:5/1"><span class="dot"></span><span class="t">formatted findings ready</span><span class="d"></span></div>
       <div class="sys new" id="g-29" style="grid-area:5/2"><a class="ref" href="#detail-steps">D1 ↓</a><span class="k">script</span><span class="t">2.9 comments</span><span class="d">review-comments.json</span></div>
       <div class="sys new" id="g-210" style="grid-area:5/3"><a class="ref" href="#detail-steps">D1 ↓</a><span class="k">script</span><span class="t">2.10 validate</span><span class="d">shape + provenance</span></div>
-      <div class="sys new" id="g-31" style="grid-area:5/4"><a class="ref" href="#detail-publish">D9 ↓</a><span class="k">script</span><span class="t">3.1 publish</span><span class="d">lane B, or SKIPPED.md</span></div>
+      <div class="sys new" id="g-211" style="grid-area:5/4"><a class="ref" href="#detail-steps">D21 ↓</a><span class="k">script</span><span class="t">2.11 tool usage</span><span class="d">reads the session streams</span></div>
+      <div class="sys new" id="g-31" style="grid-area:5/5"><a class="ref" href="#detail-publish">D9 ↓</a><span class="k">script</span><span class="t">3.1 publish</span><span class="d">lane B, or SKIPPED.md</span></div>
       <a class="sys-edge new" data-from="g-ta" data-to="g-11"></a>
       <a class="sys-edge" data-from="g-11" data-to="g-12"></a>
       <a class="sys-edge new" data-from="g-12" data-to="g-13"></a>
@@ -577,15 +579,17 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
       <a class="sys-edge new" data-from="g-27" data-to="g-28"></a>
       <a class="sys-edge new" data-from="g-td" data-to="g-29"></a>
       <a class="sys-edge new" data-from="g-29" data-to="g-210"></a>
-      <a class="sys-edge new" data-from="g-210" data-to="g-31"></a>
+      <a class="sys-edge new" data-from="g-210" data-to="g-211"></a>
+      <a class="sys-edge new" data-from="g-211" data-to="g-31"></a>
     </div>
     <div class="sys-refs">
       <a class="refrow new" data-ref="D5"><span class="chip">D5</span><span class="txt">the run request is a zod schema in 1.1-inputs, not typed workflow inputs; no question opens when the request is already there</span></a>
       <a class="refrow new" data-ref="D24"><span class="chip">D24</span><span class="txt">the shared stager plus a facts.md step for parity (conflicts with rule 19, see Q1)</span></a>
       <a class="refrow new" data-ref="D7"><span class="chip">D7</span><span class="txt">reviewFiles narrows the roster; downstream steps see only those guides' findings</span></a>
-      <a class="refrow new" data-ref="D20"><span class="chip">D20</span><span class="txt">vision and semantic search become CLIs the review agent runs, with a parity tool allowlist (D21)</span></a>
+      <a class="refrow new" data-ref="D20"><span class="chip">D20</span><span class="txt">vision and semantic search become CLIs the review agent runs; 2.11 checks after the run that nothing else was used (D21)</span></a>
       <a class="refrow new" data-ref="D1"><span class="chip">D1</span><span class="txt">same intermediates and envelope; the legacy scripts run unchanged</span></a>
-      <a class="refrow new" data-ref="D8"><span class="chip">D8</span><span class="txt">forced-outcome rows for guides not in this run are dropped and logged</span></a>
+      <a class="refrow new" data-ref="D21"><span class="chip">D21</span><span class="txt">no allowlist is enforceable on the claude harness, so tool use is reported per cell instead</span></a>
+      <a class="refrow new" data-ref="D8"><span class="chip">D8</span><span class="txt">forced-outcome rows for guides not in this run are skipped by the legacy script itself and listed as unmatched in its receipt</span></a>
       <a class="refrow new" data-ref="D23"><span class="chip">D23</span><span class="txt">explain keeps legacy tolerance: a failed item writes FAILED.md and counts as null; the &gt;50% tripwire still fails the run</span></a>
       <a class="refrow new" data-ref="D6"><span class="chip">D6</span><span class="txt">models are runner presets (sonnet-5.5), not request fields</span></a>
       <a class="refrow chg" data-ref="D9"><span class="chip">D9</span><span class="txt">auto-publish through lane B</span></a>
@@ -611,6 +615,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
         <tr><td><span class="sn">2.8</span></td><td>format</td><td>format-reports</td><td><code>rephrased-items.json</code>, reports</td><td>yes</td></tr>
         <tr><td><span class="sn">2.9</span></td><td>script</td><td>build-review-comments</td><td><code>review-comments.json</code></td><td>yes</td></tr>
         <tr><td><span class="sn">2.10</span></td><td>script</td><td>validate-review-output</td><td><code>validation.json</code></td><td>yes</td></tr>
+        <tr><td><span class="sn">2.11</span></td><td>script</td><td>(new) tool-usage report</td><td><code>&lt;cell&gt;/tool-usage.json</code>, <code>summary.json</code></td><td>yes</td></tr>
         <tr><td><span class="sn">3.1</span></td><td>script</td><td>review-saver (auto-save)</td><td><code>decision.json</code>, <code>publish.log</code></td><td>yes</td></tr>
       </tbody>
     </table></div>
@@ -695,7 +700,7 @@ dropped:  model · effort · uncertainExplanationModel · maxWorkers · uncertai
       <div class="dno">no ↓</div>
       <div class="dq"><span class="q">otherwise</span><span class="yes">→</span><span class="out">roster = all 14 guides × runs</span></div>
       <div class="dno">then ↓</div>
-      <div class="dq"><span class="q">forceOutcomes rows for guides outside the roster?</span><span class="yes">yes →</span><span class="out warn">dropped + logged in dropped-forced-outcomes.json</span></div>
+      <div class="dq"><span class="q">forceOutcomes rows for guides outside the roster?</span><span class="yes">yes →</span><span class="out warn">skipped by the legacy script, listed as unmatched in its receipt</span></div>
       <div class="dno">no ↓</div>
       <div class="dq end"><span class="q">downstream steps</span><span class="yes">→</span><span class="out">see only these guides' findings (the scripts loop over findings, not guides)</span></div>
     </div>
@@ -786,34 +791,46 @@ dropped:  model · effort · uncertainExplanationModel · maxWorkers · uncertai
 
   <!-- ───────────────────────── 05 TESTING ───────────────────────── -->
   <section class="panel" id="testing">
-    <h2><span class="eyebrow">Testing</span>Cheap first, live last</h2>
-    <p class="lede">Each tier spends more tokens than the one before. The cross-lane replay is the key check: it feeds a legacy run's review output through the new pipeline, which tests the wiring without any LLM variance.</p>
+    <h2><span class="eyebrow">Testing</span>Iterate against the legacy reviews already on file</h2>
+    <p class="lede">Nothing legacy is re-run. Each v2 run, on any guide subset, is compared with two existing legacy reviews of the same submission. Items where all three agree are accepted for free. Only disagreements reach an adjudicating agent, and its verdicts build up an answer key so later loops don't pay for them again.</p>
 
     <div class="grid2">
       <div class="card keep"><h4>Tier 0 · contracts</h4><p><code>npm test</code> runs every step contract over the curated example <code>lamar-v4-cc1-cc21</code>. No run, no tokens.</p></div>
-      <div class="card keep"><h4>Tier 1 · downstream replay</h4><p><code>conductor stage 2.2 --scenario …</code>, then advance through 2.10 with <code>publish:false</code>. <b>Self-replay</b> reproduces the curated <code>review-comments.json</code>. <b>Cross-lane replay</b> converts a legacy run's <code>output/runs/</code> into 2.1 items and must reproduce the legacy <code>review-comments.json</code>. Only the forced narratives and rephrased titles are LLM-written.</p></div>
-      <div class="card change"><h4>Tier 2 · live loops</h4><p><b>Legacy subset:</b> a helper builds a temp checklist dir holding only cc-1 and cc-21, with no conductor-1 change. <b>v2 subset:</b> the request above. <b>compare.ts</b> takes any mix of legacy dirs, v2 run dirs and persisted prefixes, and reports per-item agreement and a confusion matrix, for both legacy-vs-v2 and v2-vs-v2.</p></div>
-      <div class="card change"><h4>Unit tests</h4><p><b>conductor2:</b> config, globs, dedupe, never-fail (mock server). <b>cityhall-new:</b> route validation, the 200 cap, too_large, admission. <b>bureau:</b> lane B flags, resolve, the TSV filter, grouping injection.</p></div>
+      <div class="card keep"><h4>Tier 1 · self-replay</h4><p><code>conductor stage 2.2 --scenario …</code>, then advance through 2.10 with <code>publish:false</code>. The curated 2.1 output must reproduce the curated <code>review-comments.json</code>. It catches wiring regressions while bugs are being fixed.</p></div>
+      <div class="card change"><h4>Tier 2 · the compare loop</h4><p><b>Baseline:</b> A = Opus 5 review <code>41a49412</code>, B = Sonnet 5.5 review <code>196de05b</code> (D28). <b>compare.ts</b> filters A and B to the v2 run's guides and sorts each item into agree / keyed / unresolved / guide-drift. <b>Adjudicate</b> one Opus cell per guide with unresolved items, under blind labels. <b>Scorecard</b> merges verdicts into the answer key and reports per guide, with cause tags (D29).</p></div>
+      <div class="card change"><h4>Unit tests</h4><p><b>conductor2:</b> config (including logs), globs, dedupe, never-fail (mock server). <b>cityhall-new:</b> route validation, the 200 cap, too_large, admission. <b>bureau:</b> lane B flags, resolve, grouping injection, the table-only id parser, 2.11 over a recorded stream, compare.ts.</p></div>
     </div>
+
+    <h3>One loop</h3>
+    <div class="dflow">
+      <div class="dq"><span class="q">all three runs (A, B, v2) give the item the same status?</span><span class="yes">yes →</span><span class="out">accepted, no tokens</span></div>
+      <div class="dno">no ↓</div>
+      <div class="dq"><span class="q">guide text changed since A and B ran?</span><span class="yes">yes →</span><span class="out warn">guide-drift, reported, not scored</span></div>
+      <div class="dno">no ↓</div>
+      <div class="dq"><span class="q">answer key already has a verdict for this item?</span><span class="yes">yes →</span><span class="out">score v2 against it, no tokens</span></div>
+      <div class="dno">no ↓</div>
+      <div class="dq end"><span class="q">otherwise</span><span class="yes">→</span><span class="out">blind Opus adjudication: correct status, which runs were right, cause tag; merged into the key</span></div>
+    </div>
+    <p class="claim"><b>Claim (D29):</b> after the first loops warm the answer key, a re-run after a bug fix costs adjudication tokens only for disagreements nobody has judged yet.</p>
 
     <h3 id="detail-accept">Acceptance bar</h3>
     <div class="spectable-scroll"><table class="spectable">
       <thead><tr><th>#</th><th>Check</th><th>Pass when</th></tr></thead>
       <tbody>
-        <tr><td><span class="sn">1</span></td><td>Variance parity: 3 legacy + 3 v2 runs at runs=1, reviewFiles [cc-1, cc-21], both fixtures</td><td>v2-vs-legacy per-item agreement ≥ legacy-vs-legacy − 5 points</td></tr>
-        <tr><td><span class="sn">2</span></td><td>Uncertain path: one v2 run at runs=3</td><td>≥1 uncertain item flows through 2.4 to 2.6 (raise the threshold if needed)</td></tr>
-        <tr><td><span class="sn">3</span></td><td>Cross-lane replay</td><td>green</td></tr>
+        <tr><td><span class="sn">1</span></td><td>Correctness against the key, all 14 guides scored at least once</td><td>v2 wrong count ≤ B's wrong count; every item only v2 gets wrong has a cause tag</td></tr>
+        <tr><td><span class="sn">2</span></td><td>Forced outcomes: a loop including cc-3, cc-5, cc-13 or cc-24</td><td>the receipt shows rows applied</td></tr>
+        <tr><td><span class="sn">3</span></td><td>Uncertain path: one v2 run at runs=3</td><td>≥1 uncertain item flows through 2.4 to 2.6 (raise the threshold if needed)</td></tr>
         <tr><td><span class="sn">4</span></td><td>Publish with setCurrent:false</td><td>reviews row, output_schema 2026-03-completeness-check, is_current=false, prior untouched, renders by id</td></tr>
-        <tr><td><span class="sn">5</span></td><td>Persistence</td><td>persisted.json lists every run-produced file; 1.2 and 1.3 absent</td></tr>
+        <tr><td><span class="sn">5</span></td><td>Persistence</td><td>persisted.json lists every run-produced file and the session logs; 1.2 and 1.3 absent</td></tr>
+        <tr><td><span class="sn">6</span></td><td>Tier 1 self-replay</td><td>green</td></tr>
       </tbody>
     </table></div>
 
-    <h3>Fixtures</h3>
+    <h3>Fixture</h3>
     <div class="spectable-scroll"><table class="spectable">
       <thead><tr><th>Role</th><th>Submission</th><th>IDs</th></tr></thead>
       <tbody>
-        <tr><td>primary</td><td>1700 S Lamar (Lamar + Collier) v4, which has a forced-outcomes TSV</td><td>project <code>23301a8a…</code> · sv <code>6b9b85ed…</code> · PPv4 <code>b918e8c1</code></td></tr>
-        <tr><td>secondary</td><td>2008 San Antonio v1</td><td>project <code>7746ac2f</code> · sv <code>624309c1</code> · PPv4 <code>b876caad</code> / <code>57e0b2f6</code></td></tr>
+        <tr><td>only</td><td>1700 S Lamar (Lamar + Collier) v4, which has a forced-outcomes TSV (rows for cc-3, cc-5, cc-13, cc-24)</td><td>project <code>23301a8a…</code> · sv <code>6b9b85ed…</code> · PPv4 <code>b918e8c1</code> · baselines <code>41a49412</code>, <code>196de05b</code></td></tr>
       </tbody>
     </table></div>
   </section>
@@ -830,11 +847,12 @@ dropped:  model · effort · uncertainExplanationModel · maxWorkers · uncertai
     </div>
     <div class="catgrp">
       <div class="cath"><span class="cgl">⚙</span> Plumbing</div>
+      <div class="uci"><span class="uid">Q9</span><span class="star">★</span><span class="utxt"><b>Baseline facts compare.ts depends on.</b> Are both legacy reviews on sv 6b9b85ed? Does review_comments hold every item, passes included? Which guide commit and which runs count did each use?</span></div>
       <div class="uci"><span class="uid">Q2</span><span class="utxt"><b>Bucket and size limit.</b> Share submission-data with the gate files, or use a dedicated runbook-runs bucket with its own lifecycle? The per-object limit hasn't been verified.</span></div>
       <div class="uci"><span class="uid">Q3</span><span class="utxt"><b>Vision CLI credentials.</b> Which key does the review worker carry for the sheet fetch and the gateway call, and does attribution key off runbook_run_id?</span></div>
       <div class="uci"><span class="uid">Q6</span><span class="utxt"><b>No question at 1.1-inputs.</b> Confirm a runner:none step whose request already exists opens no runbook_hitl_questions row.</span></div>
       <div class="uci"><span class="uid">Q7</span><span class="utxt"><b>Inch-mark JSON.</b> Is "resume the session with the parse error" enough, or does 2.2 need a tolerant-parse repair?</span></div>
-      <div class="uci later"><span class="uid">Q8</span><span class="utxt"><b>Legacy-trail readers.</b> audit-cc-run and IG read workflow_runs and the workflow-runs bucket, and need a v2 path before legacy retires.</span></div>
+      <div class="uci later"><span class="uid">Q8</span><span class="utxt"><b>Legacy-trail readers.</b> audit-cc-run and IG read workflow_runs and the workflow-runs bucket, and need a v2 path before legacy retires. Also: does anything read the review_comments.agent_trace column v2 no longer writes (D30)?</span></div>
     </div>
   </section>
 
