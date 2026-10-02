@@ -425,7 +425,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 
 </style>
 </head>
-<body class="reader" data-back="architecture.html" data-spec-sha="107ba9a133a688cd">
+<body class="reader" data-back="architecture.html" data-spec-sha="c20f175dbe3bc153">
 
 <header class="masthead">
   <div class="kicker">SPEC · READER</div>
@@ -442,13 +442,20 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 <script type="text/markdown" id="spec-md">
 # Completeness Check → Runbook v2 (feature-parity port)
 
-**Status:** Draft v2
+**Status:** Draft v2.1 (implementation errata)
 **Date:** 2026-10-02
 **Repos touched:** `bureau` (new `runbooks/completeness-check/`, two agent-tool CLIs, a tool-usage step, `publish_review_cli.py` lane B flags, the `cc-compare` evaluation runbook), `conductor2` (opt-in per-step persistence to Storage), `cityhall-new` (new `POST /api/runs/:runId/step-files` signing route)
 **Repos NOT touched:** `conductor` (legacy TS lane stays frozen), `substation` (retired as the API home; `cityhall-new` owns `/api/runs/*`), `cityhall`, `claude-plugins` (the `/conductor` captain skill drives any runbook already)
 
 Grilled with Will on 2026-10-02. Every decision below is numbered `D<n>`; open questions are `Q<n>`.
 
+> **Revision note (v2.1, 2026-10-02, errata from the implementation kickoff's code check):**
+> - **D18 / Q2 amended (Will).** The bucket is a genuinely new private Supabase Storage bucket, `runbook-runs`. It is unrelated to the `runbook-runs/` *path prefix* inside `submission-data`, where gate files live (`cityhall-new/src/lib/gate-files.ts`: `GATE_FILE_BUCKET = 'submission-data'`, `GATE_FILE_PREFIX = 'runbook-runs'`). Supabase Storage has no native lifecycle or TTL rule, so the bucket ships with a per-object size limit only. An expiry job is deferred to §10.
+> - **cityhall-new references corrected (§7.3).** The machine-lane rules are at `AGENTS.md:133-143`. Route tests live in `src/app/api/runs/{contract,runs}.test.ts` over `installFakeControlPlane()`, and a new route is registered in `src/test/api-routes.ts`. Writes go through an operation in `src/lib/operations/`. A bucket row is a hand-written migration plus a `supabase/config.toml` entry, because the declarative schema is in force.
+> - **conductor2 references corrected.** Rosters are `Static` / `Sh` / `Scan` (`model.rs:447-459`); there is no `briefs` variant. Session logs are `.logs/<node>.<attempt>[t<retry>].jsonl`, with a `t<retry>` suffix after a transport retry (`harness.rs:1264-1274`). The persist hook is the scheduler's reap arm (`sched.rs:467-521`). The uploader needs new `sha2`, `flate2` and `glob` crates.
+> - **D22 prefixes.** cc-5 has three ID tables (`ADR-`, `DAT-`, `HCR-`). cc-21 has an extra status table with no ID column, which the parser ignores: only tables whose header starts with `ID` count.
+> - **Step keys.** `runner`, `inputs`, `cmd`, `outputs` and `foreach` live in each `steps/<id>/step.yaml`. `runbook.yaml` holds `description`, `runners:` and now `persist:`.
+>
 > **Revision note (v2, 2026-10-02, after an audit of v1 against the code):**
 > - **D21 reversed (tool allowlist → post-run observability).** The allowlist can't be enforced on the `claude` harness: `permission:` reaches only the opencode lane (`conductor2/src/model.rs:55-58`), and the `claude` lane always passes `--dangerously-skip-permissions` (`claude.rs:65`), which bypasses `permissions.deny` (`surface.rs:288-296`). Instead, a new deterministic `2.11-tool-usage` step reads the session streams conductor2 already saves and reports every tool call, flagging anything outside the two CLIs and the allowed folders. **D27 new:** those streams are persisted too.
 > - **§8 rewritten (testing).** No legacy re-runs. The baseline is the two existing legacy reviews on Lamar + Collier v4 (Opus 5 `41a49412`, Sonnet 5.5 `196de05b`). A new run may cover any guide subset and is compared only on those guides. If all three runs agree on an item, it is accepted. Disagreements go to blind agentic adjudication, and the verdicts build up an answer key so later loops don't pay for them again (**D28, D29 new**). Dropped: the N=3-per-lane variance bar, `legacy-subset-dir.sh`, and the cross-lane replay as a gate. The secondary San Antonio fixture is dropped too, because no legacy baseline is named for it.
@@ -481,16 +488,16 @@ The review workflow already moved to runbook v2 (`bureau/runbooks/review/`, run 
 | Review agents get `vision` (Gemini 3.1 Pro via gateway) and `semantic-search-blocks` as in-process MCP tools; conductor2 has no in-process tools | `conductor/src/tools/index.ts:323`, `tools/vision/index.ts:90-210` |
 | The structured-output emit schema omits `grouping`; conductor-1 injects it from the cell filename | `conductor/src/agent/structured-output-repair.ts:266-336` |
 | The `claude` harness always runs `--dangerously-skip-permissions`, which bypasses `permissions.deny`. A preset's `permission:` reaches only opencode, so no tool allowlist can be enforced on the host lane | `conductor2/src/claude.rs:65`, `model.rs:55-58`, `surface.rs:288-296` |
-| conductor2 saves every agent session's raw `stream-json` (every tool call with its input) to `$RUN/.logs/<step>--<item>.<attempt>.jsonl`, outside every step folder | `conductor2/src/harness.rs:1258-1274` |
-| Guides cite item ids in prose that aren't checklist rows (cc-1: `CC-1-07`, which has no table row; cc-21: `CC-19-07`…`21`), and id prefixes vary (`CC-n-`, `ADR-`, `AW-`) | `v2.7-trimmed/cc-1.md:49,63-`, `cc-21.md:31,123`, `cc-5.md:46-` |
+| conductor2 saves every agent session's raw `stream-json` (every tool call with its input) to `$RUN/.logs/<step>--<item>.<attempt>[t<retry>].jsonl`, outside every step folder | `conductor2/src/harness.rs:1264-1274, 1383` |
+| Guides cite item ids in prose that aren't checklist rows (cc-1: `CC-1-07`, which has no table row; cc-21: `CC-19-07`…`21`), and id prefixes vary (`CC-n-`, `ADR-`/`DAT-`/`HCR-` in cc-5, `AW-`) | `v2.7-trimmed/cc-1.md:49,63-`, `cc-21.md:31,123`, `cc-5.md:46-` |
 | Legacy `applyToolAttribution` writes `review_comments.agent_trace.tools_used` from `vision-log.jsonl` / `semantic-search-blocks-log.jsonl`; lane B has no equivalent. The app reads the trace from `output_json.agentTrace`, not the column | `review-saver.ts:287-365`, `cityhall-new/src/lib/reviews/adapters/agent-trace.ts` |
-| conductor2 fan-out is `foreach:` with `briefs` / `sh:` / `scan:` rosters. Rosters are one-dimensional: there is no `runs: N` | `conductor2/src/model.rs:438-455` |
+| conductor2 fan-out is `foreach:` with `Static` / `Sh` / `Scan` rosters. Rosters are one-dimensional: there is no `runs: N` | `conductor2/src/model.rs:447-459` |
 | conductor2 has no `if:`. Optional steps are a roster that prints nothing, a `SKIPPED.md` marker, or a vacuously-passing contract | `runbooks/smoke/steps/2.5-animal`, `lib/contract-helpers.ts:397-401` |
 | Run inputs are a zod `Request` in `1.1-inputs/contract.test.ts` (arrays allowed). There is no scalar-only typed input block | `runbooks/review/steps/1.1-inputs/contract.test.ts:14-44` |
 | The scheduler posts a `status` checkpoint at every step's enter/exit, plus one rollup per fan-out family | `conductor2/src/sched.rs:1223-1300`, `substation_client.rs:1-18` |
 | `runbook_checkpoints` has **no** payload column (only `client_token` was added later) | `substation/supabase/migrations/20260909000000…sql:96-115`, `20260911000000…sql:13` |
 | Nothing in conductor2 uploads step output anywhere | `conductor2/src/callback.rs:61-69` (TODO) |
-| `cityhall-new` owns `/api/runs/*` (ported from substation `6fde815`) and has a signed-URL `gate-files` route whose bytes never cross the function | `cityhall-new/AGENTS.md:346-364`, `src/app/api/runs/[runId]/gate-files/route.ts`, `bureau/runbooks/lib/app_client.py:645-682` |
+| `cityhall-new` owns `/api/runs/*` (ported from substation `6fde815`) and has a signed-URL `gate-files` route whose bytes never cross the function | `cityhall-new/AGENTS.md:133-143`, `src/app/api/runs/[runId]/gate-files/route.ts`, `bureau/runbooks/lib/app_client.py:645-682` |
 | `publish_review_cli.py` lane B (v2 envelope, CC/CRC) exists but no runbook calls it. It has no `prior_review_id` and always takes over `is_current` | `publish_review_cli.py:11-16, 254-370, 301, 333-341` |
 | Legacy `setCurrent` (default true): when false, insert `is_current=false` and skip retiring the prior reviews. Legacy retire scope = project + department (+ submission_version when known), which matches lane B's | `conductor/src/shared/review-saver.ts:139, 473-505` |
 | `stage_submission.py` stages the same `sheet-NN/{guide,blocks}.md`, `block-manifest.json` and `README.md` (with `documentId`s), plus binaries, but **no `facts.md`**, on purpose | `runbooks/lib/stage_submission.py:1000-1012`, `workspace.py:759` |
@@ -547,7 +554,7 @@ The review workflow already moved to runbook v2 (`bureau/runbooks/review/`, run 
   - D22 resumes, with the ids each one demanded.
 
   A `summary.json` rolls these up. The step never fails the run: it is evidence for the comparison loop (§8.3), not a gate. Legacy agents had only `vision` and `semantic-search-blocks`, so any other tool use is an attributable difference, which is the explanation Will wants if v2 scores differently.
-- **D22 Every item resolves exactly once.** The review worker's contract reads its guide's item ids **from the ID column of the checklist table(s) only** (v2). Prose mentions such as `CC-1-07` or cc-21's `CC-19-07…21` are not items. The contract `[BLOCKING]`-requires a 1:1 match with `findings[].checklistItemId`. A miss resumes the session with the missing ids. Legacy never enforced this, so v2 answers items legacy dropped. In the comparison those items show up as "missing in a legacy run", and adjudication tags them `missed-item` (D29), so the difference is attributed instead of being read as a model change. The parser gets fixtures for every id prefix (`CC-n-`, `ADR-`, `AW-`) and for cc-1 and cc-21's prose mentions.
+- **D22 Every item resolves exactly once.** The review worker's contract reads its guide's item ids **from the ID column of the checklist table(s) only** (v2). Prose mentions such as `CC-1-07` or cc-21's `CC-19-07…21` are not items. The contract `[BLOCKING]`-requires a 1:1 match with `findings[].checklistItemId`. A miss resumes the session with the missing ids. Legacy never enforced this, so v2 answers items legacy dropped. In the comparison those items show up as "missing in a legacy run", and adjudication tags them `missed-item` (D29), so the difference is attributed instead of being read as a model change. The parser counts only tables whose header's first cell is `ID` (cc-21's status table has none), and gets fixtures for every id prefix (`CC-n-`, `ADR-`/`DAT-`/`HCR-`, `AW-`) and for cc-1 and cc-21's prose mentions.
 - **D23 explain-uncertain keeps legacy tolerance.** A worker may finish with `FAILED.md` instead of `result.json` (the contract accepts either). `2.6` treats `FAILED.md` as a null explanation, so the >50%-null tripwire in `collect-uncertain-explanations.ts` still fails the run on systemic failure.
 - **D24 Staging = `stage_submission.py`, plus a facts step for parity.** `1.3-facts` renders `facts.md` from `project_facts` exactly as conductor-1 did (`conductor/src/shared/project-downloader.ts:874-890`), so the parity comparison measures only the runner change. Dropping `facts.md` (the runbook stance, `stage_submission.py:1000-1012`) is the first post-parity experiment. The conflict with AGENTS-core rule 19 is resolved by D31.
 
@@ -560,7 +567,7 @@ The review workflow already moved to runbook v2 (`bureau/runbooks/review/`, run 
 - **D15 What gets persisted defaults to the step's declared `outputs:`** minus `scratch/`, narrowed by per-step `include`/`exclude` globs.
 - **D16 Only run-produced files.** CC persists everything **except** `1.2-stage-submission` and `1.3-facts`, which are DB data pulled into the run (Will).
 - **D17 Fan-out items upload as each item's contract passes**, not once per family. A crash 10 cells into 14 loses nothing.
-- **D18 Recording: a deterministic path plus a manifest, no DB change.** Paths are `<runbook_run_id>/steps/<step>[/<item>]/<relpath>` in a **new private `runbook-runs` bucket** (Q2, decided). It has its own per-object size limit and a lifecycle rule, so the D27 session logs can expire without touching `submission-data`. The bucket is created by a `cityhall-new/supabase/migrations/` migration that ships with the route (§9 step 1). Gate files stay where they are. `persisted.json` sits at the run prefix and at `<run>/.conductor/persisted.json`.
+- **D18 Recording: a deterministic path plus a manifest, no DB change.** Paths are `<runbook_run_id>/steps/<step>[/<item>]/<relpath>` in a **new private `runbook-runs` bucket** (Q2, decided; not the `runbook-runs/` prefix inside `submission-data` that gate files use). It has its own per-object size limit. Supabase Storage has no native lifecycle rule, so expiring the D27 session logs is a deferred cleanup job (§10, v2.1). The bucket is created by a `cityhall-new/supabase/migrations/` migration that ships with the route (§9 step 1). Gate files stay where they are. `persisted.json` sits at the run prefix and at `<run>/.conductor/persisted.json`.
 - **D19 Never a failure path.** An upload error is printed once and recorded in the manifest, and the run continues, on the same rule as checkpoints (`substation_client.rs:10-13`).
 - **D26 Transport = signed-URL batches from cityhall-new.** `POST /api/runs/:runId/step-files` signs ≤200 paths per call; conductor2 streams each file from disk with a PUT (4–8 at once). The Vercel function never holds file bytes, so the 2–4 GB sandbox memory limit doesn't apply. Files over the bucket's per-object limit are recorded as `too_large`.
 
@@ -708,7 +715,7 @@ persist:
 - Validates `step`, `item` and `path` segments (`[A-Za-z0-9._-]`, no `..`, no leading `/`). Rejects batches over 200 entries.
 - `storage.from('runbook-runs').createSignedUploadUrl(path, { upsert: true })`. `bytes` greater than the bucket's limit gives `too_large` and no URL.
 - The `_run` pseudo-step is reserved for `persisted.json`. The `_logs` pseudo-step (D27) maps to `<runId>/logs/<path>` instead of `steps/`, and accepts only `*.jsonl.gz`.
-- Contract and ported tests go into `tests/api/runs-contract.test.ts` style. The route is **additive**, so no existing machine-lane contract changes (`AGENTS.md:346-355`).
+- The logic is an operation in `src/lib/operations/`, and the handler holds no rules. Tests go in `src/app/api/runs/contract.test.ts` (shape) and `runs.test.ts` (flows, through `src/test/api-routes.ts`, over `installFakeControlPlane()`). The route is **additive**, so no existing machine-lane contract changes (`AGENTS.md:133-143`).
 
 ## 8. Testing
 
@@ -743,7 +750,7 @@ persist:
 
 ## 9. Delivery order
 
-1. **cityhall-new:** `step-files` route + tests, plus the migration creating the private `runbook-runs` bucket (size limit + lifecycle rule).
+1. **cityhall-new:** `step-files` route + tests, plus the migration creating the private `runbook-runs` bucket (size limit; no lifecycle rule, v2.1).
 2. **conductor2:** `persist:` (including `logs:`, D27) + uploader. Inert until a runbook opts in, and harmless before step 1 deploys (404 → one warning).
 3. **bureau:** the runbook (with `2.11-tool-usage`), the vision CLI, lane B flags, the Tier 0 / 1 tests, and the `cc-compare` runbook (`compare.ts`, adjudicate prompt, scorecard, an empty `answer-key.json`).
 4. **Compare loops (§8.3)** until the acceptance bar (§8.4) holds, curating `examples/lamar-v4-cc1-cc21` from the first green subset run.
@@ -753,13 +760,14 @@ persist:
 - **Run-health audit → conditional publish gate.** A deterministic `2.12-health` step scores the run from `2.11-tool-usage` and the run's own files: failed or `FAILED.md` cells, null-explanation share, vision/search error rates, `off_list` / `out_of_scope` tool use, item-coverage resumes, `too_large` uploads. Only when it flags something does a `runner: none` `2.13-deliver` gate ask in the console whether to publish. Otherwise its contract passes vacuously and no question is created.
 - **Resume from Storage:** `conductor hydrate <runbook_run_id> $RUN` rebuilds a run dir from `persisted.json` and re-stages `1.2` / `1.3` from the DB, then `advance` continues. This is the cloud payoff of D13–D26.
 - **Inspector General for v2 runs.** IG needs (a) a trigger for v2 CC publishes, replacing `conductor/workflow.completed`, and (b) a way from a review to its `runbook_runs` id and persisted prefix. The likely route is lane B stamping `runbookRunId` + `persistedPrefix` into `reviews.metadata`, plus an IG resolver for that prefix. Not needed for the port (Q8).
+- **`runbook-runs` cleanup job (v2.1, deferred by Will).** A scheduled job (a cityhall-new cron route or `pg_cron`) that deletes old objects through the Storage API, starting with `logs/`. Supabase Storage has no native lifecycle rule.
 - **Cloud lane** (`trigger-cloud-runbook`), then retiring legacy CC and moving its scripts into the runbook.
 - **Post-parity experiments:** drop `facts.md`, native image reading instead of the Gemini `vision` CLI, Opus for `review`.
 
 ## 11. Open questions
 
 - **Q1 AGENTS-core rule 19 vs `facts.md` (D24). RESOLVED → D31.** The CC prompt overrides rule 19 for `facts.md`. The 21-rule preamble stays as a known difference from legacy, and the compare loop's cause tags surface its effects.
-- **Q2 Bucket and size limit. RESOLVED:** a dedicated private `runbook-runs` bucket with its own size limit and lifecycle rule (D18).
+- **Q2 Bucket and size limit. RESOLVED:** a dedicated private `runbook-runs` bucket with its own size limit (D18). v2.1: Supabase has no native lifecycle rule, so expiry is a deferred cleanup job (§10).
 - **Q3 Vision CLI credentials on the local lane. RESOLVED from code.** The sheet fetch uses the `app_client` order: the run token first, then service-role as a local fallback (`runbooks/lib/app_client.py:137-152`). The gateway call needs `AI_GATEWAY_API_KEY`, which is not one of the variables conductor2's subscription guard refuses (`conductor2/src/harness.rs:218-230`). Legacy tags gateway calls with `WORKFLOW_RUN_ID` / `RUN_LABEL` (`conductor/src/shared/gateway-metadata.ts:21-22`). The CLI tags them with the `runbook_run_id` and the node name.
 - **Q4 Effort level. FOLDED INTO Q9.** Legacy passes `effort` only when the run sets it (`conductor/src/agent/runner.ts:299`). The presets match whatever baselines A and B ran with.
 - **Q5 Harness system prompt. RESOLVED:** accept the Claude Code CLI's default. It is part of the migration, and tool-usage reports (D21) plus cause tags (D29) explain any difference.

@@ -431,7 +431,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
   <div class="kicker">COMPLETENESS CHECK · RUNBOOK V2 PORT</div>
   <h1>Completeness Check → Runbook v2</h1>
   <p>A feature-parity port of the legacy completeness-check workflow to a conductor2 runbook. The port keeps the same steps, the same files and the same review rows. It adds a database run row, a checkpoint per step, a <code>reviewFiles</code> subset input, and opt-in persistence of each step's output to Storage. Companion to <code>DESIGN-SPEC.md</code>.</p>
-  <div class="meta">Draft v2 · 2026-10-02 · click a tab ↓</div>
+  <div class="meta">Draft v2.1 · 2026-10-02 · click a tab ↓</div>
   <a class="spec-link" href="DESIGN-SPEC.html">📖 read the spec</a>
 </header>
 
@@ -791,7 +791,7 @@ dropped:  model · effort · uncertainExplanationModel · maxWorkers · uncertai
         <div class="note">One copy at the run prefix in Storage and one at &lt;run&gt;/.conductor/persisted.json. No database change: runbook_checkpoints has no payload column, and the path layout is fixed, so the run id alone finds everything.</div>
       </div>
     </div>
-    <div class="storage"><b>Storage:</b> new private bucket <code>runbook-runs</code> (Q2, decided: own size limit and lifecycle) · path <code>&lt;runbook_run_id&gt;/steps/&lt;step&gt;[/&lt;item&gt;]/&lt;relpath&gt;</code>, session logs under <code>&lt;runbook_run_id&gt;/logs/</code></div>
+    <div class="storage"><b>Storage:</b> new private bucket <code>runbook-runs</code> (Q2, decided: own size limit; expiry job deferred, v2.1) · path <code>&lt;runbook_run_id&gt;/steps/&lt;step&gt;[/&lt;item&gt;]/&lt;relpath&gt;</code>, session logs under <code>&lt;runbook_run_id&gt;/logs/</code></div>
   </section>
 
   <!-- ───────────────────────── 05 TESTING ───────────────────────── -->
@@ -850,7 +850,7 @@ dropped:  model · effort · uncertainExplanationModel · maxWorkers · uncertai
       <div class="uci"><span class="uid">Q9</span><span class="utxt"><b>Baseline facts.</b> From the DB: each baseline has 192 rows, one per item including passes and N/As, keyed by sourceFindings[0].ref. Both ran v2.7-trimmed at runs=1 with effort unset and nothing forced. The guide tree is identical at both bureau commits, so there is no drift between A and B (spec §11.1).</span></div>
       <div class="uci"><span class="uid">Q1</span><span class="utxt"><b>Rule 19 vs facts.md.</b> The CC prompt names facts.md as in bounds (D31).</span></div>
       <div class="uci"><span class="uid">Q10</span><span class="utxt"><b>Judging agent vs rule 19.</b> The adjudicate prompt names the legacy findings as in bounds; the answer key stays barred to review agents (D31).</span></div>
-      <div class="uci"><span class="uid">Q2</span><span class="utxt"><b>Bucket.</b> A new private runbook-runs bucket with its own limit and lifecycle.</span></div>
+      <div class="uci"><span class="uid">Q2</span><span class="utxt"><b>Bucket.</b> A new private runbook-runs bucket with its own size limit. Supabase has no native lifecycle rule, so an expiry job is deferred (v2.1).</span></div>
       <div class="uci"><span class="uid">Q5</span><span class="utxt"><b>Harness system prompt.</b> Accept the CLI default; tool usage and cause tags explain any difference.</span></div>
       <div class="uci"><span class="uid">Q3</span><span class="utxt"><b>Vision CLI credentials.</b> Run token first, service-role as a local fallback; AI_GATEWAY_API_KEY doesn't trip the subscription guard; gateway calls tagged with runbook_run_id.</span></div>
       <div class="uci"><span class="uid">Q6</span><span class="utxt"><b>No question at 1.1-inputs.</b> Confirmed: only open gates are reported.</span></div>
