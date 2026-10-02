@@ -786,7 +786,7 @@ dropped:  model · effort · uncertainExplanationModel · maxWorkers · uncertai
         <div class="note">One copy at the run prefix in Storage and one at &lt;run&gt;/.conductor/persisted.json. No database change: runbook_checkpoints has no payload column, and the path layout is fixed, so the run id alone finds everything.</div>
       </div>
     </div>
-    <div class="storage"><b>Storage:</b> bucket <code>submission-data</code> (beside the gate files; Q2 asks about a dedicated bucket) · path <code>runbook-runs/&lt;runbook_run_id&gt;/steps/&lt;step&gt;[/&lt;item&gt;]/&lt;relpath&gt;</code></div>
+    <div class="storage"><b>Storage:</b> new private bucket <code>runbook-runs</code> (Q2, decided: own size limit and lifecycle) · path <code>&lt;runbook_run_id&gt;/steps/&lt;step&gt;[/&lt;item&gt;]/&lt;relpath&gt;</code>, session logs under <code>&lt;runbook_run_id&gt;/logs/</code></div>
   </section>
 
   <!-- ───────────────────────── 05 TESTING ───────────────────────── -->
@@ -838,21 +838,22 @@ dropped:  model · effort · uncertainExplanationModel · maxWorkers · uncertai
   <!-- ───────────────────────── 06 QUESTIONS ───────────────────────── -->
   <section class="panel" id="questions">
     <h2><span class="eyebrow">Open questions</span>What's still undecided</h2>
-    <p class="lede">Q1 matters most: the shared conventions preamble that conductor2 adds to every prompt is itself a parity difference.</p>
+    <p class="lede">Most of v1's questions were resolved on 2026-10-02. Two remain: Q9 needs database reads, and Q8 only matters before legacy retires.</p>
     <div class="catgrp">
-      <div class="cath"><span class="cgl">!</span> Blocks parity</div>
-      <div class="uci"><span class="uid">Q1</span><span class="star">★</span><span class="utxt"><b>AGENTS-core rule 19 vs facts.md.</b> Rule 19 bars "any prior Noetic output about this project", and project_facts carries prior-review directives. Options: accept and measure, opt CC out via the per-runbook-conventions spec, or drop facts.md now. Legacy agents saw none of the 21 rules.</span></div>
-      <div class="uci"><span class="uid">Q5</span><span class="utxt"><b>Harness system prompt.</b> The Claude Code CLI and the Agent SDK give the model different system prompts. Accept it as part of what parity measures, or run a minimal system prompt?</span></div>
-      <div class="uci"><span class="uid">Q4</span><span class="utxt"><b>Effort level.</b> Pin the presets to whatever effort legacy actually got (it was unset, so the SDK default).</span></div>
+      <div class="cath"><span class="cgl">!</span> Still open</div>
+      <div class="uci"><span class="uid">Q9</span><span class="star">★</span><span class="utxt"><b>Baseline facts compare.ts depends on.</b> Are both legacy reviews on sv 6b9b85ed? Does review_comments hold every item, passes included? Which guide commit, runs count and effort did each use?</span></div>
+      <div class="uci later"><span class="uid">Q8</span><span class="utxt"><b>Legacy-trail readers.</b> audit-cc-run and IG read workflow_runs and the workflow-runs bucket, and need a v2 path before legacy retires. Also: does anything read the review_comments.agent_trace column v2 no longer writes (D30)?</span></div>
     </div>
     <div class="catgrp">
-      <div class="cath"><span class="cgl">⚙</span> Plumbing</div>
-      <div class="uci"><span class="uid">Q9</span><span class="star">★</span><span class="utxt"><b>Baseline facts compare.ts depends on.</b> Are both legacy reviews on sv 6b9b85ed? Does review_comments hold every item, passes included? Which guide commit and which runs count did each use?</span></div>
-      <div class="uci"><span class="uid">Q2</span><span class="utxt"><b>Bucket and size limit.</b> Share submission-data with the gate files, or use a dedicated runbook-runs bucket with its own lifecycle? The per-object limit hasn't been verified.</span></div>
-      <div class="uci"><span class="uid">Q3</span><span class="utxt"><b>Vision CLI credentials.</b> Which key does the review worker carry for the sheet fetch and the gateway call, and does attribution key off runbook_run_id?</span></div>
-      <div class="uci"><span class="uid">Q6</span><span class="utxt"><b>No question at 1.1-inputs.</b> Confirm a runner:none step whose request already exists opens no runbook_hitl_questions row.</span></div>
-      <div class="uci"><span class="uid">Q7</span><span class="utxt"><b>Inch-mark JSON.</b> Is "resume the session with the parse error" enough, or does 2.2 need a tolerant-parse repair?</span></div>
-      <div class="uci later"><span class="uid">Q8</span><span class="utxt"><b>Legacy-trail readers.</b> audit-cc-run and IG read workflow_runs and the workflow-runs bucket, and need a v2 path before legacy retires. Also: does anything read the review_comments.agent_trace column v2 no longer writes (D30)?</span></div>
+      <div class="cath"><span class="cgl">✓</span> Resolved</div>
+      <div class="uci"><span class="uid">Q1</span><span class="utxt"><b>Rule 19 vs facts.md.</b> The CC prompt names facts.md as in bounds (D31).</span></div>
+      <div class="uci"><span class="uid">Q10</span><span class="utxt"><b>Judging agent vs rule 19.</b> The adjudicate prompt names the legacy findings as in bounds; the answer key stays barred to review agents (D31).</span></div>
+      <div class="uci"><span class="uid">Q2</span><span class="utxt"><b>Bucket.</b> A new private runbook-runs bucket with its own limit and lifecycle.</span></div>
+      <div class="uci"><span class="uid">Q5</span><span class="utxt"><b>Harness system prompt.</b> Accept the CLI default; tool usage and cause tags explain any difference.</span></div>
+      <div class="uci"><span class="uid">Q3</span><span class="utxt"><b>Vision CLI credentials.</b> Run token first, service-role as a local fallback; AI_GATEWAY_API_KEY doesn't trip the subscription guard; gateway calls tagged with runbook_run_id.</span></div>
+      <div class="uci"><span class="uid">Q6</span><span class="utxt"><b>No question at 1.1-inputs.</b> Confirmed: only open gates are reported.</span></div>
+      <div class="uci"><span class="uid">Q7</span><span class="utxt"><b>Inch-mark JSON.</b> No repair step; resume with the parse error and count resumes.</span></div>
+      <div class="uci later"><span class="uid">Q4</span><span class="utxt"><b>Effort.</b> Folded into Q9: match whatever the baselines ran with.</span></div>
     </div>
   </section>
 
