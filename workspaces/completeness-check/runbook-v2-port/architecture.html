@@ -431,7 +431,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
   <div class="kicker">COMPLETENESS CHECK · RUNBOOK V2 PORT</div>
   <h1>Completeness Check → Runbook v2</h1>
   <p>A feature-parity port of the legacy completeness-check workflow to a conductor2 runbook. The port keeps the same steps, the same files and the same review rows. It adds a database run row, a checkpoint per step, a <code>reviewFiles</code> subset input, and opt-in persistence of each step's output to Storage. Companion to <code>DESIGN-SPEC.md</code>.</p>
-  <div class="meta">Draft v2.1 · 2026-10-02 · click a tab ↓</div>
+  <div class="meta">Implemented v2.2 · 2026-10-03 · click a tab ↓</div>
   <a class="spec-link" href="DESIGN-SPEC.html">📖 read the spec</a>
 </header>
 
@@ -843,7 +843,7 @@ dropped:  model · effort · uncertainExplanationModel · maxWorkers · uncertai
   <!-- ───────────────────────── 06 QUESTIONS ───────────────────────── -->
   <section class="panel" id="questions">
     <h2><span class="eyebrow">Open questions</span>Questions and answers</h2>
-    <p class="lede">Every question was resolved on 2026-10-02. Q9 was answered from database reads, and Q8 was ruled out of scope for the port.</p>
+    <p class="lede">Every question was resolved on 2026-10-02. Q9 was answered from database reads, and Q8 was ruled out of scope for the port. The port shipped on 2026-10-03: spec §12 lists where the code differs from this page, and §13 gives the next steps (pre-run setup, then the compare loops).</p>
     <div class="catgrp">
       <div class="cath"><span class="cgl">✓</span> Resolved</div>
       <div class="uci"><span class="uid">Q8</span><span class="utxt"><b>Legacy-trail readers.</b> Out of scope for the port: Inspector General and audit-cc-run may go stale, and IG for v2 is a follow-up. Nothing reads the review_comments.agent_trace column, so D30 is harmless.</span></div>

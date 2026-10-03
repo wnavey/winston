@@ -1,12 +1,14 @@
 # Completeness Check → Runbook v2 (feature-parity port)
 
-**Status:** Draft v2.1 (implementation errata)
+**Status:** Implemented 2026-10-03 (v2.2). All six PRs merged and the bucket migration applied; parity not yet shown. Start at **§13 Next steps**, and see **§12 As built** for where the code departs from §3–§7.
 **Date:** 2026-10-02
 **Repos touched:** `bureau` (new `runbooks/completeness-check/`, two agent-tool CLIs, a tool-usage step, `publish_review_cli.py` lane B flags, the `cc-compare` evaluation runbook), `conductor2` (opt-in per-step persistence to Storage), `cityhall-new` (new `POST /api/runs/:runId/step-files` signing route)
 **Repos NOT touched:** `conductor` (legacy TS lane stays frozen), `substation` (retired as the API home; `cityhall-new` owns `/api/runs/*`), `cityhall`, `claude-plugins` (the `/conductor` captain skill drives any runbook already)
 
 Grilled with Will on 2026-10-02. Every decision below is numbered `D<n>`; open questions are `Q<n>`.
 
+> **Revision note (v2.2, 2026-10-03, implementation shipped):** no decision changes. It adds **§12 As built** (the PRs, and every place the merged code differs from the text above, which a reader should trust over §3–§7) and **§13 Next steps** (pre-run setup and the compare-loop order, so a fresh session can pick it up from here).
+>
 > **Revision note (v2.1, 2026-10-02, errata from the implementation kickoff's code check):**
 > - **D18 / Q2 amended (Will).** The bucket is a genuinely new private Supabase Storage bucket, `runbook-runs`. It is unrelated to the `runbook-runs/` *path prefix* inside `submission-data`, where gate files live (`cityhall-new/src/lib/gate-files.ts`: `GATE_FILE_BUCKET = 'submission-data'`, `GATE_FILE_PREFIX = 'runbook-runs'`). Supabase Storage has no native lifecycle or TTL rule, so the bucket ships with a per-object size limit only. An expiry job is deferred to §10.
 > - **cityhall-new references corrected (§7.3).** The machine-lane rules are at `AGENTS.md:133-143`. Route tests live in `src/app/api/runs/{contract,runs}.test.ts` over `installFakeControlPlane()`, and a new route is registered in `src/test/api-routes.ts`. Writes go through an operation in `src/lib/operations/`. A bucket row is a hand-written migration plus a `supabase/config.toml` entry, because the declarative schema is in force.
@@ -385,3 +387,70 @@ git rev-parse 8325169b:jurisdictions/austin/completeness-check/v2.7-trimmed     
 | (also) | `forceOutcomes` null (no forced rows), `uncertainThreshold` null (0.35 default), `commentNumberingMap` `pape-dawson-comment-num-mapping.tsv`, `priorReviewId` `54d5c002`, `setCurrent` false, `maxWorkers` 20 | same | The loop request passes the same `commentNumberingMap`. Forced items are bucketed `forced` and not scored (D29). |
 | (raw trees) | `output/runs/run-1/findings/cc-N.md.json` ×14, `enriched-findings.json`, `review-comments.json`, `logs/` all present | same layout present | The optional cross-lane replay is still possible (§8.2). |
 | (Q8 aside) | `agent_trace` column populated on 192/192 rows (`tools_used`, `vision`, `semantic_search`) | same | A v2 review will be the first CC review with that column empty (D30). Nothing reads the column (Q8), so the gap is harmless. |
+
+## 12. As built (v2.2)
+
+Everything below merged on 2026-10-02/03. Where this section and §3–§7 disagree, this section describes the code.
+
+| Repo | PR | What it is |
+|---|---|---|
+| winston | #291, #292 | This spec: v2 and the v2.1 errata |
+| cityhall-new (GitHub: `noetic-inc/cityhall`) | #238 | `POST /api/runs/:runId/step-files` (`src/lib/operations/step-files.ts`) + the private `runbook-runs` bucket (migration `20261002200000_runbook_runs_bucket`, **applied to prod 2026-10-03**) |
+| conductor2 | #140 | `persist:` block and uploader (`src/persist.rs`, documented under README "Persisting step files") |
+| bureau | #1933 | Lane B `--no-set-current` and `--prior-review-id` (`runbooks/lib/publish_review_cli.py`) |
+| bureau | #1935 | `runbooks/completeness-check/`: the 16 steps, `scripts/cc.py` (every script step, calling the legacy scripts unchanged through `bin/legacy.sh`), `scripts/tool_usage.py`, `scripts/lib/guide-items.ts` (the D22 parser), `bin/vision.ts`, `bin/search.sh` |
+| bureau | #1934 | `runbooks/cc-compare/` (`1.1-inputs` → `1.2-compare` → `2.1-adjudicate` → `3.1-scorecard`); empty key at `runbooks/completeness-check/eval/lamar-v4/answer-key.json` |
+
+### 12.1 Where the code differs from the spec
+
+- **Route contract (§7.3).** The request is `{files:[{step, item?, path, bytes}]}`. There is no `sha256` (Foreman: the server never used it), and unknown keys are stripped, so `content_type` is ignored. A bad entry comes back on its own as `{status:"invalid", error}` beside its signed neighbors. Only batch errors are a 400: `invalid_body` for an empty or malformed body, `too_many_files` for more than 200. Entries carry `storage_path` + `upload_url` (the signed URL already includes `?token=`), or `too_large`, over 50 MiB. There is no `max_bytes`, `token` or `content_type` echo. `_run` accepts only `persisted.json`. `_logs` takes no item and only `*.jsonl.gz`. Step and item use ASCII `[A-Za-z0-9._-]`, with no `@`.
+- **Uploader (§7.2).** conductor2 doesn't re-validate entries; the route answers per entry. It sanitizes step and item names (`@`→`_`). The manifest is `{"version":1,"files":[…]}` with statuses `uploaded | too_large | failed` (no `unchanged`), and it is uploaded **once per pass**, at the drain. A failed manifest upload leaves `.conductor/persisted.json.pending`, so the next pass re-sends it. An end-of-pass sweep re-offers every green node, which also covers gates and retries. A `persist:` block with no `steps:` uploads only `logs:`.
+- **`1.1-inputs` (D7).** It checks only the request's shape. Unknown `reviewFiles` and missing TSVs are refused by **`1.4-resolve`** (`cc.py`), after staging and before any LLM work.
+- **`2.11-tool-usage` (D21).** It is a **second sink**: `3.1-publish` doesn't depend on it, so evidence can never hold back a publish. A cell it can't read gets `tool-usage.json` = `{…, errors:[…]}`, which its contract accepts. Demanded ids come from `$RUN/events.jsonl`, because the stream logs omit the resume prompt. It also counts direct image reads (`binary_reads`), because the review prompt tells agents to use the vision CLI, not native image reading, for parity.
+- **Stricter than legacy.** A named `forceOutcomes` or numbering-map TSV that is missing fails `1.4`; legacy skipped a missing forced TSV silently. A missing `CURRENT_VERSION` is an error, where legacy fell back to `v1`. `2.7` fails on any checklist join miss. An emitted `grouping` must equal the guide.
+- **Deps.** `scripts/package.json` + its lockfile pin conductor-1's versions. They are installed once per run into `$RUN/.cc-deps` by `bin/deps.sh`, and `1.4` warms that install.
+- **Standard-notes URL.** It is read from `resolved.json` (the request value or the default), not from `request.json`.
+- **`cc-compare` (§8.3, D29).**
+  - v2's status is read from `2.9-comments/review-comments.json` by `sourceFindings[0].ref`. That is the same object lane B stores as `output_json`, so both sides get the same final-status precedence.
+  - Guide drift is checked against a committed hash table, `runbooks/cc-compare/baselines/lamar-v4.json` (tree `e8df1601`).
+  - The label seal is gone. Packets are still shuffled, and the scorer derives `right` from the statuses. The scorecard scans the adjudicator logs for reads of barred paths.
+  - Three `uncertain` statuses are **not** free agreement; they go to the adjudicator.
+  - With nothing scored, the acceptance line reads "no guide scored".
+  - The cause tag is spelled **`judgment-call`**, because bureau's American-spelling gate rejects "judgement".
+- **Lane B.** Lane A refuses both new flags.
+
+## 13. Next steps (start here)
+
+Nothing below has run. Every step marked **paid** spends model tokens and needs Will's explicit go on the exact request.
+
+### 13.1 Before the first run (no cost)
+1. **Rebuild the local `conductor` binary** from conductor2 `main`. A stale binary has no `persist:` and uploads nothing.
+2. Confirm cityhall's Vercel production deploy includes #238, so `step-files` answers rather than returning 404. Uploads tolerate a 404, but the persistence check (§8.4 #5) would fail.
+3. Run environment:
+   - `SUBSTATION_URL` points at cityhall-new.
+   - `AI_GATEWAY_API_KEY` is set (vision CLI, and `2.3`'s LLM call).
+   - On the local lane, set the service-role JWT as `SUPABASE_RUN_TOKEN`. The legacy `semantic-search-blocks` script has no service-role fallback.
+4. Run `dsd usage` before each `advance`, because the seat cache goes stale.
+
+### 13.2 Order of work
+1. **First subset run (paid, small).** `/conductor completeness-check` with
+   `{"submission":{"submission_version_id":"6b9b85ed-e992-4906-a222-b24ee836910c"},"reviewFiles":["cc-1","cc-21"],"runs":1,"commentNumberingMap":"pape-dawson-comment-num-mapping.tsv","publish":false}`.
+   That is 2 guides, 41 items and 2 Sonnet sessions. `publish:false` keeps wiring bugs out of `reviews`. Watch the 2.1 item-coverage resumes, the vision CLI's real calls, `2.11` `off_list` / `out_of_scope` flags, and `persisted.json` filling the bucket.
+2. **Compare (paid only if the runs disagree).** Run `cc-compare` over that run directory. Disagreements get one Opus adjudication cell per guide; expect some on the first pass, because the key starts empty. Will reviews `answer-key.next.json` + `scorecard.md` before it is committed over the key.
+3. **Fix and repeat.** Fix what the first run surfaces, as small PRs. Curate `runbooks/completeness-check/examples/lamar-v4-cc1-cc21` from the first green run, which turns on Tier 1 self-replay (§8.2).
+4. **Acceptance loops (§8.4, each paid).**
+   - Subset loops until all 14 guides are scored; each loop gets cheaper as the key fills.
+   - One loop with cc-3, cc-5, cc-13 or cc-24 and `forceOutcomes: "1700-s-lamar-forced-outcomes.tsv"`.
+   - One `runs=3` run for the uncertain path.
+   - One `publish:true, setCurrent:false` run, checked in the app by review id.
+5. **After acceptance:** switch cityhall's CC trigger off legacy, then the §10 follow-ups: the `runbook-runs` cleanup job, IG for v2 runs, the cloud lane, and the post-parity experiments.
+
+### 13.3 Unverified until the first real run
+- The ported prompts and the D22 resume loop end to end.
+- The vision CLI against real `sheet_version` / `submission-data` and the gateway (model, tags).
+- The Supabase signed-upload PUT format: a raw body to `upload_url` with `content-type` and `x-upsert: true`.
+- The stager's `block-manifest.json` and README `documentId`s as the legacy scripts consume them.
+- `2.3`'s LLM call.
+- The `2.5` family with an empty roster.
+- conductor2's log naming as `2.11` parses it.
+- First-run npm registry access for `bin/deps.sh`.
