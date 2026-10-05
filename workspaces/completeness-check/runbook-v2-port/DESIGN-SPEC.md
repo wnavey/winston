@@ -1,6 +1,6 @@
 # Completeness Check → Runbook v2 (feature-parity port)
 
-**Status:** Implemented 2026-10-03 (v2.2). All six PRs merged and the bucket migration applied; parity not yet shown. Start at **§13 Next steps**, and see **§12 As built** for where the code departs from §3–§7.
+**Status:** Implemented 2026-10-03 (v2.2). All six PRs merged and the bucket migration applied. **Parity was shown on 2026-10-03** by a 5-loop test (bureau PR #1951, IG report `2026-10-03-cc-runbook-v2-parity-loop-native-vision`); the follow-ups are in `../runbook-v2-followups/DESIGN-SPEC.md`, which also amends §8.4 #1 to a noise band (its D5). See **§12 As built** for where the code departs from §3–§7.
 **Date:** 2026-10-02
 **Repos touched:** `bureau` (new `runbooks/completeness-check/`, two agent-tool CLIs, a tool-usage step, `publish_review_cli.py` lane B flags, the `cc-compare` evaluation runbook), `conductor2` (opt-in per-step persistence to Storage), `cityhall-new` (new `POST /api/runs/:runId/step-files` signing route)
 **Repos NOT touched:** `conductor` (legacy TS lane stays frozen), `substation` (retired as the API home; `cityhall-new` owns `/api/runs/*`), `cityhall`, `claude-plugins` (the `/conductor` captain skill drives any runbook already)
