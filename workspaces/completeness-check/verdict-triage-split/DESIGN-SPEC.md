@@ -1,9 +1,11 @@
 # CC Verdict / Triage Split and Appeal
 
-**Status:** Draft v1
+**Status:** Draft v1.1
 **Date:** 2026-10-05
-**Repos touched:** `cityhall-new` (declarative schema: one trigger, one RPC, two columns; `set-triage` split; `TriageCard`; CC landing; CC PDF)
-**Repos NOT touched:** `cityhall` (old app), `substation`, `bureau`, `conductor2`, `inspector-general`, `dsd` (no new RDS component)
+**Repos touched:** `cityhall-new` (phase 1: declarative schema with one trigger, one RPC, three columns; `set-triage` split; `TriageCard`; CC landing + Overall results; CC PDF override wording), `dsd` (phase 2: RDS `StatusSummary` + `ChecklistFinding` for appeals), then `cityhall-new` again (phase 2: CC PDF appeals)
+**Repos NOT touched:** `cityhall` (old app), `substation`, `bureau`, `conductor2`, `inspector-general`
+
+> **Revision note (v1.1, 2026-10-05):** Will answered Q1–Q8. Q1 CRC stays as is. Q2 any Noetic member. Q3 the formal-note sub-status is removed from the CC flow only, because formal reviews hold 1,044 rows using it (D6, D4 step 5). Q4 fail/warn/uncertain. Q5 no notifications. Q6/Q7 an appealed count goes in the UI's Overall results now (D10) and, with a per-finding indicator and the appeal text, in the CC PDF as **phase 2** (D11, dsd RDS work). Q8 no answer state or re-appeal: v1's open/answered state and the `triage_updated_at` column are dropped (D7). §3 and §5 split into phase 1 and phase 2.
 
 Builds on [verdict-override-refactor](../verdict-override-refactor/DESIGN-SPEC.md), which split one 5-value `triage_status` into two axes on `comment_triage`: `verdict_override` (what the correct status is) and `triage_status` (what the customer is doing about it). That spec gave both axes to the same people. This one gives them to different people.
 
@@ -74,53 +76,55 @@ The post-cutover CC surface this spec changes is 8 reviews and 14 rows. CRC: 15 
 This avoids widening the INSERT/UPDATE policies to all Noetic members, which would also hand them write access to formal reviews. A plain Noetic member can correct a CC verdict without gaining any other write on the project.
 
 **D4. A trigger enforces the split on direct table writes.** `public.enforce_cc_verdict_triage_split()`, `BEFORE INSERT OR UPDATE` on `comment_triage`, SECURITY INVOKER:
-0. **Always** (every writer, every review type): if a triage column changed, set `NEW.triage_updated_at = now()` (D7).
-1. **Bypass** the checks below when `auth.uid() IS NULL` or `current_user IN ('postgres', 'service_role', 'workflow_run', 'supabase_admin')`. This covers automated writers, migrations and the D3 RPC (definer → `current_user` is the owner).
+1. **Bypass** when `auth.uid() IS NULL` or `current_user IN ('postgres', 'service_role', 'workflow_run', 'supabase_admin')`. This covers automated writers, migrations and the D3 RPC (definer → `current_user` is the owner).
 2. **Out of scope** (D1) → return NEW unchanged. The review lookup goes through a small SECURITY DEFINER helper `cc_split_applies(review_id uuid) returns boolean`, so the check can't be hidden by `reviews` RLS.
 3. **Verdict columns** (`verdict_override`, `verdict_override_note`, `verdict_override_by`, `verdict_override_at`) changed (`IS DISTINCT FROM` OLD, or from NULL on INSERT) → raise `42501` "Only Noetic can change a completeness check verdict." The RPC is the only authenticated path.
 4. **Triage columns** (`triage_status`, `triage_sub_status`, `triage_note`) changed (vs OLD, or vs the defaults `'new'`/NULL/NULL on INSERT) and `is_noetic_member(auth.uid())` → raise `42501` "Noetic can't triage a customer's completeness check."
-5. Customer triage on CC must use the CC vocabulary (D6): `triage_status ∈ {new, formal-note, appeal}`, else raise `22023`. Existing pre-split values on a row (none exist post-cutover, §1.1) are left alone unless the write changes them.
+5. Customer triage on CC must use the CC vocabulary (D6): `triage_status ∈ {new, formal-note, appeal}` and `triage_sub_status IS NULL`, else raise `22023`. Existing values on a row (3 pre-cutover sub-statuses; none post-cutover, §1.1) are left alone unless the write changes them.
 
 The comparisons are by value, so an upsert that rewrites unchanged columns (today's `setTriage`) passes. The trigger name sorts before or after `set_comment_triage_updated_at`; either order is harmless.
 
-**D5. The verdict gets its own note.** New nullable columns `verdict_override_note text`, `verdict_override_by uuid` (FK `auth.users`, no cascade: `ON DELETE SET NULL`), `verdict_override_at timestamptz`. Today one `triage_note` serves both axes (`cc-report-logic.ts:249-250`); once two different people write the two axes, sharing it would let each overwrite the other's words. Customer text stays in `triage_note`; Noetic's reason goes in `verdict_override_note`.
+**D5. The verdict gets its own note.** New nullable columns `verdict_override_note text`, `verdict_override_by uuid` (FK `auth.users`, `ON DELETE SET NULL`), `verdict_override_at timestamptz`. Today one `triage_note` serves both axes (`cc-report-logic.ts:249-250`); once two different people write the two axes, sharing it would let each overwrite the other's words. Customer text stays in `triage_note`; Noetic's reason goes in `verdict_override_note`.
 - Data step: for the 3 post-cutover CC rows that have an override and a note, copy `triage_note` → `verdict_override_note` and clear `triage_note` (their `triage_status` is `new`, so the note was the override's). Shipped as a separate data migration after the declarative one. CRC rows are not touched (D1).
 
 **D6. CC customer triage vocabulary: `new` / `formal-note` / `appeal`.**
 - `to-fix` is no longer offered on CC (it still renders where it exists; none exist post-cutover).
-- The formal-note sub-status (Need to escalate / Will fix later) is dropped on CC for new writes (Q3).
+- **The formal-note sub-status (Need to escalate / Will fix later) is removed from the CC flow only** (Q3). It can't go entirely: formal reviews hold 1,044 rows using it (358 escalate, 686 will-fix) and CRC 11. On CC the Follow-up select is not rendered, `setTriage` drops any sub-status, and D4 refuses one. Formal and CRC keep it unchanged.
 - **Both require a non-empty note.** `setTriage` refuses an empty note for `formal-note`/`appeal` on CC ("Add a comment to file an appeal.").
-- **Offered only on a non-passing verdict:** fail, warn, uncertain (`onlyAt: ["critical","major","minor"]`). This widens today's fail/warn to include uncertain, which is where a customer most needs to push back. Not offered on pass or N/A (Q4).
+- **Offered only on fail, warn and uncertain** (`onlyAt: ["critical","major","minor"]`). This widens today's fail/warn to include uncertain. Not offered on pass or N/A (Q4).
 - `'appeal'` is added to the `TriageStatus` union and to a CC-only list. The generic five-value `TRIAGE_STATUSES` that formal and CRC render is **not** extended, so their menus, filters and badges are unchanged.
 
-**D7. What an appeal means.** A customer saying "we think this verdict is wrong, and here's why." It's a request to Noetic, not a state change on the verdict. Noetic answers it by setting (or declining to set) a verdict override with a `verdict_override_note`.
-- New column `triage_updated_at timestamptz`, stamped by the D4 trigger whenever a triage column changes (`updated_at` can't serve: the verdict RPC moves it too).
-- **Open appeal** = `triage_status = 'appeal'` AND (`verdict_override_at IS NULL` OR `verdict_override_at < triage_updated_at`). **Answered** = `verdict_override_at >= triage_updated_at`.
-- If Noetic overrides to pass, the item becomes passing, D6 hides the triage tabs, and the appeal shows as **upheld** (read-only). If Noetic leaves the verdict and writes a note, the appeal shows as **answered**; the customer can edit and re-appeal, which reopens it.
-- No notification in v1 (Q5).
+**D7. What an appeal is.** A customer saying "we think this verdict is wrong, and here's why": `triage_status = 'appeal'` + `triage_note`. It's a request to Noetic, not a change to the verdict. Noetic acts on it by setting a verdict override (with a reason in `verdict_override_note`) or by leaving the verdict alone.
+- **No answer state, no re-appeal, no back-and-forth in v1** (Q8). An item is either appealed or not. If Noetic overrides the verdict to pass, the item stops being non-passing, D6 hides the triage tabs, and the stored appeal stays in the row but is no longer shown or counted (D10).
+- No notification (Q5).
 
 **D8. `TriageCard` renders one side per viewer.** It gets an `actor: "staff" | "customer"` prop.
-- **Staff** (`isStaff`, already read by all three pages): the verdict row + a "Reason" note (writes `verdict_override_note`) + Save, via a new `setVerdict` operation → `set_cc_verdict_override` RPC. Below it, the customer's triage shown read-only: "Appealed: *note*" or "Formal note: *note*", with the open/answered marker. No triage tabs.
-- **Customer:** the verdict shown read-only (agent verdict, or "Noetic changed this from Fail to Pass" + the reason), then the triage tabs `Formal note` / `Appeal` + required Comment + Save. No verdict row.
+- **Staff** (`isStaff`, already read by all three pages): the verdict row + a "Reason" note (writes `verdict_override_note`) + Save, via a new `setVerdict` operation → `set_cc_verdict_override` RPC. Below it, the customer's triage shown read-only: "Appealed: *note*" or "Formal note: *note*". No triage tabs.
+- **Customer:** the verdict shown read-only (agent verdict, or "Noetic changed this from Fail to Pass" + the reason), then the triage tabs `Formal note` / `Appeal` + required Comment + Save. No verdict row, no Follow-up select.
 - **Mount gate:** staff mount on `isStaff` (not on write access, which plain Noetic members lack); customers keep the `canTriage` write-access gate. Out-of-scope reviews (D1) keep today's card unchanged.
 
 **D9. `setTriage` is split in two.**
-- `setTriage` loses its `verdict` input. On CC it validates the D6 vocabulary and note rule.
+- `setTriage` loses its `verdict` input. On CC it validates the D6 vocabulary and note rule and drops any sub-status.
 - New `setVerdict(supabase, { reviewCommentId, verdict, note })` calls the RPC and maps `42501` to "Only Noetic can change this verdict."
 - `submitTriage` stays the customer action; a new `submitVerdict` server action is the staff one. Both call `requireUser()` + `createClient()`, so the DB is the only permission check, as today.
 
-**D10. CC landing shows appeals.**
-- A row badge "Appealed" (warning tone) and "Appeal answered" (neutral) next to the item, from the existing badge slot (`checklist-landing.tsx:300-320`).
-- The landing's "Notes" filter menu (built from the offered statuses, 265-272) gains Appeal automatically from D6's list; for staff add an "Open appeals" filter.
-- A header count for staff: "N open appeals". Exact placement is left to iteration.
+**D10. Appeals in the cityhall-new UI (phase 1).**
+- **Appealed count** = items whose effective verdict is fail, warn or uncertain and whose `triage_status = 'appeal'`. One number, used everywhere below.
+- **Overall results** (`src/components/reviews/overall-results.tsx`): the count joins the `aside` text beside the bar legend, to the left of N/A: `3 appealed · 70 N/A · 2 corrected`. It is not a bar segment. Shown only when > 0, to customers and Noetic alike. `src/lib/reviews/check-results.ts` gains `appealed` (it already reads `comment_triage` for verdicts, L44-54; it now also reads `triage_status`).
+- **Row badge** "Appealed" (amber tone) on the CC landing item (`checklist-landing.tsx:300-320`).
+- **Notes filter** (265-272) gains Appeal automatically from D6's list.
 
-**D11. CC PDF.** Post-cutover only, in `cc-report-logic.ts`:
-- Add `'appeal'` to `CcTriageStatus` (117) and `CC_DISPOSITION_VALUES` (175).
-- The disposition gate (247) widens from fail/warn to fail/warn/uncertain, matching D6.
-- New annotation: `Appealed by applicant: <triage_note>`, plus, when answered, `Noetic response: <verdict_override_note>`.
-- The override line reads `verdict_override_note` instead of the shared `triage_note`: "The Noetic agent marked this Fail; a Noetic reviewer determined the correct status is Pass. Reason: …". The wording "a human reviewer" becomes "a Noetic reviewer" since only Noetic can now write it.
-- No new count, section or RDS component. Appeals are annotations on the finding, as formal notes are. If we want an "Items under appeal" summary chip later, that's an RDS `StatusCount` change (Q6).
-- `cc-report-data.ts:160-182` selects the new columns.
+**D11. CC PDF.** Two phases.
+- **Phase 1 (cityhall-new only, no RDS change):**
+  - The override line reads `verdict_override_note` instead of the shared `triage_note`, and says "a Noetic reviewer" instead of "a human reviewer": "The Noetic agent marked this Fail; a Noetic reviewer determined the correct status is Pass. Reason: …".
+  - `cc-report-data.ts:160-182` selects the new columns.
+  - The disposition gate (`cc-report-logic.ts:247`) widens from fail/warn to fail/warn/uncertain, matching D6.
+  - Appeals are **not** printed yet. `appeal` is not added to `CC_DISPOSITION_VALUES`, so the PDF keeps silently skipping it until phase 2.
+  - Formal notes on CC print without a sub-status label from now on (no new ones exist).
+- **Phase 2 (dsd RDS release, then cityhall-new):**
+  - **Summary count.** "N Appealed" joins the `StatusSummary` counts row, to the left of N/A (`completeness-check-report.tsx:308-312`). It is not a `StackedStatusBar` segment. `StatusSummary` today takes status chips; an appeal count is not a status, so RDS needs a way to add a non-status count (design TBD with dsd).
+  - **Appealed finding.** Each appealed `ChecklistFinding` gets a visual indicator (a marker or badge next to the item number/title) and the customer's appeal text under the finding: "Appeal: *triage_note*". Needs an RDS `ChecklistFinding` change.
+  - Iterated in the dsd RDS gallery, released with the `release-rds` flow, then wired in `cc-report-logic.ts` (`appeal` into `CcTriageStatus` and `CC_DISPOSITION_VALUES`, an appeal annotation) and `completeness-check-report.tsx`.
 
 **D12. Known gaps accepted.**
 - **Old cityhall app and substation's `POST comment-triage` route.** The route writes as **service_role** (`substation/src/lib/supabase.ts:14`), so it bypasses D4 entirely, and it lets read-level users write (it only checks `read`, L23-25). No current caller found in cityhall-new, IG or claude-plugins. Out of scope per Will (cityhall-new only); file the route as a separate bug and retire it.
@@ -128,50 +132,61 @@ The comparisons are by value, so an upsert that rewrites unchanged columns (toda
 
 ---
 
-## 3. Changes by file (cityhall-new)
+## 3. Changes by file
+
+### 3.1 Phase 1 (cityhall-new)
 
 | Area | File | Change |
 |---|---|---|
-| Schema | `supabase/schemas/public/tables/comment_triage.sql` | + `verdict_override_note`, `verdict_override_by`, `verdict_override_at`, `triage_updated_at`; + `CREATE TRIGGER enforce_cc_verdict_triage_split`; column comment lists `appeal` |
+| Schema | `supabase/schemas/public/tables/comment_triage.sql` | + `verdict_override_note`, `verdict_override_by`, `verdict_override_at`; + `CREATE TRIGGER enforce_cc_verdict_triage_split`; column comment lists `appeal` |
 | Schema | `supabase/schemas/public/functions/enforce_cc_verdict_triage_split.sql` | new, SECURITY INVOKER (D4) |
 | Schema | `supabase/schemas/public/functions/cc_split_applies.sql` | new, SECURITY DEFINER, STABLE |
 | Schema | `supabase/schemas/public/functions/set_cc_verdict_override.sql` | new, SECURITY DEFINER (D3) |
 | Schema | `supabase/definer-acl-allowlist.txt` | + the two definer functions |
 | Migration | generated by `declarative sync`; + one data migration (D5 backfill, 3 rows) | |
 | Types | `src/types/database.types.ts` | regenerate |
-| Ops | `src/lib/operations/set-triage.ts` | drop `verdict`; CC vocabulary + required note; `triageFor` CC list `new/formal-note/appeal`, `onlyAt` + `minor` |
+| Ops | `src/lib/operations/set-triage.ts` | drop `verdict`; CC vocabulary, required note, no sub-status; `triageFor` CC list `new/formal-note/appeal`, `onlyAt` + `minor` |
 | Ops | `src/lib/operations/set-verdict.ts` | new (D9) |
 | Actions | `src/app/project/[projectId]/review/[reviewId]/actions.ts` | + `submitVerdict` |
-| UI | `.../[reviewId]/triage-control.tsx` | `actor` prop, two renderings (D8); `SHORT_LABEL` + Appeal |
-| UI | `src/components/reviews/checklist-landing.tsx` | pass `actor`, staff mount gate, appeal badges + filter + count (D10) |
+| UI | `.../[reviewId]/triage-control.tsx` | `actor` prop, two renderings (D8); `SHORT_LABEL` + Appeal; no Follow-up select on CC |
+| UI | `src/components/reviews/checklist-landing.tsx` | pass `actor`, staff mount gate, Appealed badge + filter (D10) |
+| UI | `src/components/reviews/overall-results.tsx`, `src/lib/reviews/check-results.ts` | appealed count left of N/A (D10) |
 | UI | `.../[discipline]/page.tsx`, `.../sheets/page.tsx` | pass `actor` only when the review is in D1 scope; otherwise unchanged |
 | UI | `src/components/reviews/issue-table.tsx` | `TRIAGE_VARIANT` + `appeal` (CC reachable by URL) |
-| Read model | `src/lib/reviews/rows.ts`, `adapters/checklist.ts` | carry `verdictOverrideNote`, `triageUpdatedAt`, `verdictOverrideAt` → `appeal: "open" \| "answered" \| null` on the view |
-| PDF | `src/pdf/cc-report-logic.ts`, `cc-report-data.ts` | D11 |
+| Read model | `src/lib/reviews/rows.ts`, `adapters/checklist.ts` | carry `verdictOverrideNote` and an `appealed` flag on the view |
+| PDF | `src/pdf/cc-report-logic.ts`, `cc-report-data.ts` | D11 phase 1 |
+
+### 3.2 Phase 2 (dsd, then cityhall-new)
+
+| Repo | Change |
+|---|---|
+| `dsd` | RDS `StatusSummary`: a non-status count slot; `ChecklistFinding`: an appealed indicator + appeal text. Gallery entries, then an RDS release |
+| `cityhall-new` | bump RDS; `cc-report-logic.ts` appeal annotation + `CC_DISPOSITION_VALUES`; `completeness-check-report.tsx` passes the appealed count and per-finding flag |
 
 ## 4. Tests
 
 - **DB** (`pnpm test:db`, `tests/db/roles.test.ts` role matrix + a new `tests/db/cc-verdict-triage-split.test.ts`), on a post-cutover CC row, a pre-cutover CC row, a CRC row and a formal row:
-  - customer admin: triage ✅, direct `verdict_override` write ❌, RPC ❌
+  - customer admin: triage ✅, direct `verdict_override` write ❌, RPC ❌, sub-status on CC ❌
   - Noetic admin: triage ❌, direct verdict ❌, RPC ✅
   - Noetic plain member: RPC ✅ (no project grant)
   - `workflow_run` and service_role: both ✅
-  - CRC, pre-cutover CC and formal rows: today's behaviour for every role (the regression guard for "don't break formal")
-  - re-upsert of unchanged triage by Noetic passes; `appeal` on a formal row is refused by nothing in the DB but never offered by the app
-- **Unit:** `set-triage.test.ts` (vocabulary, required note, no verdict), new `set-verdict.test.ts`, `cc-report-logic.test.ts` (appeal annotation, uncertain gate, `verdict_override_note` on the override line, open vs answered), `adapters/checklist.test.ts` (appeal state).
-- **E2E:** extend `e2e/flows.spec.ts:94`: staff sees verdict row and no tablist; customer sees tablist with two tabs and no verdict row.
+  - CRC, pre-cutover CC and formal rows: today's behaviour for every role, sub-status included (the regression guard for "don't break formal")
+  - re-upsert of unchanged triage by Noetic passes
+- **Unit:** `set-triage.test.ts` (vocabulary, required note, no verdict, sub-status dropped on CC only), new `set-verdict.test.ts`, `check-results.test.ts` (appealed count ignores pass/N/A items), `cc-report-logic.test.ts` (uncertain gate, `verdict_override_note` on the override line, appeal still not printed in phase 1), `adapters/checklist.test.ts` (appealed flag).
+- **E2E:** extend `e2e/flows.spec.ts:94`: staff sees verdict row and no tablist; customer sees a tablist with two tabs, no Follow-up select, and no verdict row.
 
 ## 5. Rollout
 
-One cityhall-new PR. Order: Jason pushes the declarative migration, then the D5 data migration, then the app deploys. Between the migration and the deploy, the running app's CC card hits the trigger on exactly the writes this spec forbids (a customer's verdict save, a Noetic triage save) and shows the refusal message; everything else keeps working. With 8 post-cutover CC reviews in prod, that window is acceptable. Deploy within the hour.
+- **Phase 1:** one cityhall-new PR. Order: Jason pushes the declarative migration, then the D5 data migration, then the app deploys. Between the migration and the deploy, the running app's CC card hits the trigger on exactly the writes this spec forbids (a customer's verdict save, a Noetic triage save, a CC sub-status) and shows the refusal message; everything else keeps working. With 8 post-cutover CC reviews in prod, that window is acceptable. Deploy within the hour.
+- **Phase 2:** design iteration in the dsd RDS gallery → RDS release → cityhall-new PR. No schema change.
 
-## 6. Open questions
+## 6. Resolved questions (v1.1)
 
-- **Q1. CRC.** Apply the same split to CRC (customers lose the verdict override they've used 545 times), or keep CRC as is? Recommend: keep, revisit with usage data, which `verdict_override_by` will start producing if the RPC is widened to CRC.
-- **Q2. "Noetic"** = any Noetic member (D2) or admins only? Spec assumes members.
-- **Q3. Formal-note sub-status** (Need to escalate / Will fix later) on CC: drop (D6) or keep?
-- **Q4. N/A items.** Can a customer appeal a not-applicable verdict? Spec says no (non-passing = fail/warn/uncertain).
-- **Q5. Notification.** Should an appeal notify Noetic (email/Slack), or is the landing count enough for v1?
-- **Q6. PDF summary.** Is an annotation per item enough, or does the cover/summary need an "Items under appeal" count (RDS change)?
-- **Q7. Does the appeal belong in the PDF at all** before Noetic answers it? The CC PDF goes to the applicant and may be shared with the City; an open appeal arguably shouldn't print. Spec prints both open and answered.
-- **Q8. Re-appeal** after an answer: allowed (spec), or one appeal per item?
+- **Q1. CRC:** kept as is. The split applies to post-cutover CC only (D1).
+- **Q2. "Noetic":** any Noetic member, admin or not (D2).
+- **Q3. Formal-note sub-status:** removed from the CC flow only; formal (1,044 rows) and CRC keep it (D6).
+- **Q4. What can be appealed:** fail, warn and uncertain (D6).
+- **Q5. Notifications:** none (D7).
+- **Q6. Appeal count:** yes. In the UI's Overall results now (D10), in the PDF summary to the left of N/A in phase 2 (D11). Not a bar segment in either.
+- **Q7. Appeals in the PDF:** yes, in phase 2: the summary count plus an indicator and the appeal text on each appealed finding (D11).
+- **Q8. Re-appeal / answers:** out of scope; an item is appealed or not (D7).

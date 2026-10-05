@@ -431,7 +431,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
   <div class="kicker">COMPLETENESS CHECK · VERDICT / TRIAGE SPLIT</div>
   <h1>CC verdict / triage split and Appeal</h1>
   <p>On completeness checks completed after the 2026-07-07 cutover, Noetic members own the verdict override and customers own triage, which becomes Formal note or Appeal. cityhall-new only. Companion to <code>DESIGN-SPEC.md</code>.</p>
-  <div class="meta">Draft v1 · 2026-10-05 · winston#294 · click a tab ↓</div>
+  <div class="meta">Draft v1.1 · 2026-10-05 · winston#294 · phase 1 + phase 2 · click a tab ↓</div>
   <a class="spec-link" href="DESIGN-SPEC.html">📖 read the spec</a>
 </header>
 
@@ -496,14 +496,14 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
       <div class="sys chg" id="b-card1" style="grid-area:2/2"><a class="ref" href="#detail-card">D8 ↓</a><span class="k">ui</span><span class="t">TriageCard, customer side</span><span class="d">verdict read-only, two tabs + comment</span></div>
       <div class="sys chg" id="b-op1" style="grid-area:2/3"><a class="ref" href="#detail-settriage">D9 ↓</a><span class="k">server action</span><span class="t">setTriage</span><span class="d">no verdict; CC vocabulary, note required</span></div>
       <div class="sys chg store" id="b-tbl" style="grid-area:2/5"><a class="ref" href="#detail-er">D5 ↓</a><span class="k">table</span><span class="t">comment_triage</span><span class="d">+ verdict note/by/at, + split trigger</span></div>
-      <div class="sys chg" id="b-pdf" style="grid-area:2/6"><a class="ref" href="#detail-pdf">D11 ↓</a><span class="k">pdf</span><span class="t">CC PDF</span><span class="d">prints the appeal and Noetic's reason</span></div>
+      <div class="sys chg" id="b-pdf" style="grid-area:2/6"><a class="ref" href="#detail-pdf">D11 ↓</a><span class="k">pdf</span><span class="t">CC PDF</span><span class="d">Noetic's reason now; appeals in phase 2</span></div>
 
       <div class="sys new trig" id="b-t2" style="grid-area:3/1"><span class="dot"></span><span class="t">Noetic member saves verdict</span><span class="d">any role in the noetic org</span></div>
       <div class="sys chg" id="b-card2" style="grid-area:3/2"><a class="ref" href="#detail-card">D8 ↓</a><span class="k">ui</span><span class="t">TriageCard, staff side</span><span class="d">verdict + reason; appeal read-only</span></div>
       <div class="sys new" id="b-op2" style="grid-area:3/3"><a class="ref" href="#detail-setverdict">D9 ↓</a><span class="k">server action</span><span class="t">setVerdict</span><span class="d">calls the RPC</span></div>
       <div class="sys new" id="b-rpc" style="grid-area:3/4"><a class="ref" href="#detail-rpc">D3 ↓</a><span class="k">rpc · definer</span><span class="t">set_cc_verdict_override</span><span class="d">checks is_noetic_member</span></div>
       <div class="sys new" id="b-trg" style="grid-area:3/5"><a class="ref" href="#detail-trigger">D4 ↓</a><span class="k">trigger</span><span class="t">split trigger</span><span class="d">refuses the wrong side's columns</span></div>
-      <div class="sys chg" id="b-land" style="grid-area:3/6"><a class="ref" href="#detail-landing">D10 ↓</a><span class="k">ui</span><span class="t">CC landing</span><span class="d">appeal badges, open-appeal count</span></div>
+      <div class="sys chg" id="b-land" style="grid-area:3/6"><a class="ref" href="#detail-landing">D10 ↓</a><span class="k">ui</span><span class="t">CC landing</span><span class="d">Appealed badge + count</span></div>
 
       <div class="sys trig" id="b-t3" style="grid-area:4/1"><span class="dot"></span><span class="t">Automated writer</span><span class="d">service_role, workflow_run, postgres</span></div>
 
@@ -525,8 +525,8 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
       <a class="refrow chg" data-ref="D5"><span class="chip">D5</span><span class="txt">the verdict gets its own note, author and timestamp</span></a>
       <a class="refrow chg" data-ref="D8"><span class="chip">D8</span><span class="txt">the triage card renders one side per viewer</span></a>
       <a class="refrow chg" data-ref="D9"><span class="chip">D9</span><span class="txt">setTriage is split into setTriage (customer) and setVerdict (Noetic)</span></a>
-      <a class="refrow chg" data-ref="D10"><span class="chip">D10</span><span class="txt">the CC landing shows appeals</span></a>
-      <a class="refrow chg" data-ref="D11"><span class="chip">D11</span><span class="txt">the CC PDF prints the appeal and Noetic's reason</span></a>
+      <a class="refrow chg" data-ref="D10"><span class="chip">D10</span><span class="txt">the UI shows an Appealed badge and an appealed count</span></a>
+      <a class="refrow chg" data-ref="D11"><span class="chip">D11</span><span class="txt">the CC PDF prints Noetic's reason now and the appeals in phase 2</span></a>
     </div>
     <div class="sys-legend"><span><i></i>exists today</span><span><i class="chg"></i>changed</span><span><i class="new"></i>new</span><span><i class="dot new"></i>new trigger</span></div>
     <p class="claim"><b>Claim (D1):</b> every rule applies only to a completeness check completed after 2026-07-07T21:00Z; pre-cutover CC, CRC and every formal format behave exactly as today.</p>
@@ -551,8 +551,6 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 
     <h3 id="detail-trigger">enforce_cc_verdict_triage_split</h3>
     <div class="dflow">
-      <div class="dq"><span class="q">Did a triage column change?</span><span class="yes">yes →</span><span class="out">stamp triage_updated_at, then continue</span></div>
-      <div class="dno">either way ↓</div>
       <div class="dq"><span class="q">auth.uid() is null, or current_user is postgres / service_role / workflow_run?</span><span class="yes">yes →</span><span class="out">allow</span></div>
       <div class="dno">no ↓</div>
       <div class="dq"><span class="q">Is the review out of scope (not CC, or completed before the cutover)?</span><span class="yes">yes →</span><span class="out">allow (today's rules)</span></div>
@@ -561,7 +559,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
       <div class="dno">no ↓</div>
       <div class="dq"><span class="q">Did a triage column change and the writer is a Noetic member?</span><span class="yes">yes →</span><span class="out fail">refuse 42501</span></div>
       <div class="dno">no ↓</div>
-      <div class="dq"><span class="q">Is triage_status outside new / formal-note / appeal?</span><span class="yes">yes →</span><span class="out fail">refuse 22023</span></div>
+      <div class="dq"><span class="q">Is triage_status outside new / formal-note / appeal, or is a sub-status set?</span><span class="yes">yes →</span><span class="out fail">refuse 22023</span></div>
       <div class="dno">no ↓</div>
       <div class="dq end"><span class="q">otherwise</span><span class="yes"></span><span class="out">allow</span></div>
     </div>
@@ -588,51 +586,50 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 
   <!-- ================= APPEAL ================= -->
   <section class="panel" id="appeal">
-    <h2><span class="eyebrow">03 · the customer's side</span>Appeal<span class="sub">The appeal lifecycle, what each viewer sees, the landing and the PDF.</span></h2>
+    <h2><span class="eyebrow">03 · the customer's side</span>Appeal<span class="sub">Appeal states, what each viewer sees, the UI count and badge, and the PDF by phase.</span></h2>
     <p class="lede">An appeal is a customer saying the verdict is wrong and why; it asks Noetic to act and does not change the verdict (D7).</p>
 
-    <h3>Appeal lifecycle</h3>
+    <h3>Appeal states</h3>
     <div class="sm">
-      <span class="s dim">no triage<span class="who">customer</span></span><span class="a">→</span>
-      <span class="s stop">open appeal<span class="who">Noetic's move</span></span><span class="a">→</span>
-      <span class="s ok">answered<span class="who">reason saved, verdict kept</span></span><span class="a">or</span>
-      <span class="s ok">upheld<span class="who">verdict changed to pass</span></span>
+      <span class="s dim">not appealed<span class="who">fail / warn / uncertain</span></span><span class="a">→</span>
+      <span class="s stop">appealed<span class="who">customer's comment stored</span></span><span class="a">→</span>
+      <span class="s ok">verdict changed to pass<span class="who">appeal hidden, not counted</span></span>
     </div>
-    <p class="claim"><b>Claim (D7):</b> answered means <code>verdict_override_at ≥ triage_updated_at</code>; the customer editing the appeal moves <code>triage_updated_at</code> and reopens it.</p>
+    <p class="claim"><b>Claim (D7):</b> there is no answer state, no re-appeal and no back-and-forth in v1; an item is appealed or not.</p>
 
     <h3 id="detail-card">TriageCard, by viewer</h3>
     <div class="spectable-scroll"><table class="spectable">
       <thead><tr><th>Viewer</th><th>Verdict</th><th>Triage</th><th>Saves through</th></tr></thead>
       <tbody>
-        <tr><td>Customer (write access)</td><td>read-only: agent verdict, or "Noetic changed this from Fail to Pass" + reason</td><td>tabs <b>Formal note</b> / <b>Appeal</b> + required Comment, only on fail / warn / uncertain</td><td><code>submitTriage</code></td></tr>
-        <tr><td>Noetic member</td><td>verdict picker + Reason</td><td>read-only: "Appealed: …" or "Formal note: …", with open / answered</td><td><code>submitVerdict</code></td></tr>
+        <tr><td>Customer (write access)</td><td>read-only: agent verdict, or "Noetic changed this from Fail to Pass" + reason</td><td>tabs <b>Formal note</b> / <b>Appeal</b> + required Comment, only on fail / warn / uncertain; no Follow-up select</td><td><code>submitTriage</code></td></tr>
+        <tr><td>Noetic member</td><td>verdict picker + Reason</td><td>read-only: "Appealed: …" or "Formal note: …"</td><td><code>submitVerdict</code></td></tr>
         <tr><td>Out-of-scope review</td><td colspan="2">today's card, unchanged</td><td><code>submitTriage</code></td></tr>
       </tbody>
     </table></div>
     <p class="claim"><b>Claim (D8):</b> staff mount on <code>isStaff</code>, not on write access, which plain Noetic members lack; customers keep the write-access gate.</p>
 
-    <h3 id="detail-landing">CC landing</h3>
+    <h3 id="detail-landing">Appeals in the UI (phase 1)</h3>
     <div class="spectable-scroll"><table class="spectable">
-      <thead><tr><th>Where</th><th>Customer sees</th><th>Noetic sees</th></tr></thead>
+      <thead><tr><th>Where</th><th>What shows</th><th>Who sees it</th></tr></thead>
       <tbody>
-        <tr><td>Row badge (<code>checklist-landing.tsx:300-320</code>)</td><td>Appealed / Appeal answered</td><td>Appealed / Appeal answered</td></tr>
-        <tr><td>Notes filter (265-272)</td><td>Formal note, Appeal</td><td>Formal note, Appeal, Open appeals</td></tr>
-        <tr><td>Header</td><td><span class="none">nothing new</span></td><td>"N open appeals"</td></tr>
+        <tr><td>Overall results (<code>overall-results.tsx</code>)</td><td>"3 appealed · 70 N/A · 2 corrected" beside the bar legend, left of N/A; not a bar segment; hidden at 0</td><td>everyone</td></tr>
+        <tr><td>Row badge (<code>checklist-landing.tsx:300-320</code>)</td><td>Appealed (amber)</td><td>everyone</td></tr>
+        <tr><td>Notes filter (265-272)</td><td>Formal note, Appeal</td><td>everyone</td></tr>
       </tbody>
     </table></div>
-    <p class="claim"><b>Claim (D10):</b> exact placement of the count is left to iteration.</p>
+    <p class="claim"><b>Claim (D10):</b> the appealed count is items whose effective verdict is fail, warn or uncertain and whose triage status is appeal; the same number is used everywhere.</p>
 
-    <h3 id="detail-pdf">CC PDF annotations</h3>
+    <h3 id="detail-pdf">CC PDF by phase</h3>
     <div class="spectable-scroll"><table class="spectable">
-      <thead><tr><th>Item state</th><th>Printed under the finding</th></tr></thead>
+      <thead><tr><th>Phase</th><th>Where</th><th>Change</th></tr></thead>
       <tbody>
-        <tr><td>Overridden by Noetic</td><td>"The Noetic agent marked this Fail; a Noetic reviewer determined the correct status is Pass. Reason: <i>verdict_override_note</i>"</td></tr>
-        <tr><td>Open appeal (fail / warn / uncertain)</td><td>"Appealed by applicant: <i>triage_note</i>"</td></tr>
-        <tr><td>Answered appeal</td><td>"Appealed by applicant: …" then "Noetic response: <i>verdict_override_note</i>"</td></tr>
-        <tr><td>Formal note</td><td>"Formal Note: <i>triage_note</i>" (no sub-status on new writes)</td></tr>
+        <tr><td><span class="sn">1</span></td><td>override line</td><td>"…a Noetic reviewer determined the correct status is Pass. Reason: <i>verdict_override_note</i>"</td></tr>
+        <tr><td><span class="sn">1</span></td><td>disposition gate</td><td>fail / warn widens to fail / warn / uncertain; formal notes print without a sub-status; appeals still not printed</td></tr>
+        <tr><td><span class="sn">2</span></td><td>summary counts (<code>StatusSummary</code>)</td><td>"N Appealed" left of N/A; not in the stacked bar; needs a non-status count slot in RDS</td></tr>
+        <tr><td><span class="sn">2</span></td><td>each appealed finding (<code>ChecklistFinding</code>)</td><td>a visual indicator + "Appeal: <i>triage_note</i>"; needs an RDS change</td></tr>
       </tbody>
     </table></div>
-    <p class="claim"><b>Claim (D11):</b> appeals are annotations on the finding, as formal notes are, so no new RDS component is needed; the disposition gate widens from fail/warn to fail/warn/uncertain.</p>
+    <p class="claim"><b>Claim (D11):</b> phase 2 is designed in the dsd RDS gallery and released before cityhall-new wires the appeal into the PDF.</p>
   </section>
 
   <!-- ================= STORED ================= -->
@@ -649,7 +646,6 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
         <div class="row hi"><span class="gut"></span><span class="nm">triage_status</span><span class="ty">text · + 'appeal'</span></div>
         <div class="row"><span class="gut"></span><span class="nm">triage_sub_status</span><span class="ty">text</span></div>
         <div class="row"><span class="gut"></span><span class="nm">triage_note</span><span class="ty">text · customer's words</span></div>
-        <div class="row add"><span class="gut">+</span><span class="b b-new">NEW</span><span class="nm">triage_updated_at</span><span class="ty">timestamptz · trigger-stamped</span></div>
         <div class="row"><span class="gut"></span><span class="nm">verdict_override</span><span class="ty">text</span></div>
         <div class="row add"><span class="gut">+</span><span class="b b-new">NEW</span><span class="nm">verdict_override_note</span><span class="ty">text · Noetic's reason</span></div>
         <div class="row add"><span class="gut">+</span><span class="b b-fk">FK</span><span class="b b-new">NEW</span><span class="nm">verdict_override_by</span><span class="ty">uuid → auth.users · set null</span></div>
@@ -699,31 +695,33 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 
   <!-- ================= ROLLOUT ================= -->
   <section class="panel" id="rollout">
-    <h2><span class="eyebrow">05 · shipping it</span>Rollout<span class="sub">The order, the blast radius, and the open questions.</span></h2>
-    <p class="lede">One cityhall-new PR: Jason pushes the declarative migration, then the data migration, then the app deploys (§5).</p>
+    <h2><span class="eyebrow">05 · shipping it</span>Rollout<span class="sub">The order of both phases, the blast radius, and the resolved questions.</span></h2>
+    <p class="lede">Phase 1 is one cityhall-new PR; phase 2 is a dsd RDS release followed by a cityhall-new PR (§5).</p>
 
     <div class="spectable-scroll"><table class="spectable">
       <thead><tr><th>Step</th><th>What</th><th>Prod effect</th></tr></thead>
       <tbody>
-        <tr><td><span class="sn">1</span></td><td>declarative migration: columns, trigger, functions</td><td>the running app's CC card refuses customer verdict saves and Noetic triage saves until step 3</td></tr>
-        <tr><td><span class="sn">2</span></td><td>data migration</td><td>3 rows: <code>triage_note</code> → <code>verdict_override_note</code></td></tr>
-        <tr><td><span class="sn">3</span></td><td>app deploy</td><td>split card, appeal, PDF</td></tr>
+        <tr><td><span class="sn">1</span></td><td>phase 1: declarative migration (columns, trigger, functions)</td><td>the running app's CC card refuses customer verdict saves, Noetic triage saves and CC sub-statuses until step 3</td></tr>
+        <tr><td><span class="sn">2</span></td><td>phase 1: data migration</td><td>3 rows: <code>triage_note</code> → <code>verdict_override_note</code></td></tr>
+        <tr><td><span class="sn">3</span></td><td>phase 1: app deploy</td><td>split card, appeal, appealed count in Overall results, PDF override wording</td></tr>
+        <tr><td><span class="sn">4</span></td><td>phase 2: dsd RDS iteration + release</td><td>none until cityhall-new bumps RDS</td></tr>
+        <tr><td><span class="sn">5</span></td><td>phase 2: cityhall-new PR</td><td>appeal count and appealed findings in the CC PDF</td></tr>
       </tbody>
     </table></div>
     <div class="callout ember"><span class="lab">out of scope</span> substation's <code>POST comment-triage</code> route writes as service_role, so it bypasses the trigger, and it lets read-level users write. No current caller was found; file it as a separate bug (D12).</div>
 
-    <h3>Open questions</h3>
+    <h3>Resolved questions</h3>
     <div class="spectable-scroll"><table class="spectable">
-      <thead><tr><th>#</th><th>Question</th><th>Spec's default</th></tr></thead>
+      <thead><tr><th>#</th><th>Question</th><th>Answer</th></tr></thead>
       <tbody>
-        <tr><td>Q1</td><td>Apply the split to CRC?</td><td>no; customers used the CRC override 545 times</td></tr>
+        <tr><td>Q1</td><td>Apply the split to CRC?</td><td>no, CRC stays as is</td></tr>
         <tr><td>Q2</td><td>Noetic = any member or admins only?</td><td>any member</td></tr>
-        <tr><td>Q3</td><td>Keep the formal-note sub-status on CC?</td><td>drop</td></tr>
-        <tr><td>Q4</td><td>Can a customer appeal an N/A verdict?</td><td>no</td></tr>
-        <tr><td>Q5</td><td>Notify Noetic on a new appeal?</td><td>no, landing count only</td></tr>
-        <tr><td>Q6</td><td>"Items under appeal" count in the PDF summary?</td><td>no</td></tr>
-        <tr><td>Q7</td><td>Print open appeals in the PDF?</td><td>yes</td></tr>
-        <tr><td>Q8</td><td>Allow re-appeal after an answer?</td><td>yes</td></tr>
+        <tr><td>Q3</td><td>Formal-note sub-status?</td><td>removed from the CC flow only; formal has 1,044 rows using it</td></tr>
+        <tr><td>Q4</td><td>Which verdicts can be appealed?</td><td>fail, warn, uncertain</td></tr>
+        <tr><td>Q5</td><td>Notify Noetic on a new appeal?</td><td>no</td></tr>
+        <tr><td>Q6</td><td>Appeal count?</td><td>yes: UI now, PDF summary in phase 2, left of N/A, not in the bar</td></tr>
+        <tr><td>Q7</td><td>Appeals in the PDF?</td><td>phase 2: count + indicator + appeal text per finding</td></tr>
+        <tr><td>Q8</td><td>Re-appeal / answers?</td><td>out of scope</td></tr>
       </tbody>
     </table></div>
   </section>
