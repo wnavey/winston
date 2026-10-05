@@ -1,13 +1,15 @@
 # CC Verdict / Triage Split and Appeal
 
-**Status:** Draft v1.2
+**Status:** Draft v1.3 (implemented as cityhall-new#254)
 **Date:** 2026-10-05
-**Repos touched:** `cityhall-new` (phase 1: declarative schema with one trigger, one RPC, one column; `set-triage` split; `TriageCard`; CC landing + Overall results; CC PDF override wording), `dsd` (phase 2: RDS `StatusSummary` + `ChecklistFinding` for appeals), then `cityhall-new` again (phase 2: CC PDF appeals)
+**Repos touched:** `cityhall-new` (phase 1: declarative schema with column grants, a DELETE-policy change, one RPC, one column; `set-triage` split; `TriageCard`; CC landing + Overall results; CC PDF override wording), `dsd` (phase 2: RDS `StatusSummary` + `ChecklistFinding` for appeals), then `cityhall-new` again (phase 2: CC PDF appeals)
 **Repos NOT touched:** `cityhall` (old app), `substation`, `bureau`, `conductor2`, `inspector-general`
 
 > **Revision note (v1.1, 2026-10-05):** Will answered Q1–Q8. Q1 CRC stays as is. Q2 any Noetic member. Q3 the formal-note sub-status is removed from the CC flow only, because formal reviews hold 1,044 rows using it (D6, D4 step 5). Q4 fail/warn/uncertain. Q5 no notifications. Q6/Q7 an appealed count goes in the UI's Overall results now (D10) and, with a per-finding indicator and the appeal text, in the CC PDF as **phase 2** (D11, dsd RDS work). Q8 no answer state or re-appeal: v1's open/answered state and the `triage_updated_at` column are dropped (D7). §3 and §5 split into phase 1 and phase 2.
 >
 > **Revision note (v1.2, 2026-10-05, grill session G1–G20, §6.2):** `verdict_override_by`/`_at` dropped as scope creep (G13), leaving one new column. **The D5 data migration is removed**: no existing `comment_triage` row is written (new D13, G14); old rows are read through a legacy rule instead. The trigger also covers DELETE, so a customer can't delete Noetic's override (G2). Appeals can be withdrawn, edited and switched with Formal note (G6–G8); Noetic's reason is optional and customer-facing (G10, G11). Phase 1 PDF is reduced to note-source plumbing with no visible change and keeps the neutral "a human reviewer" wording; the uncertain gate moves to phase 2 (G13, G17). Phase 2 starts after phase 1 ships (G18).
+
+> **Revision note (v1.3, 2026-10-05, implementation kickoff):** Three changes, decided by Will while implementing. (1) **CRC is in scope** (reverses Q1/D1): the split applies to every review that takes verdict corrections, i.e. `correctsVerdicts(review)` (CC and CRC after their cutovers), so the code keys on one existing predicate and adds no new cutover logic. Prod check: post-cutover CRC has 545 overrides on 547 rows and **0** customer triage (all `new`), so D5's legacy read rule covers every CRC note. (2) **No trigger** (replaces D4 and the `cc_split_applies` helper): signed-in users lose table-level INSERT/UPDATE on `comment_triage` and get them back per column on the ids and the three triage columns, so the verdict columns are writable only through the RPC; the DELETE policy gains "no verdict on the row, or the caller is Noetic". A trigger would have fired on a project/review delete's cascade as the customer and blocked it; cascades skip policies, so this way nothing blocks a project delete. G2 is confirmed as one row. (3) **"Noetic can't triage" and the CC/CRC vocabulary are enforced in the app** (`setTriage`), not the database: that was the only part that needed the cutover dates in SQL, and the security-relevant rule (customers can't overturn a verdict) stays in the database. The RPC is renamed `set_verdict_override` (it validates the word per format: CC `pass|fail|warn|uncertain|not-applicable`, CRC `resolved|failed|uncertain`) and stores a blank reason as `''` (NULL would revive a pre-column `triage_note` reason under the legacy rule); clearing the override clears the reason. `setTriage` keeps no verdict input at all (D9), since only split reviews ever offered one. `architecture.html` still draws the v1.2 trigger design. Known edge accepted: a customer filing triage on a pre-column overridden row (3 CC + 415 CRC) overwrites the old reason held in `triage_note`.
 
 Builds on [verdict-override-refactor](../verdict-override-refactor/DESIGN-SPEC.md), which split one 5-value `triage_status` into two axes on `comment_triage`: `verdict_override` (what the correct status is) and `triage_status` (what the customer is doing about it). That spec gave both axes to the same people. This one gives them to different people.
 
@@ -64,11 +66,11 @@ The post-cutover CC surface this spec changes is 8 reviews and 14 rows. CRC: 15 
 
 ## 2. Decisions
 
-**D1. Scope: post-cutover CC only.** Every rule in this spec applies to a `comment_triage` row whose review has `review_type = 'completeness_check'` and `completed_at > '2026-07-07T21:00:00Z'` (the same instant as `CC_VERDICT_TRIAGE_CUTOVER_AT`). Pre-cutover CC, CRC and every formal format behave exactly as today. Formal has no verdict to split, and pre-cutover CC is corrected through triage (`incorrect`/`na`), so splitting either would remove someone's only correction tool. CRC is deferred (Q1): customers use its override heavily (545 rows) and we can't tell who wrote them.
+**D1. Scope: post-cutover CC only.** *(v1.3: and post-cutover CRC: scope is `correctsVerdicts(review)`; the CRC rationale below is superseded.)* Every rule in this spec applies to a `comment_triage` row whose review has `review_type = 'completeness_check'` and `completed_at > '2026-07-07T21:00:00Z'` (the same instant as `CC_VERDICT_TRIAGE_CUTOVER_AT`). Pre-cutover CC, CRC and every formal format behave exactly as today. Formal has no verdict to split, and pre-cutover CC is corrected through triage (`incorrect`/`na`), so splitting either would remove someone's only correction tool. CRC is deferred (Q1): customers use its override heavily (545 rows) and we can't tell who wrote them.
 
 **D2. "Noetic" means `is_noetic_member`,** matching the app's `isStaff`, admins and plain members alike (Q2). Under masquerade it's false (§1.1), which is what we want (G3). Project visibility is **not** widened: `user_can_see_project` still admits only Noetic admins everywhere, so a plain Noetic member reaches the verdict control only on projects they've been granted. Today the Noetic org has 2 owners, 4 admins and 1 member, so in practice everyone who does overrides is an admin (G1).
 
-**D3. Verdict writes go through a SECURITY DEFINER RPC, not the table policy.** `public.set_cc_verdict_override(p_review_comment_id uuid, p_verdict text, p_note text)`:
+**D3. Verdict writes go through a SECURITY DEFINER RPC, not the table policy.** *(v1.3: named `set_verdict_override`; checks `is_noetic_member` and `user_can_see_project`; validates the word per format rather than a cutover; blank reason stored as `''`.)* `public.set_cc_verdict_override(p_review_comment_id uuid, p_verdict text, p_note text)`:
 - Refuses unless `is_noetic_member(auth.uid())`.
 - Resolves the review from the comment (never from the caller), refuses unless it is in D1's scope.
 - Validates `p_verdict ∈ {pass, fail, warn, uncertain, not-applicable}` or NULL (NULL = clear the override; the app sends NULL when the pick equals the agent's verdict, as `setTriage` does today).
@@ -78,7 +80,7 @@ The post-cutover CC surface this spec changes is 8 reviews and 14 rows. CRC: 15 
 
 This avoids widening the INSERT/UPDATE policies to all Noetic members, which would also hand them write access to formal reviews. A plain Noetic member can correct a CC verdict without gaining any other write on the project.
 
-**D4. A trigger enforces the split on direct table writes.** `public.enforce_cc_verdict_triage_split()`, `BEFORE INSERT OR UPDATE OR DELETE` on `comment_triage`, SECURITY INVOKER:
+**D4. ~~A trigger enforces the split on direct table writes.~~** *(v1.3: replaced. Column-level INSERT/UPDATE grants for `authenticated` on `project_id, review_id, review_comment_id, triage_status, triage_sub_status, triage_note` only, plus the DELETE policy `admin AND ((verdict_override IS NULL AND verdict_override_note IS NULL) OR is_noetic_member(auth.uid()))`. Steps 5 and 6 below moved to `setTriage`. The original text is kept for the record.)* `public.enforce_cc_verdict_triage_split()`, `BEFORE INSERT OR UPDATE OR DELETE` on `comment_triage`, SECURITY INVOKER:
 1. **Bypass** when `auth.uid() IS NULL` or `current_user IN ('postgres', 'service_role', 'workflow_run', 'supabase_admin')`. This covers automated writers, migrations and the D3 RPC (definer → `current_user` is the owner).
 2. **Out of scope** (D1) → allow unchanged. The review lookup goes through a small SECURITY DEFINER helper `cc_split_applies(review_id uuid) returns boolean`, so the check can't be hidden by `reviews` RLS.
 3. **DELETE** of a row whose `verdict_override` or `verdict_override_note` is set, by a non-Noetic writer → raise `42501` "Only Noetic can remove a completeness check verdict." (G2). Today the DELETE policy lets anyone with project `admin` access (a customer org admin) delete the row, and Noetic's override with it. The app never deletes triage rows; a customer withdraws an appeal by an UPDATE (D7), so nothing a customer does in the app is refused here.
@@ -94,7 +96,7 @@ Why one row and a trigger, not two tables (G2, option A): moving CC's verdict to
 - **No data migration** (D13). Existing rows keep their reason in `triage_note`. Readers apply one legacy rule: **the verdict's reason = `verdict_override_note`, or, when that is NULL and `triage_status = 'new'`, `triage_note`**. That covers the 3 post-cutover CC overrides that carry a note (all `triage_status = 'new'`) without touching them.
 - No author or timestamp columns. v1 had `verdict_override_by`/`_at`; they were scope creep (G13): `_at` only served the dropped answered state and `_by` only PDF wording, and nothing records the customer's side either. Attribution for both sides can be its own change.
 
-**D6. CC customer triage vocabulary: `new` / `formal-note` / `appeal`.**
+**D6. CC customer triage vocabulary: `new` / `formal-note` / `appeal`.** *(v1.3: CRC uses the same vocabulary, offered on Failed and Uncertain, i.e. anything but a pass.)*
 - `to-fix` is no longer offered on CC (it still renders where it exists; none exist post-cutover).
 - **The formal-note sub-status (Need to escalate / Will fix later) is removed from the CC flow only** (Q3). It can't go entirely: formal reviews hold 1,044 rows using it (358 escalate, 686 will-fix) and CRC 11. On CC the Follow-up select is not rendered, `setTriage` drops any sub-status, and D4 refuses one. Formal and CRC keep it unchanged.
 - **Both require a non-empty comment.** `setTriage` refuses an empty note for `formal-note`/`appeal` on CC ("Add a comment to file an appeal.").
@@ -143,6 +145,8 @@ Why one row and a trigger, not two tables (G2, option A): moving CC's verdict to
 ---
 
 ## 3. Changes by file
+
+*(v1.3: as built in cityhall-new#254 — no `enforce_cc_verdict_triage_split` / `cc_split_applies`; the RPC is `set_verdict_override`; new `src/lib/reviews/check-triage.ts` (legacy read rule) and `triage-slot.tsx` (one card decision for the three mount sites); `comment-resolution-data.ts` / `crv-report-data.ts` print the reason and a formal note, never an appeal; DB test is `tests/db/verdict-triage-split.test.ts`.)*
 
 ### 3.1 Phase 1 (cityhall-new)
 
@@ -226,3 +230,10 @@ Why one row and a trigger, not two tables (G2, option A): moving CC's verdict to
 - **G18.** Phase 2 starts after phase 1 ships, not in parallel (D11, §5).
 - **G19.** Will tests manually (§4).
 - **G20.** The spec is final for implementation in a new session (§5).
+
+### 6.3 Implementation kickoff (2026-10-05, v1.3)
+
+- **K1.** CRC follows the same split (reverses Q1). Scope = `correctsVerdicts`.
+- **K2.** One row confirmed (G2 = A), enforced by column grants + the DELETE policy, not a trigger (a trigger blocked cascaded project/review deletes).
+- **K3.** "Noetic can't triage" and the triage vocabulary are app rules in `setTriage`; the database owns only "customers can't write a verdict".
+- **K4.** This spec is revised to v1.3 alongside the code.
