@@ -425,7 +425,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
   <div class="kicker">COMPLETENESS CHECK · COMMENT MARKINGS</div>
   <h1>Comment markings: how the review runbook does it, and porting it to the completeness check</h1>
   <p>Markings are points and small polygons, normalised 0–1 over a plan sheet, that show <em>where</em> a comment's problem is on the drawing. This page traces them through the review runbook, the database and the app, then proposes the same feature for the CC runbook. Companion to <code>DESIGN-SPEC.md</code>.</p>
-  <div class="meta">Draft v1.1 · 2026-10-07 · bureau dde80dfc · cityhall cea34728 · click a tab ↓</div>
+  <div class="meta">Draft v2 · 2026-10-07 · bureau dde80dfc→c911d675 · cityhall cea34728→df688dd · click a tab ↓</div>
   <a class="spec-link" href="DESIGN-SPEC.html">📖 read the spec</a>
 </header>
 <nav class="tabs">
@@ -433,7 +433,8 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
   <button data-tab="review"><span class="n">02</span>How the review marks</button>
   <button data-tab="stored"><span class="n">03</span>What's stored</button>
   <button data-tab="cc"><span class="n">04</span>CC proposal</button>
-  <button data-tab="rollout"><span class="n">05</span>Rollout &amp; questions</button>
+  <button data-tab="docs"><span class="n">05</span>Documents (v2)</button>
+  <button data-tab="rollout"><span class="n">06</span>Rollout &amp; questions</button>
 </nav>
 <main data-spec="DESIGN-SPEC.html">
 
@@ -445,7 +446,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
   <div class="spectable-scroll"><table class="spectable">
     <thead><tr><th>#</th><th>Question</th><th>Answer today (review runbook)</th></tr></thead>
     <tbody>
-      <tr><td><span class="sn">1</span></td><td>Plan-set sheets only?</td><td><b>Yes.</b> Every marker names a staged plan-set sheet (<code>"03"</code>). Publish fails the run if that label is missing from <code>sheet_map</code>. The app draws only over the <code>sheet_version</code> rasters of one plan set. A comment about a document is recorded as a sheetless <code>nothing-to-mark</code>.</td></tr>
+      <tr><td><span class="sn">1</span></td><td>Plan-set sheets only?</td><td><b>Yes.</b> Every marker names a staged plan-set sheet (<code>"03"</code>). Publish fails the run if that label is missing from <code>sheet_map</code>. The app draws only over the <code>sheet_version</code> rasters of one plan set. A comment about a document is recorded as a sheetless <code>nothing-to-mark</code>. <b>v2 adds document pages for CC</b> (see the Documents tab).</td></tr>
       <tr><td><span class="sn">2</span></td><td>Needs pre-processing?</td><td><b>Not for the geometry.</b> Shapes are read off pixels of the staged sheet PDF and fingerprinted with <code>sheet_sha256</code>. The runbook around it does need a preprocessed submission, because staging lays out the transcriptions. The stager fetches block boxes but never writes them to disk. Display needs cityhall's own sheet rasters.</td></tr>
       <tr><td><span class="sn">3</span></td><td>Different output schema?</td><td><b>Yes.</b> Comment <code>output_json</code> gains <code>annotations[]</code> and <code>annotation_disposition</code>, and the review row is stamped <code>2026-09-annotated</code> with a <code>sheet_map</code>. The app chooses its adapter by <code>output_schema</code>. The CC adapter hardcodes <code>annotations: []</code>.</td></tr>
       <tr><td><span class="sn">4</span></td><td>Same step as findings?</td><td><b>No.</b> <code>3.13-annotate</code> runs after <code>3.11-final</code>: a judgment sweep (one worker per discipline) writes sidecar files, then a script merges them into a copy of the record.</td></tr>
@@ -815,6 +816,123 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
   <p class="claim"><b>Claim (D8):</b> the CC adapter calls the August readers, moved into a shared module. <code>citedBlockMarkersOn</code> already steps aside once a comment has markers, so nothing else in the sheets view changes.</p>
 </section>
 
+<!-- ============================== DOCUMENTS ============================== -->
+<section class="panel" id="docs">
+  <h2><span class="eyebrow">Documents (v2)</span>Markings on a page of a supplementary document</h2>
+  <p class="lede">About a third of failing CC runs cite a document: a form, a letter, a report. That works today without content blocks for documents and without a preprocessing-v4 change. The sweep finds the page from each run's label and the sections' page ranges, then locates the mark from pixels. The app draws it on the pdf.js page that cityhall#293 already opens.</p>
+
+  <div class="spectable-scroll"><table class="spectable">
+    <thead><tr><th>Review</th><th>Fail/warn runs</th><th>Sheets only</th><th>Documents only</th><th>Both</th></tr></thead>
+    <tbody>
+      <tr><td><code>b80e5075</code> 2008 San Antonio</td><td>96</td><td>66</td><td>12</td><td>18</td></tr>
+      <tr><td><code>581a6549</code> Will's example</td><td>59</td><td>40</td><td>9</td><td>10</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>The document path, after</h3>
+  <div class="sysmap" style="grid-template-columns:.7fr repeat(5,1fr);column-gap:40px">
+    <div class="colh" style="grid-area:1/1">trigger</div>
+    <div class="colh" style="grid-area:1/2">staging</div>
+    <div class="colh" style="grid-area:1/3">marking</div>
+    <div class="colh" style="grid-area:1/4">publish</div>
+    <div class="colh" style="grid-area:1/5">postgres</div>
+    <div class="colh" style="grid-area:1/6">cityhall</div>
+
+    <div class="sys trig" id="d-t" style="grid-area:2/1"><span class="dot"></span><span class="t">a failing run cites a document</span><span class="d">{documentId, label}</span></div>
+    <div class="sys chg" id="d-stage" style="grid-area:2/2"><a class="ref" href="#detail-doc-stage">D17 ↓</a><span class="k">runbook step</span><span class="t">stage-submission</span><span class="d">+ version id, page count, page ranges</span></div>
+    <div class="sys chg" id="d-sweep" style="grid-area:2/3"><a class="ref" href="#detail-doc-sweep">D15 ↓</a><span class="k">runbook step</span><span class="t">2.12-annotate</span><span class="d">finds the page, renders it, marks it</span></div>
+    <div class="sys chg" id="d-pub" style="grid-area:2/4"><a class="ref" href="#detail-doc-shape">D18 ↓</a><span class="k">script</span><span class="t">lane B inserts</span><span class="d">checks cited, PDF, page in range</span></div>
+    <div class="sys store chg" id="d-db" style="grid-area:2/5"><a class="ref" href="#detail-doc-shape">D13 ↓</a><span class="k">table</span><span class="t">review_comments</span><span class="d">markers with document_id + page</span></div>
+    <div class="sys chg" id="d-ui" style="grid-area:2/6"><a class="ref" href="#detail-doc-ui">D19 ↓</a><span class="k">ui</span><span class="t">pdf.js viewer</span><span class="d">overlay per page; opens at the page</span></div>
+    <div class="sys" id="d-pp" style="grid-area:3/2"><span class="k">runbook</span><span class="t">preprocessing-v4 docs</span><span class="d">unchanged: sections + page_range</span></div>
+
+    <a class="sys-edge" data-from="d-t" data-to="d-stage"></a>
+    <a class="sys-edge chg" data-from="d-stage" data-to="d-sweep">PDF, pages</a>
+    <a class="sys-edge chg" data-from="d-sweep" data-to="d-pub">merged</a>
+    <a class="sys-edge" data-from="d-pub" data-to="d-db">insert</a>
+    <a class="sys-edge chg" data-from="d-db" data-to="d-ui">markers</a>
+    <a class="sys-edge" data-from="d-pp" data-to="d-stage">sections</a>
+  </div>
+  <div class="sys-refs">
+    <a class="refrow chg" data-ref="D13"><span class="chip">D13</span><span class="txt">a marker targets a sheet or a (document, page); points normalised over the page as displayed; additive fields only</span></a>
+    <a class="refrow chg" data-ref="D14"><span class="chip">D14</span><span class="txt">no content blocks for documents and no preprocessing-v4 change: the page is what the sweep needs</span></a>
+    <a class="refrow chg" data-ref="D15"><span class="chip">D15</span><span class="txt">the sweep locates the page from the run's label and the section page ranges, at most 6 pages per (run, document)</span></a>
+    <a class="refrow chg" data-ref="D17"><span class="chip">D17</span><span class="txt">the stager records version id, page count and mime type per document, and page ranges per section</span></a>
+    <a class="refrow chg" data-ref="D18"><span class="chip">D18</span><span class="txt">a document marker must be on a document this run cites, a staged PDF, and a page in range</span></a>
+    <a class="refrow chg" data-ref="D19"><span class="chip">D19</span><span class="txt">PdfViewer gains a page-overlay slot that the drawer cannot clear; ?doc= gains &amp;page=</span></a>
+  </div>
+  <div class="sys-legend"><span><i></i>exists today</span><span><i class="chg"></i>changed</span></div>
+  <p class="claim"><b>Claim (D14):</b> preprocessing-v4 is unchanged. The sections it already publishes, with their page ranges, are enough to find the page.</p>
+
+  <h3>Do documents need content blocks?</h3>
+  <div class="dflow">
+    <div class="dq"><span class="q">Does the sweep locate a mark from blocks?</span><span class="yes">no →</span><span class="out">it locates from rendered pixels; blocks are only a seed, even on sheets</span></div>
+    <div class="dno">so what does it need ↓</div>
+    <div class="dq"><span class="q">Can it find the right page without blocks?</span><span class="yes">yes →</span><span class="out">run label ("page 2 signature block") + section page_range in overview.md</span></div>
+    <div class="dno">and ↓</div>
+    <div class="dq"><span class="q">Is a whole page readable in one look?</span><span class="yes">yes →</span><span class="out">a letter page at 200 DPI is 1700×2200 px; large-format pages use the sheet quadrant rule</span></div>
+    <div class="dno">otherwise ↓</div>
+    <div class="dq end"><span class="q">if not-located is high on documents</span><span class="yes"></span><span class="out warn">add per-section page regions to preprocessing-v4 (Q9)</span></div>
+  </div>
+  <p class="claim"><b>Claim (D14):</b> blocks are not what makes a marking work. The page is.</p>
+
+  <h3 id="detail-doc-sweep">How the sweep handles one (run, document)</h3>
+  <div class="dflow">
+    <div class="dq"><span class="q">Is the cited document a PDF?</span><span class="yes">no →</span><span class="out warn">merge writes nothing-to-mark: "not a visual document" (D16)</span></div>
+    <div class="dno">yes ↓ pick candidate pages, narrowest first</div>
+    <div class="dq"><span class="q">Does the label name a page, or a section with a page_range?</span><span class="yes">yes →</span><span class="out">render those pages with annotate-crop --page N</span></div>
+    <div class="dno">no ↓</div>
+    <div class="dq"><span class="q">Is it a short document (1–3 pages)?</span><span class="yes">yes →</span><span class="out">render its pages in order</span></div>
+    <div class="dno">no ↓</div>
+    <div class="dq"><span class="q">Found and located within 6 pages and 3 passes?</span><span class="yes">yes →</span><span class="out">annotated: document_id + page + points</span></div>
+    <div class="dno">no ↓</div>
+    <div class="dq end"><span class="q">otherwise (vague label on a long report, or an absence)</span><span class="yes"></span><span class="out fail">not-located / nothing-to-mark, with the reason</span></div>
+  </div>
+  <p class="claim"><b>Claim (D15):</b> a 500-page report is never scanned, and the page the sweep lands on is recorded in the marker. The verdict step is untouched.</p>
+
+  <h3 id="detail-doc-shape">The stored shape: additive, no schema change</h3>
+  <div class="erd">
+    <div class="ent changed">
+      <div class="eh"><span class="en">annotation</span><span class="stereo">json in output_json</span></div>
+      <div class="row"><span class="gut"></span><span class="nm">kind · points · label · source</span><span class="ty">unchanged</span></div>
+      <div class="row"><span class="gut"></span><span class="nm">source_finding_ref · evidence · converged · passes</span><span class="ty">unchanged</span></div>
+      <div class="row"><span class="gut"></span><span class="nm">sheet + sheet_sha256</span><span class="ty">sheet markers, unchanged</span></div>
+      <div class="row add"><span class="gut">+</span><span class="b b-new">NEW</span><span class="nm">document_id</span><span class="ty">uuid · a document this run cites</span></div>
+      <div class="row add"><span class="gut">+</span><span class="b b-new">NEW</span><span class="nm">page</span><span class="ty">int ≥ 1 · ≤ staged page_count</span></div>
+      <div class="row add"><span class="gut">+</span><span class="b b-new">NEW</span><span class="nm">file_sha256</span><span class="ty">the staged source.pdf</span></div>
+      <div class="note">Exactly one target per marker: a sheet, or a (document_id, page).</div>
+    </div>
+    <div class="ent changed">
+      <div class="eh"><span class="en">annotation_disposition</span><span class="stereo">json in output_json</span></div>
+      <div class="row"><span class="gut"></span><span class="nm">status · reason</span><span class="ty">roll-up reads both arrays</span></div>
+      <div class="row"><span class="gut"></span><span class="nm">sheets[]</span><span class="ty">unchanged</span></div>
+      <div class="row add"><span class="gut">+</span><span class="b b-new">NEW</span><span class="nm">documents[]</span><span class="ty">{document_id, page?, status, reason}</span></div>
+      <div class="note">No renames, so the review runbook's stored rows and the app's current readers keep working.</div>
+    </div>
+  </div>
+  <p class="claim"><b>Claim (§7.3):</b> no table, column or migration: no document_page, no page_count column, no content blocks for documents.</p>
+
+  <h3 id="detail-doc-stage">What the stager adds (D17)</h3>
+  <div class="spectable-scroll"><table class="spectable">
+    <thead><tr><th>Staged file</th><th>Today</th><th>v2 adds</th></tr></thead>
+    <tbody>
+      <tr><td><code>download-manifest.json</code> document-pdf entry</td><td><code>document_id</code>, sha256, bytes</td><td><code>document_version_id</code>, <code>page_count</code> (pdfinfo), <code>mime_type</code></td></tr>
+      <tr><td><code>NN-&lt;section&gt;.md</code></td><td>title, description, content</td><td>its <code>page_range</code> in the header</td></tr>
+      <tr><td><code>overview.md</code></td><td>sections with page ranges</td><td><span class="none">unchanged</span></td></tr>
+    </tbody>
+  </table></div>
+
+  <h3 id="detail-doc-ui">What the viewer draws (D19)</h3>
+  <div class="dflow">
+    <div class="dq"><span class="q">Opened with ?doc=&amp;page=N?</span><span class="yes">yes →</span><span class="out">PdfViewer scrolls to page N (the prop already exists)</span></div>
+    <div class="dno">then, per page drawn ↓</div>
+    <div class="dq"><span class="q">Does any marker on this comment target (this document, this page)?</span><span class="yes">yes →</span><span class="out">an SVG overlay in the page's overlay slot, a sibling the drawer cannot clear</span></div>
+    <div class="dno">no ↓</div>
+    <div class="dq end"><span class="q">otherwise</span><span class="yes"></span><span class="out warn">the document row shows the disposition: "nothing to mark" / "not found", with the reason</span></div>
+  </div>
+  <p class="claim"><b>Claim (D19):</b> the viewer is the app's own pdf.js with exact per-page boxes, so 0–1 coordinates map directly. The one blocker is the drawer clearing the page div on every redraw.</p>
+</section>
+
 <!-- ============================== ROLLOUT ============================== -->
 <section class="panel" id="rollout">
   <h2><span class="eyebrow">Rollout</span>Four phases, app before data</h2>
@@ -835,11 +953,17 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
     <a class="sys-edge" data-from="p-1" data-to="p-2">kit</a>
     <a class="sys-edge" data-from="p-2" data-to="p-3">markers</a>
     <a class="sys-edge" data-from="p-3" data-to="p-4">visible</a>
+    <div class="sys" id="p-5" style="grid-area:3/3"><a class="ref" href="#detail-doc-sweep">P5 ↓</a><span class="k">bureau</span><span class="t">Documents: producer</span><span class="d">page targets, stager fields</span></div>
+    <div class="sys" id="p-6" style="grid-area:3/4"><a class="ref" href="#detail-doc-ui">P6 ↓</a><span class="k">cityhall</span><span class="t">Documents: viewer</span><span class="d">page overlay, &amp;page=</span></div>
+    <a class="sys-edge" data-from="p-2" data-to="p-5">same flag</a>
+    <a class="sys-edge" data-from="p-5" data-to="p-6">doc markers</a>
   </div>
   <div class="sys-refs">
     <a class="refrow" data-ref="P1"><span class="chip">P1</span><span class="txt">shared annotate kit and block boxes; the review runbook still passes its tests</span></a>
     <a class="refrow" data-ref="P2"><span class="chip">P2</span><span class="txt">2.12-annotate with annotate: false by default, plus contract tests</span></a>
     <a class="refrow" data-ref="P3"><span class="chip">P3</span><span class="txt">lane B validation and sheet_map; cityhall CC adapter reads markers</span></a>
+    <a class="refrow" data-ref="P5"><span class="chip">P5</span><span class="txt">document targets in the shared kit, sweep, merge and lane B, behind the same flag</span></a>
+    <a class="refrow" data-ref="P6"><span class="chip">P6</span><span class="txt">the pdf.js page overlay and &amp;page=, landing before any CC review carries document markers</span></a>
     <a class="refrow" data-ref="P4"><span class="chip">P4</span><span class="txt">score markers on WhiteWater and 2008 San Antonio, then flip the default</span></a>
   </div>
   <div class="sys-legend"><span><i></i>phase (none started)</span></div>
@@ -852,10 +976,14 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
       <tr><td><span class="sn">Q1</span></td><td>Should absences stay unmarked, or get a new <code>expected-here</code> kind?</td><td>Unmarked; the cited-block outline already says where to look (D2)</td></tr>
       <tr><td><span class="sn">Q2</span></td><td>Sweep grain: one worker per guide, or one for the whole run?</td><td>Per guide: about 84 run-findings at runs = 3</td></tr>
       <tr><td><span class="sn">Q3</span></td><td>annotate model: opus-5.5 high, or try sonnet-5.5?</td><td>Opus, matching the review's proven sweep</td></tr>
-      <tr><td><span class="sn">Q4</span></td><td>Markers on supplementary documents (forms, reports)?</td><td>Out of scope: the app has no document viewer to draw on</td></tr>
+      <tr><td><span class="sn">Q4</span></td><td>Markers on supplementary documents (forms, reports)?</td><td><b>Answered in v2:</b> in scope (Documents tab)</td></tr>
       <tr><td><span class="sn">Q5</span></td><td>Multiple plan sets collide on <code>sheet-NN</code>, and the app reads only one</td><td>Shared by both runbooks; a separate spec</td></tr>
       <tr><td><span class="sn">Q6</span></td><td>When is the flag good enough to default on?</td><td>No wrongly placed marker among 20 audited</td></tr>
       <tr><td><span class="sn">Q7</span></td><td>Mark each run independently, or reuse a sibling run's shape for the same block?</td><td>Independent (as D3 says); reuse is cheaper but couples the runs</td></tr>
+      <tr><td><span class="sn">Q8</span></td><td>Does the formal review runbook want document markings too?</td><td>Its own call; the kit supports it at no cost</td></tr>
+      <tr><td><span class="sn">Q9</span></td><td>Should preprocessing-v4 publish per-section page regions?</td><td>Only if document not-located is high after P5</td></tr>
+      <tr><td><span class="sn">Q10</span></td><td>Cap of 6 pages per (run, document)?</td><td>Yes, bounds spend on 500-page reports</td></tr>
+      <tr><td><span class="sn">Q11</span></td><td>Optional pageNumber on CC document citations?</td><td>Separate small change after P5 (a parity decision)</td></tr>
     </tbody>
   </table></div>
 </section>
@@ -975,7 +1103,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 <script>
   const btns=document.querySelectorAll('nav.tabs button');
   const panels=document.querySelectorAll('.panel');
-  const IDS=['overview','review','stored','cc','rollout'];
+  const IDS=['overview','review','stored','cc','docs','rollout'];
   function show(id,opts={}){
     btns.forEach(b=>b.classList.toggle('active',b.dataset.tab===id));
     panels.forEach(p=>p.classList.toggle('active',p.id===id));

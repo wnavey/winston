@@ -1,8 +1,8 @@
 # Comment markings for the completeness-check runbook
 
-**Status:** Draft v1.1
+**Status:** Draft v2
 **Date:** 2026-10-07
-**Repos touched (proposed):** `bureau` (shared annotate kit lifted out of `runbooks/review/scripts/`; a new `2.12-annotate` step family in `runbooks/completeness-check/`; the stager writes block boxes; lane B of `publish_review.py` validates and stamps markings), `cityhall` (the CC adapter reads `annotations` / `annotation_disposition` the way the August adapter does)
+**Repos touched (proposed):** `bureau` (shared annotate kit lifted out of `runbooks/review/scripts/`; a new `2.12-annotate` step family in `runbooks/completeness-check/`; the stager writes block boxes; lane B of `publish_review.py` validates and stamps markings), `cityhall` (the CC adapter reads `annotations` / `annotation_disposition` the way the August adapter does; v2: the pdf.js document viewer draws markings on a page)
 **Repos NOT touched:** `substation` (archived; its `supabase/` now lives in `cityhall`), `conductor2`, `inspector-general`, `claude-plugins`
 
 > **In one paragraph.** The review runbook already places "markings" (points and 3–12-vertex
@@ -19,6 +19,15 @@
 > validates and carries the fields, and a CC adapter in `cityhall` that reads them. The
 > companion page `architecture.html` draws all of this.
 
+> **Revision note (v2, 2026-10-07): markings on non-plan-set documents.** Will asked for
+> markings on supplementary documents too (application forms, letters, reports), now that
+> cityhall#293 opens a cited document beside the CC item. New **§7** (D13–D21, P5–P6,
+> Q8–Q11) brings them into scope. Q4 is answered (yes, in scope) and the non-goal is
+> removed. The answer to "do documents need `content_block`s, and therefore a
+> preprocessing-v4 change?" is **no** (D14). A marking is located from pixels of a rendered
+> page. The section `page_range`s already published, together with each run's own label,
+> find the page. Section boxes stay an optional later improvement (Q9).
+>
 > **Revision note (v1.1, 2026-10-07, Will's review of v1).**
 > - **Every failing run gets geometry, not only the winning one.** D3 is rewritten: the
 >   sweep's unit is a *(comment, run)* whose own run status is `fail` or `warn`, whatever the
@@ -195,7 +204,7 @@ recomputed.
 4. Close the generic gaps that both runbooks share (block boxes on disk, one sheet-key
    rule) in shared code.
 
-**Non-goals:** marking supplementary documents (Q4 in §6), multiple plan sets per
+**Non-goals:** marking non-visual documents (drainage models, spreadsheets), multiple plan sets per
 submission (Q5), human-authored markings, and a dedicated annotation table.
 
 ---
@@ -440,9 +449,7 @@ partial credit when a seat dies.
 **Q3.** Model for `annotate`: opus-5.5 high (D11), or try sonnet-5.5 first given CC's cost
 profile?
 
-**Q4.** Supplementary documents (application forms, reports) are where many CC fails live.
-Out of scope here, because the app has no viewer to draw on. Is a document viewer with
-markings wanted later?
+**Q4.** ~~Supplementary documents: out of scope?~~ **Answered in v2:** in scope, see §7.
 
 **Q5.** Multiple plan sets per submission. The stager names folders `sheet-NN` by each
 plan set's own sheet number, so two sets collide. The app's sheets view reads only one plan
@@ -456,3 +463,202 @@ mark each run independently (D3 as written: no cross-run influence, about 3× th
 or may a worker reuse a converged shape from a sibling run when that run cites the same
 sheet and block and its evidence text still reads true? Reuse is cheaper, but it makes the
 runs' markers no longer independent observations.
+
+---
+
+## 7. Markings on non-plan-set documents (v2)
+
+### 7.1 What exists today (verified 2026-10-07, bureau `c911d675`, cityhall `df688dd`)
+
+**About a third of failing runs cite a document.** Across the run-level fail/warns:
+
+| Review | Fail/warn runs | sheets only | documents only | both |
+|---|---|---|---|---|
+| `b80e5075` (2008 San Antonio, 3 runs) | 96 | 66 | 12 | 18 |
+| `581a6549` (2008 San Antonio, Will's example, 3 runs) | 59 | 40 | 9 | 10 |
+
+A CC document citation is `{documentId, label}` and nothing else: no page, no section id
+(emit schema, CC review prompt `:225`). The label is free prose that often names the place,
+for example `Engineering Summary Letter - page 2 signature block`,
+`CC Application Section 1 - Project Name`, or `Driveway Waiver Letter Exhibit 1 (spacing
+shown only here)`. On `b80e5075`, a reading of the 30 document-citing fail/warn runs puts
+about 21 of them on something **drawn or written on a page**: a blank form field, a
+signature block with no seal, a project-name field, dimensions on an exhibit. About 6 are
+absences ("no storm drain calculations") or point at a non-visual file (the HEC-HMS model),
+and 3 are ambiguous. So documents are *more* markable than plan-sheet fails, where absences
+dominate.
+
+**The documents.** Supplementary documents are `document` + `document_version` rows. The
+binary is a PDF at `document_version.storage_path` in the `submission-data` bucket (one
+cited file on that submission is a `drainage-model`, which is not visual).
+preprocessing-v4's document reader (`2.3-documents`) renders every page at 200 DPI to
+scratch, reads it, and publishes only `document_section(title, description, content,
+page_range text, sort_order)` (`publish_preprocessing_run.sql:230-240`). It publishes **no
+boxes, no page count and no page images**. There is no `document_page` table and no
+`page_count` column anywhere. On 2008 San Antonio the staged documents run 1–15 pages, with
+two outliers: the Engineer's Report (582 pages) and the Phase I ESA (549 pages).
+
+**The stager** writes `supplementary-docs/<slug>/source.pdf` (the submission's linked
+version), `overview.md` (every section with its page range, e.g. `Section 4: Engineer
+Information (3)`) and one `NN-<title>.md` per section (`stage_submission.py:969-1009`).
+`download-manifest.json` records `document_id` and the sha256 for `source.pdf`, but neither
+the `document_version_id` nor a page count.
+
+**The producer can already render a page.** `annotate-crop.ts` takes `--page N` (`:60`).
+It sizes the page with `pdfinfo -f N -l N` and renders it with `pdftoppm -f N -l N`
+(`:97, :116`), with rotation handled. The rest of the loop (remap, write, merge) does not
+care what the page belongs to. The preprocessing-v4 sheet tools (`crops.ts`, `zoom.py`,
+`measure.py`) are single-page only, but the annotate kit does not use them.
+
+**The app can show it.** cityhall#293 opens a cited document at
+`review/{id}/sheets?doc=<ref>&comment=<n>` in the app's own **pdf.js** viewer
+(`components/ui/pdf-viewer/`, `pdfjs-dist`). This is not a browser iframe. The viewer reads
+every page's size up front (`draw.ts:37-56`) and gives each page a `div[data-page]` with
+exact pixel dimensions (`index.tsx:463-476`), and it already takes a 1-based `page` prop and
+scrolls to it (`index.tsx:52-54, 123-165`). An SVG with `viewBox="0 0 1 1"` over a page
+div maps 0–1 coordinates directly. **One blocker:** the page drawer clears the page div on
+every redraw (`for (const old of Array.from(sheet.children)) old.remove()`, `draw.ts:220`;
+`replaceChildren()`, `:331`), so an overlay placed inside it is deleted. The upload
+processor also stores a 150-DPI raster of every page at `{dir}/pages/{n}.jpg`
+(`processing.ts:312-345`), but nothing in the DB points to these. Page 1 is used as the
+document's thumbnail.
+
+### 7.2 Decisions
+
+**D13. A marking targets either a plan sheet or a document page.** The annotation object
+keeps every field it has, and gains a second kind of target. **Exactly one** of the
+following is present:
+
+- `sheet: "07"`, a staged plan-set sheet, as today;
+- `document_id: <uuid>` + `page: <int, 1-based>`, a page of a cited document.
+
+`points` are normalised 0–1 over **the page as displayed**: origin top-left, y down,
+`/Rotate` applied. pdftoppm and pdf.js both apply the page's rotation, so the producer's
+render and the app's viewer share one frame. A document marker carries `file_sha256`, the staged `source.pdf` it was
+read against, in place of `sheet_sha256`. Sheet markers are untouched. Every other rule is
+unchanged: kinds, 3–12 vertices, evidence 12–500 characters, `converged` / `passes`, 20 per
+comment, 1,000 per review.
+
+The disposition gains a **`documents[]`** array beside `sheets[]`, with entries
+`{document_id, page?, status, reason}`. A `nothing-to-mark` or `not-located` entry may omit
+`page`, meaning "swept this document and placed nothing". The comment-level roll-up reads
+both arrays with the unchanged precedence (`annotated` > `not-located` > `nothing-to-mark`).
+Everything is **additive**: no existing field is renamed, so the review runbook's stored
+markers and the app's current readers keep working.
+
+**D14. No `content_block`s for documents, and no preprocessing-v4 change.** Blocks are
+not what makes a plan-sheet marking work. The review runbook's sweep locates from pixels
+and treats blocks as a seed only (§1.2). What the document sweep needs is the **page**.
+Three things already give it:
+
+- the run's own label, which often names a page or section;
+- the section `page_range`s in the staged `overview.md`;
+- the PDF itself, rendered page by page.
+
+A letter or form page renders whole at a readable size (612×792 pt at 200 DPI is
+1700×2200 px), so the first look is the full page with no tiling. Large-format pages
+(the ALTA survey, 1728×2592 pt) use the sheet quadrant rule. Section boxes from
+preprocessing-v4 remain an optional improvement, measured before it is built (Q9).
+
+**D15. The sweep locates the page itself; the verdict step is not changed.** For a
+fail/warn run citing a document, the worker reads that run's `label`, `observation` and
+`comment`, and that document's `overview.md`. From those it picks candidate pages,
+narrowest first:
+
+1. a page the label names;
+2. the page range of the section the label names;
+3. the document's first page, for a 1–3 page document.
+
+It opens **at most 6 pages** per (run, document) (Q10). A 500-page report is never
+scanned, and a run whose label names nothing findable ends in `not-located` with a reason.
+The page it lands on is recorded in the marker, which is the page number the CC emit
+schema lacks. `2.1-review` is untouched, so verdict parity holds (D9). Adding an optional
+`pageNumber` to `evidenceLocations` is a separate, later choice (Q11).
+
+**D16. Only PDFs are swept.** A `document_version` whose `mime_type` is not
+`application/pdf` (a drainage model, a spreadsheet) gets a document-level `nothing-to-mark`
+("not a visual document"), written by the merge without opening it.
+
+**D17. The stager records what the sweep and the publisher check against.** Each
+`document-pdf` entry in `download-manifest.json` gains `document_version_id`,
+`page_count` (`pdfinfo`) and `mime_type`. Each section `.md` gains its `page_range` in its
+header. This is the document counterpart of D4, and it is a staged-file change, not a DB
+change.
+
+**D18. Validation mirrors the sheet rules.** `annotate-write.ts` (CC adapter) refuses a
+document marker unless all three hold:
+
+- the `document_id` is one **this run** cites in its `documentReferences`;
+- the document is staged as a PDF;
+- `1 ≤ page ≤ page_count`.
+
+This is the document form of "a sheet the comment does not name". Lane B repeats the
+checks against the staged manifest before any row is written, and fails loudly, the same
+way an unresolvable sheet label fails lane A. Documents need no `sheet_map`
+equivalent: the app already resolves a `document` id against the review's submission
+version (`readCitedDocuments`, `sheets/read.ts:128-171`).
+
+**D19. cityhall draws markings on the pdf.js page; no raster path.**
+
+- **`PdfViewer` gains a page-overlay slot** (`renderPageOverlay(index, size)`). It renders
+  as a **sibling** layer above each page's canvas and text layer, so the drawer's clear
+  (`draw.ts:220, :331`) no longer reaches it. The drawer then draws into an inner content
+  div rather than the page div itself.
+- **The overlay reuses `SheetMarkers`' geometry**, an SVG with viewBox 0–1, with
+  `pointer-events` only on the shapes so text selection still works.
+- **`?doc=` gains `&page=N`**, which opens the viewer at the marker's page.
+- **The document row in the `IssuePanel`** lists that document's markers, each as "page N",
+  and its disposition, the same as sheet rows.
+- **`AnnotationView` becomes a union of sheet and document targets.** `markersOn` keeps
+  serving sheets, and a new `documentMarkersOn(view, documentId)` serves the viewer.
+
+The alternative was the stored `pages/{n}.jpg` rasters in the existing `ImageViewer` +
+`SheetMarkers`. It was rejected because the rasters may be cut from `optimized.pdf` while
+the viewer shows the original file. No DB row points at them, and they would lose the text
+layer and zoom quality that #293's viewer has.
+
+**D20. Per-run storage and the winning-run copy apply unchanged (D12).** Document markers
+live on `perRunFindings[k]` beside sheet markers, and the comment shows the winning run's.
+No new review-level key is needed.
+
+**D21. The review runbook can adopt document targets later at no cost.** The annotate
+kit and the validators are shared (D5). Whether the formal review's sweep marks document
+findings is that runbook's own decision, and this spec does not change it.
+
+### 7.3 Stored shape (no schema change)
+
+| Where | v2 adds |
+|---|---|
+| annotation object (comment level and `perRunFindings[k]`) | `document_id` + `page` + `file_sha256` on a document marker, as the alternative to `sheet` + `sheet_sha256` |
+| `annotation_disposition` | a `documents[]` array beside `sheets[]`: `{document_id, page?, status, reason}` |
+| `reviews.output_json` | nothing new: the app needs no map for documents |
+| DB tables | **none**: no `document_page`, no `page_count` column, no `content_block` rows for documents |
+
+### 7.4 Phases
+
+- **P5 Documents in the producer.** D13 shape and validators in the shared kit, D17 stager
+  fields, D15/D16 in the `2.12-annotate` sweep prompt and merge, D18 in lane B. This ships
+  behind the same `annotate` flag. It can land with P2 or right after it.
+- **P6 Documents in the app.** D19: the `PdfViewer` overlay slot and drawer fix, `&page=`,
+  document marker rows. Land it before any CC review carries document markers, as P3 does
+  for sheets.
+
+### 7.5 Open questions (v2)
+
+**Q8.** Does the formal review runbook want document markings too (D21)? Not needed for
+the CC.
+
+**Q9.** Should preprocessing-v4's document reader publish per-section page regions
+(`document_section.regions jsonb [{page, box}]`)? Today it renders every page at 200 DPI and
+discards the renders. Regions would give the sweep a tight seed, and the app could outline a
+cited section the way it outlines a cited block. The cost is a box-discovery pass per page,
+which is heavy on a 582-page report. Proposed: build it only if P5's `not-located` rate on
+documents is high, and Will is fine with the scope.
+
+**Q10.** Is a cap of 6 pages per (run, document) right? It bounds spend on 500-page
+reports, at the price of `not-located` when a label is vague.
+
+**Q11.** Should the CC emit schema gain an optional `pageNumber` on document
+`evidenceLocations`? That would let every document citation, marked or not, open at its
+page (cityhall#293 already has the viewer prop). It touches the verdict step's schema, so
+it is a parity decision. Proposed: a separate small change after P5.
