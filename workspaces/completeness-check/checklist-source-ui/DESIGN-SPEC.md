@@ -1,6 +1,6 @@
 # CC checklist source UI: where each completeness-check item came from
 
-**Status:** Draft v2
+**Status:** Approved (v2, 2026-10-07)
 **Date:** 2026-10-07
 **Repos touched:** `bureau` (new `cc-source-citations` runbook; per-jurisdiction source manifest, per-version citations and overrides; URL-map fixes; one path-filtered sync workflow), `cityhall-new` (new `cc-source-snapshots` bucket + read policy migration; two pages; a Source link on CC findings)
 **Repos NOT touched:** `completion-officer`, `conductor2`, `inspector-general`, `dsd`, `navalbase`
@@ -50,7 +50,7 @@
 >   `freshness` checker covers almost none of these sources (§1.4).
 > - Fact fixes: §1.3's headings claim corrected (label suffixes match accordion titles, not
 >   h3/h4); 13 unresolved labels, not 11; **53 citations use 9 `Requirements page, Section N`
->   labels that match no panel** (Q23, new).
+>   labels that match no panel** (now D25).
 
 ---
 
@@ -73,7 +73,7 @@
   Administrative Code **2**. **43** items cite only webpages.
 - **53 citations use 9 labels of the form `Requirements page, Section N`** (N = 7, 8, 9, 10, 11,
   12, 14, 23, 30). The page has no numbered sections, and N reaches 30, so they are not CC
-  Application sections (1–15) either (Q23).
+  Application sections (1–15) either (D25).
 
 ### 1.2 We never kept the sources, and the list is hand-made
 
@@ -320,7 +320,7 @@ per top-level heading block.
 
 **D9. Webpage sections are the accordion panels.** `fingerprints.sections` has one entry per
 panel (`{title, page, sha256_text}`) and `pages[n].section` names it. Label suffixes route to panels
-by fuzzy title match (D3); labels that match no panel (the `Section N` labels, Q23) search the
+by fuzzy title match (D3); labels that match no panel (the `Section N` labels, D25) search the
 whole page.
 
 **D10. Snapshots are immutable and incremental.** `snapshot_id = sn_<slug>_<yyyymmdd>`. A
@@ -554,10 +554,15 @@ copy of the JSON and ships after P3.
 | R5 | Chromium in the container? | Yes (fact) | §1.4 |
 | R6 | Re-run trigger | Manual | D17 |
 
-## 9. Open questions
+## 9. Resolved after the grill
 
-- **Q23. `Requirements page, Section N` labels.** 53 citations use 9 such labels (N = 7–30) and no
-  panel or CC Application section matches them (§1.1). Proposed: locate searches the whole page
-  (D9), the review gate settles each by override, and the labels are fixed in the guides afterwards.
-- **Q24. Who launches re-runs.** Manual (R6) needs an owner. Proposed: whoever edits a guide
-  item's text or labels launches an incremental run in the same change.
+**D25. `Requirements page, Section N` labels (was Q23).** 53 citations use 9 such labels (N = 7–30)
+and no panel or CC Application section matches them (§1.1). Locate searches the whole page for
+them (D9); the review gate settles each one by override; the labels are corrected in the guides
+afterwards, in a separate guide edit followed by an incremental run.
+
+**D26. Who launches re-runs (was Q24).** Whoever edits a guide item's text or labels, or cuts a
+new checklist version, launches an incremental `cc-source-citations` run as part of the same
+change (R6: manual relaunch).
+
+No open questions remain.
