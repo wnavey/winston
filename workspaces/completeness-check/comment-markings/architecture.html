@@ -425,7 +425,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
   <div class="kicker">COMPLETENESS CHECK · COMMENT MARKINGS</div>
   <h1>Comment markings: how the review runbook does it, and porting it to the completeness check</h1>
   <p>Markings are points and small polygons, normalised 0–1 over a plan sheet, that show <em>where</em> a comment's problem is on the drawing. This page traces them through the review runbook, the database and the app, then proposes the same feature for the CC runbook. Companion to <code>DESIGN-SPEC.md</code>.</p>
-  <div class="meta">Draft v1 · 2026-10-07 · bureau dde80dfc · cityhall cea34728 · click a tab ↓</div>
+  <div class="meta">Draft v1.1 · 2026-10-07 · bureau dde80dfc · cityhall cea34728 · click a tab ↓</div>
   <a class="spec-link" href="DESIGN-SPEC.html">📖 read the spec</a>
 </header>
 <nav class="tabs">
@@ -449,7 +449,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
       <tr><td><span class="sn">2</span></td><td>Needs pre-processing?</td><td><b>Not for the geometry.</b> Shapes are read off pixels of the staged sheet PDF and fingerprinted with <code>sheet_sha256</code>. The runbook around it does need a preprocessed submission, because staging lays out the transcriptions. The stager fetches block boxes but never writes them to disk. Display needs cityhall's own sheet rasters.</td></tr>
       <tr><td><span class="sn">3</span></td><td>Different output schema?</td><td><b>Yes.</b> Comment <code>output_json</code> gains <code>annotations[]</code> and <code>annotation_disposition</code>, and the review row is stamped <code>2026-09-annotated</code> with a <code>sheet_map</code>. The app chooses its adapter by <code>output_schema</code>. The CC adapter hardcodes <code>annotations: []</code>.</td></tr>
       <tr><td><span class="sn">4</span></td><td>Same step as findings?</td><td><b>No.</b> <code>3.13-annotate</code> runs after <code>3.11-final</code>: a judgment sweep (one worker per discipline) writes sidecar files, then a script merges them into a copy of the record.</td></tr>
-      <tr><td><span class="sn">5</span></td><td>Proposal for CC?</td><td>A new <code>2.12-annotate</code> family after <code>2.9-comments</code>, reusing the review's scripts once they move to shared code. It seeds from the cited block's box. Lane B validates the markers and adds <code>sheet_map</code> while keeping the CC label, and the cityhall CC adapter reads the markers. Opt-in at first.</td></tr>
+      <tr><td><span class="sn">5</span></td><td>Proposal for CC?</td><td>A new <code>2.12-annotate</code> family after <code>2.9-comments</code> that never adjudicates. It marks <b>every run</b> that voted fail or warn, not only the winning one, and stores each run's markers on that run. The comment shows the winning run's markers. It reuses the review's scripts once they move to shared code, and seeds from the cited block's box. Lane B validates the markers and adds <code>sheet_map</code> while keeping the CC label, and the cityhall CC adapter reads the markers. Opt-in at first.</td></tr>
     </tbody>
   </table></div>
 
@@ -508,7 +508,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 
     <div class="sys trig" id="b-t2" style="grid-area:3/1"><span class="dot"></span><span class="t">CC run</span><span class="d">request annotate: true</span></div>
     <div class="sys" id="b-c29" style="grid-area:3/2"><span class="k">runbook step</span><span class="t">2.9-comments</span><span class="d">unchanged</span></div>
-    <div class="sys new" id="b-c212" style="grid-area:3/3"><a class="ref" href="#detail-cc-graph">D1 · D3 ↓</a><span class="k">runbook step</span><span class="t">2.12-annotate</span><span class="d">sweep per guide over fails that cite a sheet, then merge</span></div>
+    <div class="sys new" id="b-c212" style="grid-area:3/3"><a class="ref" href="#detail-cc-graph">D1 · D3 · D12 ↓</a><span class="k">runbook step</span><span class="t">2.12-annotate</span><span class="d">marks every failing run, then merge</span></div>
     <div class="sys chg" id="b-pb" style="grid-area:3/4"><a class="ref" href="#detail-laneb">D7 ↓</a><span class="k">script</span><span class="t">lane B inserts</span><span class="d">validates markers, adds sheet_map</span></div>
     <div class="sys store chg" id="b-db2" style="grid-area:3/5"><a class="ref" href="#detail-store">D6 ↓</a><span class="k">table</span><span class="t">review_comments</span><span class="d">CC rows may carry markers</span></div>
     <div class="sys chg" id="b-ui2" style="grid-area:3/6"><a class="ref" href="#detail-ui">D8 ↓</a><span class="k">ui</span><span class="t">checklist adapter</span><span class="d">reads markers on presence</span></div>
@@ -531,7 +531,8 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
   </div>
   <div class="sys-refs">
     <a class="refrow new" data-ref="D1"><span class="chip">D1</span><span class="txt">a separate 2.12-annotate family after 2.9-comments; validate and publish read its merged copy</span></a>
-    <a class="refrow new" data-ref="D3"><span class="chip">D3</span><span class="txt">sweep only fail/warn comments that cite a sheet, one worker per guide; the merge writes every other comment's disposition</span></a>
+    <a class="refrow new" data-ref="D3"><span class="chip">D3</span><span class="txt">the unit is a (comment, run) whose own status is fail/warn and cites a sheet, whatever the comment's verdict; one worker per guide</span></a>
+    <a class="refrow new" data-ref="D12"><span class="chip">D12</span><span class="txt">per-run markers stored on each perRunFindings entry; the comment shows the winning run's</span></a>
     <a class="refrow chg" data-ref="D4"><span class="chip">D4</span><span class="txt">the stager writes each block's bounding box, so a cited block becomes the first seed</span></a>
     <a class="refrow new" data-ref="D5"><span class="chip">D5</span><span class="txt">lift the annotate scripts into runbooks/lib/annotate with a review|cc record adapter</span></a>
     <a class="refrow chg" data-ref="D6"><span class="chip">D6</span><span class="txt">the sheet key is the staged ordinal label, resolved through a sheet_map that lane B now writes</span></a>
@@ -652,7 +653,9 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
       <div class="row"><span class="gut"></span><span class="nm">sheet_references</span><span class="ty">[{label, sheetNumber}] · lane A only</span></div>
       <div class="row add"><span class="gut">+</span><span class="b b-new">NEW</span><span class="nm">output_json.annotations[] (CC)</span><span class="ty">present only when swept</span></div>
       <div class="row add"><span class="gut">+</span><span class="b b-new">NEW</span><span class="nm">output_json.annotation_disposition (CC)</span><span class="ty">{status, reason, sheets[]}</span></div>
-      <div class="note">Storage is presence-based. Absent means never swept. [] means every marker was rejected at import.</div>
+      <div class="row add"><span class="gut">+</span><span class="b b-new">NEW</span><span class="nm">…perRunFindings[k].annotations[] (CC)</span><span class="ty">every run's markers</span></div>
+      <div class="row add"><span class="gut">+</span><span class="b b-new">NEW</span><span class="nm">…perRunFindings[k].annotation_disposition (CC)</span><span class="ty">every run's outcome</span></div>
+      <div class="note">For CC, the comment-level pair is a copy of the winning run's (D12). Storage is presence-based. Absent means never swept. [] means every marker was rejected at import.</div>
     </div>
     <div class="ent exist">
       <div class="eh"><span class="en">annotation</span><span class="stereo">json object in output_json</span></div>
@@ -675,6 +678,19 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
     <span class="rl">annotation <span class="cf">&gt;──‖</span> sheet_version <span class="cmt">by label → sheet_map → sheet_number, resolved at read time; no FK</span></span>
   </div>
   <p class="claim"><b>Claim (§1.3):</b> there is no annotation table. A <code>comment_annotation</code> table with a <code>sheet_version_id</code> FK was designed and then abandoned before it shipped.</p>
+
+  <h3>Every stored change for CC (§3.4)</h3>
+  <div class="spectable-scroll"><table class="spectable">
+    <thead><tr><th>Where</th><th>What is added</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr><td><code>reviews.output_json.sheet_map</code></td><td><code>{"01": 1, …}</code> from the staged sheet folders</td><td>the app turns a marker's sheet label into a sheet <b>only</b> through this map; without it a CC marker is never drawn. Publish also refuses an unresolvable label</td></tr>
+      <tr><td>comment <code>output_json.annotations[]</code></td><td>the winning run's markers (0–20)</td><td>what the sheets view draws, matching the text the reader reads</td></tr>
+      <tr><td>comment <code>output_json.annotation_disposition</code></td><td>per-sheet outcome + reason, plus a roll-up</td><td>tells "never swept" from "nothing to mark: absence" from "not found"; an empty <code>annotations</code> alone cannot</td></tr>
+      <tr><td><code>…perRunFindings[k]</code> (both fields)</td><td>the same pair for every run</td><td>all runs' geometry kept for audit and IG (D12)</td></tr>
+      <tr><td><code>reviews.output_json.sections[].comments[]</code></td><td>the same fields again</td><td>lane B stores the whole envelope on the review row too, as it does for every CC field today</td></tr>
+      <tr><td><code>block-manifest.json</code> <code>blockBoxes</code></td><td><span class="none">not a DB change: a staged run file</span></td><td>a starting crop for the sweep, from the box the DB already has; an optimisation that can be dropped</td></tr>
+    </tbody>
+  </table></div>
 
   <h3>The two publish lanes side by side</h3>
   <div class="spectable-scroll"><table class="spectable">
@@ -726,7 +742,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 <!-- ============================== CC ============================== -->
 <section class="panel" id="cc">
   <h2><span class="eyebrow">CC proposal</span>2.12-annotate, the shared kit, and a CC adapter that reads markers</h2>
-  <p class="lede">Copy the review's shape: a separate step on the final envelope, sidecars, then a merge. CC changes three things: the roster (only fails that cite a sheet), the seed (the cited block's box) and the record adapter.</p>
+  <p class="lede">Copy the review's shape: a separate step on the final envelope, sidecars, then a merge. CC changes three things: the roster (every run that voted fail or warn and cites a sheet), the seed (the block that run cited) and the record adapter, which also stores markers per run.</p>
 
   <h3 id="detail-cc-graph">The CC graph with the new step</h3>
   <div class="sysmap" style="grid-template-columns:.6fr repeat(4,1fr)">
@@ -756,26 +772,31 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
   <div class="sys-legend"><span><i></i>exists today</span><span><i class="chg"></i>changed</span><span><i class="new"></i>new</span></div>
   <p class="claim"><b>Claim (D1):</b> CC has no revise loop after 2.9, so the annotate step sits directly before validate and needs no stale check. With the flag off (D9) the output is byte-identical to today.</p>
 
-  <h3 id="detail-cc-roster">Who gets swept, and what they get</h3>
+  <h3 id="detail-cc-roster">Who gets swept, and what they get: per run (D3, D12)</h3>
   <div class="dflow">
-    <div class="dq"><span class="q">Status fail or warn, or uncertain with a tentative fail/warn?</span><span class="yes">no →</span><span class="out warn">merge writes nothing-to-mark ("passed" / "not applicable")</span></div>
+    <div class="dq"><span class="q">For each run of each comment: did this run vote fail or warn? (the comment's verdict does not matter)</span><span class="yes">no →</span><span class="out warn">merge writes the run's nothing-to-mark ("run passed" / "not applicable")</span></div>
     <div class="dno">yes ↓</div>
-    <div class="dq"><span class="q">Cites at least one plan sheet (sheetReferences)?</span><span class="yes">no →</span><span class="out warn">merge writes a sheetless nothing-to-mark ("cites no sheet")</span></div>
-    <div class="dno">yes ↓ on the roster for its guide; seed from the cited block's box</div>
-    <div class="dq"><span class="q">Is the deficiency drawn (not an absence)?</span><span class="yes">no →</span><span class="out warn">nothing-to-mark; the app keeps the cited-block outline</span></div>
+    <div class="dq"><span class="q">Does this run cite at least one plan sheet?</span><span class="yes">no →</span><span class="out warn">merge writes a sheetless nothing-to-mark ("cites no sheet")</span></div>
+    <div class="dno">yes ↓ on its guide's roster; seed from the block this run cited</div>
+    <div class="dq"><span class="q">Is the deficiency this run describes drawn (not an absence)?</span><span class="yes">no →</span><span class="out warn">nothing-to-mark; the app keeps the cited-block outline</span></div>
     <div class="dno">yes ↓</div>
-    <div class="dq"><span class="q">Located with confidence within 3 passes?</span><span class="yes">yes →</span><span class="out">annotated: the app draws the marker in place of the outline</span></div>
+    <div class="dq"><span class="q">Located with confidence within 3 passes?</span><span class="yes">yes →</span><span class="out">annotated, stored on perRunFindings[k]</span></div>
     <div class="dno">no ↓</div>
     <div class="dq end"><span class="q">otherwise</span><span class="yes"></span><span class="out fail">not-located</span></div>
   </div>
-  <p class="claim"><b>Claim (§1.5):</b> on CC review <code>b80e5075</code>, 28 of 192 comments are fails or warns that cite a sheet, and 26 cite a block. Most are absences, so most will end in nothing-to-mark (Q1).</p>
+  <div class="dflow">
+    <div class="dq"><span class="q">Merge: is the comment's verdict fail or warn (or tentatively so)?</span><span class="yes">yes →</span><span class="out">copy the winning run's pair (earliest run matching the verdict) up to the comment; the app draws it</span></div>
+    <div class="dno">no ↓</div>
+    <div class="dq end"><span class="q">otherwise (outvoted failing runs)</span><span class="yes"></span><span class="out warn">comment gets a sheetless nothing-to-mark; the runs keep their markers</span></div>
+  </div>
+  <p class="claim"><b>Claim (§1.5):</b> on CC review <code>b80e5075</code> (3 runs per guide), 96 run-findings are fail/warn and 84 cite a sheet, across 36 comments. Four of those comments were outvoted to pass. The step never changes a verdict (D1).</p>
 
   <h3 id="detail-kit">The shared annotate kit (D5)</h3>
   <div class="spectable-scroll"><table class="spectable">
     <thead><tr><th>Piece</th><th>Today</th><th>After</th></tr></thead>
     <tbody>
       <tr><td>crop · remap · seam-check</td><td><code>runbooks/review/scripts/annotate-*.ts</code></td><td><code>runbooks/lib/annotate/</code>, unchanged (record-agnostic)</td></tr>
-      <tr><td>write · disposition-write</td><td>review only: <code>comments[].id</code>, <code>sheets[]</code>, <code>sources[]</code></td><td><code>--record review|cc</code>. CC finds a comment by <code>sourceFindings[0].ref</code> (<code>grouping:itemId</code>) and may name sheets from <code>sheetReferences[].sheetNumber</code>, rendered as <code>"NN"</code></td></tr>
+      <tr><td>write · disposition-write</td><td>review only: <code>comments[].id</code>, <code>sheets[]</code>, <code>sources[]</code></td><td><code>--record review|cc</code>. CC finds a comment by <code>sourceFindings[0].ref</code> (<code>grouping:itemId</code>) plus <code>--run run-k</code>, and may name sheets from that run's <code>sheetReferences[].sheetNumber</code>, rendered as <code>"NN"</code></td></tr>
       <tr><td>merge · disposition-check</td><td>folds into <code>comments[]</code></td><td>the adapter folds into <code>sections[].comments[]</code>; CC adds deterministic dispositions for comments off the roster</td></tr>
       <tr><td>validation constants</td><td><code>lib/annotate-validate.ts</code> + <code>review_annotation_geometry.py</code>, once pinned with substation (now archived)</td><td>same files; the docstrings now name bureau as the only enforcer</td></tr>
       <tr><td>seed ladder</td><td>drawing block → whole sheet in quadrants</td><td>a <b>cited block box</b> first (D4), then the same ladder</td></tr>
@@ -829,11 +850,12 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
     <thead><tr><th>Q</th><th>Question</th><th>Proposed default</th></tr></thead>
     <tbody>
       <tr><td><span class="sn">Q1</span></td><td>Should absences stay unmarked, or get a new <code>expected-here</code> kind?</td><td>Unmarked; the cited-block outline already says where to look (D2)</td></tr>
-      <tr><td><span class="sn">Q2</span></td><td>Sweep grain: one worker per guide, or one for the whole run?</td><td>Per guide, for partial credit when a seat dies</td></tr>
+      <tr><td><span class="sn">Q2</span></td><td>Sweep grain: one worker per guide, or one for the whole run?</td><td>Per guide: about 84 run-findings at runs = 3</td></tr>
       <tr><td><span class="sn">Q3</span></td><td>annotate model: opus-5.5 high, or try sonnet-5.5?</td><td>Opus, matching the review's proven sweep</td></tr>
       <tr><td><span class="sn">Q4</span></td><td>Markers on supplementary documents (forms, reports)?</td><td>Out of scope: the app has no document viewer to draw on</td></tr>
       <tr><td><span class="sn">Q5</span></td><td>Multiple plan sets collide on <code>sheet-NN</code>, and the app reads only one</td><td>Shared by both runbooks; a separate spec</td></tr>
       <tr><td><span class="sn">Q6</span></td><td>When is the flag good enough to default on?</td><td>No wrongly placed marker among 20 audited</td></tr>
+      <tr><td><span class="sn">Q7</span></td><td>Mark each run independently, or reuse a sibling run's shape for the same block?</td><td>Independent (as D3 says); reuse is cheaper but couples the runs</td></tr>
     </tbody>
   </table></div>
 </section>

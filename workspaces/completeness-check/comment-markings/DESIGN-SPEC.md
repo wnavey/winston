@@ -1,6 +1,6 @@
 # Comment markings for the completeness-check runbook
 
-**Status:** Draft v1
+**Status:** Draft v1.1
 **Date:** 2026-10-07
 **Repos touched (proposed):** `bureau` (shared annotate kit lifted out of `runbooks/review/scripts/`; a new `2.12-annotate` step family in `runbooks/completeness-check/`; the stager writes block boxes; lane B of `publish_review.py` validates and stamps markings), `cityhall` (the CC adapter reads `annotations` / `annotation_disposition` the way the August adapter does)
 **Repos NOT touched:** `substation` (archived; its `supabase/` now lives in `cityhall`), `conductor2`, `inspector-general`, `claude-plugins`
@@ -18,6 +18,21 @@
 > annotate step in the CC runbook (reusing the review's scripts), a lane-B publish that
 > validates and carries the fields, and a CC adapter in `cityhall` that reads them. The
 > companion page `architecture.html` draws all of this.
+
+> **Revision note (v1.1, 2026-10-07, Will's review of v1).**
+> - **Every failing run gets geometry, not only the winning one.** D3 is rewritten: the
+>   sweep's unit is a *(comment, run)* whose own run status is `fail` or `warn`, whatever the
+>   comment's consolidated status. On `b80e5075` (runs = 3) that is 96 run-findings (84 cite
+>   a sheet) across 36 comments, against 32 comment-level fail/warns in v1.
+> - **New D12** says where per-run markers are stored: on each
+>   `sourceFindings[0].perRunFindings[k]`. The comment-level `annotations[]` is a deterministic
+>   copy of the *winning* run's markers, meaning the run whose text the comment shows.
+> - **D1 is made explicit:** the step never adjudicates. It changes no status, text, vote or
+>   reference.
+> - **New §3.4** walks through every stored change, and says that `blockBoxes` is a staged
+>   run file, not a DB change.
+> - D5's CC adapter gains a run key. The roster numbers in §5 Risks and Q2 are updated.
+>   Q7 is new.
 
 ---
 
@@ -158,6 +173,15 @@ spacing dimensions", "no TW/BW elevations", "no seal". A minority point at somet
 but deficient, such as an incomplete Meter Notice table, a title missing its street
 number, or an empty registration box.
 
+That review ran **3 times per guide**. At the run level, 96 run-findings are fail/warn, and
+84 of them cite a sheet. They spread over 36 comments, and 4 of those comments are not
+fail/warn at the comment level: one run failed and was outvoted. Each run-finding carries
+its own `run`, `status`, `comment`, `observation`, `reasoning` and `sheetReferences` inside
+`sourceFindings[0].perRunFindings[]`. The comment's own text is the *winning* run's. That
+run is the earliest whose status matches the displayed verdict
+(`cross-run-consolidate-cc.ts:333-338`), and the envelope keeps the run order, so it can be
+recomputed.
+
 ---
 
 ## 2. Goals
@@ -184,7 +208,10 @@ submission (Q5), human-authored markings, and a dedicated annotation table.
 `2.12-annotate/{sweep, merge}`, after `2.9-comments`. `2.10-validate` and `3.1-publish`
 then read `2.12-annotate/merge/review-comments.json` instead of 2.9's. CC has no revise
 loop, so the step can sit directly before validate, and no stale check is needed. The
-fold-into-a-copy and sidecar rules from §1.4 carry over unchanged.
+fold-into-a-copy and sidecar rules from §1.4 carry over unchanged. **The step never
+adjudicates.** It reads each run's own claim and adds geometry for it. It changes no
+status, no vote, no comment text and no `sheetReferences`. The merge's only writes are the
+two annotation fields (D12).
 
 **D2. Mark only what is drawn: the review's rule, unchanged.** A CC fail that is an
 absence gets `nothing-to-mark`. "Where it should be" is already shown by the app's cited
@@ -193,14 +220,24 @@ value where the deficiency *is* a drawn thing: an incomplete table, a wrong titl
 seal box, a dimension that is drawn but wrong. Q1 asks Will to confirm, because this means
 most CC fails stay unmarked.
 
-**D3. Sweep only the comments that can have a marking.** The roster is built from
-`2.9-comments/review-comments.json`: comments whose status is `fail` / `warn`, or
-`uncertain` with a tentative fail/warn, **and** that carry at least one `sheetReferences`
-entry. Every other comment gets a sheetless `nothing-to-mark` that the merge writes
-deterministically ("passed" / "not applicable" / "cites no sheet"), so the coverage gate
-still holds. Run with **one worker per guide** (`grouping`), which is the CC equivalent of
-the review's per-discipline roster. A guide with no candidates drops out of the roster. On
-the 2008 San Antonio review that means about 28 comments over about 10 workers.
+**D3. Sweep every failing run, not only the winning one.** The unit of work is a
+*(comment, run)*: a `perRunFindings[k]` entry in `2.9-comments/review-comments.json` whose
+**own** `status` is `fail` or `warn`, **and** whose own `sheetReferences` cite at least one
+plan sheet. The comment's consolidated status does not matter. A comment that passed 2–1
+still has its failing run swept, and a fail that one run voted pass has only its two failing
+runs swept. Each run is located against **that run's** `comment` / `observation` and
+**that run's** cited sheets and blocks, so runs that disagree about where the problem is get
+marked independently (Q7). Everything else gets a disposition that the merge writes
+deterministically:
+- a run that passed or was not applicable: `nothing-to-mark` ("run passed" / "not applicable");
+- a fail/warn run that cites no sheet: sheetless `nothing-to-mark` ("cites no sheet");
+- a comment with no fail/warn run: a comment-level sheetless `nothing-to-mark`.
+
+That keeps the coverage gate total. Workers run **one per guide** (`grouping`), the CC
+equivalent of the review's per-discipline roster, and each worker handles every
+(item, run) pair in its guide. A guide with no fail/warn run drops out. On `b80e5075` that
+is 84 run-findings citing a sheet, over about 10 workers. At `runs = 1`, the common case,
+there is one run per comment, and this reduces to the comment-level sweep.
 
 **D4. Seed from the cited block box, which is a better rung 1 than the review has.** The
 stager writes `bounding_box` per block into `block-manifest.json` (`blockBoxes: {"5":
@@ -216,9 +253,10 @@ quadrants).
 `--record review|cc` adapter. The adapter answers three questions:
 
 - how to find a comment by ref (review: `comments[].id`; CC:
-  `sections[].comments[].sourceFindings[0].ref` = `grouping:itemId`);
-- which sheets it may name (review: `sheets[]`; CC: `sheetReferences[].sheetNumber`
-  rendered as the zero-padded staged ordinal);
+  `sections[].comments[].sourceFindings[0].ref` = `grouping:itemId`, plus `--run run-k`
+  naming the `perRunFindings` entry; the sidecar name carries both);
+- which sheets it may name (review: `sheets[]`; CC: **that run's**
+  `sheetReferences[].sheetNumber`, rendered as the zero-padded staged ordinal);
 - what `source_finding_ref` must match (review: `sources[]`; CC: the comment's own
   checklist ref).
 
@@ -272,6 +310,23 @@ section, so that its spend is visible.
 proven sweep (`judgment`). The CC sonnet presets are parity choices for the verdict steps
 and do not bind a new step. Q3 covers trying sonnet for cost.
 
+**D12. Per-run markers live on the run; the comment shows the winning run's.** The merge
+writes `annotations` / `annotation_disposition` onto each swept
+`sourceFindings[0].perRunFindings[k]`, the record of that run. It then copies the
+**winning run's** two fields up to the comment's own `annotations` /
+`annotation_disposition`. The winning run is the earliest run whose status equals the
+displayed verdict (`tentativeStatus` when uncertain, else `status`), recomputed exactly as
+`cross-run-consolidate-cc.ts:333-338` picks it. If the comment's status is not fail/warn
+(the 4 outvoted comments on `b80e5075`), the comment-level fields hold a sheetless
+`nothing-to-mark` ("the comment passed; see the runs"), while the failing runs keep their
+markers. A forced item shows the markers of the earliest run whose organic status matches
+the forced one, or none. The reason for this split: the app draws a comment's
+`annotations`, and the reader is reading the winning run's words. Markers from runs whose
+text the reader never sees would point at problems the comment does not describe. All runs'
+markers stay in the stored record for IG and audit (`sourceFindings` is already the per-run
+trace the app shows under Votes). The annotation object's shape is unchanged, with no `run`
+field, because the run is implied by where the object sits.
+
 ### 3.2 What changes, by repo
 
 | Repo | Change |
@@ -297,6 +352,50 @@ and do not bind a new step. Q3 covers trying sonnet for cost.
 
 ---
 
+### 3.4 Database changes, walked through
+
+No table, column, RPC or migration changes. Everything below lives inside two JSONB values
+that lane B already writes. The only new key on a review is `sheet_map`, and the only new
+keys on a comment are the two annotation fields, at two levels.
+
+| Where | What is added | Why |
+|---|---|---|
+| `reviews.output_json.sheet_map` | `{"01": 1, "02": 2, …}`, one entry per staged sheet folder, built by `read_staged` exactly as lane A builds it | The app turns a marker's `sheet` label into the sheet it draws on **only** through this map (`august.ts:281-291`). The CC review has no map today, so a CC marker would resolve to `null` and never be drawn. Lane B also uses it to refuse an unresolvable label before anything is written, the same fail-loud rule as lane A |
+| `review_comments.output_json.annotations[]` | the **winning run's** markers (0–20), each one `{sheet, kind, points, label, source, source_finding_ref, evidence, sheet_sha256, converged, passes}` | what the sheets view draws |
+| `review_comments.output_json.annotation_disposition` | the winning run's sweep outcome: `{status, reason, sheets:[{sheet, status, reason}]}` | see below |
+| `review_comments.output_json.sourceFindings[0].perRunFindings[k].annotations[]` / `.annotation_disposition` | the same two fields for **every** run that was considered (D12) | all runs' geometry is kept, for audit, IG and a later per-run view |
+| `reviews.output_json.sections[].comments[]` | the same fields again | lane B stores the whole `reviewData` blob on the review row as well as one row per comment, so every comment field appears twice. That is already true of every CC field today. It costs about 1 KB per marker, and markers are capped at 1,000 per review |
+
+**Why two fields, `annotations` and `annotation_disposition`.** They answer different
+questions, and the first cannot answer the second's.
+
+- `annotations[]` holds **what was placed**: geometry, one object per marker, each on one sheet.
+- `annotation_disposition` holds **what the sweep concluded for every sheet it opened**,
+  including the sheets where nothing was placed and why. Its statuses are `annotated`,
+  `nothing-to-mark` with a reason ("the deficiency is an absence: no spacing dimensions are
+  drawn") and `not-located` with a reason. It also holds one rolled-up status for the comment.
+
+An empty `annotations` is ambiguous on its own: never swept, swept and correctly nothing
+there, or swept and failed to find it. Under D2 the "nothing there" case is the majority for
+CC. The disposition is what lets the app say "nothing to mark: absence" or "not found" per
+sheet instead of silently drawing nothing (`readPlanMarkup`, `august.ts:442-484`). It is
+also what the merge's coverage gate checks, so an unswept comment is a failure, not a
+silent blank. Storage is presence-based: a missing disposition means *never swept*. This
+is the review's shape, unchanged, so one reader serves both.
+
+**Why `blockBoxes`, and why it is not a DB change.** `block-manifest.json` is a file the
+stager writes into the run folder (`1.2-stage-submission/`), not a table. The boxes already
+exist in the DB: `content_block.bounding_box`, normalised 0–1, present on all 522 blocks of
+2008 San Antonio. The stager already selects them (`submission_db.py:280`) and drops them.
+Writing them into the manifest gives the sweep worker a starting crop. A CC run-finding
+names the block it read (`blockNumber`, 76 of the 84 sheet-citing run-findings above), so
+the worker can crop straight to that block instead of scanning the whole sheet in four
+quadrants first. That means fewer passes, less seat spend, and a marker anchored to the
+block the run actually cited. Workers read only staged files, never the DB, so the box has
+to be on disk to be usable. It is an **optimisation, not a requirement**: without it, the
+sweep falls back to the review's seed ladder and still works. It can be dropped from P1 if
+we want the smallest change.
+
 ## 4. Rejected alternatives
 
 - **Promote cited block boxes to markings deterministically, with no agent.** This would be
@@ -318,7 +417,9 @@ and do not bind a new step. Q3 covers trying sonnet for cost.
 - **Few CC fails are markable.** If most fails are absences, the feature lands on a
   minority of items. P4 measures the real rate. On `b80e5075`, roughly 6–10 of the 28
   sheet-citing fails/warns look like drawn-but-deficient items, but that is a manual read.
-- **Seat spend.** The sweep is the most expensive kind of step: opus with pixel reads. D3's
+- **Seat spend.** The sweep is the most expensive kind of step: opus with pixel reads. Per-run
+  sweeping (D3) triples the work at `runs = 3` (84 run-findings against 28 comments on
+  `b80e5075`), and runs that agree will often be marked on the same spot. D3's
   filter bounds it to the fail/warn items that cite a sheet.
 - **Constants pinned on one side only.** The geometry limits (`review_annotation_geometry.py`)
   were "pinned with substation". Substation is archived, and cityhall carries none of them,
@@ -333,8 +434,8 @@ it should be" cue). The alternative is a second marker kind such as `expected-he
 would need a new `kind` and app styling.
 
 **Q2.** Roster grain for the sweep: one worker per guide (D3), or one worker for the whole
-CC run? At about 28 items, one worker may be enough, but it gives up partial credit when a
-seat dies.
+CC run? At `runs = 3` that is about 84 run-findings (D3, v1.1), which favours per guide for
+partial credit when a seat dies.
 
 **Q3.** Model for `annotate`: opus-5.5 high (D11), or try sonnet-5.5 first given CC's cost
 profile?
@@ -349,3 +450,9 @@ set. This is shared by both runbooks: fix it here, or leave it for a separate sp
 
 **Q6.** Default-on criterion for D9: what marker precision on the hard-item sets is good
 enough? One proposal: no wrongly placed marker among 20 audited.
+
+**Q7.** Runs that agree often cite the same block for the same deficiency. Should the sweep
+mark each run independently (D3 as written: no cross-run influence, about 3× the passes),
+or may a worker reuse a converged shape from a sibling run when that run cites the same
+sheet and block and its evidence text still reads true? Reuse is cheaper, but it makes the
+runs' markers no longer independent observations.
