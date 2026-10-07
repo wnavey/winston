@@ -1,0 +1,975 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CC Comment Markings</title>
+<style>
+/* ============================================================
+   spec-kit v5.1  —  winston HTML spec design system
+   Inline the ENTIRE contents of this file into the spec's style block.
+   Canonical source: ~/.claude/skills/winston-spec/assets/spec-kit.css
+   When you change this file, bump the version above and in COMPONENTS.md.
+   v4: + sequence diagram (.seq*), + data table (.spectable), + prompt block (.prompt)
+   v5: + system map (.sysmap/.sys, edges drawn by spec-kit.js), + decision flow (.dflow),
+       + concept figure (figure.concept), + claim caption (.claim), + reference chip rows (.sys-refs),
+       + spec reader page (body.reader; DESIGN-SPEC.md rendered by marked, built by inline-kit.py --spec)
+   v5.1: pass-2 friction fixes — long identifiers wrap (.sys .t, .uc .nt, .ent .ty), .sysmap-scroll for
+       6+ columns, state-neutral .sm pills, .dflow jump outcomes, legend 'new trigger' dot
+       Colour rule: fill/border = change state only; kind = badge text + shape; legend is the
+       complete list of colour meanings on the page.
+   ============================================================ */
+
+:root{
+  /* steel-blue ramp (matches cityhall / Noetic report surfaces) */
+  --p50:#f0f5f9;--p100:#dce8f1;--p200:#b9d2e5;--p300:#8cb4d1;--p400:#6397b8;
+  --p500:#517e9e;--p600:#3f6582;--p700:#35526b;--p800:#2d4559;--p900:#273b4b;--p950:#182530;
+  --bg:#f9f9f9;--card:#ffffff;--divider:#dfdfdf;--ink:#1f2937;--muted:#6b7280;--ember:#bb4d00;
+  /* semantic: new / changed / retired */
+  --new:#15803d;--newbg:#f0fdf4;--newbd:#bbf7d0;
+  --chg:#b45309;--chgbg:#fffbeb;--chgbd:#fde68a;
+  --ret:#b91c1c;--retbg:#fef2f2;--retbd:#fecaca;
+  --sans:'Lexend',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  --serif:'Lora',Georgia,'Times New Roman',serif;
+  --mono:'Fira Code','SF Mono',ui-monospace,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.55;font-size:15px}
+
+/* ---------- masthead ---------- */
+header.masthead{background:linear-gradient(135deg,var(--p800),var(--p600));color:#fff;padding:34px 32px 30px;position:relative;overflow:hidden}
+header.masthead::after{content:"";position:absolute;inset:0;background-image:repeating-linear-gradient(115deg,rgba(255,255,255,.06) 0 1px,transparent 1px 26px);pointer-events:none}
+header.masthead .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--p200)}
+header.masthead h1{font-family:var(--serif);font-weight:600;margin:.35em 0 .2em;font-size:29px;position:relative}
+header.masthead p{margin:0;color:var(--p100);max-width:880px;font-size:15px}
+header.masthead .meta{margin-top:14px;font-size:12.5px;color:var(--p200);font-family:var(--mono)}
+
+/* ---------- tabs ---------- */
+nav.tabs{position:sticky;top:0;z-index:20;display:flex;gap:2px;background:var(--p950);padding:0 20px;box-shadow:0 2px 8px rgba(0,0,0,.12);flex-wrap:wrap}
+nav.tabs button{appearance:none;border:0;background:transparent;color:var(--p200);font-family:var(--sans);font-size:14px;font-weight:500;padding:14px 18px;cursor:pointer;border-bottom:3px solid transparent;transition:all .15s}
+nav.tabs button .n{font-family:var(--mono);font-size:11px;opacity:.7;margin-right:7px}
+nav.tabs button:hover{color:#fff;background:rgba(255,255,255,.04)}
+nav.tabs button.active{color:#fff;border-bottom-color:var(--ember);background:rgba(255,255,255,.06)}
+
+/* ---------- layout ---------- */
+main{max-width:1140px;margin:0 auto;padding:30px 26px 90px}
+.panel{display:none;animation:fade .25s ease}
+.panel.active{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+h2{font-family:var(--serif);font-weight:600;font-size:23px;margin:34px 0 6px;color:var(--p900)}
+h2:first-child{margin-top:4px}
+h2 .eyebrow{display:block;font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--p500);font-weight:400;margin-bottom:3px}
+h3{font-size:16px;font-weight:600;margin:28px 0 8px;color:var(--p800);display:flex;align-items:center;gap:9px}
+h3 .hn{font-family:var(--mono);font-size:12px;color:#fff;background:var(--p600);border-radius:5px;padding:2px 8px}
+h4{font-size:14px;font-weight:600;margin:18px 0 6px;color:var(--p800)}
+p{margin:.55em 0}
+.lede{font-size:16px;color:var(--p800);border-left:3px solid var(--ember);padding-left:16px;margin:14px 0 20px}
+ul{margin:.4em 0;padding-left:22px}li{margin:.28em 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px solid var(--p100);border-radius:4px;padding:1px 5px;color:var(--p800)}
+
+/* ---------- callout ---------- */
+.callout{background:var(--p50);border:1px solid var(--p200);border-left:4px solid var(--p500);border-radius:8px;padding:13px 17px;margin:16px 0}
+.callout.ember{background:#fdf6f0;border-color:#f0cba8;border-left-color:var(--ember)}
+.callout.new{background:var(--newbg);border-color:var(--newbd);border-left-color:var(--new)}
+.callout .lab{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--p600);font-weight:600;display:block;margin-bottom:3px}
+.callout.ember .lab{color:var(--ember)} .callout.new .lab{color:var(--new)}
+
+/* ---------- legend ---------- */
+.legend{display:flex;flex-wrap:wrap;gap:9px 16px;background:#fff;border:1px solid var(--divider);border-radius:10px;padding:12px 16px;margin:16px 0;font-size:12px;align-items:center}
+.legend .k{display:inline-flex;align-items:center;gap:6px}
+.swatch{width:26px;height:14px;border-radius:3px;display:inline-block;border:1px solid rgba(0,0,0,.15)}
+
+/* ---------- shared field badges (used by entity rows + legend) ---------- */
+.b{font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.04em;padding:1px 4px;border-radius:3px;text-transform:uppercase;white-space:nowrap}
+.b-pk{background:#fef3c7;color:#92600a;border:1px solid #fde68a}
+.b-fk{background:#e0edfb;color:#2456a8;border:1px solid #c3d8f2}
+.b-nn{background:#eef1f4;color:#4b5563;border:1px solid #d7dde3}
+.b-new{background:var(--newbg);color:var(--new);border:1px solid var(--newbd)}
+
+/* ============================================================
+   ER / UML entity boxes
+   ============================================================ */
+.erd{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start;margin:16px 0;background:#fbfcfd;border:1px solid var(--divider);border-radius:12px;padding:18px}
+.ent{border:1px solid var(--divider);border-radius:9px;overflow:hidden;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.05);min-width:236px;flex:0 1 auto}
+.ent .eh{padding:7px 12px;color:#fff;display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.ent .eh .en{font-family:var(--mono);font-size:12.5px;font-weight:700;letter-spacing:.02em}
+.ent .eh .stereo{font-size:9.5px;font-family:var(--mono);opacity:.85;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}
+.ent.exist .eh{background:var(--p700)}
+.ent.newt .eh{background:var(--new)}
+.ent.changed .eh{background:var(--chg)}
+.ent.retired .eh{background:#9ca3af}
+.ent.retired{opacity:.72}
+.ent .row{display:flex;align-items:center;gap:7px;padding:4px 11px;font-size:11.5px;border-top:1px solid #eef1f4}
+.ent .row:first-of-type{border-top:0}
+.ent .row .nm{font-family:var(--mono);font-size:11.5px;color:var(--p900);font-weight:600}
+.ent .row .ty{font-family:var(--mono);font-size:10px;color:var(--muted);margin-left:auto;text-align:right;max-width:60%;overflow-wrap:anywhere}
+.ent .row.hi{background:#fff9f2}
+.ent .row.strk .nm{text-decoration:line-through;color:var(--muted)}
+.ent .note{padding:5px 11px;font-size:10px;color:var(--muted);font-style:italic;border-top:1px dashed #e5e9ee;background:#fbfcfd}
+/* diff rows — show a table modification (column added / removed), git-style.
+   Put a "+"/"−" marker in a .gut span at the start of the row. */
+.ent .row .gut{flex:0 0 10px;width:10px;text-align:center;font-family:var(--mono);font-size:11px;font-weight:700;color:var(--muted)}
+.ent .row.add{background:var(--newbg);box-shadow:inset 3px 0 0 var(--new)}
+.ent .row.add .gut{color:var(--new)}
+.ent .row.add .nm{color:#166534}
+.ent .row.del{background:var(--retbg);box-shadow:inset 3px 0 0 var(--ret)}
+.ent .row.del .gut{color:var(--ret)}
+.ent .row.del .nm{color:var(--ret);text-decoration:line-through}
+
+/* relationships panel — crow's-foot text notation */
+.rels{background:#fff;border:1px solid var(--divider);border-radius:10px;padding:12px 16px;margin:14px 0;font-family:var(--mono);font-size:12px;line-height:1.9}
+.rels .rl{display:block;color:var(--p800)}
+.rels .rl b{color:var(--ember)}
+.rels .cf{color:var(--p500);font-weight:700}
+.rels .cmt{color:var(--muted);font-style:normal;font-family:var(--sans);font-size:11.5px}
+.rels .tag-new{color:var(--new);font-weight:700}
+.rels .tag-ret{color:var(--ret);font-weight:700}
+.rels-h{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--p600);font-weight:700;margin-bottom:6px}
+
+/* ============================================================
+   Use-case scene  (an action + its boxes-and-arrows diagram)
+   ============================================================ */
+.uc{margin:16px 0 22px;border:1px solid var(--divider);border-radius:12px;overflow:hidden;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.uc .uch{display:flex;align-items:center;gap:13px;padding:11px 16px;background:linear-gradient(135deg,var(--p700),var(--p600));color:#fff}
+.uc .uch .ucn{flex:0 0 30px;height:30px;border-radius:50%;background:rgba(255,255,255,.2);font-family:var(--mono);font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.uc .uch .uctxt{flex:1}
+.uc .uch .actor{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--p100);display:block;margin-bottom:1px}
+.uc .uch .uct{font-weight:600;font-size:15.5px;font-family:var(--serif)}
+.uc .ucsub{padding:9px 16px;font-size:12.5px;color:var(--p800);background:var(--p50);border-bottom:1px solid var(--p100)}
+.uc .ucdiag{padding:20px 16px 14px}
+.ucnote{padding:2px 16px 14px;font-size:11.5px;color:var(--muted)}
+.ucnote b{color:var(--p700);font-family:var(--mono);font-size:10.5px}
+
+/* ============================================================
+   Boxes-and-arrows flow
+   Robustness rules baked in:
+   - .dfg WRAPS (flex-wrap:wrap) so long chains never clip / never
+     need horizontal scroll. Arrows reflow with the nodes.
+   - .node is a flex COLUMN: the op-badge is an in-flow header row
+     (never position:absolute), and .nt / .nf are block-level, so a
+     table name and its fields can never smush onto one line.
+   ============================================================ */
+.dfg{display:flex;flex-wrap:wrap;align-items:stretch;gap:8px 0;margin:0}
+.node{flex:0 0 auto;width:156px;background:#fff;border:1.5px solid var(--p300);border-radius:8px;padding:9px 11px;display:flex;flex-direction:column;gap:3px}
+.node .op{align-self:flex-start;font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:1px 6px;border-radius:3px;border:1px solid;color:#fff;margin-bottom:2px}
+.node .nt{display:block;font-family:var(--mono);font-weight:700;font-size:12px;color:var(--p900);line-height:1.3;overflow-wrap:anywhere}
+.node .nf{display:block;font-family:var(--mono);font-size:10px;color:var(--muted);line-height:1.45;word-break:break-word}
+.node.created{border-color:var(--new);background:var(--newbg)} .node.created .op{background:var(--new);border-color:var(--new)}
+.node.read{border-color:var(--p400);background:#eef4fb} .node.read .op{background:var(--p500);border-color:var(--p500)}
+.node.event{border-color:var(--ember);background:#fdf6f0} .node.event .op{background:var(--ember);border-color:var(--ember)}
+.node.store{border-style:dashed;border-color:var(--p500);background:#eef3f7} .node.store .op{background:var(--p700);border-color:var(--p700)}
+.edge{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:70px;max-width:104px;padding:0 4px}
+.edge .el{font-size:9px;color:var(--p600);font-family:var(--mono);text-align:center;line-height:1.3;margin-bottom:2px}
+.edge .ar{color:var(--p400);font-size:20px;font-weight:700;line-height:1}
+
+/* ============================================================
+   Card grid  (keep / change / drop comparisons)
+   ============================================================ */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:820px){.grid2{grid-template-columns:1fr}.erd{padding:12px}}
+.card{background:var(--card);border:1px solid var(--divider);border-radius:9px;padding:14px 16px}
+.card.keep{border-top:3px solid var(--new)} .card.change{border-top:3px solid var(--chg)} .card.drop{border-top:3px solid var(--ret)}
+.card strong{display:block;margin-bottom:4px;font-size:13.5px}
+.card ul{font-size:12.5px;margin:2px 0}
+
+/* ============================================================
+   Lifecycle / state machine
+   ============================================================ */
+.sm{display:flex;flex-wrap:wrap;gap:7px;align-items:center;margin:14px 0}
+.sm .s{border:1px solid var(--p300);background:var(--p50);border-radius:20px;padding:5px 12px;font-size:11.5px;font-weight:600;color:var(--p800);font-family:var(--mono)}
+.sm .s .who{display:block;font-size:9px;font-family:var(--mono);color:var(--muted);font-weight:400;text-transform:uppercase;letter-spacing:.03em}
+.sm .s.client{border-color:var(--newbd);background:var(--newbg)}
+.sm .s.cc{border-color:#f0cba8;background:#fdf6f0}
+.sm .s.spec{border-color:var(--chgbd);background:var(--chgbg)}
+.sm .a{color:var(--p400);font-weight:700}
+/* state-neutral variants (v5.1): terminal-good / terminal-stop / dimmed. The .client/.cc/.spec
+   colours mean "whose court" and need a legend if used. */
+.sm .s.ok{border-color:var(--newbd);background:var(--newbg);color:var(--new)}
+.sm .s.stop{border-color:var(--retbd);background:var(--retbg);color:var(--ret)}
+.sm .s.dim{opacity:.6;border-style:dashed}
+
+/* ============================================================
+   Use-case catalog — grouped list of candidate use cases
+   (a scoped list, NOT a diagram — for "what would we build" inventories)
+   ============================================================ */
+.catgrp{border:1px solid var(--divider);border-radius:10px;overflow:hidden;margin:14px 0;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.catgrp .cath{background:var(--p700);color:#fff;padding:8px 14px;font-family:var(--serif);font-weight:600;font-size:14.5px;display:flex;align-items:center;gap:10px}
+.catgrp .cath .cgl{font-family:var(--mono);font-size:12px;font-weight:700;background:rgba(255,255,255,.2);border-radius:5px;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;flex:0 0 22px}
+.uci{display:flex;gap:9px;align-items:baseline;padding:7px 13px;border-top:1px solid #eef1f4;font-size:13px}
+.uci .uid{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--p600);flex:0 0 26px}
+.uci .utxt{flex:1;color:var(--ink);line-height:1.45}
+.uci .utxt b{color:var(--p900)}
+.uci .star{color:var(--ember);font-weight:700;font-size:12px;flex:0 0 auto;letter-spacing:-1px}
+.uci.later{opacity:.66}
+.utag{font-family:var(--mono);font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;text-transform:uppercase;letter-spacing:.03em;white-space:nowrap;flex:0 0 auto}
+.utag.t-orig{background:#e0edfb;color:#2456a8;border:1px solid #c3d8f2}
+.utag.t-add{background:var(--newbg);color:var(--new);border:1px solid var(--newbd)}
+
+/* ============================================================
+   Misc: storage strip, cross-reference box
+   ============================================================ */
+.storage{background:#eef3f7;border:1px dashed var(--p300);border-radius:8px;padding:9px 13px;font-family:var(--mono);font-size:12px;color:var(--p800);margin:12px 0}
+.storage b{color:var(--ember)}
+.xref{font-size:12px;color:var(--p600);background:var(--p50);border:1px solid var(--p100);border-radius:6px;padding:8px 12px;margin:10px 0}
+.foot{margin-top:44px;padding-top:18px;border-top:1px solid var(--divider);color:var(--muted);font-size:12px;font-family:var(--mono)}
+
+/* actor / repo chips (optional, for inline actor tags in prose) */
+.rc{display:inline-block;font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;padding:1px 6px;border-radius:5px;border:1px solid;vertical-align:middle;white-space:nowrap}
+.r-ch{background:#eef4fb;color:#2456a8;border-color:#c3d8f2}
+.r-sub{background:#f3eefb;color:#6b3fa0;border-color:#dcccf0}
+.r-fa{background:#e9f7f2;color:#0f7a5f;border-color:#bfe8db}
+.r-db{background:#eaeef2;color:#2d4559;border-color:#c7d2dd}
+.r-store{background:#e6eef3;color:#35526b;border-color:#bcd0dd}
+.r-user{background:#eefaf0;color:#15803d;border-color:#bbf7d0}
+.r-mcp{background:#fdf0e6;color:#b5590d;border-color:#f2d3b3}
+
+/* ============================================================
+   Sequence diagram — swimlane message flow
+   A CSS grid: col 1 = step number, then one column per actor lane.
+   Each message is a grid item that SPANS grid-columns from its
+   source lane to its target lane, so it always sits under the right
+   headers and never smushes. Continuous lifelines are grid items
+   spanning all rows (grid-row:1/-1) — so set .seq-body's
+   grid-template-rows to repeat(STEP_COUNT, auto) for -1 to resolve.
+   Wide diagrams scroll inside .seq-scroll, never the page body.
+   Direction is an in-flow glyph (.dir ◂/▸) pushed to the target edge
+   by justify-content:space-between — never position:absolute.
+   ============================================================ */
+.seq-scroll{overflow-x:auto;margin:16px 0;border:1px solid var(--divider);border-radius:12px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.seq{min-width:840px}
+.seq-head,.seq-body{display:grid;grid-template-columns:30px repeat(6,minmax(104px,1fr))}
+.seq-head{background:linear-gradient(135deg,var(--p800),var(--p700));padding:11px 12px}
+.seq-h{display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;padding:0 4px}
+.seq-h .role{font-family:var(--mono);font-size:8.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--p200)}
+.seq-h .who{font-family:var(--mono);font-size:11px;font-weight:700;color:#fff;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.24);border-radius:6px;padding:3px 9px}
+.seq-body{position:relative;row-gap:11px;padding:16px 12px 20px}
+.seq-life{width:2px;background:var(--p100);justify-self:center;border-radius:2px;z-index:0}
+.seq-num{grid-column:1;justify-self:center;align-self:center;font-family:var(--mono);font-size:10px;font-weight:700;color:#fff;background:var(--p600);min-width:19px;height:19px;padding:0 3px;border-radius:10px;display:flex;align-items:center;justify-content:center;z-index:1}
+.seq-msg{align-self:center;display:flex;flex-direction:row;align-items:center;gap:8px;justify-content:space-between;background:#fff;border:1.5px solid var(--p300);border-radius:7px;padding:5px 10px;z-index:1;min-width:0}
+.seq-msg .mt{display:flex;flex-direction:column;gap:1px;min-width:0}
+.seq-msg .m{font-family:var(--mono);font-size:10.5px;color:var(--p900);font-weight:700;line-height:1.32;word-break:break-word}
+.seq-msg .m2{font-family:var(--mono);font-size:9.5px;color:var(--muted);line-height:1.3;word-break:break-word}
+.seq-msg .dir{font-size:14px;font-weight:700;color:var(--p500);flex:0 0 auto}
+.seq-msg.write{border-color:var(--new);background:var(--newbg)} .seq-msg.write .dir{color:var(--new)}
+.seq-msg.event{border-color:var(--ember);background:#fdf6f0} .seq-msg.event .dir{color:var(--ember)}
+.seq-msg.ret{border-style:dashed;background:#f6f9fb} .seq-msg.ret .m{font-weight:500;color:var(--p600)}
+.seq-msg.self{border-style:dashed;border-color:var(--p400);background:#eef3f7}
+.seq-foot{display:flex;flex-wrap:wrap;gap:8px 15px;padding:9px 14px;border-top:1px solid var(--divider);background:#fbfcfd;font-size:10.5px;font-family:var(--mono);color:var(--muted);align-items:center}
+.seq-foot .sw{display:inline-block;width:20px;height:11px;border-radius:3px;border:1.5px solid var(--p300);vertical-align:middle;margin-right:5px}
+.seq-foot .sw.write{border-color:var(--new);background:var(--newbg)} .seq-foot .sw.event{border-color:var(--ember);background:#fdf6f0}
+.seq-foot .sw.ret{border-style:dashed;background:#f6f9fb} .seq-foot .sw.self{border-style:dashed;border-color:var(--p400);background:#eef3f7}
+
+/* ============================================================
+   Data table — for step→entity maps and any tabular spec content.
+   Wrap in .spectable-scroll so wide tables scroll, not the page.
+   ============================================================ */
+.spectable-scroll{overflow-x:auto;margin:14px 0}
+.spectable{width:100%;border-collapse:collapse;font-size:12.5px;background:#fff;border:1px solid var(--divider);border-radius:10px;overflow:hidden}
+.spectable thead th{background:var(--p700);color:#fff;font-family:var(--mono);font-size:10px;letter-spacing:.04em;text-transform:uppercase;text-align:left;padding:8px 12px;font-weight:700;white-space:nowrap}
+.spectable tbody td{padding:7px 12px;border-top:1px solid #eef1f4;vertical-align:top;line-height:1.5}
+.spectable tbody tr:nth-child(even){background:#fbfcfd}
+.spectable td .sn{font-family:var(--mono);font-weight:700;color:#fff;background:var(--p600);border-radius:9px;padding:1px 7px;font-size:10.5px}
+.spectable td code{font-size:11px}
+.spectable td .none{color:var(--muted);font-style:italic;font-family:var(--sans)}
+.spectable td .w{color:var(--new);font-weight:700} /* write */
+.spectable td .r{color:var(--p500);font-weight:700} /* read/return */
+
+/* ============================================================
+   Prompt / code block — a readable mono block (LLM prompts, snippets).
+   White-space preserved; scrolls horizontally inside itself.
+   ============================================================ */
+.prompt{background:#fbfcfd;border:1px solid var(--p200);border-left:4px solid var(--p500);border-radius:8px;padding:12px 15px;margin:12px 0;font-family:var(--mono);font-size:11.5px;line-height:1.6;color:var(--p900);white-space:pre-wrap;overflow-x:auto}
+.prompt .ph{display:block;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--p600);font-weight:700;margin-bottom:6px}
+
+
+/* ============================================================
+   System map (.sysmap)  —  the Overview diagram.  v5
+   A CSS grid of nodes placed with grid-area:row/col. Column 1 is
+   always the TRIGGER (a start-dot, no box). Edges are authored as
+   hidden <a class="sys-edge" data-from data-to>label</a> and drawn as
+   SVG by spec-kit.js after layout (no hand-typed coordinates).
+   COLOUR = CHANGE STATE ONLY: white exists · amber .chg · green .new ·
+   red-dashed .gap. KIND = badge TEXT + shape (.ext dashed, .store
+   cylinder bottom, .trig dot). Badges are one colour except on
+   changed/new nodes, where they take the node's change colour.
+   ============================================================ */
+.sysmap{position:relative;display:grid;gap:40px 64px;padding:28px 16px 22px;background:#fff;border:1px solid var(--divider);border-radius:12px;margin:14px 0 6px}
+.sysmap-scroll{overflow-x:auto;margin:14px 0 6px} .sysmap-scroll .sysmap{margin:0;min-width:max-content} /* 6+ columns: use grid-template-columns:repeat(N,minmax(150px,1fr)) inside .sysmap-scroll */
+.sysmap .colh{font-family:var(--mono);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--p500);text-align:center;padding-bottom:6px;border-bottom:1px dashed var(--p200);align-self:end}
+.sys{position:relative;z-index:2;background:#fff;border:1.5px solid var(--p300);border-radius:9px;padding:9px 11px 8px;min-height:64px;display:flex;flex-direction:column;gap:2px;align-self:center}
+.sys .k{align-self:flex-start;font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:1px 6px;border-radius:3px;color:#fff;background:var(--p500);margin-bottom:2px}
+.sys .t{font-weight:600;font-size:12.5px;line-height:1.3;color:var(--p900);overflow-wrap:anywhere}
+.sys .d{font-family:var(--mono);font-size:9.5px;color:var(--muted);line-height:1.4}
+.sys.ext{border-style:dashed}
+.sys.store{border-radius:4px 4px 14px 14px}
+.sys.new{border-color:var(--new);background:var(--newbg);box-shadow:0 0 0 3px #dcfce7}.sys.new .k{background:var(--new)}
+.sys.chg{border-color:var(--chg);background:var(--chgbg)}.sys.chg .k{background:var(--chg)}
+/* trigger: a start-dot + label, never a box. Declared AFTER .new/.chg so it wins on order. */
+.sys.trig{border:none;background:none;box-shadow:none;padding:0;min-height:0;align-items:flex-start;justify-self:start;gap:5px;max-width:150px}
+.sys.trig .dot{width:16px;height:16px;border-radius:50%;background:var(--p700);border:3px solid #fff;box-shadow:0 0 0 1.5px var(--p700)}
+.sys.trig.new .dot{background:var(--new);box-shadow:0 0 0 1.5px var(--new)}
+.sys.trig.chg .dot{background:var(--chg);box-shadow:0 0 0 1.5px var(--chg)}
+.sys.trig .t{font-size:11.5px;font-weight:600;color:var(--p800);line-height:1.25}
+.sys.trig .d{font-size:9.5px}
+.sys.gap{border:1.5px dashed var(--ret);background:var(--retbg);color:var(--ret);align-items:center;justify-content:center;text-align:center;font-family:var(--mono);font-size:10.5px;min-height:40px}
+/* floating spec-reference tag above the box; an <a href="#detail-id"> deep-link to the zoom-in diagram */
+.sys .ref{position:absolute;top:-11px;right:8px;text-decoration:none;font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.04em;padding:1px 7px;border-radius:10px;background:#fff;border:1px solid var(--p300);color:var(--p700);white-space:nowrap}
+.sys.chg .ref{border-color:var(--chg);color:var(--chg)}.sys.new .ref{border-color:var(--new);color:var(--new)}
+.sys .ref:hover{background:var(--p50)}
+.sys-edge{display:none} /* authored edge; rendered as SVG by spec-kit.js */
+.sysmap svg.edges{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1;overflow:visible}
+.sysmap svg .e{fill:none;stroke:var(--p400);stroke-width:1.6}
+.sysmap svg .e.new{stroke:var(--new);stroke-width:2.2}
+.sysmap svg .e.chg{stroke:var(--chg);stroke-width:2}
+.sysmap svg .e.gap{stroke:var(--ret);stroke-dasharray:5 4}
+.sysmap svg .e.loop{stroke:var(--p400);stroke-dasharray:4 3}
+.sysmap svg .lbl{font:9.5px var(--mono);fill:var(--p700)}
+.sysmap svg .lbl.new{fill:var(--new);font-weight:700}.sysmap svg .lbl.chg{fill:var(--chg);font-weight:700}.sysmap svg .lbl.gap{fill:var(--ret)}
+.sysmap svg .lblbg{fill:#fff;stroke:none;opacity:.94}
+/* reference footer: stacked CHIP ROWS, one per reference, each a link into the spec reader page.
+   Markup: <div class="sys-refs"><a class="refrow" data-ref="P0a"><span class="chip">P0a</span><span class="txt">…</span></a>…</div>
+   spec-kit.js fills href = <main data-spec>#<token>. */
+.sys-refs{display:flex;flex-direction:column;gap:6px;margin:12px 0 0}
+.sys-refs .refrow{display:flex;align-items:baseline;gap:12px;padding:7px 12px;border:1px solid var(--divider);border-radius:9px;background:#fff;text-decoration:none;color:var(--p800);font-size:12.5px;line-height:1.45;transition:border-color .12s,background .12s}
+.sys-refs .refrow:hover{border-color:var(--p400);background:var(--p50)}
+.sys-refs .refrow .chip{flex:0 0 auto;font-family:var(--mono);font-size:10.5px;font-weight:700;color:var(--p700);background:var(--p50);border:1px solid var(--p200);border-radius:6px;padding:2px 8px;min-width:44px;text-align:center}
+.sys-refs .refrow.chg .chip{color:var(--chg);border-color:var(--chgbd);background:var(--chgbg)}
+.sys-refs .refrow.new .chip{color:var(--new);border-color:var(--newbd);background:var(--newbg)}
+.sys-refs .refrow .txt{flex:1}
+.sys-refs .refrow .go{flex:0 0 auto;font-family:var(--mono);font-size:10px;color:var(--p500)}
+.sys-refs .refrow[href] .go::after{content:"read §"}
+.sys-refs .refrow:not([href]) .go::after{content:"no spec reader";color:var(--muted)}
+/* citation links inside claims and ref tags (filled in by spec-kit.js) */
+.claim a.cite,.sys .ref a{color:inherit;text-decoration:underline dotted;text-underline-offset:2px}
+.claim a.cite:hover{color:var(--ember)}
+/* "read the spec" masthead link */
+header.masthead a.spec-link{display:inline-block;margin-top:12px;font-family:var(--mono);font-size:12px;color:#fff;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);border-radius:7px;padding:5px 11px;text-decoration:none;position:relative}
+header.masthead a.spec-link:hover{background:rgba(255,255,255,.24)}
+
+/* legend for a system map: the COMPLETE list of colour meanings on the page */
+.sys-legend{display:flex;flex-wrap:wrap;gap:14px;font-size:11.5px;color:var(--p800);margin:8px 4px 0}
+.sys-legend i{display:inline-block;width:22px;height:3px;vertical-align:middle;margin-right:5px;background:var(--p400)}
+.sys-legend i.new{background:var(--new)} .sys-legend i.dot{width:10px;height:10px;border-radius:50%;background:var(--p700)} .sys-legend i.dot.new{background:var(--new)}.sys-legend i.chg{background:var(--chg)}.sys-legend i.gap{background:var(--ret)}.sys-legend i.loop{background:repeating-linear-gradient(90deg,var(--p400) 0 4px,transparent 4px 7px)}
+
+/* ============================================================
+   Claim caption  —  under every diagram. Cites the spec section or
+   decision it paraphrases. "Reading:" for the author's own observation.
+   ============================================================ */
+.claim{font-size:12.5px;color:var(--p800);margin:8px 0 26px;padding:8px 12px;border-left:3px solid var(--ember);background:#fff}
+.claim b{color:var(--p900)}
+
+/* ============================================================
+   Decision flow (.dflow)  —  "try X, else Y, else Z" / gate outcomes.
+   A vertical list of question rows; "yes" exits right to an outcome,
+   "no" falls through to the next row. Text-first, no SVG.
+   ============================================================ */
+.dflow{margin:14px 0;border:1px solid var(--divider);border-radius:12px;background:#fff;padding:14px 16px 10px}
+.dflow .dq{display:grid;grid-template-columns:minmax(200px,1.4fr) auto minmax(160px,1fr);gap:10px;align-items:center}
+.dflow .dq .q{font-size:12.5px;font-weight:600;color:var(--p900);border:1.5px solid var(--p300);border-radius:8px;padding:7px 11px;background:#fff}
+.dflow .dq .yes{font-family:var(--mono);font-size:10px;font-weight:700;color:var(--new);white-space:nowrap}
+.dflow .dq .out{font-family:var(--mono);font-size:11px;color:var(--p800);border:1.5px solid var(--newbd);background:var(--newbg);border-radius:8px;padding:6px 10px}
+.dflow .dq .out.warn{border-color:var(--chgbd);background:var(--chgbg)}
+.dflow .dq .out.fail{border-color:var(--retbd);background:var(--retbg);color:var(--ret)}
+.dflow .dno{font-family:var(--mono);font-size:9.5px;color:var(--muted);padding:3px 0 3px 18px}
+.dflow .dq.end .q{border-style:dashed;font-weight:500;color:var(--p700)}
+.dflow .dq .out a,.dflow .dq a.out{color:inherit;text-decoration:underline dotted;text-underline-offset:2px}
+.dflow .dq .out.jump::after{content:" ↗";color:var(--p500)} /* an outcome that jumps to another step/diagram */
+
+/* ============================================================
+   Concept figure  —  a hand-drawn inline SVG for the one mechanism
+   prose can't carry (a transform, a timeline, a shape). One figure,
+   one claim in the figcaption. See COMPONENTS.md for SVG rules.
+   ============================================================ */
+figure.concept{margin:16px 0;padding:16px 16px 10px;background:#fff;border:1px solid var(--divider);border-radius:12px;color:var(--p800)}
+figure.concept svg{display:block;max-width:100%;height:auto;margin:0 auto}
+figure.concept figcaption{font-size:12.5px;color:var(--p800);margin-top:10px;padding:8px 12px;border-left:3px solid var(--ember);background:#fbfcfd}
+figure.concept figcaption b{color:var(--p900)}
+
+
+/* ============================================================
+   Spec reader page (body.reader) — DESIGN-SPEC.md rendered by marked,
+   generated by inline-kit.py --spec. Sticky TOC + body; :target glow.
+   ============================================================ */
+body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom:1px solid rgba(255,255,255,.4)}
+.reader-wrap{display:grid;grid-template-columns:250px minmax(0,1fr);gap:34px;max-width:1240px;margin:0 auto;padding:28px 26px 90px}
+@media(max-width:900px){.reader-wrap{grid-template-columns:1fr}.toc{position:static}}
+.toc{position:sticky;top:18px;align-self:start;max-height:calc(100vh - 36px);overflow:auto;font-size:12.5px;border-right:1px solid var(--divider);padding-right:14px}
+.toc .toc-h{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--p600);font-weight:700;margin-bottom:8px}
+.toc a{display:block;color:var(--p800);text-decoration:none;padding:3px 0;line-height:1.35}
+.toc a.toc-h3{padding-left:14px;font-size:12px;color:var(--p700)}
+.toc a:hover{color:var(--ember)}
+.reader-body{max-width:860px;font-size:15px;line-height:1.6}
+.reader-body h2{margin-top:44px;padding-top:18px;border-top:1px solid var(--divider)}
+.reader-body h3{display:block;margin-top:30px;font-size:17px}
+.reader-body h4{margin-top:22px}
+.reader-body blockquote{margin:14px 0;padding:10px 16px;border-left:4px solid var(--p500);background:var(--p50);border-radius:0 8px 8px 0;color:var(--p800)}
+.reader-body blockquote p{margin:.3em 0}
+.reader-body pre{background:#fbfcfd;border:1px solid var(--p200);border-left:4px solid var(--p500);border-radius:8px;padding:12px 15px;font-family:var(--mono);font-size:11.5px;line-height:1.55;overflow-x:auto}
+.reader-body pre code{background:none;border:0;padding:0;font-size:inherit}
+.reader-body a{color:var(--p600)}
+.reader-body hr{border:0;border-top:1px solid var(--divider);margin:26px 0}
+.reader-body .spectable-scroll{margin:12px 0}
+.reader-body .spectable td code{white-space:normal}
+.reader-body .anchor{display:block;position:relative;top:-14px;height:0}
+.reader-body strong.tok{scroll-margin-top:24px}
+.reader-body :target{scroll-margin-top:18px}
+.reader-body h2:target,.reader-body h3:target,.reader-body h4:target{background:#fff8ec;box-shadow:-12px 0 0 #fff8ec,12px 0 0 #fff8ec;border-radius:3px}
+.reader-body strong.tok:target{background:#fff1cc;border-radius:3px;padding:0 3px;box-shadow:0 0 0 2px #fde68a}
+.reader-body .anchor:target + h2,.reader-body .anchor:target + h3{background:#fff8ec;box-shadow:-12px 0 0 #fff8ec,12px 0 0 #fff8ec;border-radius:3px}
+
+</style>
+</head>
+<body>
+<header class="masthead">
+  <div class="kicker">COMPLETENESS CHECK · COMMENT MARKINGS</div>
+  <h1>Comment markings: how the review runbook does it, and porting it to the completeness check</h1>
+  <p>Markings are points and small polygons, normalised 0–1 over a plan sheet, that show <em>where</em> a comment's problem is on the drawing. This page traces them through the review runbook, the database and the app, then proposes the same feature for the CC runbook. Companion to <code>DESIGN-SPEC.md</code>.</p>
+  <div class="meta">Draft v1 · 2026-10-07 · bureau dde80dfc · cityhall cea34728 · click a tab ↓</div>
+  <a class="spec-link" href="DESIGN-SPEC.html">📖 read the spec</a>
+</header>
+<nav class="tabs">
+  <button data-tab="overview" class="active"><span class="n">01</span>Overview</button>
+  <button data-tab="review"><span class="n">02</span>How the review marks</button>
+  <button data-tab="stored"><span class="n">03</span>What's stored</button>
+  <button data-tab="cc"><span class="n">04</span>CC proposal</button>
+  <button data-tab="rollout"><span class="n">05</span>Rollout &amp; questions</button>
+</nav>
+<main data-spec="DESIGN-SPEC.html">
+
+<!-- ============================== OVERVIEW ============================== -->
+<section class="panel active" id="overview">
+  <h2><span class="eyebrow">Overview</span>Five questions, short answers</h2>
+  <p class="lede">The review runbook marks comments in a separate step that runs after the final record. Publish stores the marks inside each comment's JSON, and the app draws them only for review formats that route to its August adapter. The CC lacks all three of those pieces.</p>
+
+  <div class="spectable-scroll"><table class="spectable">
+    <thead><tr><th>#</th><th>Question</th><th>Answer today (review runbook)</th></tr></thead>
+    <tbody>
+      <tr><td><span class="sn">1</span></td><td>Plan-set sheets only?</td><td><b>Yes.</b> Every marker names a staged plan-set sheet (<code>"03"</code>). Publish fails the run if that label is missing from <code>sheet_map</code>. The app draws only over the <code>sheet_version</code> rasters of one plan set. A comment about a document is recorded as a sheetless <code>nothing-to-mark</code>.</td></tr>
+      <tr><td><span class="sn">2</span></td><td>Needs pre-processing?</td><td><b>Not for the geometry.</b> Shapes are read off pixels of the staged sheet PDF and fingerprinted with <code>sheet_sha256</code>. The runbook around it does need a preprocessed submission, because staging lays out the transcriptions. The stager fetches block boxes but never writes them to disk. Display needs cityhall's own sheet rasters.</td></tr>
+      <tr><td><span class="sn">3</span></td><td>Different output schema?</td><td><b>Yes.</b> Comment <code>output_json</code> gains <code>annotations[]</code> and <code>annotation_disposition</code>, and the review row is stamped <code>2026-09-annotated</code> with a <code>sheet_map</code>. The app chooses its adapter by <code>output_schema</code>. The CC adapter hardcodes <code>annotations: []</code>.</td></tr>
+      <tr><td><span class="sn">4</span></td><td>Same step as findings?</td><td><b>No.</b> <code>3.13-annotate</code> runs after <code>3.11-final</code>: a judgment sweep (one worker per discipline) writes sidecar files, then a script merges them into a copy of the record.</td></tr>
+      <tr><td><span class="sn">5</span></td><td>Proposal for CC?</td><td>A new <code>2.12-annotate</code> family after <code>2.9-comments</code>, reusing the review's scripts once they move to shared code. It seeds from the cited block's box. Lane B validates the markers and adds <code>sheet_map</code> while keeping the CC label, and the cityhall CC adapter reads the markers. Opt-in at first.</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Today</h3>
+  <div class="sysmap" style="grid-template-columns:.7fr repeat(5,1fr);column-gap:40px">
+    <div class="colh" style="grid-area:1/1">trigger</div>
+    <div class="colh" style="grid-area:1/2">authoring</div>
+    <div class="colh" style="grid-area:1/3">marking</div>
+    <div class="colh" style="grid-area:1/4">publish</div>
+    <div class="colh" style="grid-area:1/5">postgres</div>
+    <div class="colh" style="grid-area:1/6">cityhall</div>
+
+    <div class="sys trig" id="a-t1" style="grid-area:2/1"><span class="dot"></span><span class="t">review run</span><span class="d">runbooks/review</span></div>
+    <div class="sys" id="a-r311" style="grid-area:2/2"><span class="k">runbook step</span><span class="t">3.11-final</span><span class="d">the final comment record</span></div>
+    <div class="sys" id="a-r313" style="grid-area:2/3"><span class="k">runbook step</span><span class="t">3.13-annotate</span><span class="d">sweep per discipline, then merge</span></div>
+    <div class="sys" id="a-pa" style="grid-area:2/4"><span class="k">script</span><span class="t">lane A import</span><span class="d">validates geometry, calls the import RPC</span></div>
+    <div class="sys store" id="a-db1" style="grid-area:2/5"><span class="k">table</span><span class="t">review_comments</span><span class="d">markers inside output_json</span></div>
+    <div class="sys" id="a-ui1" style="grid-area:2/6"><span class="k">ui</span><span class="t">August adapter</span><span class="d">draws markers on the sheet</span></div>
+
+    <div class="sys trig" id="a-t2" style="grid-area:3/1"><span class="dot"></span><span class="t">CC run</span><span class="d">runbooks/completeness-check</span></div>
+    <div class="sys" id="a-c29" style="grid-area:3/2"><span class="k">runbook step</span><span class="t">2.9-comments</span><span class="d">deterministic envelope build</span></div>
+    <div class="sys" id="a-pb" style="grid-area:3/4"><span class="k">script</span><span class="t">lane B inserts</span><span class="d">PostgREST; no geometry checks</span></div>
+    <div class="sys store" id="a-db2" style="grid-area:3/5"><span class="k">table</span><span class="t">review_comments</span><span class="d">sheetReferences + blockNumber</span></div>
+    <div class="sys" id="a-ui2" style="grid-area:3/6"><span class="k">ui</span><span class="t">checklist adapter</span><span class="d">cited-block outlines; annotations: []</span></div>
+    <div class="sys gap" id="a-gap" style="grid-area:4/3">no marking step</div>
+
+    <a class="sys-edge" data-from="a-t1" data-to="a-r311"></a>
+    <a class="sys-edge" data-from="a-r311" data-to="a-r313">final</a>
+    <a class="sys-edge" data-from="a-r313" data-to="a-pa">merged</a>
+    <a class="sys-edge" data-from="a-pa" data-to="a-db1">RPC</a>
+    <a class="sys-edge" data-from="a-db1" data-to="a-ui1">annotated</a>
+    <a class="sys-edge" data-from="a-t2" data-to="a-c29"></a>
+    <a class="sys-edge" data-from="a-c29" data-to="a-pb">envelope</a>
+    <a class="sys-edge gap" data-from="a-c29" data-to="a-gap"></a>
+    <a class="sys-edge" data-from="a-pb" data-to="a-db2">insert</a>
+    <a class="sys-edge" data-from="a-db2" data-to="a-ui2">CC label</a>
+  </div>
+  <div class="sys-legend"><span><i></i>exists today</span><span><i class="chg"></i>changed</span><span><i class="new"></i>new</span><span><i class="gap"></i>the gap</span></div>
+  <p class="claim"><b>Claim (§1.5):</b> the CC has no step that sees pixels after the record is final. Its app adapter hardcodes no markings and draws only outlines of the blocks each comment cites.</p>
+
+  <h3>After</h3>
+  <div class="sysmap" style="grid-template-columns:.7fr repeat(5,1fr);column-gap:40px">
+    <div class="colh" style="grid-area:1/1">trigger</div>
+    <div class="colh" style="grid-area:1/2">authoring</div>
+    <div class="colh" style="grid-area:1/3">marking</div>
+    <div class="colh" style="grid-area:1/4">publish</div>
+    <div class="colh" style="grid-area:1/5">postgres</div>
+    <div class="colh" style="grid-area:1/6">cityhall</div>
+
+    <div class="sys trig" id="b-t1" style="grid-area:2/1"><span class="dot"></span><span class="t">review run</span><span class="d">runbooks/review</span></div>
+    <div class="sys" id="b-r311" style="grid-area:2/2"><span class="k">runbook step</span><span class="t">3.11-final</span><span class="d">the final comment record</span></div>
+    <div class="sys chg" id="b-r313" style="grid-area:2/3"><a class="ref" href="#detail-kit">D5 ↓</a><span class="k">runbook step</span><span class="t">3.13-annotate</span><span class="d">calls the shared kit; gains a block-box seed</span></div>
+    <div class="sys" id="b-pa" style="grid-area:2/4"><span class="k">script</span><span class="t">lane A import</span><span class="d">unchanged</span></div>
+    <div class="sys store" id="b-db1" style="grid-area:2/5"><span class="k">table</span><span class="t">review_comments</span><span class="d">unchanged</span></div>
+    <div class="sys" id="b-ui1" style="grid-area:2/6"><span class="k">ui</span><span class="t">August adapter</span><span class="d">readers moved to a shared module</span></div>
+
+    <div class="sys trig" id="b-t2" style="grid-area:3/1"><span class="dot"></span><span class="t">CC run</span><span class="d">request annotate: true</span></div>
+    <div class="sys" id="b-c29" style="grid-area:3/2"><span class="k">runbook step</span><span class="t">2.9-comments</span><span class="d">unchanged</span></div>
+    <div class="sys new" id="b-c212" style="grid-area:3/3"><a class="ref" href="#detail-cc-graph">D1 · D3 ↓</a><span class="k">runbook step</span><span class="t">2.12-annotate</span><span class="d">sweep per guide over fails that cite a sheet, then merge</span></div>
+    <div class="sys chg" id="b-pb" style="grid-area:3/4"><a class="ref" href="#detail-laneb">D7 ↓</a><span class="k">script</span><span class="t">lane B inserts</span><span class="d">validates markers, adds sheet_map</span></div>
+    <div class="sys store chg" id="b-db2" style="grid-area:3/5"><a class="ref" href="#detail-store">D6 ↓</a><span class="k">table</span><span class="t">review_comments</span><span class="d">CC rows may carry markers</span></div>
+    <div class="sys chg" id="b-ui2" style="grid-area:3/6"><a class="ref" href="#detail-ui">D8 ↓</a><span class="k">ui</span><span class="t">checklist adapter</span><span class="d">reads markers on presence</span></div>
+
+    <div class="sys chg" id="b-stage" style="grid-area:4/2"><a class="ref" href="#detail-manifest">D4 ↓</a><span class="k">runbook step</span><span class="t">stage-submission</span><span class="d">writes each block's box to disk</span></div>
+    <div class="sys new" id="b-kit" style="grid-area:4/3"><a class="ref" href="#detail-kit">D5 ↓</a><span class="k">library</span><span class="t">shared annotate kit</span><span class="d">used by 3.13 and 2.12</span></div>
+
+    <a class="sys-edge" data-from="b-t1" data-to="b-r311"></a>
+    <a class="sys-edge" data-from="b-r311" data-to="b-r313">final</a>
+    <a class="sys-edge" data-from="b-r313" data-to="b-pa">merged</a>
+    <a class="sys-edge" data-from="b-pa" data-to="b-db1">RPC</a>
+    <a class="sys-edge" data-from="b-db1" data-to="b-ui1">annotated</a>
+    <a class="sys-edge" data-from="b-t2" data-to="b-c29"></a>
+    <a class="sys-edge new" data-from="b-c29" data-to="b-c212">final</a>
+    <a class="sys-edge chg" data-from="b-c212" data-to="b-pb">merged</a>
+    <a class="sys-edge" data-from="b-pb" data-to="b-db2">insert</a>
+    <a class="sys-edge chg" data-from="b-db2" data-to="b-ui2">CC label</a>
+    <a class="sys-edge chg" data-from="b-stage" data-to="b-kit">boxes</a>
+    <a class="sys-edge new" data-from="b-kit" data-to="b-c212">scripts</a>
+  </div>
+  <div class="sys-refs">
+    <a class="refrow new" data-ref="D1"><span class="chip">D1</span><span class="txt">a separate 2.12-annotate family after 2.9-comments; validate and publish read its merged copy</span></a>
+    <a class="refrow new" data-ref="D3"><span class="chip">D3</span><span class="txt">sweep only fail/warn comments that cite a sheet, one worker per guide; the merge writes every other comment's disposition</span></a>
+    <a class="refrow chg" data-ref="D4"><span class="chip">D4</span><span class="txt">the stager writes each block's bounding box, so a cited block becomes the first seed</span></a>
+    <a class="refrow new" data-ref="D5"><span class="chip">D5</span><span class="txt">lift the annotate scripts into runbooks/lib/annotate with a review|cc record adapter</span></a>
+    <a class="refrow chg" data-ref="D6"><span class="chip">D6</span><span class="txt">the sheet key is the staged ordinal label, resolved through a sheet_map that lane B now writes</span></a>
+    <a class="refrow chg" data-ref="D7"><span class="chip">D7</span><span class="txt">lane B validates markers like lane A and keeps the 2026-03-completeness-check label</span></a>
+    <a class="refrow chg" data-ref="D8"><span class="chip">D8</span><span class="txt">cityhall's CC adapter reads annotations and annotation_disposition on presence</span></a>
+  </div>
+  <div class="sys-legend"><span><i></i>exists today</span><span><i class="chg"></i>changed</span><span><i class="new"></i>new</span><span><i class="gap"></i>the gap</span></div>
+  <p class="claim"><b>Claim (D7):</b> no SQL change and no new RPC. Markers ride inside <code>output_json</code> in both lanes, and the CC keeps its own label and checklist view.</p>
+</section>
+
+<!-- ============================== REVIEW ============================== -->
+<section class="panel" id="review">
+  <h2><span class="eyebrow">How the review marks</span>A separate step on the final record</h2>
+  <p class="lede"><code>3.13-annotate</code> runs off <code>3.11-final</code>, beside the human delivery gate. Publish needs both. The step that wrote the comments never places a marker.</p>
+
+  <h3>The runbook tail</h3>
+  <div class="sysmap" style="grid-template-columns:.6fr repeat(4,1fr)">
+    <div class="colh" style="grid-area:1/1">trigger</div>
+    <div class="colh" style="grid-area:1/2">final record</div>
+    <div class="colh" style="grid-area:1/3">gate · sweep</div>
+    <div class="colh" style="grid-area:1/4">merge</div>
+    <div class="colh" style="grid-area:1/5">publish</div>
+
+    <div class="sys trig" id="r-t" style="grid-area:2/1"><span class="dot"></span><span class="t">synthesis done</span><span class="d">3.4 → 3.10</span></div>
+    <div class="sys" id="r-311" style="grid-area:2/2"><span class="k">agent</span><span class="t">3.11-final</span><span class="d">rewrites comments.json wholesale</span></div>
+    <div class="sys" id="r-312" style="grid-area:2/3"><span class="k">gate</span><span class="t">3.12-deliver</span><span class="d">operator approves or revises</span></div>
+    <div class="sys" id="r-41" style="grid-area:2/5"><span class="k">script</span><span class="t">4.1-publish</span><span class="d">stale check, then lane A</span></div>
+    <div class="sys" id="r-sw" style="grid-area:3/3"><span class="k">agent</span><span class="t">3.13 sweep</span><span class="d">opus-5.5 high · one worker per discipline</span></div>
+    <div class="sys" id="r-mg" style="grid-area:3/4"><span class="k">script</span><span class="t">3.13 merge</span><span class="d">folds sidecars into a copy; coverage gate</span></div>
+
+    <a class="sys-edge" data-from="r-t" data-to="r-311"></a>
+    <a class="sys-edge" data-from="r-311" data-to="r-312">readout</a>
+    <a class="sys-edge loop" data-from="r-312" data-to="r-311">revise</a>
+    <a class="sys-edge" data-from="r-312" data-to="r-41">decision</a>
+    <a class="sys-edge" data-from="r-311" data-to="r-sw">read only</a>
+    <a class="sys-edge" data-from="r-sw" data-to="r-mg">sidecars</a>
+    <a class="sys-edge" data-from="r-mg" data-to="r-41">record</a>
+  </div>
+  <div class="sys-legend"><span><i></i>exists today</span></div>
+  <p class="claim"><b>Claim (§1.4):</b> the sweep runs on the final record because 3.11 rewrites it wholesale and the revise loop closes on 3.11. A marker placed upstream is one an authoring pass can drop without noticing.</p>
+
+  <h3>One annotation, one pass at a time (up to three)</h3>
+  <div class="seq-scroll"><div class="seq">
+    <div class="seq-head">
+      <div></div>
+      <div class="seq-h"><span class="role">agent</span><span class="who">sweep worker</span></div>
+      <div class="seq-h"><span class="role">script</span><span class="who">annotate-crop</span></div>
+      <div class="seq-h"><span class="role">script</span><span class="who">annotate-remap</span></div>
+      <div class="seq-h"><span class="role">script</span><span class="who">annotate-write</span></div>
+      <div class="seq-h"><span class="role">files</span><span class="who">annotations/ disposition/</span></div>
+      <div class="seq-h"><span class="role">script</span><span class="who">merge</span></div>
+    </div>
+    <div class="seq-body" style="grid-template-rows:repeat(8,auto)">
+      <div class="seq-life" style="grid-column:2;grid-row:1/-1"></div>
+      <div class="seq-life" style="grid-column:3;grid-row:1/-1"></div>
+      <div class="seq-life" style="grid-column:4;grid-row:1/-1"></div>
+      <div class="seq-life" style="grid-column:5;grid-row:1/-1"></div>
+      <div class="seq-life" style="grid-column:6;grid-row:1/-1"></div>
+      <div class="seq-life" style="grid-column:7;grid-row:1/-1"></div>
+      <div class="seq-num" style="grid-row:1">1</div>
+      <div class="seq-msg" style="grid-row:1;grid-column:2/4"><div class="mt"><span class="m">render sheet PDF around seed</span><span class="m2">seed: box · polygon · point · sheet</span></div><span class="dir">▸</span></div>
+      <div class="seq-num" style="grid-row:2">2</div>
+      <div class="seq-msg ret" style="grid-row:2;grid-column:2/4"><span class="dir">◂</span><div class="mt"><span class="m">clean.png, overlay.png, crop-meta</span><span class="m2">crop-meta carries sheetSha256</span></div></div>
+      <div class="seq-num" style="grid-row:3">3</div>
+      <div class="seq-msg self" style="grid-row:3;grid-column:2/3"><div class="mt"><span class="m">read pixels → correction.json</span><span class="m2">point | polygon 3–12 | blank</span></div></div>
+      <div class="seq-num" style="grid-row:4">4</div>
+      <div class="seq-msg" style="grid-row:4;grid-column:2/5"><div class="mt"><span class="m">map crop-local answer onto sheet</span></div><span class="dir">▸</span></div>
+      <div class="seq-num" style="grid-row:5">5</div>
+      <div class="seq-msg ret" style="grid-row:5;grid-column:2/5"><span class="dir">◂</span><div class="mt"><span class="m">shape, delta, converged</span><span class="m2">not converged → next pass seeds from this shape</span></div></div>
+      <div class="seq-num" style="grid-row:6">6</div>
+      <div class="seq-msg" style="grid-row:6;grid-column:2/6"><div class="mt"><span class="m">write marker</span><span class="m2">--evidence-file · --crop-meta of this pass</span></div><span class="dir">▸</span></div>
+      <div class="seq-num" style="grid-row:7">7</div>
+      <div class="seq-msg write" style="grid-row:7;grid-column:5/7"><div class="mt"><span class="m">O_EXCL &lt;ref&gt;-n.json</span><span class="m2">plus one disposition per (comment, sheet)</span></div><span class="dir">▸</span></div>
+      <div class="seq-num" style="grid-row:8">8</div>
+      <div class="seq-msg ret" style="grid-row:8;grid-column:6/8"><span class="dir">◂</span><div class="mt"><span class="m">fold all sidecars into a copy of the record</span><span class="m2">all or nothing; ≤20 per comment</span></div></div>
+    </div>
+    <div class="seq-foot">
+      <span><span class="sw"></span> call</span><span><span class="sw write"></span> file write</span>
+      <span><span class="sw ret"></span> return</span><span><span class="sw self"></span> self / compute</span>
+    </div>
+  </div></div>
+  <p class="claim"><b>Claim (§1.4):</b> the math belongs to the scripts, never the agent. <code>converged</code> and <code>passes</code> are derived from the pass directory and never typed in. Sidecars exist because eight workers writing one shared document lost 47 of 240 annotations over 30 trials.</p>
+
+  <h3>Which outcome each (comment, sheet) gets</h3>
+  <div class="dflow">
+    <div class="dq"><span class="q">Does the comment name any sheet at all?</span><span class="yes">no →</span><span class="out warn">nothing-to-mark, sheetless, reason required</span></div>
+    <div class="dno">yes ↓ sweep its sheets[] in order</div>
+    <div class="dq"><span class="q">Is the deficiency an absence (something not drawn)?</span><span class="yes">yes →</span><span class="out warn">nothing-to-mark: a skip is a correct outcome</span></div>
+    <div class="dno">no ↓</div>
+    <div class="dq"><span class="q">Located with confidence within 3 passes?</span><span class="yes">yes →</span><span class="out">annotated: marker written, converged or not</span></div>
+    <div class="dno">no ↓</div>
+    <div class="dq end"><span class="q">otherwise</span><span class="yes"></span><span class="out fail">not-located: a gap someone can revisit</span></div>
+  </div>
+  <p class="claim"><b>Claim (§1.4):</b> a wrongly placed marker is worse than none, so absences are never marked.</p>
+</section>
+
+<!-- ============================== STORED ============================== -->
+<section class="panel" id="stored">
+  <h2><span class="eyebrow">What's stored</span>Inside output_json: no table, no column</h2>
+  <p class="lede">Prod review <code>bbdb82cf</code> (Fort Lauderdale Take 5) has 216 comments: 134 annotated with 290 markers, and 82 nothing-to-mark. All of it lives in <code>review_comments.output_json</code>. A <code>comment_annotation</code> table was designed and then abandoned before it shipped.</p>
+
+  <h3 id="detail-store">The two rows, and what CC rows gain</h3>
+  <div class="erd">
+    <div class="ent changed">
+      <div class="eh"><span class="en">reviews</span><span class="stereo">CC rows gain sheet_map</span></div>
+      <div class="row"><span class="gut"></span><span class="b b-pk">PK</span><span class="nm">id</span><span class="ty">uuid</span></div>
+      <div class="row"><span class="gut"></span><span class="nm">output_schema</span><span class="ty">2026-09-annotated · 2026-03-completeness-check</span></div>
+      <div class="row"><span class="gut"></span><span class="nm">output_json.sections</span><span class="ty">jsonb</span></div>
+      <div class="row hi"><span class="gut"></span><span class="nm">output_json.sheet_map</span><span class="ty">{"03": 3} · review only today</span></div>
+      <div class="row add"><span class="gut">+</span><span class="b b-new">NEW</span><span class="nm">output_json.sheet_map (CC)</span><span class="ty">built by read_staged</span></div>
+      <div class="note">The app resolves a marker's sheet label through sheet_map. If the label is missing, the marker is never drawn.</div>
+    </div>
+    <div class="ent changed">
+      <div class="eh"><span class="en">review_comments</span><span class="stereo">CC rows may carry markers</span></div>
+      <div class="row"><span class="gut"></span><span class="b b-pk">PK</span><span class="nm">id</span><span class="ty">uuid</span></div>
+      <div class="row"><span class="gut"></span><span class="b b-fk">FK</span><span class="nm">review_id</span><span class="ty">→ reviews</span></div>
+      <div class="row"><span class="gut"></span><span class="nm">output_json</span><span class="ty">jsonb · the whole comment</span></div>
+      <div class="row"><span class="gut"></span><span class="nm">sheet_references</span><span class="ty">[{label, sheetNumber}] · lane A only</span></div>
+      <div class="row add"><span class="gut">+</span><span class="b b-new">NEW</span><span class="nm">output_json.annotations[] (CC)</span><span class="ty">present only when swept</span></div>
+      <div class="row add"><span class="gut">+</span><span class="b b-new">NEW</span><span class="nm">output_json.annotation_disposition (CC)</span><span class="ty">{status, reason, sheets[]}</span></div>
+      <div class="note">Storage is presence-based. Absent means never swept. [] means every marker was rejected at import.</div>
+    </div>
+    <div class="ent exist">
+      <div class="eh"><span class="en">annotation</span><span class="stereo">json object in output_json</span></div>
+      <div class="row"><span class="nm">sheet</span><span class="ty">"03" · staged ordinal label</span></div>
+      <div class="row"><span class="nm">kind</span><span class="ty">point | polygon</span></div>
+      <div class="row"><span class="nm">points</span><span class="ty">[{x,y}] 0–1 · 1 or 3–12</span></div>
+      <div class="row"><span class="nm">label</span><span class="ty">text · nullable</span></div>
+      <div class="row"><span class="nm">source</span><span class="ty">"ai"</span></div>
+      <div class="row"><span class="nm">source_finding_ref</span><span class="ty">a ref in the comment's sources</span></div>
+      <div class="row"><span class="nm">evidence</span><span class="ty">12–500 chars read inside the shape</span></div>
+      <div class="row"><span class="nm">sheet_sha256</span><span class="ty">fingerprint of the PDF read</span></div>
+      <div class="row"><span class="nm">converged · passes</span><span class="ty">bool · 1–3</span></div>
+      <div class="note">The app reads kind, points, sheet, label and evidence. It never reads source or converged.</div>
+    </div>
+  </div>
+  <div class="rels">
+    <div class="rels-h">Relationships (crow's foot)</div>
+    <span class="rl">reviews <span class="cf">‖──&lt;</span> review_comments <span class="cmt">via review_id</span></span>
+    <span class="rl">review_comments <span class="cf">‖──&lt;</span> annotation <span class="cmt">embedded array, at most 20 per comment and 1,000 per review</span></span>
+    <span class="rl">annotation <span class="cf">&gt;──‖</span> sheet_version <span class="cmt">by label → sheet_map → sheet_number, resolved at read time; no FK</span></span>
+  </div>
+  <p class="claim"><b>Claim (§1.3):</b> there is no annotation table. A <code>comment_annotation</code> table with a <code>sheet_version_id</code> FK was designed and then abandoned before it shipped.</p>
+
+  <h3>The two publish lanes side by side</h3>
+  <div class="spectable-scroll"><table class="spectable">
+    <thead><tr><th></th><th>Lane A: review</th><th>Lane B: CC and CRC</th></tr></thead>
+    <tbody>
+      <tr><td>Writer</td><td><code>import_annotated_review</code> RPC, one transaction</td><td>PostgREST: insert the review, insert all comments, then flip is_current; delete the review on failure</td></tr>
+      <tr><td>Label</td><td><code>2026-09-annotated</code>, stamped automatically on field presence</td><td><code>2026-03-completeness-check</code>, from reviewType</td></tr>
+      <tr><td>Sheet key</td><td>staged label, resolved through <code>sheet_map</code>; an unresolvable label fails the publish</td><td><code>sheetReferences[].sheetNumber</code> (int) + <code>blockNumber</code></td></tr>
+      <tr><td>Geometry checks</td><td>drop or blunt to bbox, caps, reconcile all-dropped sheets</td><td><span class="none">none</span></td></tr>
+      <tr><td>App adapter</td><td><code>adaptAugust</code>, which reads markers on presence</td><td><code>adaptCompletenessCheck</code>, which hardcodes <code>annotations: []</code></td></tr>
+    </tbody>
+  </table></div>
+
+  <h3 id="detail-manifest">block-manifest.json gains each block's box</h3>
+  <div class="erd">
+    <div class="ent changed">
+      <div class="eh"><span class="en">block-manifest.json · sheets[]</span><span class="stereo">staged file</span></div>
+      <div class="row"><span class="gut"></span><span class="nm">documentId · sheetNumber · sheetVersionId</span><span class="ty">exists</span></div>
+      <div class="row"><span class="gut"></span><span class="nm">validBlockNumbers · blockNames</span><span class="ty">exists</span></div>
+      <div class="row add"><span class="gut">+</span><span class="b b-new">NEW</span><span class="nm">blockBoxes</span><span class="ty">{"5": {x,y,width,height}} 0–1</span></div>
+      <div class="note">The stager already fetches content_block.bounding_box (submission_db.py:280) but drops it. All 522 blocks on 2008 San Antonio have one.</div>
+    </div>
+  </div>
+  <p class="claim"><b>Claim (D4):</b> a cited block's box becomes the first rung of the seed ladder, for the CC sweep and the review sweep alike.</p>
+
+  <h3 id="detail-laneb">Lane B publish with markers (D7)</h3>
+  <div class="legend"><span class="k"><span class="swatch" style="background:var(--p500)"></span> read / validate</span><span class="k"><span class="swatch" style="background:var(--new)"></span> write</span></div>
+  <div class="uc">
+    <div class="uch"><div class="ucn">1</div><div class="uctxt">
+      <span class="actor">3.1-publish · publish_review_cli.py lane B</span>
+      <span class="uct">Publish a CC envelope that carries markers</span>
+    </div></div>
+    <div class="ucsub">The same three writes as today. What changes is the checks that run before them and one new key.</div>
+    <div class="ucdiag"><div class="dfg">
+      <div class="node read"><span class="op">read</span><span class="nt">2.12 merge envelope</span><span class="nf">review-comments.json<br>falls back to 2.9's when off</span></div>
+      <div class="edge"><span class="el">① lane A rules</span><span class="ar">→</span></div>
+      <div class="node read"><span class="op">validate</span><span class="nt">markers</span><span class="nf">drop / blunt / caps<br>labels ∈ sheet_map</span></div>
+      <div class="edge"><span class="el">②</span><span class="ar">→</span></div>
+      <div class="node created"><span class="op">insert</span><span class="nt">reviews</span><span class="nf">is_current=false<br>+ output_json.sheet_map</span></div>
+      <div class="edge"><span class="el">③ one insert</span><span class="ar">→</span></div>
+      <div class="node created"><span class="op">insert</span><span class="nt">review_comments</span><span class="nf">output_json carries<br>annotations + disposition</span></div>
+      <div class="edge"><span class="el">④</span><span class="ar">→</span></div>
+      <div class="node created"><span class="op">update</span><span class="nt">reviews</span><span class="nf">retire priors, set current</span></div>
+    </div></div>
+    <div class="ucnote"><b>note</b>: <code>build_section_shape_rows</code> already spreads <code>{**comment}</code>, so the fields would travel today with no validation. ② is what makes lane B as strict as lane A.</div>
+  </div>
+</section>
+
+<!-- ============================== CC ============================== -->
+<section class="panel" id="cc">
+  <h2><span class="eyebrow">CC proposal</span>2.12-annotate, the shared kit, and a CC adapter that reads markers</h2>
+  <p class="lede">Copy the review's shape: a separate step on the final envelope, sidecars, then a merge. CC changes three things: the roster (only fails that cite a sheet), the seed (the cited block's box) and the record adapter.</p>
+
+  <h3 id="detail-cc-graph">The CC graph with the new step</h3>
+  <div class="sysmap" style="grid-template-columns:.6fr repeat(4,1fr)">
+    <div class="colh" style="grid-area:1/1">trigger</div>
+    <div class="colh" style="grid-area:1/2">envelope</div>
+    <div class="colh" style="grid-area:1/3">marking</div>
+    <div class="colh" style="grid-area:1/4">validate</div>
+    <div class="colh" style="grid-area:1/5">publish</div>
+
+    <div class="sys trig" id="c-t" style="grid-area:2/1"><span class="dot"></span><span class="t">annotate: true</span><span class="d">request flag, off by default</span></div>
+    <div class="sys" id="c-29" style="grid-area:2/2"><span class="k">script</span><span class="t">2.9-comments</span><span class="d">the final envelope</span></div>
+    <div class="sys new" id="c-212" style="grid-area:2/3"><a class="ref" href="#detail-cc-roster">D2 · D3 ↓</a><span class="k">agent + script</span><span class="t">2.12-annotate</span><span class="d">sweep per guide, then merge into a copy</span></div>
+    <div class="sys chg" id="c-210" style="grid-area:2/4"><a class="ref" href="#detail-laneb">D1 ↓</a><span class="k">script</span><span class="t">2.10-validate</span><span class="d">reads the merged envelope</span></div>
+    <div class="sys chg" id="c-31" style="grid-area:2/5"><a class="ref" href="#detail-laneb">D7 ↓</a><span class="k">script</span><span class="t">3.1-publish</span><span class="d">lane B with marker checks</span></div>
+    <div class="sys chg" id="c-12" style="grid-area:3/2"><a class="ref" href="#detail-manifest">D4 ↓</a><span class="k">script</span><span class="t">1.2-stage-submission</span><span class="d">PDFs plus block boxes</span></div>
+
+    <a class="sys-edge" data-from="c-t" data-to="c-29"></a>
+    <a class="sys-edge new" data-from="c-29" data-to="c-212">final</a>
+    <a class="sys-edge chg" data-from="c-212" data-to="c-210">merged</a>
+    <a class="sys-edge" data-from="c-210" data-to="c-31">valid</a>
+    <a class="sys-edge chg" data-from="c-12" data-to="c-212">seeds, PDFs</a>
+  </div>
+  <div class="sys-refs">
+    <a class="refrow new" data-ref="D2"><span class="chip">D2</span><span class="txt">mark only what is drawn; an absence keeps the existing cited-block outline</span></a>
+    <a class="refrow chg" data-ref="D9"><span class="chip">D9</span><span class="txt">opt-in request flag; off writes SKIPPED.md and leaves the envelope byte-identical (parity)</span></a>
+  </div>
+  <div class="sys-legend"><span><i></i>exists today</span><span><i class="chg"></i>changed</span><span><i class="new"></i>new</span></div>
+  <p class="claim"><b>Claim (D1):</b> CC has no revise loop after 2.9, so the annotate step sits directly before validate and needs no stale check. With the flag off (D9) the output is byte-identical to today.</p>
+
+  <h3 id="detail-cc-roster">Who gets swept, and what they get</h3>
+  <div class="dflow">
+    <div class="dq"><span class="q">Status fail or warn, or uncertain with a tentative fail/warn?</span><span class="yes">no →</span><span class="out warn">merge writes nothing-to-mark ("passed" / "not applicable")</span></div>
+    <div class="dno">yes ↓</div>
+    <div class="dq"><span class="q">Cites at least one plan sheet (sheetReferences)?</span><span class="yes">no →</span><span class="out warn">merge writes a sheetless nothing-to-mark ("cites no sheet")</span></div>
+    <div class="dno">yes ↓ on the roster for its guide; seed from the cited block's box</div>
+    <div class="dq"><span class="q">Is the deficiency drawn (not an absence)?</span><span class="yes">no →</span><span class="out warn">nothing-to-mark; the app keeps the cited-block outline</span></div>
+    <div class="dno">yes ↓</div>
+    <div class="dq"><span class="q">Located with confidence within 3 passes?</span><span class="yes">yes →</span><span class="out">annotated: the app draws the marker in place of the outline</span></div>
+    <div class="dno">no ↓</div>
+    <div class="dq end"><span class="q">otherwise</span><span class="yes"></span><span class="out fail">not-located</span></div>
+  </div>
+  <p class="claim"><b>Claim (§1.5):</b> on CC review <code>b80e5075</code>, 28 of 192 comments are fails or warns that cite a sheet, and 26 cite a block. Most are absences, so most will end in nothing-to-mark (Q1).</p>
+
+  <h3 id="detail-kit">The shared annotate kit (D5)</h3>
+  <div class="spectable-scroll"><table class="spectable">
+    <thead><tr><th>Piece</th><th>Today</th><th>After</th></tr></thead>
+    <tbody>
+      <tr><td>crop · remap · seam-check</td><td><code>runbooks/review/scripts/annotate-*.ts</code></td><td><code>runbooks/lib/annotate/</code>, unchanged (record-agnostic)</td></tr>
+      <tr><td>write · disposition-write</td><td>review only: <code>comments[].id</code>, <code>sheets[]</code>, <code>sources[]</code></td><td><code>--record review|cc</code>. CC finds a comment by <code>sourceFindings[0].ref</code> (<code>grouping:itemId</code>) and may name sheets from <code>sheetReferences[].sheetNumber</code>, rendered as <code>"NN"</code></td></tr>
+      <tr><td>merge · disposition-check</td><td>folds into <code>comments[]</code></td><td>the adapter folds into <code>sections[].comments[]</code>; CC adds deterministic dispositions for comments off the roster</td></tr>
+      <tr><td>validation constants</td><td><code>lib/annotate-validate.ts</code> + <code>review_annotation_geometry.py</code>, once pinned with substation (now archived)</td><td>same files; the docstrings now name bureau as the only enforcer</td></tr>
+      <tr><td>seed ladder</td><td>drawing block → whole sheet in quadrants</td><td>a <b>cited block box</b> first (D4), then the same ladder</td></tr>
+      <tr><td>runner</td><td><code>judgment</code> opus-5.5 high</td><td>a CC <code>annotate</code> preset, also opus-5.5 high (D11, Q3); reads pixels natively (D10)</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3 id="detail-ui">How the app picks what to draw on a CC sheet (D8)</h3>
+  <div class="dflow">
+    <div class="dq"><span class="q">Does the comment's output_json carry annotations on this sheet (label → sheet_map)?</span><span class="yes">yes →</span><span class="out">draw markers (markersOn), the same as the review</span></div>
+    <div class="dno">no ↓</div>
+    <div class="dq"><span class="q">Does it cite a block with a bounding_box on this sheet?</span><span class="yes">yes →</span><span class="out warn">outline the cited block while the item is open (today's behaviour)</span></div>
+    <div class="dno">no ↓</div>
+    <div class="dq end"><span class="q">otherwise</span><span class="yes"></span><span class="out fail">listed under "cited here, nothing drawn"</span></div>
+  </div>
+  <p class="claim"><b>Claim (D8):</b> the CC adapter calls the August readers, moved into a shared module. <code>citedBlockMarkersOn</code> already steps aside once a comment has markers, so nothing else in the sheets view changes.</p>
+</section>
+
+<!-- ============================== ROLLOUT ============================== -->
+<section class="panel" id="rollout">
+  <h2><span class="eyebrow">Rollout</span>Four phases, app before data</h2>
+  <p class="lede">P1 changes no CC behaviour, and P2 ships behind a flag that is off by default. P3 lands the app reader before any CC review carries markers. P4 decides whether to turn it on by default.</p>
+
+  <div class="sysmap" style="grid-template-columns:.6fr repeat(4,1fr)">
+    <div class="colh" style="grid-area:1/1">trigger</div>
+    <div class="colh" style="grid-area:1/2">bureau</div>
+    <div class="colh" style="grid-area:1/3">bureau</div>
+    <div class="colh" style="grid-area:1/4">bureau + cityhall</div>
+    <div class="colh" style="grid-area:1/5">runs</div>
+    <div class="sys trig" id="p-t" style="grid-area:2/1"><span class="dot"></span><span class="t">spec approved</span></div>
+    <div class="sys" id="p-1" style="grid-area:2/2"><a class="ref" href="#detail-kit">P1 ↓</a><span class="k">bureau</span><span class="t">Shared kit</span><span class="d">move scripts, block boxes</span></div>
+    <div class="sys" id="p-2" style="grid-area:2/3"><a class="ref" href="#detail-cc-graph">P2 ↓</a><span class="k">bureau</span><span class="t">CC step</span><span class="d">2.12-annotate behind a flag</span></div>
+    <div class="sys" id="p-3" style="grid-area:2/4"><a class="ref" href="#detail-ui">P3 ↓</a><span class="k">bureau · cityhall</span><span class="t">Publish + app</span><span class="d">app reader lands first</span></div>
+    <div class="sys" id="p-4" style="grid-area:2/5"><a class="ref" href="#detail-cc-roster">P4 ↓</a><span class="k">runs</span><span class="t">Score, default on</span><span class="d">hard-item sets</span></div>
+    <a class="sys-edge" data-from="p-t" data-to="p-1"></a>
+    <a class="sys-edge" data-from="p-1" data-to="p-2">kit</a>
+    <a class="sys-edge" data-from="p-2" data-to="p-3">markers</a>
+    <a class="sys-edge" data-from="p-3" data-to="p-4">visible</a>
+  </div>
+  <div class="sys-refs">
+    <a class="refrow" data-ref="P1"><span class="chip">P1</span><span class="txt">shared annotate kit and block boxes; the review runbook still passes its tests</span></a>
+    <a class="refrow" data-ref="P2"><span class="chip">P2</span><span class="txt">2.12-annotate with annotate: false by default, plus contract tests</span></a>
+    <a class="refrow" data-ref="P3"><span class="chip">P3</span><span class="txt">lane B validation and sheet_map; cityhall CC adapter reads markers</span></a>
+    <a class="refrow" data-ref="P4"><span class="chip">P4</span><span class="txt">score markers on WhiteWater and 2008 San Antonio, then flip the default</span></a>
+  </div>
+  <div class="sys-legend"><span><i></i>phase (none started)</span></div>
+  <p class="claim"><b>Claim (P3):</b> until the app reader ships, a published CC review stores markers that nothing draws, which is harmless.</p>
+
+  <h3>Open questions</h3>
+  <div class="spectable-scroll"><table class="spectable">
+    <thead><tr><th>Q</th><th>Question</th><th>Proposed default</th></tr></thead>
+    <tbody>
+      <tr><td><span class="sn">Q1</span></td><td>Should absences stay unmarked, or get a new <code>expected-here</code> kind?</td><td>Unmarked; the cited-block outline already says where to look (D2)</td></tr>
+      <tr><td><span class="sn">Q2</span></td><td>Sweep grain: one worker per guide, or one for the whole run?</td><td>Per guide, for partial credit when a seat dies</td></tr>
+      <tr><td><span class="sn">Q3</span></td><td>annotate model: opus-5.5 high, or try sonnet-5.5?</td><td>Opus, matching the review's proven sweep</td></tr>
+      <tr><td><span class="sn">Q4</span></td><td>Markers on supplementary documents (forms, reports)?</td><td>Out of scope: the app has no document viewer to draw on</td></tr>
+      <tr><td><span class="sn">Q5</span></td><td>Multiple plan sets collide on <code>sheet-NN</code>, and the app reads only one</td><td>Shared by both runbooks; a separate spec</td></tr>
+      <tr><td><span class="sn">Q6</span></td><td>When is the flag good enough to default on?</td><td>No wrongly placed marker among 20 audited</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+</main>
+<script data-spec-kit-js>
+/* spec-kit v5.1 — system-map edge renderer.
+   Inline the ENTIRE contents of this file into the spec's
+   <script data-spec-kit-js> block (do not <script src>).
+   Reads every .sysmap, and for each hidden <a class="sys-edge"
+   data-from="idA" data-to="idB">label</a> draws an SVG path between the
+   two nodes' nearest sides. Routing:
+     side-to-side   when A and B share a row (label rides in the row gap ABOVE the boxes)
+     top-to-bottom  when A and B share a column (label sits right of the line)
+     orthogonal     otherwise: leave A vertically into the gap beside A's whole ROW (tags
+                    included), run, drop into B (label hugs the source); a backward edge
+                    in the same row goes over the top, .loop higher still.
+   Labels clear the source's floating .ref tag, stay inside the map, and nudge up off
+   any label drawn earlier.
+   Redraws on load, font load, resize, and whenever a tab panel becomes visible. */
+(function(){
+  const NS='http://www.w3.org/2000/svg';
+  const COL={std:'#6397b8',new:'#15803d',chg:'#b45309',gap:'#b91c1c',loop:'#6397b8'};
+  const KINDS=['new','chg','gap','loop'];
+  function el(tag,attrs){const n=document.createElementNS(NS,tag);for(const k in attrs)n.setAttribute(k,attrs[k]);return n;}
+  function draw(map){
+    let svg=map.querySelector('svg.edges');
+    if(!svg){
+      svg=el('svg',{class:'edges'});
+      const defs=el('defs',{});
+      for(const k in COL){
+        const m=el('marker',{id:'ah-'+k,viewBox:'0 0 10 10',refX:'9',refY:'5',markerWidth:'7',markerHeight:'7',orient:'auto-start-reverse'});
+        m.appendChild(el('path',{d:'M0 0L10 5L0 10z',fill:COL[k]}));defs.appendChild(m);
+      }
+      svg.appendChild(defs);map.appendChild(svg);
+    }
+    svg.querySelectorAll('g').forEach(g=>g.remove());
+    const mr=map.getBoundingClientRect(); if(mr.width===0) return;   // hidden tab: nothing to measure
+    const paths=el('g',{class:'paths'}), labels=el('g',{class:'labels'});
+    const rect=r=>({l:r.left-mr.left,t:r.top-mr.top,r:r.right-mr.left,b:r.bottom-mr.top,cx:(r.left+r.right)/2-mr.left,cy:(r.top+r.bottom)/2-mr.top});
+    const box=n=>rect((n.querySelector('.dot')||n).getBoundingClientRect());
+    const nodes=[...map.querySelectorAll('.sys')].map(n=>({n,b:box(n),ref:n.querySelector('.ref')?rect(n.querySelector('.ref').getBoundingClientRect()):null}));
+    // the vertical band a node's ROW occupies: every node overlapping it vertically, tags included
+    const band=a=>{let t=a.t,b=a.b;nodes.forEach(o=>{if(Math.min(a.b,o.b.b)-Math.max(a.t,o.b.t)>0){t=Math.min(t,o.b.t,o.ref?o.ref.t:o.b.t);b=Math.max(b,o.b.b);}});return {t,b};};
+    const placed=[];   // label boxes already drawn, for collision nudging
+    map.querySelectorAll('.sys-edge').forEach(e=>{
+      const A=map.querySelector('#'+CSS.escape(e.dataset.from||'')), B=map.querySelector('#'+CSS.escape(e.dataset.to||''));
+      if(!A||!B){console.warn('sysmap edge: missing node',e.dataset.from,e.dataset.to);return;}
+      const a=box(A), b=box(B), aRef=A.querySelector('.ref'), aRefR=aRef?rect(aRef.getBoundingClientRect()):null;
+      const kind=KINDS.find(k=>e.classList.contains(k))||'std';
+      const sameRow=Math.min(a.b,b.b)-Math.max(a.t,b.t)>0, sameCol=Math.min(a.r,b.r)-Math.max(a.l,b.l)>0;
+      const forward=b.l>=a.r;
+      let d,lx,ly,anchor='middle';
+      const clamp=(v,lo,hi)=>Math.max(lo,Math.min(hi,v));
+      if(sameRow&&forward&&kind!=='loop'){        // side to side, left→right
+        const x1=a.r,x2=b.l,y1=a.cy,mx=(x1+x2)/2;
+        const y2=A.querySelector('.dot')?clamp(y1,b.t+10,b.b-10):b.cy;
+        d=`M${x1} ${y1}C${mx} ${y1},${mx} ${y2},${x2} ${y2}`;
+        lx=mx; ly=Math.min(a.t,b.t)-6;
+        if(aRefR&&ly>aRefR.t-2&&ly<aRefR.b+12){lx=aRefR.r+6;anchor='start';}   // clear the source's floating tag
+      }else if(sameCol&&!sameRow){               // top to bottom; label just past the source end, right of the line
+        const down=b.t>=a.b, y1=down?a.b:a.t, y2=down?b.t:b.b, x1=a.cx, x2=b.cx, my=(y1+y2)/2;
+        d=`M${x1} ${y1}C${x1} ${my},${x2} ${my},${x2} ${y2}`;
+        // label just past the SOURCE end going down; just past the TARGET end going up (a source's
+        // top-right is where its floating tag lives)
+        lx=x1+8; ly=down?y1+14:y2+14; anchor='start';
+      }else{                                     // orthogonal, through the gap beside A's ROW (not A's box)
+        const rb=band(a); let y1,yr,y2;
+        if(sameRow){ y1=a.t; yr=rb.t-(kind==='loop'?34:22); y2=b.t; }      // backward / loop: over the whole row + its labels
+        else if(b.cy>a.cy){ y1=a.b; yr=rb.b+12; y2=b.t; }                   // down: gap below the row
+        else { y1=a.t; yr=rb.t-12; y2=b.b; }                                // up: gap above the row (above tags)
+        d=`M${a.cx} ${y1}L${a.cx} ${yr}L${b.cx} ${yr}L${b.cx} ${y2}`;
+        const rightward=b.cx>a.cx; lx=a.cx+(rightward?22:-22); anchor=rightward?'start':'end'; ly=yr-4;
+      }
+      paths.appendChild(el('path',{d,class:'e '+kind,'marker-end':`url(#ah-${kind})`}));
+      const txt=e.textContent.trim();
+      if(txt){
+        const t=el('text',{x:lx,y:ly,'text-anchor':anchor,class:'lbl '+kind}); t.textContent=txt;
+        const bg=el('rect',{class:'lblbg',rx:3}); labels.appendChild(bg); labels.appendChild(t);
+        svg.appendChild(labels);
+        let tb=t.getBBox();
+        if(tb.x+tb.width>mr.width-6){t.setAttribute('text-anchor','end');t.setAttribute('x',anchor==='start'?lx-16:lx);tb=t.getBBox();}   // keep inside the map
+        for(let i=0;i<4;i++){const hit=placed.find(p=>!(tb.x>p.x+p.width+2||p.x>tb.x+tb.width+2||tb.y>p.y+p.height+1||p.y>tb.y+tb.height+1));if(!hit)break;t.setAttribute('y',+t.getAttribute('y')-(tb.height+3));tb=t.getBBox();}  // nudge up off an earlier label
+        placed.push(tb);
+        bg.setAttribute('x',tb.x-4);bg.setAttribute('y',tb.y-2);bg.setAttribute('width',tb.width+8);bg.setAttribute('height',tb.height+4);
+      }
+    });
+    svg.appendChild(paths); svg.appendChild(labels);   // labels above paths
+  }
+  // long identifiers break cleanly after underscores instead of mid-word
+  function softBreaks(){document.querySelectorAll('.sys .t, .uc .nt').forEach(t=>{if(t.dataset.wbr||!/_/.test(t.textContent))return;t.innerHTML=t.innerHTML.replace(/_/g,'_<wbr>');t.dataset.wbr='1';});}
+  const all=()=>{softBreaks();document.querySelectorAll('.sysmap').forEach(draw);};
+  /* ---- spec links: when <main data-spec="DESIGN-SPEC.html"> is set, every reference token
+     becomes a link into the reader page: P0a → #P0a, D12 → #D12, Q6 → #Q6, §3.2 → #s3-2 */
+  function linkSpec(){
+    const main=document.querySelector('main[data-spec]'); if(!main) return;
+    const spec=main.dataset.spec;
+    const tokHref=t=>spec+'#'+(t.startsWith('§')?'s'+t.slice(1).replace(/\./g,'-'):t);
+    document.querySelectorAll('.sys-refs .refrow').forEach(r=>{
+      const tok=r.dataset.ref||(r.querySelector('.chip')||{}).textContent||''; if(!tok.trim()) return;
+      if(!r.getAttribute('href')) r.setAttribute('href',tokHref(tok.trim()));
+      if(!r.querySelector('.go')){const g=document.createElement('span');g.className='go';r.appendChild(g);}
+    });
+    document.querySelectorAll('.claim b, figure.concept figcaption b').forEach(b=>{
+      if(b.querySelector('a')) return;
+      b.innerHTML=b.innerHTML.replace(/(§\d+(?:\.\d+)*)|\b(P\d[a-z]?|D\d+|Q\d+)\b/g,m=>`<a class="cite" href="${tokHref(m)}" title="read this section of the spec">${m}</a>`);
+    });
+  }
+  window.addEventListener('DOMContentLoaded',linkSpec);
+  window.addEventListener('load',all);
+  if(document.fonts&&document.fonts.ready) document.fonts.ready.then(all);
+  window.addEventListener('resize',all);
+  new MutationObserver(all).observe(document.documentElement,{attributes:true,subtree:true,attributeFilter:['class']});
+})();
+
+</script>
+<script>
+  const btns=document.querySelectorAll('nav.tabs button');
+  const panels=document.querySelectorAll('.panel');
+  const IDS=['overview','review','stored','cc','rollout'];
+  function show(id,opts={}){
+    btns.forEach(b=>b.classList.toggle('active',b.dataset.tab===id));
+    panels.forEach(p=>p.classList.toggle('active',p.id===id));
+    if(!opts.keepHash&&location.hash.slice(1)!==id) history.replaceState(null,'','#'+id);
+    if(!opts.noScroll) window.scrollTo({top:0,behavior:opts.instant?'auto':'smooth'});
+  }
+  btns.forEach(b=>b.addEventListener('click',()=>show(b.dataset.tab)));
+  function goHash(instant){
+    const h=decodeURIComponent(location.hash.slice(1)); if(!h) return;
+    if(IDS.includes(h)){show(h,{instant});return;}
+    const el=document.getElementById(h); if(!el) return;
+    const panel=el.closest('.panel'); if(panel&&!panel.classList.contains('active')) show(panel.id,{keepHash:true,noScroll:true});
+    el.scrollIntoView({block:'start',behavior:instant?'auto':'smooth'});
+  }
+  goHash(true);
+  window.addEventListener('hashchange',()=>goHash(false));
+</script>
+</body>
+</html>
