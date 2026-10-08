@@ -989,7 +989,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
     <div class="colh" style="grid-area:1/4">validate</div>
     <div class="colh" style="grid-area:1/5">publish</div>
 
-    <div class="sys trig" id="c-t" style="grid-area:2/1"><span class="dot"></span><span class="t">annotate: true</span><span class="d">request flag, off by default</span></div>
+    <div class="sys trig" id="c-t" style="grid-area:2/1"><span class="dot"></span><span class="t">annotate: true</span><span class="d">request flag, on by default</span></div>
     <div class="sys" id="c-29" style="grid-area:2/2"><span class="k">script</span><span class="t">2.9-comments</span><span class="d">the final envelope</span></div>
     <div class="sys new" id="c-212" style="grid-area:2/3"><a class="ref" href="#detail-cc-roster">D2 · D3 ↓</a><span class="k">agent + script</span><span class="t">2.12-annotate</span><span class="d">sweep per guide × run, then merge into a copy</span></div>
     <div class="sys chg" id="c-210" style="grid-area:2/4"><a class="ref" href="#detail-laneb">D1 ↓</a><span class="k">script</span><span class="t">2.10-validate</span><span class="d">reads the merged envelope</span></div>
@@ -1014,7 +1014,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
     <div class="dq"><span class="q">For each run of each comment: did this run vote fail or warn? (the comment's verdict does not matter)</span><span class="yes">no →</span><span class="out warn">merge writes the run's nothing-to-mark ("run passed" / "not applicable")</span></div>
     <div class="dno">yes ↓</div>
     <div class="dq"><span class="q">Does this run cite at least one plan sheet?</span><span class="yes">no →</span><span class="out warn">merge writes a sheetless nothing-to-mark ("cites no sheet")</span></div>
-    <div class="dno">yes ↓ on its guide's roster; seed from the block this run cited</div>
+    <div class="dno">yes ↓ on its (guide, run) roster; seed from the block this run cited</div>
     <div class="dq"><span class="q">Is the deficiency a drawn thing, or an absence with a visible slot (blank field, empty cell, unchecked Yes/No)?</span><span class="yes">neither →</span><span class="out warn">nothing-to-mark ("absence with no slot"); the app keeps the cited-block outline</span></div>
     <div class="dno">yes ↓ marking_type = incorrect (drawn wrong) or missing (the empty slot, narrower than the citation)</div>
     <div class="dq"><span class="q">Located with confidence within 3 passes?</span><span class="yes">yes →</span><span class="out">annotated, stored on perRunFindings[k]</span></div>
@@ -1175,29 +1175,29 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 <!-- ============================== ROLLOUT ============================== -->
 <section class="panel" id="rollout">
   <h2><span class="eyebrow">Rollout</span>Four phases, app before data</h2>
-  <p class="lede">P1 changes no CC behaviour, and P2 ships behind a flag that is off by default. P3 lands both app renderers (sheets and the pdf.js document viewer) before any CC review carries markers. P4 decides whether to turn it on by default.</p>
+  <p class="lede">P1 changes no CC behaviour. P3 lands publish validation and both app renderers (sheets and the pdf.js document viewer) next, because P2 ships the CC step on by default. P4 is Will trying it on real reviews, with the flag as the off switch.</p>
 
   <div class="sysmap" style="grid-template-columns:.6fr repeat(4,1fr)">
     <div class="colh" style="grid-area:1/1">trigger</div>
     <div class="colh" style="grid-area:1/2">bureau</div>
-    <div class="colh" style="grid-area:1/3">bureau</div>
-    <div class="colh" style="grid-area:1/4">bureau + cityhall</div>
+    <div class="colh" style="grid-area:1/3">bureau + cityhall</div>
+    <div class="colh" style="grid-area:1/4">bureau</div>
     <div class="colh" style="grid-area:1/5">runs</div>
     <div class="sys trig" id="p-t" style="grid-area:2/1"><span class="dot"></span><span class="t">spec approved</span></div>
     <div class="sys" id="p-1" style="grid-area:2/2"><a class="ref" href="#detail-kit">P1 ↓</a><span class="k">bureau</span><span class="t">Shared kit</span><span class="d">move scripts, block boxes</span></div>
-    <div class="sys" id="p-2" style="grid-area:2/3"><a class="ref" href="#detail-cc-graph">P2 ↓</a><span class="k">bureau</span><span class="t">CC step</span><span class="d">sheets + documents, behind a flag</span></div>
-    <div class="sys" id="p-3" style="grid-area:2/4"><a class="ref" href="#detail-ui">P3 ↓</a><span class="k">bureau · cityhall</span><span class="t">Publish + app</span><span class="d">sheet + pdf.js renderers land first</span></div>
-    <div class="sys" id="p-4" style="grid-area:2/5"><a class="ref" href="#detail-cc-roster">P4 ↓</a><span class="k">runs</span><span class="t">Score, default on</span><span class="d">hard-item sets</span></div>
+    <div class="sys" id="p-2" style="grid-area:2/4"><a class="ref" href="#detail-cc-graph">P2 ↓</a><span class="k">bureau</span><span class="t">CC step</span><span class="d">sheets + documents, on by default</span></div>
+    <div class="sys" id="p-3" style="grid-area:2/3"><a class="ref" href="#detail-ui">P3 ↓</a><span class="k">bureau · cityhall</span><span class="t">Publish + app</span><span class="d">sheet + pdf.js renderers land first</span></div>
+    <div class="sys" id="p-4" style="grid-area:2/5"><a class="ref" href="#detail-cc-roster">P4 ↓</a><span class="k">runs</span><span class="t">Try it</span><span class="d">Will tests in the app; flag off if bad</span></div>
     <a class="sys-edge" data-from="p-t" data-to="p-1"></a>
-    <a class="sys-edge" data-from="p-1" data-to="p-2">kit</a>
-    <a class="sys-edge" data-from="p-2" data-to="p-3">markers</a>
-    <a class="sys-edge" data-from="p-3" data-to="p-4">visible</a>
+    <a class="sys-edge" data-from="p-1" data-to="p-3">kit</a>
+    <a class="sys-edge" data-from="p-3" data-to="p-2">readers ready</a>
+    <a class="sys-edge" data-from="p-2" data-to="p-4">markers</a>
   </div>
   <div class="sys-refs">
     <a class="refrow" data-ref="P1"><span class="chip">P1</span><span class="txt">shared annotate kit and block boxes; the review runbook still passes its tests</span></a>
-    <a class="refrow" data-ref="P2"><span class="chip">P2</span><span class="txt">2.12-annotate marks plan sheets and document pages in one sweep, annotate: false by default, plus contract tests (v3: v2's P5 folded in)</span></a>
+    <a class="refrow" data-ref="P2"><span class="chip">P2</span><span class="txt">2.12-annotate marks plan sheets and document pages in one sweep, on by default, plus contract tests (v3: v2's P5 folded in)</span></a>
     <a class="refrow" data-ref="P3"><span class="chip">P3</span><span class="txt">lane B validation and sheet_map; cityhall CC adapter reads markers and the pdf.js viewer draws document markers (v3: v2's P6 folded in)</span></a>
-    <a class="refrow" data-ref="P4"><span class="chip">P4</span><span class="txt">score markers on WhiteWater and 2008 San Antonio, then flip the default</span></a>
+    <a class="refrow" data-ref="P4"><span class="chip">P4</span><span class="txt">no scored gate: Will tests on real reviews and turns the default off if the markers are bad (G7)</span></a>
   </div>
   <div class="sys-legend"><span><i></i>phase (none started)</span></div>
   <p class="claim"><b>Claim (P3):</b> until the app reader ships, a published CC review stores markers that nothing draws, which is harmless.</p>
@@ -1206,12 +1206,12 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
   <div class="spectable-scroll"><table class="spectable">
     <thead><tr><th>Q</th><th>Question</th><th>Proposed default</th></tr></thead>
     <tbody>
-      <tr><td><span class="sn">Q1</span></td><td>Should absences stay unmarked, or get a new <code>missing</code> kind?</td><td><b>Answered in v3:</b> an absence with a visible slot gets an <code>missing</code> marker (optional <code>role</code>); the agent decides, no sheet/document rule (D2)</td></tr>
+      <tr><td><span class="sn">Q1</span></td><td>Should absences stay unmarked, or get a new <code>missing</code> kind?</td><td><b>Answered in v3:</b> an absence with a visible slot gets an <code>missing</code> marker (optional <code>marking_type</code>); the agent decides, no sheet/document rule (D2)</td></tr>
       <tr><td><span class="sn">Q2</span></td><td>Sweep grain: one worker per guide, or one for the whole run?</td><td><b>Answered (G6):</b> per guide × run, as 2.1-review; ≤16 in flight via CONDUCTOR_CONCURRENCY. Q7: no reuse</td></tr>
       <tr><td><span class="sn">Q3</span></td><td>annotate model: opus-5.5 high, or try sonnet-5.5?</td><td>Opus, matching the review's proven sweep</td></tr>
       <tr><td><span class="sn">Q4</span></td><td>Markers on supplementary documents (forms, reports)?</td><td><b>Answered in v2:</b> in scope (Documents tab)</td></tr>
       <tr><td><span class="sn">Q5</span></td><td>Multiple plan sets collide on <code>sheet-NN</code>, and the app reads only one</td><td><b>Answered (research):</b> a separate spec. All 38 prod submission versions with a plan set have exactly one.</td></tr>
-      <tr><td><span class="sn">Q6</span></td><td>When is the flag good enough to default on?</td><td>No wrongly placed marker among 20 audited</td></tr>
+      <tr><td><span class="sn">Q6</span></td><td>When is the flag good enough to default on?</td><td><b>Answered (G7):</b> no gate; on by default, Will tests in the app and turns it off if bad</td></tr>
       <tr><td><span class="sn">Q7</span></td><td>Mark each run independently, or reuse a sibling run's shape for the same block?</td><td><b>Answered (G6):</b> independent; a worker sees one run only</td></tr>
       <tr><td><span class="sn">Q8</span></td><td>Does the formal review runbook want document markings too?</td><td>Its own call; the kit supports it at no cost</td></tr>
       <tr><td><span class="sn">Q9</span></td><td>Should preprocessing-v4 publish per-section page regions?</td><td>Only if document not-located is high in P4</td></tr>

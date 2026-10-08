@@ -38,8 +38,8 @@
 >   architecture tab, *Agent and scripts*, walks the sweep prompt fragment by fragment.
 > - **G2: documents ship with plan sheets.** v2's P5 (document targets in the
 >   producer) folds into P2, and P6 (the pdf.js page overlay) folds into P3. One
->   `2.12-annotate` sweep marks sheets and document pages in the same pass, and P4 scores
->   both before the default flips. P5 and P6 no longer exist. §3.3 and §7.4 are rewritten.
+>   `2.12-annotate` sweep marks sheets and document pages in the same pass, and P4 covers
+>   both. P5 and P6 no longer exist. §3.3 and §7.4 are rewritten.
 > - **G3: share the geometry, not the policy (D5 rewritten).** Shared code is the geometry half
 >   plus the annotation object's shape. The loop mechanics are shared as prompt text carried
 >   verbatim (the `block-name-rule.md` pattern). What to mark, the roster, the record's field
@@ -68,6 +68,11 @@
 >   observations, which is the point of G4. No new parallelism cap: conductor2's
 >   `CONDUCTOR_CONCURRENCY` (default 16) already bounds in-flight nodes, so `runs = 7` queues
 >   about 70 workers and runs at most 16 at a time.
+> - **G7 = Q6: on by default, with no scored gate.** `annotate` defaults to `true`. Traffic
+>   is low, so Will tests the markers in the app and flips the default off if they are bad.
+>   Because the step is live from its first release, the land order becomes P1 → P3 → P2,
+>   so publish validation and the app renderers exist before any CC review carries markers.
+>   `cc-compare` passes `annotate: false`.
 >
 > **Revision note (v2, 2026-10-07): markings on non-plan-set documents.** Will asked for
 > markings on supplementary documents too (application forms, letters, reports), now that
@@ -467,11 +472,18 @@ The approved [checklist-source-ui spec](../checklist-source-ui/DESIGN-SPEC.md) (
 #297/#298) edits the same `statusComment` to add a Source link. The two changes are
 independent fields on the same view model, so whichever lands second rebases onto the other.
 
-**D9. Opt-in by request flag, off by default until scored.** Add `annotate: boolean`
-(default `false`) to the CC `Request`. Off means a `2.12-annotate` folder holding only
-`SKIPPED.md`, and 2.10/3.1 read 2.9's envelope, which is byte-identical to today (parity,
-goal 3). Default it on after a marking-quality pass on the WhiteWater and 2008 San Antonio
-hard-item sets (`cc-hard-items`).
+**D9. A request flag, on by default (v3, grill G7).** Add `annotate: boolean` to the CC
+`Request`, **default `true`**. Off means a `2.12-annotate` folder holding only `SKIPPED.md`,
+and 2.10/3.1 read 2.9's envelope, which is byte-identical to today (parity, goal 3). There
+is no scored gate before it goes on. CC traffic is low, so Will tests the markers on real
+reviews in the app. If they are bad, the default goes back to `false` in one line, and any
+single run can pass `annotate: false`. The parity and compare loops (`cc-compare`) should
+pass `annotate: false`. The step never changes a verdict (D1), so it cannot affect parity
+either way, but it would add Opus spend to every compare run.
+
+Because the step is on from its first release, **lane B validation, `sheet_map` and both
+app renderers must land before it** (§3.3 land order). Otherwise the first CC review to run
+it would publish unvalidated markers that nothing draws.
 
 **D10. The annotate worker sees pixels natively and is exempt from the parity rule.** The
 "vision CLI only" rule (CC prompt `:44`) protects the parity of the *verdict*. The sweep
@@ -518,8 +530,8 @@ field, because the run is implied by where the object sits.
 - **P1 Shared kit.** Do D5's move of the geometry half and `loop-rules.md`, and D4, in bureau.
   The review's writers refuse `missing`. The review runbook's examples and tests pass
   unchanged, except for the extra seed rung and the moved imports. This phase has no CC behaviour change.
-- **P2 CC step, sheets and documents together (v3).** `2.12-annotate` behind
-  `annotate: false` (D1–D3, D9–D11), with document targets in the same sweep (D13, D15–D18):
+- **P2 CC step, sheets and documents together (v3).** `2.12-annotate`, on by default
+  (D1–D3, D9–D11), with document targets in the same sweep (D13, D15–D18):
   the stager's document fields (D17), the page-finding rules (D15), the non-PDF disposition
   (D16) and the document checks in the kit's validators (D18). Contract tests: every roster
   run has a disposition for every sheet **and document** it cites, and markers validate.
@@ -528,9 +540,15 @@ field, because the run is implied by where the object sits.
   overlay with `&page=` (D19). Land the app change first: until it ships, a published CC
   review stores markings that nothing draws, which is harmless. The overlay edits the
   viewer that cityhall#293 shipped, so P3's cityhall PR waits until #293 is settled on main.
-- **P4 Score and default on.** Run `annotate: true` on the two hard-item submissions, audit
-  sheet and document markers visually in the app, and flip the default (D9). Score
-  `incorrect` and `missing` separately (D2).
+- **P4 Try it on real reviews (v3, G7).** No scored gate. Will looks at the markers on the
+  next CC reviews in the app, and turns the default off if they are bad (D9). The things to
+  watch are `missing` markers that point at nothing (D2 guards), document `not-located` (Q9),
+  and the step's wall clock (D3).
+
+**Land order (v3, G7): P1, then P3, then P2.** P2 ships on by default, so the publish
+validation and both app renderers (P3) go first. P3's bureau half is inert until a record
+carries markers, and its cityhall half draws nothing until then, so landing it early is
+safe.
 
 ---
 
@@ -600,10 +618,11 @@ we want the smallest change.
 - **Few CC fails are markable (reduced in v3).** On `b80e5075`, roughly 6–10 of the 28
   sheet-citing fails/warns look like drawn-but-deficient items (a manual read). D2's
   `missing` marking type adds the absences that have a slot, such as blank fields and empty
-  cells. Absences with no slot still stay unmarked. P4 measures the real rate per marking type.
+  cells. Absences with no slot still stay unmarked. Will's P4 look shows the real rate.
 - **A `missing` marker drifts into guessing.** Without a visible slot the agent could "place"
-  a missing note where it thinks one belongs. Guards 1–3 of D2 forbid that. P4 audits
-  `missing` markers separately from `incorrect` ones.
+  a missing note where it thinks one belongs. Guards 1–3 of D2 forbid that. There is
+  no formal audit before default-on (G7). Will watches `missing` markers first in P4, and
+  the off switch is the request flag.
 - **Seat spend.** The sweep is the most expensive kind of step: opus with pixel reads. Per-run
   sweeping (D3) triples the work at `runs = 3`, which is every current CC review (59–135
   fail/warn runs against 21–46 drawn comments, D3 table), and runs that agree will often be
@@ -646,6 +665,8 @@ the feature would run on today.
 
 **Q6.** Default-on criterion for D9: what marker precision on the hard-item sets is good
 enough? One proposal: no wrongly placed marker among 20 audited.
+**Answered in v3 (grill G7): no criterion; on by default from the first release.** Traffic
+is low. Will tests in the app and turns it off if it is bad (D9).
 
 **Q7.** Runs that agree often cite the same block for the same deficiency. Should the sweep
 mark each run independently (D3 as written: no cross-run influence, about 3× the passes),
@@ -861,8 +882,8 @@ the CC.
 (`document_section.regions jsonb [{page, box}]`)? Today it renders every page at 200 DPI and
 discards the renders. Regions would give the sweep a tight seed, and the app could outline a
 cited section the way it outlines a cited block. The cost is a box-discovery pass per page,
-which is heavy on a 582-page report. Proposed: build it only if P4's `not-located` rate on
-documents is high, and Will is fine with the scope.
+which is heavy on a 582-page report. Proposed: build it only if document `not-located` is high
+in Will's P4 testing, and Will is fine with the scope.
 
 **Q10.** Is a cap of 6 pages per (run, document) right? It bounds spend on 500-page
 reports, at the price of `not-located` when a label is vague.
