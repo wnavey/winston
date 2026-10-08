@@ -1043,15 +1043,15 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
     </tbody>
   </table></div>
 
-  <h3 id="detail-ui">How the app picks what to draw on a CC sheet (D8)</h3>
+  <h3 id="detail-ui">How the app picks what to draw for one comment on one sheet (D8)</h3>
   <div class="dflow">
-    <div class="dq"><span class="q">Does the comment's output_json carry annotations on this sheet (label → sheet_map)?</span><span class="yes">yes →</span><span class="out">draw markers (markersOn): incorrect red, missing yellow, selected blue (D8)</span></div>
+    <div class="dq"><span class="q">Does this comment have a drawn marker on <b>this</b> sheet (label → sheet_map)?</span><span class="yes">yes →</span><span class="out">draw markers (markersOn): incorrect red, missing yellow, selected blue (D8)</span></div>
     <div class="dno">no ↓</div>
-    <div class="dq"><span class="q">Does it cite a block with a bounding_box on this sheet?</span><span class="yes">yes →</span><span class="out warn">outline the cited block while the item is open (today's behaviour)</span></div>
+    <div class="dq"><span class="q">Does it cite a block with a bounding_box on this sheet?</span><span class="yes">yes →</span><span class="out warn">outline its cited blocks on this sheet while the item is open, even when other sheets of the same comment are marked</span></div>
     <div class="dno">no ↓</div>
     <div class="dq end"><span class="q">otherwise</span><span class="yes"></span><span class="out fail">listed under "cited here, nothing drawn"</span></div>
   </div>
-  <p class="claim"><b>Claim (D8):</b> the CC adapter calls the August readers, moved into a shared module. <code>citedBlockMarkersOn</code> already steps aside once a comment has markers, so nothing else in the sheets view changes.</p>
+  <p class="claim"><b>Claim (D8):</b> the choice is made per sheet. A comment shows its markers on a sheet that has them and its cited-block outlines on every other cited sheet. Today <code>citedBlockMarkersOn</code> and <code>tourOf</code> switch per comment, so both change.</p>
 </section>
 
 <!-- ============================== DOCUMENTS ============================== -->

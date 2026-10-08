@@ -482,7 +482,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 
 </style>
 </head>
-<body class="reader" data-back="architecture.html" data-spec-sha="7fb4bf5998e46285">
+<body class="reader" data-back="architecture.html" data-spec-sha="10ed5bff695444bc">
 
 <header class="masthead">
   <div class="kicker">SPEC · READER</div>
@@ -572,6 +572,11 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 >   Because the step is live from its first release, the land order becomes P1 → P3 → P2,
 >   so publish validation and the app renderers exist before any CC review carries markers.
 >   `cc-compare` passes `annotate: false`.
+> - **G8: markers or cited outlines, per sheet (D8).** Will's rule: on each sheet, a comment
+>   shows its markers if it has any there, otherwise its cited-block outlines. cityhall
+>   switches per comment today (`placed-markers.ts:70`, `tourOf`), so marking one sheet would
+>   hide the outlines on all the others. D8 now changes both to per sheet, and §1.3 records
+>   the current behaviour.
 >
 > **Revision note (v2, 2026-10-07): markings on non-plan-set documents.** Will asked for
 > markings on supplementary documents too (application forms, letters, reports), now that
@@ -683,9 +688,14 @@ stored anywhere else.
 the content blocks the comment cites**, only while that item is open. It takes them from
 `sheetReferences[].blockNumber` and `content_block.bounding_box`
 (`src/lib/reviews/placed-markers.ts:63-90`, `sheets/read.ts:73-100`). Today a CC item that
-cites `Sheet 10 · block 5 (Parking Table)` already shows that box. Once a comment has
-markers, `citedBlockMarkersOn` skips it, so markings would replace the outlines rather than
-pile on top of them.
+cites `Sheet 10 · block 5 (Parking Table)` already shows that box. **Today the switch is per
+comment** (verified v3, cityhall-new `origin/main`). `citedBlockMarkersOn` returns nothing
+for a comment with any marker anywhere (`placed-markers.ts:70`), and `tourOf` builds the
+comment's prev/next tour from markers alone once there is one (`marker-sequence.ts`,
+`tourOf`). A comment marked on one sheet would therefore lose its cited-block outlines on
+every other sheet. D8 (v3, G8) makes the switch per sheet. Only plan-set sheets have
+outlines at all: they come from `content_block`, which hangs off `sheet_version`
+(`sheets/read.ts:87`), and the pdf.js document viewer draws none.
 
 ### 1.4 Are markings produced in the same step that writes the findings?
 
@@ -826,8 +836,8 @@ required fields in CC Application Sections 1–11 are complete", is a fail: "Sec
 Project question and Section 9 Restrictive Covenant question have neither Yes nor No
 checked." The citation is whole sections, so today the viewer outlines every field across
 the application's pages (about 50). Under D2 the comment gets exactly two `missing`
-markers, one on each unchecked Yes/No pair. Once a comment has markers, the cited outlines
-step aside (`citedBlockMarkersOn`, §1.3), so the reader sees only the two.
+markers, one on each unchecked Yes/No pair. On the pages that carry those markers, the reader
+sees only the two (D8, per-target switch).
 
 *Stored shape.* The annotation gains an optional `marking_type`, whose only written value is
 `"missing"`. An absent `marking_type` means `incorrect`, so every marker the review runbook has
@@ -955,9 +965,31 @@ change, no new RPC.
 `readPlanMarkup` from `adapters/august.ts` into a shared `adapters/annotations.ts`. Call
 them from `checklist.ts` `statusComment`, keyed by `reviewJson.sheet_map`, and set
 `markerCount` / `hasAnnotations` from the result. CRC shares `statusComment` and
-automatically gains the ability to render markings if it ever carries them. Nothing else
-in the sheets view changes: `markersOn` already draws any comment's `annotations`, and
-`citedBlockMarkersOn` already steps aside once a comment has markers.
+automatically gains the ability to render markings if it ever carries them. `markersOn`
+already draws any comment's `annotations`.
+
+**v3 (grill G8): markers or cited outlines, chosen per sheet, not per comment.** For each
+(comment, sheet), the sheets view draws **either** that comment's markers on that sheet,
+**or**, when the comment has no drawn marker on that sheet, the outlines of the blocks it
+cites there (today's behaviour, open-only). Never both, and never nothing when a cited block
+has a box. Example: a fail cites Sheet 5 block 2 and Sheet 6 block 3, and the sweep places
+`incorrect` polygons on Sheet 6 only. Sheet 5 keeps its block-2 outline, and Sheet 6 shows
+the polygons with no block-3 outline. A sheet whose disposition is `nothing-to-mark` or
+`not-located` keeps its outline, because it has no marker. This changes cityhall code that
+today switches per comment (§1.3):
+
+- `citedBlockMarkersOn` (`placed-markers.ts:70`): skip a comment's outlines on **this
+  sheet** only when it has a drawn marker on this sheet, rather than when it has any marker.
+- `tourOf` (`marker-sequence.ts`): a comment's prev/next tour is its markers, in marker
+  order, then a cited-block stop for each cited sheet that has no marker, in citation order.
+  This is the order `rowSheets` already lists in the issue panel.
+- The comment-level markers are the winning run's (D12), and so is the comment's
+  `sheetReferences`, so both halves of the switch describe the same run.
+
+Documents have no outline fallback (§1.3). A document page with markers draws them (D19),
+and a cited document without markers opens with nothing drawn, as today. The review
+runbook's comments are affected only if they cite block numbers. The P3 PR checks the
+August fixtures for that, and a comment without cited blocks behaves exactly as today.
 **v3 (G5): colour by marking type.** Unselected, an `incorrect` marker draws **red**, as
 every marker does today, and a `missing` marker draws **highlighter yellow**. A selected
 marker draws **blue** whatever its type, as today. The marker row and tooltip say "missing"
