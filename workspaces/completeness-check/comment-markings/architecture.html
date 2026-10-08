@@ -1189,12 +1189,16 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
     <div class="sys" id="p-2" style="grid-area:2/4"><a class="ref" href="#detail-cc-graph">P2 ↓</a><span class="k">bureau</span><span class="t">CC step</span><span class="d">sheets + documents, on by default</span></div>
     <div class="sys" id="p-3" style="grid-area:2/3"><a class="ref" href="#detail-ui">P3 ↓</a><span class="k">bureau · cityhall</span><span class="t">Publish + app</span><span class="d">sheet + pdf.js renderers land first</span></div>
     <div class="sys" id="p-4" style="grid-area:2/5"><a class="ref" href="#detail-cc-roster">P4 ↓</a><span class="k">runs</span><span class="t">Try it</span><span class="d">Will tests in the app; flag off if bad</span></div>
+    <div class="sys" id="p-0" style="grid-area:3/2"><a class="ref" href="#detail-cc-graph">P0 ↓</a><span class="k">conductor2</span><span class="t">after_retries: pass</span><span class="d">retry gaps twice, then go on</span></div>
     <a class="sys-edge" data-from="p-t" data-to="p-1"></a>
+    <a class="sys-edge" data-from="p-t" data-to="p-0"></a>
+    <a class="sys-edge" data-from="p-0" data-to="p-2">strict contract</a>
     <a class="sys-edge" data-from="p-1" data-to="p-3">kit</a>
     <a class="sys-edge" data-from="p-3" data-to="p-2">readers ready</a>
     <a class="sys-edge" data-from="p-2" data-to="p-4">markers</a>
   </div>
   <div class="sys-refs">
+    <a class="refrow" data-ref="P0"><span class="chip">P0</span><span class="txt">conductor2 step key after_retries: pass, so a strict sweep contract retries its gaps and then publishes anyway (D23); P2 runs an always-pass contract until it lands</span></a>
     <a class="refrow" data-ref="P1"><span class="chip">P1</span><span class="txt">shared annotate kit and block boxes; the review runbook still passes its tests</span></a>
     <a class="refrow" data-ref="P2"><span class="chip">P2</span><span class="txt">2.12-annotate marks plan sheets and document pages in one sweep, on by default, plus contract tests (v3: v2's P5 folded in)</span></a>
     <a class="refrow" data-ref="P3"><span class="chip">P3</span><span class="txt">lane B validation and sheet_map; cityhall CC adapter reads markers and the pdf.js viewer draws document markers (v3: v2's P6 folded in)</span></a>
@@ -1219,7 +1223,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
       <tr><td><span class="sn">Q10</span></td><td>Cap of 6 pages per (run, document)?</td><td><b>Answered (research):</b> 6 pages for long documents; a document of 10 pages or fewer is read whole (the 8-page CC Application draws 107 of 254 citations)</td></tr>
       <tr><td><span class="sn">Q11</span></td><td>Optional pageNumber on CC document citations?</td><td><b>Answered (G9):</b> yes, now, as its own PR before P2 (D22); checked on 2008 San Antonio cc-1: one CC run + one cc-compare loop vs b80e5075/76570a10 + hand page check</td></tr>
       <tr><td><span class="sn">Q12</span></td><td>Should the shared kit take over the agent's two hand copies (next seed from remap; final points into <code>annotate-write</code>)?</td><td><b>Answered (research):</b> yes, in P1. <code>remap-result.json</code> already holds the next seed (<code>sheet</code>) and the stored points (<code>unit</code>)</td></tr>
-      <tr><td><span class="sn">Q13</span></td><td>How does 2.10 wait for 2.12 without being blocked by its failure? conductor2 has no such edge</td><td><b>Answered:</b> 2.12's contracts always pass; the merge checks, writes not-swept and logs to tool-bugs.md. No conductor2 change (D23)</td></tr>
+      <tr><td><span class="sn">Q13</span></td><td>How does 2.10 wait for 2.12 without being blocked by its failure? conductor2 has no such edge</td><td><b>Answered:</b> strict contract + conductor's 2 retries, then a new conductor2 <code>after_retries: pass</code> key; the merge writes not-swept and logs to tool-bugs.md (D23, P0)</td></tr>
     </tbody>
   </table></div>
 </section>
