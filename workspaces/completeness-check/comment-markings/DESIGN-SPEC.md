@@ -633,8 +633,25 @@ the work:
 No conductor2 change. `tool-bugs.md` is unaffected, because it is written during the session
 and by the merge, and contracts already allow it at any depth. Two things change against
 today's agent steps:
-- **No in-session retry.** A worker that writes a bad sidecar is not sent back to fix it. The
-  merge drops the sidecar, records `not-swept` and logs it.
+- **Retries are kept; they move into the session (v3, Will).** There are two retry loops, and
+  only one runs through the contract:
+  - **The agent's own loop.** An agent never writes a sidecar itself. `annotate-write` and
+    `annotate-disposition-write` validate first and exit non-zero, writing nothing, on a
+    malformed or invalid input. `annotate-crop` and `annotate-remap` fail loudly on a
+    malformed `seed.json` or `correction.json`. The agent sees the error and fixes it, as
+    often as it needs, inside its session. **Malformed JSON is retried here, untouched by
+    the contract.** Each of those non-zero exits is still a `tool-bugs.md` line, even when
+    recovered (table above).
+  - **conductor's contract retry.** It sends a failing contract back into the session up to
+    `--max-retries` (2) times, then exits 1. The contract is not told which attempt it is on
+    (`src/verbs/agent.rs:820-1200`), so a strict contract cannot "fail, then give up
+    quietly". The end-of-session check it would run moves into the session instead: before
+    it ends, the CC sweep prompt requires the worker to run `annotate-disposition-check`
+    scoped to its own (guide, run) and fix every gap it names until the check is clean. A
+    worker that still ends with gaps (out of time, seat lost) is caught by the merge:
+    `not-swept`, plus a line. Rejected: a conductor2 change that tells the contract its
+    attempt number, so that it could be strict until the last attempt. Revisit only if the
+    in-session check proves leaky.
 - **conductor's ledger shows every sweep worker as done.** The failure record is the
   `tool-bugs.md` line plus the disposition, which is what G10 asks for.
 
