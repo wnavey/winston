@@ -482,7 +482,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 
 </style>
 </head>
-<body class="reader" data-back="architecture.html" data-spec-sha="a65616384aeb77b5">
+<body class="reader" data-back="architecture.html" data-spec-sha="9b48d1ddc0769758">
 
 <header class="masthead">
   <div class="kicker">SPEC · READER</div>
@@ -544,6 +544,11 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 >   verbatim (the `block-name-rule.md` pattern). What to mark, the roster, the record's field
 >   names, the writers' record checks and the merge stay per runbook. Each runbook's writer
 >   decides which `role`s it allows, and CC's record checks fail closed. Q12 is new.
+> - **G4: every fail/warn run is swept, reaffirmed (D3).** `runs = 3` is now every current CC
+>   review (7 of 7 since 2026-10-01), so the sweep is about 3× the drawn comments (59–135
+>   runs per review). Will keeps it: each failing run's geometry will be viewable later in
+>   the app or IG, which this spec does not build. The stale "runs = 1 is the common case"
+>   line is corrected.
 >
 > **Revision note (v2, 2026-10-07): markings on non-plan-set documents.** Will asked for
 > markings on supplementary documents too (application forms, letters, reports), now that
@@ -824,8 +829,29 @@ deterministically:
 That keeps the coverage gate total. Workers run **one per guide** (`grouping`), the CC
 equivalent of the review's per-discipline roster, and each worker handles every
 (item, run) pair in its guide. A guide with no fail/warn run drops out. On `b80e5075` that
-is 84 run-findings citing a sheet, over about 10 workers. At `runs = 1`, the common case,
-there is one run per comment, and this reduces to the comment-level sweep.
+is 84 run-findings citing a sheet, over about 10 workers. At `runs = 1` there is one run per
+comment, and this reduces to the comment-level sweep.
+
+**v3 (grill G4, Will, 2026-10-08): reaffirmed, every fail/warn run, at its full cost.**
+`runs = 3` is now the norm, not the exception. All 7 CC reviews in prod since 2026-10-01
+that were not legacy comparisons ran 3 times per guide. On those, D3's roster is about 3×
+the comments the app draws:
+
+| Review | Comment-level fail/warn (drawn, D12) | Fail/warn runs (swept, D3) |
+|---|---|---|
+| `d36b7aad` | 45 | 130 |
+| `75a6449c` | 46 | 135 |
+| `53d79f08` | 42 | 132 |
+| `91e224bd` | 30 | 97 |
+| `b80e5075` | 32 | 96 |
+| `76570a10` | 30 | 93 |
+| `581a6549` | 21 | 59 |
+
+These counts are before D3's "cites a sheet or document" filter. The cost is accepted. Every
+failing run's geometry is a product requirement: a later view, in the app or in Inspector
+General, will show each failing run's markers. That view is out of scope here. D12's per-run
+storage is what makes it possible without a schema change. A winning-run-only sweep, with
+`all` as an opt-in, was offered and rejected.
 
 **D4. Seed from the cited block box, which is a better rung 1 than the review has.** The
 stager writes `bounding_box` per block into `block-manifest.json` (`blockBoxes: {"5":
@@ -1038,9 +1064,11 @@ we want the smallest change.
   a missing note where it thinks one belongs. Guards 1–3 of D2 forbid that. P4 audits
   `expected-here` markers separately from `found` ones.
 - **Seat spend.** The sweep is the most expensive kind of step: opus with pixel reads. Per-run
-  sweeping (D3) triples the work at `runs = 3` (84 run-findings against 28 comments on
-  `b80e5075`), and runs that agree will often be marked on the same spot. D3's
-  filter bounds it to the fail/warn items that cite a sheet.
+  sweeping (D3) triples the work at `runs = 3`, which is every current CC review (59–135
+  fail/warn runs against 21–46 drawn comments, D3 table), and runs that agree will often be
+  marked on the same spot. G1 (`expected-here`) and G2 (documents) widen the markable
+  set further. D3's filter bounds it to fail/warn runs that cite a sheet or document. The
+  cost is accepted (G4). Q7's shape reuse is the remaining lever.
 - **Constants pinned on one side only.** The geometry limits (`review_annotation_geometry.py`)
   were "pinned with substation". Substation is archived, and cityhall carries none of them,
   so bureau is now the only enforcer. That is fine, but the docstrings should say so.
