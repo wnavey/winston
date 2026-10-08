@@ -675,7 +675,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
         <span class="t">Pick the slice, decide mark or skip, pick the sheet</span>
         <span class="q">"A skip is a correct outcome, not a failure." · "A comment's <code>sheets[]</code> is the list to sweep, not a first guess."</span>
         <span class="io"><b>decides</b>which comments are its discipline's, whether each one is a location at all, and the sheet, written as the staged ordinal <code>"07"</code></span>
-        <span class="cc">CC: the guide's fail/warn runs (D3). An absence with a slot gets <code>expected-here</code> (D2). The sheet comes from that run's <code>sheetReferences</code>, or a document page is chosen (D15).</span>
+        <span class="cc">CC: the guide's fail/warn runs (D3). An absence with a slot gets <code>missing</code> (D2). The sheet comes from that run's <code>sheetReferences</code>, or a document page is chosen (D15).</span>
       </div>
       <div class="af-x"></div>
       <div class="af-none">no script</div>
@@ -757,7 +757,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
           <span class="t">Read the crop, answer with a shape</span>
           <span class="q">"Answer … in crop-local coordinates … <code>evidence</code> is what you can actually read inside the shape."</span>
           <span class="io"><b>writes</b><code>correction.json</code>: a point, a 3–12-vertex polygon or <code>blank</code>, in 0–1000 over the crop, with the evidence text. <b>Every vertex comes from here.</b></span>
-          <span class="cc">CC: also decides <code>found</code> or <code>expected-here</code> (D2).</span>
+          <span class="cc">CC: also decides <code>incorrect</code> or <code>missing</code> (D2).</span>
         </div>
         <div class="af-x"></div>
         <div class="af-none">no script</div>
@@ -799,7 +799,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
         <span class="q">"Never type them into the command." (evidence and label go in files)</span>
         <span class="io"><b>types</b>ref, sheet, kind, <code>--points</code> (the 0–1 points, retyped from <code>remap-result.json</code>), <code>source_finding_ref</code>, the evidence and label files, and this pass's crop-meta</span>
         <span class="gap"><code>--points</code> is never compared with <code>remap-result.json</code>'s <code>unit</code> (<code>annotate-write.ts:134-150</code>)</span>
-        <span class="cc">CC: <code>--run run-k</code>, that run's sheets and sources, <code>document_id</code> + <code>page</code>, <code>--role expected-here</code>, on CC's own writer (D5).</span>
+        <span class="cc">CC: <code>--run run-k</code>, that run's sheets and sources, <code>document_id</code> + <code>page</code>, <code>--marking-type missing</code>, on CC's own writer (D5).</span>
       </div>
       <div class="af-x">
         <div class="c"><span class="l">annotate-write</span><span class="ln">▸</span></div>
@@ -1003,7 +1003,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
     <a class="sys-edge chg" data-from="c-12" data-to="c-212">seeds, PDFs</a>
   </div>
   <div class="sys-refs">
-    <a class="refrow new" data-ref="D2"><span class="chip">D2</span><span class="txt">mark what is drawn (found), and an absence that has a visible slot (expected-here); the agent decides, any sheet or document</span></a>
+    <a class="refrow new" data-ref="D2"><span class="chip">D2</span><span class="txt">mark what is drawn wrong (incorrect, red), and an absence that has a visible slot (missing, yellow); the agent decides, any sheet or document</span></a>
     <a class="refrow chg" data-ref="D9"><span class="chip">D9</span><span class="txt">opt-in request flag; off writes SKIPPED.md and leaves the envelope byte-identical (parity)</span></a>
   </div>
   <div class="sys-legend"><span><i></i>exists today</span><span><i class="chg"></i>changed</span><span><i class="new"></i>new</span></div>
@@ -1016,7 +1016,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
     <div class="dq"><span class="q">Does this run cite at least one plan sheet?</span><span class="yes">no →</span><span class="out warn">merge writes a sheetless nothing-to-mark ("cites no sheet")</span></div>
     <div class="dno">yes ↓ on its guide's roster; seed from the block this run cited</div>
     <div class="dq"><span class="q">Is the deficiency a drawn thing, or an absence with a visible slot (blank field, empty cell, unchecked Yes/No)?</span><span class="yes">neither →</span><span class="out warn">nothing-to-mark ("absence with no slot"); the app keeps the cited-block outline</span></div>
-    <div class="dno">yes ↓ role = found (drawn) or expected-here (the empty slot, narrower than the citation)</div>
+    <div class="dno">yes ↓ marking_type = incorrect (drawn wrong) or missing (the empty slot, narrower than the citation)</div>
     <div class="dq"><span class="q">Located with confidence within 3 passes?</span><span class="yes">yes →</span><span class="out">annotated, stored on perRunFindings[k]</span></div>
     <div class="dno">no ↓</div>
     <div class="dq end"><span class="q">otherwise</span><span class="yes"></span><span class="out fail">not-located</span></div>
@@ -1033,9 +1033,9 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
     <thead><tr><th>Piece</th><th>Today</th><th>After</th></tr></thead>
     <tbody>
       <tr><td>crop · remap · seam-check · refine · draw</td><td><code>runbooks/review/scripts/</code></td><td><b>shared</b>: <code>runbooks/lib/annotate/</code>, unchanged (they never see a comment)</td></tr>
-      <tr><td>geometry rules · sidecar writer · annotation object</td><td><code>lib/annotate-validate.ts</code> + <code>review_annotation_geometry.py</code>, once pinned with substation (now archived)</td><td><b>shared</b>: same rules for both lanes, plus <code>role</code> (D2); the docstrings name bureau as the only enforcer</td></tr>
+      <tr><td>geometry rules · sidecar writer · annotation object</td><td><code>lib/annotate-validate.ts</code> + <code>review_annotation_geometry.py</code>, once pinned with substation (now archived)</td><td><b>shared</b>: same rules for both lanes, plus <code>marking_type</code> (D2); the docstrings name bureau as the only enforcer</td></tr>
       <tr><td>loop mechanics (prompt text)</td><td>inside the review's sweep prompt</td><td><b>shared as text</b>: <code>runbooks/lib/annotate/loop-rules.md</code>, carried verbatim in both prompts and test-enforced, like <code>block-name-rule.md</code></td></tr>
-      <tr><td>what to mark (prompt text)</td><td>review: skip absences</td><td><b>per runbook</b>: the review keeps its rule and its writer refuses <code>expected-here</code>; CC marks <code>expected-here</code> (D2)</td></tr>
+      <tr><td>what to mark (prompt text)</td><td>review: skip absences</td><td><b>per runbook</b>: the review keeps its rule and its writer refuses <code>missing</code>; CC marks <code>missing</code> (D2)</td></tr>
       <tr><td>write · disposition-write (record checks)</td><td>review only: <code>comments[].ref</code>, <code>sheets[]</code>, <code>sources[]</code>, checked only when present</td><td><b>per runbook</b>: CC's own writers find <code>sourceFindings[0].ref</code> + <code>--run run-k</code>, check that run's sheets, documents and checklist ref, and refuse what they cannot check</td></tr>
       <tr><td>merge · disposition-check</td><td>folds into <code>comments[]</code></td><td><b>per runbook</b>: CC's own merge folds into <code>sections[].comments[]…perRunFindings[k]</code>, copies the winning run's markers (D12) and writes dispositions for runs off the roster</td></tr>
       <tr><td>seed ladder</td><td>drawing block → whole sheet in quadrants</td><td>a <b>cited block box</b> first (D4), then the same ladder</td></tr>
@@ -1045,7 +1045,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 
   <h3 id="detail-ui">How the app picks what to draw on a CC sheet (D8)</h3>
   <div class="dflow">
-    <div class="dq"><span class="q">Does the comment's output_json carry annotations on this sheet (label → sheet_map)?</span><span class="yes">yes →</span><span class="out">draw markers (markersOn), the same as the review</span></div>
+    <div class="dq"><span class="q">Does the comment's output_json carry annotations on this sheet (label → sheet_map)?</span><span class="yes">yes →</span><span class="out">draw markers (markersOn): incorrect red, missing yellow, selected blue (D8)</span></div>
     <div class="dno">no ↓</div>
     <div class="dq"><span class="q">Does it cite a block with a bounding_box on this sheet?</span><span class="yes">yes →</span><span class="out warn">outline the cited block while the item is open (today's behaviour)</span></div>
     <div class="dno">no ↓</div>
@@ -1138,7 +1138,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
       <div class="row add"><span class="gut">+</span><span class="b b-new">NEW</span><span class="nm">document_id</span><span class="ty">uuid · a document this run cites</span></div>
       <div class="row add"><span class="gut">+</span><span class="b b-new">NEW</span><span class="nm">page</span><span class="ty">int ≥ 1 · ≤ staged page_count</span></div>
       <div class="row add"><span class="gut">+</span><span class="b b-new">NEW</span><span class="nm">file_sha256</span><span class="ty">the staged source.pdf</span></div>
-      <div class="row add"><span class="gut">+</span><span class="b b-new">NEW</span><span class="nm">role</span><span class="ty">optional · "expected-here" (v3, D2); absent = found</span></div>
+      <div class="row add"><span class="gut">+</span><span class="b b-new">NEW</span><span class="nm">marking_type</span><span class="ty">optional · "missing" (v3, D2); absent = incorrect</span></div>
       <div class="note">Exactly one target per marker: a sheet, or a (document_id, page).</div>
     </div>
     <div class="ent changed">
@@ -1206,7 +1206,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
   <div class="spectable-scroll"><table class="spectable">
     <thead><tr><th>Q</th><th>Question</th><th>Proposed default</th></tr></thead>
     <tbody>
-      <tr><td><span class="sn">Q1</span></td><td>Should absences stay unmarked, or get a new <code>expected-here</code> kind?</td><td><b>Answered in v3:</b> an absence with a visible slot gets an <code>expected-here</code> marker (optional <code>role</code>); the agent decides, no sheet/document rule (D2)</td></tr>
+      <tr><td><span class="sn">Q1</span></td><td>Should absences stay unmarked, or get a new <code>missing</code> kind?</td><td><b>Answered in v3:</b> an absence with a visible slot gets an <code>missing</code> marker (optional <code>role</code>); the agent decides, no sheet/document rule (D2)</td></tr>
       <tr><td><span class="sn">Q2</span></td><td>Sweep grain: one worker per guide, or one for the whole run?</td><td>Per guide: about 84 run-findings at runs = 3</td></tr>
       <tr><td><span class="sn">Q3</span></td><td>annotate model: opus-5.5 high, or try sonnet-5.5?</td><td>Opus, matching the review's proven sweep</td></tr>
       <tr><td><span class="sn">Q4</span></td><td>Markers on supplementary documents (forms, reports)?</td><td><b>Answered in v2:</b> in scope (Documents tab)</td></tr>
