@@ -482,7 +482,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 
 </style>
 </head>
-<body class="reader" data-back="architecture.html" data-spec-sha="7cefbac237fe3c69">
+<body class="reader" data-back="architecture.html" data-spec-sha="7ff540fa017864c4">
 
 <header class="masthead">
   <div class="kicker">SPEC · READER</div>
@@ -502,7 +502,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 **Status:** Draft v3
 **Date:** 2026-10-08
 **Repos touched (proposed):** `bureau` (shared annotate kit lifted out of `runbooks/review/scripts/`; a new `2.12-annotate` step family in `runbooks/completeness-check/`; the stager writes block boxes; lane B of `publish_review.py` validates and stamps markings), `cityhall` (the CC adapter reads `annotations` / `annotation_disposition` the way the August adapter does; v2: the pdf.js document viewer draws markings on a page)
-**Repos NOT touched:** `substation` (archived; its `supabase/` now lives in `cityhall`), `inspector-general`, `claude-plugins`. `conductor2` is touched only if Q13 (a) is chosen (v3, D23): a best-effort input edge
+**Repos NOT touched:** `substation` (archived; its `supabase/` now lives in `cityhall`), `conductor2` (D23 needs no best-effort edge; 2.12's contracts always pass), `inspector-general`, `claude-plugins`
 
 > **In one paragraph.** The review runbook already places "markings" (points and 3–12-vertex
 > polygons, normalised 0–1 over a plan sheet) on its comments. A separate step,
@@ -591,7 +591,10 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 >   review publishes with the rest. If the merge produces nothing, publish falls back to
 >   2.9's envelope. CC's merge is drop-and-log, not the review's all-or-nothing.
 >   `nothing-to-mark` and `not-located` are outcomes, not failures. conductor2 has no "go on
->   after a failure" edge, so Q13 is new, and on-by-default waits on it.
+>   after a failure" edge (Q13). Will's answer is that 2.12's contracts always pass and the
+>   merge does the checking. conductor2 measures a contract after every session, timeouts
+>   included, so this needs no conductor2 change. A seat park (75) remains, as a delay rather
+>   than a failure.
 >
 > **Revision note (v2, 2026-10-07): markings on non-plan-set documents.** Will asked for
 > markings on supplementary documents too (application forms, letters, reports), now that
@@ -1106,13 +1109,43 @@ roll-up precedence becomes `annotated` > `not-swept` > `not-located` > `nothing-
 gap the system caused shows ahead of the agent's own. cityhall's disposition reader
 (`readPlanMarkup`, D8) shows it as "not swept (marking failed)".
 
-**How "never blocks" holds in conductor2.** conductor2 blocks every reader of a node that
-failed (exit 1, 76, 77) or parked (75) (conductor2 `README.md`, "Trust the exit code"). Its
-two input modifiers do not help. `?` means the path may be absent, but it still orders. `??`
-orders nothing, so a reader could run before the sweep finishes (`src/model.rs:536-545`).
-There is no edge that means "wait for this, then go on whether it succeeded or not". If
-2.10 named `2.12-annotate` as a plain input, one dead sweep worker would hold the review.
-Q13 asks how to get that edge. Until it is answered, P2 does not ship on by default (D9).
+**How "never blocks" holds: the annotate steps always pass, and the merge does the checking
+(v3, G10, Will's design).** In conductor2, a step finishing and a step passing are one event.
+A node's exit code is its contract's verdict, and readers launch only on 0. A failing
+contract sends the agent back into its own session (`--max-retries`, default 2) and then
+exits 1, which blocks every reader (conductor2 `README.md`, "Trust the exit code"). So
+2.12's contracts are written to pass whenever the step ran, and the step after them checks
+the work:
+
+- **Sweep worker contract:** passes whenever the session ended. Every output is optional
+  (`annotations/*.json?`, `disposition/*.json?`, `logs/*.md?`). It checks nothing about
+  count, coverage or validity. conductor2 measures the contract after every session,
+  including one that hit its `timeout_secs` (`src/verbs/agent.rs`, the after-contract
+  branch), so a timed-out or crashed worker exits 0 too.
+- **Merge** (a script): never exits non-zero. It compares the (guide, run) roster with what
+  each worker left, folds what is valid, writes `not-swept` for every gap, and appends a
+  `tool-bugs.md` line for each failure in the table above. It always writes an envelope,
+  falling back to a copy of 2.9's. Its contract checks only that the envelope exists, and
+  it can be kept trivial enough that it cannot fail to run.
+- `2.10-validate` and `3.1-publish` read the merge's envelope as a plain input.
+
+No conductor2 change. `tool-bugs.md` is unaffected, because it is written during the session
+and by the merge, and contracts already allow it at any depth. Two things change against
+today's agent steps:
+- **No in-session retry.** A worker that writes a bad sidecar is not sent back to fix it. The
+  merge drops the sidecar, records `not-swept` and logs it.
+- **conductor's ledger shows every sweep worker as done.** The failure record is the
+  `tool-bugs.md` line plus the disposition, which is what G10 asks for.
+
+**What a passing contract cannot cover:**
+- **A seat park (exit 75).** A worker that never gets a seat never runs, so it has no
+  contract to pass. A local pass sleeps and retries for up to six hours. A cloud pass exits
+  75 and the run waits for a seat (conductor2 `README.md`, "Which seat a step spends"). That
+  delays the publish rather than failing it, and `2.1-review`'s workers already carry the
+  same exposure, so it is accepted.
+- **Exit 76 (unmeasurable contract) and exit 77 (strays from another process).** The worker
+  contract is kept trivial so that it cannot error. Its outputs are declared broadly enough
+  that its siblings' shared `annotations/` and `disposition/` files are never strays.
 
 ### 3.2 What changes, by repo
 
@@ -1319,7 +1352,9 @@ dir>` builds the next seed from the previous `remap-result.json`, and `annotate-
 rules (`loop-rules.md`, D5) say so, and both runbooks gain the fix.
 
 **Q13 (v3, G10).** How does `2.10-validate` wait for `2.12-annotate` without being blocked
-by its failure (D23)? conductor2 has no such edge today. Options:
+by its failure (D23)? conductor2 has no such edge today.
+**Answered in v3 (Will): 2.12's contracts always pass and the merge checks (D23).** No
+conductor2 change is needed. The options considered: Options:
 - **(a) A small conductor2 feature:** a best-effort input, for example `- 2.12-annotate!`.
   It orders like a plain input, but the reader launches once that node is terminal in any
   state: done, failed, or parked past a deadline. The reader then finds out from the folder
@@ -1327,7 +1362,7 @@ by its failure (D23)? conductor2 has no such edge today. Options:
 - **(b) Bureau only:** `2.12-annotate` becomes one `runner: script` step that drives its
   sweep workers itself, as a sub-run, and always exits 0.
 
-Proposed: (a). It keeps the sweep a normal foreach with per-worker ledger rows and partial
+First proposed: (a), now superseded by the answer above, which needs neither. (a) kept the sweep a normal foreach with per-worker ledger rows and partial
 credit (G6). It is a few lines in conductor2's scheduler, and it moves `conductor2` from
 "not touched" to "touched". (b) hides the workers from the run graph. Either way, every
 annotate worker gets a `timeout_secs` on its runner preset (D11), so a hung sweep ends as a
