@@ -78,6 +78,13 @@
 >   switches per comment today (`placed-markers.ts:70`, `tourOf`), so marking one sheet would
 >   hide the outlines on all the others. D8 now changes both to per sheet, and §1.3 records
 >   the current behaviour.
+> - **G9 = Q11: the verdict step records `pageNumber` on supplementary-document citations
+>   (new D22).** It is optional and 1-based. It is read from the section page ranges, using
+>   the first page of a multi-page section, and omitted when no range covers the evidence.
+>   It is carried through `cc.py` and `build-review-comments.ts`, both of which drop it
+>   today. Every cited document opens at its page, and the sweep gets a rung-0 page. It is
+>   its own PR (P2b), checked by a subset CC run plus one `cc-compare` loop for verdicts and
+>   a hand check of about 20 pages.
 >
 > **Revision note (v2, 2026-10-07): markings on non-plan-set documents.** Will asked for
 > markings on supplementary documents too (application forms, letters, reports), now that
@@ -577,7 +584,15 @@ field, because the run is implied by where the object sits.
   watch are `missing` markers that point at nothing (D2 guards), document `not-located` (Q9),
   and the step's wall clock (D3).
 
-**Land order (v3, G7): P1, then P3, then P2.** P2 ships on by default, so the publish
+- **P2b Document page numbers in 2.1 (v3, G9, D22).** Its own bureau PR. Checked with one
+  CC run of the Lamar + Collier v4 baseline: a **subset** of the guides that cite
+  supplementary documents (subset runs are cc-compare's normal case), with
+  `annotate: false`, then one `cc-compare` loop on it. The pass bar is a scorecard no worse
+  than the last loop's. cc-compare compares only final statuses, so it shows whether the new
+  instruction moved any verdict. It does not check pages. Pages are checked by hand: open
+  about 20 document citations at their `pageNumber` and confirm each lands on its evidence.
+
+**Land order (v3, G7, G9): P1 and P2b, then P3, then P2.** P2 ships on by default, so the publish
 validation and both app renderers (P3) go first. P3's bureau half is inert until a record
 carries markers, and its cityhall half draws nothing until then, so landing it early is
 safe.
@@ -827,6 +842,7 @@ fail/warn run citing a document, the worker reads that run's `label`, `observati
 `comment`, and that document's `overview.md`. From those it picks candidate pages,
 narrowest first:
 
+0. the run's own `pageNumber` on that citation, when 2.1 recorded one (v3, D22);
 1. a page the label names;
 2. the page range of the section the label names;
 3. the whole document, in page order, for a document of **10 pages or fewer** (v3, Q10).
@@ -869,7 +885,8 @@ version (`readCitedDocuments`, `sheets/read.ts:128-171`).
 - **The overlay reuses `SheetMarkers`' geometry**, an SVG with viewBox 0–1, with
   `pointer-events` only on the shapes so text selection still works. It uses the same
   `missing` style as sheets (D2, D8).
-- **`?doc=` gains `&page=N`**, which opens the viewer at the marker's page.
+- **`?doc=` gains `&page=N`**, which opens the viewer at the marker's page. A cited document
+  with no marker opens at the citation's `pageNumber` (D22) when it has one, else page 1.
 - **The document row in the `IssuePanel`** lists that document's markers, each as "page N",
   and its disposition, the same as sheet rows.
 - **`AnnotationView` becomes a union of sheet and document targets.** `markersOn` keeps
@@ -888,12 +905,44 @@ No new review-level key is needed.
 kit and the validators are shared (D5). Whether the formal review's sweep marks document
 findings is that runbook's own decision, and this spec does not change it.
 
+**D22. The verdict step records a page for every supplementary-document citation (v3,
+grill G9; answers Q11).** `2.1-review`'s `evidenceLocations` gain an optional
+**`pageNumber`** (integer, 1-based) on a citation of a supplementary document, meaning any
+`documentId` that is not the plan set. A sheet citation never carries it, because
+`sheetNumber` is already its page. This is a deliberate change to the verdict step, so CC
+parity with the legacy runner no longer binds it. The verdicts themselves must not move,
+which is what the check below measures.
+
+- **Where the page comes from.** The worker sees documents through the staged transcriptions
+  and the vision tool, which analyses a document as a whole (prompt `:37`). So the page is read
+  off the section page ranges in `overview.md` (`Section 4: Engineer Information (3)`) and in
+  each section file's header (D17). The prompt rule is to cite the page the evidence is on
+  when its section covers one page, and the section's **first** page when it covers several.
+  Never guess: omit `pageNumber` when no page range covers the evidence. The marker's page
+  (D13, D15) is still the exact page, because the sweep reads pixels.
+- **Where it travels**, three places that drop unknown keys today:
+  - the 2.1 emit schema, prompt (`:225`, `:299`) and contract (`contract.test.ts:23`
+    `EvidenceLocation`);
+  - `cc.py` `canonicalize`, which coerces `"3"` to `3` as it already does for
+    `sheetNumber` / `blockNumber`;
+  - `workflows/completeness-check/scripts/build-review-comments.ts`, both the comment-level
+    `docRefs` (`:246`) and each `perRunFindings[k].documentReferences` (`:381`), which today
+    map a citation to `{documentId, label}` only. They become
+    `{documentId, label, pageNumber?}`.
+- **Stored:** `documentReferences[].pageNumber` in `review_comments.output_json`, at the
+  comment level and per run. It is additive and optional, and there is no DB change. The app
+  reads it for `&page=` (D19).
+- **Uses:** every cited document opens at its page in cityhall#293's viewer, whether marked
+  or not, and the sweep gets a rung-0 page (D15).
+- **Ships as its own PR, before P2,** checked as described in P2b (§3.3).
+
 ### 7.3 Stored shape (no schema change)
 
 | Where | v2 adds |
 |---|---|
 | annotation object (comment level and `perRunFindings[k]`) | `document_id` + `page` + `file_sha256` on a document marker, as the alternative to `sheet` + `sheet_sha256` |
 | `annotation_disposition` | a `documents[]` array beside `sheets[]`: `{document_id, page?, status, reason}` |
+| `documentReferences[]` (comment level and `perRunFindings[k]`) | optional `pageNumber` (v3, D22) |
 | `reviews.output_json` | nothing new: the app needs no map for documents |
 | DB tables | **none**: no `document_page`, no `page_count` column, no `content_block` rows for documents |
 
@@ -934,3 +983,5 @@ counts are the maximum of each document's `document_section.page_range`.
 `evidenceLocations`? That would let every document citation, marked or not, open at its
 page (cityhall#293 already has the viewer prop). It touches the verdict step's schema, so
 it is a parity decision. Proposed: a separate small change after P2.
+**Answered in v3 (grill G9): yes, now, as its own PR before P2 (D22).** Verdict-step parity
+no longer binds this change. The check is that verdicts do not move (§3.3 P2b).
