@@ -942,7 +942,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 <!-- ============================== ROLLOUT ============================== -->
 <section class="panel" id="rollout">
   <h2><span class="eyebrow">Rollout</span>Four phases, app before data</h2>
-  <p class="lede">P1 changes no CC behaviour, and P2 ships behind a flag that is off by default. P3 lands the app reader before any CC review carries markers. P4 decides whether to turn it on by default.</p>
+  <p class="lede">P1 changes no CC behaviour, and P2 ships behind a flag that is off by default. P3 lands both app renderers (sheets and the pdf.js document viewer) before any CC review carries markers. P4 decides whether to turn it on by default.</p>
 
   <div class="sysmap" style="grid-template-columns:.6fr repeat(4,1fr)">
     <div class="colh" style="grid-area:1/1">trigger</div>
@@ -952,24 +952,18 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
     <div class="colh" style="grid-area:1/5">runs</div>
     <div class="sys trig" id="p-t" style="grid-area:2/1"><span class="dot"></span><span class="t">spec approved</span></div>
     <div class="sys" id="p-1" style="grid-area:2/2"><a class="ref" href="#detail-kit">P1 ↓</a><span class="k">bureau</span><span class="t">Shared kit</span><span class="d">move scripts, block boxes</span></div>
-    <div class="sys" id="p-2" style="grid-area:2/3"><a class="ref" href="#detail-cc-graph">P2 ↓</a><span class="k">bureau</span><span class="t">CC step</span><span class="d">2.12-annotate behind a flag</span></div>
-    <div class="sys" id="p-3" style="grid-area:2/4"><a class="ref" href="#detail-ui">P3 ↓</a><span class="k">bureau · cityhall</span><span class="t">Publish + app</span><span class="d">app reader lands first</span></div>
+    <div class="sys" id="p-2" style="grid-area:2/3"><a class="ref" href="#detail-cc-graph">P2 ↓</a><span class="k">bureau</span><span class="t">CC step</span><span class="d">sheets + documents, behind a flag</span></div>
+    <div class="sys" id="p-3" style="grid-area:2/4"><a class="ref" href="#detail-ui">P3 ↓</a><span class="k">bureau · cityhall</span><span class="t">Publish + app</span><span class="d">sheet + pdf.js renderers land first</span></div>
     <div class="sys" id="p-4" style="grid-area:2/5"><a class="ref" href="#detail-cc-roster">P4 ↓</a><span class="k">runs</span><span class="t">Score, default on</span><span class="d">hard-item sets</span></div>
     <a class="sys-edge" data-from="p-t" data-to="p-1"></a>
     <a class="sys-edge" data-from="p-1" data-to="p-2">kit</a>
     <a class="sys-edge" data-from="p-2" data-to="p-3">markers</a>
     <a class="sys-edge" data-from="p-3" data-to="p-4">visible</a>
-    <div class="sys" id="p-5" style="grid-area:3/3"><a class="ref" href="#detail-doc-sweep">P5 ↓</a><span class="k">bureau</span><span class="t">Documents: producer</span><span class="d">page targets, stager fields</span></div>
-    <div class="sys" id="p-6" style="grid-area:3/4"><a class="ref" href="#detail-doc-ui">P6 ↓</a><span class="k">cityhall</span><span class="t">Documents: viewer</span><span class="d">page overlay, &amp;page=</span></div>
-    <a class="sys-edge" data-from="p-2" data-to="p-5">same flag</a>
-    <a class="sys-edge" data-from="p-5" data-to="p-6">doc markers</a>
   </div>
   <div class="sys-refs">
     <a class="refrow" data-ref="P1"><span class="chip">P1</span><span class="txt">shared annotate kit and block boxes; the review runbook still passes its tests</span></a>
-    <a class="refrow" data-ref="P2"><span class="chip">P2</span><span class="txt">2.12-annotate with annotate: false by default, plus contract tests</span></a>
-    <a class="refrow" data-ref="P3"><span class="chip">P3</span><span class="txt">lane B validation and sheet_map; cityhall CC adapter reads markers</span></a>
-    <a class="refrow" data-ref="P5"><span class="chip">P5</span><span class="txt">document targets in the shared kit, sweep, merge and lane B, behind the same flag</span></a>
-    <a class="refrow" data-ref="P6"><span class="chip">P6</span><span class="txt">the pdf.js page overlay and &amp;page=, landing before any CC review carries document markers</span></a>
+    <a class="refrow" data-ref="P2"><span class="chip">P2</span><span class="txt">2.12-annotate marks plan sheets and document pages in one sweep, annotate: false by default, plus contract tests (v3: v2's P5 folded in)</span></a>
+    <a class="refrow" data-ref="P3"><span class="chip">P3</span><span class="txt">lane B validation and sheet_map; cityhall CC adapter reads markers and the pdf.js viewer draws document markers (v3: v2's P6 folded in)</span></a>
     <a class="refrow" data-ref="P4"><span class="chip">P4</span><span class="txt">score markers on WhiteWater and 2008 San Antonio, then flip the default</span></a>
   </div>
   <div class="sys-legend"><span><i></i>phase (none started)</span></div>
@@ -987,9 +981,9 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
       <tr><td><span class="sn">Q6</span></td><td>When is the flag good enough to default on?</td><td>No wrongly placed marker among 20 audited</td></tr>
       <tr><td><span class="sn">Q7</span></td><td>Mark each run independently, or reuse a sibling run's shape for the same block?</td><td>Independent (as D3 says); reuse is cheaper but couples the runs</td></tr>
       <tr><td><span class="sn">Q8</span></td><td>Does the formal review runbook want document markings too?</td><td>Its own call; the kit supports it at no cost</td></tr>
-      <tr><td><span class="sn">Q9</span></td><td>Should preprocessing-v4 publish per-section page regions?</td><td>Only if document not-located is high after P5</td></tr>
+      <tr><td><span class="sn">Q9</span></td><td>Should preprocessing-v4 publish per-section page regions?</td><td>Only if document not-located is high in P4</td></tr>
       <tr><td><span class="sn">Q10</span></td><td>Cap of 6 pages per (run, document)?</td><td>Yes, bounds spend on 500-page reports</td></tr>
-      <tr><td><span class="sn">Q11</span></td><td>Optional pageNumber on CC document citations?</td><td>Separate small change after P5 (a parity decision)</td></tr>
+      <tr><td><span class="sn">Q11</span></td><td>Optional pageNumber on CC document citations?</td><td>Separate small change after P2 (a parity decision)</td></tr>
     </tbody>
   </table></div>
 </section>

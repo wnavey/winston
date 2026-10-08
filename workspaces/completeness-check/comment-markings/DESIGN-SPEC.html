@@ -425,7 +425,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 
 </style>
 </head>
-<body class="reader" data-back="architecture.html" data-spec-sha="1a78b76a2e9d334a">
+<body class="reader" data-back="architecture.html" data-spec-sha="9347a109a75d7d4c">
 
 <header class="masthead">
   <div class="kicker">SPEC · READER</div>
@@ -471,6 +471,10 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 >   D13 and D19 gain the role. §3.4, §4 and §5 are updated. The motivating case is CC review
 >   `d36b7aad`: a "required fields" fail that cites whole application sections, where the
 >   reader needs the 2 blank questions, not every field outlined.
+> - **Q2 answered: documents ship with plan sheets.** v2's P5 (document targets in the
+>   producer) folds into P2, and P6 (the pdf.js page overlay) folds into P3. One
+>   `2.12-annotate` sweep marks sheets and document pages in the same pass, and P4 scores
+>   both before the default flips. P5 and P6 no longer exist. §3.3 and §7.4 are rewritten.
 >
 > **Revision note (v2, 2026-10-07): markings on non-plan-set documents.** Will asked for
 > markings on supplementary documents too (application forms, letters, reports), now that
@@ -845,13 +849,19 @@ field, because the run is implied by where the object sits.
 
 - **P1 Shared kit.** Do D5 and D4 in bureau. The review runbook's examples and tests pass
   unchanged, except for the extra seed rung. This phase has no CC behaviour change.
-- **P2 CC step.** `2.12-annotate` behind `annotate: false` (D1–D3, D9–D11). Contract tests:
-  every roster comment has a disposition for every sheet it cites; markers validate.
-- **P3 Publish + app.** Lane B validation and `sheet_map` (D6, D7), then cityhall D8. Land
-  the app change first: until it ships, a published CC review stores markings that nothing
-  draws, which is harmless.
+- **P2 CC step, sheets and documents together (v3).** `2.12-annotate` behind
+  `annotate: false` (D1–D3, D9–D11), with document targets in the same sweep (D13, D15–D18):
+  the stager's document fields (D17), the page-finding rules (D15), the non-PDF disposition
+  (D16) and the document checks in the kit's validators (D18). Contract tests: every roster
+  run has a disposition for every sheet **and document** it cites, and markers validate.
+- **P3 Publish + app, both renderers (v3).** Lane B validation and `sheet_map` (D6, D7), plus
+  the document checks (D18). Then cityhall: the CC adapter (D8) **and** the pdf.js page
+  overlay with `&page=` (D19). Land the app change first: until it ships, a published CC
+  review stores markings that nothing draws, which is harmless. The overlay edits the
+  viewer that cityhall#293 shipped, so P3's cityhall PR waits until #293 is settled on main.
 - **P4 Score and default on.** Run `annotate: true` on the two hard-item submissions, audit
-  the markers visually in the app, and flip the default (D9).
+  sheet and document markers visually in the app, and flip the default (D9). Score
+  `found` and `expected-here` separately (D2).
 
 ---
 
@@ -1138,12 +1148,11 @@ findings is that runbook's own decision, and this spec does not change it.
 
 ### 7.4 Phases
 
-- **P5 Documents in the producer.** D13 shape and validators in the shared kit, D17 stager
-  fields, D15/D16 in the `2.12-annotate` sweep prompt and merge, D18 in lane B. This ships
-  behind the same `annotate` flag. It can land with P2 or right after it.
-- **P6 Documents in the app.** D19: the `PdfViewer` overlay slot and drawer fix, `&page=`,
-  document marker rows. Land it before any CC review carries document markers, as P3 does
-  for sheets.
+**v3 (Q2): no separate document phases.** v2 had P5 (documents in the producer) and P6
+(documents in the app) after P4. Both fold into the main sequence (§3.3): the producer half
+into P2 and the viewer half into P3, so the first release and the P4 score cover documents.
+The reason is that documents are the more markable half: about a third of failing runs cite
+one, and blank form fields are the clearest `expected-here` case (D2).
 
 ### 7.5 Open questions (v2)
 
@@ -1154,7 +1163,7 @@ the CC.
 (`document_section.regions jsonb [{page, box}]`)? Today it renders every page at 200 DPI and
 discards the renders. Regions would give the sweep a tight seed, and the app could outline a
 cited section the way it outlines a cited block. The cost is a box-discovery pass per page,
-which is heavy on a 582-page report. Proposed: build it only if P5's `not-located` rate on
+which is heavy on a 582-page report. Proposed: build it only if P4's `not-located` rate on
 documents is high, and Will is fine with the scope.
 
 **Q10.** Is a cap of 6 pages per (run, document) right? It bounds spend on 500-page
@@ -1163,7 +1172,7 @@ reports, at the price of `not-located` when a label is vague.
 **Q11.** Should the CC emit schema gain an optional `pageNumber` on document
 `evidenceLocations`? That would let every document citation, marked or not, open at its
 page (cityhall#293 already has the viewer prop). It touches the verdict step's schema, so
-it is a parity decision. Proposed: a separate small change after P5.
+it is a parity decision. Proposed: a separate small change after P2.
 
 </script>
 <script data-marked>
