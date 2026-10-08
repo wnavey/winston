@@ -1120,7 +1120,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
     <div class="dno">yes ↓ pick candidate pages, narrowest first</div>
     <div class="dq"><span class="q">Does the label name a page, or a section with a page_range?</span><span class="yes">yes →</span><span class="out">render those pages with annotate-crop --page N</span></div>
     <div class="dno">no ↓</div>
-    <div class="dq"><span class="q">Is it a short document (1–3 pages)?</span><span class="yes">yes →</span><span class="out">render its pages in order</span></div>
+    <div class="dq"><span class="q">Is it a short document (10 pages or fewer)?</span><span class="yes">yes →</span><span class="out">render its pages in order</span></div>
     <div class="dno">no ↓</div>
     <div class="dq"><span class="q">Found and located within 6 pages and 3 passes?</span><span class="yes">yes →</span><span class="out">annotated: document_id + page + points</span></div>
     <div class="dno">no ↓</div>
@@ -1210,14 +1210,14 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
       <tr><td><span class="sn">Q2</span></td><td>Sweep grain: one worker per guide, or one for the whole run?</td><td>Per guide: about 84 run-findings at runs = 3</td></tr>
       <tr><td><span class="sn">Q3</span></td><td>annotate model: opus-5.5 high, or try sonnet-5.5?</td><td>Opus, matching the review's proven sweep</td></tr>
       <tr><td><span class="sn">Q4</span></td><td>Markers on supplementary documents (forms, reports)?</td><td><b>Answered in v2:</b> in scope (Documents tab)</td></tr>
-      <tr><td><span class="sn">Q5</span></td><td>Multiple plan sets collide on <code>sheet-NN</code>, and the app reads only one</td><td>Shared by both runbooks; a separate spec</td></tr>
+      <tr><td><span class="sn">Q5</span></td><td>Multiple plan sets collide on <code>sheet-NN</code>, and the app reads only one</td><td><b>Answered (research):</b> a separate spec. All 38 prod submission versions with a plan set have exactly one.</td></tr>
       <tr><td><span class="sn">Q6</span></td><td>When is the flag good enough to default on?</td><td>No wrongly placed marker among 20 audited</td></tr>
       <tr><td><span class="sn">Q7</span></td><td>Mark each run independently, or reuse a sibling run's shape for the same block?</td><td>Independent (as D3 says); reuse is cheaper but couples the runs</td></tr>
       <tr><td><span class="sn">Q8</span></td><td>Does the formal review runbook want document markings too?</td><td>Its own call; the kit supports it at no cost</td></tr>
       <tr><td><span class="sn">Q9</span></td><td>Should preprocessing-v4 publish per-section page regions?</td><td>Only if document not-located is high in P4</td></tr>
-      <tr><td><span class="sn">Q10</span></td><td>Cap of 6 pages per (run, document)?</td><td>Yes, bounds spend on 500-page reports</td></tr>
+      <tr><td><span class="sn">Q10</span></td><td>Cap of 6 pages per (run, document)?</td><td><b>Answered (research):</b> 6 pages for long documents; a document of 10 pages or fewer is read whole (the 8-page CC Application draws 107 of 254 citations)</td></tr>
       <tr><td><span class="sn">Q11</span></td><td>Optional pageNumber on CC document citations?</td><td>Separate small change after P2 (a parity decision)</td></tr>
-      <tr><td><span class="sn">Q12</span></td><td>Should the shared kit take over the agent's two hand copies (next seed from remap; final points into <code>annotate-write</code>)?</td><td>Yes, in P1: <code>--seed-from</code> and <code>--from-remap</code>, so <code>correction.json</code> is the agent's only numeric output</td></tr>
+      <tr><td><span class="sn">Q12</span></td><td>Should the shared kit take over the agent's two hand copies (next seed from remap; final points into <code>annotate-write</code>)?</td><td><b>Answered (research):</b> yes, in P1. <code>remap-result.json</code> already holds the next seed (<code>sheet</code>) and the stored points (<code>unit</code>)</td></tr>
     </tbody>
   </table></div>
 </section>

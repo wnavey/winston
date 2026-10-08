@@ -57,6 +57,12 @@
 >   colour means selection only (`sheet-markers.tsx:47`). The immediate use is the colour;
 >   separate P4 scoring is a side benefit. D2 and D8 are updated, and G1's text now uses the
 >   new names.
+> - **Answered by code and prod research, not grilled:** Q5 (every prod submission version
+>   has one plan set, so it stays a separate spec), Q10 (6-page cap for long documents, and
+>   a document of 10 pages or fewer is read whole, because the 8-page CC Application draws
+>   107 of 254 document citations), and Q12 (the kit takes over both hand copies in P1;
+>   `remap-result.json` already has the seed's and the writer's shapes). D15 rung 3 is
+>   updated.
 >
 > **Revision note (v2, 2026-10-07): markings on non-plan-set documents.** Will asked for
 > markings on supplementary documents too (application forms, letters, reports), now that
@@ -610,6 +616,10 @@ profile?
 **Q5.** Multiple plan sets per submission. The stager names folders `sheet-NN` by each
 plan set's own sheet number, so two sets collide. The app's sheets view reads only one plan
 set. This is shared by both runbooks: fix it here, or leave it for a separate spec?
+**Answered by research (v3, 2026-10-08): a separate spec, and not needed now.** In prod,
+all 38 submission versions that carry a plan set have exactly one `plan_set_version`. That
+includes the 14 with a CC or annotated review. The collision cannot occur on any submission
+the feature would run on today.
 
 **Q6.** Default-on criterion for D9: what marker precision on the hard-item sets is good
 enough? One proposal: no wrongly placed marker among 20 audited.
@@ -628,6 +638,15 @@ at least shows that copy. At step 9 it copies the final 0–1 `unit` points into
 kit take both over, with `annotate-crop --seed-from <prev pass dir>` and
 `annotate-write --from-remap <pass dir>`, so that `correction.json` is the agent's only
 numeric output? Proposed: yes, in P1, which fixes the review runbook too.
+**Answered by research (v3, 2026-10-08): yes, in P1.** The two hand copies are mechanical,
+and the files already line up. `remap-result.json` carries `kind` plus `sheet`, which is
+`SheetPoint[]` in sheet 0–1000 (`annotate-remap.ts:125-134`). That is exactly the
+`polygon` / `point` form of a `Seed` (`lib/annotate-refine.ts:29-32`). It also carries
+`unit`, the 0–1 points `annotate-write` stores. So `annotate-crop --seed-from <prev pass
+dir>` builds the next seed from the previous `remap-result.json`, and `annotate-write
+--from-remap <pass dir>` reads `kind` and `unit` from the same file it already opens for
+`converged`. `--points` and `--kind` are removed from the writer. The sweep prompts' loop
+rules (`loop-rules.md`, D5) say so, and both runbooks gain the fix.
 ---
 
 ## 7. Markings on non-plan-set documents (v2)
@@ -732,9 +751,9 @@ narrowest first:
 
 1. a page the label names;
 2. the page range of the section the label names;
-3. the document's first page, for a 1–3 page document.
+3. the whole document, in page order, for a document of **10 pages or fewer** (v3, Q10).
 
-It opens **at most 6 pages** per (run, document) (Q10). A 500-page report is never
+For a longer document it opens **at most 6 pages** per (run, document) (Q10). A 500-page report is never
 scanned, and a run whose label names nothing findable ends in `not-located` with a reason.
 The page it lands on is recorded in the marker, which is the page number the CC emit
 schema lacks. `2.1-review` is untouched, so verdict parity holds (D9). Adding an optional
@@ -822,6 +841,16 @@ documents is high, and Will is fine with the scope.
 
 **Q10.** Is a cap of 6 pages per (run, document) right? It bounds spend on 500-page
 reports, at the price of `not-located` when a label is vague.
+**Answered by research (v3, 2026-10-08): 6 pages for long documents; a document of 10
+pages or fewer may be read whole.** The 7 `runs = 3` CC reviews since 2026-10-01 carry 254
+document citations on fail/warn runs, across 12 documents. The most-cited document is the
+**8-page** CC Application, with 107 of the 254 citations. A flat cap of 6 would block a
+whole read of the one document that `missing` markers (D2) target most. Long documents
+account for 65 of the 254 citations: a 50-page Engineer's Report (55) and a 582-page one
+(10). That is where the cap matters. Labels usually name a part of the document: 202 of 254
+name a section, exhibit, table, form, field, signature or seal; 10 name a page; and 50 name
+neither. The section `page_range`s (D15 rung 2) cover most of the long-document cases. Page
+counts are the maximum of each document's `document_section.page_range`.
 
 **Q11.** Should the CC emit schema gain an optional `pageNumber` on document
 `evidenceLocations`? That would let every document citation, marked or not, open at its
