@@ -3,7 +3,7 @@
 **Status:** Draft v3
 **Date:** 2026-10-08
 **Repos touched (proposed):** `bureau` (shared annotate kit lifted out of `runbooks/review/scripts/`; a new `2.12-annotate` step family in `runbooks/completeness-check/`; the stager writes block boxes; lane B of `publish_review.py` validates and stamps markings), `cityhall` (the CC adapter reads `annotations` / `annotation_disposition` the way the August adapter does; v2: the pdf.js document viewer draws markings on a page)
-**Repos NOT touched:** `substation` (archived; its `supabase/` now lives in `cityhall`), `conductor2`, `inspector-general`, `claude-plugins`
+**Repos NOT touched:** `substation` (archived; its `supabase/` now lives in `cityhall`), `inspector-general`, `claude-plugins`. `conductor2` is touched only if Q13 (a) is chosen (v3, D23): a best-effort input edge
 
 > **In one paragraph.** The review runbook already places "markings" (points and 3–12-vertex
 > polygons, normalised 0–1 over a plan sheet) on its comments. A separate step,
@@ -86,6 +86,13 @@
 >   its own PR (P2b), checked on 2008 San Antonio guide `cc-1` (33 items, about 24 document
 >   citations): one CC run, one `cc-compare` loop against reviews `b80e5075` / `76570a10` (a
 >   new `2008-san-antonio` baseline), and a hand check of every page.
+> - **G10: annotation never blocks publishing, and every failure is logged (new D23).** Any
+>   failure, however small (one comment of one run), appends a line to the `tool-bugs.md` of
+>   the step that saw it. The failed piece becomes a new `not-swept` disposition, and the
+>   review publishes with the rest. If the merge produces nothing, publish falls back to
+>   2.9's envelope. CC's merge is drop-and-log, not the review's all-or-nothing.
+>   `nothing-to-mark` and `not-located` are outcomes, not failures. conductor2 has no "go on
+>   after a failure" edge, so Q13 is new, and on-by-default waits on it.
 >
 > **Revision note (v2, 2026-10-07): markings on non-plan-set documents.** Will asked for
 > markings on supplementary documents too (application forms, letters, reports), now that
@@ -553,6 +560,61 @@ markers stay in the stored record for IG and audit (`sourceFindings` is already 
 trace the app shows under Votes). The annotation object's shape is unchanged, with no `run`
 field, because the run is implied by where the object sits.
 
+**D23. Annotation never blocks publishing, and every annotation failure is a
+`tool-bugs.md` line (v3, grill G10).** Markings are a supplementary, bonus product of the CC.
+Whatever happens inside `2.12-annotate`, `2.10-validate` and `3.1-publish` run and the CC
+review publishes. The review runbook's shape is deliberately not copied: its `4.1-publish`
+depends hard on `3.13-annotate`. Three outcomes, best first:
+
+1. **All markers:** every swept (comment, run, target) has its outcome.
+2. **Partial markers:** whatever failed is recorded as a new disposition status,
+   **`not-swept`**, with the failure as its reason. Everything else publishes normally, and
+   the sheets view falls back to cited-block outlines on a `not-swept` sheet (G8).
+3. **No markers:** if the merge itself cannot produce an envelope, 2.10 and 3.1 use
+   `2.9-comments`' envelope, exactly the `annotate: false` path (D9).
+
+**What counts as a failure, each one logged however small.** Every failure appends one line
+to `tool-bugs.md` in the folder of the step that saw it. That is AGENTS-core rule 14's file,
+and contracts already allow it at any depth (`contract-helpers.ts:727`). Each line names the
+tool, what happened, the (guide, run, comment ref, sheet or document page) it cost, and
+where the evidence is. A separate spec will read these files; this one only guarantees they
+are written.
+
+| Failure | Who sees it | Result |
+|---|---|---|
+| A sweep worker exits non-zero, times out, parks, or never gets a seat | the merge, from the roster against the worker's missing output | `not-swept` for every (comment, run) of that (guide, run), + line |
+| An annotate script exits non-zero inside a worker (crop render, remap, writer or disposition-writer refusal), **even when the worker recovered** | the worker | line in the worker's own `tool-bugs.md`. Under CC's prompt this is required, not discretionary |
+| A sidecar the merge rejects (invalid, orphan, conflict) | the merge | that sidecar is dropped alone, its (comment, run, target) becomes `not-swept`, + line |
+| A (comment, run) left with no disposition after the fold | the merge's coverage check | `not-swept`, + line, where the review runbook's gate would fail the step |
+| A comment over the 20-marker cap | the merge | first 20 kept in marker order, + line |
+| The merge crashes or writes no envelope | `2.10-validate`, falling back to 2.9's envelope | + line in 2.10's `tool-bugs.md` |
+| Lane B drops or blunts a marker, or reconciles a sheet to `not-located` (D7) | `3.1-publish` | + line in 3.1's `tool-bugs.md` |
+
+**Not failures:** `nothing-to-mark` and `not-located`. They are the sweep's correct answers
+(D2), so they stay in the disposition and are not logged.
+
+**CC's merge is drop-and-log, not all-or-nothing.** The review's merge refuses the whole fold
+on one bad sidecar, because an operator is there to fix it and re-run before the human gate.
+The CC has no such gate, and markings must not hold back the review. So CC's own merge (D5,
+per runbook) drops the bad piece, records `not-swept`, and logs it. Nothing is lost
+silently, because every drop is both a disposition and a `tool-bugs.md` line. The rule 14
+lines from scripts (the merge, 2.10's fallback, lane B) are an extension of a rule written
+for agents, and these scripts append them themselves.
+
+**`not-swept` in the stored shape.** It is a disposition status beside `annotated`,
+`nothing-to-mark` and `not-located`, valid per sheet, per document and comment-level. The
+roll-up precedence becomes `annotated` > `not-swept` > `not-located` > `nothing-to-mark`: a
+gap the system caused shows ahead of the agent's own. cityhall's disposition reader
+(`readPlanMarkup`, D8) shows it as "not swept (marking failed)".
+
+**How "never blocks" holds in conductor2.** conductor2 blocks every reader of a node that
+failed (exit 1, 76, 77) or parked (75) (conductor2 `README.md`, "Trust the exit code"). Its
+two input modifiers do not help. `?` means the path may be absent, but it still orders. `??`
+orders nothing, so a reader could run before the sweep finishes (`src/model.rs:536-545`).
+There is no edge that means "wait for this, then go on whether it succeeded or not". If
+2.10 named `2.12-annotate` as a plain input, one dead sweep worker would hold the review.
+Q13 asks how to get that edge. Until it is answered, P2 does not ship on by default (D9).
+
 ### 3.2 What changes, by repo
 
 | Repo | Change |
@@ -756,6 +818,21 @@ dir>` builds the next seed from the previous `remap-result.json`, and `annotate-
 --from-remap <pass dir>` reads `kind` and `unit` from the same file it already opens for
 `converged`. `--points` and `--kind` are removed from the writer. The sweep prompts' loop
 rules (`loop-rules.md`, D5) say so, and both runbooks gain the fix.
+
+**Q13 (v3, G10).** How does `2.10-validate` wait for `2.12-annotate` without being blocked
+by its failure (D23)? conductor2 has no such edge today. Options:
+- **(a) A small conductor2 feature:** a best-effort input, for example `- 2.12-annotate!`.
+  It orders like a plain input, but the reader launches once that node is terminal in any
+  state: done, failed, or parked past a deadline. The reader then finds out from the folder
+  what happened.
+- **(b) Bureau only:** `2.12-annotate` becomes one `runner: script` step that drives its
+  sweep workers itself, as a sub-run, and always exits 0.
+
+Proposed: (a). It keeps the sweep a normal foreach with per-worker ledger rows and partial
+credit (G6). It is a few lines in conductor2's scheduler, and it moves `conductor2` from
+"not touched" to "touched". (b) hides the workers from the run graph. Either way, every
+annotate worker gets a `timeout_secs` on its runner preset (D11), so a hung sweep ends as a
+failure the merge logs, not as a wait.
 ---
 
 ## 7. Markings on non-plan-set documents (v2)
