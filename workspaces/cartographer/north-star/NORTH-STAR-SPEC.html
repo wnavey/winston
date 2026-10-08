@@ -1,0 +1,1134 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cartographer north star — anchored geometry for every site</title>
+<style>
+/* ============================================================
+   spec-kit v5.2  —  winston HTML spec design system
+   Inline the ENTIRE contents of this file into the spec's style block.
+   Canonical source: ~/.claude/skills/winston-spec/assets/spec-kit.css
+   When you change this file, bump the version above and in COMPONENTS.md.
+   v4: + sequence diagram (.seq*), + data table (.spectable), + prompt block (.prompt)
+   v5: + system map (.sysmap/.sys, edges drawn by spec-kit.js), + decision flow (.dflow),
+       + concept figure (figure.concept), + claim caption (.claim), + reference chip rows (.sys-refs),
+       + spec reader page (body.reader; DESIGN-SPEC.md rendered by marked, built by inline-kit.py --spec)
+   v5.1: pass-2 friction fixes — long identifiers wrap (.sys .t, .uc .nt, .ent .ty), .sysmap-scroll for
+       6+ columns, state-neutral .sm pills, .dflow jump outcomes, legend 'new trigger' dot
+   v5.2: + two-lane activity flow (.af) — an agent and the tools it calls, prompt fragment per step
+       Colour rule: fill/border = change state only; kind = badge text + shape; legend is the
+       complete list of colour meanings on the page.
+   ============================================================ */
+
+:root{
+  /* steel-blue ramp (matches cityhall / Noetic report surfaces) */
+  --p50:#f0f5f9;--p100:#dce8f1;--p200:#b9d2e5;--p300:#8cb4d1;--p400:#6397b8;
+  --p500:#517e9e;--p600:#3f6582;--p700:#35526b;--p800:#2d4559;--p900:#273b4b;--p950:#182530;
+  --bg:#f9f9f9;--card:#ffffff;--divider:#dfdfdf;--ink:#1f2937;--muted:#6b7280;--ember:#bb4d00;
+  /* semantic: new / changed / retired */
+  --new:#15803d;--newbg:#f0fdf4;--newbd:#bbf7d0;
+  --chg:#b45309;--chgbg:#fffbeb;--chgbd:#fde68a;
+  --ret:#b91c1c;--retbg:#fef2f2;--retbd:#fecaca;
+  --sans:'Lexend',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  --serif:'Lora',Georgia,'Times New Roman',serif;
+  --mono:'Fira Code','SF Mono',ui-monospace,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.55;font-size:15px}
+
+/* ---------- masthead ---------- */
+header.masthead{background:linear-gradient(135deg,var(--p800),var(--p600));color:#fff;padding:34px 32px 30px;position:relative;overflow:hidden}
+header.masthead::after{content:"";position:absolute;inset:0;background-image:repeating-linear-gradient(115deg,rgba(255,255,255,.06) 0 1px,transparent 1px 26px);pointer-events:none}
+header.masthead .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--p200)}
+header.masthead h1{font-family:var(--serif);font-weight:600;margin:.35em 0 .2em;font-size:29px;position:relative}
+header.masthead p{margin:0;color:var(--p100);max-width:880px;font-size:15px}
+header.masthead .meta{margin-top:14px;font-size:12.5px;color:var(--p200);font-family:var(--mono)}
+
+/* ---------- tabs ---------- */
+nav.tabs{position:sticky;top:0;z-index:20;display:flex;gap:2px;background:var(--p950);padding:0 20px;box-shadow:0 2px 8px rgba(0,0,0,.12);flex-wrap:wrap}
+nav.tabs button{appearance:none;border:0;background:transparent;color:var(--p200);font-family:var(--sans);font-size:14px;font-weight:500;padding:14px 18px;cursor:pointer;border-bottom:3px solid transparent;transition:all .15s}
+nav.tabs button .n{font-family:var(--mono);font-size:11px;opacity:.7;margin-right:7px}
+nav.tabs button:hover{color:#fff;background:rgba(255,255,255,.04)}
+nav.tabs button.active{color:#fff;border-bottom-color:var(--ember);background:rgba(255,255,255,.06)}
+
+/* ---------- layout ---------- */
+main{max-width:1140px;margin:0 auto;padding:30px 26px 90px}
+.panel{display:none;animation:fade .25s ease}
+main [id]{scroll-margin-top:74px} /* deep-link targets clear the sticky tab bar */
+.panel.active{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* Section heading: the h2 text is the PLAIN NAME of the thing the tab is about (v5.1 — it used to
+   carry a tagline while the small eyebrow carried the name; that was backwards). .eyebrow = the
+   tab number / section label, small. .sub = one plain sentence saying what is on the tab. */
+h2{font-family:var(--serif);font-weight:700;font-size:30px;line-height:1.15;letter-spacing:-.01em;margin:34px 0 10px;color:var(--p950)}
+h2:first-child{margin-top:4px}
+h2 .eyebrow{display:block;font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--p500);font-weight:400;margin-bottom:6px}
+h2 .sub{display:block;font-family:var(--sans);font-size:14px;font-weight:400;letter-spacing:0;line-height:1.5;color:var(--muted);margin-top:6px}
+h3{font-size:16px;font-weight:600;margin:28px 0 8px;color:var(--p800);display:flex;align-items:center;gap:9px}
+h3 .hn{font-family:var(--mono);font-size:12px;color:#fff;background:var(--p600);border-radius:5px;padding:2px 8px}
+h4{font-size:14px;font-weight:600;margin:18px 0 6px;color:var(--p800)}
+p{margin:.55em 0}
+.lede{font-size:15px;color:var(--p800);border-left:3px solid var(--ember);padding-left:16px;margin:12px 0 20px}
+ul{margin:.4em 0;padding-left:22px}li{margin:.28em 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px solid var(--p100);border-radius:4px;padding:1px 5px;color:var(--p800)}
+
+/* ---------- callout ---------- */
+.callout{background:var(--p50);border:1px solid var(--p200);border-left:4px solid var(--p500);border-radius:8px;padding:13px 17px;margin:16px 0}
+.callout.ember{background:#fdf6f0;border-color:#f0cba8;border-left-color:var(--ember)}
+.callout.new{background:var(--newbg);border-color:var(--newbd);border-left-color:var(--new)}
+.callout .lab{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--p600);font-weight:600;display:block;margin-bottom:3px}
+.callout.ember .lab{color:var(--ember)} .callout.new .lab{color:var(--new)}
+
+/* ---------- legend ---------- */
+.legend{display:flex;flex-wrap:wrap;gap:9px 16px;background:#fff;border:1px solid var(--divider);border-radius:10px;padding:12px 16px;margin:16px 0;font-size:12px;align-items:center}
+.legend .k{display:inline-flex;align-items:center;gap:6px}
+.swatch{width:26px;height:14px;border-radius:3px;display:inline-block;border:1px solid rgba(0,0,0,.15)}
+
+/* ---------- shared field badges (used by entity rows + legend) ---------- */
+.b{font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.04em;padding:1px 4px;border-radius:3px;text-transform:uppercase;white-space:nowrap}
+.b-pk{background:#fef3c7;color:#92600a;border:1px solid #fde68a}
+.b-fk{background:#e0edfb;color:#2456a8;border:1px solid #c3d8f2}
+.b-nn{background:#eef1f4;color:#4b5563;border:1px solid #d7dde3}
+.b-new{background:var(--newbg);color:var(--new);border:1px solid var(--newbd)}
+
+/* ============================================================
+   ER / UML entity boxes
+   ============================================================ */
+.erd{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start;margin:16px 0;background:#fbfcfd;border:1px solid var(--divider);border-radius:12px;padding:18px}
+.ent{border:1px solid var(--divider);border-radius:9px;overflow:hidden;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.05);min-width:236px;flex:0 1 auto}
+.ent .eh{padding:7px 12px;color:#fff;display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.ent .eh .en{font-family:var(--mono);font-size:12.5px;font-weight:700;letter-spacing:.02em}
+.ent .eh .stereo{font-size:9.5px;font-family:var(--mono);opacity:.85;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}
+.ent.exist .eh{background:var(--p700)}
+.ent.newt .eh{background:var(--new)}
+.ent.changed .eh{background:var(--chg)}
+.ent.retired .eh{background:#9ca3af}
+.ent.retired{opacity:.72}
+.ent .row{display:flex;align-items:center;gap:7px;padding:4px 11px;font-size:11.5px;border-top:1px solid #eef1f4}
+.ent .row:first-of-type{border-top:0}
+.ent .row .nm{font-family:var(--mono);font-size:11.5px;color:var(--p900);font-weight:600}
+.ent .row .ty{font-family:var(--mono);font-size:10px;color:var(--muted);margin-left:auto;text-align:right;max-width:60%;overflow-wrap:anywhere}
+.ent .row.hi{background:#fff9f2}
+.ent .row.strk .nm{text-decoration:line-through;color:var(--muted)}
+.ent .note{padding:5px 11px;font-size:10px;color:var(--muted);font-style:italic;border-top:1px dashed #e5e9ee;background:#fbfcfd}
+/* diff rows — show a table modification (column added / removed), git-style.
+   Put a "+"/"−" marker in a .gut span at the start of the row. */
+.ent .row .gut{flex:0 0 10px;width:10px;text-align:center;font-family:var(--mono);font-size:11px;font-weight:700;color:var(--muted)}
+.ent .row.add{background:var(--newbg);box-shadow:inset 3px 0 0 var(--new)}
+.ent .row.add .gut{color:var(--new)}
+.ent .row.add .nm{color:#166534}
+.ent .row.del{background:var(--retbg);box-shadow:inset 3px 0 0 var(--ret)}
+.ent .row.del .gut{color:var(--ret)}
+.ent .row.del .nm{color:var(--ret);text-decoration:line-through}
+
+/* relationships panel — crow's-foot text notation */
+.rels{background:#fff;border:1px solid var(--divider);border-radius:10px;padding:12px 16px;margin:14px 0;font-family:var(--mono);font-size:12px;line-height:1.9}
+.rels .rl{display:block;color:var(--p800)}
+.rels .rl b{color:var(--ember)}
+.rels .cf{color:var(--p500);font-weight:700}
+.rels .cmt{color:var(--muted);font-style:normal;font-family:var(--sans);font-size:11.5px}
+.rels .tag-new{color:var(--new);font-weight:700}
+.rels .tag-ret{color:var(--ret);font-weight:700}
+.rels-h{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--p600);font-weight:700;margin-bottom:6px}
+
+/* ============================================================
+   Use-case scene  (an action + its boxes-and-arrows diagram)
+   ============================================================ */
+.uc{margin:16px 0 22px;border:1px solid var(--divider);border-radius:12px;overflow:hidden;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.uc .uch{display:flex;align-items:center;gap:13px;padding:11px 16px;background:linear-gradient(135deg,var(--p700),var(--p600));color:#fff}
+.uc .uch .ucn{flex:0 0 30px;height:30px;border-radius:50%;background:rgba(255,255,255,.2);font-family:var(--mono);font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.uc .uch .uctxt{flex:1}
+.uc .uch .actor{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--p100);display:block;margin-bottom:1px}
+.uc .uch .uct{font-weight:600;font-size:15.5px;font-family:var(--serif)}
+.uc .ucsub{padding:9px 16px;font-size:12.5px;color:var(--p800);background:var(--p50);border-bottom:1px solid var(--p100)}
+.uc .ucdiag{padding:20px 16px 14px}
+.ucnote{padding:2px 16px 14px;font-size:11.5px;color:var(--muted)}
+.ucnote b{color:var(--p700);font-family:var(--mono);font-size:10.5px}
+
+/* ============================================================
+   Boxes-and-arrows flow
+   Robustness rules baked in:
+   - .dfg WRAPS (flex-wrap:wrap) so long chains never clip / never
+     need horizontal scroll. Arrows reflow with the nodes.
+   - .node is a flex COLUMN: the op-badge is an in-flow header row
+     (never position:absolute), and .nt / .nf are block-level, so a
+     table name and its fields can never smush onto one line.
+   ============================================================ */
+.dfg{display:flex;flex-wrap:wrap;align-items:stretch;gap:8px 0;margin:0}
+.node{flex:0 0 auto;width:156px;background:#fff;border:1.5px solid var(--p300);border-radius:8px;padding:9px 11px;display:flex;flex-direction:column;gap:3px}
+.node .op{align-self:flex-start;font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:1px 6px;border-radius:3px;border:1px solid;color:#fff;margin-bottom:2px}
+.node .nt{display:block;font-family:var(--mono);font-weight:700;font-size:12px;color:var(--p900);line-height:1.3;overflow-wrap:anywhere}
+.node .nf{display:block;font-family:var(--mono);font-size:10px;color:var(--muted);line-height:1.45;word-break:break-word}
+.node.created{border-color:var(--new);background:var(--newbg)} .node.created .op{background:var(--new);border-color:var(--new)}
+.node.read{border-color:var(--p400);background:#eef4fb} .node.read .op{background:var(--p500);border-color:var(--p500)}
+.node.event{border-color:var(--ember);background:#fdf6f0} .node.event .op{background:var(--ember);border-color:var(--ember)}
+.node.store{border-style:dashed;border-color:var(--p500);background:#eef3f7} .node.store .op{background:var(--p700);border-color:var(--p700)}
+.edge{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:70px;max-width:104px;padding:0 4px}
+.edge .el{font-size:9px;color:var(--p600);font-family:var(--mono);text-align:center;line-height:1.3;margin-bottom:2px}
+.edge .ar{color:var(--p400);font-size:20px;font-weight:700;line-height:1}
+
+/* ============================================================
+   Card grid  (keep / change / drop comparisons)
+   ============================================================ */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:820px){.grid2{grid-template-columns:1fr}.erd{padding:12px}}
+.card{background:var(--card);border:1px solid var(--divider);border-radius:9px;padding:14px 16px}
+.card.keep{border-top:3px solid var(--new)} .card.change{border-top:3px solid var(--chg)} .card.drop{border-top:3px solid var(--ret)}
+.card strong{display:block;margin-bottom:4px;font-size:13.5px}
+.card ul{font-size:12.5px;margin:2px 0}
+
+/* ============================================================
+   Lifecycle / state machine
+   ============================================================ */
+.sm{display:flex;flex-wrap:wrap;gap:7px;align-items:center;margin:14px 0}
+.sm .s{border:1px solid var(--p300);background:var(--p50);border-radius:20px;padding:5px 12px;font-size:11.5px;font-weight:600;color:var(--p800);font-family:var(--mono)}
+.sm .s .who{display:block;font-size:9px;font-family:var(--mono);color:var(--muted);font-weight:400;text-transform:uppercase;letter-spacing:.03em}
+.sm .s.client{border-color:var(--newbd);background:var(--newbg)}
+.sm .s.cc{border-color:#f0cba8;background:#fdf6f0}
+.sm .s.spec{border-color:var(--chgbd);background:var(--chgbg)}
+.sm .a{color:var(--p400);font-weight:700}
+/* state-neutral variants (v5.1): terminal-good / terminal-stop / dimmed. The .client/.cc/.spec
+   colours mean "whose court" and need a legend if used. */
+.sm .s.ok{border-color:var(--newbd);background:var(--newbg);color:var(--new)}
+.sm .s.stop{border-color:var(--retbd);background:var(--retbg);color:var(--ret)}
+.sm .s.dim{opacity:.6;border-style:dashed}
+
+/* ============================================================
+   Use-case catalog — grouped list of candidate use cases
+   (a scoped list, NOT a diagram — for "what would we build" inventories)
+   ============================================================ */
+.catgrp{border:1px solid var(--divider);border-radius:10px;overflow:hidden;margin:14px 0;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.catgrp .cath{background:var(--p700);color:#fff;padding:8px 14px;font-family:var(--serif);font-weight:600;font-size:14.5px;display:flex;align-items:center;gap:10px}
+.catgrp .cath .cgl{font-family:var(--mono);font-size:12px;font-weight:700;background:rgba(255,255,255,.2);border-radius:5px;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;flex:0 0 22px}
+.uci{display:flex;gap:9px;align-items:baseline;padding:7px 13px;border-top:1px solid #eef1f4;font-size:13px}
+.uci .uid{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--p600);flex:0 0 26px}
+.uci .utxt{flex:1;color:var(--ink);line-height:1.45}
+.uci .utxt b{color:var(--p900)}
+.uci .star{color:var(--ember);font-weight:700;font-size:12px;flex:0 0 auto;letter-spacing:-1px}
+.uci.later{opacity:.66}
+.utag{font-family:var(--mono);font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;text-transform:uppercase;letter-spacing:.03em;white-space:nowrap;flex:0 0 auto}
+.utag.t-orig{background:#e0edfb;color:#2456a8;border:1px solid #c3d8f2}
+.utag.t-add{background:var(--newbg);color:var(--new);border:1px solid var(--newbd)}
+
+/* ============================================================
+   Misc: storage strip, cross-reference box
+   ============================================================ */
+.storage{background:#eef3f7;border:1px dashed var(--p300);border-radius:8px;padding:9px 13px;font-family:var(--mono);font-size:12px;color:var(--p800);margin:12px 0}
+.storage b{color:var(--ember)}
+.xref{font-size:12px;color:var(--p600);background:var(--p50);border:1px solid var(--p100);border-radius:6px;padding:8px 12px;margin:10px 0}
+.foot{margin-top:44px;padding-top:18px;border-top:1px solid var(--divider);color:var(--muted);font-size:12px;font-family:var(--mono)}
+
+/* actor / repo chips (optional, for inline actor tags in prose) */
+.rc{display:inline-block;font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;padding:1px 6px;border-radius:5px;border:1px solid;vertical-align:middle;white-space:nowrap}
+.r-ch{background:#eef4fb;color:#2456a8;border-color:#c3d8f2}
+.r-sub{background:#f3eefb;color:#6b3fa0;border-color:#dcccf0}
+.r-fa{background:#e9f7f2;color:#0f7a5f;border-color:#bfe8db}
+.r-db{background:#eaeef2;color:#2d4559;border-color:#c7d2dd}
+.r-store{background:#e6eef3;color:#35526b;border-color:#bcd0dd}
+.r-user{background:#eefaf0;color:#15803d;border-color:#bbf7d0}
+.r-mcp{background:#fdf0e6;color:#b5590d;border-color:#f2d3b3}
+
+/* ============================================================
+   Sequence diagram — swimlane message flow
+   A CSS grid: col 1 = step number, then one column per actor lane.
+   Each message is a grid item that SPANS grid-columns from its
+   source lane to its target lane, so it always sits under the right
+   headers and never smushes. Continuous lifelines are grid items
+   spanning all rows (grid-row:1/-1) — so set .seq-body's
+   grid-template-rows to repeat(STEP_COUNT, auto) for -1 to resolve.
+   Wide diagrams scroll inside .seq-scroll, never the page body.
+   Direction is an in-flow glyph (.dir ◂/▸) pushed to the target edge
+   by justify-content:space-between — never position:absolute.
+   ============================================================ */
+.seq-scroll{overflow-x:auto;margin:16px 0;border:1px solid var(--divider);border-radius:12px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.seq{min-width:840px}
+.seq-head,.seq-body{display:grid;grid-template-columns:30px repeat(6,minmax(104px,1fr))}
+.seq-head{background:linear-gradient(135deg,var(--p800),var(--p700));padding:11px 12px}
+.seq-h{display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;padding:0 4px}
+.seq-h .role{font-family:var(--mono);font-size:8.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--p200)}
+.seq-h .who{font-family:var(--mono);font-size:11px;font-weight:700;color:#fff;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.24);border-radius:6px;padding:3px 9px}
+.seq-body{position:relative;row-gap:11px;padding:16px 12px 20px}
+.seq-life{width:2px;background:var(--p100);justify-self:center;border-radius:2px;z-index:0}
+.seq-num{grid-column:1;justify-self:center;align-self:center;font-family:var(--mono);font-size:10px;font-weight:700;color:#fff;background:var(--p600);min-width:19px;height:19px;padding:0 3px;border-radius:10px;display:flex;align-items:center;justify-content:center;z-index:1}
+.seq-msg{align-self:center;display:flex;flex-direction:row;align-items:center;gap:8px;justify-content:space-between;background:#fff;border:1.5px solid var(--p300);border-radius:7px;padding:5px 10px;z-index:1;min-width:0}
+.seq-msg .mt{display:flex;flex-direction:column;gap:1px;min-width:0}
+.seq-msg .m{font-family:var(--mono);font-size:10.5px;color:var(--p900);font-weight:700;line-height:1.32;word-break:break-word}
+.seq-msg .m2{font-family:var(--mono);font-size:9.5px;color:var(--muted);line-height:1.3;word-break:break-word}
+.seq-msg .dir{font-size:14px;font-weight:700;color:var(--p500);flex:0 0 auto}
+.seq-msg.write{border-color:var(--new);background:var(--newbg)} .seq-msg.write .dir{color:var(--new)}
+.seq-msg.event{border-color:var(--ember);background:#fdf6f0} .seq-msg.event .dir{color:var(--ember)}
+.seq-msg.ret{border-style:dashed;background:#f6f9fb} .seq-msg.ret .m{font-weight:500;color:var(--p600)}
+.seq-msg.self{border-style:dashed;border-color:var(--p400);background:#eef3f7}
+.seq-foot{display:flex;flex-wrap:wrap;gap:8px 15px;padding:9px 14px;border-top:1px solid var(--divider);background:#fbfcfd;font-size:10.5px;font-family:var(--mono);color:var(--muted);align-items:center}
+.seq-foot .sw{display:inline-block;width:20px;height:11px;border-radius:3px;border:1.5px solid var(--p300);vertical-align:middle;margin-right:5px}
+.seq-foot .sw.write{border-color:var(--new);background:var(--newbg)} .seq-foot .sw.event{border-color:var(--ember);background:#fdf6f0}
+.seq-foot .sw.ret{border-style:dashed;background:#f6f9fb} .seq-foot .sw.self{border-style:dashed;border-color:var(--p400);background:#eef3f7}
+
+/* ============================================================
+   Data table — for step→entity maps and any tabular spec content.
+   Wrap in .spectable-scroll so wide tables scroll, not the page.
+   ============================================================ */
+.spectable-scroll{overflow-x:auto;margin:14px 0}
+.spectable{width:100%;border-collapse:collapse;font-size:12.5px;background:#fff;border:1px solid var(--divider);border-radius:10px;overflow:hidden}
+.spectable thead th{background:var(--p700);color:#fff;font-family:var(--mono);font-size:10px;letter-spacing:.04em;text-transform:uppercase;text-align:left;padding:8px 12px;font-weight:700;white-space:nowrap}
+.spectable tbody td{padding:7px 12px;border-top:1px solid #eef1f4;vertical-align:top;line-height:1.5}
+.spectable tbody tr:nth-child(even){background:#fbfcfd}
+.spectable td .sn{font-family:var(--mono);font-weight:700;color:#fff;background:var(--p600);border-radius:9px;padding:1px 7px;font-size:10.5px}
+.spectable td code{font-size:11px}
+.spectable td .none{color:var(--muted);font-style:italic;font-family:var(--sans)}
+.spectable td .w{color:var(--new);font-weight:700} /* write */
+.spectable td .r{color:var(--p500);font-weight:700} /* read/return */
+
+/* ============================================================
+   Prompt / code block — a readable mono block (LLM prompts, snippets).
+   White-space preserved; scrolls horizontally inside itself.
+   ============================================================ */
+.prompt{background:#fbfcfd;border:1px solid var(--p200);border-left:4px solid var(--p500);border-radius:8px;padding:12px 15px;margin:12px 0;font-family:var(--mono);font-size:11.5px;line-height:1.6;color:var(--p900);white-space:pre-wrap;overflow-x:auto}
+.prompt .ph{display:block;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--p600);font-weight:700;margin-bottom:6px}
+
+
+/* ============================================================
+   System map (.sysmap)  —  the Overview diagram.  v5
+   A CSS grid of nodes placed with grid-area:row/col. Column 1 is
+   always the TRIGGER (a start-dot, no box). Edges are authored as
+   hidden <a class="sys-edge" data-from data-to>label</a> and drawn as
+   SVG by spec-kit.js after layout (no hand-typed coordinates).
+   COLOUR = CHANGE STATE ONLY: white exists · amber .chg · green .new ·
+   red-dashed .gap. KIND = badge TEXT + shape (.ext dashed, .store
+   cylinder bottom, .trig dot). Badges are one colour except on
+   changed/new nodes, where they take the node's change colour.
+   ============================================================ */
+.sysmap{position:relative;display:grid;gap:40px 64px;padding:28px 16px 22px;background:#fff;border:1px solid var(--divider);border-radius:12px;margin:14px 0 6px}
+.sysmap-scroll{overflow-x:auto;margin:14px 0 6px} .sysmap-scroll .sysmap{margin:0;min-width:max-content} /* 6+ columns: use grid-template-columns:repeat(N,minmax(150px,1fr)) inside .sysmap-scroll */
+.sysmap .colh{font-family:var(--mono);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--p500);text-align:center;padding-bottom:6px;border-bottom:1px dashed var(--p200);align-self:end}
+.sys{position:relative;z-index:2;background:#fff;border:1.5px solid var(--p300);border-radius:9px;padding:9px 11px 8px;min-height:64px;display:flex;flex-direction:column;gap:2px;align-self:center}
+.sys .k{align-self:flex-start;font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:1px 6px;border-radius:3px;color:#fff;background:var(--p500);margin-bottom:2px}
+.sys .t{font-weight:600;font-size:12.5px;line-height:1.3;color:var(--p900);overflow-wrap:anywhere}
+.sys .d{font-family:var(--mono);font-size:9.5px;color:var(--muted);line-height:1.4}
+.sys.ext{border-style:dashed}
+.sys.store{border-radius:4px 4px 14px 14px}
+.sys.new{border-color:var(--new);background:var(--newbg);box-shadow:0 0 0 3px #dcfce7}.sys.new .k{background:var(--new)}
+.sys.chg{border-color:var(--chg);background:var(--chgbg)}.sys.chg .k{background:var(--chg)}
+/* trigger: a start-dot + label, never a box. Declared AFTER .new/.chg so it wins on order. */
+.sys.trig{border:none;background:none;box-shadow:none;padding:0;min-height:0;align-items:flex-start;justify-self:start;gap:5px;max-width:150px}
+.sys.trig .dot{width:16px;height:16px;border-radius:50%;background:var(--p700);border:3px solid #fff;box-shadow:0 0 0 1.5px var(--p700)}
+.sys.trig.new .dot{background:var(--new);box-shadow:0 0 0 1.5px var(--new)}
+.sys.trig.chg .dot{background:var(--chg);box-shadow:0 0 0 1.5px var(--chg)}
+.sys.trig .t{font-size:11.5px;font-weight:600;color:var(--p800);line-height:1.25}
+.sys.trig .d{font-size:9.5px}
+.sys.gap{border:1.5px dashed var(--ret);background:var(--retbg);color:var(--ret);align-items:center;justify-content:center;text-align:center;font-family:var(--mono);font-size:10.5px;min-height:40px}
+/* floating spec-reference tag above the box; an <a href="#detail-id"> deep-link to the zoom-in diagram */
+.sys .ref{position:absolute;top:-11px;right:8px;text-decoration:none;font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.04em;padding:1px 7px;border-radius:10px;background:#fff;border:1px solid var(--p300);color:var(--p700);white-space:nowrap}
+.sys.chg .ref{border-color:var(--chg);color:var(--chg)}.sys.new .ref{border-color:var(--new);color:var(--new)}
+.sys .ref:hover{background:var(--p50)}
+.sys-edge{display:none} /* authored edge; rendered as SVG by spec-kit.js */
+.sysmap svg.edges{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1;overflow:visible}
+.sysmap svg .e{fill:none;stroke:var(--p400);stroke-width:1.6}
+.sysmap svg .e.new{stroke:var(--new);stroke-width:2.2}
+.sysmap svg .e.chg{stroke:var(--chg);stroke-width:2}
+.sysmap svg .e.gap{stroke:var(--ret);stroke-dasharray:5 4}
+.sysmap svg .e.loop{stroke:var(--p400);stroke-dasharray:4 3}
+.sysmap svg .lbl{font:9.5px var(--mono);fill:var(--p700)}
+.sysmap svg .lbl.new{fill:var(--new);font-weight:700}.sysmap svg .lbl.chg{fill:var(--chg);font-weight:700}.sysmap svg .lbl.gap{fill:var(--ret)}
+.sysmap svg .lblbg{fill:#fff;stroke:none;opacity:.94}
+/* reference footer: stacked CHIP ROWS, one per reference, each a link into the spec reader page.
+   Markup: <div class="sys-refs"><a class="refrow" data-ref="P0a"><span class="chip">P0a</span><span class="txt">…</span></a>…</div>
+   spec-kit.js fills href = <main data-spec>#<token>. */
+.sys-refs{display:flex;flex-direction:column;gap:6px;margin:12px 0 0}
+.sys-refs .refrow{display:flex;align-items:baseline;gap:12px;padding:7px 12px;border:1px solid var(--divider);border-radius:9px;background:#fff;text-decoration:none;color:var(--p800);font-size:12.5px;line-height:1.45;transition:border-color .12s,background .12s}
+.sys-refs .refrow:hover{border-color:var(--p400);background:var(--p50)}
+.sys-refs .refrow .chip{flex:0 0 auto;font-family:var(--mono);font-size:10.5px;font-weight:700;color:var(--p700);background:var(--p50);border:1px solid var(--p200);border-radius:6px;padding:2px 8px;min-width:44px;text-align:center}
+.sys-refs .refrow.chg .chip{color:var(--chg);border-color:var(--chgbd);background:var(--chgbg)}
+.sys-refs .refrow.new .chip{color:var(--new);border-color:var(--newbd);background:var(--newbg)}
+.sys-refs .refrow .txt{flex:1}
+.sys-refs .refrow .go{flex:0 0 auto;font-family:var(--mono);font-size:10px;color:var(--p500)}
+.sys-refs .refrow[href] .go::after{content:"read §"}
+.sys-refs .refrow:not([href]) .go::after{content:"no spec reader";color:var(--muted)}
+/* citation links inside claims and ref tags (filled in by spec-kit.js) */
+.claim a.cite,.sys .ref a{color:inherit;text-decoration:underline dotted;text-underline-offset:2px}
+.claim a.cite:hover{color:var(--ember)}
+/* "read the spec" masthead link */
+header.masthead a.spec-link{display:inline-block;margin-top:12px;font-family:var(--mono);font-size:12px;color:#fff;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);border-radius:7px;padding:5px 11px;text-decoration:none;position:relative}
+header.masthead a.spec-link:hover{background:rgba(255,255,255,.24)}
+
+/* legend for a system map: the COMPLETE list of colour meanings on the page */
+.sys-legend{display:flex;flex-wrap:wrap;gap:14px;font-size:11.5px;color:var(--p800);margin:8px 4px 0}
+.sys-legend i{display:inline-block;width:22px;height:3px;vertical-align:middle;margin-right:5px;background:var(--p400)}
+.sys-legend i.new{background:var(--new)} .sys-legend i.dot{width:10px;height:10px;border-radius:50%;background:var(--p700)} .sys-legend i.dot.new{background:var(--new)}.sys-legend i.chg{background:var(--chg)}.sys-legend i.gap{background:var(--ret)}.sys-legend i.loop{background:repeating-linear-gradient(90deg,var(--p400) 0 4px,transparent 4px 7px)}
+
+/* ============================================================
+   Claim caption  —  under every diagram. Cites the spec section or
+   decision it paraphrases. "Reading:" for the author's own observation.
+   ============================================================ */
+.claim{font-size:12.5px;color:var(--p800);margin:8px 0 26px;padding:8px 12px;border-left:3px solid var(--ember);background:#fff}
+.claim b{color:var(--p900)}
+
+/* ============================================================
+   Decision flow (.dflow)  —  "try X, else Y, else Z" / gate outcomes.
+   A vertical list of question rows; "yes" exits right to an outcome,
+   "no" falls through to the next row. Text-first, no SVG.
+   ============================================================ */
+.dflow{margin:14px 0;border:1px solid var(--divider);border-radius:12px;background:#fff;padding:14px 16px 10px}
+.dflow .dq{display:grid;grid-template-columns:minmax(200px,1.4fr) auto minmax(160px,1fr);gap:10px;align-items:center}
+.dflow .dq .q{font-size:12.5px;font-weight:600;color:var(--p900);border:1.5px solid var(--p300);border-radius:8px;padding:7px 11px;background:#fff}
+.dflow .dq .yes{font-family:var(--mono);font-size:10px;font-weight:700;color:var(--new);white-space:nowrap}
+.dflow .dq .out{font-family:var(--mono);font-size:11px;color:var(--p800);border:1.5px solid var(--newbd);background:var(--newbg);border-radius:8px;padding:6px 10px}
+.dflow .dq .out.warn{border-color:var(--chgbd);background:var(--chgbg)}
+.dflow .dq .out.fail{border-color:var(--retbd);background:var(--retbg);color:var(--ret)}
+.dflow .dno{font-family:var(--mono);font-size:9.5px;color:var(--muted);padding:3px 0 3px 18px}
+.dflow .dq.end .q{border-style:dashed;font-weight:500;color:var(--p700)}
+.dflow .dq .out a,.dflow .dq a.out{color:inherit;text-decoration:underline dotted;text-underline-offset:2px}
+.dflow .dq .out.jump::after{content:" ↗";color:var(--p500)} /* an outcome that jumps to another step/diagram */
+
+/* ============================================================
+   Concept figure  —  a hand-drawn inline SVG for the one mechanism
+   prose can't carry (a transform, a timeline, a shape). One figure,
+   one claim in the figcaption. See COMPONENTS.md for SVG rules.
+   ============================================================ */
+figure.concept{margin:16px 0;padding:16px 16px 10px;background:#fff;border:1px solid var(--divider);border-radius:12px;color:var(--p800)}
+figure.concept svg{display:block;max-width:100%;height:auto;margin:0 auto}
+figure.concept figcaption{font-size:12.5px;color:var(--p800);margin-top:10px;padding:8px 12px;border-left:3px solid var(--ember);background:#fbfcfd}
+figure.concept figcaption b{color:var(--p900)}
+
+
+/* ============================================================
+   Spec reader page (body.reader) — DESIGN-SPEC.md rendered by marked,
+   generated by inline-kit.py --spec. Sticky TOC + body; :target glow.
+   ============================================================ */
+body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom:1px solid rgba(255,255,255,.4)}
+.reader-wrap{display:grid;grid-template-columns:250px minmax(0,1fr);gap:34px;max-width:1240px;margin:0 auto;padding:28px 26px 90px}
+@media(max-width:900px){.reader-wrap{grid-template-columns:1fr}.toc{position:static}}
+.toc{position:sticky;top:18px;align-self:start;max-height:calc(100vh - 36px);overflow:auto;font-size:12.5px;border-right:1px solid var(--divider);padding-right:14px}
+.toc .toc-h{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--p600);font-weight:700;margin-bottom:8px}
+.toc a{display:block;color:var(--p800);text-decoration:none;padding:3px 0;line-height:1.35}
+.toc a.toc-h3{padding-left:14px;font-size:12px;color:var(--p700)}
+.toc a:hover{color:var(--ember)}
+.reader-body{max-width:860px;font-size:15px;line-height:1.6}
+.reader-body h2{margin-top:44px;padding-top:18px;border-top:1px solid var(--divider)}
+.reader-body h3{display:block;margin-top:30px;font-size:17px}
+.reader-body h4{margin-top:22px}
+.reader-body blockquote{margin:14px 0;padding:10px 16px;border-left:4px solid var(--p500);background:var(--p50);border-radius:0 8px 8px 0;color:var(--p800)}
+.reader-body blockquote p{margin:.3em 0}
+.reader-body pre{background:#fbfcfd;border:1px solid var(--p200);border-left:4px solid var(--p500);border-radius:8px;padding:12px 15px;font-family:var(--mono);font-size:11.5px;line-height:1.55;overflow-x:auto}
+.reader-body pre code{background:none;border:0;padding:0;font-size:inherit}
+.reader-body a{color:var(--p600)}
+.reader-body hr{border:0;border-top:1px solid var(--divider);margin:26px 0}
+.reader-body .spectable-scroll{margin:12px 0}
+.reader-body .spectable td code{white-space:normal}
+.reader-body .anchor{display:block;position:relative;top:-14px;height:0}
+.reader-body strong.tok{scroll-margin-top:24px}
+.reader-body :target{scroll-margin-top:18px}
+.reader-body h2:target,.reader-body h3:target,.reader-body h4:target{background:#fff8ec;box-shadow:-12px 0 0 #fff8ec,12px 0 0 #fff8ec;border-radius:3px}
+.reader-body strong.tok:target{background:#fff1cc;border-radius:3px;padding:0 3px;box-shadow:0 0 0 2px #fde68a}
+.reader-body .anchor:target + h2,.reader-body .anchor:target + h3{background:#fff8ec;box-shadow:-12px 0 0 #fff8ec,12px 0 0 #fff8ec;border-radius:3px}
+
+/* ============================================================
+   Two-lane activity flow (.af)  —  v5.2
+   An agent (left lane) and the deterministic tools it calls (right
+   lane), read top to bottom. One row = one exchange: the left box says
+   what the caller decides / types / writes, the right box what the tool
+   derives / checks; the middle column carries the call (▸, solid) and
+   the return (◂, dashed) labels. Rows inside .af-loop repeat (dashed
+   frame + label). .af-sec is a full-width "only when…" divider.
+   Notes inside a box: .cc = what this spec changes (amber), .gap = a
+   defect found (red dashed). .af-box.key = where the important value is
+   produced (heavier border, weight only, no colour).
+   Columns stack under 820px.
+   ============================================================ */
+.af{margin:16px 0;border:1px solid var(--divider);border-radius:12px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.05);padding-bottom:8px;overflow:hidden}
+.af-head,.af-row{display:grid;grid-template-columns:26px minmax(0,1.2fr) minmax(110px,.42fr) minmax(0,1fr);gap:0 12px}
+.af-head{background:linear-gradient(135deg,var(--p800),var(--p700));padding:10px 14px;color:#fff;align-items:end}
+.af-h{font-family:var(--mono);font-size:11.5px;font-weight:700;line-height:1.3}
+.af-h .role{display:block;font-size:8.5px;font-weight:400;color:var(--p200);text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px}
+.af-row{align-items:center;padding:8px 14px}
+.af-row + .af-row{border-top:1px solid #eef1f4}
+.af-n{align-self:start;margin-top:8px;font-family:var(--mono);font-size:10px;font-weight:700;color:#fff;background:var(--p600);min-width:20px;height:20px;padding:0 4px;border-radius:10px;display:flex;align-items:center;justify-content:center}
+.af-box{border:1.5px solid var(--p300);border-radius:8px;padding:8px 11px;background:#fff;display:flex;flex-direction:column;gap:5px;min-width:0}
+.af-box.key{border-width:3px;border-color:var(--p700)}
+.af-box .t{font-size:13px;font-weight:600;color:var(--p900);line-height:1.35}
+.af-box .t code{font-size:11.5px}
+.af-box .q{font-family:var(--serif);font-style:italic;font-size:12.5px;color:var(--p700);border-left:3px solid var(--p200);padding-left:9px;line-height:1.45}
+.af-box .io{font-size:12px;color:var(--ink);line-height:1.5;overflow-wrap:anywhere}
+.af-box .io > b:first-child{display:inline-block;font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--p600);background:var(--p50);border:1px solid var(--p100);border-radius:3px;padding:0 4px;margin-right:5px;vertical-align:1px}
+.af-box .io code{font-size:11px}
+.af-box .cc{font-size:11.5px;line-height:1.45;color:#7c4a03;background:var(--chgbg);border:1px solid var(--chgbd);border-radius:6px;padding:4px 8px}
+.af-box .gap{font-size:11.5px;line-height:1.45;color:var(--ret);background:var(--retbg);border:1.5px dashed var(--retbd);border-radius:6px;padding:4px 8px}
+.af-box .cc code,.af-box .gap code{font-size:10.5px}
+.af-none{font-family:var(--mono);font-size:10.5px;color:var(--muted);font-style:italic;padding:0 4px}
+.af-x{display:flex;flex-direction:column;gap:9px;justify-content:center;min-width:0}
+.af-x .c,.af-x .r{display:flex;flex-direction:column;gap:1px}
+.af-x .l{font-family:var(--mono);font-size:9.5px;line-height:1.3;color:var(--p800);overflow-wrap:anywhere}
+.af-x .r .l{color:var(--muted)}
+.af-x .ln{display:flex;align-items:center;font-size:13px;line-height:1;color:var(--p500)}
+.af-x .c .ln::before{content:"";flex:1;border-top:1.5px solid var(--p400);margin-right:-3px}
+.af-x .r .ln::after{content:"";flex:1;border-top:1.5px dashed var(--p400);margin-left:-3px}
+.af-loop{margin:6px 10px;border:1.5px dashed var(--p400);border-radius:10px;padding:2px 0}
+.af-loop .af-row{padding-left:4px;padding-right:4px}
+.af-lh{font-family:var(--mono);font-size:10.5px;font-weight:700;color:var(--p700);padding:6px 10px 2px}
+.af-sec{font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--p600);background:var(--p50);border-top:1px solid var(--p100);border-bottom:1px solid var(--p100);padding:5px 14px 5px 52px}
+.af-legend{display:flex;flex-wrap:wrap;gap:8px 16px;font-size:11.5px;color:var(--p800);padding:8px 14px 0;align-items:center}
+.af-legend span{display:inline-flex;align-items:center;gap:6px}
+.af-legend i{display:inline-block;width:22px;height:13px;border-radius:3px;border:1.5px solid var(--p300);background:#fff}
+.af-legend i.key{border-width:3px;border-color:var(--p700)} .af-legend i.cc{background:var(--chgbg);border-color:var(--chgbd)}
+.af-legend i.gap{background:var(--retbg);border:1.5px dashed var(--retbd)} .af-legend i.loop{border:1.5px dashed var(--p400)}
+@media(max-width:820px){
+  .af-head,.af-row{grid-template-columns:26px minmax(0,1fr)}
+  .af-head > :nth-child(3),.af-head > :nth-child(4){display:none}
+  .af-row > :not(.af-n){grid-column:2}
+  .af-row > .af-x{flex-direction:row;padding:6px 0}
+}
+
+</style>
+</head>
+<body class="reader" data-back="architecture.html" data-spec-sha="71be999010eb2e75">
+
+<header class="masthead">
+  <div class="kicker">SPEC · READER</div>
+  <h1 id="reader-title">Cartographer north star — anchored geometry for every site</h1>
+  <p><a class="back" href="architecture.html">← back to the diagrams</a> · rendered from <code>NORTH-STAR-SPEC.md</code> · the markdown is the source of truth</p>
+  <div class="meta" id="reader-meta"></div>
+</header>
+
+<div class="reader-wrap">
+  <nav class="toc" id="toc"><div class="toc-h">Contents</div></nav>
+  <main class="reader-body" id="spec-body"></main>
+</div>
+
+<script type="text/markdown" id="spec-md">
+# Cartographer north star — anchored geometry for every site
+
+**Status:** Draft v1
+**Date:** 2026-10-08
+**Repos touched:** none yet. This spec commits to no implementation; it names the destination, the stages, and what to peel off first.
+**Repos eventually touched:** `substation` (schema), `bureau` (runbooks), `cartographer` (readers, solvers, viewer), `surveyor` (layer identity)
+**Repos NOT touched:** `cityhall` until a viewer phase exists
+**Prod:** Supabase **Noetic App** (`mgxqsrjutswbciyrltwd`)
+
+> **What this document is.** A plan of a plan. It is deliberately coarse, expects to be
+> iterated on for weeks, and expects slices to be peeled off one at a time. Decisions
+> (D) are directional, not settled. Open questions (Q) outnumber them on purpose.
+> Everything in §2 is verified against prod and the code on 2026-10-08; everything in
+> §4 onward is a proposal.
+
+---
+
+## 1. The north star
+
+### 1.1 What "done" looks like
+
+Every site Noetic knows about has its geometry in `geo`, in the county's own State Plane
+zone, from **both** of its producers:
+
+- **From the SIR** — the county parcel ring, and every recorded encumbrance the county
+  clerk documents describe: easements, rights-of-way, lots, replat boundaries, building
+  lines.
+- **From the site plan set** — the proposed improvements the drawings show: the building
+  footprint, curbs and drive aisles, utility structures (transformers, hydrants,
+  manholes), detention ponds.
+
+Both land in the same table, in the same coordinate system, each carrying how it was
+placed and how much its position can be trusted.
+
+### 1.2 Why: the question that needs both producers
+
+The point of a planar, projected geometry layer is that **PostGIS answers questions
+deterministically** that an LLM can only guess at:
+
+```sql
+SELECT ST_Distance(building.geom_local, easement.geom_local);
+SELECT ST_ShortestLine(ST_Boundary(building.geom_local), ST_Boundary(parcel.geom_local));
+SELECT ST_Intersects(proposed_structure.geom_local, recorded_easement.geom_local);
+```
+
+Every one of those is a real review question — *does the proposed building encroach on
+the recorded sanitary sewer easement, and if not, by how much?* And every one of them
+needs **one geometry from each producer**: the recorded encumbrance comes off a county
+clerk document (the SIR side), the proposed structure comes off a plan sheet (the plan
+set side). Neither producer alone answers it.
+
+That is the whole argument for one `geo` table serving both, and for this spec existing
+at all.
+
+### 1.3 The consumer is a tool surface, not a map
+
+A map viewer is nice and comes late. The actual deliverable is a set of **deterministic
+geometry tools an agent can call** during a review or a diligence pass, backed by
+PostGIS. A MapLibre viewer is how a human audits what the tools are reasoning over.
+
+---
+
+## 2. Where we are today (verified 2026-10-08)
+
+### 2.1 What exists and works
+
+| Piece | State |
+|---|---|
+| `geo` table | 44 rows. 34 `county_api` (parcel rings), 8 `anchored`, 2 `estimated`. Every row carries `geom_local` + `srid_local`. |
+| SIR → parcel rings | Automatic. `upload-sir`'s publish calls `sir_add_parcel_geo` (`substation/supabase/functions/geo_helpers.sql:143`), which now derives `geom_local` from the county layer's native ring or by `ST_Transform`. |
+| Local SRID resolution | Layer-first (`arcgis_query.py` reads the layer's own `sourceSpatialReference` as `native_sr`), falling back to the curated county table via `site-research/bin/spcs_lookup.py`. |
+| `extract-geometry-v2` | Works. One PDF per run → SRID:0 figures in `cartographer_geometries`, placed relative to each other inside a `frame_key`, with `basis_of_bearings` / `distance_units` / `grid_or_surface` / `combined_scale_factor` / `control_points` transcribed. |
+| `anchor-geometry` | Works. One run completed: anchor `e94fae93`, car-wash plat, `printed_coordinates` / `survey`, θ vs grid 0.0095°, control-point residuals 0.17–0.31 ft, IoU 0.988, 8 `geo` rows published 2026-09-28. |
+| Cartographer app | Live at `cartographer-ruddy.vercel.app`, SSO gate working. `/files` lists uploads, `/processed` lists files with figures, `/geometry/[id]` renders one figure. |
+
+### 2.2 What the corpus actually looks like
+
+From the Inspector General survey
+[`2026-09-23-sir-geometry-source-survey`](https://inspector-general-gamma.vercel.app/reports/view/2026-09-23-sir-geometry-source-survey/)
+(10 SIRs, 645 supporting docs / 445 unique files / ~6,800 pages, 315 unique geometries),
+and from prod counts taken for this spec:
+
+- **Volume.** 2,597 `supporting_document` rows across 34 SIRs — 100–300 per SIR. IG found
+  **75%** of documents define some geometry.
+- **Cost.** `extract-geometry-v2` is 30–60 minutes of Opus vision and roughly $40 of
+  subscription drain per document. Exhaustive extraction of one SIR is therefore a
+  four-to-five-figure, multi-day proposition.
+- **The anchoring ladder is calibrated for the rare case.** Printed State Plane
+  coordinate values appear in **3 of 315 geometries** (~1%) — the car-wash plat is one of
+  them. **25** geometries cite a State Plane grid as a basis of bearings with no
+  coordinate values.
+- **Reconstructability.** 51% are a closed shape with no position (today's SRID:0 path,
+  anchored by ring fit); **27% are located only by reference to another document**; 17%
+  are approximate sketches; 3% are not reconstructable.
+- **Duplication is the norm.** **147 of 315 geometries appear in more than one
+  document.** Palm Bay's Lot 7 description is reproduced in **12**.
+- **Feature mix.** Easement 27%, tract 18%, lot 10%, parcel 8%, right-of-way 7%, site
+  boundary 6%, point features 5%.
+
+### 2.3 The couplings that block the north star
+
+**C1 — `geo` is SIR-owned.** `geo.sir_id` is `NOT NULL` with `ON DELETE CASCADE`
+(`20260807130000_geo_parcels.sql`). A plan set can never hang geometry off it. Both
+`plan_set` and `site_intelligence_report` carry `project_id`.
+
+**C2 — `anchor-geometry` requires a SIR**, and the SIR does three different jobs in it
+(`bureau/runbooks/anchor-geometry/steps/1.1-inputs/contract.test.ts`,
+`cartographer/runbooks/anchor-geometry/scripts/fetch.ts`): it supplies the **fitting
+target** (the county parcel ring), the **target CRS** (modal `srid_local` of the SIR's
+`kind='parcel'` rows), and the **output destination** (`sir_put_anchored_geo`).
+
+**C3 — nothing crosses document boundaries.** Extraction is scoped to one
+`cartographer_files` row. Nothing anywhere says two readings describe the same thing.
+
+**C4 — no route from a SIR's documents into Cartographer at scale.** Only two things
+insert `cartographer_files` rows: the app's upload (`api/files/commit`) and
+`import-sir-artifact.ts`. Both are one file at a time, by hand.
+
+**C5 — the quality metric is wrong for the dominant case.** winston#289 B3: fit metrics
+are computed over a *union outline* that keeps the target's interior lot lines, giving
+25.7 ft mean / 209 ft Hausdorff where per-lot it is 1.6–2.5 ft. Auto-accept thresholds
+cannot be calibrated against it.
+
+---
+
+## 3. The shape of the system
+
+### 3.1 Four stages; two of them are source-agnostic
+
+**D1.** The pipeline has four stages, and the question of *which are reusable across
+producers* is the organising idea of this spec:
+
+| Stage | What it does | Source-agnostic? |
+|---|---|---|
+| **Read** | turn a document into a shape | **No.** Metes-and-bounds prose, a dimensioned plat, a CAD vector layer and a hydrant symbol on a utility sheet are four different problems. |
+| **Identify** | decide which readings describe the same real-world thing | **Mostly yes.** The matching signals differ (recording references vs sheet labels) but the algorithm is one. |
+| **Place** | solve a transform onto the county grid | **Yes.** One 2D similarity transform. The *strategies* are weighted differently per producer, but the solver is one. |
+| **Publish** | write the located feature to `geo` | **Yes.** |
+
+The corollary: **plan sets need a new reader and reuse everything below it.** That is
+what makes the north star reachable instead of a rewrite.
+
+### 3.2 Placement is already source-agnostic, in code
+
+`cartographer/src/lib/geometry/anchor.ts` takes `AnchorInputs` = `{ frameKey, figures,
+distanceUnits, targetUnits, gridBasis, statedScaleFactor, controlPoints, vertexTies,
+edgeTies, ringTargets }`. There is no SIR concept anywhere in the math layer. **The
+coupling in C2 lives entirely in the runbook's `fetch.ts` and `publish.ts` wrappers.**
+
+### 3.3 The missing stage is identity
+
+Nothing today represents *the thing itself*. `cartographer_geometries` holds **what one
+document says**; `geo` holds **where something is**. With 147 of 315 geometries appearing
+in more than one document, a per-document pipeline writing straight into `geo` produces a
+pile of near-identical polygons and `ST_ShortestLine` has no idea which easement was
+meant.
+
+**D2.** Introduce a **feature**: the row that asserts *"these N readings describe one
+thing, and here is the reading we trust."* Three roles, cleanly separated:
+
+| Role | What it is | Where |
+|---|---|---|
+| **Reading** | what one document says — SRID:0, feet, evidence-backed, one per figure per document | `cartographer_geometries` (unchanged) |
+| **Feature** | the real-world thing, its identity, its corroboration | **new** |
+| **Placement** | the transform that puts a frame on the grid | `cartographer_anchors` (unchanged) |
+
+Identity is also **free accuracy**: twelve independent transcriptions of one description
+cross-check each other. If eleven close to 0.02 ft and one closes to 40 ft, the outlier
+is a misread, not a disagreement about the world.
+
+### 3.4 What `geo` becomes
+
+**D3.** `geo` stops being a second source of truth and becomes the **derived spatial
+layer**: one row per located feature, rebuildable. The invariant:
+
+> If you dropped `geo` entirely, you could regenerate every row from readings + anchors +
+> county fetches.
+
+Today it is both — the two `estimated` rows are hand-authored truth, the 8 `anchored`
+rows are derived, the 34 `county_api` rows are a fetch. Picking *derived* resolves the
+"two databases" smell without deleting anything, and makes the plan-set producer a
+straightforward additional writer rather than a schema negotiation.
+
+**D4.** `geo`'s owner becomes the **project**, with SIR and plan-set ids as provenance
+rather than parentage. This is the one change that makes §6 possible at all, and it is
+far cheaper now than after there is data pointing at it.
+
+---
+
+## 4. The five-step SIR geo workflow
+
+**D5.** For the SIR producer, the pipeline is five steps, three of which are new
+runbooks. Will's name for it: *the five-step SIR geo workflow.*
+
+```
+① triage  →  ② extract  →  ③ consolidate  →  ④ anchor  →  ⑤ geo
+   (new)      (exists)        (new)          (exists,      (exists,
+                                              decoupled)    widened)
+```
+
+### 4.1 ① triage — which documents are worth $40
+
+A cheap, per-SIR runbook. Reads the SIR's supporting documents by text, first page,
+filename and whatever the SIR's own research already concluded, and emits a **ranked
+worklist**: which documents define geometry, what is in each, what to extract first and
+why, what to never bother with.
+
+It never does full vision extraction. The expensive, genuinely-unsupported decision today
+is *which 12 of 200 documents are worth the money* — not launching the run, which
+conductor already does.
+
+**D6.** The queue is not a new subsystem. `sir_artifact` already **is** the backlog —
+"not yet extracted" is a query (a supporting document with no `cartographer_files` row
+carrying its `source_sir_artifact_id`). The only state worth persisting is what a query
+cannot derive: *examined and deliberately skipped*, *tried and the scan is illegible*.
+
+### 4.2 ② extract — unchanged
+
+`extract-geometry-v2`, per document, exactly as it runs today. Needs a
+`cartographer_files` row, which `import-sir-artifact.ts` already mints from a
+`sir_artifact` id with content-hash dedup.
+
+### 4.3 ③ consolidate — readings become features
+
+Its own runbook, for three independent reasons: it is the first step that is **per-SIR
+rather than per-file**; it must **re-run every time one more document is extracted**
+(idempotent and incremental, where extraction is once-per-file and destructive on
+republish); and it is **cheap** (structured JSON, not vision), so it can be re-run
+freely.
+
+**D7.** Two matching problems, not one:
+
+- **Same-shape** — nearly deterministic. Twelve recitations of one description give
+  twelve course lists with matching bearings and distances. Comparable as SRID:0 shapes
+  with no anchoring at all. Probably catches the large majority of the 147/315.
+- **Same-thing** — genuinely semantic. Recording references (book/page, instrument
+  number) are the strongest signal; portions, amendments and releases need judgment.
+
+Cheap deterministic clustering, then an agent adjudicates the residue — structurally the
+same pattern as the AW training pipeline, over geometries instead of comments.
+
+**D8.** Consolidation's output is **two things**: the feature set, *and the anchor
+worklist* — a minimal covering set of frames. Twelve documents reciting Lot 7 collapse to
+one anchor run.
+
+That second output carries a judgment worth making deliberately: **prefer a frame that
+contains something fittable.** An easement exhibit showing a bare strip has nothing to
+match against the county ring and can only ride someone else's transform; a plat showing
+the parent boundary *and* the easement anchors itself and carries the easement along.
+
+### 4.4 ④ anchor — per frame, not per feature
+
+A frame is the set of figures one document draws together, already placed relative to one
+another; the transform applies to the whole frame at once. The car-wash run is the
+illustration: **8 figures, 1 anchor**. So a feature picks its authoritative reading, that
+reading lives in some frame, and anchoring that frame incidentally places every other
+figure on it.
+
+### 4.5 ⑤ geo — the located feature
+
+`sir_put_anchored_geo`, widened per D3/D4.
+
+### 4.6 What will not land on the first pass
+
+By IG's reconstructability split, a meaningful share of features will come out with a
+solid identity — recording reference, courses, corroborating copies — and **no position**:
+the 27% defined relative to another document, and the 17% approximate sketches.
+
+**D9.** A feature with no geometry is a first-class outcome, not a failure. `geo` (or the
+feature table) must be able to represent *we know this easement exists, we know its
+courses, we do not know where it is* rather than silently dropping it.
+
+**D10.** The 27% are a **dependency graph, not a queue** — "a 25-foot strip along the east
+line of Lot 20" cannot be placed until Lot 20 is placed. Dependency-ordered placement is
+deliberately deferred (§8, P3). Trying to solve it in the first build is what turns this
+into a six-month project.
+
+---
+
+## 5. Decoupling anchor-geometry from the SIR
+
+**D11.** Introduce one small concept — an **anchoring target** = `{ ring(s), srid,
+provenance }` — and let it be sourced three ways: from a SIR's `geo` rows (today's path,
+unchanged), fetched live from the county layer, or supplied by a plan set that already
+knows its parcel.
+
+The three couplings in C2 are of very different difficulty:
+
+| Coupling | Difficulty |
+|---|---|
+| **Target CRS** | Already solved. `--target-srid` exists; `spcs_lookup.py <county FIPS>` answers it with no SIR. |
+| **Output destination** | Mechanical — this is D4. |
+| **The fitting target** | The real one. `ringTargets` is what rung 3 fits against and what rung 2's ties attach to. |
+
+But the fitting target is not really a *SIR* problem either — it is "we need this site's
+county parcel polygon", and `arcgis_query.py` is a standalone script that fetches exactly
+that **and returns `native_sr` in the same call**, answering the CRS question at the same
+time. The SIR is simply the only thing that currently goes and gets one.
+
+**Honest caveat.** For rung 1 (printed coordinates) the CRS genuinely *is* all you need —
+the parcel ring only feeds a zone sanity-check and the quality metrics, both optional in
+`AnchorTolerances`. But rung 1 is the 3-in-315 case. For the 51% that are
+closed-shape-no-position, the ring *is* the anchor. So "decoupled from SIRs" and "needs a
+parcel ring from somewhere" are the same sentence, and the work is sourcing the ring.
+
+---
+
+## 6. Site plan sets
+
+**D12.** Plan sets need a **new reader** and reuse identify / place / publish unchanged.
+
+What is the same: a sheet's drawn features, once read, are a shape in some local frame
+that needs one similarity transform onto the county grid. The solver, the accuracy
+classes, the metrics and the storage are all the same.
+
+What is different, and unsolved:
+
+- **The reading problem.** A building footprint, a curb return or a hydrant symbol is not
+  metes-and-bounds prose. Reading them means sheet georeferencing — a scale bar plus a
+  known point, or matching the drawn property line to the known parcel ring — then a
+  pixel-to-ground transform. This is closer to the existing `preprocessing-v4` vision work
+  than to `extract-geometry-v2`.
+- **Point and line features.** Today's model is polygons. Hydrants and transformers are
+  points; water mains and curbs are lines.
+- **Proposed, not recorded.** A plan set shows what someone *intends to build*. That is a
+  different epistemic category from a recorded easement, and §1.2's whole use case is
+  measuring between the two — so the distinction has to survive into `geo`, not be
+  flattened away.
+
+---
+
+## 7. The manual Cartographer path
+
+Lower priority, but a **design constraint worth stating explicitly**: it must be possible
+to upload a loose PDF into Cartographer, carry it as far down the pipeline as the data
+allows, and see an anchored geometry on a map.
+
+Where an automated producer fills a blank from a database lookup (which parcel? which
+CRS? which ring to fit?), the manual path should **ask**. That is the forcing function
+that keeps the pipeline's inputs explicit parameters rather than implicit SIR reads — the
+same discipline that makes §5 and §6 possible.
+
+**D13.** Test uploads need no special handling in the data model. A manual upload produces
+*readings*, and readings are harmless; they only reach `geo` by being promoted to a
+feature and anchored, which is gated. An explicit `origin` on `cartographer_files`
+(`manual_upload` / `sir_pipeline` / `plan_set`) makes it self-describing rather than
+inferred from `source_sir_artifact_id IS NULL`, but the separation of roles in D2 is what
+actually does the work.
+
+---
+
+## 8. Granularity and priority
+
+Grouped so slices can be peeled off one at a time. **The ordering principle: schema
+decisions are cheap now and expensive later; runbooks can be built in any order.**
+
+### P0 — Unblockers (small, and they gate everything else)
+
+| | What | Why first |
+|---|---|---|
+| **P0a** | `geo` gets a project-level owner (D4) | Two-line migration today; a data migration later. Nothing behaves differently. |
+| **P0b** | `geo` becomes derived-only (D3); `cartographer_files.origin` (D13) | Establishes the invariant before there is volume to clean up. |
+| **P0c** | Fix the fit metric (C5 / winston#289 B3) | Nothing about auto-acceptance can be calibrated until the quality number is right for the 51% case. |
+
+### P1 — The five-step SIR workflow
+
+| | What | Notes |
+|---|---|---|
+| **P1a** | `triage-sir-geos` runbook (§4.1) | Independently valuable even if nothing else ships: first time the backlog and its cost are visible. No new tables, no change to the SIR runbook. |
+| **P1b** | Run the existing extract + anchor by hand off the triage list | Proves the chain end-to-end on a real SIR. Knowingly accepts duplicates. |
+| **P1c** | Feature identity + `consolidate-geos` (D2, D7, D8) | The biggest piece of new design. Depends on P0c for anything automatic. |
+
+### P2 — Decoupling
+
+| | What | Notes |
+|---|---|---|
+| **P2a** | The anchoring target (D11) | Lets an anchor run name its own ring and CRS. |
+| **P2b** | The manual Cartographer path end-to-end (§7) | The test that proves P2a. |
+
+### P3 — Dependency-ordered placement
+
+Rung 2 (ties) in earnest, and features located relative to other features — the 27%
+(D10).
+
+### P4 — The consumer
+
+The PostGIS tool surface for agents (§1.2), and a MapLibre viewer for auditing it.
+
+### P5 — Plan sets
+
+The new reader (§6). Blocked on P0a; everything else is additive.
+
+---
+
+## 9. Things to think about
+
+Not decisions. Tensions worth carrying while the spec is iterated on.
+
+1. **Feature identity must be stable across re-runs.** Once `geo` rows and anchors point
+   at features, consolidation cannot rebuild its groupings from scratch each pass — it has
+   to propose merges and splits against existing features. A wrong merge is silent and
+   expensive. This is what makes consolidation an algorithm rather than a clustering
+   script, and why it needs a HITL gate about *identity* where extraction's gate is about
+   *readings*.
+2. **Geometry has a vintage.** An easement is granted, amended, partially released,
+   superseded by a replat. A feature is not just a shape, it is a shape *as of a date*,
+   and title chains are exactly where SIRs operate. Today's model has no time dimension at
+   all.
+3. **Recorded versus proposed.** §6 again, from the other side: `geo` will hold both
+   "what is recorded" and "what is drawn as proposed", and the headline use case measures
+   between them. Conflating them would be a quiet correctness bug.
+4. **Accuracy must survive into the tool surface.** If an easement is placed at
+   `gis_fit` (±3 ft on the one measurement we have) and an agent computes a 2-ft setback
+   violation, that is noise presented as a finding. `geo` carries `accuracy_class`; the
+   tools must refuse or caveat accordingly.
+5. **Triage is the product until extraction gets cheap.** At ~$40/document, full
+   automation is not a goal to rush toward — it is a thing that becomes sensible when the
+   per-document cost falls. The first honest number P1a will produce: *how many documents
+   per site actually carry a reconstructable boundary?* If it is 8, automation is close;
+   if it is 60, the triage list is the product for a long time.
+6. **Units and grid-versus-surface discipline.** `ftUS` vs `ft` vs `m`, grid vs surface
+   distances, combined scale factors. Already modelled at the reading layer; it has to
+   survive consolidation when two readings of one feature disagree about units.
+7. **Consolidation feeds back into triage.** Once Lot 7 is known to appear in 12
+   documents, triage should stop recommending all 12 and start recommending the best copy.
+   The second pass over a site should be much cheaper than the first.
+
+---
+
+## 10. Open questions
+
+**Q1.** Does a feature live in its own table, or is `geo` itself the feature table with
+readings pointing at it? The second is fewer moving parts; the first survives a feature
+having no position (D9) more naturally.
+
+**Q2.** What is a feature's identity key? Recording reference where one exists — but
+what carries identity for an unrecorded exhibit, or a plan-set hydrant?
+
+**Q3.** When consolidation re-runs and disagrees with itself, what is the merge/split
+protocol, and what does a human see at the gate?
+
+**Q4.** Where does the time dimension live (§9.2) — on the feature, on the reading, or
+not at all in v1?
+
+**Q5.** Does `geo` keep one row per feature, or one row per (feature, source) so that the
+recorded easement and the plan set's depiction of it coexist? §1.2's use case may need
+both.
+
+**Q6.** How does a plan set get its anchoring target — the project's SIR parcel ring when
+one exists, a live county fetch when it does not, or a georeference solved from the sheet
+itself?
+
+**Q7.** Is `project` really the right owner for `geo` (D4), or should it be the site /
+parcel, with projects pointing at sites?
+
+**Q8.** What does the agent tool surface look like — raw SQL against a view, a small set
+of named RPCs, or an MCP server with a geometry vocabulary?
+
+**Q9.** Should triage's skip decisions be per-document or per-(document, reason), and do
+they survive a new SIR version over the same site?
+
+**Q10.** Does consolidation run before anchoring only, or is a second post-anchor
+reconciliation pass (two shapes that turn out to occupy the same ground) part of v1?
+
+**Q11.** What is the backfill posture for the 34 existing SIRs and the one existing
+anchored file? Stated intent: **no perfect backfill required.** Does anything need to be
+re-derived at all, or does the new model only apply going forward?
+
+**Q12.** Does the plan-set reader belong in Cartographer or in the preprocessing-v4
+lineage, given that the vision machinery for reading sheets already lives there?
+
+---
+
+## 11. Out of scope
+
+- Any implementation. This spec names no PRs and no migrations.
+- True curves. Everything stays chorded, as in the anchoring spec §8.
+- Automatic anchoring inside a SIR run — the SIR runbook is untouched by every phase here.
+- Backfilling historical SIRs to the new model (Q11 may reopen this).
+- A customer-facing map.
+
+---
+
+## Appendix A: evidence pointers
+
+- **Prod counts (2026-10-08):** `geo` 44 rows (34 `county_api` / 8 `anchored` / 2
+  `estimated`), all with `geom_local`; `cartographer_files` 1; `cartographer_geometries`
+  8; `cartographer_anchors` 1; `sir_artifact` 2,597 `supporting_document` rows across 34
+  SIRs; 28 of 34 SIRs have any `geo` row.
+- **The one anchor run:** `e94fae93-b3b6-42e5-9a24-fd16c476bee1`, run slug
+  `car-wash-anchor-1`, accepted 2026-09-28T19:15Z, `printed_coordinates` / `survey`,
+  params `{theta_rad 0.000166, scale 1, k_units 1}`, IoU 0.9876, θ vs grid 0.0095°,
+  `auto_accept_suggested: false` (C5).
+- **Corpus survey:** IG report `2026-09-23-sir-geometry-source-survey`. Figures in §2.2
+  are taken from its summary, classification distribution, by-site table and coordinate
+  systems catalog; the per-SIR appendix tables were not read in full.
+- **Schema:** `substation/supabase/migrations/20260807130000_geo_parcels.sql` (the
+  `sir_id NOT NULL` cascade), `20260812000000_geo_optional_local.sql` (`geom_wgs84` became
+  the required geometry), `20260918170000_cartographer_geometries.sql`,
+  `20260925140000_cartographer_anchors.sql`.
+- **RPCs:** `substation/supabase/functions/geo_helpers.sql` — `sir_parcels:14`,
+  `geo_projected_srid:71`, `sir_add_parcel_geo:143`, `sir_put_anchored_geo:291`,
+  `cartographer_anchor_decide:398`, `cartographer_mark_anchors_stale:451`,
+  `sir_geo_in_srid:500`.
+- **The SIR-free math layer:** `cartographer/src/lib/geometry/anchor.ts`, `AnchorInputs`.
+- **The couplings:** `bureau/runbooks/anchor-geometry/steps/1.1-inputs/contract.test.ts`,
+  `cartographer/runbooks/anchor-geometry/scripts/fetch.ts`.
+- **Prior specs this one sits above:** `../geometry-extraction/DESIGN-SPEC.md`,
+  `../geometry-extraction/evidence/DESIGN-SPEC.md`,
+  `../geometry-placement/DESIGN-SPEC.md`,
+  `../anchoring-geometries/DESIGN-SPEC.md` (winston#279, #281),
+  `../anchoring-geometries/ANCHOR-RUNS-PLAN.md` (winston#283),
+  `../anchoring-geometries/bugs/ANCHOR-RUN-1-BUGS.md` (winston#289).
+
+</script>
+<script data-marked>
+/**
+ * marked v15.0.12 - a markdown parser
+ * Copyright (c) 2011-2025, Christopher Jeffrey. (MIT Licensed)
+ * https://github.com/markedjs/marked
+ */
+
+/**
+ * DO NOT EDIT THIS FILE
+ * The code in this file is generated from files in ./src/
+ */
+(function(g,f){if(typeof exports=="object"&&typeof module<"u"){module.exports=f()}else if("function"==typeof define && define.amd){define("marked",f)}else {g["marked"]=f()}}(typeof globalThis < "u" ? globalThis : typeof self < "u" ? self : this,function(){var exports={};var __exports=exports;var module={exports};
+"use strict";var H=Object.defineProperty;var be=Object.getOwnPropertyDescriptor;var Te=Object.getOwnPropertyNames;var we=Object.prototype.hasOwnProperty;var ye=(l,e)=>{for(var t in e)H(l,t,{get:e[t],enumerable:!0})},Re=(l,e,t,n)=>{if(e&&typeof e=="object"||typeof e=="function")for(let s of Te(e))!we.call(l,s)&&s!==t&&H(l,s,{get:()=>e[s],enumerable:!(n=be(e,s))||n.enumerable});return l};var Se=l=>Re(H({},"__esModule",{value:!0}),l);var kt={};ye(kt,{Hooks:()=>L,Lexer:()=>x,Marked:()=>E,Parser:()=>b,Renderer:()=>$,TextRenderer:()=>_,Tokenizer:()=>S,defaults:()=>w,getDefaults:()=>z,lexer:()=>ht,marked:()=>k,options:()=>it,parse:()=>pt,parseInline:()=>ct,parser:()=>ut,setOptions:()=>ot,use:()=>lt,walkTokens:()=>at});module.exports=Se(kt);function z(){return{async:!1,breaks:!1,extensions:null,gfm:!0,hooks:null,pedantic:!1,renderer:null,silent:!1,tokenizer:null,walkTokens:null}}var w=z();function N(l){w=l}var I={exec:()=>null};function h(l,e=""){let t=typeof l=="string"?l:l.source,n={replace:(s,i)=>{let r=typeof i=="string"?i:i.source;return r=r.replace(m.caret,"$1"),t=t.replace(s,r),n},getRegex:()=>new RegExp(t,e)};return n}var m={codeRemoveIndent:/^(?: {1,4}| {0,3}\t)/gm,outputLinkReplace:/\\([\[\]])/g,indentCodeCompensation:/^(\s+)(?:```)/,beginningSpace:/^\s+/,endingHash:/#$/,startingSpaceChar:/^ /,endingSpaceChar:/ $/,nonSpaceChar:/[^ ]/,newLineCharGlobal:/\n/g,tabCharGlobal:/\t/g,multipleSpaceGlobal:/\s+/g,blankLine:/^[ \t]*$/,doubleBlankLine:/\n[ \t]*\n[ \t]*$/,blockquoteStart:/^ {0,3}>/,blockquoteSetextReplace:/\n {0,3}((?:=+|-+) *)(?=\n|$)/g,blockquoteSetextReplace2:/^ {0,3}>[ \t]?/gm,listReplaceTabs:/^\t+/,listReplaceNesting:/^ {1,4}(?=( {4})*[^ ])/g,listIsTask:/^\[[ xX]\] /,listReplaceTask:/^\[[ xX]\] +/,anyLine:/\n.*\n/,hrefBrackets:/^<(.*)>$/,tableDelimiter:/[:|]/,tableAlignChars:/^\||\| *$/g,tableRowBlankLine:/\n[ \t]*$/,tableAlignRight:/^ *-+: *$/,tableAlignCenter:/^ *:-+: *$/,tableAlignLeft:/^ *:-+ *$/,startATag:/^<a /i,endATag:/^<\/a>/i,startPreScriptTag:/^<(pre|code|kbd|script)(\s|>)/i,endPreScriptTag:/^<\/(pre|code|kbd|script)(\s|>)/i,startAngleBracket:/^</,endAngleBracket:/>$/,pedanticHrefTitle:/^([^'"]*[^\s])\s+(['"])(.*)\2/,unicodeAlphaNumeric:/[\p{L}\p{N}]/u,escapeTest:/[&<>"']/,escapeReplace:/[&<>"']/g,escapeTestNoEncode:/[<>"']|&(?!(#\d{1,7}|#[Xx][a-fA-F0-9]{1,6}|\w+);)/,escapeReplaceNoEncode:/[<>"']|&(?!(#\d{1,7}|#[Xx][a-fA-F0-9]{1,6}|\w+);)/g,unescapeTest:/&(#(?:\d+)|(?:#x[0-9A-Fa-f]+)|(?:\w+));?/ig,caret:/(^|[^\[])\^/g,percentDecode:/%25/g,findPipe:/\|/g,splitPipe:/ \|/,slashPipe:/\\\|/g,carriageReturn:/\r\n|\r/g,spaceLine:/^ +$/gm,notSpaceStart:/^\S*/,endingNewline:/\n$/,listItemRegex:l=>new RegExp(`^( {0,3}${l})((?:[	 ][^\\n]*)?(?:\\n|$))`),nextBulletRegex:l=>new RegExp(`^ {0,${Math.min(3,l-1)}}(?:[*+-]|\\d{1,9}[.)])((?:[ 	][^\\n]*)?(?:\\n|$))`),hrRegex:l=>new RegExp(`^ {0,${Math.min(3,l-1)}}((?:- *){3,}|(?:_ *){3,}|(?:\\* *){3,})(?:\\n+|$)`),fencesBeginRegex:l=>new RegExp(`^ {0,${Math.min(3,l-1)}}(?:\`\`\`|~~~)`),headingBeginRegex:l=>new RegExp(`^ {0,${Math.min(3,l-1)}}#`),htmlBeginRegex:l=>new RegExp(`^ {0,${Math.min(3,l-1)}}<(?:[a-z].*>|!--)`,"i")},$e=/^(?:[ \t]*(?:\n|$))+/,_e=/^((?: {4}| {0,3}\t)[^\n]+(?:\n(?:[ \t]*(?:\n|$))*)?)+/,Le=/^ {0,3}(`{3,}(?=[^`\n]*(?:\n|$))|~{3,})([^\n]*)(?:\n|$)(?:|([\s\S]*?)(?:\n|$))(?: {0,3}\1[~`]* *(?=\n|$)|$)/,O=/^ {0,3}((?:-[\t ]*){3,}|(?:_[ \t]*){3,}|(?:\*[ \t]*){3,})(?:\n+|$)/,ze=/^ {0,3}(#{1,6})(?=\s|$)(.*)(?:\n+|$)/,F=/(?:[*+-]|\d{1,9}[.)])/,ie=/^(?!bull |blockCode|fences|blockquote|heading|html|table)((?:.|\n(?!\s*?\n|bull |blockCode|fences|blockquote|heading|html|table))+?)\n {0,3}(=+|-+) *(?:\n+|$)/,oe=h(ie).replace(/bull/g,F).replace(/blockCode/g,/(?: {4}| {0,3}\t)/).replace(/fences/g,/ {0,3}(?:`{3,}|~{3,})/).replace(/blockquote/g,/ {0,3}>/).replace(/heading/g,/ {0,3}#{1,6}/).replace(/html/g,/ {0,3}<[^\n>]+>\n/).replace(/\|table/g,"").getRegex(),Me=h(ie).replace(/bull/g,F).replace(/blockCode/g,/(?: {4}| {0,3}\t)/).replace(/fences/g,/ {0,3}(?:`{3,}|~{3,})/).replace(/blockquote/g,/ {0,3}>/).replace(/heading/g,/ {0,3}#{1,6}/).replace(/html/g,/ {0,3}<[^\n>]+>\n/).replace(/table/g,/ {0,3}\|?(?:[:\- ]*\|)+[\:\- ]*\n/).getRegex(),Q=/^([^\n]+(?:\n(?!hr|heading|lheading|blockquote|fences|list|html|table| +\n)[^\n]+)*)/,Pe=/^[^\n]+/,U=/(?!\s*\])(?:\\.|[^\[\]\\])+/,Ae=h(/^ {0,3}\[(label)\]: *(?:\n[ \t]*)?([^<\s][^\s]*|<.*?>)(?:(?: +(?:\n[ \t]*)?| *\n[ \t]*)(title))? *(?:\n+|$)/).replace("label",U).replace("title",/(?:"(?:\\"?|[^"\\])*"|'[^'\n]*(?:\n[^'\n]+)*\n?'|\([^()]*\))/).getRegex(),Ee=h(/^( {0,3}bull)([ \t][^\n]+?)?(?:\n|$)/).replace(/bull/g,F).getRegex(),v="address|article|aside|base|basefont|blockquote|body|caption|center|col|colgroup|dd|details|dialog|dir|div|dl|dt|fieldset|figcaption|figure|footer|form|frame|frameset|h[1-6]|head|header|hr|html|iframe|legend|li|link|main|menu|menuitem|meta|nav|noframes|ol|optgroup|option|p|param|search|section|summary|table|tbody|td|tfoot|th|thead|title|tr|track|ul",K=/<!--(?:-?>|[\s\S]*?(?:-->|$))/,Ce=h("^ {0,3}(?:<(script|pre|style|textarea)[\\s>][\\s\\S]*?(?:</\\1>[^\\n]*\\n+|$)|comment[^\\n]*(\\n+|$)|<\\?[\\s\\S]*?(?:\\?>\\n*|$)|<![A-Z][\\s\\S]*?(?:>\\n*|$)|<!\\[CDATA\\[[\\s\\S]*?(?:\\]\\]>\\n*|$)|</?(tag)(?: +|\\n|/?>)[\\s\\S]*?(?:(?:\\n[ 	]*)+\\n|$)|<(?!script|pre|style|textarea)([a-z][\\w-]*)(?:attribute)*? */?>(?=[ \\t]*(?:\\n|$))[\\s\\S]*?(?:(?:\\n[ 	]*)+\\n|$)|</(?!script|pre|style|textarea)[a-z][\\w-]*\\s*>(?=[ \\t]*(?:\\n|$))[\\s\\S]*?(?:(?:\\n[ 	]*)+\\n|$))","i").replace("comment",K).replace("tag",v).replace("attribute",/ +[a-zA-Z:_][\w.:-]*(?: *= *"[^"\n]*"| *= *'[^'\n]*'| *= *[^\s"'=<>`]+)?/).getRegex(),le=h(Q).replace("hr",O).replace("heading"," {0,3}#{1,6}(?:\\s|$)").replace("|lheading","").replace("|table","").replace("blockquote"," {0,3}>").replace("fences"," {0,3}(?:`{3,}(?=[^`\\n]*\\n)|~{3,})[^\\n]*\\n").replace("list"," {0,3}(?:[*+-]|1[.)]) ").replace("html","</?(?:tag)(?: +|\\n|/?>)|<(?:script|pre|style|textarea|!--)").replace("tag",v).getRegex(),Ie=h(/^( {0,3}> ?(paragraph|[^\n]*)(?:\n|$))+/).replace("paragraph",le).getRegex(),X={blockquote:Ie,code:_e,def:Ae,fences:Le,heading:ze,hr:O,html:Ce,lheading:oe,list:Ee,newline:$e,paragraph:le,table:I,text:Pe},re=h("^ *([^\\n ].*)\\n {0,3}((?:\\| *)?:?-+:? *(?:\\| *:?-+:? *)*(?:\\| *)?)(?:\\n((?:(?! *\\n|hr|heading|blockquote|code|fences|list|html).*(?:\\n|$))*)\\n*|$)").replace("hr",O).replace("heading"," {0,3}#{1,6}(?:\\s|$)").replace("blockquote"," {0,3}>").replace("code","(?: {4}| {0,3}	)[^\\n]").replace("fences"," {0,3}(?:`{3,}(?=[^`\\n]*\\n)|~{3,})[^\\n]*\\n").replace("list"," {0,3}(?:[*+-]|1[.)]) ").replace("html","</?(?:tag)(?: +|\\n|/?>)|<(?:script|pre|style|textarea|!--)").replace("tag",v).getRegex(),Oe={...X,lheading:Me,table:re,paragraph:h(Q).replace("hr",O).replace("heading"," {0,3}#{1,6}(?:\\s|$)").replace("|lheading","").replace("table",re).replace("blockquote"," {0,3}>").replace("fences"," {0,3}(?:`{3,}(?=[^`\\n]*\\n)|~{3,})[^\\n]*\\n").replace("list"," {0,3}(?:[*+-]|1[.)]) ").replace("html","</?(?:tag)(?: +|\\n|/?>)|<(?:script|pre|style|textarea|!--)").replace("tag",v).getRegex()},Be={...X,html:h(`^ *(?:comment *(?:\\n|\\s*$)|<(tag)[\\s\\S]+?</\\1> *(?:\\n{2,}|\\s*$)|<tag(?:"[^"]*"|'[^']*'|\\s[^'"/>\\s]*)*?/?> *(?:\\n{2,}|\\s*$))`).replace("comment",K).replace(/tag/g,"(?!(?:a|em|strong|small|s|cite|q|dfn|abbr|data|time|code|var|samp|kbd|sub|sup|i|b|u|mark|ruby|rt|rp|bdi|bdo|span|br|wbr|ins|del|img)\\b)\\w+(?!:|[^\\w\\s@]*@)\\b").getRegex(),def:/^ *\[([^\]]+)\]: *<?([^\s>]+)>?(?: +(["(][^\n]+[")]))? *(?:\n+|$)/,heading:/^(#{1,6})(.*)(?:\n+|$)/,fences:I,lheading:/^(.+?)\n {0,3}(=+|-+) *(?:\n+|$)/,paragraph:h(Q).replace("hr",O).replace("heading",` *#{1,6} *[^
+]`).replace("lheading",oe).replace("|table","").replace("blockquote"," {0,3}>").replace("|fences","").replace("|list","").replace("|html","").replace("|tag","").getRegex()},qe=/^\\([!"#$%&'()*+,\-./:;<=>?@\[\]\\^_`{|}~])/,ve=/^(`+)([^`]|[^`][\s\S]*?[^`])\1(?!`)/,ae=/^( {2,}|\\)\n(?!\s*$)/,De=/^(`+|[^`])(?:(?= {2,}\n)|[\s\S]*?(?:(?=[\\<!\[`*_]|\b_|$)|[^ ](?= {2,}\n)))/,D=/[\p{P}\p{S}]/u,W=/[\s\p{P}\p{S}]/u,ce=/[^\s\p{P}\p{S}]/u,Ze=h(/^((?![*_])punctSpace)/,"u").replace(/punctSpace/g,W).getRegex(),pe=/(?!~)[\p{P}\p{S}]/u,Ge=/(?!~)[\s\p{P}\p{S}]/u,He=/(?:[^\s\p{P}\p{S}]|~)/u,Ne=/\[[^[\]]*?\]\((?:\\.|[^\\\(\)]|\((?:\\.|[^\\\(\)])*\))*\)|`[^`]*?`|<[^<>]*?>/g,ue=/^(?:\*+(?:((?!\*)punct)|[^\s*]))|^_+(?:((?!_)punct)|([^\s_]))/,je=h(ue,"u").replace(/punct/g,D).getRegex(),Fe=h(ue,"u").replace(/punct/g,pe).getRegex(),he="^[^_*]*?__[^_*]*?\\*[^_*]*?(?=__)|[^*]+(?=[^*])|(?!\\*)punct(\\*+)(?=[\\s]|$)|notPunctSpace(\\*+)(?!\\*)(?=punctSpace|$)|(?!\\*)punctSpace(\\*+)(?=notPunctSpace)|[\\s](\\*+)(?!\\*)(?=punct)|(?!\\*)punct(\\*+)(?!\\*)(?=punct)|notPunctSpace(\\*+)(?=notPunctSpace)",Qe=h(he,"gu").replace(/notPunctSpace/g,ce).replace(/punctSpace/g,W).replace(/punct/g,D).getRegex(),Ue=h(he,"gu").replace(/notPunctSpace/g,He).replace(/punctSpace/g,Ge).replace(/punct/g,pe).getRegex(),Ke=h("^[^_*]*?\\*\\*[^_*]*?_[^_*]*?(?=\\*\\*)|[^_]+(?=[^_])|(?!_)punct(_+)(?=[\\s]|$)|notPunctSpace(_+)(?!_)(?=punctSpace|$)|(?!_)punctSpace(_+)(?=notPunctSpace)|[\\s](_+)(?!_)(?=punct)|(?!_)punct(_+)(?!_)(?=punct)","gu").replace(/notPunctSpace/g,ce).replace(/punctSpace/g,W).replace(/punct/g,D).getRegex(),Xe=h(/\\(punct)/,"gu").replace(/punct/g,D).getRegex(),We=h(/^<(scheme:[^\s\x00-\x1f<>]*|email)>/).replace("scheme",/[a-zA-Z][a-zA-Z0-9+.-]{1,31}/).replace("email",/[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+(@)[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+(?![-_])/).getRegex(),Je=h(K).replace("(?:-->|$)","-->").getRegex(),Ve=h("^comment|^</[a-zA-Z][\\w:-]*\\s*>|^<[a-zA-Z][\\w-]*(?:attribute)*?\\s*/?>|^<\\?[\\s\\S]*?\\?>|^<![a-zA-Z]+\\s[\\s\\S]*?>|^<!\\[CDATA\\[[\\s\\S]*?\\]\\]>").replace("comment",Je).replace("attribute",/\s+[a-zA-Z:_][\w.:-]*(?:\s*=\s*"[^"]*"|\s*=\s*'[^']*'|\s*=\s*[^\s"'=<>`]+)?/).getRegex(),q=/(?:\[(?:\\.|[^\[\]\\])*\]|\\.|`[^`]*`|[^\[\]\\`])*?/,Ye=h(/^!?\[(label)\]\(\s*(href)(?:(?:[ \t]*(?:\n[ \t]*)?)(title))?\s*\)/).replace("label",q).replace("href",/<(?:\\.|[^\n<>\\])+>|[^ \t\n\x00-\x1f]*/).replace("title",/"(?:\\"?|[^"\\])*"|'(?:\\'?|[^'\\])*'|\((?:\\\)?|[^)\\])*\)/).getRegex(),ke=h(/^!?\[(label)\]\[(ref)\]/).replace("label",q).replace("ref",U).getRegex(),ge=h(/^!?\[(ref)\](?:\[\])?/).replace("ref",U).getRegex(),et=h("reflink|nolink(?!\\()","g").replace("reflink",ke).replace("nolink",ge).getRegex(),J={_backpedal:I,anyPunctuation:Xe,autolink:We,blockSkip:Ne,br:ae,code:ve,del:I,emStrongLDelim:je,emStrongRDelimAst:Qe,emStrongRDelimUnd:Ke,escape:qe,link:Ye,nolink:ge,punctuation:Ze,reflink:ke,reflinkSearch:et,tag:Ve,text:De,url:I},tt={...J,link:h(/^!?\[(label)\]\((.*?)\)/).replace("label",q).getRegex(),reflink:h(/^!?\[(label)\]\s*\[([^\]]*)\]/).replace("label",q).getRegex()},j={...J,emStrongRDelimAst:Ue,emStrongLDelim:Fe,url:h(/^((?:ftp|https?):\/\/|www\.)(?:[a-zA-Z0-9\-]+\.?)+[^\s<]*|^email/,"i").replace("email",/[A-Za-z0-9._+-]+(@)[a-zA-Z0-9-_]+(?:\.[a-zA-Z0-9-_]*[a-zA-Z0-9])+(?![-_])/).getRegex(),_backpedal:/(?:[^?!.,:;*_'"~()&]+|\([^)]*\)|&(?![a-zA-Z0-9]+;$)|[?!.,:;*_'"~)]+(?!$))+/,del:/^(~~?)(?=[^\s~])((?:\\.|[^\\])*?(?:\\.|[^\s~\\]))\1(?=[^~]|$)/,text:/^([`~]+|[^`~])(?:(?= {2,}\n)|(?=[a-zA-Z0-9.!#$%&'*+\/=?_`{\|}~-]+@)|[\s\S]*?(?:(?=[\\<!\[`*~_]|\b_|https?:\/\/|ftp:\/\/|www\.|$)|[^ ](?= {2,}\n)|[^a-zA-Z0-9.!#$%&'*+\/=?_`{\|}~-](?=[a-zA-Z0-9.!#$%&'*+\/=?_`{\|}~-]+@)))/},nt={...j,br:h(ae).replace("{2,}","*").getRegex(),text:h(j.text).replace("\\b_","\\b_| {2,}\\n").replace(/\{2,\}/g,"*").getRegex()},B={normal:X,gfm:Oe,pedantic:Be},P={normal:J,gfm:j,breaks:nt,pedantic:tt};var st={"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"},fe=l=>st[l];function R(l,e){if(e){if(m.escapeTest.test(l))return l.replace(m.escapeReplace,fe)}else if(m.escapeTestNoEncode.test(l))return l.replace(m.escapeReplaceNoEncode,fe);return l}function V(l){try{l=encodeURI(l).replace(m.percentDecode,"%")}catch{return null}return l}function Y(l,e){let t=l.replace(m.findPipe,(i,r,o)=>{let a=!1,c=r;for(;--c>=0&&o[c]==="\\";)a=!a;return a?"|":" |"}),n=t.split(m.splitPipe),s=0;if(n[0].trim()||n.shift(),n.length>0&&!n.at(-1)?.trim()&&n.pop(),e)if(n.length>e)n.splice(e);else for(;n.length<e;)n.push("");for(;s<n.length;s++)n[s]=n[s].trim().replace(m.slashPipe,"|");return n}function A(l,e,t){let n=l.length;if(n===0)return"";let s=0;for(;s<n;){let i=l.charAt(n-s-1);if(i===e&&!t)s++;else if(i!==e&&t)s++;else break}return l.slice(0,n-s)}function de(l,e){if(l.indexOf(e[1])===-1)return-1;let t=0;for(let n=0;n<l.length;n++)if(l[n]==="\\")n++;else if(l[n]===e[0])t++;else if(l[n]===e[1]&&(t--,t<0))return n;return t>0?-2:-1}function me(l,e,t,n,s){let i=e.href,r=e.title||null,o=l[1].replace(s.other.outputLinkReplace,"$1");n.state.inLink=!0;let a={type:l[0].charAt(0)==="!"?"image":"link",raw:t,href:i,title:r,text:o,tokens:n.inlineTokens(o)};return n.state.inLink=!1,a}function rt(l,e,t){let n=l.match(t.other.indentCodeCompensation);if(n===null)return e;let s=n[1];return e.split(`
+`).map(i=>{let r=i.match(t.other.beginningSpace);if(r===null)return i;let[o]=r;return o.length>=s.length?i.slice(s.length):i}).join(`
+`)}var S=class{options;rules;lexer;constructor(e){this.options=e||w}space(e){let t=this.rules.block.newline.exec(e);if(t&&t[0].length>0)return{type:"space",raw:t[0]}}code(e){let t=this.rules.block.code.exec(e);if(t){let n=t[0].replace(this.rules.other.codeRemoveIndent,"");return{type:"code",raw:t[0],codeBlockStyle:"indented",text:this.options.pedantic?n:A(n,`
+`)}}}fences(e){let t=this.rules.block.fences.exec(e);if(t){let n=t[0],s=rt(n,t[3]||"",this.rules);return{type:"code",raw:n,lang:t[2]?t[2].trim().replace(this.rules.inline.anyPunctuation,"$1"):t[2],text:s}}}heading(e){let t=this.rules.block.heading.exec(e);if(t){let n=t[2].trim();if(this.rules.other.endingHash.test(n)){let s=A(n,"#");(this.options.pedantic||!s||this.rules.other.endingSpaceChar.test(s))&&(n=s.trim())}return{type:"heading",raw:t[0],depth:t[1].length,text:n,tokens:this.lexer.inline(n)}}}hr(e){let t=this.rules.block.hr.exec(e);if(t)return{type:"hr",raw:A(t[0],`
+`)}}blockquote(e){let t=this.rules.block.blockquote.exec(e);if(t){let n=A(t[0],`
+`).split(`
+`),s="",i="",r=[];for(;n.length>0;){let o=!1,a=[],c;for(c=0;c<n.length;c++)if(this.rules.other.blockquoteStart.test(n[c]))a.push(n[c]),o=!0;else if(!o)a.push(n[c]);else break;n=n.slice(c);let p=a.join(`
+`),u=p.replace(this.rules.other.blockquoteSetextReplace,`
+    $1`).replace(this.rules.other.blockquoteSetextReplace2,"");s=s?`${s}
+${p}`:p,i=i?`${i}
+${u}`:u;let d=this.lexer.state.top;if(this.lexer.state.top=!0,this.lexer.blockTokens(u,r,!0),this.lexer.state.top=d,n.length===0)break;let g=r.at(-1);if(g?.type==="code")break;if(g?.type==="blockquote"){let T=g,f=T.raw+`
+`+n.join(`
+`),y=this.blockquote(f);r[r.length-1]=y,s=s.substring(0,s.length-T.raw.length)+y.raw,i=i.substring(0,i.length-T.text.length)+y.text;break}else if(g?.type==="list"){let T=g,f=T.raw+`
+`+n.join(`
+`),y=this.list(f);r[r.length-1]=y,s=s.substring(0,s.length-g.raw.length)+y.raw,i=i.substring(0,i.length-T.raw.length)+y.raw,n=f.substring(r.at(-1).raw.length).split(`
+`);continue}}return{type:"blockquote",raw:s,tokens:r,text:i}}}list(e){let t=this.rules.block.list.exec(e);if(t){let n=t[1].trim(),s=n.length>1,i={type:"list",raw:"",ordered:s,start:s?+n.slice(0,-1):"",loose:!1,items:[]};n=s?`\\d{1,9}\\${n.slice(-1)}`:`\\${n}`,this.options.pedantic&&(n=s?n:"[*+-]");let r=this.rules.other.listItemRegex(n),o=!1;for(;e;){let c=!1,p="",u="";if(!(t=r.exec(e))||this.rules.block.hr.test(e))break;p=t[0],e=e.substring(p.length);let d=t[2].split(`
+`,1)[0].replace(this.rules.other.listReplaceTabs,Z=>" ".repeat(3*Z.length)),g=e.split(`
+`,1)[0],T=!d.trim(),f=0;if(this.options.pedantic?(f=2,u=d.trimStart()):T?f=t[1].length+1:(f=t[2].search(this.rules.other.nonSpaceChar),f=f>4?1:f,u=d.slice(f),f+=t[1].length),T&&this.rules.other.blankLine.test(g)&&(p+=g+`
+`,e=e.substring(g.length+1),c=!0),!c){let Z=this.rules.other.nextBulletRegex(f),te=this.rules.other.hrRegex(f),ne=this.rules.other.fencesBeginRegex(f),se=this.rules.other.headingBeginRegex(f),xe=this.rules.other.htmlBeginRegex(f);for(;e;){let G=e.split(`
+`,1)[0],C;if(g=G,this.options.pedantic?(g=g.replace(this.rules.other.listReplaceNesting,"  "),C=g):C=g.replace(this.rules.other.tabCharGlobal,"    "),ne.test(g)||se.test(g)||xe.test(g)||Z.test(g)||te.test(g))break;if(C.search(this.rules.other.nonSpaceChar)>=f||!g.trim())u+=`
+`+C.slice(f);else{if(T||d.replace(this.rules.other.tabCharGlobal,"    ").search(this.rules.other.nonSpaceChar)>=4||ne.test(d)||se.test(d)||te.test(d))break;u+=`
+`+g}!T&&!g.trim()&&(T=!0),p+=G+`
+`,e=e.substring(G.length+1),d=C.slice(f)}}i.loose||(o?i.loose=!0:this.rules.other.doubleBlankLine.test(p)&&(o=!0));let y=null,ee;this.options.gfm&&(y=this.rules.other.listIsTask.exec(u),y&&(ee=y[0]!=="[ ] ",u=u.replace(this.rules.other.listReplaceTask,""))),i.items.push({type:"list_item",raw:p,task:!!y,checked:ee,loose:!1,text:u,tokens:[]}),i.raw+=p}let a=i.items.at(-1);if(a)a.raw=a.raw.trimEnd(),a.text=a.text.trimEnd();else return;i.raw=i.raw.trimEnd();for(let c=0;c<i.items.length;c++)if(this.lexer.state.top=!1,i.items[c].tokens=this.lexer.blockTokens(i.items[c].text,[]),!i.loose){let p=i.items[c].tokens.filter(d=>d.type==="space"),u=p.length>0&&p.some(d=>this.rules.other.anyLine.test(d.raw));i.loose=u}if(i.loose)for(let c=0;c<i.items.length;c++)i.items[c].loose=!0;return i}}html(e){let t=this.rules.block.html.exec(e);if(t)return{type:"html",block:!0,raw:t[0],pre:t[1]==="pre"||t[1]==="script"||t[1]==="style",text:t[0]}}def(e){let t=this.rules.block.def.exec(e);if(t){let n=t[1].toLowerCase().replace(this.rules.other.multipleSpaceGlobal," "),s=t[2]?t[2].replace(this.rules.other.hrefBrackets,"$1").replace(this.rules.inline.anyPunctuation,"$1"):"",i=t[3]?t[3].substring(1,t[3].length-1).replace(this.rules.inline.anyPunctuation,"$1"):t[3];return{type:"def",tag:n,raw:t[0],href:s,title:i}}}table(e){let t=this.rules.block.table.exec(e);if(!t||!this.rules.other.tableDelimiter.test(t[2]))return;let n=Y(t[1]),s=t[2].replace(this.rules.other.tableAlignChars,"").split("|"),i=t[3]?.trim()?t[3].replace(this.rules.other.tableRowBlankLine,"").split(`
+`):[],r={type:"table",raw:t[0],header:[],align:[],rows:[]};if(n.length===s.length){for(let o of s)this.rules.other.tableAlignRight.test(o)?r.align.push("right"):this.rules.other.tableAlignCenter.test(o)?r.align.push("center"):this.rules.other.tableAlignLeft.test(o)?r.align.push("left"):r.align.push(null);for(let o=0;o<n.length;o++)r.header.push({text:n[o],tokens:this.lexer.inline(n[o]),header:!0,align:r.align[o]});for(let o of i)r.rows.push(Y(o,r.header.length).map((a,c)=>({text:a,tokens:this.lexer.inline(a),header:!1,align:r.align[c]})));return r}}lheading(e){let t=this.rules.block.lheading.exec(e);if(t)return{type:"heading",raw:t[0],depth:t[2].charAt(0)==="="?1:2,text:t[1],tokens:this.lexer.inline(t[1])}}paragraph(e){let t=this.rules.block.paragraph.exec(e);if(t){let n=t[1].charAt(t[1].length-1)===`
+`?t[1].slice(0,-1):t[1];return{type:"paragraph",raw:t[0],text:n,tokens:this.lexer.inline(n)}}}text(e){let t=this.rules.block.text.exec(e);if(t)return{type:"text",raw:t[0],text:t[0],tokens:this.lexer.inline(t[0])}}escape(e){let t=this.rules.inline.escape.exec(e);if(t)return{type:"escape",raw:t[0],text:t[1]}}tag(e){let t=this.rules.inline.tag.exec(e);if(t)return!this.lexer.state.inLink&&this.rules.other.startATag.test(t[0])?this.lexer.state.inLink=!0:this.lexer.state.inLink&&this.rules.other.endATag.test(t[0])&&(this.lexer.state.inLink=!1),!this.lexer.state.inRawBlock&&this.rules.other.startPreScriptTag.test(t[0])?this.lexer.state.inRawBlock=!0:this.lexer.state.inRawBlock&&this.rules.other.endPreScriptTag.test(t[0])&&(this.lexer.state.inRawBlock=!1),{type:"html",raw:t[0],inLink:this.lexer.state.inLink,inRawBlock:this.lexer.state.inRawBlock,block:!1,text:t[0]}}link(e){let t=this.rules.inline.link.exec(e);if(t){let n=t[2].trim();if(!this.options.pedantic&&this.rules.other.startAngleBracket.test(n)){if(!this.rules.other.endAngleBracket.test(n))return;let r=A(n.slice(0,-1),"\\");if((n.length-r.length)%2===0)return}else{let r=de(t[2],"()");if(r===-2)return;if(r>-1){let a=(t[0].indexOf("!")===0?5:4)+t[1].length+r;t[2]=t[2].substring(0,r),t[0]=t[0].substring(0,a).trim(),t[3]=""}}let s=t[2],i="";if(this.options.pedantic){let r=this.rules.other.pedanticHrefTitle.exec(s);r&&(s=r[1],i=r[3])}else i=t[3]?t[3].slice(1,-1):"";return s=s.trim(),this.rules.other.startAngleBracket.test(s)&&(this.options.pedantic&&!this.rules.other.endAngleBracket.test(n)?s=s.slice(1):s=s.slice(1,-1)),me(t,{href:s&&s.replace(this.rules.inline.anyPunctuation,"$1"),title:i&&i.replace(this.rules.inline.anyPunctuation,"$1")},t[0],this.lexer,this.rules)}}reflink(e,t){let n;if((n=this.rules.inline.reflink.exec(e))||(n=this.rules.inline.nolink.exec(e))){let s=(n[2]||n[1]).replace(this.rules.other.multipleSpaceGlobal," "),i=t[s.toLowerCase()];if(!i){let r=n[0].charAt(0);return{type:"text",raw:r,text:r}}return me(n,i,n[0],this.lexer,this.rules)}}emStrong(e,t,n=""){let s=this.rules.inline.emStrongLDelim.exec(e);if(!s||s[3]&&n.match(this.rules.other.unicodeAlphaNumeric))return;if(!(s[1]||s[2]||"")||!n||this.rules.inline.punctuation.exec(n)){let r=[...s[0]].length-1,o,a,c=r,p=0,u=s[0][0]==="*"?this.rules.inline.emStrongRDelimAst:this.rules.inline.emStrongRDelimUnd;for(u.lastIndex=0,t=t.slice(-1*e.length+r);(s=u.exec(t))!=null;){if(o=s[1]||s[2]||s[3]||s[4]||s[5]||s[6],!o)continue;if(a=[...o].length,s[3]||s[4]){c+=a;continue}else if((s[5]||s[6])&&r%3&&!((r+a)%3)){p+=a;continue}if(c-=a,c>0)continue;a=Math.min(a,a+c+p);let d=[...s[0]][0].length,g=e.slice(0,r+s.index+d+a);if(Math.min(r,a)%2){let f=g.slice(1,-1);return{type:"em",raw:g,text:f,tokens:this.lexer.inlineTokens(f)}}let T=g.slice(2,-2);return{type:"strong",raw:g,text:T,tokens:this.lexer.inlineTokens(T)}}}}codespan(e){let t=this.rules.inline.code.exec(e);if(t){let n=t[2].replace(this.rules.other.newLineCharGlobal," "),s=this.rules.other.nonSpaceChar.test(n),i=this.rules.other.startingSpaceChar.test(n)&&this.rules.other.endingSpaceChar.test(n);return s&&i&&(n=n.substring(1,n.length-1)),{type:"codespan",raw:t[0],text:n}}}br(e){let t=this.rules.inline.br.exec(e);if(t)return{type:"br",raw:t[0]}}del(e){let t=this.rules.inline.del.exec(e);if(t)return{type:"del",raw:t[0],text:t[2],tokens:this.lexer.inlineTokens(t[2])}}autolink(e){let t=this.rules.inline.autolink.exec(e);if(t){let n,s;return t[2]==="@"?(n=t[1],s="mailto:"+n):(n=t[1],s=n),{type:"link",raw:t[0],text:n,href:s,tokens:[{type:"text",raw:n,text:n}]}}}url(e){let t;if(t=this.rules.inline.url.exec(e)){let n,s;if(t[2]==="@")n=t[0],s="mailto:"+n;else{let i;do i=t[0],t[0]=this.rules.inline._backpedal.exec(t[0])?.[0]??"";while(i!==t[0]);n=t[0],t[1]==="www."?s="http://"+t[0]:s=t[0]}return{type:"link",raw:t[0],text:n,href:s,tokens:[{type:"text",raw:n,text:n}]}}}inlineText(e){let t=this.rules.inline.text.exec(e);if(t){let n=this.lexer.state.inRawBlock;return{type:"text",raw:t[0],text:t[0],escaped:n}}}};var x=class l{tokens;options;state;tokenizer;inlineQueue;constructor(e){this.tokens=[],this.tokens.links=Object.create(null),this.options=e||w,this.options.tokenizer=this.options.tokenizer||new S,this.tokenizer=this.options.tokenizer,this.tokenizer.options=this.options,this.tokenizer.lexer=this,this.inlineQueue=[],this.state={inLink:!1,inRawBlock:!1,top:!0};let t={other:m,block:B.normal,inline:P.normal};this.options.pedantic?(t.block=B.pedantic,t.inline=P.pedantic):this.options.gfm&&(t.block=B.gfm,this.options.breaks?t.inline=P.breaks:t.inline=P.gfm),this.tokenizer.rules=t}static get rules(){return{block:B,inline:P}}static lex(e,t){return new l(t).lex(e)}static lexInline(e,t){return new l(t).inlineTokens(e)}lex(e){e=e.replace(m.carriageReturn,`
+`),this.blockTokens(e,this.tokens);for(let t=0;t<this.inlineQueue.length;t++){let n=this.inlineQueue[t];this.inlineTokens(n.src,n.tokens)}return this.inlineQueue=[],this.tokens}blockTokens(e,t=[],n=!1){for(this.options.pedantic&&(e=e.replace(m.tabCharGlobal,"    ").replace(m.spaceLine,""));e;){let s;if(this.options.extensions?.block?.some(r=>(s=r.call({lexer:this},e,t))?(e=e.substring(s.raw.length),t.push(s),!0):!1))continue;if(s=this.tokenizer.space(e)){e=e.substring(s.raw.length);let r=t.at(-1);s.raw.length===1&&r!==void 0?r.raw+=`
+`:t.push(s);continue}if(s=this.tokenizer.code(e)){e=e.substring(s.raw.length);let r=t.at(-1);r?.type==="paragraph"||r?.type==="text"?(r.raw+=`
+`+s.raw,r.text+=`
+`+s.text,this.inlineQueue.at(-1).src=r.text):t.push(s);continue}if(s=this.tokenizer.fences(e)){e=e.substring(s.raw.length),t.push(s);continue}if(s=this.tokenizer.heading(e)){e=e.substring(s.raw.length),t.push(s);continue}if(s=this.tokenizer.hr(e)){e=e.substring(s.raw.length),t.push(s);continue}if(s=this.tokenizer.blockquote(e)){e=e.substring(s.raw.length),t.push(s);continue}if(s=this.tokenizer.list(e)){e=e.substring(s.raw.length),t.push(s);continue}if(s=this.tokenizer.html(e)){e=e.substring(s.raw.length),t.push(s);continue}if(s=this.tokenizer.def(e)){e=e.substring(s.raw.length);let r=t.at(-1);r?.type==="paragraph"||r?.type==="text"?(r.raw+=`
+`+s.raw,r.text+=`
+`+s.raw,this.inlineQueue.at(-1).src=r.text):this.tokens.links[s.tag]||(this.tokens.links[s.tag]={href:s.href,title:s.title});continue}if(s=this.tokenizer.table(e)){e=e.substring(s.raw.length),t.push(s);continue}if(s=this.tokenizer.lheading(e)){e=e.substring(s.raw.length),t.push(s);continue}let i=e;if(this.options.extensions?.startBlock){let r=1/0,o=e.slice(1),a;this.options.extensions.startBlock.forEach(c=>{a=c.call({lexer:this},o),typeof a=="number"&&a>=0&&(r=Math.min(r,a))}),r<1/0&&r>=0&&(i=e.substring(0,r+1))}if(this.state.top&&(s=this.tokenizer.paragraph(i))){let r=t.at(-1);n&&r?.type==="paragraph"?(r.raw+=`
+`+s.raw,r.text+=`
+`+s.text,this.inlineQueue.pop(),this.inlineQueue.at(-1).src=r.text):t.push(s),n=i.length!==e.length,e=e.substring(s.raw.length);continue}if(s=this.tokenizer.text(e)){e=e.substring(s.raw.length);let r=t.at(-1);r?.type==="text"?(r.raw+=`
+`+s.raw,r.text+=`
+`+s.text,this.inlineQueue.pop(),this.inlineQueue.at(-1).src=r.text):t.push(s);continue}if(e){let r="Infinite loop on byte: "+e.charCodeAt(0);if(this.options.silent){console.error(r);break}else throw new Error(r)}}return this.state.top=!0,t}inline(e,t=[]){return this.inlineQueue.push({src:e,tokens:t}),t}inlineTokens(e,t=[]){let n=e,s=null;if(this.tokens.links){let o=Object.keys(this.tokens.links);if(o.length>0)for(;(s=this.tokenizer.rules.inline.reflinkSearch.exec(n))!=null;)o.includes(s[0].slice(s[0].lastIndexOf("[")+1,-1))&&(n=n.slice(0,s.index)+"["+"a".repeat(s[0].length-2)+"]"+n.slice(this.tokenizer.rules.inline.reflinkSearch.lastIndex))}for(;(s=this.tokenizer.rules.inline.anyPunctuation.exec(n))!=null;)n=n.slice(0,s.index)+"++"+n.slice(this.tokenizer.rules.inline.anyPunctuation.lastIndex);for(;(s=this.tokenizer.rules.inline.blockSkip.exec(n))!=null;)n=n.slice(0,s.index)+"["+"a".repeat(s[0].length-2)+"]"+n.slice(this.tokenizer.rules.inline.blockSkip.lastIndex);let i=!1,r="";for(;e;){i||(r=""),i=!1;let o;if(this.options.extensions?.inline?.some(c=>(o=c.call({lexer:this},e,t))?(e=e.substring(o.raw.length),t.push(o),!0):!1))continue;if(o=this.tokenizer.escape(e)){e=e.substring(o.raw.length),t.push(o);continue}if(o=this.tokenizer.tag(e)){e=e.substring(o.raw.length),t.push(o);continue}if(o=this.tokenizer.link(e)){e=e.substring(o.raw.length),t.push(o);continue}if(o=this.tokenizer.reflink(e,this.tokens.links)){e=e.substring(o.raw.length);let c=t.at(-1);o.type==="text"&&c?.type==="text"?(c.raw+=o.raw,c.text+=o.text):t.push(o);continue}if(o=this.tokenizer.emStrong(e,n,r)){e=e.substring(o.raw.length),t.push(o);continue}if(o=this.tokenizer.codespan(e)){e=e.substring(o.raw.length),t.push(o);continue}if(o=this.tokenizer.br(e)){e=e.substring(o.raw.length),t.push(o);continue}if(o=this.tokenizer.del(e)){e=e.substring(o.raw.length),t.push(o);continue}if(o=this.tokenizer.autolink(e)){e=e.substring(o.raw.length),t.push(o);continue}if(!this.state.inLink&&(o=this.tokenizer.url(e))){e=e.substring(o.raw.length),t.push(o);continue}let a=e;if(this.options.extensions?.startInline){let c=1/0,p=e.slice(1),u;this.options.extensions.startInline.forEach(d=>{u=d.call({lexer:this},p),typeof u=="number"&&u>=0&&(c=Math.min(c,u))}),c<1/0&&c>=0&&(a=e.substring(0,c+1))}if(o=this.tokenizer.inlineText(a)){e=e.substring(o.raw.length),o.raw.slice(-1)!=="_"&&(r=o.raw.slice(-1)),i=!0;let c=t.at(-1);c?.type==="text"?(c.raw+=o.raw,c.text+=o.text):t.push(o);continue}if(e){let c="Infinite loop on byte: "+e.charCodeAt(0);if(this.options.silent){console.error(c);break}else throw new Error(c)}}return t}};var $=class{options;parser;constructor(e){this.options=e||w}space(e){return""}code({text:e,lang:t,escaped:n}){let s=(t||"").match(m.notSpaceStart)?.[0],i=e.replace(m.endingNewline,"")+`
+`;return s?'<pre><code class="language-'+R(s)+'">'+(n?i:R(i,!0))+`</code></pre>
+`:"<pre><code>"+(n?i:R(i,!0))+`</code></pre>
+`}blockquote({tokens:e}){return`<blockquote>
+${this.parser.parse(e)}</blockquote>
+`}html({text:e}){return e}heading({tokens:e,depth:t}){return`<h${t}>${this.parser.parseInline(e)}</h${t}>
+`}hr(e){return`<hr>
+`}list(e){let t=e.ordered,n=e.start,s="";for(let o=0;o<e.items.length;o++){let a=e.items[o];s+=this.listitem(a)}let i=t?"ol":"ul",r=t&&n!==1?' start="'+n+'"':"";return"<"+i+r+`>
+`+s+"</"+i+`>
+`}listitem(e){let t="";if(e.task){let n=this.checkbox({checked:!!e.checked});e.loose?e.tokens[0]?.type==="paragraph"?(e.tokens[0].text=n+" "+e.tokens[0].text,e.tokens[0].tokens&&e.tokens[0].tokens.length>0&&e.tokens[0].tokens[0].type==="text"&&(e.tokens[0].tokens[0].text=n+" "+R(e.tokens[0].tokens[0].text),e.tokens[0].tokens[0].escaped=!0)):e.tokens.unshift({type:"text",raw:n+" ",text:n+" ",escaped:!0}):t+=n+" "}return t+=this.parser.parse(e.tokens,!!e.loose),`<li>${t}</li>
+`}checkbox({checked:e}){return"<input "+(e?'checked="" ':"")+'disabled="" type="checkbox">'}paragraph({tokens:e}){return`<p>${this.parser.parseInline(e)}</p>
+`}table(e){let t="",n="";for(let i=0;i<e.header.length;i++)n+=this.tablecell(e.header[i]);t+=this.tablerow({text:n});let s="";for(let i=0;i<e.rows.length;i++){let r=e.rows[i];n="";for(let o=0;o<r.length;o++)n+=this.tablecell(r[o]);s+=this.tablerow({text:n})}return s&&(s=`<tbody>${s}</tbody>`),`<table>
+<thead>
+`+t+`</thead>
+`+s+`</table>
+`}tablerow({text:e}){return`<tr>
+${e}</tr>
+`}tablecell(e){let t=this.parser.parseInline(e.tokens),n=e.header?"th":"td";return(e.align?`<${n} align="${e.align}">`:`<${n}>`)+t+`</${n}>
+`}strong({tokens:e}){return`<strong>${this.parser.parseInline(e)}</strong>`}em({tokens:e}){return`<em>${this.parser.parseInline(e)}</em>`}codespan({text:e}){return`<code>${R(e,!0)}</code>`}br(e){return"<br>"}del({tokens:e}){return`<del>${this.parser.parseInline(e)}</del>`}link({href:e,title:t,tokens:n}){let s=this.parser.parseInline(n),i=V(e);if(i===null)return s;e=i;let r='<a href="'+e+'"';return t&&(r+=' title="'+R(t)+'"'),r+=">"+s+"</a>",r}image({href:e,title:t,text:n,tokens:s}){s&&(n=this.parser.parseInline(s,this.parser.textRenderer));let i=V(e);if(i===null)return R(n);e=i;let r=`<img src="${e}" alt="${n}"`;return t&&(r+=` title="${R(t)}"`),r+=">",r}text(e){return"tokens"in e&&e.tokens?this.parser.parseInline(e.tokens):"escaped"in e&&e.escaped?e.text:R(e.text)}};var _=class{strong({text:e}){return e}em({text:e}){return e}codespan({text:e}){return e}del({text:e}){return e}html({text:e}){return e}text({text:e}){return e}link({text:e}){return""+e}image({text:e}){return""+e}br(){return""}};var b=class l{options;renderer;textRenderer;constructor(e){this.options=e||w,this.options.renderer=this.options.renderer||new $,this.renderer=this.options.renderer,this.renderer.options=this.options,this.renderer.parser=this,this.textRenderer=new _}static parse(e,t){return new l(t).parse(e)}static parseInline(e,t){return new l(t).parseInline(e)}parse(e,t=!0){let n="";for(let s=0;s<e.length;s++){let i=e[s];if(this.options.extensions?.renderers?.[i.type]){let o=i,a=this.options.extensions.renderers[o.type].call({parser:this},o);if(a!==!1||!["space","hr","heading","code","table","blockquote","list","html","paragraph","text"].includes(o.type)){n+=a||"";continue}}let r=i;switch(r.type){case"space":{n+=this.renderer.space(r);continue}case"hr":{n+=this.renderer.hr(r);continue}case"heading":{n+=this.renderer.heading(r);continue}case"code":{n+=this.renderer.code(r);continue}case"table":{n+=this.renderer.table(r);continue}case"blockquote":{n+=this.renderer.blockquote(r);continue}case"list":{n+=this.renderer.list(r);continue}case"html":{n+=this.renderer.html(r);continue}case"paragraph":{n+=this.renderer.paragraph(r);continue}case"text":{let o=r,a=this.renderer.text(o);for(;s+1<e.length&&e[s+1].type==="text";)o=e[++s],a+=`
+`+this.renderer.text(o);t?n+=this.renderer.paragraph({type:"paragraph",raw:a,text:a,tokens:[{type:"text",raw:a,text:a,escaped:!0}]}):n+=a;continue}default:{let o='Token with "'+r.type+'" type was not found.';if(this.options.silent)return console.error(o),"";throw new Error(o)}}}return n}parseInline(e,t=this.renderer){let n="";for(let s=0;s<e.length;s++){let i=e[s];if(this.options.extensions?.renderers?.[i.type]){let o=this.options.extensions.renderers[i.type].call({parser:this},i);if(o!==!1||!["escape","html","link","image","strong","em","codespan","br","del","text"].includes(i.type)){n+=o||"";continue}}let r=i;switch(r.type){case"escape":{n+=t.text(r);break}case"html":{n+=t.html(r);break}case"link":{n+=t.link(r);break}case"image":{n+=t.image(r);break}case"strong":{n+=t.strong(r);break}case"em":{n+=t.em(r);break}case"codespan":{n+=t.codespan(r);break}case"br":{n+=t.br(r);break}case"del":{n+=t.del(r);break}case"text":{n+=t.text(r);break}default:{let o='Token with "'+r.type+'" type was not found.';if(this.options.silent)return console.error(o),"";throw new Error(o)}}}return n}};var L=class{options;block;constructor(e){this.options=e||w}static passThroughHooks=new Set(["preprocess","postprocess","processAllTokens"]);preprocess(e){return e}postprocess(e){return e}processAllTokens(e){return e}provideLexer(){return this.block?x.lex:x.lexInline}provideParser(){return this.block?b.parse:b.parseInline}};var E=class{defaults=z();options=this.setOptions;parse=this.parseMarkdown(!0);parseInline=this.parseMarkdown(!1);Parser=b;Renderer=$;TextRenderer=_;Lexer=x;Tokenizer=S;Hooks=L;constructor(...e){this.use(...e)}walkTokens(e,t){let n=[];for(let s of e)switch(n=n.concat(t.call(this,s)),s.type){case"table":{let i=s;for(let r of i.header)n=n.concat(this.walkTokens(r.tokens,t));for(let r of i.rows)for(let o of r)n=n.concat(this.walkTokens(o.tokens,t));break}case"list":{let i=s;n=n.concat(this.walkTokens(i.items,t));break}default:{let i=s;this.defaults.extensions?.childTokens?.[i.type]?this.defaults.extensions.childTokens[i.type].forEach(r=>{let o=i[r].flat(1/0);n=n.concat(this.walkTokens(o,t))}):i.tokens&&(n=n.concat(this.walkTokens(i.tokens,t)))}}return n}use(...e){let t=this.defaults.extensions||{renderers:{},childTokens:{}};return e.forEach(n=>{let s={...n};if(s.async=this.defaults.async||s.async||!1,n.extensions&&(n.extensions.forEach(i=>{if(!i.name)throw new Error("extension name required");if("renderer"in i){let r=t.renderers[i.name];r?t.renderers[i.name]=function(...o){let a=i.renderer.apply(this,o);return a===!1&&(a=r.apply(this,o)),a}:t.renderers[i.name]=i.renderer}if("tokenizer"in i){if(!i.level||i.level!=="block"&&i.level!=="inline")throw new Error("extension level must be 'block' or 'inline'");let r=t[i.level];r?r.unshift(i.tokenizer):t[i.level]=[i.tokenizer],i.start&&(i.level==="block"?t.startBlock?t.startBlock.push(i.start):t.startBlock=[i.start]:i.level==="inline"&&(t.startInline?t.startInline.push(i.start):t.startInline=[i.start]))}"childTokens"in i&&i.childTokens&&(t.childTokens[i.name]=i.childTokens)}),s.extensions=t),n.renderer){let i=this.defaults.renderer||new $(this.defaults);for(let r in n.renderer){if(!(r in i))throw new Error(`renderer '${r}' does not exist`);if(["options","parser"].includes(r))continue;let o=r,a=n.renderer[o],c=i[o];i[o]=(...p)=>{let u=a.apply(i,p);return u===!1&&(u=c.apply(i,p)),u||""}}s.renderer=i}if(n.tokenizer){let i=this.defaults.tokenizer||new S(this.defaults);for(let r in n.tokenizer){if(!(r in i))throw new Error(`tokenizer '${r}' does not exist`);if(["options","rules","lexer"].includes(r))continue;let o=r,a=n.tokenizer[o],c=i[o];i[o]=(...p)=>{let u=a.apply(i,p);return u===!1&&(u=c.apply(i,p)),u}}s.tokenizer=i}if(n.hooks){let i=this.defaults.hooks||new L;for(let r in n.hooks){if(!(r in i))throw new Error(`hook '${r}' does not exist`);if(["options","block"].includes(r))continue;let o=r,a=n.hooks[o],c=i[o];L.passThroughHooks.has(r)?i[o]=p=>{if(this.defaults.async)return Promise.resolve(a.call(i,p)).then(d=>c.call(i,d));let u=a.call(i,p);return c.call(i,u)}:i[o]=(...p)=>{let u=a.apply(i,p);return u===!1&&(u=c.apply(i,p)),u}}s.hooks=i}if(n.walkTokens){let i=this.defaults.walkTokens,r=n.walkTokens;s.walkTokens=function(o){let a=[];return a.push(r.call(this,o)),i&&(a=a.concat(i.call(this,o))),a}}this.defaults={...this.defaults,...s}}),this}setOptions(e){return this.defaults={...this.defaults,...e},this}lexer(e,t){return x.lex(e,t??this.defaults)}parser(e,t){return b.parse(e,t??this.defaults)}parseMarkdown(e){return(n,s)=>{let i={...s},r={...this.defaults,...i},o=this.onError(!!r.silent,!!r.async);if(this.defaults.async===!0&&i.async===!1)return o(new Error("marked(): The async option was set to true by an extension. Remove async: false from the parse options object to return a Promise."));if(typeof n>"u"||n===null)return o(new Error("marked(): input parameter is undefined or null"));if(typeof n!="string")return o(new Error("marked(): input parameter is of type "+Object.prototype.toString.call(n)+", string expected"));r.hooks&&(r.hooks.options=r,r.hooks.block=e);let a=r.hooks?r.hooks.provideLexer():e?x.lex:x.lexInline,c=r.hooks?r.hooks.provideParser():e?b.parse:b.parseInline;if(r.async)return Promise.resolve(r.hooks?r.hooks.preprocess(n):n).then(p=>a(p,r)).then(p=>r.hooks?r.hooks.processAllTokens(p):p).then(p=>r.walkTokens?Promise.all(this.walkTokens(p,r.walkTokens)).then(()=>p):p).then(p=>c(p,r)).then(p=>r.hooks?r.hooks.postprocess(p):p).catch(o);try{r.hooks&&(n=r.hooks.preprocess(n));let p=a(n,r);r.hooks&&(p=r.hooks.processAllTokens(p)),r.walkTokens&&this.walkTokens(p,r.walkTokens);let u=c(p,r);return r.hooks&&(u=r.hooks.postprocess(u)),u}catch(p){return o(p)}}}onError(e,t){return n=>{if(n.message+=`
+Please report this to https://github.com/markedjs/marked.`,e){let s="<p>An error occurred:</p><pre>"+R(n.message+"",!0)+"</pre>";return t?Promise.resolve(s):s}if(t)return Promise.reject(n);throw n}}};var M=new E;function k(l,e){return M.parse(l,e)}k.options=k.setOptions=function(l){return M.setOptions(l),k.defaults=M.defaults,N(k.defaults),k};k.getDefaults=z;k.defaults=w;k.use=function(...l){return M.use(...l),k.defaults=M.defaults,N(k.defaults),k};k.walkTokens=function(l,e){return M.walkTokens(l,e)};k.parseInline=M.parseInline;k.Parser=b;k.parser=b.parse;k.Renderer=$;k.TextRenderer=_;k.Lexer=x;k.lexer=x.lex;k.Tokenizer=S;k.Hooks=L;k.parse=k;var it=k.options,ot=k.setOptions,lt=k.use,at=k.walkTokens,ct=k.parseInline,pt=k,ut=b.parse,ht=x.lex;
+
+if(__exports != exports)module.exports = exports;return module.exports}));
+
+</script>
+<script data-reader>
+/* spec-kit v5 — spec reader. Renders the embedded markdown (#spec-md) with marked, assigns
+   deep-link ids, builds the TOC, and highlights the :target.
+   ids assigned:
+     headings   → GitHub-style slug of the text, PLUS an alias  s<number> for numbered headings
+                  ("### 3.2 Piece A" → #s3-2, "## 1. Problem" → #s1)
+     tokens     → the first <strong> whose text starts with P0a / D12 / Q6 gets id="P0a" etc.
+   So a companion page can link to  SPEC.html#s3-2 , #D12 , #P0a , #Q6 . */
+(function(){
+  const raw=document.getElementById('spec-md').textContent.replace(/<\\\/script/g,'</script').trim();
+  const body=document.getElementById('spec-body');
+  marked.use({gfm:true,breaks:false});
+  // a run of **Label:** lines (the spec header block) is meant to stack: give each a hard break
+  const md=raw.replace(/^(\*\*[^*\n]+:\*\*[^\n]*)$/gm,'$1  ');
+  body.innerHTML=marked.parse(md);
+  const used=new Set();
+  const slug=t=>t.toLowerCase().replace(/[^\w\s-]/g,'').trim().replace(/\s+/g,'-');
+  const uniq=id=>{let i=id,n=1;while(used.has(i))i=id+'-'+(n++);used.add(i);return i;};
+  // headings
+  body.querySelectorAll('h1,h2,h3,h4').forEach(h=>{
+    const text=h.textContent.trim();
+    h.id=uniq(slug(text));
+    const m=text.match(/^(\d+(?:\.\d+)*)\.?\s/);
+    if(m){const a=document.createElement('span');a.id=uniq('s'+m[1].replace(/\./g,'-'));a.className='anchor';h.before(a);}
+  });
+  // tokens: **D4.** / **P0a …** / **Q6.**
+  body.querySelectorAll('strong,b').forEach(s=>{
+    const m=s.textContent.trim().match(/^(P\d[a-z]?|D\d+|Q\d+)\b/);
+    if(m&&!used.has(m[1])){s.id=m[1];used.add(m[1]);s.classList.add('tok');}
+  });
+  // tables scroll instead of the page
+  body.querySelectorAll('table').forEach(t=>{t.classList.add('spectable');const w=document.createElement('div');w.className='spectable-scroll';t.before(w);w.appendChild(t);});
+  // title + meta
+  const h1=body.querySelector('h1'); if(h1){document.getElementById('reader-title').textContent=h1.textContent;document.title=h1.textContent;h1.remove();}
+  const status=raw.match(/\*\*Status:\*\*\s*([^\n]+)/),date=raw.match(/\*\*Date:\*\*\s*([^\n]+)/);
+  document.getElementById('reader-meta').textContent=[status&&status[1],date&&date[1]].filter(Boolean).join(' · ');
+  // TOC from h2/h3
+  const toc=document.getElementById('toc');
+  body.querySelectorAll('h2,h3').forEach(h=>{const a=document.createElement('a');a.href='#'+h.id;a.textContent=h.textContent;a.className='toc-'+h.tagName.toLowerCase();toc.appendChild(a);});
+  // sibling .md links stay .md (GitHub renders them; a reader for them may not be built). If a
+  // sibling reader IS built, link to it explicitly from the markdown as .html.
+  // scroll to :target after ids exist
+  if(location.hash){const t=document.getElementById(decodeURIComponent(location.hash.slice(1)));if(t)t.scrollIntoView({block:'start'});}
+})();
+
+</script>
+</body>
+</html>
