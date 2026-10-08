@@ -63,6 +63,11 @@
 >   107 of 254 document citations), and Q12 (the kit takes over both hand copies in P1;
 >   `remap-result.json` already has the seed's and the writer's shapes). D15 rung 3 is
 >   updated.
+> - **G6 = Q2 + Q7: one sweep worker per guide × run, with no shape reuse.** This is the
+>   roster `2.1-review` uses. A worker sees one run only, so runs' markers are independent
+>   observations, which is the point of G4. No new parallelism cap: conductor2's
+>   `CONDUCTOR_CONCURRENCY` (default 16) already bounds in-flight nodes, so `runs = 7` queues
+>   about 70 workers and runs at most 16 at a time.
 >
 > **Revision note (v2, 2026-10-07): markings on non-plan-set documents.** Will asked for
 > markings on supplementary documents too (application forms, letters, reports), now that
@@ -341,10 +346,25 @@ deterministically:
 - a fail/warn run that cites no sheet: sheetless `nothing-to-mark` ("cites no sheet");
 - a comment with no fail/warn run: a comment-level sheetless `nothing-to-mark`.
 
-That keeps the coverage gate total. Workers run **one per guide** (`grouping`), the CC
-equivalent of the review's per-discipline roster, and each worker handles every
-(item, run) pair in its guide. A guide with no fail/warn run drops out. On `b80e5075` that
-is 84 run-findings citing a sheet, over about 10 workers. At `runs = 1` there is one run per
+That keeps the coverage gate total. **Workers run one per guide × run (v3, grill G6)**, the
+roster `2.1-review` already uses for verdicts (`checklistItems × runs`, written by
+`1.4-resolve`). Each worker handles every fail/warn item of **one run** of its guide, and
+never sees another run's claims or shapes. A (guide, run) with no fail/warn finding that
+cites a sheet or document drops out. On `b80e5075` that is 84 run-findings citing a sheet,
+over about 30 workers. v2 had one worker per guide covering every run. That was rejected,
+because a worker that has just marked run 1 carries run 1's crops and shape into run 2, and
+G4's per-run geometry would no longer be independent observations.
+
+**Parallelism needs no new cap.** conductor2 already limits how many graph nodes one driver
+has in flight: `CONDUCTOR_CONCURRENCY`, default 16, sized to the seat pool rather than the
+CPU (conductor2 `README.md:587`, `src/verbs/advance.rs:402-410`). A foreach roster is
+queued, not launched all at once. So `runs = 7` over 10 guides is about 70 roster items, of
+which at most 16 run at a time. That is the same bound `2.1-review` already runs under at
+the same width. There is no per-step cap in `step.yaml` today, and this spec adds none.
+The one difference from the verdict workers is that each sweep worker renders crops with
+`pdftoppm` (300 DPI, CPU-bound), which `2.1-review`'s workers do not do. On a small cloud
+sandbox, 16 concurrent renders may be slow rather than wrong. P4 records the step's wall
+clock, and an operator can lower `CONDUCTOR_CONCURRENCY` for a run if it is. At `runs = 1` there is one run per
 comment, and this reduces to the comment-level sweep.
 
 **v3 (grill G4, Will, 2026-10-08): reaffirmed, every fail/warn run, at its full cost.**
@@ -607,6 +627,9 @@ new `kind`: `kind` stays the geometry (point or polygon).
 **Q2.** Roster grain for the sweep: one worker per guide (D3), or one worker for the whole
 CC run? At `runs = 3` that is about 84 run-findings (D3, v1.1), which favours per guide for
 partial credit when a seat dies.
+**Answered in v3 (grill G6): one worker per guide × run** (D3). It matches `2.1-review`'s
+roster, keeps each run's markers independent, and gives the finest partial credit.
+In-flight workers are bounded by conductor2's existing `CONDUCTOR_CONCURRENCY` (16).
 
 **Q3.** Model for `annotate`: opus-5.5 high (D11), or try sonnet-5.5 first given CC's cost
 profile?
@@ -629,6 +652,8 @@ mark each run independently (D3 as written: no cross-run influence, about 3× th
 or may a worker reuse a converged shape from a sibling run when that run cites the same
 sheet and block and its evidence text still reads true? Reuse is cheaper, but it makes the
 runs' markers no longer independent observations.
+**Answered in v3 (grill G6): no reuse.** A per guide × run worker never sees a sibling run,
+so each run is located independently (G4, D3).
 
 
 **Q12 (v3).** The agent still moves numbers between files by hand twice. At step 8 (tab 03)

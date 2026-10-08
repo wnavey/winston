@@ -595,7 +595,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
   </div>
   <div class="sys-refs">
     <a class="refrow new" data-ref="D1"><span class="chip">D1</span><span class="txt">a separate 2.12-annotate family after 2.9-comments; validate and publish read its merged copy</span></a>
-    <a class="refrow new" data-ref="D3"><span class="chip">D3</span><span class="txt">the unit is a (comment, run) whose own status is fail/warn and cites a sheet, whatever the comment's verdict; one worker per guide</span></a>
+    <a class="refrow new" data-ref="D3"><span class="chip">D3</span><span class="txt">the unit is a (comment, run) whose own status is fail/warn and cites a sheet, whatever the comment's verdict; one worker per guide × run, at most 16 in flight</span></a>
     <a class="refrow new" data-ref="D12"><span class="chip">D12</span><span class="txt">per-run markers stored on each perRunFindings entry; the comment shows the winning run's</span></a>
     <a class="refrow chg" data-ref="D4"><span class="chip">D4</span><span class="txt">the stager writes each block's bounding box, so a cited block becomes the first seed</span></a>
     <a class="refrow new" data-ref="D5"><span class="chip">D5</span><span class="txt">share the geometry scripts and loop rules in runbooks/lib/annotate; what to mark, the record and the merge stay per runbook</span></a>
@@ -991,7 +991,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 
     <div class="sys trig" id="c-t" style="grid-area:2/1"><span class="dot"></span><span class="t">annotate: true</span><span class="d">request flag, off by default</span></div>
     <div class="sys" id="c-29" style="grid-area:2/2"><span class="k">script</span><span class="t">2.9-comments</span><span class="d">the final envelope</span></div>
-    <div class="sys new" id="c-212" style="grid-area:2/3"><a class="ref" href="#detail-cc-roster">D2 · D3 ↓</a><span class="k">agent + script</span><span class="t">2.12-annotate</span><span class="d">sweep per guide, then merge into a copy</span></div>
+    <div class="sys new" id="c-212" style="grid-area:2/3"><a class="ref" href="#detail-cc-roster">D2 · D3 ↓</a><span class="k">agent + script</span><span class="t">2.12-annotate</span><span class="d">sweep per guide × run, then merge into a copy</span></div>
     <div class="sys chg" id="c-210" style="grid-area:2/4"><a class="ref" href="#detail-laneb">D1 ↓</a><span class="k">script</span><span class="t">2.10-validate</span><span class="d">reads the merged envelope</span></div>
     <div class="sys chg" id="c-31" style="grid-area:2/5"><a class="ref" href="#detail-laneb">D7 ↓</a><span class="k">script</span><span class="t">3.1-publish</span><span class="d">lane B with marker checks</span></div>
     <div class="sys chg" id="c-12" style="grid-area:3/2"><a class="ref" href="#detail-manifest">D4 ↓</a><span class="k">script</span><span class="t">1.2-stage-submission</span><span class="d">PDFs plus block boxes</span></div>
@@ -1207,12 +1207,12 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
     <thead><tr><th>Q</th><th>Question</th><th>Proposed default</th></tr></thead>
     <tbody>
       <tr><td><span class="sn">Q1</span></td><td>Should absences stay unmarked, or get a new <code>missing</code> kind?</td><td><b>Answered in v3:</b> an absence with a visible slot gets an <code>missing</code> marker (optional <code>role</code>); the agent decides, no sheet/document rule (D2)</td></tr>
-      <tr><td><span class="sn">Q2</span></td><td>Sweep grain: one worker per guide, or one for the whole run?</td><td>Per guide: about 84 run-findings at runs = 3</td></tr>
+      <tr><td><span class="sn">Q2</span></td><td>Sweep grain: one worker per guide, or one for the whole run?</td><td><b>Answered (G6):</b> per guide × run, as 2.1-review; ≤16 in flight via CONDUCTOR_CONCURRENCY. Q7: no reuse</td></tr>
       <tr><td><span class="sn">Q3</span></td><td>annotate model: opus-5.5 high, or try sonnet-5.5?</td><td>Opus, matching the review's proven sweep</td></tr>
       <tr><td><span class="sn">Q4</span></td><td>Markers on supplementary documents (forms, reports)?</td><td><b>Answered in v2:</b> in scope (Documents tab)</td></tr>
       <tr><td><span class="sn">Q5</span></td><td>Multiple plan sets collide on <code>sheet-NN</code>, and the app reads only one</td><td><b>Answered (research):</b> a separate spec. All 38 prod submission versions with a plan set have exactly one.</td></tr>
       <tr><td><span class="sn">Q6</span></td><td>When is the flag good enough to default on?</td><td>No wrongly placed marker among 20 audited</td></tr>
-      <tr><td><span class="sn">Q7</span></td><td>Mark each run independently, or reuse a sibling run's shape for the same block?</td><td>Independent (as D3 says); reuse is cheaper but couples the runs</td></tr>
+      <tr><td><span class="sn">Q7</span></td><td>Mark each run independently, or reuse a sibling run's shape for the same block?</td><td><b>Answered (G6):</b> independent; a worker sees one run only</td></tr>
       <tr><td><span class="sn">Q8</span></td><td>Does the formal review runbook want document markings too?</td><td>Its own call; the kit supports it at no cost</td></tr>
       <tr><td><span class="sn">Q9</span></td><td>Should preprocessing-v4 publish per-section page regions?</td><td>Only if document not-located is high in P4</td></tr>
       <tr><td><span class="sn">Q10</span></td><td>Cap of 6 pages per (run, document)?</td><td><b>Answered (research):</b> 6 pages for long documents; a document of 10 pages or fewer is read whole (the 8-page CC Application draws 107 of 254 citations)</td></tr>
