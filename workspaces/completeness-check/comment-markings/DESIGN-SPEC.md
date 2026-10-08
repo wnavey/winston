@@ -1,6 +1,6 @@
 # Comment markings for the completeness-check runbook
 
-**Status:** Draft v3
+**Status:** Approved v3.1 (implementation corrections folded 2026-10-08)
 **Date:** 2026-10-08
 **Repos touched (proposed):** `bureau` (shared annotate kit lifted out of `runbooks/review/scripts/`; a new `2.12-annotate` step family in `runbooks/completeness-check/`; the stager writes block boxes; lane B of `publish_review.py` validates and stamps markings), `cityhall` (the CC adapter reads `annotations` / `annotation_disposition` the way the August adapter does; v2: the pdf.js document viewer draws markings on a page; v3: per-sheet marker/outline switch, colours by `marking_type`), `conductor2` (v3, D23: a step-level `after_retries: pass` key)
 **Repos NOT touched:** `substation` (archived; its `supabase/` now lives in `cityhall`), `inspector-general`, `claude-plugins`
@@ -18,6 +18,58 @@
 > annotate step in the CC runbook (reusing the review's scripts), a lane-B publish that
 > validates and carries the fields, and a CC adapter in `cityhall` that reads them. The
 > companion page `architecture.html` draws all of this.
+
+> **Revision note (v3.1, 2026-10-08, implementation kickoff): corrections from reading the code.**
+> Will approved the plan, with these corrections, on 2026-10-08. Code was read at bureau
+> `0cb97661`, cityhall `df688dd` and conductor2 `acd4bc5`.
+>
+> - **P0 needs an acceptance record, not only an exit 0 (D23).** conductor2 treats an exit 0
+>   as final only for the rest of the pass. Every later pass, the `run-step` upstream gate
+>   (`check.rs` `upstream_done`) and `status` re-run the contract (`check_step`) to decide
+>   whether a node is done. A sweep worker that only exited 0 would be read as failing on the
+>   next pass and relaunched, and its readers would be refused. **Decision (Will):**
+>   `after_retries: pass` also writes a ledger line marking the node *accepted after retries*,
+>   with its failure count and a fingerprint of its output folder. `check_step` treats a
+>   failing or unmeasurable contract as passed when the newest ledger line for that node is an
+>   acceptance and the folder still matches the fingerprint.
+> - **The contract's environment.** It runs with the step's whole environment
+>   (`harness::step_env`), not with only `TARGET_DIR` (`contract.rs:365`). The conclusion
+>   still holds, because nothing in that environment names the attempt.
+> - **The paths the key converts.** An unmeasured contract exits **76**
+>   (`EXIT_UNVERIFIED`, `agent.rs:1136-1148`), not 1. The two refused retries (`:1160-1181`)
+>   happen at attempt 0, before any retry is spent. The key still covers all four paths,
+>   because D23's aim is that annotation never blocks publishing. The ledger line names
+>   which path it was.
+> - **The CC runbook's `AGENTS.md` rule 2** ("Two tools, no others") also forbids reading
+>   images, as prompt `:44` does. D10's exemption is written in both places.
+> - **The `annotate` request flag** goes into `cc.py` `DEFAULTS` and `effective_options`
+>   as well as the zod `Request`, because `test_cc.py` pins the defaults against each other.
+> - **cc-compare never starts a CC run.** It scores a finished one (`cc-compare/scripts/lib.ts`).
+>   So `annotate: false` is set by whoever starts a comparison's CC run, not by cc-compare (G7, D9).
+> - **2.11-tool-usage reads only the logs `persist.logs` keeps.** D10's change therefore
+>   adds `2.12-annotate/sweep` to `persist.logs` and to `tool_usage.py` `AGENT_STEPS`.
+>   `2.12` sorts after `2.11` but runs before `2.10`. Order comes from inputs, so the number
+>   is a label only.
+> - **cityhall: CC markings go in `checkComment`, not `statusComment` (D8).** `statusComment`
+>   also serves CRC and the legacy format. The checklist-source-ui Source link landed in
+>   `checkComment` too (cityhall `e20d12b`, #292), so the two changes no longer touch the same
+>   function. `readAnnotations`, `readPlanMarkup` and `readSheetMap` are not exported today.
+>   `marking_type` has to be added to `AnnotationView`, `PanelMarker` and `toPanelMarker`.
+>   `rowSheets` belongs to the issue table; the issue panel lists rows with `citedSheets`.
+>   `DocumentCanvas` does not pass `page` to `PdfViewer` yet.
+> - **Stale text fixed.** D3 counts a run that cites a sheet **or a document** (G2). D13's
+>   roll-up order includes `not-swept` (D23). D15 no longer says `2.1-review` is untouched
+>   (D22). Q3 is answered: opus-5.5 at high effort (D11).
+> - **Other facts.** No script appends to `tool-bugs.md` today, so D23's script-written lines
+>   are the first. `annotate-crop.ts:150-152` says the publisher refuses a `sheet_sha256`
+>   mismatch, but nothing in bureau compares it. P1 corrects the comment. The kit move also
+>   carries `lib/host-tools.ts` and keeps `runbooks/lib/box-refine.ts` where it is.
+>   `annotate_stale_check.py` stays with the review. When `runs = 1`, `perRunFindings` has no
+>   `observation`/`reasoning` (`build-review-comments.ts:384-397`), so the sweep falls back
+>   to the run's `comment`.
+> - **PR split.** P1 is two PRs: P1a (the kit) and P1b (staged files: D4 block boxes and D17
+>   document fields). P3 is three: P3a (bureau lane B), P3b (cityhall adapter, per-sheet switch
+>   and colours) and P3c (cityhall pdf.js overlay). The land order is unchanged.
 
 > **Revision note (v3, 2026-10-08, grill with Will): decisions folded one at a time.**
 > Grill decisions are numbered G1, G2, … The spec's own Q numbers keep their meaning. G1 is
@@ -72,7 +124,8 @@
 >   is low, so Will tests the markers in the app and flips the default off if they are bad.
 >   Because the step is live from its first release, the land order becomes P1 → P3 → P2,
 >   so publish validation and the app renderers exist before any CC review carries markers.
->   `cc-compare` passes `annotate: false`.
+>   The CC runs a comparison scores are started with `annotate: false` (v3.1: cc-compare
+>   only scores finished runs).
 > - **G8: markers or cited outlines, per sheet (D8).** Will's rule: on each sheet, a comment
 >   shows its markers if it has any there, otherwise its cited-block outlines. cityhall
 >   switches per comment today (`placed-markers.ts:70`, `tourOf`), so marking one sheet would
@@ -96,7 +149,7 @@
 >   merge does the checking. Then, refined: **keep conductor's contract retry** (a strict
 >   contract sends "you missed these dispositions" back into the session up to twice), **then
 >   publish anyway.** That needs a small conductor2 step key, `after_retries: pass` (new P0),
->   because a contract cannot tell its last attempt from its first (`contract.rs:386`). An
+>   because a contract cannot tell its last attempt from its first (v3.1: no attempt in its environment). An
 >   interim always-pass contract ships until P0 lands. A seat park (75) remains, as a delay
 >   rather than a failure.
 >
@@ -371,8 +424,8 @@ marks absences is that runbook's own call, as in D21.
 
 **D3. Sweep every failing run, not only the winning one.** The unit of work is a
 *(comment, run)*: a `perRunFindings[k]` entry in `2.9-comments/review-comments.json` whose
-**own** `status` is `fail` or `warn`, **and** whose own `sheetReferences` cite at least one
-plan sheet. The comment's consolidated status does not matter. A comment that passed 2–1
+**own** `status` is `fail` or `warn`, **and** whose own `sheetReferences` or
+`documentReferences` cite at least one plan sheet or supplementary document (v3.1, G2). The comment's consolidated status does not matter. A comment that passed 2–1
 still has its failing run swept, and a fail that one run voted pass has only its two failing
 runs swept. Each run is located against **that run's** `comment` / `observation` and
 **that run's** cited sheets and blocks, so runs that disagree about where the problem is get
@@ -485,10 +538,10 @@ change, no new RPC.
 
 **D8. cityhall: the CC adapter reads markings.** Export `readAnnotations` /
 `readPlanMarkup` from `adapters/august.ts` into a shared `adapters/annotations.ts`. Call
-them from `checklist.ts` `statusComment`, keyed by `reviewJson.sheet_map`, and set
-`markerCount` / `hasAnnotations` from the result. CRC shares `statusComment` and
-automatically gains the ability to render markings if it ever carries them. `markersOn`
-already draws any comment's `annotations`.
+them from `checklist.ts` `checkComment` (v3.1: not `statusComment`, which CRC and the legacy
+format share), keyed by `reviewJson.sheet_map`, and set `markerCount` / `hasAnnotations`
+from the result. `markersOn` already draws any comment's `annotations`. `marking_type` is
+carried through `AnnotationView`, `PanelMarker` and `toPanelMarker`.
 
 **v3 (grill G8): markers or cited outlines, chosen per sheet, not per comment.** For each
 (comment, sheet), the sheets view draws **either** that comment's markers on that sheet,
@@ -504,7 +557,7 @@ today switches per comment (§1.3):
   sheet** only when it has a drawn marker on this sheet, rather than when it has any marker.
 - `tourOf` (`marker-sequence.ts`): a comment's prev/next tour is its markers, in marker
   order, then a cited-block stop for each cited sheet that has no marker, in citation order.
-  This is the order `rowSheets` already lists in the issue panel.
+  This is the order `rowSheets` already lists in the issue table (v3.1).
 - The comment-level markers are the winning run's (D12), and so is the comment's
   `sheetReferences`, so both halves of the switch describe the same run.
 
@@ -522,16 +575,16 @@ colour should say what the drawing cannot, holds for this change: whether someth
 or missing cannot be seen from the shape. The P3 cityhall PR rewrites that comment to say
 colour means selection or marking type.
 The approved [checklist-source-ui spec](../checklist-source-ui/DESIGN-SPEC.md) (D22, winston
-#297/#298) edits the same `statusComment` to add a Source link. The two changes are
-independent fields on the same view model, so whichever lands second rebases onto the other.
+#297/#298) added a Source link. It landed in `checkComment` (cityhall `e20d12b`, #292), so
+markings sit beside it as another independent field (v3.1).
 
 **D9. A request flag, on by default (v3, grill G7).** Add `annotate: boolean` to the CC
 `Request`, **default `true`**. Off means a `2.12-annotate` folder holding only `SKIPPED.md`,
 and 2.10/3.1 read 2.9's envelope, which is byte-identical to today (parity, goal 3). There
 is no scored gate before it goes on. CC traffic is low, so Will tests the markers on real
 reviews in the app. If they are bad, the default goes back to `false` in one line, and any
-single run can pass `annotate: false`. The parity and compare loops (`cc-compare`) should
-pass `annotate: false`. The step never changes a verdict (D1), so it cannot affect parity
+single run can pass `annotate: false`. The CC runs that parity and compare loops score
+should be started with `annotate: false` (cc-compare only scores finished runs, v3.1). The step never changes a verdict (D1), so it cannot affect parity
 either way, but it would add Opus spend to every compare run.
 
 Because the step is on from its first release, **lane B validation, `sheet_map` and both
@@ -618,8 +671,8 @@ gap the system caused shows ahead of the agent's own. cityhall's disposition rea
 node's exit code is its contract's verdict, and readers launch only on 0. A failing contract
 is sent back into the agent's own session up to `--max-retries` (default 2) times, and then
 the node exits 1, which blocks every reader (conductor2 `README.md`, "Trust the exit code").
-The contract cannot tell its attempts apart: it runs with only `TARGET_DIR` set
-(`src/contract.rs:386`). Will wants both behaviours: retry the gaps, and publish anyway if
+The contract cannot tell its attempts apart. It runs with the step's environment plus
+`TARGET_DIR` (`src/contract.rs:365`), and nothing in it names the attempt (v3.1 correction). Will wants both behaviours: retry the gaps, and publish anyway if
 gaps remain after the retries. Three layers give that.
 
 1. **In the session (first line of defence).** The writer scripts validate, and crop/remap
@@ -632,12 +685,22 @@ gaps remain after the retries. Three layers give that.
    every sidecar parses and validates. A gap is sent back into the session with the
    failure list ("cc-1:APP-07 run-2 has no disposition") up to twice.
 3. **After the retries, pass anyway: a new conductor2 step key, `after_retries: pass`.**
-   The sweep step declares it in `step.yaml`. Where conductor2 would exit 1, it exits 0
-   instead, prints the remaining failures to the step log, and records the attempt in the
-   ledger as passed-after-retries with its failure count. That covers:
-   - retries exhausted (`src/verbs/agent.rs:1198`);
-   - a retry refused for want of a session id or transcript (`:1169`, `:1181`);
-   - a contract that could not be measured (`:1148`).
+   The sweep step declares it in `step.yaml`. Where conductor2 would end the node failed, it
+   exits 0 instead, prints the remaining failures to the step log, and appends a ledger line
+   marking the node **accepted after retries**. The line carries the failure count, which
+   path it was, and a fingerprint of the output folder. That covers:
+   - retries exhausted (`src/verbs/agent.rs:1189-1198`, exit 1);
+   - a retry refused for want of a session id or transcript (`:1160-1181`, exit 1, at
+     attempt 0);
+   - a contract that could not be measured (`:1136-1148`, exit **76**, `EXIT_UNVERIFIED`).
+
+   **The acceptance has to outlive the pass (v3.1, Will).** conductor2 trusts an exit 0 only
+   for the rest of the pass that produced it. Later passes, the `run-step` upstream gate
+   (`check.rs` `upstream_done`) and `status` re-run the contract through `check_step`. So
+   `check_step` treats a failing or unmeasurable contract as passed when two things hold:
+   the newest ledger line for that node is an acceptance, and the output folder still
+   matches its fingerprint. Any change to the folder, such as a re-run, voids it. Without
+   this, the next pass would relaunch the worker and refuse its readers.
 
    The key's default is today's behaviour, so no other step changes. The merge then turns
    whatever is still missing into `not-swept` plus a `tool-bugs.md` line, and publishing
@@ -718,7 +781,9 @@ It is swapped for the strict contract plus `after_retries: pass` once conductor2
 - **P0 conductor2 `after_retries: pass` (v3, D23).** A conductor2 PR adds the step key. It
   has a test for each path it converts: retries exhausted, retry refused for want of a
   session id or transcript, and contract unverified. Each must exit 0 with the failures
-  printed and a ledger line, and a step without the key must behave as today.
+  printed and an acceptance ledger line. A later `check_step` must read the accepted node as
+  done, and read it as failing again once its folder changes. A step without the key must
+  behave as today (v3.1).
 
 **Land order (v3, G7, G9, D23): P0, P1 and P2b, then P3, then P2.** P2's sweep can ship on
 the interim always-pass contract if P0 is late, and switch to the strict contract when P0
@@ -829,6 +894,8 @@ In-flight workers are bounded by conductor2's existing `CONDUCTOR_CONCURRENCY` (
 
 **Q3.** Model for `annotate`: opus-5.5 high (D11), or try sonnet-5.5 first given CC's cost
 profile?
+**Answered in v3.1 (Will, 2026-10-08): opus-5.5 at high effort (D11).** Sonnet can be tried
+later for cost.
 
 **Q4.** ~~Supplementary documents: out of scope?~~ **Answered in v2:** in scope, see §7.
 
@@ -967,7 +1034,8 @@ comment, 1,000 per review.
 The disposition gains a **`documents[]`** array beside `sheets[]`, with entries
 `{document_id, page?, status, reason}`. A `nothing-to-mark` or `not-located` entry may omit
 `page`, meaning "swept this document and placed nothing". The comment-level roll-up reads
-both arrays with the unchanged precedence (`annotated` > `not-located` > `nothing-to-mark`).
+both arrays with the same precedence as sheets, `not-swept` included (`annotated` >
+`not-swept` > `not-located` > `nothing-to-mark`, D23).
 Everything is **additive**: no existing field is renamed, so the review runbook's stored
 markers and the app's current readers keep working.
 
@@ -998,8 +1066,9 @@ narrowest first:
 For a longer document it opens **at most 6 pages** per (run, document) (Q10). A 500-page report is never
 scanned, and a run whose label names nothing findable ends in `not-located` with a reason.
 The page it lands on is recorded in the marker, which is the page number the CC emit
-schema lacks. `2.1-review` is untouched, so verdict parity holds (D9). Adding an optional
-`pageNumber` to `evidenceLocations` is a separate, later choice (Q11).
+schema lacks. The sweep itself never changes `2.1-review`. The optional `pageNumber` on
+`evidenceLocations` that rung 0 reads is D22's own change (P2b), checked for verdict drift
+there (v3.1; v2's "2.1 is untouched" is superseded).
 
 **D16. Only PDFs are swept.** A `document_version` whose `mime_type` is not
 `application/pdf` (a drainage model, a spreadsheet) gets a document-level `nothing-to-mark`
