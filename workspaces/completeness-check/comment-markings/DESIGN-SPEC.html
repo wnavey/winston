@@ -482,7 +482,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 
 </style>
 </head>
-<body class="reader" data-back="architecture.html" data-spec-sha="e288c8f2e56c2853">
+<body class="reader" data-back="architecture.html" data-spec-sha="c47bab7a067e5185">
 
 <header class="masthead">
   <div class="kicker">SPEC · READER</div>
@@ -582,8 +582,9 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 >   the first page of a multi-page section, and omitted when no range covers the evidence.
 >   It is carried through `cc.py` and `build-review-comments.ts`, both of which drop it
 >   today. Every cited document opens at its page, and the sweep gets a rung-0 page. It is
->   its own PR (P2b), checked by a subset CC run plus one `cc-compare` loop for verdicts and
->   a hand check of about 20 pages.
+>   its own PR (P2b), checked on 2008 San Antonio guide `cc-1` (33 items, about 24 document
+>   citations): one CC run, one `cc-compare` loop against reviews `b80e5075` / `76570a10` (a
+>   new `2008-san-antonio` baseline), and a hand check of every page.
 >
 > **Revision note (v2, 2026-10-07): markings on non-plan-set documents.** Will asked for
 > markings on supplementary documents too (application forms, letters, reports), now that
@@ -1083,13 +1084,28 @@ field, because the run is implied by where the object sits.
   watch are `missing` markers that point at nothing (D2 guards), document `not-located` (Q9),
   and the step's wall clock (D3).
 
-- **P2b Document page numbers in 2.1 (v3, G9, D22).** Its own bureau PR. Checked with one
-  CC run of the Lamar + Collier v4 baseline: a **subset** of the guides that cite
-  supplementary documents (subset runs are cc-compare's normal case), with
-  `annotate: false`, then one `cc-compare` loop on it. The pass bar is a scorecard no worse
-  than the last loop's. cc-compare compares only final statuses, so it shows whether the new
-  instruction moved any verdict. It does not check pages. Pages are checked by hand: open
-  about 20 document citations at their `pageNumber` and confirm each lands on its evidence.
+- **P2b Document page numbers in 2.1 (v3, G9, D22).** Its own bureau PR, checked on
+  **2008 San Antonio St, guide `cc-1` only** (Will, 2026-10-08):
+  - **Target.** Project `7746ac2f-9788-40cd-ad68-3efe5d32d399`, submission version
+    `624309c1-a216-44ca-9c27-b4dcb11d6d1f`, checklist `v2.7-trimmed`. `cc-1` has 33 items. On
+    the two newest reviews, 18–19 of them cite a supplementary document (15–16 passes, 3
+    fail/warn), for 23–24 document citations, so it exercises the new field on both passes
+    and fails.
+  - **Run.** One CC run of the PR branch: `cc-1` only, `runs = 3` (as the comparison
+    reviews), `annotate: false`.
+  - **Verdicts.** One `cc-compare` loop. cc-compare ships only the `lamar-v4` baseline, so
+    this adds `runbooks/cc-compare/baselines/2008-san-antonio.json`:
+    - A = `b80e5075-f883-4e63-947c-7bd2a603fb84` and B =
+      `76570a10-116d-42a0-9577-761b5ee6776e`, both 2026-10-06, `runs = 3`, `v2.7-trimmed`,
+      on this submission version and without `pageNumber`. They are the "before".
+    - The `cc-1` guide hash is generated with the README's command, never by hand.
+    - An empty answer key, so disagreements go to the blind adjudicator and seed it.
+
+    The pass bar is no `cc-1` verdict moved beyond the A/B disagreement the adjudicator
+    rules on. cc-compare compares final statuses only, so it shows whether the new
+    instruction moved a verdict, not whether a page is right.
+  - **Pages.** By hand: open every `cc-1` document citation (about 24) at its `pageNumber`
+    and confirm it lands on the evidence, or on the first page of the evidence's section.
 
 **Land order (v3, G7, G9): P1 and P2b, then P3, then P2.** P2 ships on by default, so the publish
 validation and both app renderers (P3) go first. P3's bureau half is inert until a record
