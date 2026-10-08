@@ -1,7 +1,7 @@
 # Comment markings for the completeness-check runbook
 
-**Status:** Draft v2
-**Date:** 2026-10-07
+**Status:** Draft v3
+**Date:** 2026-10-08
 **Repos touched (proposed):** `bureau` (shared annotate kit lifted out of `runbooks/review/scripts/`; a new `2.12-annotate` step family in `runbooks/completeness-check/`; the stager writes block boxes; lane B of `publish_review.py` validates and stamps markings), `cityhall` (the CC adapter reads `annotations` / `annotation_disposition` the way the August adapter does; v2: the pdf.js document viewer draws markings on a page)
 **Repos NOT touched:** `substation` (archived; its `supabase/` now lives in `cityhall`), `conductor2`, `inspector-general`, `claude-plugins`
 
@@ -19,6 +19,17 @@
 > validates and carries the fields, and a CC adapter in `cityhall` that reads them. The
 > companion page `architecture.html` draws all of this.
 
+> **Revision note (v3, 2026-10-08, grill with Will): decisions folded one at a time.**
+> - **Q1 answered: absences get a marker when they have a slot (reverses v2's D2).** A new
+>   marker role, `expected-here`, outlines the specific empty place where a required thing
+>   should be: a blank form field, a Yes/No pair with neither box checked, an empty table
+>   cell. The agent decides when to use it. There is no rule by sheet or document type. The
+>   guards are that the slot is visible, the marker is narrower than the citation, and an
+>   absence with no slot (a missing report) stays `nothing-to-mark`. D2 is rewritten. D8,
+>   D13 and D19 gain the role. §3.4, §4 and §5 are updated. The motivating case is CC review
+>   `d36b7aad`: a "required fields" fail that cites whole application sections, where the
+>   reader needs the 2 blank questions, not every field outlined.
+>
 > **Revision note (v2, 2026-10-07): markings on non-plan-set documents.** Will asked for
 > markings on supplementary documents too (application forms, letters, reports), now that
 > cityhall#293 opens a cited document beside the CC item. New **§7** (D13–D21, P5–P6,
@@ -222,12 +233,50 @@ adjudicates.** It reads each run's own claim and adds geometry for it. It change
 status, no vote, no comment text and no `sheetReferences`. The merge's only writes are the
 two annotation fields (D12).
 
-**D2. Mark only what is drawn: the review's rule, unchanged.** A CC fail that is an
-absence gets `nothing-to-mark`. "Where it should be" is already shown by the app's cited
-block outlines (§1.3), and those keep working for every unmarked comment. The marking adds
-value where the deficiency *is* a drawn thing: an incomplete table, a wrong title, an empty
-seal box, a dimension that is drawn but wrong. Q1 asks Will to confirm, because this means
-most CC fails stay unmarked.
+**D2. Mark what is drawn, and mark an absence when it has a slot (v3; reverses v2's
+"mark only what is drawn").** A marker has one of two roles:
+
+- **`found`** (the default, and the review runbook's only role today): the shape outlines a
+  drawn thing that is deficient, such as an incomplete table, a wrong title, or a dimension
+  that is drawn but wrong.
+- **`expected-here`**: the shape outlines **the specific empty place where a required thing
+  should be and is not**, such as a blank form field, a Yes/No pair with neither box
+  checked, an empty table cell or missing total, or an empty seal or signature box.
+
+**The agent decides which role applies. No sheet or document type is excluded.** A plan
+sheet's parking table with the total-spaces cell left blank gets an `expected-here` marker,
+the same as a blank field on the application form. The prompt gives the guards, not a list
+of places:
+
+1. **The slot must be visible.** The marker outlines something on the page, such as the
+   field label and its blank line, the empty checkboxes, or the empty cell under its column
+   header. Its `evidence` quotes what is read there, for example `Small Project? ☐ Yes
+   ☐ No (neither checked)`.
+2. **It must be narrower than the citation.** Draw one marker per missing slot. Never
+   outline a whole cited block, section or page. If the honest marker would cover the whole
+   cited region, skip it, because the app's cited-block outline already says that.
+3. **No slot, no marker.** Something missing from the submission altogether ("no building
+   elevations", "no tax certificate attached", "no TIA compliance memo") has nowhere on the
+   page to point. It stays `nothing-to-mark` with the reason "absence with no slot on the
+   page".
+4. **The precision rule is unchanged.** A wrongly placed marker is worse than none, for
+   either role.
+
+*Worked example.* CC review `d36b7aad` (submission `38ddbfd8`, 2026-10-06), item "All
+required fields in CC Application Sections 1–11 are complete", is a fail: "Section 1 Small
+Project question and Section 9 Restrictive Covenant question have neither Yes nor No
+checked." The citation is whole sections, so today the viewer outlines every field across
+the application's pages (about 50). Under D2 the comment gets exactly two `expected-here`
+markers, one on each unchecked Yes/No pair. Once a comment has markers, the cited outlines
+step aside (`citedBlockMarkersOn`, §1.3), so the reader sees only the two.
+
+*Stored shape.* The annotation gains an optional `role`, whose only written value is
+`"expected-here"`. An absent `role` means `found`, so every marker the review runbook has
+already stored reads unchanged. The disposition is unchanged: a sheet or page holding only
+`expected-here` markers is `annotated`. Both lanes' field whitelists
+(`_STORED_ANNOTATION_FIELDS`) and `annotate-validate.ts` gain `role`, because the kit is
+shared (D5). The review runbook's sweep prompt is not changed. Whether the formal review
+marks absences is that runbook's own call, as in D21.
 
 **D3. Sweep every failing run, not only the winning one.** The unit of work is a
 *(comment, run)*: a `perRunFindings[k]` entry in `2.9-comments/review-comments.json` whose
@@ -298,6 +347,9 @@ them from `checklist.ts` `statusComment`, keyed by `reviewJson.sheet_map`, and s
 automatically gains the ability to render markings if it ever carries them. Nothing else
 in the sheets view changes: `markersOn` already draws any comment's `annotations`, and
 `citedBlockMarkersOn` already steps aside once a comment has markers.
+**v3:** `SheetMarkers` draws an `expected-here` marker in its own style (dashed outline,
+labelled "expected here" in the marker row and tooltip) so it does not read as "this drawn
+thing is wrong". A missing `role` draws as today.
 The approved [checklist-source-ui spec](../checklist-source-ui/DESIGN-SPEC.md) (D22, winston
 #297/#298) edits the same `statusComment` to add a Source link. The two changes are
 independent fields on the same view model, so whichever lands second rebases onto the other.
@@ -344,8 +396,8 @@ field, because the run is implied by where the object sits.
 | bureau `runbooks/lib/stage_submission.py` | `blockBoxes` per sheet in `block-manifest.json` (D4) |
 | bureau `runbooks/review/` | step yamls and prompt point at the moved scripts; sweep prompt gains the block-box rung (D4) |
 | bureau `runbooks/completeness-check/` | `2.12-annotate/{sweep,merge}` (prompt adapted from the review's, plus D2/D3 roster rules); `annotate` preset; `annotate` request flag; 2.10/3.1 read the merge output when present; 2.11 reports 2.12 |
-| bureau `runbooks/lib/publish_review.py` | lane B: validate and reconcile markings, write `sheet_map` into `reviewData` (D6, D7) |
-| cityhall `src/lib/reviews/adapters/` | shared `annotations.ts`; `checklist.ts` reads markings and sets counts (D8) |
+| bureau `runbooks/lib/publish_review.py` | lane B: validate and reconcile markings, write `sheet_map` into `reviewData` (D6, D7); `role` joins `_STORED_ANNOTATION_FIELDS` for both lanes (D2) |
+| cityhall `src/lib/reviews/adapters/` | shared `annotations.ts`; `checklist.ts` reads markings and sets counts (D8); `SheetMarkers` styles `expected-here` (D2) |
 
 ### 3.3 Phases
 
@@ -370,7 +422,7 @@ keys on a comment are the two annotation fields, at two levels.
 | Where | What is added | Why |
 |---|---|---|
 | `reviews.output_json.sheet_map` | `{"01": 1, "02": 2, …}`, one entry per staged sheet folder, built by `read_staged` exactly as lane A builds it | The app turns a marker's `sheet` label into the sheet it draws on **only** through this map (`august.ts:281-291`). The CC review has no map today, so a CC marker would resolve to `null` and never be drawn. Lane B also uses it to refuse an unresolvable label before anything is written, the same fail-loud rule as lane A |
-| `review_comments.output_json.annotations[]` | the **winning run's** markers (0–20), each one `{sheet, kind, points, label, source, source_finding_ref, evidence, sheet_sha256, converged, passes}` | what the sheets view draws |
+| `review_comments.output_json.annotations[]` | the **winning run's** markers (0–20), each one `{sheet, kind, points, label, source, source_finding_ref, evidence, sheet_sha256, converged, passes}` plus an optional `role: "expected-here"` (v3, D2) | what the sheets view draws |
 | `review_comments.output_json.annotation_disposition` | the winning run's sweep outcome: `{status, reason, sheets:[{sheet, status, reason}]}` | see below |
 | `review_comments.output_json.sourceFindings[0].perRunFindings[k].annotations[]` / `.annotation_disposition` | the same two fields for **every** run that was considered (D12) | all runs' geometry is kept, for audit, IG and a later per-run view |
 | `reviews.output_json.sections[].comments[]` | the same fields again | lane B stores the whole `reviewData` blob on the review row as well as one row per comment, so every comment field appears twice. That is already true of every CC field today. It costs about 1 KB per marker, and markers are capped at 1,000 per review |
@@ -410,7 +462,8 @@ we want the smallest change.
 - **Promote cited block boxes to markings deterministically, with no agent.** This would be
   cheap, but the app already draws those boxes as outlines (§1.3). It would also
   mis-assert a defect location for absences, which is the opposite of the review's skip
-  rule.
+  rule. v3's `expected-here` (D2) is the opposite of this: an agent picks the 2 empty slots
+  out of about 50 cited fields, rather than promoting all 50.
 - **Have `2.1-review` emit markings alongside findings.** The review cells are sonnet,
   forbidden from reading pixels, and run N times per guide before a vote. A marking from a
   losing run would attach to the winning verdict. It would also break parity.
@@ -423,9 +476,13 @@ we want the smallest change.
 
 ## 5. Risks
 
-- **Few CC fails are markable.** If most fails are absences, the feature lands on a
-  minority of items. P4 measures the real rate. On `b80e5075`, roughly 6–10 of the 28
-  sheet-citing fails/warns look like drawn-but-deficient items, but that is a manual read.
+- **Few CC fails are markable (reduced in v3).** On `b80e5075`, roughly 6–10 of the 28
+  sheet-citing fails/warns look like drawn-but-deficient items (a manual read). D2's
+  `expected-here` role adds the absences that have a slot, such as blank fields and empty
+  cells. Absences with no slot still stay unmarked. P4 measures the real rate per role.
+- **`expected-here` drifts into guessing.** Without a visible slot the agent could "place"
+  a missing note where it thinks one belongs. Guards 1–3 of D2 forbid that. P4 audits
+  `expected-here` markers separately from `found` ones.
 - **Seat spend.** The sweep is the most expensive kind of step: opus with pixel reads. Per-run
   sweeping (D3) triples the work at `runs = 3` (84 run-findings against 28 comments on
   `b80e5075`), and runs that agree will often be marked on the same spot. D3's
@@ -438,9 +495,10 @@ we want the smallest change.
 
 ## 6. Open questions
 
-**Q1.** Confirm D2: absences stay unmarked (the existing cited-block outline is the "where
-it should be" cue). The alternative is a second marker kind such as `expected-here`, which
-would need a new `kind` and app styling.
+**Q1.** ~~Confirm D2: absences stay unmarked?~~ **Answered in v3 (Will, 2026-10-08):** no.
+Absences get an `expected-here` marker when they have a visible slot, and the agent decides
+when, with no rule by sheet or document type (D2). The marker is stored as an optional
+`role`, not a new `kind`: `kind` stays the geometry (point or polygon).
 
 **Q2.** Roster grain for the sweep: one worker per guide (D3), or one worker for the whole
 CC run? At `runs = 3` that is about 84 run-findings (D3, v1.1), which favours per guide for
@@ -536,7 +594,8 @@ following is present:
 `/Rotate` applied. pdftoppm and pdf.js both apply the page's rotation, so the producer's
 render and the app's viewer share one frame. A document marker carries `file_sha256`, the staged `source.pdf` it was
 read against, in place of `sheet_sha256`. Sheet markers are untouched. Every other rule is
-unchanged: kinds, 3–12 vertices, evidence 12–500 characters, `converged` / `passes`, 20 per
+unchanged, including the optional `role` (D2: a blank form field is an `expected-here`
+document marker): kinds, 3–12 vertices, evidence 12–500 characters, `converged` / `passes`, 20 per
 comment, 1,000 per review.
 
 The disposition gains a **`documents[]`** array beside `sheets[]`, with entries
@@ -605,7 +664,8 @@ version (`readCitedDocuments`, `sheets/read.ts:128-171`).
   (`draw.ts:220, :331`) no longer reaches it. The drawer then draws into an inner content
   div rather than the page div itself.
 - **The overlay reuses `SheetMarkers`' geometry**, an SVG with viewBox 0–1, with
-  `pointer-events` only on the shapes so text selection still works.
+  `pointer-events` only on the shapes so text selection still works. It uses the same
+  `expected-here` style as sheets (D2, D8).
 - **`?doc=` gains `&page=N`**, which opens the viewer at the marker's page.
 - **The document row in the `IssuePanel`** lists that document's markers, each as "page N",
   and its disposition, the same as sheet rows.
