@@ -1,0 +1,1043 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cartographer north star — anchored geometry for every site</title>
+<style>
+/* ============================================================
+   spec-kit v5.2  —  winston HTML spec design system
+   Inline the ENTIRE contents of this file into the spec's style block.
+   Canonical source: ~/.claude/skills/winston-spec/assets/spec-kit.css
+   When you change this file, bump the version above and in COMPONENTS.md.
+   v4: + sequence diagram (.seq*), + data table (.spectable), + prompt block (.prompt)
+   v5: + system map (.sysmap/.sys, edges drawn by spec-kit.js), + decision flow (.dflow),
+       + concept figure (figure.concept), + claim caption (.claim), + reference chip rows (.sys-refs),
+       + spec reader page (body.reader; DESIGN-SPEC.md rendered by marked, built by inline-kit.py --spec)
+   v5.1: pass-2 friction fixes — long identifiers wrap (.sys .t, .uc .nt, .ent .ty), .sysmap-scroll for
+       6+ columns, state-neutral .sm pills, .dflow jump outcomes, legend 'new trigger' dot
+   v5.2: + two-lane activity flow (.af) — an agent and the tools it calls, prompt fragment per step
+       Colour rule: fill/border = change state only; kind = badge text + shape; legend is the
+       complete list of colour meanings on the page.
+   ============================================================ */
+
+:root{
+  /* steel-blue ramp (matches cityhall / Noetic report surfaces) */
+  --p50:#f0f5f9;--p100:#dce8f1;--p200:#b9d2e5;--p300:#8cb4d1;--p400:#6397b8;
+  --p500:#517e9e;--p600:#3f6582;--p700:#35526b;--p800:#2d4559;--p900:#273b4b;--p950:#182530;
+  --bg:#f9f9f9;--card:#ffffff;--divider:#dfdfdf;--ink:#1f2937;--muted:#6b7280;--ember:#bb4d00;
+  /* semantic: new / changed / retired */
+  --new:#15803d;--newbg:#f0fdf4;--newbd:#bbf7d0;
+  --chg:#b45309;--chgbg:#fffbeb;--chgbd:#fde68a;
+  --ret:#b91c1c;--retbg:#fef2f2;--retbd:#fecaca;
+  --sans:'Lexend',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  --serif:'Lora',Georgia,'Times New Roman',serif;
+  --mono:'Fira Code','SF Mono',ui-monospace,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.55;font-size:15px}
+
+/* ---------- masthead ---------- */
+header.masthead{background:linear-gradient(135deg,var(--p800),var(--p600));color:#fff;padding:34px 32px 30px;position:relative;overflow:hidden}
+header.masthead::after{content:"";position:absolute;inset:0;background-image:repeating-linear-gradient(115deg,rgba(255,255,255,.06) 0 1px,transparent 1px 26px);pointer-events:none}
+header.masthead .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--p200)}
+header.masthead h1{font-family:var(--serif);font-weight:600;margin:.35em 0 .2em;font-size:29px;position:relative}
+header.masthead p{margin:0;color:var(--p100);max-width:880px;font-size:15px}
+header.masthead .meta{margin-top:14px;font-size:12.5px;color:var(--p200);font-family:var(--mono)}
+
+/* ---------- tabs ---------- */
+nav.tabs{position:sticky;top:0;z-index:20;display:flex;gap:2px;background:var(--p950);padding:0 20px;box-shadow:0 2px 8px rgba(0,0,0,.12);flex-wrap:wrap}
+nav.tabs button{appearance:none;border:0;background:transparent;color:var(--p200);font-family:var(--sans);font-size:14px;font-weight:500;padding:14px 18px;cursor:pointer;border-bottom:3px solid transparent;transition:all .15s}
+nav.tabs button .n{font-family:var(--mono);font-size:11px;opacity:.7;margin-right:7px}
+nav.tabs button:hover{color:#fff;background:rgba(255,255,255,.04)}
+nav.tabs button.active{color:#fff;border-bottom-color:var(--ember);background:rgba(255,255,255,.06)}
+
+/* ---------- layout ---------- */
+main{max-width:1140px;margin:0 auto;padding:30px 26px 90px}
+.panel{display:none;animation:fade .25s ease}
+main [id]{scroll-margin-top:74px} /* deep-link targets clear the sticky tab bar */
+.panel.active{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* Section heading: the h2 text is the PLAIN NAME of the thing the tab is about (v5.1 — it used to
+   carry a tagline while the small eyebrow carried the name; that was backwards). .eyebrow = the
+   tab number / section label, small. .sub = one plain sentence saying what is on the tab. */
+h2{font-family:var(--serif);font-weight:700;font-size:30px;line-height:1.15;letter-spacing:-.01em;margin:34px 0 10px;color:var(--p950)}
+h2:first-child{margin-top:4px}
+h2 .eyebrow{display:block;font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--p500);font-weight:400;margin-bottom:6px}
+h2 .sub{display:block;font-family:var(--sans);font-size:14px;font-weight:400;letter-spacing:0;line-height:1.5;color:var(--muted);margin-top:6px}
+h3{font-size:16px;font-weight:600;margin:28px 0 8px;color:var(--p800);display:flex;align-items:center;gap:9px}
+h3 .hn{font-family:var(--mono);font-size:12px;color:#fff;background:var(--p600);border-radius:5px;padding:2px 8px}
+h4{font-size:14px;font-weight:600;margin:18px 0 6px;color:var(--p800)}
+p{margin:.55em 0}
+.lede{font-size:15px;color:var(--p800);border-left:3px solid var(--ember);padding-left:16px;margin:12px 0 20px}
+ul{margin:.4em 0;padding-left:22px}li{margin:.28em 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px solid var(--p100);border-radius:4px;padding:1px 5px;color:var(--p800)}
+
+/* ---------- callout ---------- */
+.callout{background:var(--p50);border:1px solid var(--p200);border-left:4px solid var(--p500);border-radius:8px;padding:13px 17px;margin:16px 0}
+.callout.ember{background:#fdf6f0;border-color:#f0cba8;border-left-color:var(--ember)}
+.callout.new{background:var(--newbg);border-color:var(--newbd);border-left-color:var(--new)}
+.callout .lab{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--p600);font-weight:600;display:block;margin-bottom:3px}
+.callout.ember .lab{color:var(--ember)} .callout.new .lab{color:var(--new)}
+
+/* ---------- legend ---------- */
+.legend{display:flex;flex-wrap:wrap;gap:9px 16px;background:#fff;border:1px solid var(--divider);border-radius:10px;padding:12px 16px;margin:16px 0;font-size:12px;align-items:center}
+.legend .k{display:inline-flex;align-items:center;gap:6px}
+.swatch{width:26px;height:14px;border-radius:3px;display:inline-block;border:1px solid rgba(0,0,0,.15)}
+
+/* ---------- shared field badges (used by entity rows + legend) ---------- */
+.b{font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.04em;padding:1px 4px;border-radius:3px;text-transform:uppercase;white-space:nowrap}
+.b-pk{background:#fef3c7;color:#92600a;border:1px solid #fde68a}
+.b-fk{background:#e0edfb;color:#2456a8;border:1px solid #c3d8f2}
+.b-nn{background:#eef1f4;color:#4b5563;border:1px solid #d7dde3}
+.b-new{background:var(--newbg);color:var(--new);border:1px solid var(--newbd)}
+
+/* ============================================================
+   ER / UML entity boxes
+   ============================================================ */
+.erd{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start;margin:16px 0;background:#fbfcfd;border:1px solid var(--divider);border-radius:12px;padding:18px}
+.ent{border:1px solid var(--divider);border-radius:9px;overflow:hidden;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.05);min-width:236px;flex:0 1 auto}
+.ent .eh{padding:7px 12px;color:#fff;display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.ent .eh .en{font-family:var(--mono);font-size:12.5px;font-weight:700;letter-spacing:.02em}
+.ent .eh .stereo{font-size:9.5px;font-family:var(--mono);opacity:.85;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}
+.ent.exist .eh{background:var(--p700)}
+.ent.newt .eh{background:var(--new)}
+.ent.changed .eh{background:var(--chg)}
+.ent.retired .eh{background:#9ca3af}
+.ent.retired{opacity:.72}
+.ent .row{display:flex;align-items:center;gap:7px;padding:4px 11px;font-size:11.5px;border-top:1px solid #eef1f4}
+.ent .row:first-of-type{border-top:0}
+.ent .row .nm{font-family:var(--mono);font-size:11.5px;color:var(--p900);font-weight:600}
+.ent .row .ty{font-family:var(--mono);font-size:10px;color:var(--muted);margin-left:auto;text-align:right;max-width:60%;overflow-wrap:anywhere}
+.ent .row.hi{background:#fff9f2}
+.ent .row.strk .nm{text-decoration:line-through;color:var(--muted)}
+.ent .note{padding:5px 11px;font-size:10px;color:var(--muted);font-style:italic;border-top:1px dashed #e5e9ee;background:#fbfcfd}
+/* diff rows — show a table modification (column added / removed), git-style.
+   Put a "+"/"−" marker in a .gut span at the start of the row. */
+.ent .row .gut{flex:0 0 10px;width:10px;text-align:center;font-family:var(--mono);font-size:11px;font-weight:700;color:var(--muted)}
+.ent .row.add{background:var(--newbg);box-shadow:inset 3px 0 0 var(--new)}
+.ent .row.add .gut{color:var(--new)}
+.ent .row.add .nm{color:#166534}
+.ent .row.del{background:var(--retbg);box-shadow:inset 3px 0 0 var(--ret)}
+.ent .row.del .gut{color:var(--ret)}
+.ent .row.del .nm{color:var(--ret);text-decoration:line-through}
+
+/* relationships panel — crow's-foot text notation */
+.rels{background:#fff;border:1px solid var(--divider);border-radius:10px;padding:12px 16px;margin:14px 0;font-family:var(--mono);font-size:12px;line-height:1.9}
+.rels .rl{display:block;color:var(--p800)}
+.rels .rl b{color:var(--ember)}
+.rels .cf{color:var(--p500);font-weight:700}
+.rels .cmt{color:var(--muted);font-style:normal;font-family:var(--sans);font-size:11.5px}
+.rels .tag-new{color:var(--new);font-weight:700}
+.rels .tag-ret{color:var(--ret);font-weight:700}
+.rels-h{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--p600);font-weight:700;margin-bottom:6px}
+
+/* ============================================================
+   Use-case scene  (an action + its boxes-and-arrows diagram)
+   ============================================================ */
+.uc{margin:16px 0 22px;border:1px solid var(--divider);border-radius:12px;overflow:hidden;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.uc .uch{display:flex;align-items:center;gap:13px;padding:11px 16px;background:linear-gradient(135deg,var(--p700),var(--p600));color:#fff}
+.uc .uch .ucn{flex:0 0 30px;height:30px;border-radius:50%;background:rgba(255,255,255,.2);font-family:var(--mono);font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.uc .uch .uctxt{flex:1}
+.uc .uch .actor{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--p100);display:block;margin-bottom:1px}
+.uc .uch .uct{font-weight:600;font-size:15.5px;font-family:var(--serif)}
+.uc .ucsub{padding:9px 16px;font-size:12.5px;color:var(--p800);background:var(--p50);border-bottom:1px solid var(--p100)}
+.uc .ucdiag{padding:20px 16px 14px}
+.ucnote{padding:2px 16px 14px;font-size:11.5px;color:var(--muted)}
+.ucnote b{color:var(--p700);font-family:var(--mono);font-size:10.5px}
+
+/* ============================================================
+   Boxes-and-arrows flow
+   Robustness rules baked in:
+   - .dfg WRAPS (flex-wrap:wrap) so long chains never clip / never
+     need horizontal scroll. Arrows reflow with the nodes.
+   - .node is a flex COLUMN: the op-badge is an in-flow header row
+     (never position:absolute), and .nt / .nf are block-level, so a
+     table name and its fields can never smush onto one line.
+   ============================================================ */
+.dfg{display:flex;flex-wrap:wrap;align-items:stretch;gap:8px 0;margin:0}
+.node{flex:0 0 auto;width:156px;background:#fff;border:1.5px solid var(--p300);border-radius:8px;padding:9px 11px;display:flex;flex-direction:column;gap:3px}
+.node .op{align-self:flex-start;font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:1px 6px;border-radius:3px;border:1px solid;color:#fff;margin-bottom:2px}
+.node .nt{display:block;font-family:var(--mono);font-weight:700;font-size:12px;color:var(--p900);line-height:1.3;overflow-wrap:anywhere}
+.node .nf{display:block;font-family:var(--mono);font-size:10px;color:var(--muted);line-height:1.45;word-break:break-word}
+.node.created{border-color:var(--new);background:var(--newbg)} .node.created .op{background:var(--new);border-color:var(--new)}
+.node.read{border-color:var(--p400);background:#eef4fb} .node.read .op{background:var(--p500);border-color:var(--p500)}
+.node.event{border-color:var(--ember);background:#fdf6f0} .node.event .op{background:var(--ember);border-color:var(--ember)}
+.node.store{border-style:dashed;border-color:var(--p500);background:#eef3f7} .node.store .op{background:var(--p700);border-color:var(--p700)}
+.edge{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:70px;max-width:104px;padding:0 4px}
+.edge .el{font-size:9px;color:var(--p600);font-family:var(--mono);text-align:center;line-height:1.3;margin-bottom:2px}
+.edge .ar{color:var(--p400);font-size:20px;font-weight:700;line-height:1}
+
+/* ============================================================
+   Card grid  (keep / change / drop comparisons)
+   ============================================================ */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:820px){.grid2{grid-template-columns:1fr}.erd{padding:12px}}
+.card{background:var(--card);border:1px solid var(--divider);border-radius:9px;padding:14px 16px}
+.card.keep{border-top:3px solid var(--new)} .card.change{border-top:3px solid var(--chg)} .card.drop{border-top:3px solid var(--ret)}
+.card strong{display:block;margin-bottom:4px;font-size:13.5px}
+.card ul{font-size:12.5px;margin:2px 0}
+
+/* ============================================================
+   Lifecycle / state machine
+   ============================================================ */
+.sm{display:flex;flex-wrap:wrap;gap:7px;align-items:center;margin:14px 0}
+.sm .s{border:1px solid var(--p300);background:var(--p50);border-radius:20px;padding:5px 12px;font-size:11.5px;font-weight:600;color:var(--p800);font-family:var(--mono)}
+.sm .s .who{display:block;font-size:9px;font-family:var(--mono);color:var(--muted);font-weight:400;text-transform:uppercase;letter-spacing:.03em}
+.sm .s.client{border-color:var(--newbd);background:var(--newbg)}
+.sm .s.cc{border-color:#f0cba8;background:#fdf6f0}
+.sm .s.spec{border-color:var(--chgbd);background:var(--chgbg)}
+.sm .a{color:var(--p400);font-weight:700}
+/* state-neutral variants (v5.1): terminal-good / terminal-stop / dimmed. The .client/.cc/.spec
+   colours mean "whose court" and need a legend if used. */
+.sm .s.ok{border-color:var(--newbd);background:var(--newbg);color:var(--new)}
+.sm .s.stop{border-color:var(--retbd);background:var(--retbg);color:var(--ret)}
+.sm .s.dim{opacity:.6;border-style:dashed}
+
+/* ============================================================
+   Use-case catalog — grouped list of candidate use cases
+   (a scoped list, NOT a diagram — for "what would we build" inventories)
+   ============================================================ */
+.catgrp{border:1px solid var(--divider);border-radius:10px;overflow:hidden;margin:14px 0;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.catgrp .cath{background:var(--p700);color:#fff;padding:8px 14px;font-family:var(--serif);font-weight:600;font-size:14.5px;display:flex;align-items:center;gap:10px}
+.catgrp .cath .cgl{font-family:var(--mono);font-size:12px;font-weight:700;background:rgba(255,255,255,.2);border-radius:5px;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;flex:0 0 22px}
+.uci{display:flex;gap:9px;align-items:baseline;padding:7px 13px;border-top:1px solid #eef1f4;font-size:13px}
+.uci .uid{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--p600);flex:0 0 26px}
+.uci .utxt{flex:1;color:var(--ink);line-height:1.45}
+.uci .utxt b{color:var(--p900)}
+.uci .star{color:var(--ember);font-weight:700;font-size:12px;flex:0 0 auto;letter-spacing:-1px}
+.uci.later{opacity:.66}
+.utag{font-family:var(--mono);font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;text-transform:uppercase;letter-spacing:.03em;white-space:nowrap;flex:0 0 auto}
+.utag.t-orig{background:#e0edfb;color:#2456a8;border:1px solid #c3d8f2}
+.utag.t-add{background:var(--newbg);color:var(--new);border:1px solid var(--newbd)}
+
+/* ============================================================
+   Misc: storage strip, cross-reference box
+   ============================================================ */
+.storage{background:#eef3f7;border:1px dashed var(--p300);border-radius:8px;padding:9px 13px;font-family:var(--mono);font-size:12px;color:var(--p800);margin:12px 0}
+.storage b{color:var(--ember)}
+.xref{font-size:12px;color:var(--p600);background:var(--p50);border:1px solid var(--p100);border-radius:6px;padding:8px 12px;margin:10px 0}
+.foot{margin-top:44px;padding-top:18px;border-top:1px solid var(--divider);color:var(--muted);font-size:12px;font-family:var(--mono)}
+
+/* actor / repo chips (optional, for inline actor tags in prose) */
+.rc{display:inline-block;font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;padding:1px 6px;border-radius:5px;border:1px solid;vertical-align:middle;white-space:nowrap}
+.r-ch{background:#eef4fb;color:#2456a8;border-color:#c3d8f2}
+.r-sub{background:#f3eefb;color:#6b3fa0;border-color:#dcccf0}
+.r-fa{background:#e9f7f2;color:#0f7a5f;border-color:#bfe8db}
+.r-db{background:#eaeef2;color:#2d4559;border-color:#c7d2dd}
+.r-store{background:#e6eef3;color:#35526b;border-color:#bcd0dd}
+.r-user{background:#eefaf0;color:#15803d;border-color:#bbf7d0}
+.r-mcp{background:#fdf0e6;color:#b5590d;border-color:#f2d3b3}
+
+/* ============================================================
+   Sequence diagram — swimlane message flow
+   A CSS grid: col 1 = step number, then one column per actor lane.
+   Each message is a grid item that SPANS grid-columns from its
+   source lane to its target lane, so it always sits under the right
+   headers and never smushes. Continuous lifelines are grid items
+   spanning all rows (grid-row:1/-1) — so set .seq-body's
+   grid-template-rows to repeat(STEP_COUNT, auto) for -1 to resolve.
+   Wide diagrams scroll inside .seq-scroll, never the page body.
+   Direction is an in-flow glyph (.dir ◂/▸) pushed to the target edge
+   by justify-content:space-between — never position:absolute.
+   ============================================================ */
+.seq-scroll{overflow-x:auto;margin:16px 0;border:1px solid var(--divider);border-radius:12px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.seq{min-width:840px}
+.seq-head,.seq-body{display:grid;grid-template-columns:30px repeat(6,minmax(104px,1fr))}
+.seq-head{background:linear-gradient(135deg,var(--p800),var(--p700));padding:11px 12px}
+.seq-h{display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;padding:0 4px}
+.seq-h .role{font-family:var(--mono);font-size:8.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--p200)}
+.seq-h .who{font-family:var(--mono);font-size:11px;font-weight:700;color:#fff;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.24);border-radius:6px;padding:3px 9px}
+.seq-body{position:relative;row-gap:11px;padding:16px 12px 20px}
+.seq-life{width:2px;background:var(--p100);justify-self:center;border-radius:2px;z-index:0}
+.seq-num{grid-column:1;justify-self:center;align-self:center;font-family:var(--mono);font-size:10px;font-weight:700;color:#fff;background:var(--p600);min-width:19px;height:19px;padding:0 3px;border-radius:10px;display:flex;align-items:center;justify-content:center;z-index:1}
+.seq-msg{align-self:center;display:flex;flex-direction:row;align-items:center;gap:8px;justify-content:space-between;background:#fff;border:1.5px solid var(--p300);border-radius:7px;padding:5px 10px;z-index:1;min-width:0}
+.seq-msg .mt{display:flex;flex-direction:column;gap:1px;min-width:0}
+.seq-msg .m{font-family:var(--mono);font-size:10.5px;color:var(--p900);font-weight:700;line-height:1.32;word-break:break-word}
+.seq-msg .m2{font-family:var(--mono);font-size:9.5px;color:var(--muted);line-height:1.3;word-break:break-word}
+.seq-msg .dir{font-size:14px;font-weight:700;color:var(--p500);flex:0 0 auto}
+.seq-msg.write{border-color:var(--new);background:var(--newbg)} .seq-msg.write .dir{color:var(--new)}
+.seq-msg.event{border-color:var(--ember);background:#fdf6f0} .seq-msg.event .dir{color:var(--ember)}
+.seq-msg.ret{border-style:dashed;background:#f6f9fb} .seq-msg.ret .m{font-weight:500;color:var(--p600)}
+.seq-msg.self{border-style:dashed;border-color:var(--p400);background:#eef3f7}
+.seq-foot{display:flex;flex-wrap:wrap;gap:8px 15px;padding:9px 14px;border-top:1px solid var(--divider);background:#fbfcfd;font-size:10.5px;font-family:var(--mono);color:var(--muted);align-items:center}
+.seq-foot .sw{display:inline-block;width:20px;height:11px;border-radius:3px;border:1.5px solid var(--p300);vertical-align:middle;margin-right:5px}
+.seq-foot .sw.write{border-color:var(--new);background:var(--newbg)} .seq-foot .sw.event{border-color:var(--ember);background:#fdf6f0}
+.seq-foot .sw.ret{border-style:dashed;background:#f6f9fb} .seq-foot .sw.self{border-style:dashed;border-color:var(--p400);background:#eef3f7}
+
+/* ============================================================
+   Data table — for step→entity maps and any tabular spec content.
+   Wrap in .spectable-scroll so wide tables scroll, not the page.
+   ============================================================ */
+.spectable-scroll{overflow-x:auto;margin:14px 0}
+.spectable{width:100%;border-collapse:collapse;font-size:12.5px;background:#fff;border:1px solid var(--divider);border-radius:10px;overflow:hidden}
+.spectable thead th{background:var(--p700);color:#fff;font-family:var(--mono);font-size:10px;letter-spacing:.04em;text-transform:uppercase;text-align:left;padding:8px 12px;font-weight:700;white-space:nowrap}
+.spectable tbody td{padding:7px 12px;border-top:1px solid #eef1f4;vertical-align:top;line-height:1.5}
+.spectable tbody tr:nth-child(even){background:#fbfcfd}
+.spectable td .sn{font-family:var(--mono);font-weight:700;color:#fff;background:var(--p600);border-radius:9px;padding:1px 7px;font-size:10.5px}
+.spectable td code{font-size:11px}
+.spectable td .none{color:var(--muted);font-style:italic;font-family:var(--sans)}
+.spectable td .w{color:var(--new);font-weight:700} /* write */
+.spectable td .r{color:var(--p500);font-weight:700} /* read/return */
+
+/* ============================================================
+   Prompt / code block — a readable mono block (LLM prompts, snippets).
+   White-space preserved; scrolls horizontally inside itself.
+   ============================================================ */
+.prompt{background:#fbfcfd;border:1px solid var(--p200);border-left:4px solid var(--p500);border-radius:8px;padding:12px 15px;margin:12px 0;font-family:var(--mono);font-size:11.5px;line-height:1.6;color:var(--p900);white-space:pre-wrap;overflow-x:auto}
+.prompt .ph{display:block;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--p600);font-weight:700;margin-bottom:6px}
+
+
+/* ============================================================
+   System map (.sysmap)  —  the Overview diagram.  v5
+   A CSS grid of nodes placed with grid-area:row/col. Column 1 is
+   always the TRIGGER (a start-dot, no box). Edges are authored as
+   hidden <a class="sys-edge" data-from data-to>label</a> and drawn as
+   SVG by spec-kit.js after layout (no hand-typed coordinates).
+   COLOUR = CHANGE STATE ONLY: white exists · amber .chg · green .new ·
+   red-dashed .gap. KIND = badge TEXT + shape (.ext dashed, .store
+   cylinder bottom, .trig dot). Badges are one colour except on
+   changed/new nodes, where they take the node's change colour.
+   ============================================================ */
+.sysmap{position:relative;display:grid;gap:40px 64px;padding:28px 16px 22px;background:#fff;border:1px solid var(--divider);border-radius:12px;margin:14px 0 6px}
+.sysmap-scroll{overflow-x:auto;margin:14px 0 6px} .sysmap-scroll .sysmap{margin:0;min-width:max-content} /* 6+ columns: use grid-template-columns:repeat(N,minmax(150px,1fr)) inside .sysmap-scroll */
+.sysmap .colh{font-family:var(--mono);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--p500);text-align:center;padding-bottom:6px;border-bottom:1px dashed var(--p200);align-self:end}
+.sys{position:relative;z-index:2;background:#fff;border:1.5px solid var(--p300);border-radius:9px;padding:9px 11px 8px;min-height:64px;display:flex;flex-direction:column;gap:2px;align-self:center}
+.sys .k{align-self:flex-start;font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:1px 6px;border-radius:3px;color:#fff;background:var(--p500);margin-bottom:2px}
+.sys .t{font-weight:600;font-size:12.5px;line-height:1.3;color:var(--p900);overflow-wrap:anywhere}
+.sys .d{font-family:var(--mono);font-size:9.5px;color:var(--muted);line-height:1.4}
+.sys.ext{border-style:dashed}
+.sys.store{border-radius:4px 4px 14px 14px}
+.sys.new{border-color:var(--new);background:var(--newbg);box-shadow:0 0 0 3px #dcfce7}.sys.new .k{background:var(--new)}
+.sys.chg{border-color:var(--chg);background:var(--chgbg)}.sys.chg .k{background:var(--chg)}
+/* trigger: a start-dot + label, never a box. Declared AFTER .new/.chg so it wins on order. */
+.sys.trig{border:none;background:none;box-shadow:none;padding:0;min-height:0;align-items:flex-start;justify-self:start;gap:5px;max-width:150px}
+.sys.trig .dot{width:16px;height:16px;border-radius:50%;background:var(--p700);border:3px solid #fff;box-shadow:0 0 0 1.5px var(--p700)}
+.sys.trig.new .dot{background:var(--new);box-shadow:0 0 0 1.5px var(--new)}
+.sys.trig.chg .dot{background:var(--chg);box-shadow:0 0 0 1.5px var(--chg)}
+.sys.trig .t{font-size:11.5px;font-weight:600;color:var(--p800);line-height:1.25}
+.sys.trig .d{font-size:9.5px}
+.sys.gap{border:1.5px dashed var(--ret);background:var(--retbg);color:var(--ret);align-items:center;justify-content:center;text-align:center;font-family:var(--mono);font-size:10.5px;min-height:40px}
+/* floating spec-reference tag above the box; an <a href="#detail-id"> deep-link to the zoom-in diagram */
+.sys .ref{position:absolute;top:-11px;right:8px;text-decoration:none;font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.04em;padding:1px 7px;border-radius:10px;background:#fff;border:1px solid var(--p300);color:var(--p700);white-space:nowrap}
+.sys.chg .ref{border-color:var(--chg);color:var(--chg)}.sys.new .ref{border-color:var(--new);color:var(--new)}
+.sys .ref:hover{background:var(--p50)}
+.sys-edge{display:none} /* authored edge; rendered as SVG by spec-kit.js */
+.sysmap svg.edges{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1;overflow:visible}
+.sysmap svg .e{fill:none;stroke:var(--p400);stroke-width:1.6}
+.sysmap svg .e.new{stroke:var(--new);stroke-width:2.2}
+.sysmap svg .e.chg{stroke:var(--chg);stroke-width:2}
+.sysmap svg .e.gap{stroke:var(--ret);stroke-dasharray:5 4}
+.sysmap svg .e.loop{stroke:var(--p400);stroke-dasharray:4 3}
+.sysmap svg .lbl{font:9.5px var(--mono);fill:var(--p700)}
+.sysmap svg .lbl.new{fill:var(--new);font-weight:700}.sysmap svg .lbl.chg{fill:var(--chg);font-weight:700}.sysmap svg .lbl.gap{fill:var(--ret)}
+.sysmap svg .lblbg{fill:#fff;stroke:none;opacity:.94}
+/* reference footer: stacked CHIP ROWS, one per reference, each a link into the spec reader page.
+   Markup: <div class="sys-refs"><a class="refrow" data-ref="P0a"><span class="chip">P0a</span><span class="txt">…</span></a>…</div>
+   spec-kit.js fills href = <main data-spec>#<token>. */
+.sys-refs{display:flex;flex-direction:column;gap:6px;margin:12px 0 0}
+.sys-refs .refrow{display:flex;align-items:baseline;gap:12px;padding:7px 12px;border:1px solid var(--divider);border-radius:9px;background:#fff;text-decoration:none;color:var(--p800);font-size:12.5px;line-height:1.45;transition:border-color .12s,background .12s}
+.sys-refs .refrow:hover{border-color:var(--p400);background:var(--p50)}
+.sys-refs .refrow .chip{flex:0 0 auto;font-family:var(--mono);font-size:10.5px;font-weight:700;color:var(--p700);background:var(--p50);border:1px solid var(--p200);border-radius:6px;padding:2px 8px;min-width:44px;text-align:center}
+.sys-refs .refrow.chg .chip{color:var(--chg);border-color:var(--chgbd);background:var(--chgbg)}
+.sys-refs .refrow.new .chip{color:var(--new);border-color:var(--newbd);background:var(--newbg)}
+.sys-refs .refrow .txt{flex:1}
+.sys-refs .refrow .go{flex:0 0 auto;font-family:var(--mono);font-size:10px;color:var(--p500)}
+.sys-refs .refrow[href] .go::after{content:"read §"}
+.sys-refs .refrow:not([href]) .go::after{content:"no spec reader";color:var(--muted)}
+/* citation links inside claims and ref tags (filled in by spec-kit.js) */
+.claim a.cite,.sys .ref a{color:inherit;text-decoration:underline dotted;text-underline-offset:2px}
+.claim a.cite:hover{color:var(--ember)}
+/* "read the spec" masthead link */
+header.masthead a.spec-link{display:inline-block;margin-top:12px;font-family:var(--mono);font-size:12px;color:#fff;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);border-radius:7px;padding:5px 11px;text-decoration:none;position:relative}
+header.masthead a.spec-link:hover{background:rgba(255,255,255,.24)}
+
+/* legend for a system map: the COMPLETE list of colour meanings on the page */
+.sys-legend{display:flex;flex-wrap:wrap;gap:14px;font-size:11.5px;color:var(--p800);margin:8px 4px 0}
+.sys-legend i{display:inline-block;width:22px;height:3px;vertical-align:middle;margin-right:5px;background:var(--p400)}
+.sys-legend i.new{background:var(--new)} .sys-legend i.dot{width:10px;height:10px;border-radius:50%;background:var(--p700)} .sys-legend i.dot.new{background:var(--new)}.sys-legend i.chg{background:var(--chg)}.sys-legend i.gap{background:var(--ret)}.sys-legend i.loop{background:repeating-linear-gradient(90deg,var(--p400) 0 4px,transparent 4px 7px)}
+
+/* ============================================================
+   Claim caption  —  under every diagram. Cites the spec section or
+   decision it paraphrases. "Reading:" for the author's own observation.
+   ============================================================ */
+.claim{font-size:12.5px;color:var(--p800);margin:8px 0 26px;padding:8px 12px;border-left:3px solid var(--ember);background:#fff}
+.claim b{color:var(--p900)}
+
+/* ============================================================
+   Decision flow (.dflow)  —  "try X, else Y, else Z" / gate outcomes.
+   A vertical list of question rows; "yes" exits right to an outcome,
+   "no" falls through to the next row. Text-first, no SVG.
+   ============================================================ */
+.dflow{margin:14px 0;border:1px solid var(--divider);border-radius:12px;background:#fff;padding:14px 16px 10px}
+.dflow .dq{display:grid;grid-template-columns:minmax(200px,1.4fr) auto minmax(160px,1fr);gap:10px;align-items:center}
+.dflow .dq .q{font-size:12.5px;font-weight:600;color:var(--p900);border:1.5px solid var(--p300);border-radius:8px;padding:7px 11px;background:#fff}
+.dflow .dq .yes{font-family:var(--mono);font-size:10px;font-weight:700;color:var(--new);white-space:nowrap}
+.dflow .dq .out{font-family:var(--mono);font-size:11px;color:var(--p800);border:1.5px solid var(--newbd);background:var(--newbg);border-radius:8px;padding:6px 10px}
+.dflow .dq .out.warn{border-color:var(--chgbd);background:var(--chgbg)}
+.dflow .dq .out.fail{border-color:var(--retbd);background:var(--retbg);color:var(--ret)}
+.dflow .dno{font-family:var(--mono);font-size:9.5px;color:var(--muted);padding:3px 0 3px 18px}
+.dflow .dq.end .q{border-style:dashed;font-weight:500;color:var(--p700)}
+.dflow .dq .out a,.dflow .dq a.out{color:inherit;text-decoration:underline dotted;text-underline-offset:2px}
+.dflow .dq .out.jump::after{content:" ↗";color:var(--p500)} /* an outcome that jumps to another step/diagram */
+
+/* ============================================================
+   Concept figure  —  a hand-drawn inline SVG for the one mechanism
+   prose can't carry (a transform, a timeline, a shape). One figure,
+   one claim in the figcaption. See COMPONENTS.md for SVG rules.
+   ============================================================ */
+figure.concept{margin:16px 0;padding:16px 16px 10px;background:#fff;border:1px solid var(--divider);border-radius:12px;color:var(--p800)}
+figure.concept svg{display:block;max-width:100%;height:auto;margin:0 auto}
+figure.concept figcaption{font-size:12.5px;color:var(--p800);margin-top:10px;padding:8px 12px;border-left:3px solid var(--ember);background:#fbfcfd}
+figure.concept figcaption b{color:var(--p900)}
+
+
+/* ============================================================
+   Spec reader page (body.reader) — DESIGN-SPEC.md rendered by marked,
+   generated by inline-kit.py --spec. Sticky TOC + body; :target glow.
+   ============================================================ */
+body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom:1px solid rgba(255,255,255,.4)}
+.reader-wrap{display:grid;grid-template-columns:250px minmax(0,1fr);gap:34px;max-width:1240px;margin:0 auto;padding:28px 26px 90px}
+@media(max-width:900px){.reader-wrap{grid-template-columns:1fr}.toc{position:static}}
+.toc{position:sticky;top:18px;align-self:start;max-height:calc(100vh - 36px);overflow:auto;font-size:12.5px;border-right:1px solid var(--divider);padding-right:14px}
+.toc .toc-h{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--p600);font-weight:700;margin-bottom:8px}
+.toc a{display:block;color:var(--p800);text-decoration:none;padding:3px 0;line-height:1.35}
+.toc a.toc-h3{padding-left:14px;font-size:12px;color:var(--p700)}
+.toc a:hover{color:var(--ember)}
+.reader-body{max-width:860px;font-size:15px;line-height:1.6}
+.reader-body h2{margin-top:44px;padding-top:18px;border-top:1px solid var(--divider)}
+.reader-body h3{display:block;margin-top:30px;font-size:17px}
+.reader-body h4{margin-top:22px}
+.reader-body blockquote{margin:14px 0;padding:10px 16px;border-left:4px solid var(--p500);background:var(--p50);border-radius:0 8px 8px 0;color:var(--p800)}
+.reader-body blockquote p{margin:.3em 0}
+.reader-body pre{background:#fbfcfd;border:1px solid var(--p200);border-left:4px solid var(--p500);border-radius:8px;padding:12px 15px;font-family:var(--mono);font-size:11.5px;line-height:1.55;overflow-x:auto}
+.reader-body pre code{background:none;border:0;padding:0;font-size:inherit}
+.reader-body a{color:var(--p600)}
+.reader-body hr{border:0;border-top:1px solid var(--divider);margin:26px 0}
+.reader-body .spectable-scroll{margin:12px 0}
+.reader-body .spectable td code{white-space:normal}
+.reader-body .anchor{display:block;position:relative;top:-14px;height:0}
+.reader-body strong.tok{scroll-margin-top:24px}
+.reader-body :target{scroll-margin-top:18px}
+.reader-body h2:target,.reader-body h3:target,.reader-body h4:target{background:#fff8ec;box-shadow:-12px 0 0 #fff8ec,12px 0 0 #fff8ec;border-radius:3px}
+.reader-body strong.tok:target{background:#fff1cc;border-radius:3px;padding:0 3px;box-shadow:0 0 0 2px #fde68a}
+.reader-body .anchor:target + h2,.reader-body .anchor:target + h3{background:#fff8ec;box-shadow:-12px 0 0 #fff8ec,12px 0 0 #fff8ec;border-radius:3px}
+
+/* ============================================================
+   Two-lane activity flow (.af)  —  v5.2
+   An agent (left lane) and the deterministic tools it calls (right
+   lane), read top to bottom. One row = one exchange: the left box says
+   what the caller decides / types / writes, the right box what the tool
+   derives / checks; the middle column carries the call (▸, solid) and
+   the return (◂, dashed) labels. Rows inside .af-loop repeat (dashed
+   frame + label). .af-sec is a full-width "only when…" divider.
+   Notes inside a box: .cc = what this spec changes (amber), .gap = a
+   defect found (red dashed). .af-box.key = where the important value is
+   produced (heavier border, weight only, no colour).
+   Columns stack under 820px.
+   ============================================================ */
+.af{margin:16px 0;border:1px solid var(--divider);border-radius:12px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.05);padding-bottom:8px;overflow:hidden}
+.af-head,.af-row{display:grid;grid-template-columns:26px minmax(0,1.2fr) minmax(110px,.42fr) minmax(0,1fr);gap:0 12px}
+.af-head{background:linear-gradient(135deg,var(--p800),var(--p700));padding:10px 14px;color:#fff;align-items:end}
+.af-h{font-family:var(--mono);font-size:11.5px;font-weight:700;line-height:1.3}
+.af-h .role{display:block;font-size:8.5px;font-weight:400;color:var(--p200);text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px}
+.af-row{align-items:center;padding:8px 14px}
+.af-row + .af-row{border-top:1px solid #eef1f4}
+.af-n{align-self:start;margin-top:8px;font-family:var(--mono);font-size:10px;font-weight:700;color:#fff;background:var(--p600);min-width:20px;height:20px;padding:0 4px;border-radius:10px;display:flex;align-items:center;justify-content:center}
+.af-box{border:1.5px solid var(--p300);border-radius:8px;padding:8px 11px;background:#fff;display:flex;flex-direction:column;gap:5px;min-width:0}
+.af-box.key{border-width:3px;border-color:var(--p700)}
+.af-box .t{font-size:13px;font-weight:600;color:var(--p900);line-height:1.35}
+.af-box .t code{font-size:11.5px}
+.af-box .q{font-family:var(--serif);font-style:italic;font-size:12.5px;color:var(--p700);border-left:3px solid var(--p200);padding-left:9px;line-height:1.45}
+.af-box .io{font-size:12px;color:var(--ink);line-height:1.5;overflow-wrap:anywhere}
+.af-box .io > b:first-child{display:inline-block;font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--p600);background:var(--p50);border:1px solid var(--p100);border-radius:3px;padding:0 4px;margin-right:5px;vertical-align:1px}
+.af-box .io code{font-size:11px}
+.af-box .cc{font-size:11.5px;line-height:1.45;color:#7c4a03;background:var(--chgbg);border:1px solid var(--chgbd);border-radius:6px;padding:4px 8px}
+.af-box .gap{font-size:11.5px;line-height:1.45;color:var(--ret);background:var(--retbg);border:1.5px dashed var(--retbd);border-radius:6px;padding:4px 8px}
+.af-box .cc code,.af-box .gap code{font-size:10.5px}
+.af-none{font-family:var(--mono);font-size:10.5px;color:var(--muted);font-style:italic;padding:0 4px}
+.af-x{display:flex;flex-direction:column;gap:9px;justify-content:center;min-width:0}
+.af-x .c,.af-x .r{display:flex;flex-direction:column;gap:1px}
+.af-x .l{font-family:var(--mono);font-size:9.5px;line-height:1.3;color:var(--p800);overflow-wrap:anywhere}
+.af-x .r .l{color:var(--muted)}
+.af-x .ln{display:flex;align-items:center;font-size:13px;line-height:1;color:var(--p500)}
+.af-x .c .ln::before{content:"";flex:1;border-top:1.5px solid var(--p400);margin-right:-3px}
+.af-x .r .ln::after{content:"";flex:1;border-top:1.5px dashed var(--p400);margin-left:-3px}
+.af-loop{margin:6px 10px;border:1.5px dashed var(--p400);border-radius:10px;padding:2px 0}
+.af-loop .af-row{padding-left:4px;padding-right:4px}
+.af-lh{font-family:var(--mono);font-size:10.5px;font-weight:700;color:var(--p700);padding:6px 10px 2px}
+.af-sec{font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--p600);background:var(--p50);border-top:1px solid var(--p100);border-bottom:1px solid var(--p100);padding:5px 14px 5px 52px}
+.af-legend{display:flex;flex-wrap:wrap;gap:8px 16px;font-size:11.5px;color:var(--p800);padding:8px 14px 0;align-items:center}
+.af-legend span{display:inline-flex;align-items:center;gap:6px}
+.af-legend i{display:inline-block;width:22px;height:13px;border-radius:3px;border:1.5px solid var(--p300);background:#fff}
+.af-legend i.key{border-width:3px;border-color:var(--p700)} .af-legend i.cc{background:var(--chgbg);border-color:var(--chgbd)}
+.af-legend i.gap{background:var(--retbg);border:1.5px dashed var(--retbd)} .af-legend i.loop{border:1.5px dashed var(--p400)}
+@media(max-width:820px){
+  .af-head,.af-row{grid-template-columns:26px minmax(0,1fr)}
+  .af-head > :nth-child(3),.af-head > :nth-child(4){display:none}
+  .af-row > :not(.af-n){grid-column:2}
+  .af-row > .af-x{flex-direction:row;padding:6px 0}
+}
+
+</style>
+</head>
+<body>
+
+<header class="masthead">
+  <div class="kicker">CARTOGRAPHER · NORTH STAR</div>
+  <h1>Anchored geometry for every site</h1>
+  <p>Both producers — the SIR's county clerk documents and the site plan set's drawings — put geometry into <code>geo</code> in the county's own State Plane zone, so PostGIS can answer distance and encroachment questions deterministically. A plan of a plan. Companion to <code>NORTH-STAR-SPEC.md</code>.</p>
+  <div class="meta">Draft v1 · 2026-10-08 · click a tab ↓</div>
+  <a class="spec-link" href="NORTH-STAR-SPEC.html">📖 read the spec</a>
+</header>
+
+<nav class="tabs">
+  <button data-tab="overview" class="active"><span class="n">01</span>Overview</button>
+  <button data-tab="workflow"><span class="n">02</span>The five-step SIR geo workflow</button>
+  <button data-tab="model"><span class="n">03</span>What's stored</button>
+  <button data-tab="anchoring"><span class="n">04</span>The anchoring target</button>
+  <button data-tab="rollout"><span class="n">05</span>Priority and open questions</button>
+</nav>
+
+<main data-spec="NORTH-STAR-SPEC.html">
+
+  <section class="panel active" id="overview">
+    <h2><span class="eyebrow">01 · where geometry comes from and where it goes</span>The two producers and the one table<span class="sub">What reaches <code>geo</code> today, what would reach it, and in what order the pieces get built.</span></h2>
+    <p class="lede">Prod on 2026-10-08: <code>geo</code> holds 44 rows — 34 county parcel rings, 8 anchored figures from one plat, 2 hand-authored easements. The same 34 SIRs hold <b>2,597 supporting documents</b>, and 75% of documents in the corpus define some geometry (§2.1, §2.2).</p>
+
+    <h3><span class="hn">A</span>Today</h3>
+    <div class="sysmap" style="grid-template-columns:.7fr repeat(4,1fr)">
+      <div class="colh" style="grid-area:1/1">trigger</div>
+      <div class="colh" style="grid-area:1/2">sources</div>
+      <div class="colh" style="grid-area:1/3">pipeline</div>
+      <div class="colh" style="grid-area:1/4">postgres</div>
+      <div class="colh" style="grid-area:1/5">consumers</div>
+
+      <div class="sys trig" id="a-t1" style="grid-area:2/1"><span class="dot"></span><span class="t">operator picks one PDF</span><span class="d">by hand, one at a time</span></div>
+      <div class="sys store" id="a-files" style="grid-area:2/2"><span class="k">table</span><span class="t">cartographer_files</span><span class="d">1 row in prod</span></div>
+      <div class="sys" id="a-ex" style="grid-area:2/3"><span class="k">runbook</span><span class="t">extract-geometry-v2</span><span class="d">30–60 min of vision, ~$40 per document</span></div>
+      <div class="sys store" id="a-cg" style="grid-area:2/4"><span class="k">table</span><span class="t">cartographer_geometries</span><span class="d">8 figures · SRID:0 · feet</span></div>
+
+      <div class="sys trig" id="a-t2" style="grid-area:3/1"><span class="dot"></span><span class="t">SIR run published</span><span class="d">28 of 34 SIRs</span></div>
+      <div class="sys ext" id="a-src" style="grid-area:3/2"><span class="k">external</span><span class="t">County parcel layer</span><span class="d">ArcGIS · carries its own State Plane zone</span></div>
+      <div class="sys" id="a-sir" style="grid-area:3/3"><span class="k">runbook step</span><span class="t">sir 4.1-upload</span><span class="d">writes the parcel rings automatically</span></div>
+      <div class="sys store" id="a-geo" style="grid-area:3/4"><span class="k">table</span><span class="t">geo</span><span class="d">44 rows · owned by one SIR</span></div>
+      <div class="sys" id="a-map" style="grid-area:3/5"><span class="k">ui</span><span class="t">SIR map</span><span class="d">cityhall, behind a flag</span></div>
+
+      <div class="sys trig" id="a-t3" style="grid-area:4/1"><span class="dot"></span><span class="t">everything else</span><span class="d">clerk docs · plan sheets</span></div>
+      <div class="sys gap" id="a-gap" style="grid-area:4/2">2,597 supporting documents and every plan set sheet reach neither pipeline</div>
+
+      <a class="sys-edge" data-from="a-t1" data-to="a-files"></a>
+      <a class="sys-edge" data-from="a-files" data-to="a-ex"></a>
+      <a class="sys-edge" data-from="a-ex" data-to="a-cg"></a>
+      <a class="sys-edge" data-from="a-cg" data-to="a-geo">1 anchor run</a>
+      <a class="sys-edge" data-from="a-t2" data-to="a-src"></a>
+      <a class="sys-edge" data-from="a-src" data-to="a-sir"></a>
+      <a class="sys-edge" data-from="a-sir" data-to="a-geo"></a>
+      <a class="sys-edge" data-from="a-geo" data-to="a-map"></a>
+      <a class="sys-edge gap" data-from="a-t3" data-to="a-gap"></a>
+    </div>
+    <p class="claim"><b>Claim (§2.1):</b> the document side has reached the map exactly once — anchor <code>e94fae93</code>, the car-wash plat, accepted 2026-09-28.</p>
+
+    <h3><span class="hn">B</span>After</h3>
+    <div class="sysmap" style="grid-template-columns:.7fr repeat(4,1fr)">
+      <div class="colh" style="grid-area:1/1">trigger</div>
+      <div class="colh" style="grid-area:1/2">sources</div>
+      <div class="colh" style="grid-area:1/3">pipeline</div>
+      <div class="colh" style="grid-area:1/4">postgres</div>
+      <div class="colh" style="grid-area:1/5">consumers</div>
+
+      <div class="sys trig" id="b-t1" style="grid-area:2/1"><span class="dot"></span><span class="t">SIR published</span><span class="d">its clerk documents are the backlog</span></div>
+      <div class="sys store" id="b-docs" style="grid-area:2/2"><span class="k">table</span><span class="t">sir_artifact</span><span class="d">2,597 supporting documents, already the queue</span></div>
+      <div class="sys new" id="b-five" style="grid-area:2/3"><a class="ref" href="#detail-workflow">D5 ↓</a><span class="k">runbooks</span><span class="t">five-step geo workflow</span><span class="d">triage, extract, consolidate, anchor</span></div>
+      <div class="sys store new" id="b-feat" style="grid-area:2/4"><a class="ref" href="#detail-feature">D2 ↓</a><span class="k">table</span><span class="t">feature</span><span class="d">one row per real-world thing, N readings</span></div>
+
+      <div class="sys trig" id="b-t2" style="grid-area:3/1"><span class="dot"></span><span class="t">operator uploads a PDF</span><span class="d">the manual test path</span></div>
+      <div class="sys store chg" id="b-files" style="grid-area:3/2"><a class="ref" href="#detail-files">D13 ↓</a><span class="k">table</span><span class="t">cartographer_files</span><span class="d">says where it came from</span></div>
+
+      <div class="sys trig" id="b-t3" style="grid-area:4/1"><span class="dot"></span><span class="t">an anchor run needs a target</span><span class="d">a ring and a CRS to fit to</span></div>
+      <div class="sys ext" id="b-src" style="grid-area:4/2"><span class="k">external</span><span class="t">County parcel layer</span><span class="d">fetched live, or read from a SIR</span></div>
+      <div class="sys new" id="b-target" style="grid-area:4/3"><a class="ref" href="#detail-target">D11 ↓</a><span class="k">concept</span><span class="t">anchoring target</span><span class="d">rings, srid and where they came from</span></div>
+      <div class="sys store chg" id="b-geo" style="grid-area:4/4"><a class="ref" href="#detail-geo">D3 ↓</a><span class="k">table</span><span class="t">geo</span><span class="d">owned by the project, rebuildable</span></div>
+      <div class="sys gap" id="b-tools" style="grid-area:4/5">no PostGIS tool surface for agents yet</div>
+
+      <div class="sys trig" id="b-t4" style="grid-area:5/1"><span class="dot"></span><span class="t">plan set preprocessed</span><span class="d">the second producer</span></div>
+      <div class="sys store" id="b-sheets" style="grid-area:5/2"><span class="k">table</span><span class="t">plan set sheets</span><span class="d">drawings, not prose</span></div>
+      <div class="sys gap" id="b-reader" style="grid-area:5/3">no reader for drawn features yet</div>
+
+      <a class="sys-edge" data-from="b-t1" data-to="b-docs"></a>
+      <a class="sys-edge new" data-from="b-docs" data-to="b-five">worklist</a>
+      <a class="sys-edge new" data-from="b-five" data-to="b-feat"></a>
+      <a class="sys-edge new" data-from="b-feat" data-to="b-geo">placed</a>
+      <a class="sys-edge" data-from="b-t2" data-to="b-files"></a>
+      <a class="sys-edge chg" data-from="b-files" data-to="b-five"></a>
+      <a class="sys-edge" data-from="b-t3" data-to="b-src"></a>
+      <a class="sys-edge new" data-from="b-src" data-to="b-target"></a>
+      <a class="sys-edge new" data-from="b-target" data-to="b-geo"></a>
+      <a class="sys-edge gap" data-from="b-geo" data-to="b-tools"></a>
+      <a class="sys-edge" data-from="b-t4" data-to="b-sheets"></a>
+      <a class="sys-edge gap" data-from="b-sheets" data-to="b-reader"></a>
+    </div>
+    <div class="sys-refs">
+      <a class="refrow new" data-ref="D5"><span class="chip">D5</span><span class="txt">the five-step SIR geo workflow: triage, extract, consolidate, anchor, geo</span></a>
+      <a class="refrow new" data-ref="D2"><span class="chip">D2</span><span class="txt">a feature is the row asserting that N readings describe one thing</span></a>
+      <a class="refrow new" data-ref="D11"><span class="chip">D11</span><span class="txt">an anchoring target is rings plus a srid plus its provenance, sourced three ways</span></a>
+      <a class="refrow chg" data-ref="D3"><span class="chip">D3</span><span class="txt">geo becomes the derived spatial layer — drop it and you could rebuild it</span></a>
+      <a class="refrow chg" data-ref="D13"><span class="chip">D13</span><span class="txt">a manual upload says so, and reaches geo only through the same gates</span></a>
+    </div>
+    <div class="sys-legend"><span><i></i>exists today</span><span><i class="chg"></i>changed</span><span><i class="new"></i>new</span><span><i class="gap"></i>the gap</span></div>
+    <p class="claim"><b>Claim (§1.2):</b> "does the proposed building encroach on the recorded sanitary sewer easement" needs one geometry from each producer, in one coordinate system.</p>
+
+    <h3><span class="hn">C</span>What gets built in what order</h3>
+    <div class="sysmap" style="grid-template-columns:.6fr repeat(4,1fr)">
+      <div class="colh" style="grid-area:1/1">now</div>
+      <div class="colh" style="grid-area:1/2">unblockers</div>
+      <div class="colh" style="grid-area:1/3">the SIR workflow</div>
+      <div class="colh" style="grid-area:1/4">decoupling</div>
+      <div class="colh" style="grid-area:1/5">later</div>
+
+      <div class="sys trig" id="d-t" style="grid-area:2/1"><span class="dot"></span><span class="t">today</span><span class="d">one anchored plat</span></div>
+      <div class="sys" id="d-p0a" style="grid-area:2/2"><span class="k">substation</span><span class="t">P0a geo owner</span><span class="d">project-level, so plan sets can hang off it</span></div>
+      <div class="sys" id="d-p1a" style="grid-area:2/3"><span class="k">bureau</span><span class="t">P1a triage-sir-geos</span><span class="d">which documents are worth $40</span></div>
+      <div class="sys" id="d-p2a" style="grid-area:2/4"><span class="k">bureau · cartographer</span><span class="t">P2a anchoring target</span><span class="d">an anchor run names its own ring and CRS</span></div>
+      <div class="sys" id="d-p3" style="grid-area:2/5"><span class="k">cartographer</span><span class="t">P3 dependency-ordered placement</span><span class="d">the 27% located by reference</span></div>
+
+      <div class="sys" id="d-p0b" style="grid-area:3/2"><span class="k">substation</span><span class="t">P0b derived geo · file origin</span><span class="d">the invariant, set before there is volume</span></div>
+      <div class="sys" id="d-p1b" style="grid-area:3/3"><span class="k">operator</span><span class="t">P1b first full SIR by hand</span><span class="d">proves the chain, accepts duplicates</span></div>
+      <div class="sys" id="d-p2b" style="grid-area:3/4"><span class="k">cartographer</span><span class="t">P2b manual path end to end</span><span class="d">a loose PDF to a map</span></div>
+      <div class="sys" id="d-p4" style="grid-area:3/5"><span class="k">substation · mcp</span><span class="t">P4 agent tool surface</span><span class="d">ST_Distance and friends, with accuracy</span></div>
+
+      <div class="sys" id="d-p0c" style="grid-area:4/2"><span class="k">cartographer</span><span class="t">P0c fix the fit metric</span><span class="d">nothing auto-accepts until this is right</span></div>
+      <div class="sys" id="d-p1c" style="grid-area:4/3"><span class="k">bureau · substation</span><span class="t">P1c features and consolidate</span><span class="d">the biggest piece of new design</span></div>
+      <div class="sys" id="d-p5" style="grid-area:4/5"><span class="k">cartographer</span><span class="t">P5 plan-set reader</span><span class="d">a new reader, everything below reused</span></div>
+
+      <a class="sys-edge" data-from="d-t" data-to="d-p0a"></a>
+      <a class="sys-edge" data-from="d-p0a" data-to="d-p0b"></a>
+      <a class="sys-edge" data-from="d-p0b" data-to="d-p0c"></a>
+      <a class="sys-edge" data-from="d-p0a" data-to="d-p1a"></a>
+      <a class="sys-edge" data-from="d-p1a" data-to="d-p1b"></a>
+      <a class="sys-edge" data-from="d-p1b" data-to="d-p1c"></a>
+      <a class="sys-edge" data-from="d-p1a" data-to="d-p2a"></a>
+      <a class="sys-edge" data-from="d-p2a" data-to="d-p2b"></a>
+      <a class="sys-edge" data-from="d-p2a" data-to="d-p3"></a>
+      <a class="sys-edge" data-from="d-p3" data-to="d-p4"></a>
+      <a class="sys-edge" data-from="d-p4" data-to="d-p5"></a>
+    </div>
+    <p class="claim"><b>Claim (§8):</b> schema decisions are cheap now and expensive later; runbooks can be built in any order.</p>
+
+    <div class="callout ember"><span class="lab">watch out</span> P0c is not cosmetic. Fit metrics are computed over a union outline that keeps the target's interior lot lines — 25.7 ft mean and 209 ft Hausdorff where per-lot it is 1.6–2.5 ft (§2.3 C5, winston#289 B3). Half the corpus is anchored by ring fit, so no auto-accept threshold can be set against a number that is wrong for the dominant case.</div>
+  </section>
+
+  <section class="panel" id="workflow">
+    <h2><span class="eyebrow">02 · from a clerk document to a located feature</span>The five-step SIR geo workflow<span class="sub">The step order, what triage emits, and how readings become features.</span></h2>
+    <p class="lede">Three of the five steps are new runbooks. Extraction already works per document; anchoring already works per frame (§4).</p>
+
+    <div class="sysmap-scroll"><div class="sysmap" id="detail-workflow" style="grid-template-columns:.5fr repeat(5,minmax(112px,1fr));column-gap:20px">
+      <div class="colh" style="grid-area:1/1">trigger</div>
+      <div class="colh" style="grid-area:1/2">① triage</div>
+      <div class="colh" style="grid-area:1/3">② extract</div>
+      <div class="colh" style="grid-area:1/4">③ consolidate</div>
+      <div class="colh" style="grid-area:1/5">④ anchor</div>
+      <div class="colh" style="grid-area:1/6">⑤ publish</div>
+
+      <div class="sys trig" id="w-t" style="grid-area:2/1"><span class="dot"></span><span class="t">a SIR with documents</span><span class="d">100–300 of them</span></div>
+      <div class="sys new" id="w-1" style="grid-area:2/2"><a class="ref" href="#detail-triage">D6 ↓</a><span class="k">runbook · cheap</span><span class="t">triage-sir-geos</span><span class="d">ranked worklist, no vision</span></div>
+      <div class="sys" id="w-2" style="grid-area:2/3"><span class="k">runbook · per file</span><span class="t">extract-geometry-v2</span><span class="d">unchanged</span></div>
+      <div class="sys new" id="w-3" style="grid-area:2/4"><a class="ref" href="#detail-consolidate">D7 ↓</a><span class="k">runbook · per SIR</span><span class="t">consolidate-geos</span><span class="d">readings become features</span></div>
+      <div class="sys chg" id="w-4" style="grid-area:2/5"><a class="ref" href="#detail-target">D11 ↓</a><span class="k">runbook · per frame</span><span class="t">anchor-geometry</span><span class="d">decoupled from the SIR</span></div>
+      <div class="sys store chg" id="w-5" style="grid-area:2/6"><a class="ref" href="#detail-geo">D3 ↓</a><span class="k">table</span><span class="t">geo</span><span class="d">located features</span></div>
+
+      <a class="sys-edge" data-from="w-t" data-to="w-1"></a>
+      <a class="sys-edge new" data-from="w-1" data-to="w-2">worklist</a>
+      <a class="sys-edge" data-from="w-2" data-to="w-3">readings</a>
+      <a class="sys-edge new" data-from="w-3" data-to="w-4">anchor plan</a>
+      <a class="sys-edge new" data-from="w-4" data-to="w-5"></a>
+      <a class="sys-edge loop" data-from="w-3" data-to="w-2"></a>
+    </div></div>
+    <div class="sys-refs">
+      <a class="refrow new" data-ref="D6"><span class="chip">D6</span><span class="txt">the queue is not a new subsystem — sir_artifact already is the backlog</span></a>
+      <a class="refrow new" data-ref="D7"><span class="chip">D7</span><span class="txt">two matching problems: same-shape is deterministic, same-thing needs judgment</span></a>
+      <a class="refrow chg" data-ref="D11"><span class="chip">D11</span><span class="txt">an anchoring target is rings plus a srid plus its provenance, sourced three ways</span></a>
+      <a class="refrow chg" data-ref="D3"><span class="chip">D3</span><span class="txt">geo becomes the derived spatial layer — drop it and you could rebuild it</span></a>
+    </div>
+    <p class="claim"><b>Claim (§4.3):</b> consolidation re-runs every time one more document is extracted, where extraction runs once per file and is destructive on republish.</p>
+
+    <h3 id="detail-triage"><span class="hn">1</span>What triage reads and emits</h3>
+    <div class="spectable-scroll"><table class="spectable">
+      <thead><tr><th>Step</th><th>What happens</th><th>Cost · entities</th></tr></thead>
+      <tbody>
+        <tr><td><span class="sn">1</span></td><td>List the SIR's supporting documents that have no extraction yet</td><td><code>sir_artifact</code> <span class="r">read</span> · <code>cartographer_files</code> <span class="r">read</span> <span class="none">— already a query</span></td></tr>
+        <tr><td><span class="sn">2</span></td><td>Read each cheaply: filename, first page, text layer, what the SIR's own research already concluded</td><td><span class="none">no vision extraction</span></td></tr>
+        <tr><td><span class="sn">3</span></td><td>Emit a ranked worklist — what each document defines, what to extract first, what to never bother with</td><td>a report, not a table</td></tr>
+        <tr><td><span class="sn">4</span></td><td>Record only what a query cannot derive: examined and skipped, tried and illegible</td><td>a thin decisions store <span class="w">INSERT</span></td></tr>
+      </tbody>
+    </table></div>
+    <p class="claim"><b>Claim (§4.1):</b> the expensive decision is which 12 of 200 documents are worth the money, not launching the run — conductor already does that.</p>
+
+    <h3 id="detail-consolidate"><span class="hn">2</span>How a reading joins a feature</h3>
+    <div class="dflow">
+      <div class="dq"><span class="q">Another reading has the same course list — bearings and distances within tolerance?</span><span class="yes">yes →</span><span class="out">same feature · deterministic, no agent</span></div>
+      <div class="dno">no ↓</div>
+      <div class="dq"><span class="q">Same recording reference — book and page, or instrument number?</span><span class="yes">yes →</span><span class="out">same feature · agent confirms it is not a portion or an amendment</span></div>
+      <div class="dno">no ↓</div>
+      <div class="dq"><span class="q">Agent judges it the same thing from label, parent tract and plat wording?</span><span class="yes">yes →</span><span class="out warn">same feature · recorded as a judgment call, shown at the gate</span></div>
+      <div class="dno">no ↓</div>
+      <div class="dq end"><span class="q">otherwise</span><span class="yes"></span><span class="out">a new feature with one reading</span></div>
+    </div>
+    <p class="claim"><b>Claim (§3.3):</b> 147 of 315 geometries appear in more than one document; Palm Bay's Lot 7 is reproduced in 12.</p>
+
+    <div class="grid2">
+      <div class="card"><b>Why consolidation pays for itself</b><br>Twelve documents reciting Lot 7 collapse to one anchor run. Consolidation's second output is the anchor worklist — a minimal covering set of frames (D8).</div>
+      <div class="card"><b>Prefer a frame that can be fitted</b><br>An easement exhibit showing a bare strip has nothing to match against the county ring. A plat showing the parent boundary <i>and</i> the easement anchors itself and carries the easement along (D8).</div>
+      <div class="card"><b>Duplication is free accuracy</b><br>Twelve independent transcriptions cross-check each other. Eleven closing to 0.02 ft and one to 40 ft identifies a misread, not a disagreement about the world (§3.3).</div>
+      <div class="card"><b>What will not land on pass one</b><br>27% are located only by reference to another document and 17% are approximate sketches. A feature with identity and no position is a first-class outcome (D9, D10).</div>
+    </div>
+  </section>
+
+  <section class="panel" id="model">
+    <h2><span class="eyebrow">03 · readings, features, placements</span>What's stored<span class="sub">The three roles the data model separates, and the two tables that change.</span></h2>
+    <p class="lede">A reading is what one document says; a feature is the real-world thing; a placement is the transform. Today the first and third exist and the second does not (§3.3).</p>
+
+    <div class="erd">
+      <div class="ent exist">
+        <div class="eh"><span class="en">cartographer_geometries</span><span class="stereo">READING</span></div>
+        <div class="row"><span class="b b-pk">PK</span><span class="nm">id</span></div>
+        <div class="row"><span class="b b-fk">FK</span><span class="b b-nn">NN</span><span class="nm">file_id</span><span class="ty">→ cartographer_files</span></div>
+        <div class="row"><span class="nm">mete · polygon</span><span class="ty">SRID:0 · feet</span></div>
+        <div class="row"><span class="nm">frame_key · offset_x · offset_y</span><span class="ty">placed within the document</span></div>
+        <div class="row"><span class="nm">basis_of_bearings · control_points</span><span class="ty">what anchoring needs</span></div>
+        <div class="note">unchanged by this spec — 8 rows in prod</div>
+      </div>
+
+      <div class="ent newt" id="detail-feature">
+        <div class="eh"><span class="en">feature</span><span class="stereo">NEW</span></div>
+        <div class="row"><span class="b b-pk">PK</span><span class="nm">id</span><span class="ty">stable across re-runs</span></div>
+        <div class="row"><span class="b b-fk">FK</span><span class="nm">project_id</span><span class="ty">→ project</span></div>
+        <div class="row"><span class="nm">kind · label</span><span class="ty">easement · lot · right_of_way · …</span></div>
+        <div class="row hi"><span class="nm">identity_key</span><span class="ty">recording reference, where one exists</span></div>
+        <div class="row"><span class="nm">authoritative_reading_id</span><span class="ty">→ cartographer_geometries</span></div>
+        <div class="row"><span class="nm">corroborating_reading_ids</span><span class="ty">the other N − 1 copies</span></div>
+        <div class="note">may exist with no position at all — 27% are located only by reference to another document</div>
+      </div>
+
+      <div class="ent exist">
+        <div class="eh"><span class="en">cartographer_anchors</span><span class="stereo">PLACEMENT</span></div>
+        <div class="row"><span class="b b-pk">PK</span><span class="nm">id</span></div>
+        <div class="row"><span class="nm">frame_key · target_srid</span></div>
+        <div class="row"><span class="nm">params</span><span class="ty">theta_rad · scale · t_e · t_n · k_units</span></div>
+        <div class="row"><span class="nm">method · accuracy_class</span><span class="ty">printed_coordinates · ties · ring_fit</span></div>
+        <div class="row"><span class="nm">status</span><span class="ty">proposed · accepted · rejected · stale</span></div>
+        <div class="note">1 row in prod — the car-wash plat, accepted 2026-09-28</div>
+      </div>
+
+      <div class="ent changed" id="detail-geo">
+        <div class="eh"><span class="en">geo</span><span class="stereo">MODIFIED</span></div>
+        <div class="row"><span class="gut"></span><span class="b b-pk">PK</span><span class="nm">id</span></div>
+        <div class="row del"><span class="gut">−</span><span class="b b-nn">NN</span><span class="nm">sir_id</span><span class="ty">was: NOT NULL, ON DELETE CASCADE</span></div>
+        <div class="row add"><span class="gut">+</span><span class="b b-fk">FK</span><span class="b b-new">NEW</span><span class="nm">project_id</span><span class="ty">the owner — SIR and plan set become provenance</span></div>
+        <div class="row add"><span class="gut">+</span><span class="b b-fk">FK</span><span class="b b-new">NEW</span><span class="nm">feature_id</span><span class="ty">→ feature</span></div>
+        <div class="row"><span class="gut"></span><span class="b b-nn">NN</span><span class="nm">geom_wgs84</span><span class="ty">required since the geom-local iteration</span></div>
+        <div class="row hi"><span class="gut"></span><span class="nm">geom_local · srid_local</span><span class="ty">the planar copy PostGIS queries use</span></div>
+        <div class="row"><span class="gut"></span><span class="nm">method</span><span class="ty">county_api · anchored · estimated</span></div>
+        <div class="note">becomes derived-only: drop it and every row could be rebuilt from readings, anchors and county fetches</div>
+      </div>
+
+      <div class="ent changed" id="detail-files">
+        <div class="eh"><span class="en">cartographer_files</span><span class="stereo">MODIFIED</span></div>
+        <div class="row"><span class="gut"></span><span class="b b-pk">PK</span><span class="nm">id</span></div>
+        <div class="row"><span class="gut"></span><span class="nm">content_sha256</span><span class="ty">the file's identity — an import of the same bytes reuses the row</span></div>
+        <div class="row"><span class="gut"></span><span class="nm">source_sir_artifact_id</span><span class="ty">nullable today</span></div>
+        <div class="row add"><span class="gut">+</span><span class="b b-new">NEW</span><span class="nm">origin</span><span class="ty">manual_upload · sir_pipeline · plan_set</span></div>
+        <div class="note">self-describing instead of inferred from a null provenance column</div>
+      </div>
+    </div>
+
+    <div class="rels">
+      <div class="rels-h">Relationships (crow's foot)</div>
+      <span class="rl">cartographer_files <span class="cf">‖──&lt;</span> cartographer_geometries <span class="cmt">— one PDF, many readings</span></span>
+      <span class="rl">feature <span class="cf">‖──&lt;</span> cartographer_geometries <span class="tag-new">[NEW]</span> <span class="cmt">— one thing, N readings across N documents</span></span>
+      <span class="rl">feature <span class="cf">‖──‖</span> geo <span class="tag-new">[NEW]</span> <span class="cmt">— one located feature, one row (Q5 may make this one-to-many)</span></span>
+      <span class="rl">project <span class="cf">‖──&lt;</span> geo <span class="tag-new">[NEW]</span> <span class="cmt">— replaces site_intelligence_report ‖──&lt; geo</span></span>
+      <span class="rl">cartographer_anchors <span class="cf">‖──&lt;</span> geo <span class="cmt">— one transform, every figure on its frame</span></span>
+    </div>
+
+    <div class="callout"><span class="lab">the open one</span> Q1 — does a feature live in its own table, or is <code>geo</code> itself the feature table with readings pointing at it? The second is fewer moving parts; the first survives a feature having no position more naturally. The diagram above draws the first; it is not settled.</div>
+  </section>
+
+  <section class="panel" id="anchoring">
+    <h2><span class="eyebrow">04 · what an anchor run fits to</span>The anchoring target<span class="sub">The three jobs the SIR does inside anchor-geometry, and how each is replaced.</span></h2>
+    <p class="lede"><code>anchor.ts</code>'s <code>AnchorInputs</code> is <code>{ frameKey, figures, distanceUnits, targetUnits, gridBasis, statedScaleFactor, controlPoints, vertexTies, edgeTies, ringTargets }</code>. There is no SIR concept anywhere in the math layer — the coupling lives entirely in the runbook's <code>fetch.ts</code> and <code>publish.ts</code> wrappers (§3.2).</p>
+
+    <div class="spectable-scroll"><table class="spectable">
+      <thead><tr><th>What the SIR supplies</th><th>Why it is needed</th><th>How it is replaced</th></tr></thead>
+      <tbody>
+        <tr><td>the target CRS</td><td>the EPSG code the transform solves in</td><td><span class="none">already solved</span> — <code>--target-srid</code> exists, and <code>spcs_lookup.py &lt;county FIPS&gt;</code> answers it with no SIR</td></tr>
+        <tr><td>the output destination</td><td><code>sir_put_anchored_geo</code> writes rows on that SIR</td><td>mechanical — <code>geo</code> becomes project-owned (D4)</td></tr>
+        <tr><td>the fitting target</td><td><code>ringTargets</code> is what ring fit fits against, and what ties attach to</td><td>the real work — an anchoring target, sourced three ways (D11)</td></tr>
+      </tbody>
+    </table></div>
+
+    <h3><span class="hn">A</span>Where the ring and the CRS come from</h3>
+    <div class="dflow" id="detail-target">
+      <div class="dq"><span class="q">The request names a target explicitly?</span><span class="yes">yes →</span><span class="out">use it · provenance = operator</span></div>
+      <div class="dno">no ↓</div>
+      <div class="dq"><span class="q">A SIR is in scope with county parcel rows?</span><span class="yes">yes →</span><span class="out">rings from geo · srid from the modal srid_local · provenance = sir</span></div>
+      <div class="dno">no ↓</div>
+      <div class="dq"><span class="q">The project knows its parcel — an address, APN or lat-lon the county layer answers?</span><span class="yes">yes →</span><span class="out">arcgis_query.py returns the ring and its native_sr in one call · provenance = county_live</span></div>
+      <div class="dno">no ↓</div>
+      <div class="dq"><span class="q">The plat prints State Plane coordinates on its corners?</span><span class="yes">yes →</span><span class="out warn">solve with no ring at all · no fit metrics, no zone sanity check</span></div>
+      <div class="dno">no ↓</div>
+      <div class="dq end"><span class="q">otherwise</span><span class="yes"></span><span class="out fail">unanchorable · the feature keeps its identity and gets no position</span></div>
+    </div>
+    <p class="claim"><b>Claim (§5):</b> "decoupled from SIRs" and "needs a parcel ring from somewhere" are the same sentence — the work is sourcing the ring.</p>
+
+    <div class="callout ember"><span class="lab">the honest caveat</span> For rung 1 the CRS genuinely is all you need — the parcel ring only feeds a zone sanity-check and the quality metrics, both optional in <code>AnchorTolerances</code>. But printed State Plane coordinates appear in 3 of 315 geometries. For the 51% that are a closed shape with no position, the ring <i>is</i> the anchor (§5).</div>
+
+    <h3><span class="hn">B</span>Which stages a second producer reuses</h3>
+    <figure class="concept">
+      <svg viewBox="0 0 1040 300" role="img" aria-label="Two producers feed a reading stage each, then share identify, place and publish">
+        <defs><marker id="ns-ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
+
+        <text x="20" y="26" font-size="13" font-weight="700" fill="currentColor">producers</text>
+        <text x="300" y="26" font-size="13" font-weight="700" fill="currentColor">read</text>
+        <text x="560" y="26" font-size="13" font-weight="700" fill="currentColor">identify</text>
+        <text x="730" y="26" font-size="13" font-weight="700" fill="currentColor">place</text>
+        <text x="900" y="26" font-size="13" font-weight="700" fill="currentColor">publish</text>
+
+        <rect x="20" y="52" width="210" height="58" rx="7" fill="none" stroke="currentColor" stroke-width="1.5"/>
+        <text x="36" y="76" font-size="13" fill="currentColor">County clerk documents</text>
+        <text x="36" y="96" font-size="11.5" fill="currentColor" opacity=".7">metes and bounds · plats</text>
+
+        <rect x="20" y="186" width="210" height="58" rx="7" fill="none" stroke="currentColor" stroke-width="1.5"/>
+        <text x="36" y="210" font-size="13" fill="currentColor">Site plan set sheets</text>
+        <text x="36" y="230" font-size="11.5" fill="currentColor" opacity=".7">dimensioned drawings</text>
+
+        <rect x="290" y="52" width="200" height="58" rx="7" fill="none" stroke="currentColor" stroke-width="1.5"/>
+        <text x="306" y="76" font-size="13" fill="currentColor">extract-geometry-v2</text>
+        <text x="306" y="96" font-size="11.5" fill="currentColor" opacity=".7">exists</text>
+
+        <rect x="290" y="186" width="200" height="58" rx="7" fill="none" stroke="var(--new)" stroke-width="2" stroke-dasharray="5 4"/>
+        <text x="306" y="210" font-size="13" fill="var(--new)">a plan-set reader</text>
+        <text x="306" y="230" font-size="11.5" fill="var(--new)" opacity=".85">does not exist</text>
+
+        <rect x="548" y="119" width="150" height="58" rx="7" fill="none" stroke="currentColor" stroke-width="1.5"/>
+        <text x="564" y="143" font-size="13" fill="currentColor">consolidate</text>
+        <text x="564" y="163" font-size="11.5" fill="currentColor" opacity=".7">one algorithm</text>
+
+        <rect x="718" y="119" width="150" height="58" rx="7" fill="none" stroke="currentColor" stroke-width="1.5"/>
+        <text x="734" y="143" font-size="13" fill="currentColor">anchor</text>
+        <text x="734" y="163" font-size="11.5" fill="currentColor" opacity=".7">one solver</text>
+
+        <rect x="888" y="119" width="132" height="58" rx="7" fill="none" stroke="currentColor" stroke-width="1.5"/>
+        <text x="904" y="143" font-size="13" fill="currentColor">geo</text>
+        <text x="904" y="163" font-size="11.5" fill="currentColor" opacity=".7">one table</text>
+
+        <line x1="232" y1="81" x2="284" y2="81" stroke="currentColor" stroke-width="1.5" marker-end="url(#ns-ar)"/>
+        <line x1="232" y1="215" x2="284" y2="215" stroke="var(--new)" stroke-width="1.5" marker-end="url(#ns-ar)"/>
+        <path d="M492 81 L520 81 L520 148 L542 148" fill="none" stroke="currentColor" stroke-width="1.5" marker-end="url(#ns-ar)"/>
+        <path d="M492 215 L520 215 L520 148 L542 148" fill="none" stroke="var(--new)" stroke-width="1.5" marker-end="url(#ns-ar)"/>
+        <line x1="700" y1="148" x2="712" y2="148" stroke="currentColor" stroke-width="1.5" marker-end="url(#ns-ar)"/>
+        <line x1="870" y1="148" x2="882" y2="148" stroke="currentColor" stroke-width="1.5" marker-end="url(#ns-ar)"/>
+
+        <text x="548" y="268" font-size="11.5" fill="currentColor" opacity=".7">shared by both producers — the solver, the accuracy classes, the metrics and the storage are one</text>
+      </svg>
+      <figcaption><b>Claim (D1):</b> reading is per-source and everything below it is shared, so a plan set needs a new reader and reuses identify, place and publish. Green dashed = the piece that does not exist.</figcaption>
+    </figure>
+  </section>
+
+  <section class="panel" id="rollout">
+    <h2><span class="eyebrow">05 · what to peel off, and what is unresolved</span>Priority and open questions<span class="sub">The tiers in words, the tensions to carry, and the twelve questions this draft leaves open.</span></h2>
+    <p class="lede">This is a plan of a plan. Decisions are directional; the questions outnumber them on purpose, and the spec expects to be iterated on for weeks with slices peeled off one at a time.</p>
+
+    <div class="grid2">
+      <div class="card"><b>P0 · unblockers</b><br>Project ownership for <code>geo</code>, the derived-only invariant and a file <code>origin</code>, and the fit-metric fix. Small, and each one gates work downstream. Schema is cheap now and expensive later.</div>
+      <div class="card"><b>P1 · the SIR workflow</b><br>The triage runbook first — independently valuable, no new tables, no change to the SIR runbook. Then a full SIR by hand. Then features and consolidation, the biggest new design.</div>
+      <div class="card"><b>P2 · decoupling</b><br>The anchoring target, then the manual Cartographer path end to end as the test that proves it.</div>
+      <div class="card"><b>P3–P5 · later</b><br>Dependency-ordered placement for the 27%, the agent tool surface and a viewer, and the plan-set reader. P5 is blocked only on P0a.</div>
+    </div>
+
+    <h3><span class="hn">T</span>Tensions to carry</h3>
+    <div class="legend">
+      <span class="k"><span class="utag t-orig">#n</span> raised in the spec</span>
+      <span class="k"><span class="utag t-add">+</span> modeling consequence</span>
+      <span class="k"><span class="star">★</span> affects the schema</span>
+    </div>
+    <div class="catgrp">
+      <div class="cath"><span class="cgl">A</span> Identity</div>
+      <div class="uci"><span class="uid">A1</span><span class="utag t-orig">#1</span><span class="star">★</span><span class="utxt"><b>Stable feature ids across re-runs</b> — consolidation must propose merges and splits against existing features, not rebuild from scratch. A wrong merge is silent and expensive.</span></div>
+      <div class="uci"><span class="uid">A2</span><span class="utag t-add">+</span><span class="star">★</span><span class="utxt"><b>Geometry has a vintage</b> — granted, amended, partially released, superseded by a replat. A feature is a shape <i>as of a date</i>, and title chains are where SIRs operate. No time dimension exists today.</span></div>
+      <div class="uci"><span class="uid">A3</span><span class="utag t-add">+</span><span class="star">★</span><span class="utxt"><b>Recorded versus proposed</b> — <code>geo</code> will hold both, and the headline use case measures between them. Conflating them would be a quiet correctness bug.</span></div>
+    </div>
+    <div class="catgrp">
+      <div class="cath"><span class="cgl">B</span> Trust and cost</div>
+      <div class="uci"><span class="uid">B1</span><span class="utag t-orig">#4</span><span class="utxt"><b>Accuracy must reach the tool surface</b> — an easement placed at <code>gis_fit</code> and a computed 2 ft setback violation is noise presented as a finding.</span></div>
+      <div class="uci"><span class="uid">B2</span><span class="utag t-orig">#5</span><span class="utxt"><b>Triage is the product until extraction gets cheap</b> — the first honest number P1a produces is how many documents per site actually carry a reconstructable boundary.</span></div>
+      <div class="uci"><span class="uid">B3</span><span class="utag t-add">+</span><span class="utxt"><b>Units and grid-versus-surface discipline</b> must survive consolidation when two readings of one feature disagree.</span></div>
+      <div class="uci later"><span class="uid">B4</span><span class="utag t-add">+</span><span class="utxt"><b>Consolidation feeds back into triage</b> — the second pass over a site should be much cheaper than the first.</span></div>
+    </div>
+
+    <h3><span class="hn">Q</span>Open questions</h3>
+    <div class="catgrp">
+      <div class="cath"><span class="cgl">M</span> The model</div>
+      <div class="uci"><span class="uid">Q1</span><span class="star">★</span><span class="utxt">Does a feature live in its own table, or is <code>geo</code> itself the feature table with readings pointing at it?</span></div>
+      <div class="uci"><span class="uid">Q2</span><span class="star">★</span><span class="utxt">What is a feature's identity key when there is no recording reference — an unrecorded exhibit, a plan-set hydrant?</span></div>
+      <div class="uci"><span class="uid">Q4</span><span class="star">★</span><span class="utxt">Where does the time dimension live — on the feature, on the reading, or not at all in v1?</span></div>
+      <div class="uci"><span class="uid">Q5</span><span class="star">★</span><span class="utxt">One <code>geo</code> row per feature, or one per (feature, source) so the recorded easement and the plan set's depiction coexist?</span></div>
+      <div class="uci"><span class="uid">Q7</span><span class="star">★</span><span class="utxt">Is <code>project</code> really the right owner, or should it be the site / parcel with projects pointing at sites?</span></div>
+    </div>
+    <div class="catgrp">
+      <div class="cath"><span class="cgl">R</span> The runbooks</div>
+      <div class="uci"><span class="uid">Q3</span><span class="utxt">When consolidation re-runs and disagrees with itself, what is the merge/split protocol and what does a human see at the gate?</span></div>
+      <div class="uci"><span class="uid">Q9</span><span class="utxt">Are triage's skip decisions per-document or per-(document, reason), and do they survive a new SIR version over the same site?</span></div>
+      <div class="uci"><span class="uid">Q10</span><span class="utxt">Does consolidation run before anchoring only, or is a post-anchor reconciliation pass part of v1?</span></div>
+      <div class="uci"><span class="uid">Q11</span><span class="utxt">Backfill posture for the 34 existing SIRs. Stated intent: no perfect backfill required — does anything need re-deriving at all?</span></div>
+    </div>
+    <div class="catgrp">
+      <div class="cath"><span class="cgl">S</span> The second producer and the consumer</div>
+      <div class="uci"><span class="uid">Q6</span><span class="utxt">How does a plan set get its anchoring target — the project's SIR ring, a live county fetch, or a georeference solved from the sheet itself?</span></div>
+      <div class="uci"><span class="uid">Q8</span><span class="utxt">What does the agent tool surface look like — raw SQL against a view, named RPCs, or an MCP server with a geometry vocabulary?</span></div>
+      <div class="uci"><span class="uid">Q12</span><span class="utxt">Does the plan-set reader belong in Cartographer or in the preprocessing-v4 lineage, where the sheet-reading vision machinery already lives?</span></div>
+    </div>
+
+    <div class="xref">Grounding: prod counts taken 2026-10-08 against Supabase <code>mgxqsrjutswbciyrltwd</code>; corpus figures from the Inspector General survey <code>2026-09-23-sir-geometry-source-survey</code> (10 SIRs, 645 supporting docs, 315 geometries).</div>
+    <div class="foot">Sits above the cartographer extraction, evidence, placement and anchoring specs (winston#274, #270, #279, #281, #283, #289). It replaces none of them.</div>
+  </section>
+
+</main>
+
+<script data-spec-kit-js>
+/* spec-kit v5.2 — system-map edge renderer.
+   Inline the ENTIRE contents of this file into the spec's
+   <script data-spec-kit-js> block (do not <script src>).
+   Reads every .sysmap, and for each hidden <a class="sys-edge"
+   data-from="idA" data-to="idB">label</a> draws an SVG path between the
+   two nodes' nearest sides. Routing:
+     side-to-side   when A and B share a row (label rides in the row gap ABOVE the boxes)
+     top-to-bottom  when A and B share a column (label sits right of the line)
+     orthogonal     otherwise: leave A vertically into the gap beside A's whole ROW (tags
+                    included), run, drop into B (label hugs the source); a backward edge
+                    in the same row goes over the top, .loop higher still.
+   Labels clear the source's floating .ref tag, stay inside the map, and nudge up off
+   any label drawn earlier.
+   Redraws on load, font load, resize, and whenever a tab panel becomes visible. */
+(function(){
+  const NS='http://www.w3.org/2000/svg';
+  const COL={std:'#6397b8',new:'#15803d',chg:'#b45309',gap:'#b91c1c',loop:'#6397b8'};
+  const KINDS=['new','chg','gap','loop'];
+  function el(tag,attrs){const n=document.createElementNS(NS,tag);for(const k in attrs)n.setAttribute(k,attrs[k]);return n;}
+  function draw(map){
+    let svg=map.querySelector('svg.edges');
+    if(!svg){
+      svg=el('svg',{class:'edges'});
+      const defs=el('defs',{});
+      for(const k in COL){
+        const m=el('marker',{id:'ah-'+k,viewBox:'0 0 10 10',refX:'9',refY:'5',markerWidth:'7',markerHeight:'7',orient:'auto-start-reverse'});
+        m.appendChild(el('path',{d:'M0 0L10 5L0 10z',fill:COL[k]}));defs.appendChild(m);
+      }
+      svg.appendChild(defs);map.appendChild(svg);
+    }
+    svg.querySelectorAll('g').forEach(g=>g.remove());
+    const mr=map.getBoundingClientRect(); if(mr.width===0) return;   // hidden tab: nothing to measure
+    const paths=el('g',{class:'paths'}), labels=el('g',{class:'labels'});
+    const rect=r=>({l:r.left-mr.left,t:r.top-mr.top,r:r.right-mr.left,b:r.bottom-mr.top,cx:(r.left+r.right)/2-mr.left,cy:(r.top+r.bottom)/2-mr.top});
+    const box=n=>rect((n.querySelector('.dot')||n).getBoundingClientRect());
+    const nodes=[...map.querySelectorAll('.sys')].map(n=>({n,b:box(n),ref:n.querySelector('.ref')?rect(n.querySelector('.ref').getBoundingClientRect()):null}));
+    // the vertical band a node's ROW occupies: every node overlapping it vertically, tags included
+    const band=a=>{let t=a.t,b=a.b;nodes.forEach(o=>{if(Math.min(a.b,o.b.b)-Math.max(a.t,o.b.t)>0){t=Math.min(t,o.b.t,o.ref?o.ref.t:o.b.t);b=Math.max(b,o.b.b);}});return {t,b};};
+    const placed=[];   // label boxes already drawn, for collision nudging
+    map.querySelectorAll('.sys-edge').forEach(e=>{
+      const A=map.querySelector('#'+CSS.escape(e.dataset.from||'')), B=map.querySelector('#'+CSS.escape(e.dataset.to||''));
+      if(!A||!B){console.warn('sysmap edge: missing node',e.dataset.from,e.dataset.to);return;}
+      const a=box(A), b=box(B), aRef=A.querySelector('.ref'), aRefR=aRef?rect(aRef.getBoundingClientRect()):null;
+      const kind=KINDS.find(k=>e.classList.contains(k))||'std';
+      const sameRow=Math.min(a.b,b.b)-Math.max(a.t,b.t)>0, sameCol=Math.min(a.r,b.r)-Math.max(a.l,b.l)>0;
+      const forward=b.l>=a.r;
+      let d,lx,ly,anchor='middle';
+      const clamp=(v,lo,hi)=>Math.max(lo,Math.min(hi,v));
+      if(sameRow&&forward&&kind!=='loop'){        // side to side, left→right
+        const x1=a.r,x2=b.l,y1=a.cy,mx=(x1+x2)/2;
+        const y2=A.querySelector('.dot')?clamp(y1,b.t+10,b.b-10):b.cy;
+        d=`M${x1} ${y1}C${mx} ${y1},${mx} ${y2},${x2} ${y2}`;
+        lx=mx; ly=Math.min(a.t,b.t)-6;
+        if(aRefR&&ly>aRefR.t-2&&ly<aRefR.b+12){lx=aRefR.r+6;anchor='start';}   // clear the source's floating tag
+      }else if(sameCol&&!sameRow){               // top to bottom; label just past the source end, right of the line
+        const down=b.t>=a.b, y1=down?a.b:a.t, y2=down?b.t:b.b, x1=a.cx, x2=b.cx, my=(y1+y2)/2;
+        d=`M${x1} ${y1}C${x1} ${my},${x2} ${my},${x2} ${y2}`;
+        // label just past the SOURCE end going down; just past the TARGET end going up (a source's
+        // top-right is where its floating tag lives)
+        lx=x1+8; ly=down?y1+14:y2+14; anchor='start';
+      }else{                                     // orthogonal, through the gap beside A's ROW (not A's box)
+        const rb=band(a); let y1,yr,y2;
+        if(sameRow){ y1=a.t; yr=rb.t-(kind==='loop'?34:22); y2=b.t; }      // backward / loop: over the whole row + its labels
+        else if(b.cy>a.cy){ y1=a.b; yr=rb.b+12; y2=b.t; }                   // down: gap below the row
+        else { y1=a.t; yr=rb.t-12; y2=b.b; }                                // up: gap above the row (above tags)
+        d=`M${a.cx} ${y1}L${a.cx} ${yr}L${b.cx} ${yr}L${b.cx} ${y2}`;
+        const rightward=b.cx>a.cx; lx=a.cx+(rightward?22:-22); anchor=rightward?'start':'end'; ly=yr-4;
+      }
+      paths.appendChild(el('path',{d,class:'e '+kind,'marker-end':`url(#ah-${kind})`}));
+      const txt=e.textContent.trim();
+      if(txt){
+        const t=el('text',{x:lx,y:ly,'text-anchor':anchor,class:'lbl '+kind}); t.textContent=txt;
+        const bg=el('rect',{class:'lblbg',rx:3}); labels.appendChild(bg); labels.appendChild(t);
+        svg.appendChild(labels);
+        let tb=t.getBBox();
+        if(tb.x+tb.width>mr.width-6){t.setAttribute('text-anchor','end');t.setAttribute('x',anchor==='start'?lx-16:lx);tb=t.getBBox();}   // keep inside the map
+        for(let i=0;i<4;i++){const hit=placed.find(p=>!(tb.x>p.x+p.width+2||p.x>tb.x+tb.width+2||tb.y>p.y+p.height+1||p.y>tb.y+tb.height+1));if(!hit)break;t.setAttribute('y',+t.getAttribute('y')-(tb.height+3));tb=t.getBBox();}  // nudge up off an earlier label
+        placed.push(tb);
+        bg.setAttribute('x',tb.x-4);bg.setAttribute('y',tb.y-2);bg.setAttribute('width',tb.width+8);bg.setAttribute('height',tb.height+4);
+      }
+    });
+    svg.appendChild(paths); svg.appendChild(labels);   // labels above paths
+  }
+  // long identifiers break cleanly after underscores instead of mid-word
+  function softBreaks(){document.querySelectorAll('.sys .t, .uc .nt').forEach(t=>{if(t.dataset.wbr||!/_/.test(t.textContent))return;t.innerHTML=t.innerHTML.replace(/_/g,'_<wbr>');t.dataset.wbr='1';});}
+  const all=()=>{softBreaks();document.querySelectorAll('.sysmap').forEach(draw);};
+  /* ---- spec links: when <main data-spec="DESIGN-SPEC.html"> is set, every reference token
+     becomes a link into the reader page: P0a → #P0a, D12 → #D12, Q6 → #Q6, §3.2 → #s3-2 */
+  function linkSpec(){
+    const main=document.querySelector('main[data-spec]'); if(!main) return;
+    const spec=main.dataset.spec;
+    const tokHref=t=>spec+'#'+(t.startsWith('§')?'s'+t.slice(1).replace(/\./g,'-'):t);
+    document.querySelectorAll('.sys-refs .refrow').forEach(r=>{
+      const tok=r.dataset.ref||(r.querySelector('.chip')||{}).textContent||''; if(!tok.trim()) return;
+      if(!r.getAttribute('href')) r.setAttribute('href',tokHref(tok.trim()));
+      if(!r.querySelector('.go')){const g=document.createElement('span');g.className='go';r.appendChild(g);}
+    });
+    document.querySelectorAll('.claim b, figure.concept figcaption b').forEach(b=>{
+      if(b.querySelector('a')) return;
+      b.innerHTML=b.innerHTML.replace(/(§\d+(?:\.\d+)*)|\b(P\d[a-z]?|D\d+|Q\d+)\b/g,m=>`<a class="cite" href="${tokHref(m)}" title="read this section of the spec">${m}</a>`);
+    });
+  }
+  window.addEventListener('DOMContentLoaded',linkSpec);
+  window.addEventListener('load',all);
+  if(document.fonts&&document.fonts.ready) document.fonts.ready.then(all);
+  window.addEventListener('resize',all);
+  new MutationObserver(all).observe(document.documentElement,{attributes:true,subtree:true,attributeFilter:['class']});
+})();
+
+</script>
+<script>
+  const btns=document.querySelectorAll('nav.tabs button');
+  const panels=document.querySelectorAll('.panel');
+  const IDS=['overview','workflow','model','anchoring','rollout']; /* KEEP IN SYNC with the data-tab / panel ids above */
+  function show(id,opts={}){
+    btns.forEach(b=>b.classList.toggle('active',b.dataset.tab===id));
+    panels.forEach(p=>p.classList.toggle('active',p.id===id));
+    if(!opts.keepHash&&location.hash.slice(1)!==id) history.replaceState(null,'','#'+id);
+    if(!opts.noScroll) window.scrollTo({top:0,behavior:opts.instant?'auto':'smooth'});
+  }
+  btns.forEach(b=>b.addEventListener('click',()=>show(b.dataset.tab)));
+  function fromHash(instant){
+    const h=location.hash.slice(1); if(!h) return;
+    if(IDS.includes(h)){ show(h,{keepHash:true,instant}); return; }
+    const el=document.getElementById(h); if(!el) return;
+    const panel=el.closest('.panel'); if(!panel) return;
+    show(panel.id,{keepHash:true,noScroll:true,instant});
+    requestAnimationFrame(()=>el.scrollIntoView({behavior:instant?'auto':'smooth',block:'start'}));
+  }
+  window.addEventListener('hashchange',()=>fromHash(false));
+  fromHash(true);
+</script>
+</body>
+</html>
