@@ -598,7 +598,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
     <a class="refrow new" data-ref="D3"><span class="chip">D3</span><span class="txt">the unit is a (comment, run) whose own status is fail/warn and cites a sheet, whatever the comment's verdict; one worker per guide</span></a>
     <a class="refrow new" data-ref="D12"><span class="chip">D12</span><span class="txt">per-run markers stored on each perRunFindings entry; the comment shows the winning run's</span></a>
     <a class="refrow chg" data-ref="D4"><span class="chip">D4</span><span class="txt">the stager writes each block's bounding box, so a cited block becomes the first seed</span></a>
-    <a class="refrow new" data-ref="D5"><span class="chip">D5</span><span class="txt">lift the annotate scripts into runbooks/lib/annotate with a review|cc record adapter</span></a>
+    <a class="refrow new" data-ref="D5"><span class="chip">D5</span><span class="txt">share the geometry scripts and loop rules in runbooks/lib/annotate; what to mark, the record and the merge stay per runbook</span></a>
     <a class="refrow chg" data-ref="D6"><span class="chip">D6</span><span class="txt">the sheet key is the staged ordinal label, resolved through a sheet_map that lane B now writes</span></a>
     <a class="refrow chg" data-ref="D7"><span class="chip">D7</span><span class="txt">lane B validates markers like lane A and keeps the 2026-03-completeness-check label</span></a>
     <a class="refrow chg" data-ref="D8"><span class="chip">D8</span><span class="txt">cityhall's CC adapter reads annotations and annotation_disposition on presence</span></a>
@@ -799,7 +799,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
         <span class="q">"Never type them into the command." (evidence and label go in files)</span>
         <span class="io"><b>types</b>ref, sheet, kind, <code>--points</code> (the 0–1 points, retyped from <code>remap-result.json</code>), <code>source_finding_ref</code>, the evidence and label files, and this pass's crop-meta</span>
         <span class="gap"><code>--points</code> is never compared with <code>remap-result.json</code>'s <code>unit</code> (<code>annotate-write.ts:134-150</code>)</span>
-        <span class="cc">CC: <code>--run run-k</code>, that run's sheets and sources, <code>document_id</code> + <code>page</code>, <code>--role expected-here</code> (Q3).</span>
+        <span class="cc">CC: <code>--run run-k</code>, that run's sheets and sources, <code>document_id</code> + <code>page</code>, <code>--role expected-here</code>, on CC's own writer (D5).</span>
       </div>
       <div class="af-x">
         <div class="c"><span class="l">annotate-write</span><span class="ln">▸</span></div>
@@ -854,7 +854,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
         <span class="t"><code>annotate-merge</code> · <code>annotate-disposition-check</code></span>
         <span class="io"><b>derives</b>every sidecar folded into a copy of the record, all or nothing, at most 20 per comment, with the per-comment roll-up</span>
         <span class="io"><b>checks</b>fails any comment with no record</span>
-        <span class="cc">CC: its own merge for the per-run record and the winning-run copy (D12, Q3).</span>
+        <span class="cc">CC: its own merge for the per-run record and the winning-run copy (D12, D5).</span>
       </div>
     </div>
 
@@ -979,7 +979,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 <!-- ============================== CC ============================== -->
 <section class="panel" id="cc">
   <h2><span class="eyebrow">CC proposal</span>2.12-annotate, the shared kit, and a CC adapter that reads markers</h2>
-  <p class="lede">Copy the review's shape: a separate step on the final envelope, sidecars, then a merge. CC changes three things: the roster (every run that voted fail or warn and cites a sheet), the seed (the block that run cited) and the record adapter, which also stores markers per run.</p>
+  <p class="lede">Copy the review's shape: a separate step on the final envelope, sidecars, then a merge. CC changes three things: the roster (every run that voted fail or warn and cites a sheet), the seed (the block that run cited), and its own record writers and merge, which store markers per run (D5).</p>
 
   <h3 id="detail-cc-graph">The CC graph with the new step</h3>
   <div class="sysmap" style="grid-template-columns:.6fr repeat(4,1fr)">
@@ -1032,12 +1032,14 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
   <div class="spectable-scroll"><table class="spectable">
     <thead><tr><th>Piece</th><th>Today</th><th>After</th></tr></thead>
     <tbody>
-      <tr><td>crop · remap · seam-check</td><td><code>runbooks/review/scripts/annotate-*.ts</code></td><td><code>runbooks/lib/annotate/</code>, unchanged (record-agnostic)</td></tr>
-      <tr><td>write · disposition-write</td><td>review only: <code>comments[].id</code>, <code>sheets[]</code>, <code>sources[]</code></td><td><code>--record review|cc</code>. CC finds a comment by <code>sourceFindings[0].ref</code> (<code>grouping:itemId</code>) plus <code>--run run-k</code>, and may name sheets from that run's <code>sheetReferences[].sheetNumber</code>, rendered as <code>"NN"</code></td></tr>
-      <tr><td>merge · disposition-check</td><td>folds into <code>comments[]</code></td><td>the adapter folds into <code>sections[].comments[]</code>; CC adds deterministic dispositions for comments off the roster</td></tr>
-      <tr><td>validation constants</td><td><code>lib/annotate-validate.ts</code> + <code>review_annotation_geometry.py</code>, once pinned with substation (now archived)</td><td>same files; the docstrings now name bureau as the only enforcer</td></tr>
+      <tr><td>crop · remap · seam-check · refine · draw</td><td><code>runbooks/review/scripts/</code></td><td><b>shared</b>: <code>runbooks/lib/annotate/</code>, unchanged (they never see a comment)</td></tr>
+      <tr><td>geometry rules · sidecar writer · annotation object</td><td><code>lib/annotate-validate.ts</code> + <code>review_annotation_geometry.py</code>, once pinned with substation (now archived)</td><td><b>shared</b>: same rules for both lanes, plus <code>role</code> (D2); the docstrings name bureau as the only enforcer</td></tr>
+      <tr><td>loop mechanics (prompt text)</td><td>inside the review's sweep prompt</td><td><b>shared as text</b>: <code>runbooks/lib/annotate/loop-rules.md</code>, carried verbatim in both prompts and test-enforced, like <code>block-name-rule.md</code></td></tr>
+      <tr><td>what to mark (prompt text)</td><td>review: skip absences</td><td><b>per runbook</b>: the review keeps its rule and its writer refuses <code>expected-here</code>; CC marks <code>expected-here</code> (D2)</td></tr>
+      <tr><td>write · disposition-write (record checks)</td><td>review only: <code>comments[].ref</code>, <code>sheets[]</code>, <code>sources[]</code>, checked only when present</td><td><b>per runbook</b>: CC's own writers find <code>sourceFindings[0].ref</code> + <code>--run run-k</code>, check that run's sheets, documents and checklist ref, and refuse what they cannot check</td></tr>
+      <tr><td>merge · disposition-check</td><td>folds into <code>comments[]</code></td><td><b>per runbook</b>: CC's own merge folds into <code>sections[].comments[]…perRunFindings[k]</code>, copies the winning run's markers (D12) and writes dispositions for runs off the roster</td></tr>
       <tr><td>seed ladder</td><td>drawing block → whole sheet in quadrants</td><td>a <b>cited block box</b> first (D4), then the same ladder</td></tr>
-      <tr><td>runner</td><td><code>judgment</code> opus-5.5 high</td><td>a CC <code>annotate</code> preset, also opus-5.5 high (D11, Q3); reads pixels natively (D10)</td></tr>
+      <tr><td>runner</td><td><code>judgment</code> opus-5.5 high</td><td>a CC <code>annotate</code> preset, also opus-5.5 high (D11; Q3 asks about sonnet); reads pixels natively (D10)</td></tr>
     </tbody>
   </table></div>
 
@@ -1215,6 +1217,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
       <tr><td><span class="sn">Q9</span></td><td>Should preprocessing-v4 publish per-section page regions?</td><td>Only if document not-located is high in P4</td></tr>
       <tr><td><span class="sn">Q10</span></td><td>Cap of 6 pages per (run, document)?</td><td>Yes, bounds spend on 500-page reports</td></tr>
       <tr><td><span class="sn">Q11</span></td><td>Optional pageNumber on CC document citations?</td><td>Separate small change after P2 (a parity decision)</td></tr>
+      <tr><td><span class="sn">Q12</span></td><td>Should the shared kit take over the agent's two hand copies (next seed from remap; final points into <code>annotate-write</code>)?</td><td>Yes, in P1: <code>--seed-from</code> and <code>--from-remap</code>, so <code>correction.json</code> is the agent's only numeric output</td></tr>
     </tbody>
   </table></div>
 </section>

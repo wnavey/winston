@@ -482,7 +482,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 
 </style>
 </head>
-<body class="reader" data-back="architecture.html" data-spec-sha="1966dfebd0a87d86">
+<body class="reader" data-back="architecture.html" data-spec-sha="a65616384aeb77b5">
 
 <header class="masthead">
   <div class="kicker">SPEC · READER</div>
@@ -519,7 +519,10 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 > companion page `architecture.html` draws all of this.
 
 > **Revision note (v3, 2026-10-08, grill with Will): decisions folded one at a time.**
-> - **Q1 answered: absences get a marker when they have a slot (reverses v2's D2).** A new
+> Grill decisions are numbered G1, G2, … The spec's own Q numbers keep their meaning. G1 is
+> Q1. G2 and G3 are new questions; Q2 (roster grain) and Q3 (model) are still open.
+>
+> - **G1 = Q1 answered: absences get a marker when they have a slot (reverses v2's D2).** A new
 >   marker role, `expected-here`, outlines the specific empty place where a required thing
 >   should be: a blank form field, a Yes/No pair with neither box checked, an empty table
 >   cell. The agent decides when to use it. There is no rule by sheet or document type. The
@@ -532,10 +535,15 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 >   derive `converged`, `passes` and the fingerprint, but `annotate-write.ts` takes the final
 >   points as retyped `--points` without checking them against `remap-result.json`. New
 >   architecture tab, *Agent and scripts*, walks the sweep prompt fragment by fragment.
-> - **Q2 answered: documents ship with plan sheets.** v2's P5 (document targets in the
+> - **G2: documents ship with plan sheets.** v2's P5 (document targets in the
 >   producer) folds into P2, and P6 (the pdf.js page overlay) folds into P3. One
 >   `2.12-annotate` sweep marks sheets and document pages in the same pass, and P4 scores
 >   both before the default flips. P5 and P6 no longer exist. §3.3 and §7.4 are rewritten.
+> - **G3: share the geometry, not the policy (D5 rewritten).** Shared code is the geometry half
+>   plus the annotation object's shape. The loop mechanics are shared as prompt text carried
+>   verbatim (the `block-name-rule.md` pattern). What to mark, the roster, the record's field
+>   names, the writers' record checks and the merge stay per runbook. Each runbook's writer
+>   decides which `role`s it allows, and CC's record checks fail closed. Q12 is new.
 >
 > **Revision note (v2, 2026-10-07): markings on non-plan-set documents.** Will asked for
 > markings on supplementary documents too (application forms, letters, reports), now that
@@ -827,21 +835,37 @@ loop proceeds as in the review: crop → read → answer → remap, up to 3 pass
 block, the seed falls back to the review's ladder (drawing block → whole sheet in
 quadrants).
 
-**D5. Lift the annotate kit into shared code, parameterised by a record adapter.** Move
-`annotate-{crop,remap,seam-check,write,disposition-write,merge,disposition-check}.ts` and
-`lib/annotate-*` from `runbooks/review/scripts/` to `runbooks/lib/annotate/`, and add a
-`--record review|cc` adapter. The adapter answers three questions:
+**D5. Share the geometry and the loop mechanics; keep policy and record handling per
+runbook (v3, grill G3).** The annotate scripts fall into two halves (§1.4, architecture tab
+03), and only one of them is shared code:
 
-- how to find a comment by ref (review: `comments[].id`; CC:
-  `sections[].comments[].sourceFindings[0].ref` = `grouping:itemId`, plus `--run run-k`
-  naming the `perRunFindings` entry; the sidecar name carries both);
-- which sheets it may name (review: `sheets[]`; CC: **that run's**
-  `sheetReferences[].sheetNumber`, rendered as the zero-padded staged ordinal);
-- what `source_finding_ref` must match (review: `sources[]`; CC: the comment's own
-  checklist ref).
+| Bucket | What | Where it lives |
+|---|---|---|
+| **Geometry code** | `annotate-crop` (crop window, padding, pixel cap, rotation, `--page`, overlay, sha256), `annotate-remap` (crop → sheet → 0–1, rotation, shape-delta convergence), `annotate-seam-check`, `lib/annotate-refine`, `lib/annotate_draw.py`, the geometry contract (`annotate-validate.ts` geometry checks + its Python twin `review_annotation_geometry.py`), the `O_EXCL` sidecar writer, and **the annotation object's shape** | **Shared**, moved to `runbooks/lib/annotate/`. None of it knows what a comment is. |
+| **Loop mechanics** (prompt text) | how to drive those scripts: tile with both pad flags, "an `OK` is not proof", pass a polygon on as a polygon, `pass-<k>` is load-bearing, evidence/label/reason go in files | **Shared as text**: `runbooks/lib/annotate/loop-rules.md`, carried verbatim in both sweep prompts and enforced by a test, the pattern `runbooks/lib/block-name-rule.md` already uses (`block-name.test.ts:78`) |
+| **Policy and record** | what to mark (the review skips absences; CC marks `expected-here`, D2), the roster (per discipline vs per guide run), finding a comment or run by ref, which sheets / documents / sources a marker may name, the envelope's field names, the merge, the winning-run copy (D12), the coverage gate | **Per runbook.** The review keeps its own writers and merge under `runbooks/review/scripts/`. CC gets its own under `runbooks/completeness-check/scripts/`, built on the shared writer and validator. |
 
-The review keeps calling the same scripts through the moved paths. Its tests move with the
-code.
+The annotation object is in the shared bucket, not the per-runbook one: the comment
+envelope differs between the lanes, but the marker inside it keeps one set of field names,
+because cityhall has one reader for it and publish has one geometry check (D7, D8).
+
+**Each runbook's writer decides which roles it allows.** The shared validator accepts
+`role`; the review's writer refuses `expected-here`, so a review worker cannot drift into
+marking absences whatever its prompt says. CC's writer accepts both.
+
+**CC's record checks fail closed.** The review's `resolveTarget` checks a sheet against
+`sheets[]` and a source against `sources[]` only when the comment carries those fields
+(§1.4). A CC comment carries neither, so CC's writer resolves `sourceFindings[0].ref` plus
+`--run run-k` and checks the marker against **that run's** `sheetReferences[].sheetNumber`
+(as the zero-padded staged ordinal), `documentReferences` and the checklist ref, and
+refuses anything it cannot check.
+
+The review's own scripts change only their import paths, and its tests move with the code.
+Rejected: **one kit behind a `--record review|cc` switch** (v2's D5). The per-run storage
+and winning-run copy exist only for CC, so the switch would mostly add CC branches inside
+the review's 450-line all-or-nothing merge. Also rejected: **no move**, with CC calling
+`runbooks/review/scripts/` in place, which ties one runbook's step files to another's
+folder.
 
 **D6. The sheet key is the staged ordinal label, the same as the review.** `annotation.sheet
 = "07"`. For a single-plan-set submission, the CC `sheetNumber` and the staged folder
@@ -914,7 +938,8 @@ field, because the run is implied by where the object sits.
 
 | Repo | Change |
 |---|---|
-| bureau `runbooks/lib/annotate/` | annotate scripts + libs moved from `review/scripts/`; `--record review\|cc` adapter (D5) |
+| bureau `runbooks/lib/annotate/` | the geometry half moved from `review/scripts/` (crop, remap, seam-check, refine, draw, geometry validator, sidecar writer) and `loop-rules.md` (D5) |
+| bureau `runbooks/completeness-check/scripts/` | CC's own annotate writers, merge and coverage gate on the shared kit; record checks fail closed (D5) |
 | bureau `runbooks/lib/stage_submission.py` | `blockBoxes` per sheet in `block-manifest.json` (D4) |
 | bureau `runbooks/review/` | step yamls and prompt point at the moved scripts; sweep prompt gains the block-box rung (D4) |
 | bureau `runbooks/completeness-check/` | `2.12-annotate/{sweep,merge}` (prompt adapted from the review's, plus D2/D3 roster rules); `annotate` preset; `annotate` request flag; 2.10/3.1 read the merge output when present; 2.11 reports 2.12 |
@@ -923,8 +948,9 @@ field, because the run is implied by where the object sits.
 
 ### 3.3 Phases
 
-- **P1 Shared kit.** Do D5 and D4 in bureau. The review runbook's examples and tests pass
-  unchanged, except for the extra seed rung. This phase has no CC behaviour change.
+- **P1 Shared kit.** Do D5's move of the geometry half and `loop-rules.md`, and D4, in bureau.
+  The review's writers refuse `expected-here`. The review runbook's examples and tests pass
+  unchanged, except for the extra seed rung and the moved imports. This phase has no CC behaviour change.
 - **P2 CC step, sheets and documents together (v3).** `2.12-annotate` behind
   `annotate: false` (D1–D3, D9–D11), with document targets in the same sweep (D13, D15–D18):
   the stager's document fields (D17), the page-finding rules (D15), the non-PDF disposition
@@ -1050,6 +1076,14 @@ or may a worker reuse a converged shape from a sibling run when that run cites t
 sheet and block and its evidence text still reads true? Reuse is cheaper, but it makes the
 runs' markers no longer independent observations.
 
+
+**Q12 (v3).** The agent still moves numbers between files by hand twice. At step 8 (tab 03)
+it copies `remap-result.json`'s sheet shape into the next `seed.json`, and the next overlay
+at least shows that copy. At step 9 it copies the final 0–1 `unit` points into
+`annotate-write --points`, which is never compared and never drawn (§1.4). Should the shared
+kit take both over, with `annotate-crop --seed-from <prev pass dir>` and
+`annotate-write --from-remap <pass dir>`, so that `correction.json` is the agent's only
+numeric output? Proposed: yes, in P1, which fixes the review runbook too.
 ---
 
 ## 7. Markings on non-plan-set documents (v2)
@@ -1224,7 +1258,7 @@ findings is that runbook's own decision, and this spec does not change it.
 
 ### 7.4 Phases
 
-**v3 (Q2): no separate document phases.** v2 had P5 (documents in the producer) and P6
+**v3 (grill G2): no separate document phases.** v2 had P5 (documents in the producer) and P6
 (documents in the app) after P4. Both fold into the main sequence (§3.3): the producer half
 into P2 and the viewer half into P3, so the first release and the P4 score cover documents.
 The reason is that documents are the more markable half: about a third of failing runs cite
