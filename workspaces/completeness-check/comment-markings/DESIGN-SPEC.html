@@ -425,7 +425,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 
 </style>
 </head>
-<body class="reader" data-back="architecture.html" data-spec-sha="9347a109a75d7d4c">
+<body class="reader" data-back="architecture.html" data-spec-sha="1966dfebd0a87d86">
 
 <header class="masthead">
   <div class="kicker">SPEC · READER</div>
@@ -471,6 +471,10 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 >   D13 and D19 gain the role. §3.4, §4 and §5 are updated. The motivating case is CC review
 >   `d36b7aad`: a "required fields" fail that cites whole application sections, where the
 >   reader needs the 2 blank questions, not every field outlined.
+> - **Fact added to §1.4: who supplies what.** The agent supplies every vertex. The scripts
+>   derive `converged`, `passes` and the fingerprint, but `annotate-write.ts` takes the final
+>   points as retyped `--points` without checking them against `remap-result.json`. New
+>   architecture tab, *Agent and scripts*, walks the sweep prompt fragment by fragment.
 > - **Q2 answered: documents ship with plan sheets.** v2's P5 (document targets in the
 >   producer) folds into P2, and P6 (the pdf.js page overlay) folds into P3. One
 >   `2.12-annotate` sweep marks sheets and document pages in the same pass, and P4 scores
@@ -619,6 +623,21 @@ wholesale and is what the 3.12 revise loop closes on, so a marker placed upstrea
 marker an authoring pass can drop without noticing" (`3.13-annotate/steps/sweep/step.yaml`, header comment).
 The sidecars exist because eight workers writing one shared document lost 47 of 240
 annotations over 30 trials, while the sidecars lost none.
+
+**Who supplies what (verified v3, bureau `0cb97661`).** Every vertex comes from the agent's
+read of a crop: `correction.json`, a point or polygon in crop-local 0–1000. The scripts
+render the crop (`annotate-crop.ts`), map the answer back onto the sheet and judge
+convergence (`annotate-remap.ts`), and derive `converged`, `passes` and `sheet_sha256` at
+write time, so the agent cannot type those. **One value is still retyped.**
+`annotate-write.ts` takes the final 0–1 points from the agent as `--points` and never
+compares them with the `unit` points that `annotate-remap.ts` already wrote to
+`remap-result.json` in the same pass directory (`annotate-remap.ts:125-134`,
+`annotate-write.ts:134-150`). A typo, or a copy from the wrong pass, is stored as a valid
+marker beside a fingerprint and a `converged` that describe another shape. Separately,
+`resolveTarget` (`lib/annotate-validate.ts:302-326`) checks a marker's sheet against the
+comment's `sheets[]` and its source against `sources[]` **only when the comment has those
+fields**. The architecture page's *Agent and scripts* tab goes through every prompt
+fragment, what the agent supplies to each script, and what each script derives.
 
 The sweep's central rule is **"A skip is a correct outcome."** An absence (something not
 drawn) is not marked, because a wrongly placed marker is worse than none.

@@ -436,10 +436,11 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 <nav class="tabs">
   <button data-tab="overview" class="active"><span class="n">01</span>Overview</button>
   <button data-tab="review"><span class="n">02</span>How the review marks</button>
-  <button data-tab="stored"><span class="n">03</span>What's stored</button>
-  <button data-tab="cc"><span class="n">04</span>CC proposal</button>
-  <button data-tab="docs"><span class="n">05</span>Documents (v2)</button>
-  <button data-tab="rollout"><span class="n">06</span>Rollout &amp; questions</button>
+  <button data-tab="agent"><span class="n">03</span>Agent and scripts</button>
+  <button data-tab="stored"><span class="n">04</span>What's stored</button>
+  <button data-tab="cc"><span class="n">05</span>CC proposal</button>
+  <button data-tab="docs"><span class="n">06</span>Documents (v2)</button>
+  <button data-tab="rollout"><span class="n">07</span>Rollout &amp; questions</button>
 </nav>
 <main data-spec="DESIGN-SPEC.html">
 
@@ -581,46 +582,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
   <p class="claim"><b>Claim (§1.4):</b> the sweep runs on the final record because 3.11 rewrites it wholesale and the revise loop closes on 3.11. A marker placed upstream is one an authoring pass can drop without noticing.</p>
 
   <h3>One annotation, one pass at a time (up to three)</h3>
-  <div class="seq-scroll"><div class="seq">
-    <div class="seq-head">
-      <div></div>
-      <div class="seq-h"><span class="role">agent</span><span class="who">sweep worker</span></div>
-      <div class="seq-h"><span class="role">script</span><span class="who">annotate-crop</span></div>
-      <div class="seq-h"><span class="role">script</span><span class="who">annotate-remap</span></div>
-      <div class="seq-h"><span class="role">script</span><span class="who">annotate-write</span></div>
-      <div class="seq-h"><span class="role">files</span><span class="who">annotations/ disposition/</span></div>
-      <div class="seq-h"><span class="role">script</span><span class="who">merge</span></div>
-    </div>
-    <div class="seq-body" style="grid-template-rows:repeat(8,auto)">
-      <div class="seq-life" style="grid-column:2;grid-row:1/-1"></div>
-      <div class="seq-life" style="grid-column:3;grid-row:1/-1"></div>
-      <div class="seq-life" style="grid-column:4;grid-row:1/-1"></div>
-      <div class="seq-life" style="grid-column:5;grid-row:1/-1"></div>
-      <div class="seq-life" style="grid-column:6;grid-row:1/-1"></div>
-      <div class="seq-life" style="grid-column:7;grid-row:1/-1"></div>
-      <div class="seq-num" style="grid-row:1">1</div>
-      <div class="seq-msg" style="grid-row:1;grid-column:2/4"><div class="mt"><span class="m">render sheet PDF around seed</span><span class="m2">seed: box · polygon · point · sheet</span></div><span class="dir">▸</span></div>
-      <div class="seq-num" style="grid-row:2">2</div>
-      <div class="seq-msg ret" style="grid-row:2;grid-column:2/4"><span class="dir">◂</span><div class="mt"><span class="m">clean.png, overlay.png, crop-meta</span><span class="m2">crop-meta carries sheetSha256</span></div></div>
-      <div class="seq-num" style="grid-row:3">3</div>
-      <div class="seq-msg self" style="grid-row:3;grid-column:2/3"><div class="mt"><span class="m">read pixels → correction.json</span><span class="m2">point | polygon 3–12 | blank</span></div></div>
-      <div class="seq-num" style="grid-row:4">4</div>
-      <div class="seq-msg" style="grid-row:4;grid-column:2/5"><div class="mt"><span class="m">map crop-local answer onto sheet</span></div><span class="dir">▸</span></div>
-      <div class="seq-num" style="grid-row:5">5</div>
-      <div class="seq-msg ret" style="grid-row:5;grid-column:2/5"><span class="dir">◂</span><div class="mt"><span class="m">shape, delta, converged</span><span class="m2">not converged → next pass seeds from this shape</span></div></div>
-      <div class="seq-num" style="grid-row:6">6</div>
-      <div class="seq-msg" style="grid-row:6;grid-column:2/6"><div class="mt"><span class="m">write marker</span><span class="m2">--evidence-file · --crop-meta of this pass</span></div><span class="dir">▸</span></div>
-      <div class="seq-num" style="grid-row:7">7</div>
-      <div class="seq-msg write" style="grid-row:7;grid-column:5/7"><div class="mt"><span class="m">O_EXCL &lt;ref&gt;-n.json</span><span class="m2">plus one disposition per (comment, sheet)</span></div><span class="dir">▸</span></div>
-      <div class="seq-num" style="grid-row:8">8</div>
-      <div class="seq-msg ret" style="grid-row:8;grid-column:6/8"><span class="dir">◂</span><div class="mt"><span class="m">fold all sidecars into a copy of the record</span><span class="m2">all or nothing; ≤20 per comment</span></div></div>
-    </div>
-    <div class="seq-foot">
-      <span><span class="sw"></span> call</span><span><span class="sw write"></span> file write</span>
-      <span><span class="sw ret"></span> return</span><span><span class="sw self"></span> self / compute</span>
-    </div>
-  </div></div>
-  <p class="claim"><b>Claim (§1.4):</b> the math belongs to the scripts, never the agent. <code>converged</code> and <code>passes</code> are derived from the pass directory and never typed in. Sidecars exist because eight workers writing one shared document lost 47 of 240 annotations over 30 trials.</p>
+  <div class="xref">Each pass (seed → crop → read → remap → write) is drawn step by step on the <b>Agent and scripts</b> tab (03), with the prompt fragment behind every script call and what the agent types into it.</div>
 
   <h3>Which outcome each (comment, sheet) gets</h3>
   <div class="dflow">
@@ -636,6 +598,133 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 </section>
 
 <!-- ============================== STORED ============================== -->
+<!-- ============================ 03 Agent and scripts ============================ -->
+<section class="panel" id="agent">
+  <h2><span class="eyebrow">Agent and scripts</span>The sweep worker and the annotate scripts<span class="sub">Each prompt fragment of the review's sweep, what the agent supplies, and what the script it calls derives or checks.</span></h2>
+  <p class="lede">Every vertex comes from the agent's read of a crop. The scripts render the crop, map the answer back onto the sheet, and derive <code>converged</code>, <code>passes</code> and the sheet fingerprint (§1.4). Fragments are quoted from <code>runbooks/review/steps/3.13-annotate/steps/sweep/prompt.md</code> at bureau <code>0cb97661</code>.</p>
+
+  <h3 id="detail-agent-seq">One annotation, from slice to sidecar</h3>
+  <div class="seq-scroll"><div class="seq">
+    <div class="seq-head">
+      <div></div>
+      <div class="seq-h"><span class="role">agent</span><span class="who">sweep worker</span></div>
+      <div class="seq-h"><span class="role">files</span><span class="who">scratch/</span></div>
+      <div class="seq-h"><span class="role">script</span><span class="who">annotate-seam-check</span></div>
+      <div class="seq-h"><span class="role">script</span><span class="who">annotate-crop</span></div>
+      <div class="seq-h"><span class="role">script</span><span class="who">annotate-remap</span></div>
+      <div class="seq-h"><span class="role">script</span><span class="who">annotate-write · disposition-write</span></div>
+    </div>
+    <div class="seq-body" style="grid-template-rows:repeat(15,auto)">
+      <div class="seq-life" style="grid-column:2;grid-row:1/-1"></div>
+      <div class="seq-life" style="grid-column:3;grid-row:1/-1"></div>
+      <div class="seq-life" style="grid-column:4;grid-row:1/-1"></div>
+      <div class="seq-life" style="grid-column:5;grid-row:1/-1"></div>
+      <div class="seq-life" style="grid-column:6;grid-row:1/-1"></div>
+      <div class="seq-life" style="grid-column:7;grid-row:1/-1"></div>
+
+      <div class="seq-num" style="grid-row:1">1</div>
+      <div class="seq-msg self" style="grid-row:1;grid-column:2/3"><div class="mt"><span class="m">pick slice, mark or skip, pick sheet</span><span class="m2">no script</span></div></div>
+      <div class="seq-num" style="grid-row:2">2</div>
+      <div class="seq-msg write" style="grid-row:2;grid-column:2/4"><div class="mt"><span class="m">seed.json</span><span class="m2">box | polygon | point | sheet · 0–1000 over the sheet</span></div><span class="dir">▸</span></div>
+      <div class="seq-num" style="grid-row:3">3</div>
+      <div class="seq-msg" style="grid-row:3;grid-column:2/6"><div class="mt"><span class="m">annotate-crop × 4 quadrant boxes</span><span class="m2">whole-sheet seed only · --pad-frac 0 --pad-min 0</span></div><span class="dir">▸</span></div>
+      <div class="seq-num" style="grid-row:4">4</div>
+      <div class="seq-msg ret" style="grid-row:4;grid-column:2/6"><span class="dir">◂</span><div class="mt"><span class="m">four quadrant PNGs</span></div></div>
+      <div class="seq-num" style="grid-row:5">5</div>
+      <div class="seq-msg" style="grid-row:5;grid-column:2/5"><div class="mt"><span class="m">--box --quadrant-index</span><span class="m2">the box the agent read</span></div><span class="dir">▸</span></div>
+      <div class="seq-num" style="grid-row:6">6</div>
+      <div class="seq-msg ret" style="grid-row:6;grid-column:2/5"><span class="dir">◂</span><div class="mt"><span class="m">OK | SEAM</span><span class="m2">OK is not proof; the agent re-reads the numbers</span></div></div>
+      <div class="seq-num" style="grid-row:7">7</div>
+      <div class="seq-msg" style="grid-row:7;grid-column:2/6"><div class="mt"><span class="m">annotate-crop &lt;pdf&gt; pass-k --seed</span><span class="m2">[--rotate 90|180|270] · CC documents: [--page N]</span></div><span class="dir">▸</span></div>
+      <div class="seq-num" style="grid-row:8">8</div>
+      <div class="seq-msg ret" style="grid-row:8;grid-column:2/6"><span class="dir">◂</span><div class="mt"><span class="m">clean.png · overlay.png · crop-meta.json</span><span class="m2">crop window, sheetSha256</span></div></div>
+      <div class="seq-num" style="grid-row:9">9</div>
+      <div class="seq-msg write" style="grid-row:9;grid-column:2/4"><div class="mt"><span class="m">correction.json</span><span class="m2">crop-local shape + evidence, or blank</span></div><span class="dir">▸</span></div>
+      <div class="seq-num" style="grid-row:10">10</div>
+      <div class="seq-msg" style="grid-row:10;grid-column:2/7"><div class="mt"><span class="m">annotate-remap crop-meta correction</span></div><span class="dir">▸</span></div>
+      <div class="seq-num" style="grid-row:11">11</div>
+      <div class="seq-msg ret" style="grid-row:11;grid-column:2/7"><span class="dir">◂</span><div class="mt"><span class="m">remap-result.json</span><span class="m2">unit 0–1 · sheet 0–1000 · delta · converged</span></div></div>
+      <div class="seq-num" style="grid-row:12">12</div>
+      <div class="seq-msg self" style="grid-row:12;grid-column:2/3"><div class="mt"><span class="m">stop, or reseed from this shape</span><span class="m2">≤ 3 passes; back to step 7</span></div></div>
+      <div class="seq-num" style="grid-row:13">13</div>
+      <div class="seq-msg" style="grid-row:13;grid-column:2/8"><div class="mt"><span class="m">annotate-write --points --crop-meta --evidence-file</span><span class="m2">ref · sheet · kind · source_finding_ref · points retyped by the agent</span></div><span class="dir">▸</span></div>
+      <div class="seq-num" style="grid-row:14">14</div>
+      <div class="seq-msg self" style="grid-row:14;grid-column:7/8"><div class="mt"><span class="m">derive, validate, O_EXCL sidecar</span><span class="m2">converged · passes · sha256</span></div></div>
+      <div class="seq-num" style="grid-row:15">15</div>
+      <div class="seq-msg" style="grid-row:15;grid-column:2/8"><div class="mt"><span class="m">annotate-disposition-write --status --reason-file</span><span class="m2">one per (comment, sheet) opened</span></div><span class="dir">▸</span></div>
+    </div>
+    <div class="seq-foot">
+      <span><span class="sw"></span> call</span><span><span class="sw write"></span> file the agent writes</span>
+      <span><span class="sw ret"></span> return</span><span><span class="sw self"></span> self / compute</span>
+    </div>
+  </div></div>
+  <p class="claim"><b>Claim (§1.4):</b> the math belongs to the scripts, never the agent. <code>converged</code> and <code>passes</code> are derived from the pass directory and never typed in. Sidecars exist because eight workers writing one shared document lost 47 of 240 annotations over 30 trials.</p>
+
+  <h3 id="detail-agent-fragments">Prompt fragment by prompt fragment</h3>
+  <div class="spectable-scroll"><table class="spectable">
+    <thead><tr><th>Step</th><th>Prompt fragment</th><th>The agent supplies</th><th>The script derives or checks</th><th>In CC 2.12</th></tr></thead>
+    <tbody>
+      <tr><td><span class="sn">1</span></td>
+        <td>"Your slice is every comment in the final record whose <code>discipline</code> … equals your item name." · "<b>A skip is a correct outcome, not a failure.</b>" · "A comment's <code>sheets[]</code> is <b>the list to sweep, not a first guess</b>."</td>
+        <td>Which comments are its own, whether each one is a location at all, and which sheet to open, written as the staged ordinal (<code>"07"</code>).</td>
+        <td><span class="none">none: judgment only</span></td>
+        <td>Slice = the guide's fail/warn runs (D3). The skip rule gains <code>expected-here</code> (D2). The sheet comes from that run's <code>sheetReferences</code>, or a document page is chosen (D15).</td></tr>
+      <tr><td><span class="sn">2</span></td>
+        <td>"Work down this ladder … 1. <b>A fine content block</b> … 2. <b>The drawing block</b> … 3. <b>The whole sheet</b>." · "Write it to <code>…/seed.json</code>, as one of <b>four</b> kinds."</td>
+        <td>The seed kind and its coordinates, 0–1000 over the sheet, read off whatever it judged the tightest container.</td>
+        <td><span class="none">none: annotate-crop reads the file at step 7</span></td>
+        <td>Rung 1 becomes the cited block's box from <code>block-manifest.json</code> <code>blockBoxes</code> (D4).</td></tr>
+      <tr><td><span class="sn" style="white-space:nowrap">3–4</span></td>
+        <td>"<b>A whole-sheet seed means scanning in tiles, not one look.</b> … Crop into four quadrants with <code>--pad-frac 0 --pad-min 0</code> (<b>both flags are needed</b>) at boxes <code>[0,0,520,520]</code> …"</td>
+        <td>The four fixed boxes and both padding flags, typed from the prompt.</td>
+        <td>Renders each quadrant off the PDF with <code>pdftoppm</code>.</td>
+        <td>Unchanged for sheets. A letter-size document page is read whole in one look (D14).</td></tr>
+      <tr><td><span class="sn" style="white-space:nowrap">5–6</span></td>
+        <td>"Before seeding from a quadrant, check which of its edges your target actually touches." · "<b>An <code>OK</code> is not proof</b>, and this is the one guard you must not let replace your own eyes."</td>
+        <td>The box it read in the quadrant and the quadrant's index.</td>
+        <td>Prints <code>OK</code> or <code>SEAM</code> (exit 0 or 1). It catches only an edge landing on a seam, so the agent re-reads the numbers itself.</td>
+        <td>Unchanged.</td></tr>
+      <tr><td><span class="sn" style="white-space:nowrap">7–8</span></td>
+        <td>"<code>annotate-crop.ts &lt;the sheet's pdf&gt; &lt;pass dir&gt; --seed …</code>" · "the <code>pass-&lt;k&gt;</code> spelling is load-bearing" · "re-render with <code>--rotate 90|180|270</code>"</td>
+        <td>The PDF path, the pass directory name, an optional rotation.</td>
+        <td>The crop window around the seed, <code>clean.png</code>, <code>overlay.png</code> (the previous shape drawn on) and <code>crop-meta.json</code> with the PDF's sha256.</td>
+        <td>A document marker adds <code>--page N</code>, which the script already takes (D13).</td></tr>
+      <tr><td><span class="sn">9</span></td>
+        <td>"<b>Answer</b>, as <code>&lt;pass dir&gt;/correction.json</code>, in crop-local coordinates … <code>evidence</code> is what you can actually read inside the shape … <code>blank</code> means there is nothing to mark here."</td>
+        <td><b>The geometry itself</b>: a point or a 3–12-vertex polygon, 0–1000 over the image it was shown, plus the evidence text. Or <code>blank</code>.</td>
+        <td><span class="none">none until step 10</span></td>
+        <td>Same file. The agent also decides here whether the shape is <code>found</code> or <code>expected-here</code> (D2).</td></tr>
+      <tr><td><span class="sn" style="white-space:nowrap">10–11</span></td>
+        <td>"<b>The math is the script's, never yours</b>: it maps your crop-local answer onto the sheet, prints the shape with <code>delta</code> and <code>converged</code> … Read <code>converged</code>; do not compare <code>delta</code> against a number of your own."</td>
+        <td>Two file paths.</td>
+        <td>Crop-local → sheet 0–1000 → normalised 0–1 (<code>unit</code>), undoing rotation. <code>delta</code> against the seed and <code>converged</code>, all written to <code>remap-result.json</code>.</td>
+        <td>Unchanged; a document page is just a page.</td></tr>
+      <tr><td><span class="sn">12</span></td>
+        <td>"<b>Stop this annotation</b> when <code>converged</code> is true, when you judge the shape already tight, or at pass 3." · "<b>Pass a polygon on as a <code>polygon</code> seed, never as its bounding box.</b>"</td>
+        <td>Whether to stop. If not, the next <code>seed.json</code>, copying this pass's sheet-space shape out of <code>remap-result.json</code>.</td>
+        <td><span class="none">none: the next overlay shows the copied seed, so a bad copy is visible</span></td>
+        <td>Unchanged.</td></tr>
+      <tr><td><span class="sn" style="white-space:nowrap">13–14</span></td>
+        <td>"<code>annotate-write.ts … --kind point|polygon --points '&lt;normalized 0-1 points JSON&gt;' --source-finding-ref … --crop-meta &lt;pass dir&gt;/crop-meta.json --evidence-file …</code>" · "<b>Never type them into the command</b>" (evidence, label)</td>
+        <td>Comment ref, sheet, kind, <b>the final 0–1 points, retyped from <code>remap-result.json</code></b>, <code>source_finding_ref</code>, the evidence and label files, and which pass's crop-meta to stamp.</td>
+        <td><code>converged</code> from <code>remap-result.json</code>, <code>passes</code> from the <code>pass-k</code> name, <code>sheet_sha256</code> from crop-meta. Validates shape, vertex count, self-intersection and evidence length. <code>resolveTarget</code>: the ref is unique, the sheet is in <code>sheets[]</code> and the source in <code>sources[]</code>, <b>each checked only if the comment has that field</b>. Writes one <code>O_EXCL</code> sidecar.</td>
+        <td><code>--run run-k</code>. Sheets and sources come from that run. Document markers take <code>document_id</code> + <code>page</code>, and <code>--role expected-here</code>. A CC comment has no <code>sheets[]</code> or <code>sources[]</code>, so its checks must refuse rather than pass (Q3).</td></tr>
+      <tr><td><span class="sn">15</span></td>
+        <td>"<b>One record per comment per sheet</b> … <code>--status annotated|nothing-to-mark|not-located [--reason-file &lt;path&gt;]</code>" · "Record every sheet you opened … Do not record a sheet you never opened."</td>
+        <td>The status and a reason file, per sheet it opened.</td>
+        <td>A sheetless record is legal only as <code>nothing-to-mark</code> with a reason. One <code>O_EXCL</code> sidecar. Later, the merge rolls statuses up, and the coverage gate fails any comment with no record.</td>
+        <td>Per run, with a <code>documents[]</code> entry for a document (D13). The merge writes the records for runs that were never swept (D3).</td></tr>
+      <tr><td><span class="none">—</span></td>
+        <td>"<code>logs/&lt;item&gt;.md</code>: your own narrative … five sections in this order: Swept, Marked, Skipped, Not located, Not settled."</td>
+        <td>The whole log.</td>
+        <td><span class="none">none: internal, not checked</span></td>
+        <td>Unchanged.</td></tr>
+    </tbody>
+  </table></div>
+  <div class="callout ember"><span class="lab">one value is still retyped</span>At step 13 the agent passes the final points as <code>--points</code>. <code>annotate-remap.ts:125-134</code> already wrote those exact numbers to <code>remap-result.json</code> as <code>unit</code>, in the folder <code>annotate-write.ts</code> opens to read <code>converged</code>. The writer never compares the two (<code>annotate-write.ts:134-150</code>). A typo, or a copy from the wrong pass, is stored as a valid marker beside a fingerprint and a <code>converged</code> that describe another shape.</div>
+  <p class="claim"><b>Claim (§1.4):</b> the agent supplies every vertex; the scripts derive <code>converged</code>, <code>passes</code> and <code>sheet_sha256</code>, but the final points are retyped by the agent and not checked against <code>remap-result.json</code>.</p>
+</section>
+
 <section class="panel" id="stored">
   <h2><span class="eyebrow">What's stored</span>Inside output_json: no table, no column</h2>
   <p class="lede">Prod review <code>bbdb82cf</code> (Fort Lauderdale Take 5) has 216 comments: 134 annotated with 290 markers, and 82 nothing-to-mark. All of it lives in <code>review_comments.output_json</code>. A <code>comment_annotation</code> table was designed and then abandoned before it shipped.</p>
@@ -1103,7 +1192,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 <script>
   const btns=document.querySelectorAll('nav.tabs button');
   const panels=document.querySelectorAll('.panel');
-  const IDS=['overview','review','stored','cc','docs','rollout'];
+  const IDS=['overview','review','agent','stored','cc','docs','rollout'];
   function show(id,opts={}){
     btns.forEach(b=>b.classList.toggle('active',b.dataset.tab===id));
     panels.forEach(p=>p.classList.toggle('active',p.id===id));
