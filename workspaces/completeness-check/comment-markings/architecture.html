@@ -6,7 +6,7 @@
 <title>CC Comment Markings</title>
 <style>
 /* ============================================================
-   spec-kit v5.1  —  winston HTML spec design system
+   spec-kit v5.2  —  winston HTML spec design system
    Inline the ENTIRE contents of this file into the spec's style block.
    Canonical source: ~/.claude/skills/winston-spec/assets/spec-kit.css
    When you change this file, bump the version above and in COMPONENTS.md.
@@ -16,6 +16,7 @@
        + spec reader page (body.reader; DESIGN-SPEC.md rendered by marked, built by inline-kit.py --spec)
    v5.1: pass-2 friction fixes — long identifiers wrap (.sys .t, .uc .nt, .ent .ty), .sysmap-scroll for
        6+ columns, state-neutral .sm pills, .dflow jump outcomes, legend 'new trigger' dot
+   v5.2: + two-lane activity flow (.af) — an agent and the tools it calls, prompt fragment per step
        Colour rule: fill/border = change state only; kind = badge text + shape; legend is the
        complete list of colour meanings on the page.
    ============================================================ */
@@ -54,17 +55,22 @@ nav.tabs button.active{color:#fff;border-bottom-color:var(--ember);background:rg
 /* ---------- layout ---------- */
 main{max-width:1140px;margin:0 auto;padding:30px 26px 90px}
 .panel{display:none;animation:fade .25s ease}
+main [id]{scroll-margin-top:74px} /* deep-link targets clear the sticky tab bar */
 .panel.active{display:block}
 @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 
-h2{font-family:var(--serif);font-weight:600;font-size:23px;margin:34px 0 6px;color:var(--p900)}
+/* Section heading: the h2 text is the PLAIN NAME of the thing the tab is about (v5.1 — it used to
+   carry a tagline while the small eyebrow carried the name; that was backwards). .eyebrow = the
+   tab number / section label, small. .sub = one plain sentence saying what is on the tab. */
+h2{font-family:var(--serif);font-weight:700;font-size:30px;line-height:1.15;letter-spacing:-.01em;margin:34px 0 10px;color:var(--p950)}
 h2:first-child{margin-top:4px}
-h2 .eyebrow{display:block;font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--p500);font-weight:400;margin-bottom:3px}
+h2 .eyebrow{display:block;font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--p500);font-weight:400;margin-bottom:6px}
+h2 .sub{display:block;font-family:var(--sans);font-size:14px;font-weight:400;letter-spacing:0;line-height:1.5;color:var(--muted);margin-top:6px}
 h3{font-size:16px;font-weight:600;margin:28px 0 8px;color:var(--p800);display:flex;align-items:center;gap:9px}
 h3 .hn{font-family:var(--mono);font-size:12px;color:#fff;background:var(--p600);border-radius:5px;padding:2px 8px}
 h4{font-size:14px;font-weight:600;margin:18px 0 6px;color:var(--p800)}
 p{margin:.55em 0}
-.lede{font-size:16px;color:var(--p800);border-left:3px solid var(--ember);padding-left:16px;margin:14px 0 20px}
+.lede{font-size:15px;color:var(--p800);border-left:3px solid var(--ember);padding-left:16px;margin:12px 0 20px}
 ul{margin:.4em 0;padding-left:22px}li{margin:.28em 0}
 code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px solid var(--p100);border-radius:4px;padding:1px 5px;color:var(--p800)}
 
@@ -418,6 +424,62 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 .reader-body strong.tok:target{background:#fff1cc;border-radius:3px;padding:0 3px;box-shadow:0 0 0 2px #fde68a}
 .reader-body .anchor:target + h2,.reader-body .anchor:target + h3{background:#fff8ec;box-shadow:-12px 0 0 #fff8ec,12px 0 0 #fff8ec;border-radius:3px}
 
+/* ============================================================
+   Two-lane activity flow (.af)  —  v5.2
+   An agent (left lane) and the deterministic tools it calls (right
+   lane), read top to bottom. One row = one exchange: the left box says
+   what the caller decides / types / writes, the right box what the tool
+   derives / checks; the middle column carries the call (▸, solid) and
+   the return (◂, dashed) labels. Rows inside .af-loop repeat (dashed
+   frame + label). .af-sec is a full-width "only when…" divider.
+   Notes inside a box: .cc = what this spec changes (amber), .gap = a
+   defect found (red dashed). .af-box.key = where the important value is
+   produced (heavier border, weight only, no colour).
+   Columns stack under 820px.
+   ============================================================ */
+.af{margin:16px 0;border:1px solid var(--divider);border-radius:12px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.05);padding-bottom:8px;overflow:hidden}
+.af-head,.af-row{display:grid;grid-template-columns:26px minmax(0,1.2fr) minmax(110px,.42fr) minmax(0,1fr);gap:0 12px}
+.af-head{background:linear-gradient(135deg,var(--p800),var(--p700));padding:10px 14px;color:#fff;align-items:end}
+.af-h{font-family:var(--mono);font-size:11.5px;font-weight:700;line-height:1.3}
+.af-h .role{display:block;font-size:8.5px;font-weight:400;color:var(--p200);text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px}
+.af-row{align-items:center;padding:8px 14px}
+.af-row + .af-row{border-top:1px solid #eef1f4}
+.af-n{align-self:start;margin-top:8px;font-family:var(--mono);font-size:10px;font-weight:700;color:#fff;background:var(--p600);min-width:20px;height:20px;padding:0 4px;border-radius:10px;display:flex;align-items:center;justify-content:center}
+.af-box{border:1.5px solid var(--p300);border-radius:8px;padding:8px 11px;background:#fff;display:flex;flex-direction:column;gap:5px;min-width:0}
+.af-box.key{border-width:3px;border-color:var(--p700)}
+.af-box .t{font-size:13px;font-weight:600;color:var(--p900);line-height:1.35}
+.af-box .t code{font-size:11.5px}
+.af-box .q{font-family:var(--serif);font-style:italic;font-size:12.5px;color:var(--p700);border-left:3px solid var(--p200);padding-left:9px;line-height:1.45}
+.af-box .io{font-size:12px;color:var(--ink);line-height:1.5;overflow-wrap:anywhere}
+.af-box .io > b:first-child{display:inline-block;font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--p600);background:var(--p50);border:1px solid var(--p100);border-radius:3px;padding:0 4px;margin-right:5px;vertical-align:1px}
+.af-box .io code{font-size:11px}
+.af-box .cc{font-size:11.5px;line-height:1.45;color:#7c4a03;background:var(--chgbg);border:1px solid var(--chgbd);border-radius:6px;padding:4px 8px}
+.af-box .gap{font-size:11.5px;line-height:1.45;color:var(--ret);background:var(--retbg);border:1.5px dashed var(--retbd);border-radius:6px;padding:4px 8px}
+.af-box .cc code,.af-box .gap code{font-size:10.5px}
+.af-none{font-family:var(--mono);font-size:10.5px;color:var(--muted);font-style:italic;padding:0 4px}
+.af-x{display:flex;flex-direction:column;gap:9px;justify-content:center;min-width:0}
+.af-x .c,.af-x .r{display:flex;flex-direction:column;gap:1px}
+.af-x .l{font-family:var(--mono);font-size:9.5px;line-height:1.3;color:var(--p800);overflow-wrap:anywhere}
+.af-x .r .l{color:var(--muted)}
+.af-x .ln{display:flex;align-items:center;font-size:13px;line-height:1;color:var(--p500)}
+.af-x .c .ln::before{content:"";flex:1;border-top:1.5px solid var(--p400);margin-right:-3px}
+.af-x .r .ln::after{content:"";flex:1;border-top:1.5px dashed var(--p400);margin-left:-3px}
+.af-loop{margin:6px 10px;border:1.5px dashed var(--p400);border-radius:10px;padding:2px 0}
+.af-loop .af-row{padding-left:4px;padding-right:4px}
+.af-lh{font-family:var(--mono);font-size:10.5px;font-weight:700;color:var(--p700);padding:6px 10px 2px}
+.af-sec{font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--p600);background:var(--p50);border-top:1px solid var(--p100);border-bottom:1px solid var(--p100);padding:5px 14px 5px 52px}
+.af-legend{display:flex;flex-wrap:wrap;gap:8px 16px;font-size:11.5px;color:var(--p800);padding:8px 14px 0;align-items:center}
+.af-legend span{display:inline-flex;align-items:center;gap:6px}
+.af-legend i{display:inline-block;width:22px;height:13px;border-radius:3px;border:1.5px solid var(--p300);background:#fff}
+.af-legend i.key{border-width:3px;border-color:var(--p700)} .af-legend i.cc{background:var(--chgbg);border-color:var(--chgbd)}
+.af-legend i.gap{background:var(--retbg);border:1.5px dashed var(--retbd)} .af-legend i.loop{border:1.5px dashed var(--p400)}
+@media(max-width:820px){
+  .af-head,.af-row{grid-template-columns:26px minmax(0,1fr)}
+  .af-head > :nth-child(3),.af-head > :nth-child(4){display:none}
+  .af-row > :not(.af-n){grid-column:2}
+  .af-row > .af-x{flex-direction:row;padding:6px 0}
+}
+
 </style>
 </head>
 <body>
@@ -425,16 +487,17 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
   <div class="kicker">COMPLETENESS CHECK · COMMENT MARKINGS</div>
   <h1>Comment markings: how the review runbook does it, and porting it to the completeness check</h1>
   <p>Markings are points and small polygons, normalised 0–1 over a plan sheet, that show <em>where</em> a comment's problem is on the drawing. This page traces them through the review runbook, the database and the app, then proposes the same feature for the CC runbook. Companion to <code>DESIGN-SPEC.md</code>.</p>
-  <div class="meta">Draft v2 · 2026-10-07 · bureau dde80dfc→c911d675 · cityhall cea34728→df688dd · click a tab ↓</div>
+  <div class="meta">Draft v3 · 2026-10-08 · bureau dde80dfc→c911d675 · cityhall cea34728→df688dd · click a tab ↓</div>
   <a class="spec-link" href="DESIGN-SPEC.html">📖 read the spec</a>
 </header>
 <nav class="tabs">
   <button data-tab="overview" class="active"><span class="n">01</span>Overview</button>
   <button data-tab="review"><span class="n">02</span>How the review marks</button>
-  <button data-tab="stored"><span class="n">03</span>What's stored</button>
-  <button data-tab="cc"><span class="n">04</span>CC proposal</button>
-  <button data-tab="docs"><span class="n">05</span>Documents (v2)</button>
-  <button data-tab="rollout"><span class="n">06</span>Rollout &amp; questions</button>
+  <button data-tab="agent"><span class="n">03</span>Agent and scripts</button>
+  <button data-tab="stored"><span class="n">04</span>What's stored</button>
+  <button data-tab="cc"><span class="n">05</span>CC proposal</button>
+  <button data-tab="docs"><span class="n">06</span>Documents (v2)</button>
+  <button data-tab="rollout"><span class="n">07</span>Rollout &amp; questions</button>
 </nav>
 <main data-spec="DESIGN-SPEC.html">
 
@@ -532,10 +595,10 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
   </div>
   <div class="sys-refs">
     <a class="refrow new" data-ref="D1"><span class="chip">D1</span><span class="txt">a separate 2.12-annotate family after 2.9-comments; validate and publish read its merged copy</span></a>
-    <a class="refrow new" data-ref="D3"><span class="chip">D3</span><span class="txt">the unit is a (comment, run) whose own status is fail/warn and cites a sheet, whatever the comment's verdict; one worker per guide</span></a>
+    <a class="refrow new" data-ref="D3"><span class="chip">D3</span><span class="txt">the unit is a (comment, run) whose own status is fail/warn and cites a sheet, whatever the comment's verdict; one worker per guide × run, at most 16 in flight</span></a>
     <a class="refrow new" data-ref="D12"><span class="chip">D12</span><span class="txt">per-run markers stored on each perRunFindings entry; the comment shows the winning run's</span></a>
     <a class="refrow chg" data-ref="D4"><span class="chip">D4</span><span class="txt">the stager writes each block's bounding box, so a cited block becomes the first seed</span></a>
-    <a class="refrow new" data-ref="D5"><span class="chip">D5</span><span class="txt">lift the annotate scripts into runbooks/lib/annotate with a review|cc record adapter</span></a>
+    <a class="refrow new" data-ref="D5"><span class="chip">D5</span><span class="txt">share the geometry scripts and loop rules in runbooks/lib/annotate; what to mark, the record and the merge stay per runbook</span></a>
     <a class="refrow chg" data-ref="D6"><span class="chip">D6</span><span class="txt">the sheet key is the staged ordinal label, resolved through a sheet_map that lane B now writes</span></a>
     <a class="refrow chg" data-ref="D7"><span class="chip">D7</span><span class="txt">lane B validates markers like lane A and keeps the 2026-03-completeness-check label</span></a>
     <a class="refrow chg" data-ref="D8"><span class="chip">D8</span><span class="txt">cityhall's CC adapter reads annotations and annotation_disposition on presence</span></a>
@@ -576,46 +639,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
   <p class="claim"><b>Claim (§1.4):</b> the sweep runs on the final record because 3.11 rewrites it wholesale and the revise loop closes on 3.11. A marker placed upstream is one an authoring pass can drop without noticing.</p>
 
   <h3>One annotation, one pass at a time (up to three)</h3>
-  <div class="seq-scroll"><div class="seq">
-    <div class="seq-head">
-      <div></div>
-      <div class="seq-h"><span class="role">agent</span><span class="who">sweep worker</span></div>
-      <div class="seq-h"><span class="role">script</span><span class="who">annotate-crop</span></div>
-      <div class="seq-h"><span class="role">script</span><span class="who">annotate-remap</span></div>
-      <div class="seq-h"><span class="role">script</span><span class="who">annotate-write</span></div>
-      <div class="seq-h"><span class="role">files</span><span class="who">annotations/ disposition/</span></div>
-      <div class="seq-h"><span class="role">script</span><span class="who">merge</span></div>
-    </div>
-    <div class="seq-body" style="grid-template-rows:repeat(8,auto)">
-      <div class="seq-life" style="grid-column:2;grid-row:1/-1"></div>
-      <div class="seq-life" style="grid-column:3;grid-row:1/-1"></div>
-      <div class="seq-life" style="grid-column:4;grid-row:1/-1"></div>
-      <div class="seq-life" style="grid-column:5;grid-row:1/-1"></div>
-      <div class="seq-life" style="grid-column:6;grid-row:1/-1"></div>
-      <div class="seq-life" style="grid-column:7;grid-row:1/-1"></div>
-      <div class="seq-num" style="grid-row:1">1</div>
-      <div class="seq-msg" style="grid-row:1;grid-column:2/4"><div class="mt"><span class="m">render sheet PDF around seed</span><span class="m2">seed: box · polygon · point · sheet</span></div><span class="dir">▸</span></div>
-      <div class="seq-num" style="grid-row:2">2</div>
-      <div class="seq-msg ret" style="grid-row:2;grid-column:2/4"><span class="dir">◂</span><div class="mt"><span class="m">clean.png, overlay.png, crop-meta</span><span class="m2">crop-meta carries sheetSha256</span></div></div>
-      <div class="seq-num" style="grid-row:3">3</div>
-      <div class="seq-msg self" style="grid-row:3;grid-column:2/3"><div class="mt"><span class="m">read pixels → correction.json</span><span class="m2">point | polygon 3–12 | blank</span></div></div>
-      <div class="seq-num" style="grid-row:4">4</div>
-      <div class="seq-msg" style="grid-row:4;grid-column:2/5"><div class="mt"><span class="m">map crop-local answer onto sheet</span></div><span class="dir">▸</span></div>
-      <div class="seq-num" style="grid-row:5">5</div>
-      <div class="seq-msg ret" style="grid-row:5;grid-column:2/5"><span class="dir">◂</span><div class="mt"><span class="m">shape, delta, converged</span><span class="m2">not converged → next pass seeds from this shape</span></div></div>
-      <div class="seq-num" style="grid-row:6">6</div>
-      <div class="seq-msg" style="grid-row:6;grid-column:2/6"><div class="mt"><span class="m">write marker</span><span class="m2">--evidence-file · --crop-meta of this pass</span></div><span class="dir">▸</span></div>
-      <div class="seq-num" style="grid-row:7">7</div>
-      <div class="seq-msg write" style="grid-row:7;grid-column:5/7"><div class="mt"><span class="m">O_EXCL &lt;ref&gt;-n.json</span><span class="m2">plus one disposition per (comment, sheet)</span></div><span class="dir">▸</span></div>
-      <div class="seq-num" style="grid-row:8">8</div>
-      <div class="seq-msg ret" style="grid-row:8;grid-column:6/8"><span class="dir">◂</span><div class="mt"><span class="m">fold all sidecars into a copy of the record</span><span class="m2">all or nothing; ≤20 per comment</span></div></div>
-    </div>
-    <div class="seq-foot">
-      <span><span class="sw"></span> call</span><span><span class="sw write"></span> file write</span>
-      <span><span class="sw ret"></span> return</span><span><span class="sw self"></span> self / compute</span>
-    </div>
-  </div></div>
-  <p class="claim"><b>Claim (§1.4):</b> the math belongs to the scripts, never the agent. <code>converged</code> and <code>passes</code> are derived from the pass directory and never typed in. Sidecars exist because eight workers writing one shared document lost 47 of 240 annotations over 30 trials.</p>
+  <div class="xref">Each pass (seed → crop → read → remap → write) is drawn step by step on the <b>Agent and scripts</b> tab (03), with the prompt fragment behind every script call and what the agent types into it.</div>
 
   <h3>Which outcome each (comment, sheet) gets</h3>
   <div class="dflow">
@@ -631,6 +655,218 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 </section>
 
 <!-- ============================== STORED ============================== -->
+<!-- ============================ 03 Agent and scripts ============================ -->
+<section class="panel" id="agent">
+  <h2><span class="eyebrow">Agent and scripts</span>The sweep worker and the annotate scripts<span class="sub">Each step of the review's sweep prompt: the fragment, what the agent supplies, and what the script it calls derives or checks.</span></h2>
+  <p class="lede">Every vertex comes from the agent's read of a crop. The scripts render the crop, map the answer back onto the sheet, and derive <code>converged</code>, <code>passes</code> and the sheet fingerprint (§1.4). Fragments are quoted from <code>runbooks/review/steps/3.13-annotate/steps/sweep/prompt.md</code> at bureau <code>0cb97661</code>.</p>
+
+  <h3 id="detail-agent-seq">One annotation, from slice to sidecar</h3>
+  <div class="af">
+    <div class="af-head">
+      <div></div>
+      <div class="af-h"><span class="role">agent · opus-5.5 high, one worker per discipline</span>sweep worker</div>
+      <div></div>
+      <div class="af-h"><span class="role">scripts · deterministic</span>bun run $BUREAU/runbooks/review/scripts/…</div>
+    </div>
+
+    <div class="af-row">
+      <div class="af-n">1</div>
+      <div class="af-box">
+        <span class="t">Pick the slice, decide mark or skip, pick the sheet</span>
+        <span class="q">"A skip is a correct outcome, not a failure." · "A comment's <code>sheets[]</code> is the list to sweep, not a first guess."</span>
+        <span class="io"><b>decides</b>which comments are its discipline's, whether each one is a location at all, and the sheet, written as the staged ordinal <code>"07"</code></span>
+        <span class="cc">CC: the guide's fail/warn runs (D3). An absence with a slot gets <code>missing</code> (D2). The sheet comes from that run's <code>sheetReferences</code>, or a document page is chosen (D15).</span>
+      </div>
+      <div class="af-x"></div>
+      <div class="af-none">no script</div>
+    </div>
+
+    <div class="af-row">
+      <div class="af-n">2</div>
+      <div class="af-box">
+        <span class="t">Write the seed</span>
+        <span class="q">"Work down this ladder … a fine content block … the drawing block … the whole sheet."</span>
+        <span class="io"><b>writes</b><code>seed.json</code>: box, polygon, point or whole sheet, in 0–1000 over the sheet</span>
+        <span class="cc">CC: rung 1 is the cited block's box from <code>blockBoxes</code> (D4).</span>
+      </div>
+      <div class="af-x"></div>
+      <div class="af-none">no script; annotate-crop reads it at step 5</div>
+    </div>
+
+    <div class="af-sec">only for a whole-sheet seed</div>
+
+    <div class="af-row">
+      <div class="af-n">3</div>
+      <div class="af-box">
+        <span class="t">Tile the sheet into quadrants</span>
+        <span class="q">"A whole-sheet seed means scanning in tiles, not one look."</span>
+        <span class="io"><b>types</b>four fixed boxes from the prompt (<code>[0,0,520,520]</code> …) and <code>--pad-frac 0 --pad-min 0</code></span>
+        <span class="cc">CC: a letter-size document page is read whole in one look (D14).</span>
+      </div>
+      <div class="af-x">
+        <div class="c"><span class="l">annotate-crop ×4</span><span class="ln">▸</span></div>
+        <div class="r"><span class="ln">◂</span><span class="l">4 quadrant PNGs</span></div>
+      </div>
+      <div class="af-box">
+        <span class="t"><code>annotate-crop</code></span>
+        <span class="io"><b>derives</b>each quadrant rendered off the PDF with <code>pdftoppm</code></span>
+      </div>
+    </div>
+
+    <div class="af-row">
+      <div class="af-n">4</div>
+      <div class="af-box">
+        <span class="t">Check the quadrant's seams</span>
+        <span class="q">"An <code>OK</code> is not proof, and this is the one guard you must not let replace your own eyes."</span>
+        <span class="io"><b>types</b>the box it read, and <code>--quadrant-index 0–3</code></span>
+      </div>
+      <div class="af-x">
+        <div class="c"><span class="l">annotate-seam-check</span><span class="ln">▸</span></div>
+        <div class="r"><span class="ln">◂</span><span class="l">OK | SEAM</span></div>
+      </div>
+      <div class="af-box">
+        <span class="t"><code>annotate-seam-check</code></span>
+        <span class="io"><b>checks</b>whether a box edge lands on a tile seam. It misses a box that crosses a seam, so the agent re-reads the numbers.</span>
+      </div>
+    </div>
+
+    <div class="af-loop">
+      <div class="af-lh">↺ each pass, k = 1 … 3 (stop early when converged or already tight)</div>
+
+      <div class="af-row">
+        <div class="af-n">5</div>
+        <div class="af-box">
+          <span class="t">Render pass k</span>
+          <span class="q">"the <code>pass-&lt;k&gt;</code> spelling is load-bearing"</span>
+          <span class="io"><b>types</b>sheet PDF path, <code>pass-k</code> folder, <code>--seed</code>, optional <code>--rotate</code></span>
+          <span class="cc">CC documents: <code>--page N</code>, which the script already takes (D13).</span>
+        </div>
+        <div class="af-x">
+          <div class="c"><span class="l">annotate-crop</span><span class="ln">▸</span></div>
+          <div class="r"><span class="ln">◂</span><span class="l">clean.png · overlay.png · crop-meta.json</span></div>
+        </div>
+        <div class="af-box">
+          <span class="t"><code>annotate-crop</code></span>
+          <span class="io"><b>derives</b>the crop window around the seed, an overlay of the previous shape, and the PDF's sha256</span>
+        </div>
+      </div>
+
+      <div class="af-row">
+        <div class="af-n">6</div>
+        <div class="af-box key">
+          <span class="t">Read the crop, answer with a shape</span>
+          <span class="q">"Answer … in crop-local coordinates … <code>evidence</code> is what you can actually read inside the shape."</span>
+          <span class="io"><b>writes</b><code>correction.json</code>: a point, a 3–12-vertex polygon or <code>blank</code>, in 0–1000 over the crop, with the evidence text. <b>Every vertex comes from here.</b></span>
+          <span class="cc">CC: also decides <code>incorrect</code> or <code>missing</code> (D2).</span>
+        </div>
+        <div class="af-x"></div>
+        <div class="af-none">no script</div>
+      </div>
+
+      <div class="af-row">
+        <div class="af-n">7</div>
+        <div class="af-box">
+          <span class="t">Remap onto the sheet</span>
+          <span class="q">"The math is the script's, never yours."</span>
+          <span class="io"><b>types</b>two file paths</span>
+        </div>
+        <div class="af-x">
+          <div class="c"><span class="l">annotate-remap</span><span class="ln">▸</span></div>
+          <div class="r"><span class="ln">◂</span><span class="l">remap-result.json</span></div>
+        </div>
+        <div class="af-box">
+          <span class="t"><code>annotate-remap</code></span>
+          <span class="io"><b>derives</b>crop → sheet 0–1000 → <code>unit</code> 0–1, undoing rotation; <code>delta</code> against the seed; <code>converged</code></span>
+        </div>
+      </div>
+
+      <div class="af-row">
+        <div class="af-n">8</div>
+        <div class="af-box">
+          <span class="t">Stop, or reseed</span>
+          <span class="q">"Pass a polygon on as a <code>polygon</code> seed, never as its bounding box."</span>
+          <span class="io"><b>decides</b>stop when converged, already tight, or at pass 3. Otherwise it writes the next <code>seed.json</code>, copied from this pass's sheet shape, and goes back to step 5.</span>
+        </div>
+        <div class="af-x"></div>
+        <div class="af-none">no script; the next overlay shows the copied seed</div>
+      </div>
+    </div>
+
+    <div class="af-row">
+      <div class="af-n">9</div>
+      <div class="af-box">
+        <span class="t">Write the marker</span>
+        <span class="q">"Never type them into the command." (evidence and label go in files)</span>
+        <span class="io"><b>types</b>ref, sheet, kind, <code>--points</code> (the 0–1 points, retyped from <code>remap-result.json</code>), <code>source_finding_ref</code>, the evidence and label files, and this pass's crop-meta</span>
+        <span class="gap"><code>--points</code> is never compared with <code>remap-result.json</code>'s <code>unit</code> (<code>annotate-write.ts:134-150</code>)</span>
+        <span class="cc">CC: <code>--run run-k</code>, that run's sheets and sources, <code>document_id</code> + <code>page</code>, <code>--marking-type missing</code>, on CC's own writer (D5).</span>
+      </div>
+      <div class="af-x">
+        <div class="c"><span class="l">annotate-write</span><span class="ln">▸</span></div>
+        <div class="r"><span class="ln">◂</span><span class="l">annotations/&lt;ref&gt;-n.json</span></div>
+      </div>
+      <div class="af-box">
+        <span class="t"><code>annotate-write</code></span>
+        <span class="io"><b>derives</b><code>converged</code> (remap-result), <code>passes</code> (the <code>pass-k</code> name), <code>sheet_sha256</code> (crop-meta)</span>
+        <span class="io"><b>checks</b>shape, 3–12 vertices, no self-intersection, evidence 12–500 chars; ref unique, sheet in <code>sheets[]</code>, source in <code>sources[]</code></span>
+        <span class="gap">sheet and source are checked only if the comment has those fields (<code>annotate-validate.ts:302-326</code>)</span>
+        <span class="io"><b>writes</b>one <code>O_EXCL</code> sidecar</span>
+      </div>
+    </div>
+
+    <div class="af-row">
+      <div class="af-n">10</div>
+      <div class="af-box">
+        <span class="t">Record each sheet opened</span>
+        <span class="q">"One record per comment per sheet … Do not record a sheet you never opened."</span>
+        <span class="io"><b>types</b><code>annotated</code>, <code>nothing-to-mark</code> or <code>not-located</code>, and a reason file</span>
+        <span class="cc">CC: per run, plus a <code>documents[]</code> entry for a document (D13).</span>
+      </div>
+      <div class="af-x">
+        <div class="c"><span class="l">annotate-disposition-write</span><span class="ln">▸</span></div>
+        <div class="r"><span class="ln">◂</span><span class="l">disposition/&lt;ref&gt;-n.json</span></div>
+      </div>
+      <div class="af-box">
+        <span class="t"><code>annotate-disposition-write</code></span>
+        <span class="io"><b>checks</b>a sheetless record is only <code>nothing-to-mark</code>, with a reason</span>
+        <span class="io"><b>writes</b>one <code>O_EXCL</code> sidecar</span>
+      </div>
+    </div>
+
+    <div class="af-row">
+      <div class="af-n">11</div>
+      <div class="af-box">
+        <span class="t">Write the log</span>
+        <span class="q">"Swept, Marked, Skipped, Not located, Not settled."</span>
+        <span class="io"><b>writes</b><code>logs/&lt;item&gt;.md</code>, internal and unchecked</span>
+      </div>
+      <div class="af-x"></div>
+      <div class="af-none">no script</div>
+    </div>
+
+    <div class="af-sec">after every worker finishes · the merge child, no agent</div>
+
+    <div class="af-row">
+      <div class="af-n">12</div>
+      <div class="af-none"></div>
+      <div class="af-x"></div>
+      <div class="af-box">
+        <span class="t"><code>annotate-merge</code> · <code>annotate-disposition-check</code></span>
+        <span class="io"><b>derives</b>every sidecar folded into a copy of the record, all or nothing, at most 20 per comment, with the per-comment roll-up</span>
+        <span class="io"><b>checks</b>fails any comment with no record</span>
+        <span class="cc">CC: its own merge for the per-run record and the winning-run copy (D12, D5).</span>
+      </div>
+    </div>
+
+    <div class="af-legend">
+      <span><i></i>the review runbook today</span><span><i class="key"></i>where the geometry comes from</span>
+      <span><i class="cc"></i>what CC 2.12 changes</span><span><i class="gap"></i>gap found (§1.4)</span>
+      <span><i class="loop"></i>repeats per pass</span>
+    </div>
+  </div>
+  <p class="claim"><b>Claim (§1.4):</b> the agent supplies every vertex; the scripts derive <code>converged</code>, <code>passes</code> and <code>sheet_sha256</code>, but the final points are retyped by the agent and not checked against <code>remap-result.json</code>.</p>
+</section>
+
 <section class="panel" id="stored">
   <h2><span class="eyebrow">What's stored</span>Inside output_json: no table, no column</h2>
   <p class="lede">Prod review <code>bbdb82cf</code> (Fort Lauderdale Take 5) has 216 comments: 134 annotated with 290 markers, and 82 nothing-to-mark. All of it lives in <code>review_comments.output_json</code>. A <code>comment_annotation</code> table was designed and then abandoned before it shipped.</p>
@@ -743,7 +979,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 <!-- ============================== CC ============================== -->
 <section class="panel" id="cc">
   <h2><span class="eyebrow">CC proposal</span>2.12-annotate, the shared kit, and a CC adapter that reads markers</h2>
-  <p class="lede">Copy the review's shape: a separate step on the final envelope, sidecars, then a merge. CC changes three things: the roster (every run that voted fail or warn and cites a sheet), the seed (the block that run cited) and the record adapter, which also stores markers per run.</p>
+  <p class="lede">Copy the review's shape: a separate step on the final envelope, sidecars, then a merge. CC changes three things: the roster (every run that voted fail or warn and cites a sheet), the seed (the block that run cited), and its own record writers and merge, which store markers per run (D5).</p>
 
   <h3 id="detail-cc-graph">The CC graph with the new step</h3>
   <div class="sysmap" style="grid-template-columns:.6fr repeat(4,1fr)">
@@ -753,9 +989,9 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
     <div class="colh" style="grid-area:1/4">validate</div>
     <div class="colh" style="grid-area:1/5">publish</div>
 
-    <div class="sys trig" id="c-t" style="grid-area:2/1"><span class="dot"></span><span class="t">annotate: true</span><span class="d">request flag, off by default</span></div>
+    <div class="sys trig" id="c-t" style="grid-area:2/1"><span class="dot"></span><span class="t">annotate: true</span><span class="d">request flag, on by default</span></div>
     <div class="sys" id="c-29" style="grid-area:2/2"><span class="k">script</span><span class="t">2.9-comments</span><span class="d">the final envelope</span></div>
-    <div class="sys new" id="c-212" style="grid-area:2/3"><a class="ref" href="#detail-cc-roster">D2 · D3 ↓</a><span class="k">agent + script</span><span class="t">2.12-annotate</span><span class="d">sweep per guide, then merge into a copy</span></div>
+    <div class="sys new" id="c-212" style="grid-area:2/3"><a class="ref" href="#detail-cc-roster">D2 · D3 ↓</a><span class="k">agent + script</span><span class="t">2.12-annotate</span><span class="d">sweep per guide × run, then merge into a copy</span></div>
     <div class="sys chg" id="c-210" style="grid-area:2/4"><a class="ref" href="#detail-laneb">D1 ↓</a><span class="k">script</span><span class="t">2.10-validate</span><span class="d">reads the merged envelope</span></div>
     <div class="sys chg" id="c-31" style="grid-area:2/5"><a class="ref" href="#detail-laneb">D7 ↓</a><span class="k">script</span><span class="t">3.1-publish</span><span class="d">lane B with marker checks</span></div>
     <div class="sys chg" id="c-12" style="grid-area:3/2"><a class="ref" href="#detail-manifest">D4 ↓</a><span class="k">script</span><span class="t">1.2-stage-submission</span><span class="d">PDFs plus block boxes</span></div>
@@ -767,8 +1003,9 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
     <a class="sys-edge chg" data-from="c-12" data-to="c-212">seeds, PDFs</a>
   </div>
   <div class="sys-refs">
-    <a class="refrow new" data-ref="D2"><span class="chip">D2</span><span class="txt">mark only what is drawn; an absence keeps the existing cited-block outline</span></a>
-    <a class="refrow chg" data-ref="D9"><span class="chip">D9</span><span class="txt">opt-in request flag; off writes SKIPPED.md and leaves the envelope byte-identical (parity)</span></a>
+    <a class="refrow new" data-ref="D2"><span class="chip">D2</span><span class="txt">mark what is drawn wrong (incorrect, red), and an absence that has a visible slot (missing, yellow); the agent decides, any sheet or document</span></a>
+    <a class="refrow new" data-ref="D23"><span class="chip">D23</span><span class="txt">annotation never blocks publishing: a failed piece becomes not-swept and a tool-bugs.md line; no markers at worst</span></a>
+    <a class="refrow chg" data-ref="D9"><span class="chip">D9</span><span class="txt">request flag, on by default (G7); off writes SKIPPED.md and leaves the envelope byte-identical (parity)</span></a>
   </div>
   <div class="sys-legend"><span><i></i>exists today</span><span><i class="chg"></i>changed</span><span><i class="new"></i>new</span></div>
   <p class="claim"><b>Claim (D1):</b> CC has no revise loop after 2.9, so the annotate step sits directly before validate and needs no stale check. With the flag off (D9) the output is byte-identical to today.</p>
@@ -778,9 +1015,9 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
     <div class="dq"><span class="q">For each run of each comment: did this run vote fail or warn? (the comment's verdict does not matter)</span><span class="yes">no →</span><span class="out warn">merge writes the run's nothing-to-mark ("run passed" / "not applicable")</span></div>
     <div class="dno">yes ↓</div>
     <div class="dq"><span class="q">Does this run cite at least one plan sheet?</span><span class="yes">no →</span><span class="out warn">merge writes a sheetless nothing-to-mark ("cites no sheet")</span></div>
-    <div class="dno">yes ↓ on its guide's roster; seed from the block this run cited</div>
-    <div class="dq"><span class="q">Is the deficiency this run describes drawn (not an absence)?</span><span class="yes">no →</span><span class="out warn">nothing-to-mark; the app keeps the cited-block outline</span></div>
-    <div class="dno">yes ↓</div>
+    <div class="dno">yes ↓ on its (guide, run) roster; seed from the block this run cited</div>
+    <div class="dq"><span class="q">Is the deficiency a drawn thing, or an absence with a visible slot (blank field, empty cell, unchecked Yes/No)?</span><span class="yes">neither →</span><span class="out warn">nothing-to-mark ("absence with no slot"); the app keeps the cited-block outline</span></div>
+    <div class="dno">yes ↓ marking_type = incorrect (drawn wrong) or missing (the empty slot, narrower than the citation)</div>
     <div class="dq"><span class="q">Located with confidence within 3 passes?</span><span class="yes">yes →</span><span class="out">annotated, stored on perRunFindings[k]</span></div>
     <div class="dno">no ↓</div>
     <div class="dq end"><span class="q">otherwise</span><span class="yes"></span><span class="out fail">not-located</span></div>
@@ -796,24 +1033,26 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
   <div class="spectable-scroll"><table class="spectable">
     <thead><tr><th>Piece</th><th>Today</th><th>After</th></tr></thead>
     <tbody>
-      <tr><td>crop · remap · seam-check</td><td><code>runbooks/review/scripts/annotate-*.ts</code></td><td><code>runbooks/lib/annotate/</code>, unchanged (record-agnostic)</td></tr>
-      <tr><td>write · disposition-write</td><td>review only: <code>comments[].id</code>, <code>sheets[]</code>, <code>sources[]</code></td><td><code>--record review|cc</code>. CC finds a comment by <code>sourceFindings[0].ref</code> (<code>grouping:itemId</code>) plus <code>--run run-k</code>, and may name sheets from that run's <code>sheetReferences[].sheetNumber</code>, rendered as <code>"NN"</code></td></tr>
-      <tr><td>merge · disposition-check</td><td>folds into <code>comments[]</code></td><td>the adapter folds into <code>sections[].comments[]</code>; CC adds deterministic dispositions for comments off the roster</td></tr>
-      <tr><td>validation constants</td><td><code>lib/annotate-validate.ts</code> + <code>review_annotation_geometry.py</code>, once pinned with substation (now archived)</td><td>same files; the docstrings now name bureau as the only enforcer</td></tr>
+      <tr><td>crop · remap · seam-check · refine · draw</td><td><code>runbooks/review/scripts/</code></td><td><b>shared</b>: <code>runbooks/lib/annotate/</code>, unchanged (they never see a comment)</td></tr>
+      <tr><td>geometry rules · sidecar writer · annotation object</td><td><code>lib/annotate-validate.ts</code> + <code>review_annotation_geometry.py</code>, once pinned with substation (now archived)</td><td><b>shared</b>: same rules for both lanes, plus <code>marking_type</code> (D2); the docstrings name bureau as the only enforcer</td></tr>
+      <tr><td>loop mechanics (prompt text)</td><td>inside the review's sweep prompt</td><td><b>shared as text</b>: <code>runbooks/lib/annotate/loop-rules.md</code>, carried verbatim in both prompts and test-enforced, like <code>block-name-rule.md</code></td></tr>
+      <tr><td>what to mark (prompt text)</td><td>review: skip absences</td><td><b>per runbook</b>: the review keeps its rule and its writer refuses <code>missing</code>; CC marks <code>missing</code> (D2)</td></tr>
+      <tr><td>write · disposition-write (record checks)</td><td>review only: <code>comments[].ref</code>, <code>sheets[]</code>, <code>sources[]</code>, checked only when present</td><td><b>per runbook</b>: CC's own writers find <code>sourceFindings[0].ref</code> + <code>--run run-k</code>, check that run's sheets, documents and checklist ref, and refuse what they cannot check</td></tr>
+      <tr><td>merge · disposition-check</td><td>folds into <code>comments[]</code></td><td><b>per runbook</b>: CC's own merge folds into <code>sections[].comments[]…perRunFindings[k]</code>, copies the winning run's markers (D12) and writes dispositions for runs off the roster</td></tr>
       <tr><td>seed ladder</td><td>drawing block → whole sheet in quadrants</td><td>a <b>cited block box</b> first (D4), then the same ladder</td></tr>
-      <tr><td>runner</td><td><code>judgment</code> opus-5.5 high</td><td>a CC <code>annotate</code> preset, also opus-5.5 high (D11, Q3); reads pixels natively (D10)</td></tr>
+      <tr><td>runner</td><td><code>judgment</code> opus-5.5 high</td><td>a CC <code>annotate</code> preset, also opus-5.5 high (D11; Q3 asks about sonnet); reads pixels natively (D10)</td></tr>
     </tbody>
   </table></div>
 
-  <h3 id="detail-ui">How the app picks what to draw on a CC sheet (D8)</h3>
+  <h3 id="detail-ui">How the app picks what to draw for one comment on one sheet (D8)</h3>
   <div class="dflow">
-    <div class="dq"><span class="q">Does the comment's output_json carry annotations on this sheet (label → sheet_map)?</span><span class="yes">yes →</span><span class="out">draw markers (markersOn), the same as the review</span></div>
+    <div class="dq"><span class="q">Does this comment have a drawn marker on <b>this</b> sheet (label → sheet_map)?</span><span class="yes">yes →</span><span class="out">draw markers (markersOn): incorrect red, missing yellow, selected blue (D8)</span></div>
     <div class="dno">no ↓</div>
-    <div class="dq"><span class="q">Does it cite a block with a bounding_box on this sheet?</span><span class="yes">yes →</span><span class="out warn">outline the cited block while the item is open (today's behaviour)</span></div>
+    <div class="dq"><span class="q">Does it cite a block with a bounding_box on this sheet?</span><span class="yes">yes →</span><span class="out warn">outline its cited blocks on this sheet while the item is open, even when other sheets of the same comment are marked</span></div>
     <div class="dno">no ↓</div>
     <div class="dq end"><span class="q">otherwise</span><span class="yes"></span><span class="out fail">listed under "cited here, nothing drawn"</span></div>
   </div>
-  <p class="claim"><b>Claim (D8):</b> the CC adapter calls the August readers, moved into a shared module. <code>citedBlockMarkersOn</code> already steps aside once a comment has markers, so nothing else in the sheets view changes.</p>
+  <p class="claim"><b>Claim (D8):</b> the choice is made per sheet. A comment shows its markers on a sheet that has them and its cited-block outlines on every other cited sheet. Today <code>citedBlockMarkersOn</code> and <code>tourOf</code> switch per comment, so both change.</p>
 </section>
 
 <!-- ============================== DOCUMENTS ============================== -->
@@ -882,7 +1121,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
     <div class="dno">yes ↓ pick candidate pages, narrowest first</div>
     <div class="dq"><span class="q">Does the label name a page, or a section with a page_range?</span><span class="yes">yes →</span><span class="out">render those pages with annotate-crop --page N</span></div>
     <div class="dno">no ↓</div>
-    <div class="dq"><span class="q">Is it a short document (1–3 pages)?</span><span class="yes">yes →</span><span class="out">render its pages in order</span></div>
+    <div class="dq"><span class="q">Is it a short document (10 pages or fewer)?</span><span class="yes">yes →</span><span class="out">render its pages in order</span></div>
     <div class="dno">no ↓</div>
     <div class="dq"><span class="q">Found and located within 6 pages and 3 passes?</span><span class="yes">yes →</span><span class="out">annotated: document_id + page + points</span></div>
     <div class="dno">no ↓</div>
@@ -900,6 +1139,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
       <div class="row add"><span class="gut">+</span><span class="b b-new">NEW</span><span class="nm">document_id</span><span class="ty">uuid · a document this run cites</span></div>
       <div class="row add"><span class="gut">+</span><span class="b b-new">NEW</span><span class="nm">page</span><span class="ty">int ≥ 1 · ≤ staged page_count</span></div>
       <div class="row add"><span class="gut">+</span><span class="b b-new">NEW</span><span class="nm">file_sha256</span><span class="ty">the staged source.pdf</span></div>
+      <div class="row add"><span class="gut">+</span><span class="b b-new">NEW</span><span class="nm">marking_type</span><span class="ty">optional · "missing" (v3, D2); absent = incorrect</span></div>
       <div class="note">Exactly one target per marker: a sheet, or a (document_id, page).</div>
     </div>
     <div class="ent changed">
@@ -936,35 +1176,33 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 <!-- ============================== ROLLOUT ============================== -->
 <section class="panel" id="rollout">
   <h2><span class="eyebrow">Rollout</span>Four phases, app before data</h2>
-  <p class="lede">P1 changes no CC behaviour, and P2 ships behind a flag that is off by default. P3 lands the app reader before any CC review carries markers. P4 decides whether to turn it on by default.</p>
+  <p class="lede">P1 changes no CC behaviour. P3 lands publish validation and both app renderers (sheets and the pdf.js document viewer) next, because P2 ships the CC step on by default. P4 is Will trying it on real reviews, with the flag as the off switch.</p>
 
   <div class="sysmap" style="grid-template-columns:.6fr repeat(4,1fr)">
     <div class="colh" style="grid-area:1/1">trigger</div>
     <div class="colh" style="grid-area:1/2">bureau</div>
-    <div class="colh" style="grid-area:1/3">bureau</div>
-    <div class="colh" style="grid-area:1/4">bureau + cityhall</div>
+    <div class="colh" style="grid-area:1/3">bureau + cityhall</div>
+    <div class="colh" style="grid-area:1/4">bureau</div>
     <div class="colh" style="grid-area:1/5">runs</div>
     <div class="sys trig" id="p-t" style="grid-area:2/1"><span class="dot"></span><span class="t">spec approved</span></div>
     <div class="sys" id="p-1" style="grid-area:2/2"><a class="ref" href="#detail-kit">P1 ↓</a><span class="k">bureau</span><span class="t">Shared kit</span><span class="d">move scripts, block boxes</span></div>
-    <div class="sys" id="p-2" style="grid-area:2/3"><a class="ref" href="#detail-cc-graph">P2 ↓</a><span class="k">bureau</span><span class="t">CC step</span><span class="d">2.12-annotate behind a flag</span></div>
-    <div class="sys" id="p-3" style="grid-area:2/4"><a class="ref" href="#detail-ui">P3 ↓</a><span class="k">bureau · cityhall</span><span class="t">Publish + app</span><span class="d">app reader lands first</span></div>
-    <div class="sys" id="p-4" style="grid-area:2/5"><a class="ref" href="#detail-cc-roster">P4 ↓</a><span class="k">runs</span><span class="t">Score, default on</span><span class="d">hard-item sets</span></div>
+    <div class="sys" id="p-2" style="grid-area:2/4"><a class="ref" href="#detail-cc-graph">P2 ↓</a><span class="k">bureau</span><span class="t">CC step</span><span class="d">sheets + documents, on by default</span></div>
+    <div class="sys" id="p-3" style="grid-area:2/3"><a class="ref" href="#detail-ui">P3 ↓</a><span class="k">bureau · cityhall</span><span class="t">Publish + app</span><span class="d">sheet + pdf.js renderers land first</span></div>
+    <div class="sys" id="p-4" style="grid-area:2/5"><a class="ref" href="#detail-cc-roster">P4 ↓</a><span class="k">runs</span><span class="t">Try it</span><span class="d">Will tests in the app; flag off if bad</span></div>
+    <div class="sys" id="p-0" style="grid-area:3/2"><a class="ref" href="#detail-cc-graph">P0 ↓</a><span class="k">conductor2</span><span class="t">after_retries: pass</span><span class="d">retry gaps twice, then go on</span></div>
     <a class="sys-edge" data-from="p-t" data-to="p-1"></a>
-    <a class="sys-edge" data-from="p-1" data-to="p-2">kit</a>
-    <a class="sys-edge" data-from="p-2" data-to="p-3">markers</a>
-    <a class="sys-edge" data-from="p-3" data-to="p-4">visible</a>
-    <div class="sys" id="p-5" style="grid-area:3/3"><a class="ref" href="#detail-doc-sweep">P5 ↓</a><span class="k">bureau</span><span class="t">Documents: producer</span><span class="d">page targets, stager fields</span></div>
-    <div class="sys" id="p-6" style="grid-area:3/4"><a class="ref" href="#detail-doc-ui">P6 ↓</a><span class="k">cityhall</span><span class="t">Documents: viewer</span><span class="d">page overlay, &amp;page=</span></div>
-    <a class="sys-edge" data-from="p-2" data-to="p-5">same flag</a>
-    <a class="sys-edge" data-from="p-5" data-to="p-6">doc markers</a>
+    <a class="sys-edge" data-from="p-t" data-to="p-0"></a>
+    <a class="sys-edge" data-from="p-0" data-to="p-2">strict contract</a>
+    <a class="sys-edge" data-from="p-1" data-to="p-3">kit</a>
+    <a class="sys-edge" data-from="p-3" data-to="p-2">readers ready</a>
+    <a class="sys-edge" data-from="p-2" data-to="p-4">markers</a>
   </div>
   <div class="sys-refs">
+    <a class="refrow" data-ref="P0"><span class="chip">P0</span><span class="txt">conductor2 step key after_retries: pass, so a strict sweep contract retries its gaps and then publishes anyway (D23); P2 runs an always-pass contract until it lands</span></a>
     <a class="refrow" data-ref="P1"><span class="chip">P1</span><span class="txt">shared annotate kit and block boxes; the review runbook still passes its tests</span></a>
-    <a class="refrow" data-ref="P2"><span class="chip">P2</span><span class="txt">2.12-annotate with annotate: false by default, plus contract tests</span></a>
-    <a class="refrow" data-ref="P3"><span class="chip">P3</span><span class="txt">lane B validation and sheet_map; cityhall CC adapter reads markers</span></a>
-    <a class="refrow" data-ref="P5"><span class="chip">P5</span><span class="txt">document targets in the shared kit, sweep, merge and lane B, behind the same flag</span></a>
-    <a class="refrow" data-ref="P6"><span class="chip">P6</span><span class="txt">the pdf.js page overlay and &amp;page=, landing before any CC review carries document markers</span></a>
-    <a class="refrow" data-ref="P4"><span class="chip">P4</span><span class="txt">score markers on WhiteWater and 2008 San Antonio, then flip the default</span></a>
+    <a class="refrow" data-ref="P2"><span class="chip">P2</span><span class="txt">2.12-annotate marks plan sheets and document pages in one sweep, on by default, plus contract tests (v3: v2's P5 folded in)</span></a>
+    <a class="refrow" data-ref="P3"><span class="chip">P3</span><span class="txt">lane B validation and sheet_map; cityhall CC adapter reads markers and the pdf.js viewer draws document markers (v3: v2's P6 folded in)</span></a>
+    <a class="refrow" data-ref="P4"><span class="chip">P4</span><span class="txt">no scored gate: Will tests on real reviews and turns the default off if the markers are bad (G7)</span></a>
   </div>
   <div class="sys-legend"><span><i></i>phase (none started)</span></div>
   <p class="claim"><b>Claim (P3):</b> until the app reader ships, a published CC review stores markers that nothing draws, which is harmless.</p>
@@ -973,24 +1211,26 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
   <div class="spectable-scroll"><table class="spectable">
     <thead><tr><th>Q</th><th>Question</th><th>Proposed default</th></tr></thead>
     <tbody>
-      <tr><td><span class="sn">Q1</span></td><td>Should absences stay unmarked, or get a new <code>expected-here</code> kind?</td><td>Unmarked; the cited-block outline already says where to look (D2)</td></tr>
-      <tr><td><span class="sn">Q2</span></td><td>Sweep grain: one worker per guide, or one for the whole run?</td><td>Per guide: about 84 run-findings at runs = 3</td></tr>
+      <tr><td><span class="sn">Q1</span></td><td>Should absences stay unmarked, or get a new <code>missing</code> kind?</td><td><b>Answered in v3:</b> an absence with a visible slot gets an <code>missing</code> marker (optional <code>marking_type</code>); the agent decides, no sheet/document rule (D2)</td></tr>
+      <tr><td><span class="sn">Q2</span></td><td>Sweep grain: one worker per guide, or one for the whole run?</td><td><b>Answered (G6):</b> per guide × run, as 2.1-review; ≤16 in flight via CONDUCTOR_CONCURRENCY. Q7: no reuse</td></tr>
       <tr><td><span class="sn">Q3</span></td><td>annotate model: opus-5.5 high, or try sonnet-5.5?</td><td>Opus, matching the review's proven sweep</td></tr>
       <tr><td><span class="sn">Q4</span></td><td>Markers on supplementary documents (forms, reports)?</td><td><b>Answered in v2:</b> in scope (Documents tab)</td></tr>
-      <tr><td><span class="sn">Q5</span></td><td>Multiple plan sets collide on <code>sheet-NN</code>, and the app reads only one</td><td>Shared by both runbooks; a separate spec</td></tr>
-      <tr><td><span class="sn">Q6</span></td><td>When is the flag good enough to default on?</td><td>No wrongly placed marker among 20 audited</td></tr>
-      <tr><td><span class="sn">Q7</span></td><td>Mark each run independently, or reuse a sibling run's shape for the same block?</td><td>Independent (as D3 says); reuse is cheaper but couples the runs</td></tr>
+      <tr><td><span class="sn">Q5</span></td><td>Multiple plan sets collide on <code>sheet-NN</code>, and the app reads only one</td><td><b>Answered (research):</b> a separate spec. All 38 prod submission versions with a plan set have exactly one.</td></tr>
+      <tr><td><span class="sn">Q6</span></td><td>When is the flag good enough to default on?</td><td><b>Answered (G7):</b> no gate; on by default, Will tests in the app and turns it off if bad</td></tr>
+      <tr><td><span class="sn">Q7</span></td><td>Mark each run independently, or reuse a sibling run's shape for the same block?</td><td><b>Answered (G6):</b> independent; a worker sees one run only</td></tr>
       <tr><td><span class="sn">Q8</span></td><td>Does the formal review runbook want document markings too?</td><td>Its own call; the kit supports it at no cost</td></tr>
-      <tr><td><span class="sn">Q9</span></td><td>Should preprocessing-v4 publish per-section page regions?</td><td>Only if document not-located is high after P5</td></tr>
-      <tr><td><span class="sn">Q10</span></td><td>Cap of 6 pages per (run, document)?</td><td>Yes, bounds spend on 500-page reports</td></tr>
-      <tr><td><span class="sn">Q11</span></td><td>Optional pageNumber on CC document citations?</td><td>Separate small change after P5 (a parity decision)</td></tr>
+      <tr><td><span class="sn">Q9</span></td><td>Should preprocessing-v4 publish per-section page regions?</td><td>Only if document not-located is high in P4</td></tr>
+      <tr><td><span class="sn">Q10</span></td><td>Cap of 6 pages per (run, document)?</td><td><b>Answered (research):</b> 6 pages for long documents; a document of 10 pages or fewer is read whole (the 8-page CC Application draws 107 of 254 citations)</td></tr>
+      <tr><td><span class="sn">Q11</span></td><td>Optional pageNumber on CC document citations?</td><td><b>Answered (G9):</b> yes, now, as its own PR before P2 (D22); checked on 2008 San Antonio cc-1: one CC run + one cc-compare loop vs b80e5075/76570a10 + hand page check</td></tr>
+      <tr><td><span class="sn">Q12</span></td><td>Should the shared kit take over the agent's two hand copies (next seed from remap; final points into <code>annotate-write</code>)?</td><td><b>Answered (research):</b> yes, in P1. <code>remap-result.json</code> already holds the next seed (<code>sheet</code>) and the stored points (<code>unit</code>)</td></tr>
+      <tr><td><span class="sn">Q13</span></td><td>How does 2.10 wait for 2.12 without being blocked by its failure? conductor2 has no such edge</td><td><b>Answered:</b> strict contract + conductor's 2 retries, then a new conductor2 <code>after_retries: pass</code> key; the merge writes not-swept and logs to tool-bugs.md (D23, P0)</td></tr>
     </tbody>
   </table></div>
 </section>
 
 </main>
 <script data-spec-kit-js>
-/* spec-kit v5.1 — system-map edge renderer.
+/* spec-kit v5.2 — system-map edge renderer.
    Inline the ENTIRE contents of this file into the spec's
    <script data-spec-kit-js> block (do not <script src>).
    Reads every .sysmap, and for each hidden <a class="sys-edge"
@@ -1103,7 +1343,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 <script>
   const btns=document.querySelectorAll('nav.tabs button');
   const panels=document.querySelectorAll('.panel');
-  const IDS=['overview','review','stored','cc','docs','rollout'];
+  const IDS=['overview','review','agent','stored','cc','docs','rollout'];
   function show(id,opts={}){
     btns.forEach(b=>b.classList.toggle('active',b.dataset.tab===id));
     panels.forEach(p=>p.classList.toggle('active',p.id===id));
