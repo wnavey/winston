@@ -488,16 +488,17 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
   <div class="kicker">CARTOGRAPHER · NORTH STAR</div>
   <h1>Anchored geometry for every site</h1>
   <p>Both producers — the SIR's county clerk documents and the site plan set's drawings — put geometry into <code>geo</code> in the county's own State Plane zone, so PostGIS can answer distance and encroachment questions deterministically. A plan of a plan. Companion to <code>NORTH-STAR-SPEC.md</code>.</p>
-  <div class="meta">Draft v1 · 2026-10-08 · click a tab ↓</div>
+  <div class="meta">Draft v2 · 2026-10-12 · click a tab ↓</div>
   <a class="spec-link" href="NORTH-STAR-SPEC.html">📖 read the spec</a>
 </header>
 
 <nav class="tabs">
   <button data-tab="overview" class="active"><span class="n">01</span>Overview</button>
-  <button data-tab="workflow"><span class="n">02</span>The five-step SIR geo workflow</button>
-  <button data-tab="model"><span class="n">03</span>What's stored</button>
-  <button data-tab="anchoring"><span class="n">04</span>The anchoring target</button>
-  <button data-tab="rollout"><span class="n">05</span>Priority and open questions</button>
+  <button data-tab="existing"><span class="n">02</span>What Jason has built</button>
+  <button data-tab="workflow"><span class="n">03</span>The five-step SIR geo workflow</button>
+  <button data-tab="model"><span class="n">04</span>What's stored</button>
+  <button data-tab="anchoring"><span class="n">05</span>The anchoring target</button>
+  <button data-tab="rollout"><span class="n">06</span>Priority and open questions</button>
 </nav>
 
 <main data-spec="NORTH-STAR-SPEC.html">
@@ -629,8 +630,118 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
     <div class="callout ember"><span class="lab">watch out</span> P0c is not cosmetic. Fit metrics are computed over a union outline that keeps the target's interior lot lines — 25.7 ft mean and 209 ft Hausdorff where per-lot it is 1.6–2.5 ft (§2.3 C5, winston#289 B3). Half the corpus is anchored by ring fit, so no auto-accept threshold can be set against a number that is wrong for the dominant case.</div>
   </section>
 
+  <section class="panel" id="existing">
+    <h2><span class="eyebrow">02 · geometry already in production</span>The figure pipeline and the project thumbnails<span class="sub">Two live geometry systems Draft v1 did not account for, what each one stores, and where its geometry goes.</span></h2>
+    <p class="lede">Every commit in both systems lands as <code>DSD &lt;dsd@noeticbuild.com&gt;</code>, a shared identity, so git cannot say who wrote what. §2.4 describes the code, not the author.</p>
+
+    <div class="callout new"><span class="lab">the headline</span> <b>57 of 59 projects carry a <code>project.site_outline</code></b>, against 28 of 34 SIRs with any <code>geo</code> row. The geometry store the spec never mentioned is the most populated one we have.</div>
+
+    <h3><span class="hn">A</span>What produces geometry today</h3>
+    <div class="sysmap" style="grid-template-columns:.62fr repeat(4,1fr)">
+      <div class="colh" style="grid-area:1/1">trigger</div>
+      <div class="colh" style="grid-area:1/2">source</div>
+      <div class="colh" style="grid-area:1/3">what computes it</div>
+      <div class="colh" style="grid-area:1/4">where it lands</div>
+      <div class="colh" style="grid-area:1/5">what a person sees</div>
+
+      <div class="sys trig" id="e-t1" style="grid-area:2/1"><span class="dot"></span><span class="t">SIR step 3.3.1</span><span class="d">once per run</span></div>
+      <div class="sys store" id="e-rings" style="grid-area:2/2"><span class="k">file</span><span class="t">parcel-rings.geojson</span><span class="d">resolve-site, from the county layer</span></div>
+      <div class="sys" id="e-fig" style="grid-area:2/3"><span class="k">python library</span><span class="t">figures.mapkit · utility</span><span class="d">five map plates; mains, hydrants and right-of-way drawn</span></div>
+      <div class="sys store" id="e-png" style="grid-area:2/4"><span class="k">files</span><span class="t">figures/*.png</span><span class="d">pixels, into the report</span></div>
+      <div class="sys" id="e-rep" style="grid-area:2/5"><span class="k">ui</span><span class="t">the SIR report</span><span class="d">PDF, DOCX and in-app HTML</span></div>
+
+      <div class="sys trig" id="e-t2" style="grid-area:3/1"><span class="dot"></span><span class="t">SIR step 3.3.2</span><span class="d">one judgment step over a builder</span></div>
+      <div class="sys store" id="e-sg" style="grid-area:3/2"><span class="k">file</span><span class="t">site-geometry.json</span><span class="d">boundary runs and bearings, local tangent plane</span></div>
+      <div class="sys" id="e-c3d" style="grid-area:3/3"><span class="k">python · shapely · three.js</span><span class="t">figures.constraints · constraints3d</span><span class="d">setback bands, buildable envelope, section, 3-D stills</span></div>
+      <div class="sys store" id="e-cj" style="grid-area:3/4"><span class="k">file</span><span class="t">constraints.json</span><span class="d">gated and measured, run directory only</span></div>
+      <div class="sys" id="e-ex" style="grid-area:3/5"><span class="k">ui</span><span class="t">web exhibit</span><span class="d">OrbitControls scene, 19 exhibit rows on 7 SIRs</span></div>
+
+      <div class="sys trig" id="e-t3" style="grid-area:4/1"><span class="dot"></span><span class="t">SIR publish</span><span class="d">one function, two writes</span></div>
+      <div class="sys" id="e-pub" style="grid-area:4/3"><span class="k">cityhall</span><span class="t">publish/sir.ts</span><span class="d">collects and dedupes every polygon, never unions</span></div>
+      <div class="sys store" id="e-out" style="grid-area:4/4"><span class="k">column</span><span class="t">project.site_outline</span><span class="d">GeoJSON WGS84 · 57 of 59 projects</span></div>
+      <div class="sys" id="e-card" style="grid-area:4/5"><span class="k">ui</span><span class="t">project card and site map</span><span class="d">Esri imagery, outline drawn with sharp</span></div>
+
+      <div class="sys gap" id="e-gap" style="grid-area:5/2">neither JSON is persisted as geometry — the bands, the envelope and the section profiles stay in the run directory</div>
+
+      <a class="sys-edge" data-from="e-t1" data-to="e-rings"></a>
+      <a class="sys-edge" data-from="e-rings" data-to="e-fig"></a>
+      <a class="sys-edge" data-from="e-fig" data-to="e-png"></a>
+      <a class="sys-edge" data-from="e-png" data-to="e-rep"></a>
+      <a class="sys-edge" data-from="e-t2" data-to="e-sg"></a>
+      <a class="sys-edge" data-from="e-sg" data-to="e-c3d"></a>
+      <a class="sys-edge" data-from="e-c3d" data-to="e-cj"></a>
+      <a class="sys-edge" data-from="e-cj" data-to="e-ex"></a>
+      <a class="sys-edge" data-from="e-t3" data-to="e-pub"></a>
+      <a class="sys-edge" data-from="e-pub" data-to="e-out"></a>
+      <a class="sys-edge" data-from="e-out" data-to="e-card"></a>
+      <a class="sys-edge gap" data-from="e-sg" data-to="e-gap"></a>
+    </div>
+    <p class="claim"><b>Claim (§2.4):</b> the geometry is real, gated and measured; what reaches the app is PNGs and a self-contained HTML exhibit.</p>
+
+    <h3><span class="hn">B</span>What one SIR publish writes</h3>
+    <div class="legend">
+      <span class="k"><span class="swatch" style="background:var(--new)"></span> write</span>
+      <span class="k"><span class="swatch" style="background:var(--p500)"></span> read</span>
+      <span class="k"><span class="swatch" style="background:var(--p700);border-style:dashed"></span> object storage</span>
+    </div>
+    <div class="uc">
+      <div class="uch"><div class="ucn">1</div><div class="uctxt">
+        <span class="actor">cityhall · publish/sir.ts</span>
+        <span class="uct">One staged parcel-rings file becomes two geometry stores</span>
+      </div></div>
+      <div class="ucsub">Both writes happen in the same function, from the same features, and neither knows about the other.</div>
+      <div class="ucdiag"><div class="dfg">
+        <div class="node read"><span class="op">read</span><span class="nt">parcel-rings.geojson</span><span class="nf">staged under _geo/<br>WGS84 features</span></div>
+        <div class="edge"><span class="el">① per feature</span><span class="ar">→</span></div>
+        <div class="node created"><span class="op">rpc</span><span class="nt">sir_add_parcel_geo</span><span class="nf">geo row, kind=parcel<br>method=county_api<br>geom_local derived</span></div>
+        <div class="edge"><span class="el">② collect,<br>dedupe,<br>never union</span><span class="ar">→</span></div>
+        <div class="node created"><span class="op">update</span><span class="nt">project</span><span class="nf">site_outline = Polygon<br>or MultiPolygon<br>thumbnail_rendered_at = null</span></div>
+        <div class="edge"><span class="el">③ first view</span><span class="ar">→</span></div>
+        <div class="node store"><span class="op">put</span><span class="nt">project-thumbnails</span><span class="nf">&lt;project_id&gt;.png<br>Esri World Imagery<br>drawn with sharp</span></div>
+      </div></div>
+      <div class="ucnote"><b>note</b> — nulling the stamp is what triggers the render; the route renders with the service role on first view so the card's picture does not depend on who looked first. A failed render leaves the previous picture and is not cached.</div>
+    </div>
+    <p class="claim"><b>Claim (§2.4):</b> one function writes both stores from one source, which is why Q13 asks whether <code>site_outline</code> becomes derived under D3 or stays a third source of truth.</p>
+
+    <h3><span class="hn">C</span>Four coordinate conventions, seven places geometry sits</h3>
+    <div class="spectable-scroll"><table class="spectable">
+      <thead><tr><th>Where</th><th>Coordinates</th><th>Written by</th><th>Persisted</th></tr></thead>
+      <tbody>
+        <tr><td><code>geo.geom_wgs84</code></td><td>WGS84 (4326)</td><td><code>sir_add_parcel_geo</code>, <code>sir_put_anchored_geo</code></td><td><span class="w">44 rows</span></td></tr>
+        <tr><td><code>geo.geom_local</code></td><td>county State Plane</td><td>same</td><td><span class="w">44 rows</span></td></tr>
+        <tr><td><code>project.site_outline</code></td><td>WGS84 GeoJSON, jsonb</td><td>cityhall <code>publish/sir.ts</code></td><td><span class="w">57 of 59 projects</span></td></tr>
+        <tr><td><code>cartographer_geometries.polygon</code></td><td>SRID:0, plat feet</td><td><code>extract-geometry-v2</code></td><td><span class="w">8 rows</span></td></tr>
+        <tr><td><code>site-geometry.json</code></td><td>local tangent plane, feet</td><td><code>site_geometry.py</code></td><td><span class="none">run directory only</span></td></tr>
+        <tr><td><code>constraints.json</code></td><td>local tangent plane + pixels</td><td><code>figures.constraints.cli</code></td><td><span class="none">run directory + exhibit</span></td></tr>
+        <tr><td><code>project_facts.geometry</code></td><td>jsonb</td><td>surveyor</td><td><span class="w">12 of 17 rows</span></td></tr>
+      </tbody>
+    </table></div>
+
+    <div class="callout ember"><span class="lab">watch out</span> <code>site_geometry.py</code> is deliberately stdlib-only on a <b>local tangent plane at the rings' centroid</b> — explicitly not a projected CRS, explicitly not pyproj — and cross-checks every edge against a Vincenty geodesic inverse. It is a well-argued third convention that meets State Plane nowhere (Q15).</div>
+
+    <h3><span class="hn">D</span>The two SIR engines already disagree</h3>
+    <div class="grid2">
+      <div class="card"><b>The half-plane</b><br><code>site_geometry.py</code> sizes a land take as an offset half-plane intersected with the parcel. Exact only where the run's infinite line leaves the whole ring on one side.</div>
+      <div class="card"><b>What it cost on Koenig</b><br>A re-entrant north-west boundary: a 5 ft offset off an 80.8 ft run reported as taking <b>17,598 sq ft</b> against a geometric maximum near <b>404 sq ft</b>. That run's <code>inward_offset_ladder</code> was removed as unusable.</div>
+      <div class="card"><b>The shapely band (gate G1)</b><br>Each run's own segment, buffered with flat caps, mitred to its neighbours, intersected with the ring. Measured by <code>checks.band_bounding</code> into <code>constraints.json</code>.</div>
+      <div class="card"><b>Why it matters here</b><br>Three computations of the same arithmetic — the tangent plane, shapely, and PostGIS on State Plane — are already in the building. Q15 asks whether they converge.</div>
+    </div>
+
+    <h3><span class="hn">E</span>What this changes about the plan</h3>
+    <div class="catgrp">
+      <div class="cath"><span class="cgl">N</span> New open questions</div>
+      <div class="uci"><span class="uid">Q13</span><span class="star">★</span><span class="utxt">Does <code>project.site_outline</code> become derived from <code>geo</code> under D3, or stay its own write? It is the store with the most rows.</span></div>
+      <div class="uci"><span class="uid">Q14</span><span class="star">★</span><span class="utxt">Should the SIR's computed constraint geometry — bands, buildable envelope, section profiles — persist as geometry, or stay figure-only?</span></div>
+      <div class="uci"><span class="uid">Q15</span><span class="utxt">One geometry engine or three? The tangent plane, shapely, and PostGIS on State Plane.</span></div>
+      <div class="uci"><span class="uid">Q16</span><span class="star">★</span><span class="utxt">Is a buildable envelope a <i>feature</i>? It is derived from a ring plus code setbacks, not read from a document, and D2 has no category for a computed shape.</span></div>
+      <div class="uci"><span class="uid">Q17</span><span class="utxt">Does the figure library become P4's viewer? <code>mapkit</code> already owns a projection, a frame, a tile source and label placement.</span></div>
+    </div>
+
+    <div class="callout new"><span class="lab">the largest unclaimed thing</span> The SIR already computes setback bands, the buildable envelope and section profiles — gated, measured, and exactly the shapes <code>ST_Distance</code> questions want — and then keeps only the pixels. Of everything in this spec, that is the biggest existing value the plan did not claim (Q14).</div>
+  </section>
+
   <section class="panel" id="workflow">
-    <h2><span class="eyebrow">02 · from a clerk document to a located feature</span>The five-step SIR geo workflow<span class="sub">The step order, what triage emits, and how readings become features.</span></h2>
+    <h2><span class="eyebrow">03 · from a clerk document to a located feature</span>The five-step SIR geo workflow<span class="sub">The step order, what triage emits, and how readings become features.</span></h2>
     <p class="lede">Three of the five steps are new runbooks. Extraction already works per document; anchoring already works per frame (§4).</p>
 
     <div class="sysmap-scroll"><div class="sysmap" id="detail-workflow" style="grid-template-columns:.5fr repeat(5,minmax(112px,1fr));column-gap:20px">
@@ -696,7 +807,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
   </section>
 
   <section class="panel" id="model">
-    <h2><span class="eyebrow">03 · readings, features, placements</span>What's stored<span class="sub">The three roles the data model separates, and the two tables that change.</span></h2>
+    <h2><span class="eyebrow">04 · readings, features, placements</span>What's stored<span class="sub">The three roles the data model separates, and the two tables that change.</span></h2>
     <p class="lede">A reading is what one document says; a feature is the real-world thing; a placement is the transform. Today the first and third exist and the second does not (§3.3).</p>
 
     <div class="erd">
@@ -766,7 +877,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
   </section>
 
   <section class="panel" id="anchoring">
-    <h2><span class="eyebrow">04 · what an anchor run fits to</span>The anchoring target<span class="sub">The three jobs the SIR does inside anchor-geometry, and how each is replaced.</span></h2>
+    <h2><span class="eyebrow">05 · what an anchor run fits to</span>The anchoring target<span class="sub">The three jobs the SIR does inside anchor-geometry, and how each is replaced.</span></h2>
     <p class="lede"><code>anchor.ts</code>'s <code>AnchorInputs</code> is <code>{ frameKey, figures, distanceUnits, targetUnits, gridBasis, statedScaleFactor, controlPoints, vertexTies, edgeTies, ringTargets }</code>. There is no SIR concept anywhere in the math layer — the coupling lives entirely in the runbook's <code>fetch.ts</code> and <code>publish.ts</code> wrappers (§3.2).</p>
 
     <div class="spectable-scroll"><table class="spectable">
@@ -847,7 +958,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
   </section>
 
   <section class="panel" id="rollout">
-    <h2><span class="eyebrow">05 · what to peel off, and what is unresolved</span>Priority and open questions<span class="sub">The tiers in words, the tensions to carry, and the twelve questions this draft leaves open.</span></h2>
+    <h2><span class="eyebrow">06 · what to peel off, and what is unresolved</span>Priority and open questions<span class="sub">The tiers in words, the tensions to carry, and the twelve questions this draft leaves open.</span></h2>
     <p class="lede">This is a plan of a plan. Decisions are directional; the questions outnumber them on purpose, and the spec expects to be iterated on for weeks with slices peeled off one at a time.</p>
 
     <div class="grid2">
@@ -1020,7 +1131,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 <script>
   const btns=document.querySelectorAll('nav.tabs button');
   const panels=document.querySelectorAll('.panel');
-  const IDS=['overview','workflow','model','anchoring','rollout']; /* KEEP IN SYNC with the data-tab / panel ids above */
+  const IDS=['overview','existing','workflow','model','anchoring','rollout']; /* KEEP IN SYNC with the data-tab / panel ids above */
   function show(id,opts={}){
     btns.forEach(b=>b.classList.toggle('active',b.dataset.tab===id));
     panels.forEach(p=>p.classList.toggle('active',p.id===id));

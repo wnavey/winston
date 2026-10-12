@@ -482,7 +482,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 
 </style>
 </head>
-<body class="reader" data-back="architecture.html" data-spec-sha="71be999010eb2e75">
+<body class="reader" data-back="architecture.html" data-spec-sha="2d9584e09a674c94">
 
 <header class="masthead">
   <div class="kicker">SPEC · READER</div>
@@ -499,18 +499,26 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 <script type="text/markdown" id="spec-md">
 # Cartographer north star — anchored geometry for every site
 
-**Status:** Draft v1
-**Date:** 2026-10-08
+**Status:** Draft v2
+**Date:** 2026-10-12
 **Repos touched:** none yet. This spec commits to no implementation; it names the destination, the stages, and what to peel off first.
 **Repos eventually touched:** `substation` (schema), `bureau` (runbooks), `cartographer` (readers, solvers, viewer), `surveyor` (layer identity)
 **Repos NOT touched:** `cityhall` until a viewer phase exists
 **Prod:** Supabase **Noetic App** (`mgxqsrjutswbciyrltwd`)
 
+> **Revision note (v2, 2026-10-12).** Adds **§2.4**: two live geometry systems v1 did not
+> account for — the SIR figure pipeline (`figures/`, including the shapely constraint
+> builder and the three.js step-back stills) and the project thumbnails
+> (`project.site_outline`, **57 of 59 projects** — more rows than `geo` has). Four
+> coordinate conventions are in use, not two, and the two SIR engines already disagree on
+> re-entrant boundaries. New open questions **Q13–Q17**. Nothing in §3–§8 is reversed;
+> §2.4 widens what the plan has to absorb, and Q13/Q14 are the two that could move D3.
+
 > **What this document is.** A plan of a plan. It is deliberately coarse, expects to be
 > iterated on for weeks, and expects slices to be peeled off one at a time. Decisions
 > (D) are directional, not settled. Open questions (Q) outnumber them on purpose.
-> Everything in §2 is verified against prod and the code on 2026-10-08; everything in
-> §4 onward is a proposal.
+> Everything in §2 is verified against prod and the code (§2.1–§2.3 on 2026-10-08,
+> §2.4 on 2026-10-12); everything in §4 onward is a proposal.
 
 ---
 
@@ -559,7 +567,7 @@ PostGIS. A MapLibre viewer is how a human audits what the tools are reasoning ov
 
 ---
 
-## 2. Where we are today (verified 2026-10-08)
+## 2. Where we are today
 
 ### 2.1 What exists and works
 
@@ -619,6 +627,77 @@ insert `cartographer_files` rows: the app's upload (`api/files/commit`) and
 are computed over a *union outline* that keeps the target's interior lot lines, giving
 25.7 ft mean / 209 ft Hausdorff where per-lot it is 1.6–2.5 ft. Auto-accept thresholds
 cannot be calibrated against it.
+
+### 2.4 Geometry already in production that this spec did not account for
+
+Draft v1 described `geo`, `cartographer_geometries`, `extract-geometry-v2` and
+`anchor-geometry` as the whole picture. They are not. Two other geometry systems are
+live, and one of them is the **most populated geometry store we have**.
+
+> **On authorship.** Every commit in both systems lands as `DSD <dsd@noeticbuild.com>`,
+> a shared identity, so git cannot say who wrote what. "Jason's work" in conversation
+> maps to the code below; this section describes the code, not the author.
+
+**The SIR figure pipeline** — `bureau/runbooks/sir/scripts/lib/figures/`, twelve modules,
+consumed by two steps:
+
+- `3.3.1-figures` exports five map plates (`establishing-aerial`, `parcel-aerial`,
+  `zoning-plate`, `flood-panel`, `utility-context`). `mapkit` owns the projection, the
+  export frame, the tile source, an ESRI query helper, and the subject ring read from
+  `parcel-rings.geojson`. `utility` draws mains by material and diameter, hydrants and
+  right-of-way — the same features §1.1 wants from a plan set, already being found.
+- `3.3.2-constraints` runs a deterministic builder under one judgment step. `constraints`
+  (shapely) computes the setback bands, the **buildable envelope as disjoint cap blocks**,
+  the section line and its profile, with gates G1–G4 and G7 each measured into
+  `constraints.json`. `constraints3d` renders the **3-D step-back stills** — vendored
+  three.js r128 on SwiftShader through `playwright-core`, G3 block check, G5 cameras, G6
+  frame score, G7 replay — plus one interactive web exhibit per envelope (OrbitControls),
+  published as `sir_artifact` rows of kind `exhibit`.
+
+The geometry is real, gated and measured. **None of it is persisted as geometry.**
+`constraints.json` and `site-geometry.json` live in the run directory and the full-run
+mirror; what reaches the app is PNGs and a self-contained HTML exhibit.
+
+**The project thumbnails** — `cityhall-new/src/lib/site/thumbnail.ts` and
+`/project/:id/thumbnail`:
+
+- `project.site_outline` is a **GeoJSON Polygon/MultiPolygon in WGS84**, written at SIR
+  publish (`src/lib/publish/sir.ts:416`) from the same staged `parcel-rings.geojson` that
+  feeds `sir_add_parcel_geo` in the same function — collected and deduped, never unioned.
+- Writing it nulls `thumbnail_rendered_at`; the first view renders with the service role,
+  frames the outline in **Web Mercator (EPSG:3857)**, fetches one Esri World Imagery
+  `export`, draws the ring with `sharp`, and uploads `<project_id>.png` to the
+  `project-thumbnails` bucket. No outline falls back to a US Census geocoder pin, then to
+  the SIR's `latitude`/`longitude`. `/project/:id/site` serves bounds + outline to the
+  Overview's live map.
+- **57 of 59 projects carry `site_outline`**, against 28 of 34 SIRs with any `geo` row.
+
+**Four coordinate conventions are in use, not two:**
+
+| Where | Coordinates | Written by | Persisted? |
+|---|---|---|---|
+| `geo.geom_wgs84` | WGS84 (4326) | `sir_add_parcel_geo`, `sir_put_anchored_geo` | yes — 44 rows |
+| `geo.geom_local` | county State Plane | same | yes — 44 rows |
+| `project.site_outline` | WGS84 GeoJSON, jsonb | cityhall `publish/sir.ts` | yes — 57 of 59 projects |
+| `cartographer_geometries.polygon` | SRID:0, plat feet | `extract-geometry-v2` | yes — 8 rows |
+| `site-geometry.json` | local tangent plane, feet | `site_geometry.py` | run directory only |
+| `constraints.json` | local tangent plane + pixels | `figures.constraints.cli` | run directory + exhibit |
+| `project_facts.geometry` | jsonb | surveyor | 12 of 17 rows |
+
+`site_geometry.py` is deliberately stdlib-only on a **local tangent plane at the rings'
+centroid** (`lib/geodesy.LocalFrame`), explicitly not a projected CRS and explicitly not
+pyproj. It cross-checks every edge against a Vincenty geodesic inverse and publishes the
+worst disagreement. It is a third convention, chosen for good reasons, and it does not
+meet State Plane anywhere.
+
+**The two SIR engines already disagree.** `figures/constraints/geometry.py` records that
+`site_geometry.py` sizes a take as an offset **half-plane** intersected with the parcel,
+which is exact only where the run's infinite line leaves the whole ring on one side. On
+Koenig's re-entrant north-west boundary a 5 ft offset off an 80.8 ft run was reported as
+taking 17,598 sq ft against a geometric maximum near 404 sq ft, and that run's
+`inward_offset_ladder` was removed as unusable. The shapely band — each run's own segment,
+flat caps, mitred to its neighbours, intersected with the ring — is gate G1 and is the
+correct one.
 
 ---
 
@@ -968,6 +1047,27 @@ re-derived at all, or does the new model only apply going forward?
 **Q12.** Does the plan-set reader belong in Cartographer or in the preprocessing-v4
 lineage, given that the vision machinery for reading sheets already lives there?
 
+**Q13.** Does `project.site_outline` become derived from `geo` under D3, or stay its own
+write? Today one function writes both from one source; leaving it independent makes it a
+third source of truth, and it is the one with the most rows.
+
+**Q14.** Should the SIR's computed constraint geometry — bands, buildable envelope,
+section profiles — persist as geometry, or stay figure-only? It is already gated and
+measured (§2.4), and it is exactly the shape `ST_Distance` questions want.
+
+**Q15.** One geometry engine or three? `site_geometry.py`'s local tangent plane,
+`figures.constraints`'s shapely, and PostGIS on State Plane are three computations of the
+same arithmetic. Does the tangent plane converge on the State Plane convention, or is its
+stdlib-only, keyless design worth keeping separate?
+
+**Q16.** Is a buildable envelope a *feature*? It is **derived** from a parcel ring plus
+code setbacks, not **read** from a document. D2's model has readings and features and no
+category for a computed shape.
+
+**Q17.** Does the figure library become the renderer for P4's viewer, or is MapLibre a
+separate path? `mapkit` already owns a projection, a frame, a tile source and label
+placement, and `constraints3d` already renders an interactive 3-D scene.
+
 ---
 
 ## 11. Out of scope
@@ -1002,6 +1102,20 @@ lineage, given that the vision machinery for reading sheets already lives there?
   `cartographer_anchor_decide:398`, `cartographer_mark_anchors_stale:451`,
   `sir_geo_in_srid:500`.
 - **The SIR-free math layer:** `cartographer/src/lib/geometry/anchor.ts`, `AnchorInputs`.
+- **The figure pipeline (§2.4):** `bureau/runbooks/sir/scripts/lib/figures/README.md` (the
+  twelve modules), `figures/constraints/__init__.py` and `geometry.py` (G1 and the Koenig
+  half-plane failure), `figures/constraints3d/__init__.py` (three.js r128, SwiftShader,
+  G3/G5/G6/G7), `runbooks/sir/steps/3.3.1-figures/prompt.md` (the five plates),
+  `3.3.2-constraints/prompt.md` outputs and `schema/constraints.schema.json`
+  (`meta · layers · envelopes · lines_ft · lines_px · neighbors · profile · cameras · checks`),
+  `runbooks/sir/scripts/site_geometry.py` (the tangent plane, and `site-geometry.json`'s keys).
+- **The thumbnails (§2.4):** `cityhall-new/src/lib/site/thumbnail.ts`,
+  `src/app/project/[projectId]/thumbnail/route.ts`, `src/app/project/[projectId]/site/route.ts`,
+  `src/lib/publish/sir.ts:416`, `scripts/backfill-site-thumbnails.mjs`, bucket
+  `project-thumbnails` (created 2026-09-23).
+- **Prod counts for §2.4 (2026-10-12):** `project` 59 rows, 57 with `site_outline` (30
+  MultiPolygon), 58 with `thumbnail_rendered_at`; `project_facts` 17 rows, 12 with
+  `geometry`; `sir_artifact` holds 19 `exhibit` rows across 7 SIRs.
 - **The couplings:** `bureau/runbooks/anchor-geometry/steps/1.1-inputs/contract.test.ts`,
   `cartographer/runbooks/anchor-geometry/scripts/fetch.ts`.
 - **Prior specs this one sits above:** `../geometry-extraction/DESIGN-SPEC.md`,
