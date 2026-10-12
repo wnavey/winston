@@ -1,9 +1,11 @@
 # CC review amend — re-run part of a completeness-check run and update its published review in place
 
-**Status:** Draft v1
+**Status:** Draft v1.1
 **Date:** 2026-10-12
 **Repos touched:** `bureau` (`runbooks/lib/publish_review_cli.py` + `publish_review.py` gain an amend lane; `runbooks/completeness-check/scripts/cc.py` passes it; `steps/1.1-inputs/contract.test.ts` accepts the request key; tests)
 **Repos NOT touched:** `conductor2` (its `void` + `advance` already re-run a step and everything that reads it), `cityhall` / `cityhall-new` (no schema, RPC or UI change — and both are on the deprecation path), `substation`, `inspector-general`
+
+> **Revision note (v1.1, 2026-10-12, during implementation, bureau#2100).** D8 changed from "any drifted row refuses" to a **per-field three-way merge**, which answers Q1. A read-only dry run against `0bc96434` showed #82/#84 were not mechanical touches: staff had removed the internal suffix "(pending = warn, TBD = fail)" from both **titles** after publish. Under v1, the annotation amend would have been refused, and `overwriteDrift` would have restored the suffix. Fact 8 is corrected to match. D4 also refuses a run whose checklist copy came from a dirty checkout (`checklistsDirty`).
 
 ## Problem
 
@@ -29,7 +31,7 @@ Verified facts (prod `mgxqsrjutswbciyrltwd`, bureau `826585eda0`, 2026-10-12):
 5. **The checklist can drift under a re-run.** The run resolved `v2.7-trimmed` at bureau `fb64eb11`, tree `f59519178815…`. At bureau HEAD the same directory is tree `04e428d2…`. A run reads guides only from its own copy (`1.4-resolve/checklist/`), so voiding a step at 2.1 or later keeps the run's checklist. Voiding `1.4-resolve` re-copies from the live checkout and would silently swap it.
 6. **The target review records its checklist.** `reviews.metadata` holds `checklistVersion` (`v2.7-trimmed`), `bureauArtifactPath` (`jurisdictions/austin/completeness-check/v2.7-trimmed`), `bureauCommitHash` and `runbookRunId`. It does not hold the tree hash, but `git rev-parse <bureauCommitHash>:<bureauArtifactPath>` reproduces it exactly (`f5951917…`).
 7. **The run token can already do this.** The `workflow_run` role has SELECT/INSERT/UPDATE on `review_comments` and SELECT/UPDATE on `reviews`, both scoped to the claim's project, plus SELECT on `comment_triage`. A PostgREST upsert (`on_conflict=id`, `resolution=merge-duplicates`) needs INSERT + UPDATE, and both are granted. No new RPC or policy is needed.
-8. **Rows can change after publish.** Two of the 192 rows (#82, #84) have `updated_at` 14 minutes after `created_at`. Their status, votes, text and sheets still match the run's envelope (`2.9-comments/review-comments.json`), so the touch looks mechanical, but an amend must not blindly overwrite a row someone has changed.
+8. **Rows are edited after publish.** Two of the 192 rows (#82, #84) have `updated_at` 14 minutes after `created_at`. Their status, votes, text and sheets match the run's envelope, but their `title` does not: the published "… (pending = warn, TBD = fail)" suffix was removed in the app. An amend must not blindly overwrite a row someone has changed.
 
 ## Decisions
 
@@ -68,7 +70,13 @@ So `checklistVersion`, `checklistsDir` and `reviewFiles` cannot change under an 
 
 A dry run stops after the report and exits 0 having written nothing.
 
-**D8 — Drift refuses.** The baseline is the envelope that last wrote the target (the uploaded `review-comments.json`, found from the run-root `review-publishing-record.json` when this run published the target, else from `metadata.reviewCommentsPath`, which D9 writes from now on). A row whose current `output_json` differs from its baseline, apart from the `section` slug lane B adds, was changed outside the run. Any drifted row refuses the whole amend and lists the rows. `amend.overwriteDrift: [<comment numbers>]` accepts named rows explicitly. When no baseline can be found, the report says so and the amend refuses unless `amend.noBaseline: true`.
+**D8 — Edits made in the app are kept, by a three-way merge.** The baseline is the envelope that last wrote the target (the uploaded `review-comments.json`, found from the run-root `review-publishing-record.json` when this run published the target, else from `metadata.reviewCommentsPath`, which D9 writes from now on). Each comment's `output_json` is merged field by field (top-level keys) across the baseline, the current row and the run:
+- a field only the row changed (a staff edit) **keeps the row's value**, and the report lists it under "Edits made since publish, kept"
+- a field only the run changed takes the run's value
+- a field both changed to different values is a **conflict**: the amend refuses and lists it, unless `amend.overwriteDrift: [<comment numbers>]` names the comment, in which case the run's value wins
+- the `section` slug lane B adds always follows the run
+
+When no baseline can be found, the report says so and the amend refuses unless `amend.noBaseline: true` (then the run's values are written as is).
 
 **D9 — Write order, and making the next amend easier.**
 1. Upload the run's envelope to `<project>/reviews/<svid>/<run>/v<N>/review-comments.json`. The earlier version's file stays where it is.
@@ -102,7 +110,7 @@ By hand, the same lane is `publish_review_cli.py … --amend-review-id <uuid> [-
 
 ## First use: markings onto `0bc96434`
 
-Run `sa2008-v1-cc27-no-annotate`: set `annotate: true` and `amend: {reviewId: "0bc96434-…", dryRun: true}` in both request copies, void `2.12-annotate --fresh` and advance (28 annotate sweep workers, Opus high, seat `personal`), read the report, then flip `dryRun` to false and void/advance `3.1-publish`. Expected report: 0 status flips, markers added on the fail/warn comments, 0 triage notes on changed verdicts, and #82/#84 either clean (content equal to the baseline) or named as drift.
+Run `sa2008-v1-cc27-no-annotate`: set `annotate: true` and `amend: {reviewId: "0bc96434-…", dryRun: true}` in both request copies, void `2.12-annotate --fresh` and advance (28 annotate sweep workers, Opus high, seat `personal`), read the report, then flip `dryRun` to false and void/advance `3.1-publish`. Expected report: 0 status flips, markers added on the fail/warn comments, 0 triage notes on changed verdicts, and #82/#84 listed as edits kept (their cleaned-up titles survive; they still gain markers). The read-only dry run before annotation already shows 192/192 matched, the checklist proven, 0 changes and those 2 edits kept.
 
 ## Scope
 
@@ -112,6 +120,6 @@ Run `sa2008-v1-cc27-no-annotate`: set `annotate: true` and `amend: {reviewId: "0
 
 ## Open questions
 
-- **Q1** — Drift (D8): is refusing the whole amend right, or should drifted rows be skipped and the rest applied? v1 refuses; it is the conservative choice while drift is rare (2/192 here, likely mechanical).
+- **Q1** — ~~Drift: refuse the whole amend, or skip drifted rows?~~ **Answered in v1.1:** neither. Merge per field (D8). Only a same-field conflict refuses.
 - **Q2** — IG re-send (D12): confirm `ig_review_runs`, `review_checklist_comment_map` and the audit scores refresh rather than duplicate on the first real amend.
 - **Q3** — Should the app show that a review was amended (e.g. "updated 2026-10-12" from `metadata.amendments`)? Not needed for v1; staff can see it in metadata.
