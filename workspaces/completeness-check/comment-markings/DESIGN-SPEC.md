@@ -1,6 +1,6 @@
 # Comment markings for the completeness-check runbook
 
-**Status:** Approved v3.1 (implementation corrections folded 2026-10-08)
+**Status:** Approved v3.2 (D22 page numbers move out of the verdict step, 2026-10-08)
 **Date:** 2026-10-08
 **Repos touched (proposed):** `bureau` (shared annotate kit lifted out of `runbooks/review/scripts/`; a new `2.12-annotate` step family in `runbooks/completeness-check/`; the stager writes block boxes; lane B of `publish_review.py` validates and stamps markings), `cityhall` (the CC adapter reads `annotations` / `annotation_disposition` the way the August adapter does; v2: the pdf.js document viewer draws markings on a page; v3: per-sheet marker/outline switch, colours by `marking_type`), `conductor2` (v3, D23: a step-level `after_retries: pass` key)
 **Repos NOT touched:** `substation` (archived; its `supabase/` now lives in `cityhall`), `inspector-general`, `claude-plugins`
@@ -18,6 +18,15 @@
 > annotate step in the CC runbook (reusing the review's scripts), a lane-B publish that
 > validates and carries the fields, and a CC adapter in `cityhall` that reads them. The
 > companion page `architecture.html` draws all of this.
+
+> **Revision note (v3.2, 2026-10-08, P2b validation): the document page is worked out after
+> the verdicts, not by the verdict agent (D22).** Asking the 2.1 agent for a `pageNumber`
+> moved verdicts on 2008 San Antonio `cc-1`. CC-1-31 (should fail) passed in 4 of 6 runs,
+> and CC-1-34 (should pass) failed in 3 of 6. Both baselines (6 runs) and a control run on
+> `main` (3 runs) got both items right every time. Will approved the change on 2026-10-08:
+> 2.1 stays as on `main`, and `2.9-comments` stamps the page from the citation's label and
+> the document's `overview.md` section list. D15 rung 0 and §3.3 P2b follow. The G9 bullet
+> below is kept as it was decided.
 
 > **Revision note (v3.1, 2026-10-08, implementation kickoff): corrections from reading the code.**
 > Will approved the plan, with these corrections, on 2026-10-08. Code was read at bureau
@@ -755,7 +764,12 @@ It is swapped for the strict contract plus `after_retries: pass` once conductor2
   watch are `missing` markers that point at nothing (D2 guards), document `not-located` (Q9),
   and the step's wall clock (D3).
 
-- **P2b Document page numbers in 2.1 (v3, G9, D22).** Its own bureau PR, checked on
+- **P2b Document page numbers (v3, G9, D22; v3.2: after the verdicts).** The v3 plan below
+  put the page in 2.1. Its validation run moved CC-1-31 and CC-1-34 (D22), so v3.2 keeps 2.1
+  as on `main` and stamps the page in 2.9. That needs no new CC run, because the verdict path
+  is unchanged. It is checked against the pages the agent wrote and the hand check below.
+  The v3 plan, as run:
+  Its own bureau PR, checked on
   **2008 San Antonio St, guide `cc-1` only** (Will, 2026-10-08):
   - **Target.** Project `7746ac2f-9788-40cd-ad68-3efe5d32d399`, submission version
     `624309c1-a216-44ca-9c27-b4dcb11d6d1f`, checklist `v2.7-trimmed`. `cc-1` has 33 items. On
@@ -1058,7 +1072,7 @@ fail/warn run citing a document, the worker reads that run's `label`, `observati
 `comment`, and that document's `overview.md`. From those it picks candidate pages,
 narrowest first:
 
-0. the run's own `pageNumber` on that citation, when 2.1 recorded one (v3, D22);
+0. the citation's own `pageNumber`, when 2.9 stamped one (v3.2, D22);
 1. a page the label names;
 2. the page range of the section the label names;
 3. the whole document, in page order, for a document of **10 pages or fewer** (v3, Q10).
@@ -1066,9 +1080,8 @@ narrowest first:
 For a longer document it opens **at most 6 pages** per (run, document) (Q10). A 500-page report is never
 scanned, and a run whose label names nothing findable ends in `not-located` with a reason.
 The page it lands on is recorded in the marker, which is the page number the CC emit
-schema lacks. The sweep itself never changes `2.1-review`. The optional `pageNumber` on
-`evidenceLocations` that rung 0 reads is D22's own change (P2b), checked for verdict drift
-there (v3.1; v2's "2.1 is untouched" is superseded).
+schema lacks. Neither the sweep nor D22 changes `2.1-review` (v3.2). The `pageNumber` that
+rung 0 reads is stamped after the verdicts.
 
 **D16. Only PDFs are swept.** A `document_version` whose `mime_type` is not
 `application/pdf` (a drainage model, a spreadsheet) gets a document-level `nothing-to-mark`
@@ -1122,36 +1135,49 @@ No new review-level key is needed.
 kit and the validators are shared (D5). Whether the formal review's sweep marks document
 findings is that runbook's own decision, and this spec does not change it.
 
-**D22. The verdict step records a page for every supplementary-document citation (v3,
-grill G9; answers Q11).** `2.1-review`'s `evidenceLocations` gain an optional
-**`pageNumber`** (integer, 1-based) on a citation of a supplementary document, meaning any
-`documentId` that is not the plan set. A sheet citation never carries it, because
-`sheetNumber` is already its page. This is a deliberate change to the verdict step, so CC
-parity with the legacy runner no longer binds it. The verdicts themselves must not move,
-which is what the check below measures.
+**D22. Every supplementary-document citation gets a page, worked out after the verdicts
+(v3.2; v3 put it in the verdict step, grill G9; answers Q11).** Each `documentReferences`
+entry of the 2.9 envelope that cites a supplementary document (any `documentId` that is not
+the plan set) may carry an optional **`pageNumber`** (integer, 1-based). A sheet citation
+never carries it, because `sheetNumber` is already its page. **The verdict step is not
+changed:** `2.1-review`'s prompt, emit schema and contract stay as they are, so verdict parity
+holds.
 
-- **Where the page comes from.** The worker sees documents through the staged transcriptions
-  and the vision tool, which analyses a document as a whole (prompt `:37`). So the page is read
-  off the section page ranges in `overview.md` (`Section 4: Engineer Information (3)`) and in
-  each section file's header (D17). The prompt rule is to cite the page the evidence is on
-  when its section covers one page, and the section's **first** page when it covers several.
-  Never guess: omit `pageNumber` when no page range covers the evidence. The marker's page
-  (D13, D15) is still the exact page, because the sweep reads pixels.
-- **Where it travels**, three places that drop unknown keys today:
-  - the 2.1 emit schema, prompt (`:225`, `:299`) and contract (`contract.test.ts:23`
-    `EvidenceLocation`);
-  - `cc.py` `canonicalize`, which coerces `"3"` to `3` as it already does for
-    `sheetNumber` / `blockNumber`;
-  - `workflows/completeness-check/scripts/build-review-comments.ts`, both the comment-level
-    `docRefs` (`:246`) and each `perRunFindings[k].documentReferences` (`:381`), which today
-    map a citation to `{documentId, label}` only. They become
-    `{documentId, label, pageNumber?}`.
+- **Why not in 2.1 (v3.2).** v3 had the 2.1 agent write the page. The pages it wrote were
+  right: 30 hand-checked, 26 exact, 4 at the section's first page, none wrong. But on the
+  P2b validation (§3.3) the extra lookup moved verdicts:
+
+  | Item | Right answer | Baselines A+B (6 runs) | Control on `main` (3) | 2.1 writes `pageNumber` (6) |
+  |---|---|---|---|---|
+  | CC-1-31 | fail | fail ×6 | fail ×3 | pass ×4, fail ×2 |
+  | CC-1-34 | pass | pass ×6 | pass ×3 | fail ×3, pass ×3 |
+
+  On CC-1-31 the control runs apply the checklist glossary rule that a prequalification
+  letter is not the required certification letter, and the page-lookup runs skip it. A
+  verdict is the product and a page is a convenience, so the page moved out of the agent.
+- **Where the page comes from.** `2.9-comments`, after the legacy `build-review-comments`,
+  runs `scripts/doc_pages.py`. It reads each citation's `label` against the document's staged
+  `overview.md` section list (`N. **Title** (pages)`). The manifest's `document-pdf` row ties
+  the document id to its folder. The first rule that gives exactly one page wins:
+  1. the label names a page (`page 3`, `pp.126-128`);
+  2. the label names `Section N`, and the sections titled `Section N` all start on one page;
+  3. the label's words, less the document's own title, best match sections that all start
+     on one page (two words in common, or every remaining word);
+  4. the document has one page: page 1.
+
+  Otherwise there is no `pageNumber`. A page past the document's staged `page_count` (or its
+  last section page) is never stamped. A failure costs only the pages, never the comments.
+  The marker's page (D13, D15) is still the exact page, because the sweep reads pixels.
+- **Measured** on every document citation in the three San Antonio `cc-1` runs: wherever both
+  the agent and the script gave a page, they agree, with 0 disagreements. On the control
+  run, 60 of 83 references get a page. The rest are whole-document citations of multi-page
+  documents, and one label whose words tie two sections.
 - **Stored:** `documentReferences[].pageNumber` in `review_comments.output_json`, at the
   comment level and per run. It is additive and optional, and there is no DB change. The app
   reads it for `&page=` (D19).
 - **Uses:** every cited document opens at its page in cityhall#293's viewer, whether marked
   or not, and the sweep gets a rung-0 page (D15).
-- **Ships as its own PR, before P2,** checked as described in P2b (§3.3).
+- **Ships as its own PR** (P2b, bureau#2050).
 
 ### 7.3 Stored shape (no schema change)
 
@@ -1202,3 +1228,5 @@ page (cityhall#293 already has the viewer prop). It touches the verdict step's s
 it is a parity decision. Proposed: a separate small change after P2.
 **Answered in v3 (grill G9): yes, now, as its own PR before P2 (D22).** Verdict-step parity
 no longer binds this change. The check is that verdicts do not move (§3.3 P2b).
+**Revised in v3.2 (D22):** the check found that verdicts moved, so the page is stamped after
+the verdicts and the emit schema is unchanged.
