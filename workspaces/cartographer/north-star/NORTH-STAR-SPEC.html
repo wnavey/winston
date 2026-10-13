@@ -482,7 +482,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 
 </style>
 </head>
-<body class="reader" data-back="architecture.html" data-spec-sha="61372073e91e6360">
+<body class="reader" data-back="architecture.html" data-spec-sha="83f2bef7b999cc37">
 
 <header class="masthead">
   <div class="kicker">SPEC · READER</div>
@@ -532,7 +532,50 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 
 ## 1. The north star
 
-### 1.1 What "done" looks like
+### 1.1 The goals
+
+In rough dependency order. **G2 is the test every other goal serves.**
+
+**G1. One geometry layer, in a real coordinate system, fed by both producers.** Recorded
+encumbrances off the SIR's clerk documents and proposed improvements off the plan set's
+drawings, both landing in `geo` in the county's own State Plane zone, each carrying how it
+was placed and how much its position can be trusted.
+
+**G2. So PostGIS answers review questions deterministically.** *Does the proposed building
+encroach on the recorded sanitary sewer easement, and if not by how much?* — a question that
+needs one geometry from each producer, which is the whole argument for one table serving
+both. The consumer is an agent tool surface; a map is how a human audits it (§1.3, §1.4).
+
+**G3. Separate reading a shape from placing a shape.** Reading is per-source and always will
+be — deed prose, a dimensioned plat and a hydrant symbol are three different problems.
+Placement is one similarity transform. Keep that seam clean and the second producer is a new
+reader on top of existing machinery rather than a rewrite (§3.1, D1).
+
+**G4. Give geometry an identity.** 147 of 315 geometries appear in more than one document.
+Without a feature layer, `ST_ShortestLine` has twelve easements to choose from and the layer
+is unqueryable (§3.3, D2).
+
+**G5. Collapse several sources of truth into one derived layer.** `geo`,
+`project.site_outline`, `cartographer_geometries`, two JSON files in run directories, four
+coordinate conventions. The target is one rebuildable spatial layer with everything else
+upstream of it (§3.4, D3, D4).
+
+**G6. Make cost visible before automating anything.** At roughly $40 a document against
+100–300 documents per SIR, triage is not a stepping stone toward full automation — it is the
+architecture until extraction gets cheap (§4.1, D6).
+
+**G7. Claim the geometry we already compute and throw away.** The SIR produces gated,
+measured setback bands and buildable envelopes and keeps only the pixels. The cheapest real
+geometry in the plan, and the one goal that arrived as a finding rather than a premise
+(§2.5, §3.5, D14).
+
+**What this is deliberately not.** Not an implementation plan — no PRs, no migrations, no
+build order. The goal of the *document* is to be a stable frame that slices get peeled off
+one at a time, which is why seventeen open questions outnumber fourteen directional
+decisions, and why the two that matter most — Q1 and Q16, what a feature even *is* — are
+still open.
+
+### 1.2 What "done" looks like
 
 Every site Noetic knows about has its geometry in `geo`, in the county's own State Plane
 zone, from **both** of its producers:
@@ -547,7 +590,7 @@ zone, from **both** of its producers:
 Both land in the same table, in the same coordinate system, each carrying how it was
 placed and how much its position can be trusted.
 
-### 1.2 Why: the question that needs both producers
+### 1.3 Why: the question that needs both producers
 
 The point of a planar, projected geometry layer is that **PostGIS answers questions
 deterministically** that an LLM can only guess at:
@@ -567,7 +610,7 @@ set side). Neither producer alone answers it.
 That is the whole argument for one `geo` table serving both, and for this spec existing
 at all.
 
-### 1.3 The consumer is a tool surface, not a map
+### 1.4 The consumer is a tool surface, not a map
 
 A map viewer is nice and comes late. The actual deliverable is a set of **deterministic
 geometry tools an agent can call** during a review or a diligence pass, backed by
@@ -653,7 +696,7 @@ consumed by two steps:
   `zoning-plate`, `flood-panel`, `utility-context`). `mapkit` owns the projection, the
   export frame, the tile source, an ESRI query helper, and the subject ring read from
   `parcel-rings.geojson`. `utility` draws mains by material and diameter, hydrants and
-  right-of-way — the same features §1.1 wants from a plan set, already being found.
+  right-of-way — the same features §1.2 wants from a plan set, already being found.
 - `3.3.2-constraints` runs a deterministic builder under one judgment step. `constraints`
   (shapely) computes the setback bands, the **buildable envelope as disjoint cap blocks**,
   the section line and its profile, with gates G1–G4 and G7 each measured into
@@ -1016,7 +1059,7 @@ What is different, and unsolved:
 - **Point and line features.** Today's model is polygons. Hydrants and transformers are
   points; water mains and curbs are lines.
 - **Proposed, not recorded.** A plan set shows what someone *intends to build*. That is a
-  different epistemic category from a recorded easement, and §1.2's whole use case is
+  different epistemic category from a recorded easement, and §1.3's whole use case is
   measuring between the two — so the distinction has to survive into `geo`, not be
   flattened away.
 
@@ -1078,7 +1121,7 @@ Rung 2 (ties) in earnest, and features located relative to other features — th
 
 ### P4 — The consumer
 
-The PostGIS tool surface for agents (§1.2), and a MapLibre viewer for auditing it.
+The PostGIS tool surface for agents (§1.3), and a MapLibre viewer for auditing it.
 
 ### P5 — Plan sets
 
@@ -1137,7 +1180,7 @@ protocol, and what does a human see at the gate?
 not at all in v1?
 
 **Q5.** Does `geo` keep one row per feature, or one row per (feature, source) so that the
-recorded easement and the plan set's depiction of it coexist? §1.2's use case may need
+recorded easement and the plan set's depiction of it coexist? §1.3's use case may need
 both.
 
 **Q6.** How does a plan set get its anchoring target — the project's SIR parcel ring when

@@ -504,8 +504,21 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 <main data-spec="NORTH-STAR-SPEC.html">
 
   <section class="panel active" id="overview">
-    <h2><span class="eyebrow">01 · where geometry comes from and where it goes</span>The two producers and the one table<span class="sub">What reaches <code>geo</code> today, what would reach it, and in what order the pieces get built.</span></h2>
+    <h2><span class="eyebrow">01 · where geometry comes from and where it goes</span>The two producers and the one table<span class="sub">The goals, what reaches <code>geo</code> today, what would reach it, and in what order the pieces get built.</span></h2>
     <p class="lede">Prod on 2026-10-08: <code>geo</code> holds 44 rows — 34 county parcel rings, 8 anchored figures from one plat, 2 hand-authored easements. The same 34 SIRs hold <b>2,597 supporting documents</b>, and 75% of documents in the corpus define some geometry (§2.1, §2.2).</p>
+
+    <h3><span class="hn">G</span>The goals</h3>
+    <p class="lede">In rough dependency order. <b>G2 is the test every other goal serves</b> (§1.1).</p>
+    <div class="grid2">
+      <div class="card"><b>G1 · One geometry layer, fed by both producers</b><br>Recorded encumbrances off the SIR's clerk documents and proposed improvements off the plan set's drawings, both in <code>geo</code> in the county's own State Plane zone — each carrying how it was placed and how far to trust it.</div>
+      <div class="card"><b>G2 · So PostGIS answers review questions deterministically</b><br><i>Does the proposed building encroach on the recorded sanitary sewer easement, and if not by how much?</i> Needs one geometry from each producer. The consumer is an agent tool surface; a map is how a human audits it.</div>
+      <div class="card"><b>G3 · Separate reading a shape from placing a shape</b><br>Reading is per-source and always will be. Placement is one similarity transform. Keep that seam clean and a second producer is a new reader on existing machinery, not a rewrite.</div>
+      <div class="card"><b>G4 · Give geometry an identity</b><br>147 of 315 geometries appear in more than one document. Without a feature layer, <code>ST_ShortestLine</code> has twelve easements to choose from.</div>
+      <div class="card"><b>G5 · Collapse several sources of truth into one derived layer</b><br><code>geo</code>, <code>project.site_outline</code>, <code>cartographer_geometries</code>, two JSON files in run directories, four coordinate conventions. One rebuildable layer, everything else upstream of it.</div>
+      <div class="card"><b>G6 · Make cost visible before automating anything</b><br>At ~$40 a document against 100–300 documents per SIR, triage is not a stepping stone toward automation — it is the architecture until extraction gets cheap.</div>
+    </div>
+    <div class="callout new"><span class="lab">G7 · the one that arrived as a finding</span> <b>Claim the geometry we already compute and throw away.</b> The SIR produces gated, measured setback bands and buildable envelopes and keeps only the pixels. The cheapest real geometry in the plan — and the only goal here that was not a premise when the spec was written.</div>
+    <div class="callout"><span class="lab">what this is deliberately not</span> Not an implementation plan — no PRs, no migrations, no build order. The goal of the <i>document</i> is a stable frame that slices get peeled off one at a time, which is why seventeen open questions outnumber fourteen directional decisions, and why the two that matter most — Q1 and Q16, what a feature even <i>is</i> — are still open.</div>
 
     <h3><span class="hn">A</span>Today</h3>
     <div class="sysmap" style="grid-template-columns:.7fr repeat(4,1fr)">
@@ -604,7 +617,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
       <a class="refrow chg" data-ref="D13"><span class="chip">D13</span><span class="txt">a manual upload says so, and reaches geo only through the same gates</span></a>
     </div>
     <div class="sys-legend"><span><i></i>exists today</span><span><i class="chg"></i>changed</span><span><i class="new"></i>new</span><span><i class="gap"></i>the gap</span></div>
-    <p class="claim"><b>Claim (§1.2):</b> "does the proposed building encroach on the recorded sanitary sewer easement" needs one geometry from each producer, in one coordinate system.</p>
+    <p class="claim"><b>Claim (§1.3):</b> "does the proposed building encroach on the recorded sanitary sewer easement" needs one geometry from each producer, in one coordinate system.</p>
 
     <h3><span class="hn">C</span>What gets built in what order</h3>
     <div class="sysmap" style="grid-template-columns:.6fr repeat(4,1fr)">
