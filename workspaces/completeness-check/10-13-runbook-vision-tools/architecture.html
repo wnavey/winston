@@ -1,0 +1,1050 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CC Runbook Vision</title>
+<style>
+/* ============================================================
+   spec-kit v5.1  —  winston HTML spec design system
+   Inline the ENTIRE contents of this file into the spec's style block.
+   Canonical source: ~/.claude/skills/winston-spec/assets/spec-kit.css
+   When you change this file, bump the version above and in COMPONENTS.md.
+   v4: + sequence diagram (.seq*), + data table (.spectable), + prompt block (.prompt)
+   v5: + system map (.sysmap/.sys, edges drawn by spec-kit.js), + decision flow (.dflow),
+       + concept figure (figure.concept), + claim caption (.claim), + reference chip rows (.sys-refs),
+       + spec reader page (body.reader; DESIGN-SPEC.md rendered by marked, built by inline-kit.py --spec)
+   v5.1: pass-2 friction fixes — long identifiers wrap (.sys .t, .uc .nt, .ent .ty), .sysmap-scroll for
+       6+ columns, state-neutral .sm pills, .dflow jump outcomes, legend 'new trigger' dot
+       Colour rule: fill/border = change state only; kind = badge text + shape; legend is the
+       complete list of colour meanings on the page.
+   ============================================================ */
+
+:root{
+  /* steel-blue ramp (matches cityhall / Noetic report surfaces) */
+  --p50:#f0f5f9;--p100:#dce8f1;--p200:#b9d2e5;--p300:#8cb4d1;--p400:#6397b8;
+  --p500:#517e9e;--p600:#3f6582;--p700:#35526b;--p800:#2d4559;--p900:#273b4b;--p950:#182530;
+  --bg:#f9f9f9;--card:#ffffff;--divider:#dfdfdf;--ink:#1f2937;--muted:#6b7280;--ember:#bb4d00;
+  /* semantic: new / changed / retired */
+  --new:#15803d;--newbg:#f0fdf4;--newbd:#bbf7d0;
+  --chg:#b45309;--chgbg:#fffbeb;--chgbd:#fde68a;
+  --ret:#b91c1c;--retbg:#fef2f2;--retbd:#fecaca;
+  --sans:'Lexend',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  --serif:'Lora',Georgia,'Times New Roman',serif;
+  --mono:'Fira Code','SF Mono',ui-monospace,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.55;font-size:15px}
+
+/* ---------- masthead ---------- */
+header.masthead{background:linear-gradient(135deg,var(--p800),var(--p600));color:#fff;padding:34px 32px 30px;position:relative;overflow:hidden}
+header.masthead::after{content:"";position:absolute;inset:0;background-image:repeating-linear-gradient(115deg,rgba(255,255,255,.06) 0 1px,transparent 1px 26px);pointer-events:none}
+header.masthead .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--p200)}
+header.masthead h1{font-family:var(--serif);font-weight:600;margin:.35em 0 .2em;font-size:29px;position:relative}
+header.masthead p{margin:0;color:var(--p100);max-width:880px;font-size:15px}
+header.masthead .meta{margin-top:14px;font-size:12.5px;color:var(--p200);font-family:var(--mono)}
+
+/* ---------- tabs ---------- */
+nav.tabs{position:sticky;top:0;z-index:20;display:flex;gap:2px;background:var(--p950);padding:0 20px;box-shadow:0 2px 8px rgba(0,0,0,.12);flex-wrap:wrap}
+nav.tabs button{appearance:none;border:0;background:transparent;color:var(--p200);font-family:var(--sans);font-size:14px;font-weight:500;padding:14px 18px;cursor:pointer;border-bottom:3px solid transparent;transition:all .15s}
+nav.tabs button .n{font-family:var(--mono);font-size:11px;opacity:.7;margin-right:7px}
+nav.tabs button:hover{color:#fff;background:rgba(255,255,255,.04)}
+nav.tabs button.active{color:#fff;border-bottom-color:var(--ember);background:rgba(255,255,255,.06)}
+
+/* ---------- layout ---------- */
+main{max-width:1140px;margin:0 auto;padding:30px 26px 90px}
+.panel{display:none;animation:fade .25s ease}
+.panel.active{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+h2{font-family:var(--serif);font-weight:600;font-size:23px;margin:34px 0 6px;color:var(--p900)}
+h2:first-child{margin-top:4px}
+h2 .eyebrow{display:block;font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--p500);font-weight:400;margin-bottom:3px}
+h3{font-size:16px;font-weight:600;margin:28px 0 8px;color:var(--p800);display:flex;align-items:center;gap:9px}
+h3 .hn{font-family:var(--mono);font-size:12px;color:#fff;background:var(--p600);border-radius:5px;padding:2px 8px}
+h4{font-size:14px;font-weight:600;margin:18px 0 6px;color:var(--p800)}
+p{margin:.55em 0}
+.lede{font-size:16px;color:var(--p800);border-left:3px solid var(--ember);padding-left:16px;margin:14px 0 20px}
+ul{margin:.4em 0;padding-left:22px}li{margin:.28em 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px solid var(--p100);border-radius:4px;padding:1px 5px;color:var(--p800)}
+
+/* ---------- callout ---------- */
+.callout{background:var(--p50);border:1px solid var(--p200);border-left:4px solid var(--p500);border-radius:8px;padding:13px 17px;margin:16px 0}
+.callout.ember{background:#fdf6f0;border-color:#f0cba8;border-left-color:var(--ember)}
+.callout.new{background:var(--newbg);border-color:var(--newbd);border-left-color:var(--new)}
+.callout .lab{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--p600);font-weight:600;display:block;margin-bottom:3px}
+.callout.ember .lab{color:var(--ember)} .callout.new .lab{color:var(--new)}
+
+/* ---------- legend ---------- */
+.legend{display:flex;flex-wrap:wrap;gap:9px 16px;background:#fff;border:1px solid var(--divider);border-radius:10px;padding:12px 16px;margin:16px 0;font-size:12px;align-items:center}
+.legend .k{display:inline-flex;align-items:center;gap:6px}
+.swatch{width:26px;height:14px;border-radius:3px;display:inline-block;border:1px solid rgba(0,0,0,.15)}
+
+/* ---------- shared field badges (used by entity rows + legend) ---------- */
+.b{font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.04em;padding:1px 4px;border-radius:3px;text-transform:uppercase;white-space:nowrap}
+.b-pk{background:#fef3c7;color:#92600a;border:1px solid #fde68a}
+.b-fk{background:#e0edfb;color:#2456a8;border:1px solid #c3d8f2}
+.b-nn{background:#eef1f4;color:#4b5563;border:1px solid #d7dde3}
+.b-new{background:var(--newbg);color:var(--new);border:1px solid var(--newbd)}
+
+/* ============================================================
+   ER / UML entity boxes
+   ============================================================ */
+.erd{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start;margin:16px 0;background:#fbfcfd;border:1px solid var(--divider);border-radius:12px;padding:18px}
+.ent{border:1px solid var(--divider);border-radius:9px;overflow:hidden;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.05);min-width:236px;flex:0 1 auto}
+.ent .eh{padding:7px 12px;color:#fff;display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.ent .eh .en{font-family:var(--mono);font-size:12.5px;font-weight:700;letter-spacing:.02em}
+.ent .eh .stereo{font-size:9.5px;font-family:var(--mono);opacity:.85;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}
+.ent.exist .eh{background:var(--p700)}
+.ent.newt .eh{background:var(--new)}
+.ent.changed .eh{background:var(--chg)}
+.ent.retired .eh{background:#9ca3af}
+.ent.retired{opacity:.72}
+.ent .row{display:flex;align-items:center;gap:7px;padding:4px 11px;font-size:11.5px;border-top:1px solid #eef1f4}
+.ent .row:first-of-type{border-top:0}
+.ent .row .nm{font-family:var(--mono);font-size:11.5px;color:var(--p900);font-weight:600}
+.ent .row .ty{font-family:var(--mono);font-size:10px;color:var(--muted);margin-left:auto;text-align:right;max-width:60%;overflow-wrap:anywhere}
+.ent .row.hi{background:#fff9f2}
+.ent .row.strk .nm{text-decoration:line-through;color:var(--muted)}
+.ent .note{padding:5px 11px;font-size:10px;color:var(--muted);font-style:italic;border-top:1px dashed #e5e9ee;background:#fbfcfd}
+/* diff rows — show a table modification (column added / removed), git-style.
+   Put a "+"/"−" marker in a .gut span at the start of the row. */
+.ent .row .gut{flex:0 0 10px;width:10px;text-align:center;font-family:var(--mono);font-size:11px;font-weight:700;color:var(--muted)}
+.ent .row.add{background:var(--newbg);box-shadow:inset 3px 0 0 var(--new)}
+.ent .row.add .gut{color:var(--new)}
+.ent .row.add .nm{color:#166534}
+.ent .row.del{background:var(--retbg);box-shadow:inset 3px 0 0 var(--ret)}
+.ent .row.del .gut{color:var(--ret)}
+.ent .row.del .nm{color:var(--ret);text-decoration:line-through}
+
+/* relationships panel — crow's-foot text notation */
+.rels{background:#fff;border:1px solid var(--divider);border-radius:10px;padding:12px 16px;margin:14px 0;font-family:var(--mono);font-size:12px;line-height:1.9}
+.rels .rl{display:block;color:var(--p800)}
+.rels .rl b{color:var(--ember)}
+.rels .cf{color:var(--p500);font-weight:700}
+.rels .cmt{color:var(--muted);font-style:normal;font-family:var(--sans);font-size:11.5px}
+.rels .tag-new{color:var(--new);font-weight:700}
+.rels .tag-ret{color:var(--ret);font-weight:700}
+.rels-h{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--p600);font-weight:700;margin-bottom:6px}
+
+/* ============================================================
+   Use-case scene  (an action + its boxes-and-arrows diagram)
+   ============================================================ */
+.uc{margin:16px 0 22px;border:1px solid var(--divider);border-radius:12px;overflow:hidden;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.uc .uch{display:flex;align-items:center;gap:13px;padding:11px 16px;background:linear-gradient(135deg,var(--p700),var(--p600));color:#fff}
+.uc .uch .ucn{flex:0 0 30px;height:30px;border-radius:50%;background:rgba(255,255,255,.2);font-family:var(--mono);font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.uc .uch .uctxt{flex:1}
+.uc .uch .actor{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--p100);display:block;margin-bottom:1px}
+.uc .uch .uct{font-weight:600;font-size:15.5px;font-family:var(--serif)}
+.uc .ucsub{padding:9px 16px;font-size:12.5px;color:var(--p800);background:var(--p50);border-bottom:1px solid var(--p100)}
+.uc .ucdiag{padding:20px 16px 14px}
+.ucnote{padding:2px 16px 14px;font-size:11.5px;color:var(--muted)}
+.ucnote b{color:var(--p700);font-family:var(--mono);font-size:10.5px}
+
+/* ============================================================
+   Boxes-and-arrows flow
+   Robustness rules baked in:
+   - .dfg WRAPS (flex-wrap:wrap) so long chains never clip / never
+     need horizontal scroll. Arrows reflow with the nodes.
+   - .node is a flex COLUMN: the op-badge is an in-flow header row
+     (never position:absolute), and .nt / .nf are block-level, so a
+     table name and its fields can never smush onto one line.
+   ============================================================ */
+.dfg{display:flex;flex-wrap:wrap;align-items:stretch;gap:8px 0;margin:0}
+.node{flex:0 0 auto;width:156px;background:#fff;border:1.5px solid var(--p300);border-radius:8px;padding:9px 11px;display:flex;flex-direction:column;gap:3px}
+.node .op{align-self:flex-start;font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:1px 6px;border-radius:3px;border:1px solid;color:#fff;margin-bottom:2px}
+.node .nt{display:block;font-family:var(--mono);font-weight:700;font-size:12px;color:var(--p900);line-height:1.3;overflow-wrap:anywhere}
+.node .nf{display:block;font-family:var(--mono);font-size:10px;color:var(--muted);line-height:1.45;word-break:break-word}
+.node.created{border-color:var(--new);background:var(--newbg)} .node.created .op{background:var(--new);border-color:var(--new)}
+.node.read{border-color:var(--p400);background:#eef4fb} .node.read .op{background:var(--p500);border-color:var(--p500)}
+.node.event{border-color:var(--ember);background:#fdf6f0} .node.event .op{background:var(--ember);border-color:var(--ember)}
+.node.store{border-style:dashed;border-color:var(--p500);background:#eef3f7} .node.store .op{background:var(--p700);border-color:var(--p700)}
+.edge{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:70px;max-width:104px;padding:0 4px}
+.edge .el{font-size:9px;color:var(--p600);font-family:var(--mono);text-align:center;line-height:1.3;margin-bottom:2px}
+.edge .ar{color:var(--p400);font-size:20px;font-weight:700;line-height:1}
+
+/* ============================================================
+   Card grid  (keep / change / drop comparisons)
+   ============================================================ */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:820px){.grid2{grid-template-columns:1fr}.erd{padding:12px}}
+.card{background:var(--card);border:1px solid var(--divider);border-radius:9px;padding:14px 16px}
+.card.keep{border-top:3px solid var(--new)} .card.change{border-top:3px solid var(--chg)} .card.drop{border-top:3px solid var(--ret)}
+.card strong{display:block;margin-bottom:4px;font-size:13.5px}
+.card ul{font-size:12.5px;margin:2px 0}
+
+/* ============================================================
+   Lifecycle / state machine
+   ============================================================ */
+.sm{display:flex;flex-wrap:wrap;gap:7px;align-items:center;margin:14px 0}
+.sm .s{border:1px solid var(--p300);background:var(--p50);border-radius:20px;padding:5px 12px;font-size:11.5px;font-weight:600;color:var(--p800);font-family:var(--mono)}
+.sm .s .who{display:block;font-size:9px;font-family:var(--mono);color:var(--muted);font-weight:400;text-transform:uppercase;letter-spacing:.03em}
+.sm .s.client{border-color:var(--newbd);background:var(--newbg)}
+.sm .s.cc{border-color:#f0cba8;background:#fdf6f0}
+.sm .s.spec{border-color:var(--chgbd);background:var(--chgbg)}
+.sm .a{color:var(--p400);font-weight:700}
+/* state-neutral variants (v5.1): terminal-good / terminal-stop / dimmed. The .client/.cc/.spec
+   colours mean "whose court" and need a legend if used. */
+.sm .s.ok{border-color:var(--newbd);background:var(--newbg);color:var(--new)}
+.sm .s.stop{border-color:var(--retbd);background:var(--retbg);color:var(--ret)}
+.sm .s.dim{opacity:.6;border-style:dashed}
+
+/* ============================================================
+   Use-case catalog — grouped list of candidate use cases
+   (a scoped list, NOT a diagram — for "what would we build" inventories)
+   ============================================================ */
+.catgrp{border:1px solid var(--divider);border-radius:10px;overflow:hidden;margin:14px 0;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.catgrp .cath{background:var(--p700);color:#fff;padding:8px 14px;font-family:var(--serif);font-weight:600;font-size:14.5px;display:flex;align-items:center;gap:10px}
+.catgrp .cath .cgl{font-family:var(--mono);font-size:12px;font-weight:700;background:rgba(255,255,255,.2);border-radius:5px;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;flex:0 0 22px}
+.uci{display:flex;gap:9px;align-items:baseline;padding:7px 13px;border-top:1px solid #eef1f4;font-size:13px}
+.uci .uid{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--p600);flex:0 0 26px}
+.uci .utxt{flex:1;color:var(--ink);line-height:1.45}
+.uci .utxt b{color:var(--p900)}
+.uci .star{color:var(--ember);font-weight:700;font-size:12px;flex:0 0 auto;letter-spacing:-1px}
+.uci.later{opacity:.66}
+.utag{font-family:var(--mono);font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;text-transform:uppercase;letter-spacing:.03em;white-space:nowrap;flex:0 0 auto}
+.utag.t-orig{background:#e0edfb;color:#2456a8;border:1px solid #c3d8f2}
+.utag.t-add{background:var(--newbg);color:var(--new);border:1px solid var(--newbd)}
+
+/* ============================================================
+   Misc: storage strip, cross-reference box
+   ============================================================ */
+.storage{background:#eef3f7;border:1px dashed var(--p300);border-radius:8px;padding:9px 13px;font-family:var(--mono);font-size:12px;color:var(--p800);margin:12px 0}
+.storage b{color:var(--ember)}
+.xref{font-size:12px;color:var(--p600);background:var(--p50);border:1px solid var(--p100);border-radius:6px;padding:8px 12px;margin:10px 0}
+.foot{margin-top:44px;padding-top:18px;border-top:1px solid var(--divider);color:var(--muted);font-size:12px;font-family:var(--mono)}
+
+/* actor / repo chips (optional, for inline actor tags in prose) */
+.rc{display:inline-block;font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;padding:1px 6px;border-radius:5px;border:1px solid;vertical-align:middle;white-space:nowrap}
+.r-ch{background:#eef4fb;color:#2456a8;border-color:#c3d8f2}
+.r-sub{background:#f3eefb;color:#6b3fa0;border-color:#dcccf0}
+.r-fa{background:#e9f7f2;color:#0f7a5f;border-color:#bfe8db}
+.r-db{background:#eaeef2;color:#2d4559;border-color:#c7d2dd}
+.r-store{background:#e6eef3;color:#35526b;border-color:#bcd0dd}
+.r-user{background:#eefaf0;color:#15803d;border-color:#bbf7d0}
+.r-mcp{background:#fdf0e6;color:#b5590d;border-color:#f2d3b3}
+
+/* ============================================================
+   Sequence diagram — swimlane message flow
+   A CSS grid: col 1 = step number, then one column per actor lane.
+   Each message is a grid item that SPANS grid-columns from its
+   source lane to its target lane, so it always sits under the right
+   headers and never smushes. Continuous lifelines are grid items
+   spanning all rows (grid-row:1/-1) — so set .seq-body's
+   grid-template-rows to repeat(STEP_COUNT, auto) for -1 to resolve.
+   Wide diagrams scroll inside .seq-scroll, never the page body.
+   Direction is an in-flow glyph (.dir ◂/▸) pushed to the target edge
+   by justify-content:space-between — never position:absolute.
+   ============================================================ */
+.seq-scroll{overflow-x:auto;margin:16px 0;border:1px solid var(--divider);border-radius:12px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.seq{min-width:840px}
+.seq-head,.seq-body{display:grid;grid-template-columns:30px repeat(6,minmax(104px,1fr))}
+.seq-head{background:linear-gradient(135deg,var(--p800),var(--p700));padding:11px 12px}
+.seq-h{display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;padding:0 4px}
+.seq-h .role{font-family:var(--mono);font-size:8.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--p200)}
+.seq-h .who{font-family:var(--mono);font-size:11px;font-weight:700;color:#fff;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.24);border-radius:6px;padding:3px 9px}
+.seq-body{position:relative;row-gap:11px;padding:16px 12px 20px}
+.seq-life{width:2px;background:var(--p100);justify-self:center;border-radius:2px;z-index:0}
+.seq-num{grid-column:1;justify-self:center;align-self:center;font-family:var(--mono);font-size:10px;font-weight:700;color:#fff;background:var(--p600);min-width:19px;height:19px;padding:0 3px;border-radius:10px;display:flex;align-items:center;justify-content:center;z-index:1}
+.seq-msg{align-self:center;display:flex;flex-direction:row;align-items:center;gap:8px;justify-content:space-between;background:#fff;border:1.5px solid var(--p300);border-radius:7px;padding:5px 10px;z-index:1;min-width:0}
+.seq-msg .mt{display:flex;flex-direction:column;gap:1px;min-width:0}
+.seq-msg .m{font-family:var(--mono);font-size:10.5px;color:var(--p900);font-weight:700;line-height:1.32;word-break:break-word}
+.seq-msg .m2{font-family:var(--mono);font-size:9.5px;color:var(--muted);line-height:1.3;word-break:break-word}
+.seq-msg .dir{font-size:14px;font-weight:700;color:var(--p500);flex:0 0 auto}
+.seq-msg.write{border-color:var(--new);background:var(--newbg)} .seq-msg.write .dir{color:var(--new)}
+.seq-msg.event{border-color:var(--ember);background:#fdf6f0} .seq-msg.event .dir{color:var(--ember)}
+.seq-msg.ret{border-style:dashed;background:#f6f9fb} .seq-msg.ret .m{font-weight:500;color:var(--p600)}
+.seq-msg.self{border-style:dashed;border-color:var(--p400);background:#eef3f7}
+.seq-foot{display:flex;flex-wrap:wrap;gap:8px 15px;padding:9px 14px;border-top:1px solid var(--divider);background:#fbfcfd;font-size:10.5px;font-family:var(--mono);color:var(--muted);align-items:center}
+.seq-foot .sw{display:inline-block;width:20px;height:11px;border-radius:3px;border:1.5px solid var(--p300);vertical-align:middle;margin-right:5px}
+.seq-foot .sw.write{border-color:var(--new);background:var(--newbg)} .seq-foot .sw.event{border-color:var(--ember);background:#fdf6f0}
+.seq-foot .sw.ret{border-style:dashed;background:#f6f9fb} .seq-foot .sw.self{border-style:dashed;border-color:var(--p400);background:#eef3f7}
+
+/* ============================================================
+   Data table — for step→entity maps and any tabular spec content.
+   Wrap in .spectable-scroll so wide tables scroll, not the page.
+   ============================================================ */
+.spectable-scroll{overflow-x:auto;margin:14px 0}
+.spectable{width:100%;border-collapse:collapse;font-size:12.5px;background:#fff;border:1px solid var(--divider);border-radius:10px;overflow:hidden}
+.spectable thead th{background:var(--p700);color:#fff;font-family:var(--mono);font-size:10px;letter-spacing:.04em;text-transform:uppercase;text-align:left;padding:8px 12px;font-weight:700;white-space:nowrap}
+.spectable tbody td{padding:7px 12px;border-top:1px solid #eef1f4;vertical-align:top;line-height:1.5}
+.spectable tbody tr:nth-child(even){background:#fbfcfd}
+.spectable td .sn{font-family:var(--mono);font-weight:700;color:#fff;background:var(--p600);border-radius:9px;padding:1px 7px;font-size:10.5px}
+.spectable td code{font-size:11px}
+.spectable td .none{color:var(--muted);font-style:italic;font-family:var(--sans)}
+.spectable td .w{color:var(--new);font-weight:700} /* write */
+.spectable td .r{color:var(--p500);font-weight:700} /* read/return */
+
+/* ============================================================
+   Prompt / code block — a readable mono block (LLM prompts, snippets).
+   White-space preserved; scrolls horizontally inside itself.
+   ============================================================ */
+.prompt{background:#fbfcfd;border:1px solid var(--p200);border-left:4px solid var(--p500);border-radius:8px;padding:12px 15px;margin:12px 0;font-family:var(--mono);font-size:11.5px;line-height:1.6;color:var(--p900);white-space:pre-wrap;overflow-x:auto}
+.prompt .ph{display:block;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--p600);font-weight:700;margin-bottom:6px}
+
+
+/* ============================================================
+   System map (.sysmap)  —  the Overview diagram.  v5
+   A CSS grid of nodes placed with grid-area:row/col. Column 1 is
+   always the TRIGGER (a start-dot, no box). Edges are authored as
+   hidden <a class="sys-edge" data-from data-to>label</a> and drawn as
+   SVG by spec-kit.js after layout (no hand-typed coordinates).
+   COLOUR = CHANGE STATE ONLY: white exists · amber .chg · green .new ·
+   red-dashed .gap. KIND = badge TEXT + shape (.ext dashed, .store
+   cylinder bottom, .trig dot). Badges are one colour except on
+   changed/new nodes, where they take the node's change colour.
+   ============================================================ */
+.sysmap{position:relative;display:grid;gap:40px 64px;padding:28px 16px 22px;background:#fff;border:1px solid var(--divider);border-radius:12px;margin:14px 0 6px}
+.sysmap-scroll{overflow-x:auto;margin:14px 0 6px} .sysmap-scroll .sysmap{margin:0;min-width:max-content} /* 6+ columns: use grid-template-columns:repeat(N,minmax(150px,1fr)) inside .sysmap-scroll */
+.sysmap .colh{font-family:var(--mono);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--p500);text-align:center;padding-bottom:6px;border-bottom:1px dashed var(--p200);align-self:end}
+.sys{position:relative;z-index:2;background:#fff;border:1.5px solid var(--p300);border-radius:9px;padding:9px 11px 8px;min-height:64px;display:flex;flex-direction:column;gap:2px;align-self:center}
+.sys .k{align-self:flex-start;font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:1px 6px;border-radius:3px;color:#fff;background:var(--p500);margin-bottom:2px}
+.sys .t{font-weight:600;font-size:12.5px;line-height:1.3;color:var(--p900);overflow-wrap:anywhere}
+.sys .d{font-family:var(--mono);font-size:9.5px;color:var(--muted);line-height:1.4}
+.sys.ext{border-style:dashed}
+.sys.store{border-radius:4px 4px 14px 14px}
+.sys.new{border-color:var(--new);background:var(--newbg);box-shadow:0 0 0 3px #dcfce7}.sys.new .k{background:var(--new)}
+.sys.chg{border-color:var(--chg);background:var(--chgbg)}.sys.chg .k{background:var(--chg)}
+/* trigger: a start-dot + label, never a box. Declared AFTER .new/.chg so it wins on order. */
+.sys.trig{border:none;background:none;box-shadow:none;padding:0;min-height:0;align-items:flex-start;justify-self:start;gap:5px;max-width:150px}
+.sys.trig .dot{width:16px;height:16px;border-radius:50%;background:var(--p700);border:3px solid #fff;box-shadow:0 0 0 1.5px var(--p700)}
+.sys.trig.new .dot{background:var(--new);box-shadow:0 0 0 1.5px var(--new)}
+.sys.trig.chg .dot{background:var(--chg);box-shadow:0 0 0 1.5px var(--chg)}
+.sys.trig .t{font-size:11.5px;font-weight:600;color:var(--p800);line-height:1.25}
+.sys.trig .d{font-size:9.5px}
+.sys.gap{border:1.5px dashed var(--ret);background:var(--retbg);color:var(--ret);align-items:center;justify-content:center;text-align:center;font-family:var(--mono);font-size:10.5px;min-height:40px}
+/* floating spec-reference tag above the box; an <a href="#detail-id"> deep-link to the zoom-in diagram */
+.sys .ref{position:absolute;top:-11px;right:8px;text-decoration:none;font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.04em;padding:1px 7px;border-radius:10px;background:#fff;border:1px solid var(--p300);color:var(--p700);white-space:nowrap}
+.sys.chg .ref{border-color:var(--chg);color:var(--chg)}.sys.new .ref{border-color:var(--new);color:var(--new)}
+.sys .ref:hover{background:var(--p50)}
+.sys-edge{display:none} /* authored edge; rendered as SVG by spec-kit.js */
+.sysmap svg.edges{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1;overflow:visible}
+.sysmap svg .e{fill:none;stroke:var(--p400);stroke-width:1.6}
+.sysmap svg .e.new{stroke:var(--new);stroke-width:2.2}
+.sysmap svg .e.chg{stroke:var(--chg);stroke-width:2}
+.sysmap svg .e.gap{stroke:var(--ret);stroke-dasharray:5 4}
+.sysmap svg .e.loop{stroke:var(--p400);stroke-dasharray:4 3}
+.sysmap svg .lbl{font:9.5px var(--mono);fill:var(--p700)}
+.sysmap svg .lbl.new{fill:var(--new);font-weight:700}.sysmap svg .lbl.chg{fill:var(--chg);font-weight:700}.sysmap svg .lbl.gap{fill:var(--ret)}
+.sysmap svg .lblbg{fill:#fff;stroke:none;opacity:.94}
+/* reference footer: stacked CHIP ROWS, one per reference, each a link into the spec reader page.
+   Markup: <div class="sys-refs"><a class="refrow" data-ref="P0a"><span class="chip">P0a</span><span class="txt">…</span></a>…</div>
+   spec-kit.js fills href = <main data-spec>#<token>. */
+.sys-refs{display:flex;flex-direction:column;gap:6px;margin:12px 0 0}
+.sys-refs .refrow{display:flex;align-items:baseline;gap:12px;padding:7px 12px;border:1px solid var(--divider);border-radius:9px;background:#fff;text-decoration:none;color:var(--p800);font-size:12.5px;line-height:1.45;transition:border-color .12s,background .12s}
+.sys-refs .refrow:hover{border-color:var(--p400);background:var(--p50)}
+.sys-refs .refrow .chip{flex:0 0 auto;font-family:var(--mono);font-size:10.5px;font-weight:700;color:var(--p700);background:var(--p50);border:1px solid var(--p200);border-radius:6px;padding:2px 8px;min-width:44px;text-align:center}
+.sys-refs .refrow.chg .chip{color:var(--chg);border-color:var(--chgbd);background:var(--chgbg)}
+.sys-refs .refrow.new .chip{color:var(--new);border-color:var(--newbd);background:var(--newbg)}
+.sys-refs .refrow .txt{flex:1}
+.sys-refs .refrow .go{flex:0 0 auto;font-family:var(--mono);font-size:10px;color:var(--p500)}
+.sys-refs .refrow[href] .go::after{content:"read §"}
+.sys-refs .refrow:not([href]) .go::after{content:"no spec reader";color:var(--muted)}
+/* citation links inside claims and ref tags (filled in by spec-kit.js) */
+.claim a.cite,.sys .ref a{color:inherit;text-decoration:underline dotted;text-underline-offset:2px}
+.claim a.cite:hover{color:var(--ember)}
+/* "read the spec" masthead link */
+header.masthead a.spec-link{display:inline-block;margin-top:12px;font-family:var(--mono);font-size:12px;color:#fff;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);border-radius:7px;padding:5px 11px;text-decoration:none;position:relative}
+header.masthead a.spec-link:hover{background:rgba(255,255,255,.24)}
+
+/* legend for a system map: the COMPLETE list of colour meanings on the page */
+.sys-legend{display:flex;flex-wrap:wrap;gap:14px;font-size:11.5px;color:var(--p800);margin:8px 4px 0}
+.sys-legend i{display:inline-block;width:22px;height:3px;vertical-align:middle;margin-right:5px;background:var(--p400)}
+.sys-legend i.new{background:var(--new)} .sys-legend i.dot{width:10px;height:10px;border-radius:50%;background:var(--p700)} .sys-legend i.dot.new{background:var(--new)}.sys-legend i.chg{background:var(--chg)}.sys-legend i.gap{background:var(--ret)}.sys-legend i.loop{background:repeating-linear-gradient(90deg,var(--p400) 0 4px,transparent 4px 7px)}
+
+/* ============================================================
+   Claim caption  —  under every diagram. Cites the spec section or
+   decision it paraphrases. "Reading:" for the author's own observation.
+   ============================================================ */
+.claim{font-size:12.5px;color:var(--p800);margin:8px 0 26px;padding:8px 12px;border-left:3px solid var(--ember);background:#fff}
+.claim b{color:var(--p900)}
+
+/* ============================================================
+   Decision flow (.dflow)  —  "try X, else Y, else Z" / gate outcomes.
+   A vertical list of question rows; "yes" exits right to an outcome,
+   "no" falls through to the next row. Text-first, no SVG.
+   ============================================================ */
+.dflow{margin:14px 0;border:1px solid var(--divider);border-radius:12px;background:#fff;padding:14px 16px 10px}
+.dflow .dq{display:grid;grid-template-columns:minmax(200px,1.4fr) auto minmax(160px,1fr);gap:10px;align-items:center}
+.dflow .dq .q{font-size:12.5px;font-weight:600;color:var(--p900);border:1.5px solid var(--p300);border-radius:8px;padding:7px 11px;background:#fff}
+.dflow .dq .yes{font-family:var(--mono);font-size:10px;font-weight:700;color:var(--new);white-space:nowrap}
+.dflow .dq .out{font-family:var(--mono);font-size:11px;color:var(--p800);border:1.5px solid var(--newbd);background:var(--newbg);border-radius:8px;padding:6px 10px}
+.dflow .dq .out.warn{border-color:var(--chgbd);background:var(--chgbg)}
+.dflow .dq .out.fail{border-color:var(--retbd);background:var(--retbg);color:var(--ret)}
+.dflow .dno{font-family:var(--mono);font-size:9.5px;color:var(--muted);padding:3px 0 3px 18px}
+.dflow .dq.end .q{border-style:dashed;font-weight:500;color:var(--p700)}
+.dflow .dq .out a,.dflow .dq a.out{color:inherit;text-decoration:underline dotted;text-underline-offset:2px}
+.dflow .dq .out.jump::after{content:" ↗";color:var(--p500)} /* an outcome that jumps to another step/diagram */
+
+/* ============================================================
+   Concept figure  —  a hand-drawn inline SVG for the one mechanism
+   prose can't carry (a transform, a timeline, a shape). One figure,
+   one claim in the figcaption. See COMPONENTS.md for SVG rules.
+   ============================================================ */
+figure.concept{margin:16px 0;padding:16px 16px 10px;background:#fff;border:1px solid var(--divider);border-radius:12px;color:var(--p800)}
+figure.concept svg{display:block;max-width:100%;height:auto;margin:0 auto}
+figure.concept figcaption{font-size:12.5px;color:var(--p800);margin-top:10px;padding:8px 12px;border-left:3px solid var(--ember);background:#fbfcfd}
+figure.concept figcaption b{color:var(--p900)}
+
+
+/* ============================================================
+   Spec reader page (body.reader) — DESIGN-SPEC.md rendered by marked,
+   generated by inline-kit.py --spec. Sticky TOC + body; :target glow.
+   ============================================================ */
+body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom:1px solid rgba(255,255,255,.4)}
+.reader-wrap{display:grid;grid-template-columns:250px minmax(0,1fr);gap:34px;max-width:1240px;margin:0 auto;padding:28px 26px 90px}
+@media(max-width:900px){.reader-wrap{grid-template-columns:1fr}.toc{position:static}}
+.toc{position:sticky;top:18px;align-self:start;max-height:calc(100vh - 36px);overflow:auto;font-size:12.5px;border-right:1px solid var(--divider);padding-right:14px}
+.toc .toc-h{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--p600);font-weight:700;margin-bottom:8px}
+.toc a{display:block;color:var(--p800);text-decoration:none;padding:3px 0;line-height:1.35}
+.toc a.toc-h3{padding-left:14px;font-size:12px;color:var(--p700)}
+.toc a:hover{color:var(--ember)}
+.reader-body{max-width:860px;font-size:15px;line-height:1.6}
+.reader-body h2{margin-top:44px;padding-top:18px;border-top:1px solid var(--divider)}
+.reader-body h3{display:block;margin-top:30px;font-size:17px}
+.reader-body h4{margin-top:22px}
+.reader-body blockquote{margin:14px 0;padding:10px 16px;border-left:4px solid var(--p500);background:var(--p50);border-radius:0 8px 8px 0;color:var(--p800)}
+.reader-body blockquote p{margin:.3em 0}
+.reader-body pre{background:#fbfcfd;border:1px solid var(--p200);border-left:4px solid var(--p500);border-radius:8px;padding:12px 15px;font-family:var(--mono);font-size:11.5px;line-height:1.55;overflow-x:auto}
+.reader-body pre code{background:none;border:0;padding:0;font-size:inherit}
+.reader-body a{color:var(--p600)}
+.reader-body hr{border:0;border-top:1px solid var(--divider);margin:26px 0}
+.reader-body .spectable-scroll{margin:12px 0}
+.reader-body .spectable td code{white-space:normal}
+.reader-body .anchor{display:block;position:relative;top:-14px;height:0}
+.reader-body strong.tok{scroll-margin-top:24px}
+.reader-body :target{scroll-margin-top:18px}
+.reader-body h2:target,.reader-body h3:target,.reader-body h4:target{background:#fff8ec;box-shadow:-12px 0 0 #fff8ec,12px 0 0 #fff8ec;border-radius:3px}
+.reader-body strong.tok:target{background:#fff1cc;border-radius:3px;padding:0 3px;box-shadow:0 0 0 2px #fde68a}
+.reader-body .anchor:target + h2,.reader-body .anchor:target + h3{background:#fff8ec;box-shadow:-12px 0 0 #fff8ec,12px 0 0 #fff8ec;border-radius:3px}
+
+</style>
+</head>
+<body>
+
+<header class="masthead">
+  <div class="kicker">COMPLETENESS CHECK · RUNBOOK VISION TOOLS</div>
+  <h1>How vision works in CC runbook runs</h1>
+  <p>How a review worker in <code>2.1-review</code> asks to look at a sheet or document for one checklist item, which model answers (Gemini through the AI Gateway, the legacy-parity default, or a native <code>claude -p</code> session, the opt-in new way), which file it is shown, and every place the request is logged and traced afterwards. Describes the current code; changes nothing. Companion to <code>DESIGN-SPEC.md</code>.</p>
+  <div class="meta">Reference v1 · 2026-10-13 · bureau 29dd3450e1 · click a tab ↓</div>
+  <a class="spec-link" href="DESIGN-SPEC.html">📖 read the spec</a>
+</header>
+
+<nav class="tabs">
+  <button data-tab="overview" class="active"><span class="n">01</span>Overview</button>
+  <button data-tab="flow"><span class="n">02</span>Per-item flow</button>
+  <button data-tab="sequences"><span class="n">03</span>Sequences</button>
+  <button data-tab="traces"><span class="n">04</span>Logs &amp; traces</button>
+  <button data-tab="compare"><span class="n">05</span>Legacy vs runbook</button>
+  <button data-tab="gaps"><span class="n">06</span>Open questions</button>
+</nav>
+
+<main data-spec="DESIGN-SPEC.html">
+
+  <!-- ───────────────────────── 01 OVERVIEW ───────────────────────── -->
+  <section class="panel active" id="overview">
+    <h2><span class="eyebrow">Overview</span>Three ways to answer “look at this sheet”</h2>
+    <p class="lede">The legacy workflow had an in-process <code>vision</code> tool. The runbook ported it to a command-line tool, <code>bin/vision.ts</code>, that the review agent runs through Bash. The CLI has two modes. <b>gateway</b> (the default) is the old way: the same Gemini model, prompt and inputs. <b>claude</b> is the new way: a one-shot <code>claude -p</code> session that reads the file itself. Both modes write the same log.</p>
+
+    <div class="sysmap" style="grid-template-columns:.7fr repeat(4,1fr)">
+      <div class="colh" style="grid-area:1/1">trigger</div>
+      <div class="colh" style="grid-area:1/2">review agent</div>
+      <div class="colh" style="grid-area:1/3">vision tool</div>
+      <div class="colh" style="grid-area:1/4">model</div>
+      <div class="colh" style="grid-area:1/5">what is logged</div>
+
+      <div class="sys trig" id="o-t1" style="grid-area:2/1"><span class="dot"></span><span class="t">legacy workflow</span><span class="d">conductor-1 review cell</span></div>
+      <div class="sys" id="o-la" style="grid-area:2/2"><span class="k">agent</span><span class="t">conductor-1 review agent</span><span class="d">calls an MCP tool</span></div>
+      <div class="sys" id="o-lt" style="grid-area:2/3"><a class="ref" href="#legacy-detail">D1 ↓</a><span class="k">in-process tool</span><span class="t">vision (MCP)</span><span class="d">conductor src/tools/vision</span></div>
+      <div class="sys ext" id="o-lm" style="grid-area:2/4"><span class="k">external</span><span class="t">Gemini 3.1 Pro</span><span class="d">through the AI Gateway</span></div>
+      <div class="sys store" id="o-ll" style="grid-area:2/5"><span class="k">log</span><span class="t">workflow log + sidecar</span><span class="d">sidecar has no prompt or answer</span></div>
+
+      <div class="sys trig" id="o-t2" style="grid-area:3/1"><span class="dot"></span><span class="t">visionMode: gateway</span><span class="d">the runbook default</span></div>
+      <div class="sys" id="o-ga" style="grid-area:3/2"><span class="k">runbook step</span><span class="t">2.1-review worker</span><span class="d">one per guide × run</span></div>
+      <div class="sys" id="o-gt" style="grid-area:3/3"><a class="ref" href="#seq-gateway">D3 ↓</a><span class="k">CLI</span><span class="t">bin/vision.ts</span><span class="d">run through Bash</span></div>
+      <div class="sys ext" id="o-gm" style="grid-area:3/4"><span class="k">external</span><span class="t">Gemini 3.1 Pro</span><span class="d">same model and prompt as legacy</span></div>
+      <div class="sys store" id="o-gl" style="grid-area:3/5"><a class="ref" href="#log-shape">D6 ↓</a><span class="k">file</span><span class="t">vision-log.jsonl</span><span class="d">prompt, answer, image ref</span></div>
+
+      <div class="sys trig" id="o-t3" style="grid-area:4/1"><span class="dot"></span><span class="t">visionMode: claude</span><span class="d">opt-in per request</span></div>
+      <div class="sys" id="o-ca" style="grid-area:4/2"><span class="k">runbook step</span><span class="t">2.1-review worker</span><span class="d">same prompt, same tool</span></div>
+      <div class="sys" id="o-ct" style="grid-area:4/3"><a class="ref" href="#seq-claude">D4 ↓</a><span class="k">CLI</span><span class="t">bin/vision.ts</span><span class="d">copies the file, cuts tiles</span></div>
+      <div class="sys" id="o-cm" style="grid-area:4/4"><span class="k">child session</span><span class="t">claude -p (Opus 5.5)</span><span class="d">Read tool only, cell's seat</span></div>
+      <div class="sys store" id="o-cl" style="grid-area:4/5"><span class="k">file</span><span class="t">vision-log.jsonl</span><span class="d">+ tiles, session usage</span></div>
+
+      <a class="sys-edge" data-from="o-t1" data-to="o-la"></a>
+      <a class="sys-edge" data-from="o-la" data-to="o-lt">tool call</a>
+      <a class="sys-edge" data-from="o-lt" data-to="o-lm">image/URL</a>
+      <a class="sys-edge" data-from="o-lm" data-to="o-ll">pino + ids</a>
+      <a class="sys-edge" data-from="o-t2" data-to="o-ga"></a>
+      <a class="sys-edge" data-from="o-ga" data-to="o-gt">Bash</a>
+      <a class="sys-edge" data-from="o-gt" data-to="o-gm">generateText</a>
+      <a class="sys-edge" data-from="o-gm" data-to="o-gl">1 line/call</a>
+      <a class="sys-edge" data-from="o-t3" data-to="o-ca"></a>
+      <a class="sys-edge" data-from="o-ca" data-to="o-ct">Bash</a>
+      <a class="sys-edge" data-from="o-ct" data-to="o-cm">claude -p</a>
+      <a class="sys-edge" data-from="o-cm" data-to="o-cl">1 line/call</a>
+    </div>
+    <div class="sys-refs">
+      <a class="refrow" data-ref="D1"><span class="chip">D1</span><span class="txt">the legacy in-process vision tool and its thin sidecar log</span></a>
+      <a class="refrow" data-ref="D3"><span class="chip">D3</span><span class="txt">gateway mode: Gemini through the AI Gateway, the parity path</span></a>
+      <a class="refrow" data-ref="D4"><span class="chip">D4</span><span class="txt">claude mode: a one-shot claude -p session on the calling cell's seat</span></a>
+      <a class="refrow" data-ref="D6"><span class="chip">D6</span><span class="txt">vision-log.jsonl: one line per call, success or failure</span></a>
+    </div>
+    <div class="sys-legend"><span><i></i>exists today (this page describes the current code; nothing is changed)</span></div>
+    <p class="claim"><b>Claim (§1):</b> the gateway mode is the one that mirrors the old way, built as a feature-parity port; the claude mode is the new way.</p>
+
+    <h3><span class="hn">A</span>The three paths at a glance</h3>
+    <div class="spectable-scroll"><table class="spectable">
+      <thead><tr><th>Path</th><th>Picked by</th><th>Answers</th><th>Paid by</th><th>Real run</th></tr></thead>
+      <tbody>
+        <tr><td>Legacy tool</td><td>running the legacy workflow</td><td>Gemini 3.1 Pro, in-process</td><td>AI Gateway</td><td>WhiteWater legacy review 91e224bd</td></tr>
+        <tr><td>Runbook gateway</td><td>request <code>visionMode</code> absent or <code>"gateway"</code></td><td>Gemini 3.1 Pro via CLI</td><td>AI Gateway (no-training providers only)</td><td><code>whitewater-car-wash-v1-cc27</code>: 152 calls</td></tr>
+        <tr><td>Runbook claude</td><td><code>"visionMode": "claude"</code> (+ optional <code>visionModel</code>)</td><td><code>claude -p</code>, Opus 5.5 default</td><td>the review cell's subscription seat</td><td><code>WWCW_rb2_run2_claude_vision</code>: 76 calls, $24.06 list</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <!-- ───────────────────────── 02 PER-ITEM FLOW ───────────────────────── -->
+  <section class="panel" id="flow">
+    <h2><span class="eyebrow">Activity flow</span>One checklist item, from transcription to finding</h2>
+    <p class="lede">Each <code>2.1-review</code> worker owns one guide for one run and must emit exactly one finding per checklist item id. Vision is a fallback the agent reaches for only when the preprocessed transcription is not specific enough.</p>
+
+    <h3 id="agent-flow"><span class="hn">A</span>What the review agent does per item</h3>
+    <div class="dflow">
+      <div class="dq"><span class="q">Do the staged transcriptions answer it? (README → facts.md → sheet guide.md → blocks.md, document overview.md)</span><span class="yes">yes →</span><span class="out">write the finding from the text · tools_used []</span></div>
+      <div class="dno">no ↓</div>
+      <div class="dq"><span class="q">Is there a targeted visual question the source would answer?</span><span class="yes">yes →</span><span class="out">run vision.ts with --document-id, --sheet (plan set) or none (PDF), --item-ids, --prompt</span></div>
+      <div class="dno">no ↓</div>
+      <div class="dq"><span class="q">Could semantic search find the content on another sheet?</span><span class="yes">yes →</span><span class="out">run search.sh --item-id, then back to the top</span></div>
+      <div class="dno">no ↓</div>
+      <div class="dq end"><span class="q">otherwise</span><span class="yes"></span><span class="out warn">decide from what was found · record what could not be located</span></div>
+    </div>
+    <p class="claim"><b>Claim (§3):</b> the vision CLI is the only way the agent looks at a drawing; it must not open or crop the staged images or PDFs itself.</p>
+
+    <h3 id="cli-flow"><span class="hn">B</span>What vision.ts does with one call</h3>
+    <div class="dflow">
+      <div class="dq"><span class="q">Flags parse? (--document-id and --prompt required; --sheet a whole number)</span><span class="yes">no →</span><span class="out fail">usage error, exit 2</span></div>
+      <div class="dno">yes ↓</div>
+      <div class="dq"><span class="q">Mode from CC_VISION_MODE, else resolved.json options.visionMode, else gateway. Claude mode with an ANTHROPIC_* billing variable set?</span><span class="yes">yes →</span><span class="out fail">refuse, exit 2</span></div>
+      <div class="dno">no ↓</div>
+      <div class="dq"><span class="q">Staged copy in 1.2-stage-submission whose sha256 still matches the manifest? (a sheet in either mode; a PDF in claude mode only)</span><span class="yes">yes →</span><span class="out">use it · source = staged · no network</span></div>
+      <div class="dno">no ↓</div>
+      <div class="dq"><span class="q">Download works? (pinned plan-set version → sheet_version thumbnail, or newest document_version → signed URL)</span><span class="yes">no →</span><span class="out fail">log “load: …”, print the legacy “could not be loaded” text, exit 0</span></div>
+      <div class="dno">yes ↓ · source = storage</div>
+      <div class="dq"><span class="q">visionMode = gateway?</span><span class="yes">yes →</span><span class="out"><a href="#seq-gateway">Gemini via AI Gateway</a> (sequence A)</span></div>
+      <div class="dno">no (claude) ↓</div>
+      <div class="dq end"><span class="q">claude mode</span><span class="yes"></span><span class="out"><a href="#seq-claude">copy file, cut tiles, claude -p</a> (sequence B)</span></div>
+    </div>
+    <p class="claim"><b>Claim (D2):</b> the CLI never fails the agent's turn: a load or model failure prints the legacy text, exits 0, and still writes a log line.</p>
+
+    <h3 id="tiles"><span class="hn">C</span>Claude mode: how a large sheet is cut</h3>
+    <figure class="concept">
+      <svg viewBox="0 0 1040 250" role="img" aria-label="A 5400 by 3600 pixel sheet is cut into a 3 by 2 grid of overlapping 2000 pixel tiles">
+        <rect x="40" y="20" width="540" height="200" fill="none" stroke="currentColor" stroke-width="1.5"/>
+        <text x="310" y="240" font-size="12" text-anchor="middle" fill="currentColor">sheet raster, e.g. 5400 × 3600 px (Claude would downscale it)</text>
+        <g fill="none" stroke="var(--new)" stroke-width="1.5" stroke-dasharray="5 3">
+          <rect x="40" y="20" width="200" height="111"/><rect x="210" y="20" width="200" height="111"/><rect x="380" y="20" width="200" height="111"/>
+          <rect x="40" y="109" width="200" height="111"/><rect x="210" y="109" width="200" height="111"/><rect x="380" y="109" width="200" height="111"/>
+        </g>
+        <g font-size="12" fill="var(--new)" font-family="ui-monospace,monospace" text-anchor="middle">
+          <text x="125" y="60">r1c1</text><text x="310" y="60">r1c2</text><text x="495" y="60">r1c3</text>
+          <text x="125" y="190">r2c1</text><text x="310" y="190">r2c2</text><text x="495" y="190">r2c3</text>
+        </g>
+        <g font-size="12.5" fill="currentColor">
+          <text x="620" y="50">1. the whole sheet, opened first (downscaled view)</text>
+          <text x="620" y="80">2. tiles at full resolution, 2000 px, 10% overlap</text>
+          <text x="620" y="110">3. the child opens only the tiles covering the question</text>
+          <text x="620" y="140">4. each tile's {file, x, y, w, h} goes into the log line</text>
+          <text x="620" y="170">5. IG redraws the same crops from the storage object</text>
+          <text x="620" y="200">   — no pixels are uploaded anywhere</text>
+        </g>
+      </svg>
+      <figcaption><b>Claim (D4):</b> a sheet whose long edge is over 2000 px is cut into an overlapping grid of full-resolution tiles (green, dashed), named by row and column, so the child can read small print the downscaled view loses.</figcaption>
+    </figure>
+  </section>
+
+  <!-- ───────────────────────── 03 SEQUENCES ───────────────────────── -->
+  <section class="panel" id="sequences">
+    <h2><span class="eyebrow">Sequence diagrams</span>Who calls whom for one vision request</h2>
+    <p class="lede">Both sequences start from the same Bash command in a review cell and end with the same kind of log line and the same stdout answer. They differ in steps 5–8.</p>
+
+    <h3 id="seq-gateway"><span class="hn">A</span>Gateway mode (default, legacy parity)</h3>
+    <div class="seq-scroll"><div class="seq">
+      <div class="seq-head">
+        <div></div>
+        <div class="seq-h"><span class="role">agent</span><span class="who">2.1-review worker</span></div>
+        <div class="seq-h"><span class="role">cli</span><span class="who">bin/vision.ts</span></div>
+        <div class="seq-h"><span class="role">files</span><span class="who">1.2-stage-submission</span></div>
+        <div class="seq-h"><span class="role">db + store</span><span class="who">Supabase</span></div>
+        <div class="seq-h"><span class="role">external</span><span class="who">AI Gateway → Gemini</span></div>
+        <div class="seq-h"><span class="role">log</span><span class="who">vision-log.jsonl</span></div>
+      </div>
+      <div class="seq-body" style="grid-template-rows:repeat(10,auto)">
+        <div class="seq-life" style="grid-column:2;grid-row:1/-1"></div>
+        <div class="seq-life" style="grid-column:3;grid-row:1/-1"></div>
+        <div class="seq-life" style="grid-column:4;grid-row:1/-1"></div>
+        <div class="seq-life" style="grid-column:5;grid-row:1/-1"></div>
+        <div class="seq-life" style="grid-column:6;grid-row:1/-1"></div>
+        <div class="seq-life" style="grid-column:7;grid-row:1/-1"></div>
+
+        <div class="seq-num" style="grid-row:1">1</div>
+        <div class="seq-msg" style="grid-row:1;grid-column:2/4"><div class="mt"><span class="m">Bash: node vision.ts</span><span class="m2">--sheet 30 --item-ids CC-2-14 --prompt …</span></div><span class="dir">▸</span></div>
+        <div class="seq-num" style="grid-row:2">2</div>
+        <div class="seq-msg self" style="grid-row:2;grid-column:3/4"><div class="mt"><span class="m">parse flags, pick mode</span><span class="m2">resolved.json → gateway</span></div></div>
+        <div class="seq-num" style="grid-row:3">3</div>
+        <div class="seq-msg" style="grid-row:3;grid-column:3/5"><div class="mt"><span class="m">look up staged copy</span><span class="m2">download-manifest.json + sha256</span></div><span class="dir">▸</span></div>
+        <div class="seq-num" style="grid-row:4">4</div>
+        <div class="seq-msg ret" style="grid-row:4;grid-column:3/5"><span class="dir">◂</span><div class="mt"><span class="m">sheet JPEG bytes</span><span class="m2">source = staged</span></div></div>
+        <div class="seq-num" style="grid-row:5">5</div>
+        <div class="seq-msg" style="grid-row:5;grid-column:3/6"><div class="mt"><span class="m">only on a miss, or for any PDF</span><span class="m2">pinned sheet_version thumbnail · newest document_version signed URL (300 s)</span></div><span class="dir">▸</span></div>
+        <div class="seq-num" style="grid-row:6">6</div>
+        <div class="seq-msg" style="grid-row:6;grid-column:3/7"><div class="mt"><span class="m">generateText(file, vision-prompt.md, question)</span><span class="m2">user = run id · tags tool:vision, node:2.1-review/&lt;cell&gt; · disallowPromptTraining</span></div><span class="dir">▸</span></div>
+        <div class="seq-num" style="grid-row:7">7</div>
+        <div class="seq-msg ret" style="grid-row:7;grid-column:3/7"><span class="dir">◂</span><div class="mt"><span class="m">answer text</span><span class="m2">no token usage returned to the log</span></div></div>
+        <div class="seq-num" style="grid-row:8">8</div>
+        <div class="seq-msg write" style="grid-row:8;grid-column:3/8"><div class="mt"><span class="m">append one line</span><span class="m2">ts, itemIds, documentId, sheet, prompt, response, ok, mode, model, source, image</span></div><span class="dir">▸</span></div>
+        <div class="seq-num" style="grid-row:9">9</div>
+        <div class="seq-msg ret" style="grid-row:9;grid-column:2/4"><span class="dir">◂</span><div class="mt"><span class="m">stdout answer · exit 0</span></div></div>
+        <div class="seq-num" style="grid-row:10">10</div>
+        <div class="seq-msg self" style="grid-row:10;grid-column:2/3"><div class="mt"><span class="m">finding</span><span class="m2">tools_used ["vision"]</span></div></div>
+      </div>
+      <div class="seq-foot">
+        <span><span class="sw"></span> call</span><span><span class="sw write"></span> file write</span>
+        <span><span class="sw ret"></span> return</span><span><span class="sw self"></span> self / compute</span>
+      </div>
+    </div></div>
+    <p class="claim"><b>Claim (D3):</b> gateway mode keeps the legacy model, prompt and inputs; a document still goes to Gemini as a signed URL to its newest version, as legacy sent it.</p>
+
+    <h3 id="seq-claude"><span class="hn">B</span>Claude mode (opt-in, native reading)</h3>
+    <div class="seq-scroll"><div class="seq">
+      <div class="seq-head">
+        <div></div>
+        <div class="seq-h"><span class="role">agent</span><span class="who">2.1-review worker</span></div>
+        <div class="seq-h"><span class="role">cli</span><span class="who">bin/vision.ts</span></div>
+        <div class="seq-h"><span class="role">files</span><span class="who">1.2-stage-submission</span></div>
+        <div class="seq-h"><span class="role">files</span><span class="who">$OUT/scratch/vision</span></div>
+        <div class="seq-h"><span class="role">child</span><span class="who">claude -p (seat)</span></div>
+        <div class="seq-h"><span class="role">log</span><span class="who">vision-log.jsonl</span></div>
+      </div>
+      <div class="seq-body" style="grid-template-rows:repeat(10,auto)">
+        <div class="seq-life" style="grid-column:2;grid-row:1/-1"></div>
+        <div class="seq-life" style="grid-column:3;grid-row:1/-1"></div>
+        <div class="seq-life" style="grid-column:4;grid-row:1/-1"></div>
+        <div class="seq-life" style="grid-column:5;grid-row:1/-1"></div>
+        <div class="seq-life" style="grid-column:6;grid-row:1/-1"></div>
+        <div class="seq-life" style="grid-column:7;grid-row:1/-1"></div>
+
+        <div class="seq-num" style="grid-row:1">1</div>
+        <div class="seq-msg" style="grid-row:1;grid-column:2/4"><div class="mt"><span class="m">Bash: node vision.ts</span><span class="m2">same flags as gateway mode</span></div><span class="dir">▸</span></div>
+        <div class="seq-num" style="grid-row:2">2</div>
+        <div class="seq-msg self" style="grid-row:2;grid-column:3/4"><div class="mt"><span class="m">mode = claude</span><span class="m2">refuse if ANTHROPIC_* set</span></div></div>
+        <div class="seq-num" style="grid-row:3">3</div>
+        <div class="seq-msg" style="grid-row:3;grid-column:3/5"><div class="mt"><span class="m">look up staged copy</span><span class="m2">sheet JPEG or the submission's PDF</span></div><span class="dir">▸</span></div>
+        <div class="seq-num" style="grid-row:4">4</div>
+        <div class="seq-msg ret" style="grid-row:4;grid-column:3/5"><span class="dir">◂</span><div class="mt"><span class="m">bytes (miss → Storage download)</span></div></div>
+        <div class="seq-num" style="grid-row:5">5</div>
+        <div class="seq-msg write" style="grid-row:5;grid-column:3/6"><div class="mt"><span class="m">write &lt;sha16&gt;.jpg + tiles</span><span class="m2">r1c1 … r2c3 at full resolution (jimp, q90)</span></div><span class="dir">▸</span></div>
+        <div class="seq-num" style="grid-row:6">6</div>
+        <div class="seq-msg" style="grid-row:6;grid-column:3/7"><div class="mt"><span class="m">claude -p &lt;prompt&gt; --model claude-opus-5-5</span><span class="m2">--tools Read --safe-mode --no-session-persistence · cwd scratch/vision · 15 min</span></div><span class="dir">▸</span></div>
+        <div class="seq-num" style="grid-row:7">7</div>
+        <div class="seq-msg ret" style="grid-row:7;grid-column:5/7"><span class="dir">◂</span><div class="mt"><span class="m">Read sheet, then tiles</span><span class="m2">PDF: page ranges ≤ 20</span></div></div>
+        <div class="seq-num" style="grid-row:8">8</div>
+        <div class="seq-msg ret" style="grid-row:8;grid-column:3/7"><span class="dir">◂</span><div class="mt"><span class="m">JSON result</span><span class="m2">result, session_id, num_turns, usage, total_cost_usd</span></div></div>
+        <div class="seq-num" style="grid-row:9">9</div>
+        <div class="seq-msg write" style="grid-row:9;grid-column:3/8"><div class="mt"><span class="m">append one line</span><span class="m2">+ file, tiles, image.sha256, image.tiles[], session usage</span></div><span class="dir">▸</span></div>
+        <div class="seq-num" style="grid-row:10">10</div>
+        <div class="seq-msg ret" style="grid-row:10;grid-column:2/4"><span class="dir">◂</span><div class="mt"><span class="m">stdout answer · exit 0</span></div></div>
+      </div>
+      <div class="seq-foot">
+        <span><span class="sw"></span> call</span><span><span class="sw write"></span> file write</span>
+        <span><span class="sw ret"></span> return / read</span><span><span class="sw self"></span> self / compute</span>
+      </div>
+    </div></div>
+    <p class="claim"><b>Claim (D4):</b> the child inherits the calling cell's seat, so it spends the subscription and never an API key, and it has the Read tool and nothing else.</p>
+
+    <h3 id="legacy-detail"><span class="hn">C</span>For contrast: the legacy tool</h3>
+    <div class="seq-scroll"><div class="seq">
+      <div class="seq-head">
+        <div></div>
+        <div class="seq-h"><span class="role">agent</span><span class="who">conductor-1 agent</span></div>
+        <div class="seq-h"><span class="role">tool</span><span class="who">vision (MCP)</span></div>
+        <div class="seq-h"><span class="role">db + store</span><span class="who">Supabase</span></div>
+        <div class="seq-h"><span class="role">external</span><span class="who">AI Gateway → Gemini</span></div>
+        <div class="seq-h"><span class="role">log</span><span class="who">workflow log (pino)</span></div>
+        <div class="seq-h"><span class="role">log</span><span class="who">output/vision-log.jsonl</span></div>
+      </div>
+      <div class="seq-body" style="grid-template-rows:repeat(6,auto)">
+        <div class="seq-life" style="grid-column:2;grid-row:1/-1"></div>
+        <div class="seq-life" style="grid-column:3;grid-row:1/-1"></div>
+        <div class="seq-life" style="grid-column:4;grid-row:1/-1"></div>
+        <div class="seq-life" style="grid-column:5;grid-row:1/-1"></div>
+        <div class="seq-life" style="grid-column:6;grid-row:1/-1"></div>
+        <div class="seq-life" style="grid-column:7;grid-row:1/-1"></div>
+        <div class="seq-num" style="grid-row:1">1</div>
+        <div class="seq-msg" style="grid-row:1;grid-column:2/4"><div class="mt"><span class="m">vision tool call</span><span class="m2">{checklistItemIds, documentId, sheetNum, prompt}</span></div><span class="dir">▸</span></div>
+        <div class="seq-num" style="grid-row:2">2</div>
+        <div class="seq-msg" style="grid-row:2;grid-column:3/5"><div class="mt"><span class="m">load file</span><span class="m2">thumbnail image · newest document signed URL</span></div><span class="dir">▸</span></div>
+        <div class="seq-num" style="grid-row:3">3</div>
+        <div class="seq-msg" style="grid-row:3;grid-column:3/6"><div class="mt"><span class="m">generateText (Gemini 3.1 Pro)</span><span class="m2">prompt.md + question</span></div><span class="dir">▸</span></div>
+        <div class="seq-num" style="grid-row:4">4</div>
+        <div class="seq-msg write" style="grid-row:4;grid-column:3/7"><div class="mt"><span class="m">log prompt + sanitized result</span></div><span class="dir">▸</span></div>
+        <div class="seq-num" style="grid-row:5">5</div>
+        <div class="seq-msg write" style="grid-row:5;grid-column:3/8"><div class="mt"><span class="m">sidecar line</span><span class="m2">event, checklistItemIds, documentId, sheetNum, runIndex, success, timestamp</span></div><span class="dir">▸</span></div>
+        <div class="seq-num" style="grid-row:6">6</div>
+        <div class="seq-msg ret" style="grid-row:6;grid-column:2/4"><span class="dir">◂</span><div class="mt"><span class="m">tool result text</span></div></div>
+      </div>
+      <div class="seq-foot">
+        <span><span class="sw"></span> call</span><span><span class="sw write"></span> log write</span><span><span class="sw ret"></span> return</span>
+      </div>
+    </div></div>
+    <p class="claim"><b>Claim (D1):</b> the legacy sidecar holds no prompt, no response and no image; the prompt survives only in the workflow log.</p>
+  </section>
+
+  <!-- ───────────────────────── 04 LOGS & TRACES ───────────────────────── -->
+  <section class="panel" id="traces">
+    <h2><span class="eyebrow">Logs &amp; traces</span>Where a vision request is recorded, and who reads it</h2>
+    <p class="lede">Three records come out of a review cell: the CLI's own <code>vision-log.jsonl</code>, the agent's <code>tools_used</code> on each finding, and the session stream conductor2 keeps. Everything downstream (the tool-usage report, Inspector General's Agent Debug, cc-compare) is built from those three.</p>
+
+    <div class="sysmap" style="grid-template-columns:.7fr repeat(4,1fr)">
+      <div class="colh" style="grid-area:1/1">trigger</div>
+      <div class="colh" style="grid-area:1/2">written in the cell</div>
+      <div class="colh" style="grid-area:1/3">processed by</div>
+      <div class="colh" style="grid-area:1/4">stored as</div>
+      <div class="colh" style="grid-area:1/5">read by</div>
+
+      <div class="sys trig" id="t-t1" style="grid-area:2/1"><span class="dot"></span><span class="t">vision.ts call</span><span class="d">one per request</span></div>
+      <div class="sys store" id="t-vl" style="grid-area:2/2"><a class="ref" href="#log-shape">D6 ↓</a><span class="k">file</span><span class="t">vision-log.jsonl</span><span class="d">2.1-review/&lt;guide&gt;--r&lt;k&gt;/</span></div>
+      <div class="sys" id="t-tu" style="grid-area:2/3"><a class="ref" href="#tool-usage">D7 ↓</a><span class="k">runbook step</span><span class="t">2.11-tool-usage</span><span class="d">counts calls in the session stream</span></div>
+      <div class="sys store" id="t-tr" style="grid-area:2/4"><span class="k">file</span><span class="t">tool-usage.json</span><span class="d">+ summary.json totals</span></div>
+      <div class="sys" id="t-cc" style="grid-area:2/5"><a class="ref" href="#readers">D10 ↓</a><span class="k">runbook</span><span class="t">cc-compare · operator</span><span class="d">adjudicates disputed items</span></div>
+
+      <div class="sys trig" id="t-t2" style="grid-area:3/1"><span class="dot"></span><span class="t">run persisted + 3.2 event</span><span class="d">ig/review.postprocess.requested</span></div>
+      <div class="sys store" id="t-rr" style="grid-area:3/2"><a class="ref" href="#seq-ig">D9 ↓</a><span class="k">bucket</span><span class="t">runbook-runs</span><span class="d">logs, findings, vision-log</span></div>
+      <div class="sys" id="t-sl" style="grid-area:3/3"><span class="k">IG compute</span><span class="t">runbook transcript slicer</span><span class="d">joins log lines to calls</span></div>
+      <div class="sys store" id="t-ig" style="grid-area:3/4"><span class="k">bucket</span><span class="t">inspector-general</span><span class="d">one slice per cell</span></div>
+      <div class="sys" id="t-ad" style="grid-area:3/5"><span class="k">ui</span><span class="t">IG Agent Debug</span><span class="d">per-item vision calls + images</span></div>
+
+      <div class="sys trig" id="t-t3" style="grid-area:4/1"><span class="dot"></span><span class="t">worker emits findings</span><span class="d">one per item id</span></div>
+      <div class="sys store" id="t-fj" style="grid-area:4/2"><a class="ref" href="#verdict-trail">D8 ↓</a><span class="k">file</span><span class="t">findings.json</span><span class="d">tools_used per item</span></div>
+      <div class="sys" id="t-bc" style="grid-area:4/3"><span class="k">runbook steps</span><span class="t">2.2 → 2.9 → 3.1</span><span class="d">consolidate, build comments, publish</span></div>
+      <div class="sys store" id="t-rc" style="grid-area:4/4"><span class="k">table</span><span class="t">review_comments</span><span class="d">agentTrace.tools_used</span></div>
+
+      <a class="sys-edge" data-from="t-t1" data-to="t-vl"></a>
+      <a class="sys-edge" data-from="t-vl" data-to="t-tu">reconcile</a>
+      <a class="sys-edge" data-from="t-tu" data-to="t-tr">writes</a>
+      <a class="sys-edge" data-from="t-tr" data-to="t-cc">reads</a>
+      <a class="sys-edge" data-from="t-vl" data-to="t-rr">persist</a>
+      <a class="sys-edge" data-from="t-t2" data-to="t-rr"></a>
+      <a class="sys-edge" data-from="t-rr" data-to="t-sl">download</a>
+      <a class="sys-edge" data-from="t-sl" data-to="t-ig">upload</a>
+      <a class="sys-edge" data-from="t-ig" data-to="t-ad">reads</a>
+      <a class="sys-edge" data-from="t-t3" data-to="t-fj"></a>
+      <a class="sys-edge" data-from="t-fj" data-to="t-rr">persist</a>
+      <a class="sys-edge" data-from="t-fj" data-to="t-bc">carried</a>
+      <a class="sys-edge" data-from="t-bc" data-to="t-rc">publish</a>
+    </div>
+    <div class="sys-refs">
+      <a class="refrow" data-ref="D6"><span class="chip">D6</span><span class="txt">the vision log line, written by the CLI itself on every call</span></a>
+      <a class="refrow" data-ref="D7"><span class="chip">D7</span><span class="txt">2.11-tool-usage reconciles CLI calls in the session stream against log lines</span></a>
+      <a class="refrow" data-ref="D8"><span class="chip">D8</span><span class="txt">the agent's tools_used travels with the finding into review_comments</span></a>
+      <a class="refrow" data-ref="D9"><span class="chip">D9</span><span class="txt">persistence to runbook-runs and Inspector General's transcript slicing</span></a>
+      <a class="refrow" data-ref="D10"><span class="chip">D10</span><span class="txt">cc-compare's adjudicator reads the vision logs</span></a>
+    </div>
+    <div class="sys-legend"><span><i></i>exists today</span></div>
+    <p class="claim"><b>Claim (D8):</b> the log line itself does not go into the review rows; only the agent-declared <code>tools_used</code> does.</p>
+
+    <h3 id="log-shape"><span class="hn">A</span>One vision-log.jsonl line, by mode</h3>
+    <div class="erd">
+      <div class="ent exist">
+        <div class="eh"><span class="en">every line</span><span class="stereo">both modes</span></div>
+        <div class="row"><span class="nm">ts</span><span class="ty">ISO time</span></div>
+        <div class="row hi"><span class="nm">itemIds</span><span class="ty">from --item-ids</span></div>
+        <div class="row"><span class="nm">documentId</span><span class="ty">plan set or document</span></div>
+        <div class="row"><span class="nm">sheet</span><span class="ty">number · null for a PDF</span></div>
+        <div class="row hi"><span class="nm">prompt</span><span class="ty">the agent's question</span></div>
+        <div class="row hi"><span class="nm">response</span><span class="ty">answer · null on failure</span></div>
+        <div class="row"><span class="nm">ok</span><span class="ty">bool</span></div>
+        <div class="row"><span class="nm">error</span><span class="ty">“load: …” or “model: …”</span></div>
+        <div class="note">a load failure stops here: no mode, no image</div>
+      </div>
+      <div class="ent exist">
+        <div class="eh"><span class="en">after the file loaded</span><span class="stereo">gateway</span></div>
+        <div class="row"><span class="nm">mode</span><span class="ty">"gateway"</span></div>
+        <div class="row"><span class="nm">model</span><span class="ty">google/gemini-3.1-pro-preview</span></div>
+        <div class="row"><span class="nm">source</span><span class="ty">staged | storage</span></div>
+        <div class="row hi"><span class="nm">image.bucket</span><span class="ty">submission-data</span></div>
+        <div class="row hi"><span class="nm">image.storagePath</span><span class="ty">the object shown</span></div>
+        <div class="row"><span class="nm">image.kind</span><span class="ty">image | pdf</span></div>
+        <div class="note">no token usage: spend is in the AI Gateway, by run id + node tag</div>
+      </div>
+      <div class="ent exist">
+        <div class="eh"><span class="en">after the file loaded</span><span class="stereo">claude</span></div>
+        <div class="row"><span class="nm">mode · model · source</span><span class="ty">"claude", claude-opus-5-5</span></div>
+        <div class="row"><span class="nm">file · fileKind · fileBytes</span><span class="ty">&lt;sha16&gt;.jpg</span></div>
+        <div class="row"><span class="nm">tiles</span><span class="ty">count, e.g. 6</span></div>
+        <div class="row hi"><span class="nm">image.sha256</span><span class="ty">exact bytes shown</span></div>
+        <div class="row hi"><span class="nm">image.tiles[]</span><span class="ty">{file, x, y, w, h}</span></div>
+        <div class="row"><span class="nm">session_id · num_turns</span><span class="ty">child session</span></div>
+        <div class="row"><span class="nm">duration_ms · usage</span><span class="ty">tokens</span></div>
+        <div class="row"><span class="nm">total_cost_usd</span><span class="ty">list-price estimate</span></div>
+      </div>
+    </div>
+    <p class="claim"><b>Claim (D6):</b> no pixels are uploaded: the storage reference plus the tile rectangles are enough to redraw exactly what the model saw.</p>
+    <div class="prompt"><span class="ph">A real claude-mode line (WWCW_rb2_run2_claude_vision, cc-2--r1; strings trimmed)</span>{"ts":"2026-10-06T15:41:09.273Z","itemIds":["CC-2-14"],
+ "documentId":"6ce598b8-…","sheet":30,
+ "prompt":"Look at the title block of this sheet (sheet 30 of 30, Geote…",
+ "response":"**No. This sheet has no PE seal, no signature and no date.**…",
+ "ok":true,"mode":"claude","model":"claude-opus-5-5","source":"staged",
+ "file":"6d2e5064ee52cd09.jpg","fileKind":"image","fileBytes":628715,"tiles":6,
+ "session_id":"eae8ebce-…","num_turns":5,"duration_ms":15030,"total_cost_usd":0.1518}</div>
+
+    <h3 id="tool-usage"><span class="hn">B</span>2.11-tool-usage: is every call accounted for?</h3>
+    <div class="dflow">
+      <div class="dq"><span class="q">A Bash command in the cell's session stream runs node …/vision.ts --document-id …? (not --help, not cat)</span><span class="yes">yes →</span><span class="out">count as vision_cli</span></div>
+      <div class="dno">then ↓</div>
+      <div class="dq"><span class="q">cli_calls == lines in the cell's vision-log.jsonl?</span><span class="yes">yes →</span><span class="out">reconciled: true</span></div>
+      <div class="dno">no ↓</div>
+      <div class="dq"><span class="q">mismatch</span><span class="yes"></span><span class="out warn">listed in summary.vision_unreconciled (evidence, never a gate)</span></div>
+      <div class="dno">and ↓</div>
+      <div class="dq"><span class="q">Log lines with a session_id (claude mode)?</span><span class="yes">yes →</span><span class="out">summed as claude_sessions → summary.vision_claude_sessions</span></div>
+      <div class="dno">and ↓</div>
+      <div class="dq end"><span class="q">Any direct read of a .jpg or .pdf by the agent?</span><span class="yes"></span><span class="out fail">flags.binary_reads (the prompt forbids it)</span></div>
+    </div>
+    <p class="claim"><b>Claim (D7):</b> claude-mode child sessions spend the seat outside conductor's ledger, so 2.11 is the only place they are totalled.</p>
+
+    <h3 id="seq-ig"><span class="hn">C</span>Inspector General: from persisted files to the Agent Debug page</h3>
+    <div class="seq-scroll"><div class="seq">
+      <div class="seq-head">
+        <div></div>
+        <div class="seq-h"><span class="role">runbook step</span><span class="who">3.2-ig-postprocess</span></div>
+        <div class="seq-h"><span class="role">fn</span><span class="who">IG postprocess</span></div>
+        <div class="seq-h"><span class="role">compute</span><span class="who">transcript slicer</span></div>
+        <div class="seq-h"><span class="role">store</span><span class="who">runbook-runs</span></div>
+        <div class="seq-h"><span class="role">store</span><span class="who">submission-data</span></div>
+        <div class="seq-h"><span class="role">store</span><span class="who">inspector-general</span></div>
+      </div>
+      <div class="seq-body" style="grid-template-rows:repeat(7,auto)">
+        <div class="seq-life" style="grid-column:2;grid-row:1/-1"></div>
+        <div class="seq-life" style="grid-column:3;grid-row:1/-1"></div>
+        <div class="seq-life" style="grid-column:4;grid-row:1/-1"></div>
+        <div class="seq-life" style="grid-column:5;grid-row:1/-1"></div>
+        <div class="seq-life" style="grid-column:6;grid-row:1/-1"></div>
+        <div class="seq-life" style="grid-column:7;grid-row:1/-1"></div>
+        <div class="seq-num" style="grid-row:1">1</div>
+        <div class="seq-msg event" style="grid-row:1;grid-column:2/4"><div class="mt"><span class="m">ig/review.postprocess.requested</span><span class="m2">reviewId, runId</span></div><span class="dir">▸</span></div>
+        <div class="seq-num" style="grid-row:2">2</div>
+        <div class="seq-msg" style="grid-row:2;grid-column:3/5"><div class="mt"><span class="m">slice run</span><span class="m2">reviews.metadata.runbookRunId</span></div><span class="dir">▸</span></div>
+        <div class="seq-num" style="grid-row:3">3</div>
+        <div class="seq-msg" style="grid-row:3;grid-column:4/6"><div class="mt"><span class="m">persisted.json, logs/*.jsonl.gz</span><span class="m2">findings.json, vision-log.jsonl, plan-set pins</span></div><span class="dir">▸</span></div>
+        <div class="seq-num" style="grid-row:4">4</div>
+        <div class="seq-msg self" style="grid-row:4;grid-column:4/5"><div class="mt"><span class="m">Bash vision.ts → tool “vision”</span><span class="m2">ids from --item-ids</span></div></div>
+        <div class="seq-num" style="grid-row:5">5</div>
+        <div class="seq-msg self" style="grid-row:5;grid-column:4/5"><div class="mt"><span class="m">join lines to calls</span><span class="m2">started ≤ ts+1s, prompt prefix (80 ch)</span></div></div>
+        <div class="seq-num" style="grid-row:6">6</div>
+        <div class="seq-msg" style="grid-row:6;grid-column:4/7"><div class="mt"><span class="m">image sizes for tile crops</span><span class="m2">re-derive image for lines before #2033</span></div><span class="dir">▸</span></div>
+        <div class="seq-num" style="grid-row:7">7</div>
+        <div class="seq-msg write" style="grid-row:7;grid-column:4/8"><div class="mt"><span class="m">upload slice</span><span class="m2">ig-derived-review-outputs/&lt;reviewId&gt;/transcripts/&lt;grouping&gt;/&lt;run&gt;.json</span></div><span class="dir">▸</span></div>
+      </div>
+      <div class="seq-foot">
+        <span><span class="sw"></span> call / read</span><span><span class="sw event"></span> async event</span><span><span class="sw write"></span> upload</span><span><span class="sw self"></span> compute</span>
+      </div>
+    </div></div>
+    <p class="claim"><b>Claim (D9):</b> each joined call carries renderedPrompt, visionCalls, resolvedImages and tileCrops, which is what the Agent Debug page shows per checklist item.</p>
+
+    <h3 id="verdict-trail"><span class="hn">D</span>The verdict trail into the app</h3>
+    <div class="spectable-scroll"><table class="spectable">
+      <thead><tr><th>Step</th><th>What happens to the vision evidence</th><th>Written</th></tr></thead>
+      <tbody>
+        <tr><td><span class="sn">2.1</span></td><td>agent writes <code>observation</code> (what vision showed), <code>tools_used: ["vision"]</code>, <code>evidenceLocations</code> (no block number for vision-only evidence)</td><td><code>findings.json</code> <span class="w">WRITE</span></td></tr>
+        <tr><td><span class="sn">2.2–2.7</span></td><td>consolidate runs, forced outcomes, enrich: <code>tools_used</code> carried unchanged</td><td><code>enriched-findings.json</code> <span class="w">WRITE</span></td></tr>
+        <tr><td><span class="sn">2.9</span></td><td><code>build-review-comments.ts:267</code> builds <code>agentTrace {observation, reasoning, tools_used, forced?, organicStatus?}</code></td><td><code>review-comments.json</code> <span class="w">WRITE</span></td></tr>
+        <tr><td><span class="sn">3.1</span></td><td>publish the envelope as a draft review</td><td><code>reviews</code>, <code>review_comments</code> <span class="w">INSERT</span></td></tr>
+      </tbody>
+    </table></div>
+
+    <h3 id="readers"><span class="hn">E</span>Other readers</h3>
+    <div class="grid2">
+      <div class="card keep"><b>cc-compare</b> (<code>runbooks/cc-compare</code>, step <code>2.1-adjudicate</code>) reads the review cells' vision logs to see what each run was told, and may call the same vision CLI itself to settle a disputed item.</div>
+      <div class="card keep"><b>Not the vision CLI:</b> <code>2.12-annotate</code> (comment markings, Opus) reads rendered crops natively to place markers. It renders no verdict, is the one exception to AGENTS.md rule 2, and has its own <code>pixel_reads</code> section in 2.11.</div>
+    </div>
+  </section>
+
+  <!-- ───────────────────────── 05 COMPARE ───────────────────────── -->
+  <section class="panel" id="compare">
+    <h2><span class="eyebrow">Side by side</span>Legacy tool vs runbook gateway vs runbook claude</h2>
+    <div class="spectable-scroll"><table class="spectable">
+      <thead><tr><th></th><th>Legacy tool</th><th>Runbook · gateway</th><th>Runbook · claude</th></tr></thead>
+      <tbody>
+        <tr><td>Agent calls it as</td><td>MCP tool <code>vision</code></td><td>Bash <code>node bin/vision.ts</code></td><td>same CLI</td></tr>
+        <tr><td>Model</td><td>Gemini 3.1 Pro</td><td>Gemini 3.1 Pro</td><td>Opus 5.5 (<code>visionModel</code>)</td></tr>
+        <tr><td>Instructions</td><td><code>prompt.md</code></td><td><code>vision-prompt.md</code> (verbatim copy)</td><td>same + how to open the file and tiles</td></tr>
+        <tr><td>Sheet shown</td><td>thumbnail from Storage</td><td>staged JPEG (digest-checked), else Storage</td><td>same + full-resolution tiles</td></tr>
+        <tr><td>Document shown</td><td>newest version, signed URL</td><td>newest version, signed URL</td><td>staged PDF = the submission's version</td></tr>
+        <tr><td>Paid by</td><td>AI Gateway</td><td>AI Gateway, no-training providers</td><td>cell's subscription seat</td></tr>
+        <tr><td>Prompt + answer logged</td><td>workflow log only</td><td>vision-log.jsonl</td><td>vision-log.jsonl + session usage</td></tr>
+        <tr><td>Image logged</td><td>no</td><td>storage reference</td><td>reference + sha256 + tile rectangles</td></tr>
+        <tr><td>Item attribution</td><td><code>checklistItemIds</code> input</td><td><code>--item-ids</code></td><td><code>--item-ids</code></td></tr>
+        <tr><td>Call accounting</td><td>none</td><td>2.11 reconciles</td><td>2.11 reconciles + child-session totals</td></tr>
+      </tbody>
+    </table></div>
+
+    <h3><span class="hn">A</span>What real runs logged</h3>
+    <div class="spectable-scroll"><table class="spectable">
+      <thead><tr><th>Run dir (~/noetic/working/completeness-check/)</th><th>Mode</th><th>Lines</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td><code>whitewater-car-wash-v1-cc27</code> · review 75a6449c</td><td>gateway</td><td>152</td><td>86 ok, 66 <code>load:</code> failures (host-lane sandbox, before bureau #2000)</td></tr>
+        <tr><td><code>WWCW_rb2_run2_claude_vision</code> · review d36b7aad</td><td>claude</td><td>76</td><td>all ok and staged · 76 sessions · $24.06 list · 2 cells unreconciled</td></tr>
+        <tr><td><code>whitewater-cc-v1-opus55</code></td><td>claude</td><td>97</td><td>all ok and staged · lines carry <code>image</code> with tiles</td></tr>
+        <tr><td><code>sa2008-v1-claude-vision-2</code></td><td>claude</td><td>63</td><td>all ok and staged</td></tr>
+      </tbody>
+    </table></div>
+    <div class="callout"><span class="lab">history</span> bureau #1935 runbook port (gateway CLI) → #1951 opt-in claude mode → #2000 read the staged file, no network → #2033 log the image each call was shown → #2099 gateway refuses providers that train on prompts.</div>
+  </section>
+
+  <!-- ───────────────────────── 06 GAPS ───────────────────────── -->
+  <section class="panel" id="gaps">
+    <h2><span class="eyebrow">Open questions</span>What the current design leaves open</h2>
+    <div class="callout ember"><span class="lab">Q1</span> <b>The two modes can show a different version of a document.</b> Gateway sends the newest <code>document_version</code> (legacy parity); claude uses the staged PDF, the version the submission links. For a document re-uploaded after the submission they analyze different files.</div>
+    <div class="callout ember"><span class="lab">Q2</span> <b>Claude-mode spend sits outside conductor's ledger.</b> Only 2.11 totals it, at list price.</div>
+    <div class="callout ember"><span class="lab">Q3</span> <b>Attribution is self-reported.</b> <code>--item-ids</code> is whatever the agent typed (missing only warns), and IG's line-to-call join is a timestamp + prompt-prefix heuristic. Two cells were unreconciled on <code>WWCW_rb2_run2_claude_vision</code>.</div>
+    <div class="callout ember"><span class="lab">Q4</span> <b><code>tools_used</code> is not cross-checked</b> against the log, so a finding can claim or omit vision without a matching line.</div>
+    <div class="callout ember"><span class="lab">Q5</span> <b>Gateway mode logs no usage.</b> Tokens and cost per call are only in the AI Gateway dashboard, by run id and node tag.</div>
+    <div class="callout ember"><span class="lab">Q6</span> <b>The tile grid is copied</b> into IG's slicer and must be kept in step with <code>vision.ts</code> by hand.</div>
+  </section>
+
+</main>
+
+<script data-spec-kit-js>
+/* spec-kit v5.1 — system-map edge renderer.
+   Inline the ENTIRE contents of this file into the spec's
+   <script data-spec-kit-js> block (do not <script src>).
+   Reads every .sysmap, and for each hidden <a class="sys-edge"
+   data-from="idA" data-to="idB">label</a> draws an SVG path between the
+   two nodes' nearest sides. Routing:
+     side-to-side   when A and B share a row (label rides in the row gap ABOVE the boxes)
+     top-to-bottom  when A and B share a column (label sits right of the line)
+     orthogonal     otherwise: leave A vertically into the gap beside A's whole ROW (tags
+                    included), run, drop into B (label hugs the source); a backward edge
+                    in the same row goes over the top, .loop higher still.
+   Labels clear the source's floating .ref tag, stay inside the map, and nudge up off
+   any label drawn earlier.
+   Redraws on load, font load, resize, and whenever a tab panel becomes visible. */
+(function(){
+  const NS='http://www.w3.org/2000/svg';
+  const COL={std:'#6397b8',new:'#15803d',chg:'#b45309',gap:'#b91c1c',loop:'#6397b8'};
+  const KINDS=['new','chg','gap','loop'];
+  function el(tag,attrs){const n=document.createElementNS(NS,tag);for(const k in attrs)n.setAttribute(k,attrs[k]);return n;}
+  function draw(map){
+    let svg=map.querySelector('svg.edges');
+    if(!svg){
+      svg=el('svg',{class:'edges'});
+      const defs=el('defs',{});
+      for(const k in COL){
+        const m=el('marker',{id:'ah-'+k,viewBox:'0 0 10 10',refX:'9',refY:'5',markerWidth:'7',markerHeight:'7',orient:'auto-start-reverse'});
+        m.appendChild(el('path',{d:'M0 0L10 5L0 10z',fill:COL[k]}));defs.appendChild(m);
+      }
+      svg.appendChild(defs);map.appendChild(svg);
+    }
+    svg.querySelectorAll('g').forEach(g=>g.remove());
+    const mr=map.getBoundingClientRect(); if(mr.width===0) return;   // hidden tab: nothing to measure
+    const paths=el('g',{class:'paths'}), labels=el('g',{class:'labels'});
+    const rect=r=>({l:r.left-mr.left,t:r.top-mr.top,r:r.right-mr.left,b:r.bottom-mr.top,cx:(r.left+r.right)/2-mr.left,cy:(r.top+r.bottom)/2-mr.top});
+    const box=n=>rect((n.querySelector('.dot')||n).getBoundingClientRect());
+    const nodes=[...map.querySelectorAll('.sys')].map(n=>({n,b:box(n),ref:n.querySelector('.ref')?rect(n.querySelector('.ref').getBoundingClientRect()):null}));
+    // the vertical band a node's ROW occupies: every node overlapping it vertically, tags included
+    const band=a=>{let t=a.t,b=a.b;nodes.forEach(o=>{if(Math.min(a.b,o.b.b)-Math.max(a.t,o.b.t)>0){t=Math.min(t,o.b.t,o.ref?o.ref.t:o.b.t);b=Math.max(b,o.b.b);}});return {t,b};};
+    const placed=[];   // label boxes already drawn, for collision nudging
+    map.querySelectorAll('.sys-edge').forEach(e=>{
+      const A=map.querySelector('#'+CSS.escape(e.dataset.from||'')), B=map.querySelector('#'+CSS.escape(e.dataset.to||''));
+      if(!A||!B){console.warn('sysmap edge: missing node',e.dataset.from,e.dataset.to);return;}
+      const a=box(A), b=box(B), aRef=A.querySelector('.ref'), aRefR=aRef?rect(aRef.getBoundingClientRect()):null;
+      const kind=KINDS.find(k=>e.classList.contains(k))||'std';
+      const sameRow=Math.min(a.b,b.b)-Math.max(a.t,b.t)>0, sameCol=Math.min(a.r,b.r)-Math.max(a.l,b.l)>0;
+      const forward=b.l>=a.r;
+      let d,lx,ly,anchor='middle';
+      const clamp=(v,lo,hi)=>Math.max(lo,Math.min(hi,v));
+      if(sameRow&&forward&&kind!=='loop'){        // side to side, left→right
+        const x1=a.r,x2=b.l,y1=a.cy,mx=(x1+x2)/2;
+        const y2=A.querySelector('.dot')?clamp(y1,b.t+10,b.b-10):b.cy;
+        d=`M${x1} ${y1}C${mx} ${y1},${mx} ${y2},${x2} ${y2}`;
+        lx=mx; ly=Math.min(a.t,b.t)-6;
+        if(aRefR&&ly>aRefR.t-2&&ly<aRefR.b+12){lx=aRefR.r+6;anchor='start';}   // clear the source's floating tag
+      }else if(sameCol&&!sameRow){               // top to bottom; label just past the source end, right of the line
+        const down=b.t>=a.b, y1=down?a.b:a.t, y2=down?b.t:b.b, x1=a.cx, x2=b.cx, my=(y1+y2)/2;
+        d=`M${x1} ${y1}C${x1} ${my},${x2} ${my},${x2} ${y2}`;
+        // label just past the SOURCE end going down; just past the TARGET end going up (a source's
+        // top-right is where its floating tag lives)
+        lx=x1+8; ly=down?y1+14:y2+14; anchor='start';
+      }else{                                     // orthogonal, through the gap beside A's ROW (not A's box)
+        const rb=band(a); let y1,yr,y2;
+        if(sameRow){ y1=a.t; yr=rb.t-(kind==='loop'?34:22); y2=b.t; }      // backward / loop: over the whole row + its labels
+        else if(b.cy>a.cy){ y1=a.b; yr=rb.b+12; y2=b.t; }                   // down: gap below the row
+        else { y1=a.t; yr=rb.t-12; y2=b.b; }                                // up: gap above the row (above tags)
+        d=`M${a.cx} ${y1}L${a.cx} ${yr}L${b.cx} ${yr}L${b.cx} ${y2}`;
+        const rightward=b.cx>a.cx; lx=a.cx+(rightward?22:-22); anchor=rightward?'start':'end'; ly=yr-4;
+      }
+      paths.appendChild(el('path',{d,class:'e '+kind,'marker-end':`url(#ah-${kind})`}));
+      const txt=e.textContent.trim();
+      if(txt){
+        const t=el('text',{x:lx,y:ly,'text-anchor':anchor,class:'lbl '+kind}); t.textContent=txt;
+        const bg=el('rect',{class:'lblbg',rx:3}); labels.appendChild(bg); labels.appendChild(t);
+        svg.appendChild(labels);
+        let tb=t.getBBox();
+        if(tb.x+tb.width>mr.width-6){t.setAttribute('text-anchor','end');t.setAttribute('x',anchor==='start'?lx-16:lx);tb=t.getBBox();}   // keep inside the map
+        for(let i=0;i<4;i++){const hit=placed.find(p=>!(tb.x>p.x+p.width+2||p.x>tb.x+tb.width+2||tb.y>p.y+p.height+1||p.y>tb.y+tb.height+1));if(!hit)break;t.setAttribute('y',+t.getAttribute('y')-(tb.height+3));tb=t.getBBox();}  // nudge up off an earlier label
+        placed.push(tb);
+        bg.setAttribute('x',tb.x-4);bg.setAttribute('y',tb.y-2);bg.setAttribute('width',tb.width+8);bg.setAttribute('height',tb.height+4);
+      }
+    });
+    svg.appendChild(paths); svg.appendChild(labels);   // labels above paths
+  }
+  // long identifiers break cleanly after underscores instead of mid-word
+  function softBreaks(){document.querySelectorAll('.sys .t, .uc .nt').forEach(t=>{if(t.dataset.wbr||!/_/.test(t.textContent))return;t.innerHTML=t.innerHTML.replace(/_/g,'_<wbr>');t.dataset.wbr='1';});}
+  const all=()=>{softBreaks();document.querySelectorAll('.sysmap').forEach(draw);};
+  /* ---- spec links: when <main data-spec="DESIGN-SPEC.html"> is set, every reference token
+     becomes a link into the reader page: P0a → #P0a, D12 → #D12, Q6 → #Q6, §3.2 → #s3-2 */
+  function linkSpec(){
+    const main=document.querySelector('main[data-spec]'); if(!main) return;
+    const spec=main.dataset.spec;
+    const tokHref=t=>spec+'#'+(t.startsWith('§')?'s'+t.slice(1).replace(/\./g,'-'):t);
+    document.querySelectorAll('.sys-refs .refrow').forEach(r=>{
+      const tok=r.dataset.ref||(r.querySelector('.chip')||{}).textContent||''; if(!tok.trim()) return;
+      if(!r.getAttribute('href')) r.setAttribute('href',tokHref(tok.trim()));
+      if(!r.querySelector('.go')){const g=document.createElement('span');g.className='go';r.appendChild(g);}
+    });
+    document.querySelectorAll('.claim b, figure.concept figcaption b').forEach(b=>{
+      if(b.querySelector('a')) return;
+      b.innerHTML=b.innerHTML.replace(/(§\d+(?:\.\d+)*)|\b(P\d[a-z]?|D\d+|Q\d+)\b/g,m=>`<a class="cite" href="${tokHref(m)}" title="read this section of the spec">${m}</a>`);
+    });
+  }
+  window.addEventListener('DOMContentLoaded',linkSpec);
+  window.addEventListener('load',all);
+  if(document.fonts&&document.fonts.ready) document.fonts.ready.then(all);
+  window.addEventListener('resize',all);
+  new MutationObserver(all).observe(document.documentElement,{attributes:true,subtree:true,attributeFilter:['class']});
+})();
+
+</script>
+<script>
+  const btns=document.querySelectorAll('nav.tabs button');
+  const panels=document.querySelectorAll('.panel');
+  const IDS=['overview','flow','sequences','traces','compare','gaps'];
+  function show(id,opts={}){
+    btns.forEach(b=>b.classList.toggle('active',b.dataset.tab===id));
+    panels.forEach(p=>p.classList.toggle('active',p.id===id));
+    if(!opts.keepHash&&location.hash.slice(1)!==id) history.replaceState(null,'','#'+id);
+    if(!opts.noScroll) window.scrollTo({top:0,behavior:opts.instant?'auto':'smooth'});
+  }
+  btns.forEach(b=>b.addEventListener('click',()=>show(b.dataset.tab)));
+  function goHash(instant){
+    const h=decodeURIComponent(location.hash.slice(1)); if(!h) return;
+    if(IDS.includes(h)){show(h,{instant});return;}
+    const el=document.getElementById(h); if(!el) return;
+    const panel=el.closest('.panel'); if(panel&&!panel.classList.contains('active')) show(panel.id,{keepHash:true,noScroll:true});
+    el.scrollIntoView({block:'start',behavior:instant?'auto':'smooth'});
+  }
+  goHash(true);
+  window.addEventListener('hashchange',()=>goHash(false));
+</script>
+</body>
+</html>
