@@ -499,6 +499,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
   <button data-tab="model"><span class="n">04</span>What's stored</button>
   <button data-tab="anchoring"><span class="n">05</span>The anchoring target</button>
   <button data-tab="rollout"><span class="n">06</span>Priority and open questions</button>
+  <button data-tab="sizing"><span class="n">07</span>Opportunity Sizing Recommendations</button>
 </nav>
 
 <main data-spec="NORTH-STAR-SPEC.html">
@@ -1081,6 +1082,115 @@ computed by the builder.</div>
     <div class="foot">Sits above the cartographer extraction, evidence, placement and anchoring specs (winston#274, #270, #279, #281, #283, #289). It replaces none of them.</div>
   </section>
 
+
+  <section class="panel" id="sizing">
+    <h2><span class="eyebrow">07 · what one formal review says about this plan</span>Opportunity sizing recommendations<span class="sub">Three changes suggested by sizing the geometry opportunity against a real formal review: more plan-set layers, anchor plan sets sooner, and treat elevation as first-class.</span></h2>
+    <p class="lede">All 272 comments of the 2008 San Antonio St formal review (review <code>2802ece8</code>) were classified. <b>49% (134) would benefit from native geometry</b>: 62 are core geometric, where the finding <i>is</i> a measurement, and 72 are geometry-assisted. That rises to 68% of the comments rated <i>significant</i>. <b>46% of the geometric comments need geometry from both producers</b>, which is direct evidence for G1/G2 and the one-table design. Full report: Inspector General <code>2026-10-13-geometry-opportunity-formal-review</code>.</p>
+
+    <div class="callout ember"><span class="lab">the finding that reframes the pitch</span> A spike re-measured five of the agent's eyeballed figures from the PDF's vector linework. The agent was <b>accurate</b> to within about 0.3 ft each time. The case for <code>geo</code> is therefore not that the agent measures wrong. It is that the agent gets <b>deterministic, citable, cheap</b> measurements, and that <b>whole-site sweeps</b> become possible: every utility pair under 5 ft, every object in a ½ CRZ, every proposed feature in the ROW. Sweeps catch findings the agent never noticed. G2's success metric should count those, not accuracy uplift on comments already written.</div>
+
+    <h3><span class="hn">1</span>The plan-set geometries worth extracting</h3>
+    <p>§1.2 lists the building footprint, curbs and drive aisles, utility structures and detention ponds. The review asks for more than that. Below are the layers ranked by how many geometric comments need them. <b>New</b> marks a layer §1.2 does not name.</p>
+    <div class="spectable-scroll"><table class="spectable">
+      <thead><tr><th>Layer (plan set)</th><th>Geometric comments</th><th>Core (A)</th><th>vs §1.2</th><th>What review asks of it</th></tr></thead>
+      <tbody>
+        <tr><td>lot lines · ROW lines · street centerline</td><td>66 · 45 · 11</td><td>25 · 18 · 7</td><td><b>new</b> (drawn by the plan set too)</td><td>setbacks from the centerline and lot line, "is it in the ROW", license-agreement items. This is also the anchoring target, see §2 below</td></tr>
+        <tr><td>building footprint and faces</td><td>51</td><td>30</td><td>in §1.2</td><td>face to curb (12 ft) and centerline (30 ft), coverage, fire separation, step-back</td></tr>
+        <tr><td>water and fire: service lines, meters, backflow, hydrant, FDC</td><td>36</td><td>21</td><td><b>new</b> (lines, small structures)</td><td>5 ft wet/dry separation, taps 3 ft apart, meter not in sidewalk, FDC within 100 ft of hydrant</td></tr>
+        <tr><td>curb, face of curb, returns</td><td>34</td><td>18</td><td>in §1.2</td><td>tree offset from curb, hydrant 3–6 ft from curb, clear widths</td></tr>
+        <tr><td>sidewalk, boardwalk, ramps</td><td>32</td><td>19</td><td><b>new</b></td><td>pedestrian clear width, objects inside the walk, ROW encroachment</td></tr>
+        <tr><td>tree trunks and root zones (CRZ, ½, ¼)</td><td>29 · 13</td><td>19 · 9</td><td><b>new</b></td><td>the largest environmental cluster: what sits inside each root zone, and the 50% natural-grade rule</td></tr>
+        <tr><td>limits of construction and erosion controls</td><td>20</td><td>8</td><td><b>new</b></td><td>LOC area, silt fence or washout inside a CRZ, construction entrance length</td></tr>
+        <tr><td>driveways and drive aisles</td><td>19</td><td>12</td><td>in §1.2</td><td>driveway spacing (75 ft), aisle width, throat storage</td></tr>
+        <tr><td>streetscape objects: grates, racks, benches, signs, light poles</td><td>17</td><td>10</td><td><b>new</b></td><td>bike-rack count and siting, clear width past each object</td></tr>
+        <tr><td>wastewater: services, cleanouts, manholes</td><td>14</td><td>7</td><td>partly (manholes)</td><td>9 ft tree-to-service, separation from water mains</td></tr>
+        <tr><td>dry utilities: duct bank, electric manholes, vault, gas line and meter</td><td>14</td><td>8</td><td>partly (transformers)</td><td>vault approach and landing zones, gas meter in the fire access strip</td></tr>
+        <tr><td>interior rooms and entrances (architectural sheets)</td><td>12</td><td>5</td><td><b>new</b></td><td>rooms on the alley, distance to the entrance, the accessible-route walk</td></tr>
+        <tr><td>storm lines, inlets, drainage areas</td><td>11</td><td>3</td><td><b>new</b></td><td>300 ft to a public storm drain, impervious area per subarea</td></tr>
+        <tr><td>retaining walls · parking stalls</td><td>8 · 8</td><td>5 · 5</td><td><b>new</b></td><td>wall in the ROW or CRZ, stall dimensions</td></tr>
+      </tbody>
+    </table></div>
+    <p class="claim"><b>Claim (§6):</b> about 20 layers cover nearly all of the demand, and most of them are points and lines, not polygons. That strengthens §6's "point and line features" point. Extract by demand, not exhaustively. Detention ponds didn't appear because this site is urban infill, so a suburban review should be sized before the list is fixed.</p>
+    <div class="callout"><span class="lab">what the reader faces (from the spike)</span>
+      <p>The 53-sheet set is a vector CAD export. The site plan alone has about 152k segments.</p>
+      <ul>
+        <li><b>No layers.</b> There are no PDF layers (OCGs), so semantics live in about 30 stroke styles plus the legend.</li>
+        <li><b>Exploded dashes.</b> Dashes are broken into individual segments; the LOC alone is 2,367 of them.</li>
+        <li><b>Some labels are drawn, not typed.</b> They exist only as vector glyphs.</li>
+        <li><b>Stipple fills have no outline.</b> Sidewalks drawn as stipple can't be read as a polygon directly.</li>
+        <li><b>Two raster sheets.</b> Sheets 45 and 48 are images, with nothing to measure from vectors.</li>
+      </ul>
+      <p>Once a style is tagged as a feature, measuring takes seconds. <b>The cost is tagging the identity of each line, not the geometry</b>, which is the plan-set side of G4 and Q2.</p>
+    </div>
+
+    <h3><span class="hn">2</span>Prioritize anchoring the plan set</h3>
+    <p>Anchoring is built and exercised only for the SIR flow today: the car-wash plat (<code>e94fae93</code>), solved through the SIR's parcel rows. Plan sets sit at P5, last. The sizing says to pull plan-set anchoring forward.</p>
+    <div class="grid2">
+      <div class="card"><b>Plan sets look like the easiest anchoring case in the corpus</b><br>
+        <p>The site plan draws the surveyed lot with its bearings and distances. The spike measured the drawn lot at 120.06 / 113.00 / 120.03 ft against the printed 120.05 / 113.00 / 120.03 ft, and 13,591 sf against the Site Data table's 13,590 sf.</p>
+        <p>That is a clean closed ring to fit to the county parcel ring. Compare the SIR corpus, where 51% of geometries are a closed shape with no position.</p>
+        <p>This answers <b>Q6</b>: fit the plan set's drawn lot ring to the parcel ring, sourced through the D11 ladder.</p></div>
+      <div class="card"><b>One anchor per plan set, not per sheet</b><br>
+        <p>Sheets exported from the same CAD file share a frame up to a translation. The spike found sheet 10 is sheet 7 shifted by (+10.32, +238.5) pt.</p>
+        <p>So a plan set is one frame, fitted to the lot quad on any sheet. Sheets 7 and 10 gave the same LOC area to the square foot.</p>
+        <p>Ground-versus-grid is absorbed by the fit's scale term (about 1.0001 in Central Texas), so the scale should not be forced to exactly 1 (B3).</p></div>
+    </div>
+    <div class="grid2">
+      <div class="card"><b>Recommendation: anchor first, keep the frame as provenance</b><br>
+        <p>Tools query only anchored rows, in the county SRID. PostGIS's mixed-SRID guard then does the safety work for free.</p>
+        <p>The frame-local shape and its <code>frame_key</code> are stored upstream, the same as <code>cartographer_geometries</code>, so a revised anchor re-derives <code>geo</code> (D3).</p>
+        <p>Anchoring is rotation plus translation, so distances <i>inside</i> a plan set survive it exactly. Only plan-set-to-county answers inherit the anchor residual (0.17–0.31 ft on the car-wash anchor). Report that residual on those answers (B1).</p></div>
+      <div class="card"><b>Fallback, only if anchors stall in practice</b><br>
+        <p>Let the tools also relate SRID-0 geometry within one <code>frame_key</code>. 27% of the geometric comments are plan-set-only and need no anchor at all.</p>
+        <p>This costs frame-aware tool logic. Two SRID-0 shapes from different frames pass the SRID guard and return a meaningless number, so the tools would have to enforce frame matching themselves.</p>
+        <p>Don't build this unless the anchor gate turns out to be a bottleneck.</p></div>
+    </div>
+    <div class="callout new"><span class="lab">suggested change to the priority tiers</span> Split P5 into:
+      <ul>
+        <li><b>P5a: plan-set reader for the top layers plus the parcel-ring anchor.</b> Promote it to follow P2, since P2's decoupled anchoring target is exactly what it needs.</li>
+        <li><b>P5b: the rest of the layers.</b></li>
+      </ul>
+      P5a by itself unlocks <b>91 of the 134</b> geometric comments, all the 2D ones: 36 plan-set-only and 55 that need plan-set plus county geometry.</div>
+
+    <h3><span class="hn">3</span>The opportunity for elevation data</h3>
+    <p><b>43 of the 134 geometric comments (32%) need Z</b>, so a 2D-only <code>geo</code> leaves a third of the value behind. Today's model is 2D: polygons, plus §6's points and lines. The SIR side already proves the appetite, since <code>constraints3d</code> renders 3D step-back envelopes.</p>
+    <div class="spectable-scroll"><table class="spectable">
+      <thead><tr><th>Review question</th><th>Example threshold</th><th>Needs</th><th>PostGIS</th></tr></thead>
+      <tbody>
+        <tr><td>pipe cover under the walk and curb</td><td>≥ 48 in</td><td>ground surface, plus the pipe crown Z along its run</td><td><code>ST_Value</code> on the surface minus <code>ST_Z</code></td></tr>
+        <tr><td>wastewater-over-water crossing</td><td>TCEQ vertical separation</td><td>Z of both pipes at the 2D crossing</td><td><code>ST_Intersection</code>, then the Z difference (or <code>ST_3DDistance</code>)</td></tr>
+        <tr><td>ramp, walk and accessible-stall slopes</td><td>8.3% running, 2% cross</td><td>spot elevations</td><td>TIN (<code>ST_DelaunayTriangles</code>) or raster, then <code>ST_Slope</code></td></tr>
+        <tr><td>slope categories and the ERI trigger</td><td>15 / 25 / 35%</td><td>existing contours</td><td><code>ST_InterpolateRaster</code>, then <code>ST_Slope</code>, polygonized</td></tr>
+        <tr><td>vault floor or threshold against adjacent grade</td><td>floor above grade at each door</td><td>finished-floor elevations plus the surface</td><td><code>ST_Value</code> at the door points</td></tr>
+        <tr><td>building height from average adjacent grade</td><td>300 ft (0.67 ft margin)</td><td>finished grade along the perimeter</td><td><code>ST_Value</code> sampled along <code>ST_Boundary</code></td></tr>
+        <tr><td>cut and fill volumes, flow direction</td><td>—</td><td>existing and proposed surfaces</td><td><code>ST_MapAlgebra</code> (proposed minus existing), <code>ST_Aspect</code></td></tr>
+      </tbody>
+    </table></div>
+    <div class="grid2">
+      <div class="card"><b>Where elevation comes from in a plan set</b><br>
+        <ul>
+          <li>Spot-elevation text pinned to points.</li>
+          <li>Contour lines with their labelled values.</li>
+          <li>Profile sheets, giving crown and invert by station. These map onto the plan-view line by linear referencing.</li>
+          <li>Finished-floor and threshold elevations on the architectural sheets.</li>
+        </ul>
+        <p>All of it is text plus vector, so it is extractable by the same reader.</p></div>
+      <div class="card"><b>Suggested model additions</b><br>
+        <ul>
+          <li>Allow Z on point and line rows (<code>PointZ</code> / <code>LineStringZ</code>).</li>
+          <li>Add a per-project <b>ground surface</b> artifact for existing and proposed grade, as a raster or TIN. <code>postgis_raster</code> is available on Supabase.</li>
+          <li>Make the <b>vertical datum</b> an explicit, required attribute, like the SRID. The same review found the cover benchmark 24–37 ft off every elevation the sheets use (comment 119).</li>
+        </ul></div>
+    </div>
+    <div class="callout"><span class="lab">new open questions this raises</span>
+      <ul>
+        <li><b>Q-Z1.</b> Do surfaces live in <code>geo</code> as TIN geometry, in a separate raster table, or as a file artifact referenced by the project?</li>
+        <li><b>Q-Z2.</b> Are existing and proposed surfaces two features, or one feature with two readings? This is A3 (recorded versus proposed) in the vertical.</li>
+        <li><b>Q-Z3.</b> Profiles to plan: does the reader station the pipe Z onto the plan line at ingest, or does the tool interpolate at query time?</li>
+      </ul></div>
+
+    <div class="xref">Grounding: review <code>2802ece8</code> (released 2026-10-12), 272 <code>review_comments</code> rows, each classified once by one of six discipline agents against one shared rubric, then read through by hand. Vector spike on the submission's <code>source.pdf</code> (53 sheets), five comments re-measured. One urban-infill review, so re-size on two or three more, including a suburban site, before the percentages are quoted. Supporting ops ranking (the top five ops cover 82% of geometric comments, which bears on Q8): same IG report.</div>
+  </section>
 </main>
 
 <script data-spec-kit-js>
@@ -1197,7 +1307,7 @@ computed by the builder.</div>
 <script>
   const btns=document.querySelectorAll('nav.tabs button');
   const panels=document.querySelectorAll('.panel');
-  const IDS=['overview','existing','workflow','model','anchoring','rollout']; /* KEEP IN SYNC with the data-tab / panel ids above */
+  const IDS=['overview','existing','workflow','model','anchoring','rollout','sizing']; /* KEEP IN SYNC with the data-tab / panel ids above */
   function show(id,opts={}){
     btns.forEach(b=>b.classList.toggle('active',b.dataset.tab===id));
     panels.forEach(p=>p.classList.toggle('active',p.id===id));
