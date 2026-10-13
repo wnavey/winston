@@ -1,12 +1,25 @@
 # Anchoring without a SIR — a loose PDF from upload to the map
 
-**Status:** Draft v1
+**Status:** Draft v1.1
 **Date:** 2026-10-13
-**Repos touched:** `bureau` (`anchor-geometry` steps 1.1 and 1.2; a new SRID resolver and a county reader under `site-research/bin`), `cartographer` (`runbooks/anchor-geometry/scripts/{fetch,publish}.ts`; `src/routes/anchored`), `substation` (`geo` and `cartographer_anchors` ownership columns; the three RPCs in `geo_helpers.sql`)
+**Repos touched:** `bureau` (`anchor-geometry` steps 1.1 and 1.2; a new SRID resolver and a county reader under `site-research/bin`), `cartographer` (`runbooks/anchor-geometry/scripts/{fetch,publish}.ts`; `src/routes/anchored`; a new `src/routes/anchor/[id]`), `substation` (`geo` and `cartographer_anchors` ownership columns; the three RPCs in `geo_helpers.sql`)
 **Repos NOT touched:** `cityhall-new`, `surveyor`, `conductor2`, `claude-plugins`, `quarry`
 **Prod:** Supabase **Noetic App** (`mgxqsrjutswbciyrltwd`)
 **Parent:** [`../north-star/NORTH-STAR-SPEC.md`](../north-star/NORTH-STAR-SPEC.md) (winston#303) — this is **P2a + P2b**, the decoupling and the manual path, peeled off on their own.
 **Predecessor:** [`../anchoring-geometries/DESIGN-SPEC.md`](../anchoring-geometries/DESIGN-SPEC.md) (winston#279/#281) — the anchoring algorithm. Nothing here changes `anchor.ts`.
+
+> **Revision note (v1.1, 2026-10-13).** Adds **§2.5 "Showing the work"** (D15–D20): an evidence
+> trail for an anchor, modelled on the one `/processed` → `/geometry/[id]` already gives an
+> extracted figure, reached by a link on the `/anchored` tile. A claim is **cited** (an existing
+> `cartographer_geometry_evidence` row, referenced by id and never copied — `basis_of_bearings`
+> and both `scale_factor` rows already exist on the White Water figure with crops, boxes and
+> grounds), **read** (the county off page 1, rendered in situ by `PdfPageOverlay` with no crop
+> upload) or **computed** (the `spcs_lookup` resolution and the ArcGIS fetch, which have no page
+> and must not pretend to). Sections 2–4 of the page are almost entirely data that is **already
+> in prod and never rendered** — correspondences' prose justifications, `metrics.notes`' reason
+> per unmatched figure, 28 residuals, the overlay PNG — so the page can be built against anchor
+> `e94fae93` before any decoupling lands. New **S5**; new **Q9–Q11**, of which Q11 is a possible
+> bug: `evidence.check_md` is null on that run.
 
 ---
 
@@ -231,6 +244,46 @@ This works with zero owners and gives `target_geo_ids` a real job — which is i
 
 **D14. The `4.1-hitl` gate is unchanged.** It exists so a fit cannot publish itself. Even on the near-perfect car-wash run `auto_accept_suggested` was `false`, because of the C5 union-outline metric bug (north star **P0c** / winston#289 B3), so the gate is still the only real check. Removing it is a separate decision that depends on P0c.
 
+### 2.5 Showing the work
+
+`/processed` → `/geometry/[id]` gives an extracted figure a real evidence trail: every course, the stated area, the basis of bearings and the scale factor each carry a **verbatim**, a **page**, a **box**, a **crop** and a prose **grounds**, rendered over the source PDF. An anchor has nothing equivalent — `/anchored` is a flat list whose only link is to the file (`anchored/+page.svelte:183`). D4–D10 make that worse before they make it better: the run now *derives* its coordinate system instead of being handed one, and a derivation you cannot inspect is a guess with better manners.
+
+**D15. Every fact the anchor run uses to place a frame is recorded as a claim**, and a claim is one of three kinds: **cited** (an evidence row the extract run already proved), **read** (something this run read off the PDF), or **computed** (a lookup or a fetch, with no page at all).
+
+**D16. Cited claims are referenced by id, never copied.** The three facts D4–D9 depend on already exist on the White Water figure, with crops and grounds:
+
+| role | verbatim | page | crop |
+|---|---|---|---|
+| `basis_of_bearings` | "HORIZONTAL DATUM BASED ON THE TEXAS STATE PLANE COORDINATE SYSTEM, NAD 83, TEXAS CENTRAL ZONE." | 2 | `6e77e887…jpg` |
+| `scale_factor` | "COORDINATES AND DISTANCES ARE SURFACE VALUES." | 2 | `6e77e887…jpg` |
+| `scale_factor` | "COMBINED SCALE FACTOR IS 1.0000327271." | 2 | `1cea8d28…jpg` |
+
+Their `confidence.grounds` are already doing the argument's work and must be surfaced verbatim, because each names the exact limit this spec works around: the basis-of-bearings row says *"no zone number or datum realization is printed"* (which is why D6 exists), and the scale-factor row says *"the note does not say whether the factor takes grid to surface or surface to grid"* (which is a live caveat on D9, and should be shown next to the applied factor rather than buried).
+
+So the anchor stores `{kind: "cited", evidence_id}` and the page renders that row's verbatim, grounds and crop. No new evidence machinery, no duplication of a reading, and the trail stays single-sourced — if a re-extraction corrects the note, the anchor page corrects with it.
+
+**D17. Read and computed claims carry what they can, and are honest about what they cannot.**
+
+- **read** — the county, off page 1's text layer (D6): `{kind: "read", value: {county: "Travis", state: "TX", fips: "48453"}, page: 1, bbox, verbatim: "FIRM PANEL NO. 48453C0595K FOR TRAVIS COUNTY", basis: "firm_panel"}`, with the legal description's "TRAVIS COUNTY, TEXAS" as a second claim marked `basis: "legal_description"`. `pdftotext -bbox` gives the box, so these render **in situ** over page 1 — `PdfPageOverlay` takes normalized `[x0,y0,x1,y1]` fractions plus a `kind` for colour and needs no stored crop image. A stored crop stays optional (**Q10**).
+- **computed** — the `spcs_lookup` resolution and the ArcGIS fetch have no page and must not pretend to: `{kind: "computed", tool: "spcs_lookup.py", input: 48453, output: {epsg: 2277, units: "ftUS", zone: "tx_central"}, table_note: "Observed on the City of Austin …MapServer/0: wkid 102739 / latestWkid 2277 (2026-09-24)"}` and `{kind: "fetched", url, pid: "0436110202", native_sr: {...}, feature_count: 1, fetched_at}`. The page renders these as a lookup and a request, not as a reading.
+
+The chain the page must make legible, end to end, is: *the plat says Texas Central / NAD 83 but prints no zone number and no unit* → *page 1's FIRM panel says Travis, FIPS 48453* → *the county table resolves 48453 to EPSG 2277, ftUS* → *they agree, so no operator input was needed* → *the TCAD layer's own `native_sr` is 2277, confirming it a third time*.
+
+**D18. The derivation record travels the path `correspondences.json` already takes.** `1.2-fetch` writes it into `inputs/target.json`; `5.1-publish` carries it into `cartographer_anchors.evidence.derivation`, beside the `correspondences` key `publish.ts` already assembles. No new table.
+
+**D19. `/anchored`'s tile gains a link to a new `/anchor/[id]`**, mirroring `/processed` → `/geometry/[id]` (`processed/+page.svelte:420`), which is the prior art for the whole page — signed PDF, box overlay, a rail of claims, four queries and no joins.
+
+**D20. The page reads in four sections, in this order.**
+
+1. **How we got the system** — the D15 claim chain ending in EPSG 2277, each claim showing its kind, and the cited ones showing their crop and grounds. This is the section that did not exist before and the reason for the whole item.
+2. **What we fitted to** — the ring fetch, and the correspondences. `evidence.correspondences` **already** stores the agent's prose justification per ring match and it has never been rendered: *"plat label 'LOT 2' = county parcel '4401 Fegenbush Ln' (PVA parcel_id 061801400000, role 'subject-vacant-pad'), whose PVA acres 1.023 equal both the plat's stated LOT 2 area and the SIR's own 'Lot 2' row"*.
+3. **The solve** — rung and accuracy class, `params` (θ, scale, tE, tN, k_units), the residual table, the metrics, and the overlay PNG from `evidence.overlay_path`. `metrics.notes` already carries a prose reason per *unmatched* figure — *"'RIGHT-OF-WAY DEDICATION AREA 1' is a strip dedicated to the public road out of the lots' frontage; the SIR carries no right-of-way row … It rides on the frame through its own printed coordinate boxes"* — which is the clearest explanation of "8 figures, 1 anchor" we have and is currently invisible.
+4. **The result** — the map, as `/anchored` draws it today.
+
+Sections 2 and 3 are **almost entirely rendering data that already exists and is thrown away**: on the one anchor run in prod, `evidence` holds `correspondences`, `constraints_used`, `overlay_path`, `check_md` and `decision_note`, and `metrics` holds 28 control-point residuals, five prose notes, IoU, Hausdorff, area ratio, free scale and θ-vs-grid. The only genuinely new recording is §2.5's derivation.
+
+One gap worth naming: **`evidence.check_md` is null on that run**, so the `3.3-check` vision readout — the step whose entire job is to say whether the overlay looks right — reached the database empty. Whether that is a publish bug or a step that wrote nothing is **Q11**.
+
 ---
 
 ## 3. The change, piece by piece
@@ -248,10 +301,15 @@ This works with zero owners and gives `target_geo_ids` a real job — which is i
 | 9 | `substation/supabase/migrations/` (new) | `geo.sir_id` nullable + `geo.submission_version_id`; same on `cartographer_anchors` (D1, D2) |
 | 10 | `substation/supabase/functions/geo_helpers.sql` | new `add_parcel_geo` (D10, D11); `sir_put_anchored_geo` and `cartographer_anchor_decide` delete-keys → `anchor_id` (D12) |
 | 11 | `cartographer/src/routes/anchored/+page.server.ts:67,92-93,106` | context by `target_geo_ids` (D13) |
+| 12 | `cartographer/.../scripts/fetch.ts` + `publish.ts` | emit the derivation record into `inputs/target.json`, carry it to `evidence.derivation` (D15–D18) |
+| 13 | `cartographer/src/routes/anchored/+page.svelte:183` | tile links to `/anchor/{anchor.id}` (D19) |
+| 14 | `cartographer/src/routes/anchor/[id]/` (new) | the evidence page (D20), modelled on `routes/geometry/[id]` |
 
-**Untouched:** `anchor.ts` and every solver; `extract-geometry-v2`; and `anchor-geometry` steps `2.1-correspond`, `3.1-solve`, `3.2-render`, `3.3-check`, `4.1-hitl`.
+**Untouched:** `anchor.ts` and every solver; `extract-geometry-v2`; `cartographer_geometry_evidence` and `cartographer_geometry_crops` (read, never written); and `anchor-geometry` steps `2.1-correspond`, `3.1-solve`, `3.2-render`, `3.3-check`, `4.1-hitl`.
 
-**Deploy order:** substation (9, 10) → bureau (1–4) + cartographer scripts (5–8) → cartographer app (11).
+**Deploy order:** substation (9, 10) → bureau (1–4) + cartographer scripts (5–8, 12) → cartographer app (11, 13, 14).
+
+Items 13 and 14 are the only ones that can ship on their own: §2.5's sections 2–4 render data that is already in prod on anchor `e94fae93`, so the page can be built and reviewed against the existing car-wash run before any of the decoupling lands.
 
 ---
 
@@ -276,6 +334,11 @@ This works with zero owners and gives `target_geo_ids` a real job — which is i
 - **Proves:** D11 (two runs on one file produce **one** county row) and D12 (the `anchor_id`-only delete-key removes exactly the right rows with `sir_id` null).
 - **Prior art:** `substation/src/lib/cartographer-anchors.integration.test.ts`, `geo-parcel-native-srid.integration.test.ts`.
 - **Runs:** substation's integration suite against a local Supabase.
+
+**S5: the `/anchor/[id]` server load** (new, mirroring an existing shape)
+- **Proves:** D15–D20 — that a cited claim resolves to its `cartographer_geometry_evidence` row and signs its crop, that a read claim carries a page and a box the overlay can draw, that a computed claim renders without pretending to have a page, and that an anchor with **no** `derivation` key (every row published before this spec) still renders rather than 500s.
+- **Prior art:** `cartographer/src/routes/geometry/[id]/+page.server.ts` — same four-queries-no-joins shape, same `createSignedUrls` batching, and the same additive posture (winston#274 D11: a figure published before the evidence tables existed renders with "no evidence recorded").
+- **Runs:** `bun test` in `cartographer`; manually against anchor `e94fae93` in prod, which already has correspondences, residuals and an overlay and no derivation.
 
 ---
 
@@ -325,3 +388,9 @@ Named only so the decoupling does not harden against north star **P5**. None is 
 **Q7.** Should `cartographer_anchors.target_geo_ids` get referential integrity now that D13 reads the map through it? It has already dangled once on one row (§1.4). An array FK needs a trigger or a join table.
 
 **Q8.** Backfill posture for the 56 existing `geo` rows. All 56 derive a `project_id` cleanly, so north star **D4** (project ownership) stays available — but this spec does not need it and does not do it. Does anything want it before P5?
+
+**Q9.** Does `/anchor/[id]` reuse `/geometry/[id]`'s PDF viewer wholesale, or is the anchor page's PDF read-only (no rotation, no zoom, no selection rail)? The extracted-figure page needs the full instrument because a reader is checking 5 courses against the drawing; an anchor cites three or four claims on two pages. Reuse is tempting and the component is already extracted (`PdfPageOverlay`), but `/geometry/[id]`'s 455 lines of page are mostly the rail and the controls around it.
+
+**Q10.** Does the **county read** (D17) get a stored crop like the extract run's readings do, or stay box-only? Box-only is free and renders identically in situ; a stored crop is what makes the two pages consistent, and is the only way the claim survives the source PDF being replaced. Storing one means writing a `cartographer_geometry_crops` row from a runbook that is not the extract runbook, against a `geometry_id` that is not really its parent — which may be a sign the crop table wants an owner other than a geometry.
+
+**Q11.** **Possible bug:** `evidence.check_md` is null on anchor `e94fae93`, so `3.3-check`'s vision readout — the step whose only job is to say whether the overlay looks right — reached the database empty. `publish.ts` reads `check.md` from the run directory and tolerates its absence. Did the step write nothing, or did the file not survive to publish? Worth settling before the page is built around showing it.
