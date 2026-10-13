@@ -61,11 +61,7 @@ is unqueryable (§3.3, D2).
 coordinate conventions. The target is one rebuildable spatial layer with everything else
 upstream of it (§3.4, D3, D4).
 
-**G6. Make cost visible before automating anything.** At roughly $40 a document against
-100–300 documents per SIR, triage is not a stepping stone toward full automation — it is the
-architecture until extraction gets cheap (§4.1, D6).
-
-**G7. Claim the geometry we already compute and throw away.** The SIR produces gated,
+**G6. Claim the geometry we already compute and throw away.** The SIR produces gated,
 measured setback bands and buildable envelopes and keeps only the pixels. The cheapest real
 geometry in the plan, and the one goal that arrived as a finding rather than a premise
 (§2.5, §3.5, D14).
