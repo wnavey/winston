@@ -488,7 +488,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
   <div class="kicker">CARTOGRAPHER · NORTH STAR</div>
   <h1>Anchored geometry for every site</h1>
   <p>Both producers — the SIR's county clerk documents and the site plan set's drawings — put geometry into <code>geo</code> in the county's own State Plane zone, so PostGIS can answer distance and encroachment questions deterministically. A plan of a plan. Companion to <code>NORTH-STAR-SPEC.md</code>.</p>
-  <div class="meta">Draft v2 · 2026-10-12 · click a tab ↓</div>
+  <div class="meta">Draft v3 · 2026-10-13 · click a tab ↓</div>
   <a class="spec-link" href="NORTH-STAR-SPEC.html">📖 read the spec</a>
 </header>
 
@@ -526,8 +526,18 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
       <div class="sys store" id="a-geo" style="grid-area:3/4"><span class="k">table</span><span class="t">geo</span><span class="d">44 rows · owned by one SIR</span></div>
       <div class="sys" id="a-map" style="grid-area:3/5"><span class="k">ui</span><span class="t">SIR map</span><span class="d">cityhall, behind a flag</span></div>
 
-      <div class="sys trig" id="a-t3" style="grid-area:4/1"><span class="dot"></span><span class="t">everything else</span><span class="d">clerk docs · plan sheets</span></div>
-      <div class="sys gap" id="a-gap" style="grid-area:4/2">2,597 supporting documents and every plan set sheet reach neither pipeline</div>
+      <div class="sys trig" id="a-t4" style="grid-area:4/1"><span class="dot"></span><span class="t">SIR publish</span><span class="d">one function, two writes</span></div>
+      <div class="sys" id="a-pub" style="grid-area:4/3"><span class="k">cityhall</span><span class="t">publish/sir.ts</span><span class="d">the same rings, collected and deduped</span></div>
+      <div class="sys store" id="a-out" style="grid-area:4/4"><span class="k">column</span><span class="t">project.site_outline</span><span class="d">GeoJSON WGS84 · 57 of 59 projects</span></div>
+      <div class="sys" id="a-card" style="grid-area:4/5"><span class="k">ui</span><span class="t">project card</span><span class="d">Esri imagery, outline drawn on top</span></div>
+
+      <div class="sys trig" id="a-t5" style="grid-area:5/1"><span class="dot"></span><span class="t">SIR step 3.3.2</span><span class="d">no documents, no vision</span></div>
+      <div class="sys store" id="a-sg" style="grid-area:5/2"><span class="k">file</span><span class="t">site-geometry.json</span><span class="d">the ring and its runs, local feet</span></div>
+      <div class="sys" id="a-con" style="grid-area:5/3"><span class="k">python · shapely · three.js</span><span class="t">figures.constraints</span><span class="d">setback bands, buildable envelope, section</span></div>
+      <div class="sys gap" id="a-gap2" style="grid-area:5/4">computed, gated, and never persisted as geometry</div>
+
+      <div class="sys trig" id="a-t3" style="grid-area:6/1"><span class="dot"></span><span class="t">everything else</span><span class="d">clerk docs · plan sheets</span></div>
+      <div class="sys gap" id="a-gap" style="grid-area:6/2">2,597 supporting documents and every plan set sheet reach neither pipeline</div>
 
       <a class="sys-edge" data-from="a-t1" data-to="a-files"></a>
       <a class="sys-edge" data-from="a-files" data-to="a-ex"></a>
@@ -537,9 +547,15 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
       <a class="sys-edge" data-from="a-src" data-to="a-sir"></a>
       <a class="sys-edge" data-from="a-sir" data-to="a-geo"></a>
       <a class="sys-edge" data-from="a-geo" data-to="a-map"></a>
+      <a class="sys-edge" data-from="a-t4" data-to="a-pub"></a>
+      <a class="sys-edge" data-from="a-pub" data-to="a-out"></a>
+      <a class="sys-edge" data-from="a-out" data-to="a-card"></a>
+      <a class="sys-edge" data-from="a-t5" data-to="a-sg"></a>
+      <a class="sys-edge" data-from="a-sg" data-to="a-con"></a>
+      <a class="sys-edge gap" data-from="a-con" data-to="a-gap2"></a>
       <a class="sys-edge gap" data-from="a-t3" data-to="a-gap"></a>
     </div>
-    <p class="claim"><b>Claim (§2.1):</b> the document side has reached the map exactly once — anchor <code>e94fae93</code>, the car-wash plat, accepted 2026-09-28.</p>
+    <p class="claim"><b>Claim (§2.1, §2.4):</b> the document side has reached the map exactly once — anchor <code>e94fae93</code>, accepted 2026-09-28 — while <code>project.site_outline</code> covers 57 of 59 projects and the constraint geometry reaches it as pixels only.</p>
 
     <h3><span class="hn">B</span>After</h3>
     <div class="sysmap" style="grid-template-columns:.7fr repeat(4,1fr)">
@@ -611,6 +627,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 
       <div class="sys" id="d-p0c" style="grid-area:4/2"><span class="k">cartographer</span><span class="t">P0c fix the fit metric</span><span class="d">nothing auto-accepts until this is right</span></div>
       <div class="sys" id="d-p1c" style="grid-area:4/3"><span class="k">bureau · substation</span><span class="t">P1c features and consolidate</span><span class="d">the biggest piece of new design</span></div>
+      <div class="sys" id="d-p1d" style="grid-area:5/3"><span class="k">substation</span><span class="t">P1d convert the constraint geometry</span><span class="d">one affine and a write; needs P0a, P0b and an answer to Q16</span></div>
       <div class="sys" id="d-p5" style="grid-area:4/5"><span class="k">cartographer</span><span class="t">P5 plan-set reader</span><span class="d">a new reader, everything below reused</span></div>
 
       <a class="sys-edge" data-from="d-t" data-to="d-p0a"></a>
@@ -619,6 +636,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
       <a class="sys-edge" data-from="d-p0a" data-to="d-p1a"></a>
       <a class="sys-edge" data-from="d-p1a" data-to="d-p1b"></a>
       <a class="sys-edge" data-from="d-p1b" data-to="d-p1c"></a>
+      <a class="sys-edge" data-from="d-p1c" data-to="d-p1d"></a>
       <a class="sys-edge" data-from="d-p1a" data-to="d-p2a"></a>
       <a class="sys-edge" data-from="d-p2a" data-to="d-p2b"></a>
       <a class="sys-edge" data-from="d-p2a" data-to="d-p3"></a>
@@ -727,7 +745,43 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
       <div class="card"><b>Why it matters here</b><br>Three computations of the same arithmetic — the tangent plane, shapely, and PostGIS on State Plane — are already in the building. Q15 asks whether they converge.</div>
     </div>
 
-    <h3><span class="hn">E</span>What this changes about the plan</h3>
+    <h3><span class="hn">E</span>What goes into the constraint builder</h3>
+    <div class="spectable-scroll"><table class="spectable">
+      <thead><tr><th>Input</th><th>What it carries</th><th>Where it comes from</th></tr></thead>
+      <tbody>
+        <tr><td><code>site-geometry.json</code></td><td>the parcel ring and its named boundary runs</td><td><code>parcel-rings.geojson</code> — the <b>same county GIS layer</b> <code>sir_add_parcel_geo</code> reads</td></tr>
+        <tr><td><code>readings.yaml</code></td><td>per band: a width, the runs it is measured from, the authority, the posture, the P-id</td><td>the agent, quoting <code>3.1-premises</code>, the discipline findings and the issue matrix</td></tr>
+        <tr><td><code>lots.geojson</code></td><td>neighbouring lot polygons for the 3-D masses</td><td>optional — <code>resolve-site</code>, or an appraisal-layer query</td></tr>
+      </tbody>
+    </table></div>
+    <div class="callout"><span class="lab">no vision, no documents</span> The builder never opens a plat, never parses a metes-and-bounds call and runs no model. Vision appears only <i>after</i> the pictures exist, as a bounded reader loop checking the rendered plates for legibility. <b>Cartographer reads shapes off documents; this computes shapes from a ring plus code numbers.</b> They are complements, not overlaps.</div>
+    <div class="prompt"><span class="ph">3.3.2-constraints · prompt.md §1</span>You author no geometry beyond the recorded coordinates of a `polygon` or `point` band.
+Every other band, area, interval, pixel coordinate, envelope block and camera is
+computed by the builder.</div>
+
+    <h3><span class="hn">F</span>Why it cannot be transformed today, and what it would take</h3>
+    <div class="dflow">
+      <div class="dq"><span class="q">Can <code>ST_Transform</code> be called on <code>constraints.json</code>'s shapes?</span><span class="yes">no ↓</span><span class="out fail">no SRID to transform from — local feet from a per-site origin carry no EPSG code</span></div>
+      <div class="dno">and ↓</div>
+      <div class="dq"><span class="q">Is there a row to call it on?</span><span class="yes">no ↓</span><span class="out fail">the shapes are a file in a run directory, never Postgres</span></div>
+      <div class="dno">but ↓</div>
+      <div class="dq"><span class="q">Is the projection a pure axis-aligned affine — scale then translate, no rotation?</span><span class="yes">yes →</span><span class="out">the conversion is one expression, exact and lossless</span></div>
+      <div class="dq end"><span class="q">so the obstacle is</span><span class="yes"></span><span class="out warn">getting the file into a table, and answering Q16 — not the geometry</span></div>
+    </div>
+    <div class="prompt"><span class="ph">D14 · the whole conversion</span>ST_Transform(
+  ST_SetSRID(
+    ST_Translate(ST_Scale(geom_ft, 1/ft_per_deg_lon, 1/ft_per_deg_lat),
+                 origin_lon, origin_lat),
+    4326),
+  srid_local)           -- the county zone geo already resolves</div>
+    <p class="claim"><b>Claim (D14):</b> a derived shape is already positioned, because its parent was; the only thing between it and <code>geo</code> is a change of coordinates and a write.</p>
+
+    <div class="grid2">
+      <div class="card"><b>Anchoring a plat</b><br>A hard research problem. Printed coordinates in 3 of 315 geometries; roughly half the corpus reachable at all; a solver, a correspondence agent, metrics and a human gate.</div>
+      <div class="card"><b>Converting an envelope</b><br>Read a file, apply four stored numbers, run the expression above. No solver, no vision, no judgment. The open question is Q16 — whether it belongs in <code>geo</code> — not whether it can get there.</div>
+    </div>
+
+    <h3><span class="hn">G</span>What this changes about the plan</h3>
     <div class="catgrp">
       <div class="cath"><span class="cgl">N</span> New open questions</div>
       <div class="uci"><span class="uid">Q13</span><span class="star">★</span><span class="utxt">Does <code>project.site_outline</code> become derived from <code>geo</code> under D3, or stay its own write? It is the store with the most rows.</span></div>

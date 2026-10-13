@@ -1,11 +1,19 @@
 # Cartographer north star — anchored geometry for every site
 
-**Status:** Draft v2
-**Date:** 2026-10-12
+**Status:** Draft v3
+**Date:** 2026-10-13
 **Repos touched:** none yet. This spec commits to no implementation; it names the destination, the stages, and what to peel off first.
 **Repos eventually touched:** `substation` (schema), `bureau` (runbooks), `cartographer` (readers, solvers, viewer), `surveyor` (layer identity)
 **Repos NOT touched:** `cityhall` until a viewer phase exists
 **Prod:** Supabase **Noetic App** (`mgxqsrjutswbciyrltwd`)
+
+> **Revision note (v3, 2026-10-13).** Adds **§2.5** (how the constraint geometry is
+> actually computed: two files in, no documents, no vision, the local tangent plane, and
+> `constraints.json` as the only store) and **§3.5 / D14** (derived geometry skips read and
+> place entirely — the conversion is one axis-aligned affine, so this is an ETL problem, not
+> a geometry problem). New phase **P1d**. Q14 and Q16 sharpened: feasibility was never the
+> question. The Overview map now draws the figure pipeline and `project.site_outline`, which
+> v2 described in prose and left off the picture.
 
 > **Revision note (v2, 2026-10-12).** Adds **§2.4**: two live geometry systems v1 did not
 > account for — the SIR figure pipeline (`figures/`, including the shapely constraint
@@ -19,7 +27,7 @@
 > iterated on for weeks, and expects slices to be peeled off one at a time. Decisions
 > (D) are directional, not settled. Open questions (Q) outnumber them on purpose.
 > Everything in §2 is verified against prod and the code (§2.1–§2.3 on 2026-10-08,
-> §2.4 on 2026-10-12); everything in §4 onward is a proposal.
+> §2.4 on 2026-10-12, §2.5 on 2026-10-13); everything in §4 onward is a proposal.
 
 ---
 
@@ -200,6 +208,78 @@ taking 17,598 sq ft against a geometric maximum near 404 sq ft, and that run's
 flat caps, mitred to its neighbours, intersected with the ring — is gate G1 and is the
 correct one.
 
+### 2.5 How the constraint geometry is actually computed
+
+Worth stating precisely, because it is not the Cartographer pipeline with a different
+label — it shares no mechanism with it at all.
+
+**Inputs: two files, no documents.**
+
+| Input | What it carries |
+|---|---|
+| `3.0-geometry/site-geometry.json` | the parcel ring and its named boundary runs — tracing back to `parcel-rings.geojson`, the **same county GIS layer** `sir_add_parcel_geo` reads |
+| `readings.yaml` | the agent's authored file: per band a width, the runs it is measured from, the authority, the posture, the P-id. The numbers come from `3.1-premises`, the discipline findings and the issue matrix |
+| `lots.geojson` | optional — neighbouring lot polygons, for the 3-D masses |
+
+**No vision, and no document is ever opened.** The builder never reads a plat, never parses
+a metes-and-bounds call, and runs no model. Vision appears only *after* the pictures exist,
+as a bounded reader loop checking the rendered plates for legibility. The band widths come
+from regulatory text the disciplines already read, not from geometry on a page.
+
+So the two pipelines are complements, not overlaps: **Cartographer reads shapes off
+documents; this computes shapes from a ring plus code numbers.**
+
+**What instructs it**, in order: `steps/3.3.2-constraints/step.yaml` (`runner:
+judgment-medium`, `3.0-geometry` in, `constraints.json` out) → `prompt.md`, whose §2 carries
+the two literal commands → `python3 -m figures.constraints.cli` → `python3 -m
+figures.constraints3d.cli`, run once per envelope. The prompt states the split itself:
+
+> *"You author no geometry beyond the recorded coordinates of a `polygon` or `point` band.
+> Every other band, area, interval, pixel coordinate, envelope block and camera is computed
+> by the builder."*
+
+It is enforced, not merely asked for: every gate's measured value lands in
+`constraints.json.checks`, the step's contract reads them, a false gate is a hard stop and
+the CLI exits 1. The prompt also carries a standing instruction never to read
+`inward_offset_ladder` — the field §2.4 records as removed, so the Koenig failure is live
+guidance, not just a docstring.
+
+**The computations.** `edge_band` (gate G1) buffers each chain of touching runs flat-capped
+and mitred, plus each segment on its own, plus the wedges obtuse convex corners leave, all
+intersected with the ring. The **envelope** is one line — the ring less the union of
+excluded bands — then `cap_blocks` stacks it as blocks strictly nested in plan and
+*disjoint in z*, so two transparent solids never share a volume in the renderer. The
+**section** is cut perpendicular through the anchor run's midpoint (not the centroid),
+probing for the site's real depth so the far end lands past the far boundary, and its
+compass direction is computed off the cut rather than written — because the first Koenig
+plate said "looking north-east" over a cut facing east-south-east.
+
+**Coordinates: a local tangent plane, anchored to a private datum.** The `projection` block
+is four numbers — an origin lon/lat and a feet-per-degree scale per axis — read from
+`site-geometry.json` and never recomputed, which is the only reason 1.2's parcel dimensions
+and 3.0's geometry are the same measurement. A point is *so many feet east and north of
+this site's origin*.
+
+That sits between the two conventions §3 already names:
+
+| | has a position | readable by anything else |
+|---|---|---|
+| SRID:0 (Cartographer) | no — the shape floats | n/a |
+| **local tangent plane** | **yes, exactly** | only with its own four numbers |
+| State Plane / WGS84 | yes | by EPSG code, universally |
+
+Locally it is excellent: better than 0.01 ft against the WGS84 geodesic over a parcel, with
+every edge cross-checked against a Vincenty inverse and the worst disagreement published.
+What it costs is that nothing else can interpret it — there is no SRID to declare, two
+sites' feet are different feet, and it is a flat axis-aligned approximation that is right
+at parcel scale and wrong at county scale, which is precisely why it must be per-site.
+
+**Storage.** `constraints.json` in the run directory and the full-run mirror — never the
+database. Shapes are `{"outer": [[x, y], …], "holes": […]}` in local feet rounded to two
+decimals under `geometry_ft` keys, beside a parallel `lines_px` block for the plate. What is
+published is the pictures: PNGs in the report and one HTML web exhibit per envelope as a
+`sir_artifact`.
+
 ---
 
 ## 3. The shape of the system
@@ -263,6 +343,41 @@ straightforward additional writer rather than a schema negotiation.
 **D4.** `geo`'s owner becomes the **project**, with SIR and plan-set ids as provenance
 rather than parentage. This is the one change that makes §6 possible at all, and it is
 far cheaper now than after there is data pointing at it.
+
+### 3.5 Derived geometry is a fourth path, and it is nearly free
+
+**D14.** A shape computed from an already-located shape plus regulatory numbers —
+a setback band, a buildable envelope, a dedication strip — does not travel the read →
+identify → place pipeline at all. It is **already positioned**, because its parent was. The
+only thing standing between it and `geo` is a change of coordinates and a write.
+
+Today that cannot be done in SQL, for two separate reasons, and the second is the larger:
+
+1. **No SRID to transform from.** `ST_Transform` needs a source CRS, and local feet from a
+   per-site origin have no EPSG code. The call is meaningless, not merely wrong.
+2. **The data is not in Postgres.** `constraints.json` is a file in a run directory. There
+   is no row to call anything on.
+
+But the projection is a pure axis-aligned affine — scale, then translate, no rotation and
+no curvature term — so once the polygon and its four numbers are in the database it is one
+expression:
+
+```sql
+ST_Transform(
+  ST_SetSRID(
+    ST_Translate(ST_Scale(geom_ft, 1/ft_per_deg_lon, 1/ft_per_deg_lat),
+                 origin_lon, origin_lat),
+    4326),
+  srid_local)           -- the county zone geo already resolves
+```
+
+Exact, lossless, no solver, no vision, no judgment.
+
+**Which makes it a different kind of work from everything else in this spec.** Anchoring a
+plat is a hard research problem with roughly half the corpus reachable. Converting a
+buildable envelope is reading a file and running the expression above. The open question is
+not whether we *can* — it is **Q16**, whether a derived shape belongs in `geo` at all, and
+how a consumer tells "what the record says" from "what the code implies".
 
 ---
 
@@ -448,6 +563,7 @@ decisions are cheap now and expensive later; runbooks can be built in any order.
 | **P1a** | `triage-sir-geos` runbook (§4.1) | Independently valuable even if nothing else ships: first time the backlog and its cost are visible. No new tables, no change to the SIR runbook. |
 | **P1b** | Run the existing extract + anchor by hand off the triage list | Proves the chain end-to-end on a real SIR. Knowingly accepts duplicates. |
 | **P1c** | Feature identity + `consolidate-geos` (D2, D7, D8) | The biggest piece of new design. Depends on P0c for anything automatic. |
+| **P1d** | Convert the constraint geometry (D14) | The cheapest real geometry in the plan: read `constraints.json`, apply the stored affine, write `geo` rows. Depends on P0a/P0b and on answering Q16 — not on P0c and not on P1c, so it can run in parallel with either. |
 
 ### P2 — Decoupling
 
@@ -554,7 +670,8 @@ third source of truth, and it is the one with the most rows.
 
 **Q14.** Should the SIR's computed constraint geometry — bands, buildable envelope,
 section profiles — persist as geometry, or stay figure-only? It is already gated and
-measured (§2.4), and it is exactly the shape `ST_Distance` questions want.
+measured (§2.4), it is exactly the shape `ST_Distance` questions want, and converting it is
+one affine and a write (D14). The cost is not the obstacle; Q16 is.
 
 **Q15.** One geometry engine or three? `site_geometry.py`'s local tangent plane,
 `figures.constraints`'s shapely, and PostGIS on State Plane are three computations of the
@@ -563,7 +680,8 @@ stdlib-only, keyless design worth keeping separate?
 
 **Q16.** Is a buildable envelope a *feature*? It is **derived** from a parcel ring plus
 code setbacks, not **read** from a document. D2's model has readings and features and no
-category for a computed shape.
+category for a computed shape — and a consumer has to be able to tell "what the record
+says" from "what the code implies", or an agent will measure to a line nobody recorded.
 
 **Q17.** Does the figure library become the renderer for P4's viewer, or is MapLibre a
 separate path? `mapkit` already owns a projection, a frame, a tile source and label
@@ -609,6 +727,10 @@ placement, and `constraints3d` already renders an interactive 3-D scene.
   G3/G5/G6/G7), `runbooks/sir/steps/3.3.1-figures/prompt.md` (the five plates),
   `3.3.2-constraints/prompt.md` outputs and `schema/constraints.schema.json`
   (`meta · layers · envelopes · lines_ft · lines_px · neighbors · profile · cameras · checks`),
+  `figures/constraints/README.md` (the `readings.yaml` schema and what the agent does not
+  decide), `figures/constraints/geometry.py` — `Projection:49`, `Site.from_dict:103`,
+  `edge_band:414`, `envelope:694`, `cap_blocks:699`, `anchor_run:732`, `section_line:744`,
+  `looking_direction:780`, `profile:795`, `polygon_lists:889`,
   `runbooks/sir/scripts/site_geometry.py` (the tangent plane, and `site-geometry.json`'s keys).
 - **The thumbnails (§2.4):** `cityhall-new/src/lib/site/thumbnail.ts`,
   `src/app/project/[projectId]/thumbnail/route.ts`, `src/app/project/[projectId]/site/route.ts`,
