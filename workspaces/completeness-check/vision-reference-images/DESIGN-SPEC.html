@@ -6,7 +6,7 @@
 <title>Completeness-check vision: how it works today, and reference images</title>
 <style>
 /* ============================================================
-   spec-kit v6.2  —  winston HTML spec design system
+   spec-kit v6.3  —  winston HTML spec design system
    Inline the ENTIRE contents of this file into the spec's style block.
    Canonical source: ~/.claude/skills/winston-spec/assets/spec-kit.css
    When you change this file, bump the version above and in COMPONENTS.md.
@@ -845,6 +845,38 @@ p.claim b{color:var(--ink);font-weight:600}
 figure.concept figcaption{font-size:var(--fs-small);color:var(--ink2);border-left:0;background:none;padding:0;margin-top:10px}
 figure.concept figcaption b{color:var(--ink);font-weight:600}
 .steps .st::before{width:auto;min-width:28px;padding:0 6px;border-radius:14px;box-sizing:border-box;justify-self:start}
+
+/* ============================================================
+   v6.3 — masthead and tabs on the page type system.
+   The masthead is a document title block, not a banner: light ground,
+   sans throughout, aligned to the content column, one primary action.
+     .kicker   project · topic           13px, grey, sentence case
+     h1        the spec's title          34px, ink
+     p         what the spec is about    17px, grey, ≤ 2 sentences
+     .meta     status pill, date, companion file
+     a.spec-link   "Read the spec"        the one button
+   Tabs: a light underline bar, no numbers.
+   ============================================================ */
+header.masthead{background:#fff;color:var(--ink);padding:44px max(26px,calc((100% - 1088px)/2)) 30px;border-bottom:1px solid var(--divider);overflow:visible}
+header.masthead::after{display:none}
+header.masthead .kicker{font-family:var(--sans);font-size:var(--fs-small);font-weight:600;letter-spacing:0;text-transform:none;color:var(--ink2)}
+header.masthead h1{font-family:var(--sans);font-size:34px;font-weight:700;letter-spacing:-.02em;line-height:1.15;color:var(--ink);margin:8px 0 12px;max-width:900px}
+header.masthead p{color:var(--ink2);font-size:17px;line-height:1.55;max-width:780px;margin:0}
+header.masthead p code{background:var(--lane);border:0;color:var(--ink)}
+header.masthead .meta{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;margin-top:18px;font-family:var(--sans);font-size:var(--fs-small);color:var(--ink2)}
+header.masthead .meta .status{font-weight:600;color:var(--chgink);background:var(--chgbg);border:1px solid var(--chgbd);border-radius:999px;padding:2px 10px}
+header.masthead .meta code{font-size:12px;background:none;border:0;padding:0;color:var(--ink2)}
+header.masthead a.spec-link{display:inline-flex;align-items:center;gap:6px;margin-top:20px;font:600 14px var(--sans);color:#fff;background:var(--ink);border:0;border-radius:8px;padding:10px 16px;min-height:40px;box-sizing:border-box}
+header.masthead a.spec-link:hover{background:#000}
+nav.tabs{background:#fff;box-shadow:none;border-bottom:1px solid var(--divider);gap:4px;padding:0 max(14px,calc((100% - 1088px)/2 - 12px))}
+nav.tabs button{color:var(--ink2);font-size:14.5px;font-weight:500;padding:14px 12px 12px;border-bottom:2px solid transparent;transition:color .12s,border-color .12s}
+nav.tabs button .n{display:none}
+nav.tabs button:hover{color:var(--ink);background:none}
+nav.tabs button.active{color:var(--ink);font-weight:600;border-bottom-color:var(--ink);background:none}
+nav.tabs button:focus-visible{outline:2px solid var(--new);outline-offset:-2px}
+nav.tabs{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none} nav.tabs::-webkit-scrollbar{display:none}
+nav.tabs button{white-space:nowrap;flex:0 0 auto}
+@media(max-width:640px){header.masthead{padding:28px 16px 22px} header.masthead h1{font-size:27px}}
 
 </style>
 </head>
