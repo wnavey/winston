@@ -1,6 +1,6 @@
 # Anchoring without a SIR — a loose PDF from upload to the map
 
-**Status:** Draft v1.3
+**Status:** Draft v1.4
 **Date:** 2026-10-14
 **Repos touched:** `bureau` (`anchor-geometry` steps 1.1 and 1.2; a zone-name reverse index in `spcs_lookup.py` and a page-1 reader under `site-research/bin`), `cartographer` (`runbooks/anchor-geometry/scripts/{fetch,publish}.ts`; `src/routes/anchored`; a new `src/routes/anchor/[id]`), `substation` (`geo` and `cartographer_anchors` ownership columns; the three RPCs in `geo_helpers.sql`)
 **Repos NOT touched:** `cityhall-new`, `surveyor`, `conductor2`, `claude-plugins`, `quarry`
@@ -58,6 +58,16 @@
 > before the SRID exists, not after. D17's claim chain, §3 items 3, 4, 6 and 7, S3, §5 steps 1–2
 > and the second negative, Q3 and Q6 follow. The audit's FIRM-panel countywide-`C` point closes
 > itself. The `plan_set_county.py` name stays; its output drops `fips`.
+
+> **Revision note (v1.4, 2026-10-14).** The five remaining audit points, decided. **D1** adds a third
+> nullable link, `geo.file_id` → `cartographer_files`: ownership (`sir_id`, `submission_version_id`)
+> and provenance (`file_id`) are different questions, and a loose file has only the second. **D11**
+> keys on that column instead of parsing `source_doc`. **D13** keeps the SIR's full parcel set as the
+> context when an anchor has a SIR, and reads `target_geo_ids` only when it has no owner — the
+> car-wash map keeps its neighbours and its two `estimated` rows. **D10** now states that the county
+> ring is written before the gate and survives a rejected fit, on purpose. **D12** gains an expression
+> index on `properties->>'anchor_id'`. **Q7** is answered *not now*: `target_geo_ids` stays a bare
+> array. §3 items 9, 10, 11 and S4 follow.
 
 ---
 
@@ -190,7 +200,15 @@ The plat's legal description is the parcel's own name in the county's table and 
 
 ### 2.1 Ownership
 
-**D1. `geo.sir_id` becomes nullable, and `geo` gains a nullable `submission_version_id`.** A `geo` row may be owned by a SIR (today's rows, unchanged), by a site-plan submission version, or by **nothing**. Nothing is a first-class case — it is what a loose PDF produces, and it is the case this spec exists to serve.
+**D1. `geo.sir_id` becomes nullable, and `geo` gains a nullable `submission_version_id` and a nullable `file_id`.** A `geo` row may be owned by a SIR (today's rows, unchanged), by a site-plan submission version, or by **nothing**. Nothing is a first-class case — it is what a loose PDF produces, and it is the case this spec exists to serve.
+
+Ownership and provenance are different questions *(v1.4)*. `sir_id` and `submission_version_id` say **who the row belongs to**; `file_id` → `cartographer_files` says **what produced it**, and every row the anchor runbook writes — the fitted lot and the county ring alike — traces to one file whether or not anyone owns that file. Today provenance is recorded as the string `source_doc = 'cartographer:' || file_id`; the column replaces the parse, and `source_doc` stays as the human-readable note. County rings site-research writes at SIR time keep `file_id` null, since no Cartographer file was involved.
+
+| column | meaning | on a loose file |
+|---|---|---|
+| `sir_id` | owned by a SIR | null |
+| `submission_version_id` | owned by a plan-set submission | null |
+| `file_id` | produced from this Cartographer file | set |
 
 `submission_version` is the right grain: for White Water, `submission_version.6688de93-71ba-4827-8092-8ec61d92c8b1` → `submission.38ddbfd8` → `project.7a697ef1`, and `plan_set_version.6b4c9887.submission_version_id = 6688de93`, so the join to the plan set already exists and nothing new is needed to reach the project.
 
@@ -243,7 +261,7 @@ The same path carries the D10a stops. Nothing here is new machinery: it is site-
 
 ### 2.3 Sourcing the fitting target
 
-**D10. `1.2-fetch` fetches the county ring live and writes it into `geo` as a `county_api` row before solving.** This is the pattern that already runs (§1.4), with the owner removed. Concretely: find the parcel (D10a), fetch it with `arcgis_query.py … --geometry --native-ring`, then an RPC that is `sir_add_parcel_geo` with the ownership changed, then `fetch.ts` reads the row back and builds `inputs/parcels.json` exactly as it does today.
+**D10. `1.2-fetch` fetches the county ring live and writes it into `geo` as a `county_api` row before solving.** This is the pattern that already runs (§1.4), with the owner removed. The write happens **before the `4.1` gate**, and a rejected fit leaves the ring in place, on purpose *(v1.4)*: the ring is true regardless of the fit, the viewer needs it to judge the overlay, and a re-run finds it by its key (D11) rather than writing it again. Concretely: find the parcel (D10a), fetch it with `arcgis_query.py … --geometry --native-ring`, then an RPC that is `sir_add_parcel_geo` with the ownership changed, then `fetch.ts` reads the row back and builds `inputs/parcels.json` exactly as it does today.
 
 **D10a. Finding the parcel is a ladder, and the ladder ends in an area gate.** It runs **before** the target SRID exists, because the ring is where the SRID comes from (D5). The solver never needs a lat/lon; only the fetch does, and a loose file carries none (§1.5). The layer to query is the registry entry (Q3) for the county named in the prose (D6). The rungs, first match wins:
 
@@ -280,20 +298,22 @@ where sir_id = p_sir and kind = p_kind
 
 With `p_sir` NULL this is a **never-match**, not a wrong-match: `sir_id = NULL` is NULL, so the lookup finds nothing and always inserts. Run the anchor runbook twice on the same loose PDF and you get two county rings, then three, and `/anchored`'s context layer accumulates duplicates. The naive repair (`sir_id is not distinct from p_sir`) is worse — it makes every unowned county row collide with every *other* unowned county row sharing a kind and label, across unrelated sites.
 
-So the new RPC keys on `(file_id, kind, label, method='county_api')`, with `file_id` taken from the `source_doc` the function already writes (`'cartographer:' || file_id`). It is stable across re-runs of both runbooks, and it makes "this file's county context" a single well-defined set regardless of whether anything owns it.
+So the new RPC keys on `(file_id, kind, label, method='county_api')`, with `file_id` the D1 column *(v1.4; v1.2 parsed it out of `source_doc`)*. It is stable across re-runs of both runbooks, and it makes "this file's county context" a single well-defined set regardless of whether anything owns it.
 
 ### 2.4 Publishing and the map
 
-**D12. The delete-key for an anchor's rows becomes `properties->>'anchor_id'` alone.** It appears twice — `sir_put_anchored_geo` (`geo_helpers.sql:326-328`) and the reject path of `cartographer_anchor_decide` (`:434-436`) — and both are currently `(sir_id, anchor_id)`. `anchor_id` is already sufficient and unique; the `sir_id` conjunct is redundant today and wrong once `sir_id` is nullable. This is the one place where the decoupling makes the schema simpler rather than wider.
+**D12. The delete-key for an anchor's rows becomes `properties->>'anchor_id'` alone.** It appears twice — `sir_put_anchored_geo` (`geo_helpers.sql:326-328`) and the reject path of `cartographer_anchor_decide` (`:434-436`) — and both are currently `(sir_id, anchor_id)`. `anchor_id` is already sufficient and unique; the `sir_id` conjunct is redundant today and wrong once `sir_id` is nullable. This is the one place where the decoupling makes the schema simpler rather than wider. The property gets an expression index, `create index on geo ((properties->>'anchor_id'))`, in the same migration *(v1.4)*: the old key used the indexed `sir_id` column, the new one must not fall back to a scan.
 
-**D13. `/anchored` finds its context through the anchor, not through an owner.**
+**D13. `/anchored` finds its context through the owner when there is one, and through the anchor when there is not.**
 
 ```
 figures = geo WHERE properties->>'anchor_id' = anchor.id      -- unchanged (+page.server.ts:139)
-context = geo WHERE id = ANY(anchor.target_geo_ids)           -- replaces sir_parcels(p_sir)
+context = anchor.sir_id IS NOT NULL                           -- v1.4
+          ? sir_parcels(anchor.sir_id)                        -- the SIR path, unchanged
+          : geo WHERE id = ANY(anchor.target_geo_ids)         -- the loose-file path
 ```
 
-This works with zero owners and gives `target_geo_ids` a real job — which is incidentally the reason to fix its integrity (§1.4, **Q7**). The SIR rail subtitle (`+page.server.ts:71`) becomes optional rather than per-anchor-required.
+The SIR path is unchanged *(v1.4; v1.2 read `target_geo_ids` for both)*: on the car-wash SIR the full parcel set includes the neighbouring parcels and two `estimated` rows that are not anchor targets, and losing them from the map would be a regression for the case that already works. The loose-file branch works with zero owners and gives `target_geo_ids` its first real job; its integrity stays as it is for now (**Q7**). The SIR rail subtitle (`+page.server.ts:71`) becomes optional rather than per-anchor-required.
 
 **D14. The `4.1-hitl` gate is unchanged.** It exists so a fit cannot publish itself. Even on the near-perfect car-wash run `auto_accept_suggested` was `false`, because of the C5 union-outline metric bug (north star **P0c** / winston#289 B3), so the gate is still the only real check. Removing it is a separate decision that depends on P0c.
 
@@ -354,9 +374,9 @@ One gap worth naming: **`evidence.check_md` is null on that run**, so the `3.3-c
 | 6 | `cartographer/.../scripts/fetch.ts:116-147` | insert the D4 ladder between the flag and the stop — ring `native_sr`, else the county table — and the D7 zone check; every stop is exit 3 with a reason (D8) |
 | 7 | `cartographer/.../scripts/fetch.ts:152-161` | when there is no SIR: find the parcel (D10a ladder + area gate) **first**, fetch the county ring (D10), take the target from its `native_sr` (D5), write it, read it back; `sir_geo_in_srid` is used only on the SIR path |
 | 8 | `cartographer/.../scripts/publish.ts:119` | `sir_id` may be null; carry `submission_version_id` |
-| 9 | `substation/supabase/migrations/` (new) | `geo.sir_id` nullable + `geo.submission_version_id`; same on `cartographer_anchors` (D1, D2) |
-| 10 | `substation/supabase/functions/geo_helpers.sql` | new `add_parcel_geo` (D10, D11); `sir_put_anchored_geo` and `cartographer_anchor_decide` delete-keys → `anchor_id` (D12) |
-| 11 | `cartographer/src/routes/anchored/+page.server.ts:67,92-93,106` | context by `target_geo_ids` (D13) |
+| 9 | `substation/supabase/migrations/` (new) | `geo.sir_id` nullable + `geo.submission_version_id` + `geo.file_id` → `cartographer_files` (D1); `cartographer_anchors.sir_id` nullable + `submission_version_id` (D2); expression index on `geo ((properties->>'anchor_id'))` (D12) |
+| 10 | `substation/supabase/functions/geo_helpers.sql` | new `add_parcel_geo` keyed on `file_id` (D10, D11); `sir_put_anchored_geo` writes `file_id` and, with `cartographer_anchor_decide`, deletes by `anchor_id` alone (D12) |
+| 11 | `cartographer/src/routes/anchored/+page.server.ts:67,92-93,106` | context by `sir_parcels` when the anchor has a SIR, by `target_geo_ids` when it does not (D13) |
 | 12 | `cartographer/.../scripts/fetch.ts` + `publish.ts` | emit the derivation record into `inputs/target.json`, carry it to `evidence.derivation` (D15–D18) |
 | 13 | `cartographer/src/routes/anchored/+page.svelte:183` | tile links to `/anchor/{anchor.id}` (D19) |
 | 14 | `cartographer/src/routes/anchor/[id]/` (new) | the evidence page (D20), modelled on `routes/geometry/[id]` |
@@ -387,7 +407,7 @@ Items 13 and 14 are the only ones that can ship on their own: §2.5's sections 2
 - **Runs:** `python3 -m unittest test_spcs_lookup`, CI.
 
 **S4: the RPCs, against a local Supabase** (existing)
-- **Proves:** D11 (two runs on one file produce **one** county row) and D12 (the `anchor_id`-only delete-key removes exactly the right rows with `sir_id` null).
+- **Proves:** D1 (`file_id` set on every row the anchor runbook writes, null on a SIR-time ring), D11 (two runs on one file produce **one** county row, keyed on `file_id`) and D12 (the `anchor_id`-only delete-key removes exactly the right rows with `sir_id` null, and `EXPLAIN` shows the expression index).
 - **Prior art:** `substation/src/lib/cartographer-anchors.integration.test.ts`, `geo-parcel-native-srid.integration.test.ts`.
 - **Runs:** substation's integration suite against a local Supabase.
 
@@ -423,7 +443,7 @@ Named only so the decoupling does not harden against north star **P5**. None is 
 5. **Reading model.** `mete.courses` + `misclosure_feet` has no meaning for a traced polyline.
 6. **Correspondence vocabulary.** `2.1-correspond` claims ring matches, vertex ties, edge ties and control points; a sheet's natural claims are "this run is the property line" and "this is the scale bar and it reads 20 ft".
 7. **Posture.** `geo.method` ∈ `county_api | anchored | estimated` has no *recorded vs proposed* axis, and north star §1.3's headline use case measures between the two.
-8. **Provenance.** `geo.source_doc` is `'cartographer:' || file_id`; a sheet reader wants the sheet. D1's `submission_version_id` is the first step toward that.
+8. **Provenance.** `geo.file_id` names the file; a sheet reader wants the sheet. D1's `file_id` and `submission_version_id` are the first steps toward that.
 
 ---
 
@@ -441,7 +461,7 @@ Named only so the decoupling does not harden against north star **P5**. None is 
 
 **Q6.** A plan set naming more than one county (a TxDOT note, an adjacent jurisdiction, a county-line subdivision). Stop and ask, or take the county in the recording reference specifically, since that is the one whose records hold the plat?
 
-**Q7.** Should `cartographer_anchors.target_geo_ids` get referential integrity now that D13 reads the map through it? It has already dangled once on one row (§1.4). An array FK needs a trigger or a join table.
+**Q7.** Should `cartographer_anchors.target_geo_ids` get referential integrity now that D13 reads the loose-file map through it? It has already dangled once on one row (§1.4). An array FK needs a trigger or a join table. *(v1.4, decided: not now.)* It stays a bare array; the loose-file viewer tolerates a missing id by drawing what exists. Revisit when there is more than one anchor run.
 
 **Q8.** Backfill posture for the 56 existing `geo` rows. All 56 derive a `project_id` cleanly, so north star **D4** (project ownership) stays available — but this spec does not need it and does not do it. Does anything want it before P5?
 

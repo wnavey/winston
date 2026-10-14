@@ -426,7 +426,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 <div class="kicker">CARTOGRAPHER · SIR-FREE ANCHORING</div>
 <h1>Anchoring without a SIR: a loose PDF from upload to the map</h1>
 <p>Architecture companion to <code>DESIGN-SPEC.md</code> (winston#309). Today <code>anchor-geometry</code> cannot run on a file nothing owns: the SIR supplies the request's identity, the target coordinate system, the fitting ring and the owner of every row it writes. This spec finds the county ring from the plan set's own text, takes the target coordinate system from the ring itself, lets <code>geo</code> and <code>cartographer_anchors</code> carry no owner, and shows the derivation on a new evidence page. North star P2a + P2b.</p>
-<div class="meta">Draft v1.3 · 2026-10-14 (v1.1 2026-10-13) · companion on spec-kit v5.1 · click a tab ↓</div>
+<div class="meta">Draft v1.4 · 2026-10-14 (v1.1 2026-10-13) · companion on spec-kit v5.1 · click a tab ↓</div>
 <a class="spec-link" href="DESIGN-SPEC.html">📖 read the spec</a>
 </header>
 
@@ -504,8 +504,8 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 <div class="sys trig" id="b-t1" style="grid-area:3/1"><span class="dot"></span><span class="t">Operator launches anchor-geometry</span><span class="d">{file, anchor_run_slug} · no owner</span></div>
 <div class="sys chg" id="b-steps" style="grid-area:3/3"><a class="ref" href="#detail-runbook">D3 · D8 ↓</a><span class="k">runbook steps</span><span class="t">1.1 inputs · 1.2 fetch</span><span class="d">owner fields optional · parks on BLOCKED.md instead of failing</span></div>
 <div class="sys chg" id="b-fetch" style="grid-area:3/4"><a class="ref" href="#detail-srid">D4 · D10a ↓</a><span class="k">script</span><span class="t">fetch.ts</span><span class="d">finds the parcel, fetches the ring, takes its SRID, checks the plat's zone, gates on area</span></div>
-<div class="sys store chg" id="b-geo" style="grid-area:3/5"><a class="ref" href="#detail-geo">D1 · D11 ↓</a><span class="k">table</span><span class="t">geo</span><span class="d">owner optional · county rows keyed by the file</span></div>
-<div class="sys chg" id="b-ui" style="grid-area:3/6"><a class="ref" href="#detail-viewer">D13 ↓</a><span class="k">ui</span><span class="t">/anchored</span><span class="d">context via the anchor's target_geo_ids, not a SIR</span></div>
+<div class="sys store chg" id="b-geo" style="grid-area:3/5"><a class="ref" href="#detail-geo">D1 · D11 ↓</a><span class="k">table</span><span class="t">geo</span><span class="d">owner optional · file_id provenance · county rows keyed by it</span></div>
+<div class="sys chg" id="b-ui" style="grid-area:3/6"><a class="ref" href="#detail-viewer">D13 ↓</a><span class="k">ui</span><span class="t">/anchored</span><span class="d">context via the SIR when there is one, else the anchor's target_geo_ids</span></div>
 
 <div class="sys ext" id="b-src" style="grid-area:4/2"><span class="k">external</span><span class="t">County parcel layer</span><span class="d">point or legal-description query · native ring</span></div>
 <div class="sys chg" id="b-bin" style="grid-area:4/3"><a class="ref" href="#detail-county">D6 ↓</a><span class="k">bureau scripts</span><span class="t">plan_set_county · spcs_lookup · arcgis_query</span><span class="d">page 1 → county name, legal description, address · zone-name index for the check</span></div>
@@ -530,7 +530,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 <a class="sys-edge new" data-from="b-ui" data-to="b-page">tile link</a>
 </div>
 <div class="sys-refs">
-<a class="refrow chg" data-ref="D1"><span class="chip">D1</span><span class="txt">geo.sir_id becomes nullable and geo gains a nullable submission_version_id; a row may be owned by a SIR, by a submission version, or by nothing</span></a>
+<a class="refrow chg" data-ref="D1"><span class="chip">D1</span><span class="txt">geo.sir_id becomes nullable; geo gains a nullable submission_version_id (ownership) and a nullable file_id (provenance); a row may be owned by a SIR, by a submission version, or by nothing</span></a>
 <a class="refrow chg" data-ref="D2"><span class="chip">D2</span><span class="txt">cartographer_anchors takes the same treatment: sir_id nullable, new nullable submission_version_id</span></a>
 <a class="refrow chg" data-ref="D3"><span class="chip">D3</span><span class="txt">the run request's owner fields are all optional; the only required field is file; site_point {lat, lon} is the operator's override for where the parcel is</span></a>
 <a class="refrow chg" data-ref="D4"><span class="chip">D4</span><span class="txt">the SRID ladder: the request's target_srid, then the fetched ring's native spatial reference, then the county table when the layer is published geographic, then stop; the plat's zone must agree</span></a>
@@ -539,9 +539,9 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 <a class="refrow chg" data-ref="D7"><span class="chip">D7</span><span class="txt">the plat's zone is the check, not the source: zone name → the set of its codes, and the derived code must be a member; assumed or deed bearings proceed with the check recorded as unavailable</span></a>
 <a class="refrow chg" data-ref="D8"><span class="chip">D8</span><span class="txt">disagreement is a hard stop: fetch.ts exits 3, fetch.py writes BLOCKED.md and exits 0, the 1.2 contract answers 75, the run waits for request.json</span></a>
 <a class="refrow chg" data-ref="D10a" href="DESIGN-SPEC.html#D10"><span class="chip">D10a</span><span class="txt">finding the parcel is a ladder (site_point → legal description → address through a jurisdiction locator → stop) closed by an area gate against the plat's stated area</span></a>
-<a class="refrow chg" data-ref="D11"><span class="chip">D11</span><span class="txt">the idempotency key for an unowned county_api row is the cartographer file: (file_id, kind, label, method)</span></a>
+<a class="refrow chg" data-ref="D11"><span class="chip">D11</span><span class="txt">the idempotency key for an unowned county_api row is the cartographer file, the D1 column: (file_id, kind, label, method)</span></a>
 <a class="refrow chg" data-ref="D12"><span class="chip">D12</span><span class="txt">the delete-key for an anchor's rows becomes properties->>'anchor_id' alone, in sir_put_anchored_geo and the reject path of cartographer_anchor_decide</span></a>
-<a class="refrow chg" data-ref="D13"><span class="chip">D13</span><span class="txt">/anchored finds its context through the anchor (geo where id = any(target_geo_ids)), not through an owner</span></a>
+<a class="refrow chg" data-ref="D13"><span class="chip">D13</span><span class="txt">/anchored finds its context through the owner when there is one (sir_parcels, unchanged) and through the anchor's target_geo_ids when there is not</span></a>
 <a class="refrow chg" data-ref="D18"><span class="chip">D18</span><span class="txt">the derivation record travels the path correspondences.json already takes: inputs/target.json → cartographer_anchors.evidence.derivation</span></a>
 <a class="refrow new" data-ref="D19"><span class="chip">D19</span><span class="txt">/anchored's tile gains a link to a new /anchor/[id], mirroring /processed → /geometry/[id]</span></a>
 <a class="refrow new" data-ref="D20"><span class="chip">D20</span><span class="txt">the evidence page reads in four sections: how we got the system, what we fitted to, the solve, the result</span></a>
@@ -775,8 +775,9 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 <div class="row"><span class="gut"></span><span class="nm">kind · label</span><span class="ty">parcel · lot · easement …</span></div>
 <div class="row"><span class="gut"></span><span class="nm">method</span><span class="ty">county_api (46) · anchored (8) · estimated (2)</span></div>
 <div class="row"><span class="gut"></span><span class="nm">geom_wgs84 · geom_local · srid_local</span><span class="ty">county's native ring in its State Plane</span></div>
-<div class="row hi"><span class="gut"></span><span class="nm">source_doc</span><span class="ty">'cartographer:' || file_id · <b>the D11 key</b> for unowned county rows</span></div>
-<div class="row hi"><span class="gut"></span><span class="nm">properties.anchor_id</span><span class="ty">anchored rows · <b>the D12 delete-key, alone</b></span></div>
+<div class="row add"><span class="gut">+</span><span class="b b-fk">FK</span><span class="b b-new">NEW</span><span class="nm">file_id</span><span class="ty">uuid · nullable → cartographer_files · provenance, not ownership · <b>the D11 key</b></span></div>
+<div class="row"><span class="gut"></span><span class="nm">source_doc</span><span class="ty">'cartographer:' || file_id · stays as the human-readable note</span></div>
+<div class="row hi"><span class="gut"></span><span class="nm">properties.anchor_id</span><span class="ty">anchored rows · <b>the D12 delete-key, alone</b> · + expression index</span></div>
 <div class="note">56 rows across 31 SIRs today, all SIR-owned; all 56 derive a project_id cleanly if a backfill is ever wanted (Q8). Both owners on one row: Q2.</div>
 </div>
 <div class="ent changed" id="detail-anchors"><div class="eh"><span class="en">cartographer_anchors</span><span class="stereo">MODIFIED · substation (D2, D13, D18)</span></div>
@@ -785,7 +786,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 <div class="row"><span class="gut"></span><span class="b b-nn">NN</span><span class="nm">run_slug · frame_key · anchor_run_slug</span><span class="ty">text</span></div>
 <div class="row hi"><span class="gut"></span><span class="b b-fk">FK</span><span class="nm">sir_id</span><span class="ty">→ site_intelligence_report · <b>now nullable</b></span></div>
 <div class="row add"><span class="gut">+</span><span class="b b-fk">FK</span><span class="b b-new">NEW</span><span class="nm">submission_version_id</span><span class="ty">uuid · nullable → submission_version</span></div>
-<div class="row hi"><span class="gut"></span><span class="nm">target_geo_ids</span><span class="ty">uuid[] · <b>now the viewer's context key</b> (D13) · no FK, already dangles on e94fae93 (Q7)</span></div>
+<div class="row hi"><span class="gut"></span><span class="nm">target_geo_ids</span><span class="ty">uuid[] · <b>the loose-file viewer's context key</b> (D13) · no FK, stays a bare array for now (Q7)</span></div>
 <div class="row"><span class="gut"></span><span class="nm">target_srid · method · accuracy_class · params · metrics</span><span class="ty">unchanged</span></div>
 <div class="row"><span class="gut"></span><span class="nm">evidence</span><span class="ty">jsonb · correspondences · constraints_used · overlay_path · check_md · decision_note</span></div>
 <div class="row add"><span class="gut">+</span><span class="b b-new">NEW</span><span class="nm">evidence.derivation</span><span class="ty">the claims: cited · read · computed (D15–D18)</span></div>
@@ -823,12 +824,12 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 <div class="rels-h">Relationships (crow's foot)</div>
 <span class="rl">site_intelligence_report <span class="cf">‖──?</span> geo <span class="cmt">— sir_id, now optional (D1)</span></span>
 <span class="rl">submission_version <span class="cf">‖──?</span> geo <span class="tag-new">[NEW]</span> <span class="cmt">— the join to plan_set_version and project already exists</span></span>
-<span class="rl">cartographer_files <span class="cf">‖──&lt;</span> geo <span class="cmt">— county_api rows keyed by source_doc 'cartographer:' || file_id (D11)</span></span>
+<span class="rl">cartographer_files <span class="cf">‖──&lt;</span> geo <span class="tag-new">[NEW]</span> <span class="cmt">— file_id, provenance of every row the anchor runbook writes; the D11 key for county rows</span></span>
 <span class="rl">cartographer_anchors <span class="cf">‖──&lt;</span> geo <span class="cmt">— anchored rows, properties.anchor_id (D12)</span></span>
 <span class="rl">cartographer_anchors <span class="cf">──&lt;</span> geo <span class="cmt">— target_geo_ids, the context the viewer draws (D13); no FK yet (Q7)</span></span>
 <span class="rl">cartographer_anchors.evidence.derivation <span class="cf">>──‖</span> cartographer_geometry_evidence <span class="cmt">— cited claims by evidence_id, never copied (D16)</span></span>
 </div>
-<p class="claim"><b>Claim (D1):</b> "nothing is a first-class case: it is what a loose PDF produces, and it is the case this spec exists to serve." <b>Claim (D12):</b> dropping the SIR from the delete-key "is the one place where the decoupling makes the schema simpler rather than wider."</p>
+<p class="claim"><b>Claim (D1):</b> "nothing is a first-class case: it is what a loose PDF produces, and it is the case this spec exists to serve"; "ownership and provenance are different questions." <b>Claim (D12):</b> dropping the SIR from the delete-key "is the one place where the decoupling makes the schema simpler rather than wider."</p>
 
 <h3 id="detail-publish"><span class="hn">RPC</span>What the two writes do</h3>
 <div class="legend"><span class="k"><span class="swatch" style="background:var(--p500)"></span> read</span><span class="k"><span class="swatch" style="background:var(--new)"></span> write</span><span class="k"><span class="swatch" style="background:var(--p700);border:1px dashed #fff"></span> store</span></div>
@@ -838,11 +839,11 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 <div class="ucdiag"><div class="dfg">
 <div class="node read"><span class="op">fetch</span><span class="nt">county layer</span><span class="nf">point | where → 1 feature<br>native ring · native_sr</span></div>
 <div class="edge"><span class="el">① area gate<br>passed</span><span class="ar">→</span></div>
-<div class="node created"><span class="op">upsert</span><span class="nt">geo</span><span class="nf">method county_api<br>sir_id NULL · submission_version_id?<br>key (file_id, kind, label)</span></div>
+<div class="node created"><span class="op">upsert</span><span class="nt">geo</span><span class="nf">method county_api<br>sir_id NULL · file_id set<br>key (file_id, kind, label)</span></div>
 <div class="edge"><span class="el">② read back</span><span class="ar">→</span></div>
 <div class="node read"><span class="op">read</span><span class="nt">geo</span><span class="nf">geom_local in target_srid<br>→ inputs/parcels.json</span></div>
 </div></div>
-<div class="ucnote"><b>note</b> — today's key is <code>sir_id = p_sir and kind and method and label</code>. With <code>p_sir</code> NULL that is a never-match, so every run inserts another ring; the naive repair (<code>is not distinct from</code>) makes every unowned county row collide across unrelated sites. The file is the key (D11); whether a new <code>anchor_run_slug</code> reuses it is Q5. Hausdorff-checking the native ring against WGS84 stays as in <code>sir_add_parcel_geo</code>.</div>
+<div class="ucnote"><b>note</b> — today's key is <code>sir_id = p_sir and kind and method and label</code>. With <code>p_sir</code> NULL that is a never-match, so every run inserts another ring; the naive repair (<code>is not distinct from</code>) makes every unowned county row collide across unrelated sites. The file is the key (D11), by the new <code>file_id</code> column rather than a parse of <code>source_doc</code>; whether a new <code>anchor_run_slug</code> reuses it is Q5. The write happens before the 4.1 gate and a rejected fit leaves the ring in place, on purpose (D10). Hausdorff-checking the native ring against WGS84 stays as in <code>sir_add_parcel_geo</code>.</div>
 </div>
 <div class="uc">
 <div class="uch"><div class="ucn">2</div><div class="uctxt"><span class="actor">5.1 publish · publish.ts</span><span class="uct">Write the anchor and its rows with no owner</span></div></div>
@@ -863,11 +864,11 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 <h3 id="detail-viewer"><span class="hn">D13</span>What /anchored reads</h3>
 <div class="spectable-scroll"><table class="spectable"><thead><tr><th>Layer</th><th>Today (<code>+page.server.ts</code>)</th><th>After</th></tr></thead><tbody>
 <tr><td>figures (marine)</td><td><code>geo where properties->>'anchor_id' = anchor.id</code> (:139)</td><td><span class="none">unchanged</span></td></tr>
-<tr><td>context (amber)</td><td>loop <code>sirIds</code>, call <code>sir_parcels(p_sir)</code> per SIR (:67, :92-93, :106)</td><td><code>geo where id = any(anchor.target_geo_ids)</code> <span class="r">read</span></td></tr>
+<tr><td>context (amber)</td><td>loop <code>sirIds</code>, call <code>sir_parcels(p_sir)</code> per SIR (:67, :92-93, :106)</td><td>anchor has a SIR: <span class="none">unchanged</span> · no owner: <code>geo where id = any(anchor.target_geo_ids)</code> <span class="r">read</span></td></tr>
 <tr><td>rail subtitle</td><td>the SIR, per anchor (:71)</td><td>optional: file name alone, or submission → project when the chain exists (Q4)</td></tr>
 <tr><td>tile</td><td>links to the file only (<code>+page.svelte:183</code>)</td><td>also links to <code>/anchor/{anchor.id}</code> (D19)</td></tr>
 </tbody></table></div>
-<p class="claim"><b>Claim (D13):</b> "this works with zero owners and gives <code>target_geo_ids</code> a real job, which is incidentally the reason to fix its integrity." The Overview's "the lot in marine over the county ring in amber" is §5 step 4.</p>
+<p class="claim"><b>Claim (D13):</b> the SIR path is unchanged because losing the neighbouring parcels and the two <code>estimated</code> rows "would be a regression for the case that already works"; the loose-file branch "works with zero owners and gives <code>target_geo_ids</code> its first real job." The Overview's "the lot in marine over the county ring in amber" is §5 step 4.</p>
 </section>
 
 <!-- ============================================================ 05 SHOWING THE WORK -->
@@ -940,9 +941,9 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 <tr><td><span class="sn">6</span></td><td><code>fetch.ts:116-147</code></td><td>the D4 ladder between the flag and the stop, ring native_sr else the county table, and the D7 zone check; every stop is exit 3 with a reason (D8)</td></tr>
 <tr><td><span class="sn">7</span></td><td><code>fetch.ts:152-161</code></td><td>no SIR: D10a ladder + area gate first, fetch the ring (D10), take the target from its native_sr (D5), write it, read it back; sir_geo_in_srid only on the SIR path</td></tr>
 <tr><td><span class="sn">8</span></td><td><code>publish.ts:119</code></td><td>sir_id may be null; carry submission_version_id</td></tr>
-<tr><td><span class="sn">9</span></td><td><code>substation/supabase/migrations/</code> <span class="w">new</span></td><td>geo.sir_id nullable + geo.submission_version_id; same on cartographer_anchors (D1, D2)</td></tr>
-<tr><td><span class="sn">10</span></td><td><code>substation/…/geo_helpers.sql</code></td><td>new add_parcel_geo (D10, D11); sir_put_anchored_geo and cartographer_anchor_decide delete-keys → anchor_id (D12)</td></tr>
-<tr><td><span class="sn">11</span></td><td><code>routes/anchored/+page.server.ts:67,92-93,106</code></td><td>context by target_geo_ids (D13)</td></tr>
+<tr><td><span class="sn">9</span></td><td><code>substation/supabase/migrations/</code> <span class="w">new</span></td><td>geo.sir_id nullable + geo.submission_version_id + geo.file_id → cartographer_files (D1); cartographer_anchors.sir_id nullable + submission_version_id (D2); expression index on geo ((properties->>'anchor_id')) (D12)</td></tr>
+<tr><td><span class="sn">10</span></td><td><code>substation/…/geo_helpers.sql</code></td><td>new add_parcel_geo keyed on file_id (D10, D11); sir_put_anchored_geo writes file_id and, with cartographer_anchor_decide, deletes by anchor_id alone (D12)</td></tr>
+<tr><td><span class="sn">11</span></td><td><code>routes/anchored/+page.server.ts:67,92-93,106</code></td><td>context by sir_parcels when the anchor has a SIR, by target_geo_ids when it does not (D13)</td></tr>
 <tr><td><span class="sn">12</span></td><td><code>fetch.ts</code> + <code>publish.ts</code></td><td>emit the derivation into inputs/target.json, carry it to evidence.derivation (D15–D18)</td></tr>
 <tr><td><span class="sn">13</span></td><td><code>routes/anchored/+page.svelte:183</code></td><td>tile links to /anchor/{anchor.id} (D19)</td></tr>
 <tr><td><span class="sn">14</span></td><td><code>routes/anchor/[id]/</code> <span class="w">new</span></td><td>the evidence page (D20), modelled on routes/geometry/[id]</td></tr>
@@ -954,7 +955,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 <tr><td><b>S1</b> the runbook, inputs → outputs</td><td>D1–D3, D10, D12 end to end: a request carrying only {file, anchor_run_slug} produces anchors.json, an anchor row with sir_id null, geo rows with no owner</td><td><code>anchor-e2e.test.ts</code></td><td>locally against White Water; the §5 acceptance test</td></tr>
 <tr><td><b>S2</b> fetch.ts's CLI</td><td>D4–D9, D10, D10a: each stop is one invocation and one expected exit 3; the area gate gets a wrong-section case; then one fetch.py case per stop proves BLOCKED.md and the 75</td><td><code>contracts.test.ts</code>, <code>frames.test.ts</code></td><td><code>bun test</code>, CI</td></tr>
 <tr><td><b>S3</b> the SRID resolver <span class="w">new</span></td><td>D6 and D7's arithmetic alone: the zone → set, member and non-member, an unknown zone, the county fallback by name, a split county</td><td><code>test_spcs_lookup.py</code></td><td><code>python3 -m unittest</code>, CI</td></tr>
-<tr><td><b>S4</b> the RPCs</td><td>D11 (two runs on one file, one county row) and D12 (anchor_id-only delete removes exactly the right rows with sir_id null)</td><td><code>cartographer-anchors.integration.test.ts</code></td><td>substation's suite against a local Supabase</td></tr>
+<tr><td><b>S4</b> the RPCs</td><td>D1 (file_id on every row the runbook writes), D11 (two runs on one file, one county row) and D12 (anchor_id-only delete removes exactly the right rows; EXPLAIN shows the index)</td><td><code>cartographer-anchors.integration.test.ts</code></td><td>substation's suite against a local Supabase</td></tr>
 <tr><td><b>S5</b> the /anchor/[id] load <span class="w">new</span></td><td>D15–D20, and that an anchor with no derivation key still renders rather than 500s</td><td><code>routes/geometry/[id]/+page.server.ts</code></td><td><code>bun test</code>; manually against e94fae93</td></tr>
 </tbody></table></div>
 <p class="claim"><b>Claim (§4):</b> every seam has prior art of the same shape; S5 inherits winston#274's additive posture, "a figure published before the evidence tables existed renders with 'no evidence recorded'."</p>
@@ -984,14 +985,14 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 <div class="uci"><span class="uid">Q4</span><span class="utxt">What labels an anchor with no owner on /anchored: the file name alone, or the submission → project chain when it exists?</span></div>
 <div class="uci"><span class="uid">Q5</span><span class="utxt">Does a re-run under a new anchor_run_slug reuse the county row (D11 says yes) or mint one per run so a run's context is immutable?</span></div>
 <div class="uci"><span class="uid">Q6</span><span class="utxt">A plan set naming more than one county: stop and ask, or take the one in the recording reference, since that is whose records hold the plat?</span></div>
-<div class="uci"><span class="uid">Q7</span><span class="utxt">Referential integrity for <code>target_geo_ids</code> now that D13 reads the map through it: a trigger or a join table.</span></div>
+<div class="uci later"><span class="uid">Q7</span><span class="utxt">Referential integrity for <code>target_geo_ids</code>: decided <b>not now</b>; it stays a bare array, revisited when there is more than one anchor run.</span></div>
 <div class="uci later"><span class="uid">Q8</span><span class="utxt">Backfill posture for the 56 existing geo rows; all derive a project_id cleanly; nothing here needs it.</span></div>
 <div class="uci"><span class="uid">Q9</span><span class="utxt">Does /anchor/[id] reuse /geometry/[id]'s full PDF instrument, or a read-only viewer?</span></div>
 <div class="uci"><span class="uid">Q10</span><span class="utxt">Does the county read get a stored crop, or stay box-only? A stored crop needs a crops row from a runbook that is not the extract runbook.</span></div>
 <div class="uci"><span class="uid">Q11</span><span class="utxt"><b>Possible bug:</b> <code>evidence.check_md</code> is null on e94fae93.</span></div>
 <div class="uci"><span class="uid">Q12</span><span class="utxt">The area-gate tolerance: start at 10 %, record both areas either way, tune on the first stop.</span></div>
 </div>
-<div class="callout ember"><span class="lab">in the PR thread, not in the spec</span>Audit points that would change functional logic are listed on winston#309 for a decision: a <code>geo.file_id</code> column instead of parsing <code>source_doc</code>; D13's effect on the SIR path; the pre-gate county write; an expression index on <code>anchor_id</code>; Q7. The FIRM-panel point closed itself in v1.3: the panel is no longer read.</div>
+<div class="callout new"><span class="lab">audit closed</span>Every functional point from the audit of winston#309 is now decided and folded in: the SRID comes from the ring (v1.3); <code>geo.file_id</code> replaces the <code>source_doc</code> parse; the SIR path keeps its full parcel context; the county ring is written before the gate on purpose; <code>anchor_id</code> is indexed; Q7 is deferred (v1.4).</div>
 </section>
 
 </main>
