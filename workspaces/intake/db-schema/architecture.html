@@ -1112,7 +1112,8 @@ decided_at: 2026-10-14</div>
         <div class="row"><span class="nm">name</span><span class="dt">text</span></div>
         <div class="row"><span class="nm">bureau_path</span><span class="dt">text</span></div>
         <div class="row"><span class="nm">bureau_commit</span><span class="dt">text<i> null</i></span></div>
-        <div class="row"><span class="nm">created_at, updated_at</span><span class="dt">timestamptz</span></div>
+        <div class="row"><span class="nm">created_at</span><span class="dt">timestamptz</span></div>
+        <div class="row"><span class="nm">updated_at</span><span class="dt">timestamptz</span></div>
         <div class="note">a jurisdiction's checklist id is its slug</div>
       </div>
       <div class="ent newt" id="t-items" style="grid-area:2/1/3/3">
@@ -1130,7 +1131,11 @@ decided_at: 2026-10-14</div>
         <div class="row"><span class="nm">comment_number</span><span class="dt">int</span><span class="ty">unique per revision</span></div>
         <div class="row"><span class="nm">title</span><span class="dt">text<i> null</i></span><span class="ty">the authored title</span></div>
         <div class="row"><span class="nm">item_text</span><span class="dt">text</span><span class="ty">the Item cell, written as the deficiency</span></div>
-        <div class="row"><span class="nm">condition, location, location_binding, requirement_source, source_type</span><span class="dt">text<i> null</i></span><span class="ty">the guide row's cells, by header name</span></div>
+        <div class="row"><span class="nm">condition</span><span class="dt">text<i> null</i></span><span class="ty">when the item applies: 'Always' or 'If …'</span></div>
+        <div class="row"><span class="nm">location</span><span class="dt">text<i> null</i></span><span class="ty">the guide row's Location cell</span></div>
+        <div class="row"><span class="nm">location_binding</span><span class="dt">text<i> null</i></span><span class="ty">the guide row's Location Binding cell</span></div>
+        <div class="row"><span class="nm">requirement_source</span><span class="dt">text<i> null</i></span><span class="ty">the regulation the item comes from</span></div>
+        <div class="row"><span class="nm">source_type</span><span class="dt">text<i> null</i></span><span class="ty">the guide row's Source Type cell</span></div>
         <div class="row"><span class="nm">fail_status</span><span class="dt">text<i> null</i></span><span class="ty">fail · warn · fail-or-warn; null in tables without the column</span></div>
         <div class="row"><span class="nm">citations</span><span class="dt">jsonb<i> null</i></span><span class="ty">the item's entry from source-citations.json</span></div>
         <div class="row"><span class="b b-fk">FK</span><span class="nm">jurisdiction_slug</span><span class="dt">text<i> null</i></span><span class="ty">copied from the checklist, so "items for X" needs no join</span></div>
