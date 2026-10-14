@@ -6,7 +6,7 @@
 <title>Intake checklist DB schema and the bureau sync</title>
 <style>
 /* ============================================================
-   spec-kit v6.5  —  winston HTML spec design system
+   spec-kit v6.6  —  winston HTML spec design system
    Inline the ENTIRE contents of this file into the spec's style block.
    Canonical source: ~/.claude/skills/winston-spec/assets/spec-kit.css
    When you change this file, bump the version above and in COMPONENTS.md.
@@ -938,6 +938,14 @@ nav.tabs button{white-space:nowrap;flex:0 0 auto}
 .ent.dropped .eh{background:var(--retbg)} .ent.dropped .eh .stereo{color:var(--retink)}
 .ent.dropped .eh .en,.ent.dropped .row .nm{text-decoration:line-through;color:var(--retink)}
 .sys-legend i.box.del{border:1.5px dashed var(--ret);background:var(--retbg)}
+/* v6.6 — composite primary key: the key's rows sit in a .pkgroup with a "{" down their left
+   edge and a small label, so "these columns together identify a row" reads at a glance. */
+.ent .pkgroup{position:relative;padding-left:18px;border-top:1px solid #eef1f4}
+.ent .pkgroup:first-child{border-top:0}
+.ent .pkgroup::before{content:"";position:absolute;left:8px;top:28px;bottom:8px;width:8px;border:2px solid var(--ink);border-right:0;border-radius:9px 0 0 9px}
+.ent .pkgroup::after{content:"";position:absolute;left:2px;top:calc(50% + 10px);width:7px;border-top:2px solid var(--ink)}
+.ent .pkgroup .pklabel{display:block;padding:7px 12px 0 4px;font-size:var(--fs-micro);font-weight:600;letter-spacing:.04em;color:var(--ink2)}
+.ent .pkgroup .row{border-top:0;padding-left:6px}
 
 </style>
 </head>
