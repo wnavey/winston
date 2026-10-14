@@ -2,7 +2,7 @@
 
 **Status:** Draft v1.1
 **Date:** 2026-10-14
-> **Revision note v1.1 (2026-10-14):** the PR plan is resequenced per north-star D3 v1.1. P2a lands first, as the runbook's output contract; P1 and P2b wait until the loop has run on two jurisdictions.
+> **Revision note v1.1 (2026-10-14):** the PR plan is resequenced per north-star D3 v1.1. P2a lands first, as the runbook's output contract; P1 and P2b wait until the loop has met the Austin bar and at least one non-Austin smoke run has produced output in the format (north-star v1.2).
 
 **Parent:** `workspaces/intake/north-star/NORTH-STAR-SPEC.md`, initiative I1 (D3). Carries out north-star D4–D9.
 **Repos touched:**
@@ -308,7 +308,7 @@ Dispatch again: still one revision.
 ## 4. PR plan
 
 **P1: the four intake tables and their write function** (`cityhall`)
-- **Blocked by:** nothing technical. **It is scheduled after the intake-prospecting loop has run on at least two jurisdictions** (north-star D3 v1.1), so that answers to north-star Q1 and Q2 can still change the schema before the migration is applied.
+- **Blocked by:** nothing technical. **It is scheduled after the intake-prospecting loop has met the Austin bar and at least one non-Austin smoke run has produced output in the format** (north-star D3 v1.1), so that answers to north-star Q1 and Q2 can still change the schema before the migration is applied.
 - **Delivers:**
   - `supabase/schemas/public/tables/{intake_checklists,intake_checklist_versions,intake_checklist_items,jurisdiction_intake}.sql`
   - `functions/intake_sync_version.sql`

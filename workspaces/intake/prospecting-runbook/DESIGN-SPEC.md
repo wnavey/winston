@@ -1,7 +1,9 @@
 # The intake-prospecting runbook
 
-**Status:** Draft v1
+**Status:** Draft v1.1
 **Date:** 2026-10-14
+> **Revision note v1.1 (2026-10-14, Will):** **Austin is the only scored scenario.** Nobody has confirmed the earlier New Braunfels and Cedar Park runs were good, so they are no longer test cases with expected answers. Non-Austin jurisdictions become unscored **smoke runs** that check only the mechanics (scraping, capture and extraction on non-Austin sites, citation validity, the file format), and they carry little weight (D16). D7's New Braunfels note is now only an illustration. Acceptance and P2/P5 changed to match, and the old Q2 is narrowed.
+
 **Parent:** `workspaces/intake/north-star/NORTH-STAR-SPEC.md`, initiative I2. Carries out north-star D2, D5, D10–D14.
 **Output contract:** `workspaces/intake/db-schema/DESIGN-SPEC.md` D1–D5 (the file format), checked by its `lint:intake` once db-schema P2a lands.
 **Repos touched:**
@@ -182,7 +184,7 @@ Snapshots exist before 1.4, so classification and every later step read the same
 
 - `scope_sources` may only name `intake_instrument` and `template` sources (enforced by the contract).
 - **The boundary rule is north-star Q1's proposal, pending Will:** any published intake, submittal or application checklist for the application type that carries the site plan gives `formal`; nothing like that, with strong-tier negative attempts, gives `none_found`; anything else gives `inconclusive`.
-- Under that rule, New Braunfels comes out `formal`: its Commercial Building Permit Checklist is an `intake_instrument`. If Will rules otherwise, D7 changes and nothing else does.
+- Illustration only, not an expected result: New Braunfels publishes a Commercial Building Permit Checklist, which this rule would type as an `intake_instrument`, giving `formal`. That reading rests on an unconfirmed Gate 0 log (D16). If Will rules the boundary differently, D7 changes and nothing else does.
 
 **D8. The scope gate.** `1.5-scope` is `runner: none`, `frozen`, and shows `1.4-classify/readout.md`: the sources table, the basis, and the scope sources with their quotes. A `Decision` zod union, `approved | revise`, carries `decided_by`, `notes`, and on `revise` the edits: add or remove scope sources, retype a source, or change the basis. `revise` re-runs 1.4 with the notes.
 
@@ -274,7 +276,10 @@ The step's contract runs `lint:intake` once db-schema P2a exists. Until then it 
 - `2.1-match/<reference group>`: blind Opus judges, one per reference group. Each sees one reference item and the candidate generated items, and answers `match | partial | none`.
 - `3.1-scorecard`: the scorecard, plus the judge cache keyed by content hash, so re-scoring an unchanged pair is free.
 
-Each scenario lives in `runbooks/intake-score/scenarios/<slug>/` and holds `reference.json` (items parsed from the reference guides, frozen), `reference-sources.json` (the documents a good run must find) and `expected.yaml` (the basis and application type).
+The one scenario, `runbooks/intake-score/scenarios/austin/` (D16), holds:
+- `reference.json`: items parsed from the reference guides, frozen;
+- `reference-sources.json`: the documents a good run must find;
+- `expected.yaml`: the basis and application type.
 
 | Metric | What it measures | How |
 |---|---|---|
@@ -288,15 +293,21 @@ Each scenario lives in `runbooks/intake-score/scenarios/<slug>/` and holds `refe
 
 M3 and M4 are also reported against Austin **v2.7-trimmed** as information only (north-star D11).
 
-**D16. Scenarios and the bar.** [Will: "close enough"; the numbers are proposed, Q1]
+**D16. Austin is the only scored scenario; other jurisdictions are unscored smoke runs.** [Will 2026-10-14: Austin only, because nobody can confirm the New Braunfels or Cedar Park runs were good. The numbers are proposed, Q1.]
 
-| Scenario | Reference | Expected |
+| Scenario | Reference | Expected and bar |
 |---|---|---|
-| `austin` | `v2-trimmed` (190 items, the four intake documents) | `formal`, Consolidated Site Plan; **M1 = 4/4, M3 ≥ 0.70, M4 ≥ 0.85, M5 ≤ 0.05, M6 ≥ 0.95** |
-| `new-braunfels` | none for items; `reference-sources.json` = the Commercial Building Permit Checklist | `formal` (under D7's rule), Commercial Building Permit; M1 = 1/1, M5 ≤ 0.05 |
-| `cedar-park` | Cedar Park `v1` (uncurated), information only | `formal`; M1 and M2 only, as a check on generalisation |
+| `austin` (scored) | `v2-trimmed` (190 items, the four intake documents) | `formal`, Consolidated Site Plan; **M1 = 4/4, M3 ≥ 0.70, M4 ≥ 0.85, M5 ≤ 0.05, M6 ≥ 0.95** |
 
-- "Close enough" means the Austin row passes on two consecutive runs with no prompt change between them.
+- "Close enough" means the Austin row passes on two consecutive runs with no prompt change between them. **This is the only bar.**
+- **Smoke runs** are for non-Austin jurisdictions, for example New Braunfels or Cedar Park, and ideally one with prospector outputs such as Leander, to exercise D4's seeds. They test **mechanics only**:
+  - the run completes;
+  - snapshots capture from non-Austin hosts (CivicPlus `DocumentCenter/View/N`, other CMSes, Municode), measured as the capture error rate;
+  - M6 citation validity;
+  - output that passes `lint:intake`;
+  - a `basis.json` whose rationale cites evidence.
+
+  They have no `reference.json` and no `expected.yaml`, and nothing is judged against one. Their basis, sources and items are skimmed by a person and noted in the iteration report, but **they don't gate the bar and shouldn't steer prompt changes on their own**. Existing artefacts (Cedar Park's `v1`, New Braunfels' Gate 0 sources) are never treated as answers.
 - Loop iterations run with `scope_gate: auto` and `publish: false`, and the scorecards are collected in one Inspector General report per iteration.
 
 **D17. completion-officer is retired, not imported.** No file is copied in. Its heuristics live on in the D5, D9, D10 and D12 prompts. Once D16's bar is met (north-star Q7):
@@ -327,7 +338,12 @@ M3 and M4 are also reported against Austin **v2.7-trimmed** as information only 
 - **Prior art:** `runbooks/cc-compare/` (scorecard, answer key) and `runbooks/lib/eval/score.ts` (deterministic scoring with cached judge verdicts).
 - **Runs:** `node --test runbooks/intake-score`, in bureau CI.
 
-**Acceptance (not a seam):** D16's Austin row passes twice in a row, then a `scope_gate: human`, `publish: true` run on New Braunfels opens a bureau PR that passes `lint:intake`.
+**Acceptance (not a seam):**
+1. D16's Austin row passes twice in a row.
+2. At least one non-Austin smoke run passes its mechanical checks.
+3. One `scope_gate: human`, `publish: true` run on a non-Austin jurisdiction of Will's choosing opens a **draft** bureau PR that passes `lint:intake`.
+
+Whether that PR merges is Will's judgement of its content, not part of acceptance.
 
 ---
 
@@ -349,9 +365,9 @@ All PRs are in `bureau`.
 - **Door:** two-way (a new runbook nobody else calls).
 - **Blast radius:** none.
 
-**P2: `intake-score` with M1/M2/M6 and the three scenarios**
+**P2: `intake-score` with M1/M2/M6 and the Austin scenario**
 - **Blocked by:** P1 (its run-dir shape).
-- **Delivers:** D15 (mechanical metrics) and D16 (scenario folders, with Austin's reference parsed from `v2-trimmed`). **The source loop starts here**: iterate 1.2 and 1.4 prompts on Austin, New Braunfels and Cedar Park.
+- **Delivers:** D15 (mechanical metrics) and D16 (scenario folders, with Austin's reference parsed from `v2-trimmed`). **The source loop starts here**: iterate 1.2 and 1.4 prompts against the Austin scores, with smoke runs on one or two non-Austin jurisdictions to catch scraping and capture failures (D16).
 - **Tested at:** S3 (mechanical half).
 - **Door:** two-way.
 - **Blast radius:** none.
@@ -372,7 +388,7 @@ All PRs are in `bureau`.
 
 **P5: write, contact sheet, review gate, publish** (steps 3.1 – 4.2)
 - **Blocked by:** P3, and db-schema **P2a** (the format and `lint:intake` the contract runs; north-star D3 v1.1).
-- **Delivers:** D13, D14. Then acceptance: a human-gated New Braunfels publish.
+- **Delivers:** D13, D14. Then acceptance, ending in a human-gated draft publish for one non-Austin jurisdiction.
 - **Tested at:** S1 (steps 3.x–4.x), then acceptance.
 - **Door:** two-way until a PR it opens is merged. A merged checklist is a bureau revert.
 - **Blast radius:** the bureau PRs it opens, which are reviewed before merge.
@@ -388,7 +404,7 @@ All PRs are in `bureau`.
 ## 5. Open questions
 
 - **Q1. The bar.** Are D16's Austin thresholds (M1 4/4, M3 ≥ 0.70, M4 ≥ 0.85, M5 ≤ 0.05, M6 ≥ 0.95, twice in a row) the right meaning of "close enough"? M3 against v2-trimmed is the number most likely to need Will's calibration after the first scored run.
-- **Q2. North-star Q1** (the formal / none_found boundary) is needed for D7 and for New Braunfels' expected basis. The spec assumes the proposed rule.
+- **Q2. North-star Q1** (the formal / none_found boundary) is needed for D7. The spec assumes the proposed rule. With no non-Austin scenario scored, Austin's `formal` is the only basis checked automatically, so a wrong boundary would show up only in the smoke runs, which a person reads.
 - **Q3. Fail status.** Is "required / will be rejected → `fail`; recommended / may be returned → `warn`" enough? v2.7 also uses `fail-or-warn` (9 items), which the generator never produces. Leave that to human edits?
 - **Q4. Key Terms.** Austin's guides gained a Key Terms section from the bureau glossary in v2.4. Should generated guides have one, and from what? The jurisdiction has no glossary until prospector's regulatory workstream builds one.
 - **Q5. Re-generating a jurisdiction that already has a checklist.** D14 refuses without `replace`, and `replace` writes the next `vN`. Should a re-run on a **curated** checklist (Austin) ever publish, or only ever be scored?

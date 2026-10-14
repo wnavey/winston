@@ -1,11 +1,13 @@
 # Intake north star: a checklist for every jurisdiction
 
-**Status:** Draft v1.1
+**Status:** Draft v1.2
 **Date:** 2026-10-14
 **Repos touched:** none. This is a plan of a plan. It records the 2026-10-14 discussion with Will, names where intake should end up, and lists the sub-specs that will carry out the work.
 **Repos eventually touched:** `bureau` (checklist files, the intake-prospecting runbook, the prospector workstream, the sync), `cityhall` (App-DB tables and migrations), `completion-officer` (retired)
 **Repos NOT touched:** `conductor` (legacy), `substation` (on the deprecation path)
 
+> **Revision note v1.2 (2026-10-14, Will):** D11: **Austin is the only scored case.** Nobody can confirm that the New Braunfels and Cedar Park runs were good, so they are at most unscored smoke runs for scraping and extraction on non-Austin sites, with little weight. D3's gate on P1/P2b is changed to match.
+>
 > **Revision note v1.1 (2026-10-14):** D3 now orders the work by dependency: I2 (the runbook) depends on I1's file format only, so it starts now. I1's migration and sync (P1, P2b) wait until the loop has run on two jurisdictions. Sub-spec table: `prospecting-runbook` is now Draft v1.
 
 **Sub-specs spawned from this one:**
@@ -162,7 +164,7 @@ Each decision is marked **[Will]** if Will decided it in the 2026-10-14 discussi
 1. The I1 file format is agreed. That is the db-schema spec, and it is the runbook's output contract.
 2. **I2 starts now.**
 3. I1's **P2a** (format, linter, Austin backfill) lands when convenient, ideally before the runbook's first real publish, so the linter can check runbook output.
-4. I1's **P1 + P2b** (migration and sync) wait until the loop has run on at least two jurisdictions. Applying a migration is the step that costs the most to undo, and Q1/Q2 (where formal vs none_found falls, and whether there is a checklist per application type) are likely to change the format once they are answered by running on New Braunfels and Cedar Park.
+4. I1's **P1 + P2b** (migration and sync) wait until the loop has met the Austin bar and at least one non-Austin smoke run has produced output in the format (v1.2). Applying a migration is the step that costs the most to undo, and Q1/Q2 (where formal vs none_found falls, and whether there is a checklist per application type) are likely to change the format once non-Austin runs show how other jurisdictions are structured.
 
 completion-officer is retired once I2 replaces it.
 
@@ -197,10 +199,8 @@ Moving a jurisdiction off the baseline later means it gets its own checklist wit
 **D11. Loop the runbook against v2-trimmed, not v2.7.** [Will: "close enough", no exact match; proposed: the target and test set]
 - v2-trimmed is the last Austin version shaped mostly by research rather than by talking with the city. Report overlap with v2.7 alongside it, but don't tune to it.
 - **Score source discovery first:** did the run find the intake-specific documents (Austin's four, §2.2)? If it found them, the items mostly follow.
-- The test set is three jurisdictions:
-  - Austin: has a formal process, and has a curated answer.
-  - New Braunfels: the boundary case (Q1).
-  - Cedar Park: a second jurisdiction with its own process and no curated answer, used to spot-check generalisation.
+- **Austin is the only scored test case** (Will, v1.2): it has a formal process and a curated answer.
+- New Braunfels and Cedar Park (or any non-Austin jurisdiction) run only as **unscored smoke runs**. They check scraping, capture and extraction on non-Austin sites, and they don't gate anything. Nobody can confirm the earlier runs there were good, so their artefacts are never treated as answers.
 
 **D12. Citations are produced as items are extracted.** [Will: "ideally"; proposed: the method] The runbook records each item's quote and source snapshot when it extracts the item. It reuses cc-source-citations' capture step (immutable snapshots in `cc-source-snapshots`) and its citation shape. It does not run a locate pass afterwards. The Austin hard-coding in `labels.py` gets generalised.
 
@@ -237,7 +237,7 @@ Port completion-officer's phases into a conductor2 runbook:
 - **Grouping and guides:** group the items using the jurisdiction's own structure where it has one, and write the guides (the `cc-N.md` prose the CC runbook consumes).
 - **Publish:** open a bureau PR in the I1 format.
 
-Then loop it on the D11 test set. The spec has to settle the scoring harness for items: matching an item against v2-trimmed needs an LLM judge, not string equality.
+Then loop it against Austin, with non-Austin smoke runs (D11). The spec has to settle the scoring harness for items: matching an item against v2-trimmed needs an LLM judge, not string equality.
 
 ### 4.3 The generic baseline (`intake/baseline`)
 
