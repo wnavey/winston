@@ -1,8 +1,8 @@
 # Anchoring without a SIR — a loose PDF from upload to the map
 
-**Status:** Draft v1.2
+**Status:** Draft v1.3
 **Date:** 2026-10-14
-**Repos touched:** `bureau` (`anchor-geometry` steps 1.1 and 1.2; a new SRID resolver and a county reader under `site-research/bin`), `cartographer` (`runbooks/anchor-geometry/scripts/{fetch,publish}.ts`; `src/routes/anchored`; a new `src/routes/anchor/[id]`), `substation` (`geo` and `cartographer_anchors` ownership columns; the three RPCs in `geo_helpers.sql`)
+**Repos touched:** `bureau` (`anchor-geometry` steps 1.1 and 1.2; a zone-name reverse index in `spcs_lookup.py` and a page-1 reader under `site-research/bin`), `cartographer` (`runbooks/anchor-geometry/scripts/{fetch,publish}.ts`; `src/routes/anchored`; a new `src/routes/anchor/[id]`), `substation` (`geo` and `cartographer_anchors` ownership columns; the three RPCs in `geo_helpers.sql`)
 **Repos NOT touched:** `cityhall-new`, `surveyor`, `conductor2`, `claude-plugins`, `quarry`
 **Prod:** Supabase **Noetic App** (`mgxqsrjutswbciyrltwd`)
 **Parent:** [`../north-star/NORTH-STAR-SPEC.md`](../north-star/NORTH-STAR-SPEC.md) (winston#303) — this is **P2a + P2b**, the decoupling and the manual path, peeled off on their own.
@@ -43,6 +43,21 @@
 > these (FIRM-panel `C` check, a `file_id` column instead of parsing `source_doc`, D13's effect on
 > the SIR path, the pre-gate county write, an `anchor_id` index, Q7) are **not** folded in; they
 > are listed in the PR thread for a decision.
+
+> **Revision note (v1.3, 2026-10-14).** Reverses how v1.2 derived the target SRID. The county
+> FIPS and the FIRM panel are gone: a FIPS is a county id, not a coordinate system, and its only
+> job was to key a county → zone table. **The ring brings its own coordinate system.** The parcel
+> layer returns `native_sr` with the feature (§1.5: `latestWkid 2277`), which is how the SIR path
+> already gets `srid_local`; the loose-file path now takes it from the same place, one row earlier.
+> **D4** is now request → ring → county table → stop; **D5** the ring is the source; **D6** the
+> county is a *name*, read from the plat's recording reference, used only to pick the layer (Q3)
+> and as the fallback when a layer is published geographic; **D7** the plat's zone is a *check*
+> (zone name → the set of its EPSG codes; the derived code must be in it), no longer a source, and
+> a plat with an `assumed` or `deed` basis proceeds with the check recorded as unavailable instead
+> of parking; **D8** keeps the hard stop and its mechanism with the cases restated. **D10a** runs
+> before the SRID exists, not after. D17's claim chain, §3 items 3, 4, 6 and 7, S3, §5 steps 1–2
+> and the second negative, Q3 and Q6 follow. The audit's FIRM-panel countywide-`C` point closes
+> itself. The `plan_set_county.py` name stays; its output drops `fips`.
 
 ---
 
@@ -146,7 +161,7 @@ The ring's edges against the plat's courses:
 
 Area 43,557.77 ft² against the plat's 43,560. **The rung-3 fit on this file should be near-exact.** Lenox Springs Section III is a 2021 plat and TCAD digitised it from the recording; this is not representative of older parcels, which are the ±3 ft `gis_fit` case north star §9.4 warns about.
 
-One more measured fact: `project.site_outline` for this project is **vertex-identical to that live fetch** — same seven points to ≤ 1.8 × 10⁻⁹ degrees, wound the opposite way. So the parcel is already resolved and already in the database, despite there being no SIR and no site-research run. What `site_outline` lacks is everything but the shape: no `parcel_id`, no legal description, no `native_geometry`, no `native_sr`. See **D7** for why that is not good enough to build a `county_api` row from.
+One more measured fact: `project.site_outline` for this project is **vertex-identical to that live fetch** — same seven points to ≤ 1.8 × 10⁻⁹ degrees, wound the opposite way. So the parcel is already resolved and already in the database, despite there being no SIR and no site-research run. What `site_outline` lacks is everything but the shape: no `parcel_id`, no legal description, no `native_geometry`, no `native_sr`. See **D10**'s rejected alternatives for why that is not good enough to build a `county_api` row from.
 
 **Where the point came from, and what else finds the parcel (v1.2).** The `--lat --lon` above were the project's `site_address` geocoded by hand — nothing a loose file carries. A parcel layer answers a point query or an attribute query and never an address, so the routes that start from the plan set's own text were measured too (2026-10-14):
 
@@ -187,57 +202,39 @@ There are **no RLS policies on `geo`, `cartographer_files`, `cartographer_geomet
 
 ### 2.2 Resolving the target SRID
 
-**D4. The ladder is: the request, then derivation, then stop.**
+**D4. The ladder is: the request, then the ring, then the county table, then stop.**
 
 1. `request.target_srid` — the existing operator override (`contract.test.ts:15` → `fetch.py:45` → `fetch.ts:116`), unchanged, always wins.
-2. **Derive it**, from two independent sources that must agree (D5, D6).
-3. **Fail fast** (D8). There is no silent fallback.
+2. **The fetched ring's native spatial reference** (D5). The parcel is found first (D10a); the layer returns `native_sr` with the feature. When it is projected, that is the target.
+3. **The county table** (D6), only when the layer is published geographic: the county *by name* from the plat's prose → `spcs_lookup --state --county` → EPSG + unit.
+4. **Fail fast** (D8). There is no silent fallback.
 
-**D5. The zone comes from the already-extracted `basis_of_bearings` — no new vision call.** The plat states the zone on sheet 2, and `extract-geometry-v2` already captured it (§1.2). `fetch.ts` already reads the field and prints it into `inputs/README.md` for the correspond agent, so the data is *already flowing through this runbook*; it is simply not used to pick an SRID.
+In every derived case the plat's own zone must agree with the result (D7).
 
-Re-reading the PDF is not an alternative: **page 2 has 641 non-whitespace characters in its text layer**. The plat's lettering is vector outlines, which is why `pdftotext` finds no "TEXAS CENTRAL ZONE" and why the extract run's vision pass is the only thing that has ever read it. Spending an Opus vision call to re-derive a field we are holding is waste.
+**D5. The ring brings its own coordinate system.** §1.5's fetch returned `native_sr {wkid: 102739, latestWkid: 2277, projected: true, source: "layer"}` with the feature. `arcgis_query.py` already reports it, `sir_add_parcel_geo` already stores it as `srid_local`, and the SIR path's target CRS (C-b) is nothing but the modal `srid_local` of those rows. So the loose-file path derives the target the way the SIR path already does, from the layer rather than from the SIR's copy of the layer. No county id is involved. The v1.2 alternative — a county → zone table — was itself reconciled against this layer (its Travis row's note says so), so the table agreeing with the ring was partly the layer agreeing with itself.
 
-The zone alone is **not sufficient**: "TEXAS CENTRAL ZONE / NAD 83" is EPSG **2277** in US survey feet and **32139** in metres, and the bearing basis note never states a unit — it says only *"COORDINATES AND DISTANCES ARE SURFACE VALUES. COMBINED SCALE FACTOR IS 1.0000327271."* That is why `distance_units` is `null` on the extracted row, and why D6 exists.
+**D6. The county is a name, used for two things: finding the layer, and the fallback.** It is read from page 1's prose — `line 150: … PUBLIC RECORDS TRAVIS COUNTY, TEXAS.` — which every recorded plat carries in its recording reference and certification block. `spcs_lookup.py --state TX --county Travis` already accepts a name; nothing needs a FIPS.
 
-**D6. The code and the unit come from the county, and the county comes from the plan set's own text layer.** `spcs_lookup.py` already holds exactly this data and resolves the unit from the state's statutory unit:
+- *Finding the layer.* The jurisdiction → parcel-layer registry (**Q3**) is keyed by it. This is the one real gap, and it is a registry problem, not a parsing problem: `jurisdictions/austin-tx.md` is prose for an agent and `site-research/steps/1-resolve-site` is an agent step; surveyor's `native_sr` is recorded **per GIS layer**, not per county — inside Travis County's own server, `DBO.Parcels` is 2277 while `DBO.County` and `DBO.Precincts` are published as geographic WGS84 WKT — so surveyor cannot stand in for the registry either.
+- *The fallback.* When the ring layer is published geographic (4326) or in Web Mercator, `native_sr` names no State Plane and the county table is the only source: `spcs_lookup.py --state TX --county Travis` → `{"epsg":2277,"units":"ftUS","zone":"tx_central","basis":"ngs_zone"}`. Stdlib, zero network, already in bureau. This is the only case where the county matters for the SRID.
 
-```
-spcs_lookup.py 48453      # or: --state TX --county Travis
-{"fips":"48453","state":"TX","county":"Travis","epsg":2277,"units":"ftUS",
- "zone_name":"NAD83 / Texas Central (ftUS)","zone":"tx_central","basis":"ngs_zone",
- "note":"Observed on the City of Austin Shared/AppraisalDistricts/MapServer/0 (TCAD Parcels)
-         layer: wkid 102739 / latestWkid 2277 (2026-09-24)","source":"county_table"}
-```
+The FIRM panel number is **not read**. Its only advantage was a FIPS without a name lookup, which nothing needs; its costs are real — community-based panels carry a community id in the FIPS slot, panels get cited without their prefix, and flood notes are common on site plans but absent from a bare recorded plat, which is P2b's input.
 
-Stdlib, zero network, already in bureau — and its Travis row has already been reconciled against the exact layer §1.5 fetched from.
+**D7. The plat's zone is the check, not the source — no new vision call.** `extract-geometry-v2` already captured `basis_of_bearings` (§1.2), and `fetch.ts` already reads it into `inputs/README.md`; re-reading the PDF is not an option because **page 2 has 641 non-whitespace characters in its text layer** (the plat's lettering is vector outlines). A new reverse index in `spcs_lookup.py` maps a zone name and datum to the **set** of its codes — `("TEXAS CENTRAL ZONE", "NAD 83") → {2277 (ftUS), 32139 (m)}` — and the derived code must be a member. The set, not a code, because the bearing-basis note never states a unit (*"COORDINATES AND DISTANCES ARE SURFACE VALUES. COMBINED SCALE FACTOR IS 1.0000327271."*), which is why `distance_units` is `null` on the extracted row; the unit comes with the layer's code, so the ambiguity never has to be resolved by the plat. The check is recorded as a computed claim (D17) in three states: `agrees`, `disagrees` (a D8 stop), or `unavailable` when `basis_of_bearings.kind` is `assumed` or `deed` — the run proceeds in that case, since the ring's system is authoritative and `fitToRing` solves the rotation anyway, and the readout at `4.1` shows that no check was possible.
 
-The county is read from **page 1 of the PDF**, which unlike page 2 has a full text layer:
+**D8. Disagreement is a hard stop.** The run parks at `1.2-fetch` with a message naming the readings and the fix (`target_srid` in `request.json`). The cases:
 
-```
-line  64: FEDERAL FLOOD INSURANCE ADMINISTRATION, FIRM PANEL NO. 48453C0595K FOR TRAVIS COUNTY,
-line 150: LOTS 1 OF LENOX SPRINGS SECTION III … PUBLIC RECORDS TRAVIS COUNTY, TEXAS.
-```
-
-The **FIRM panel number is the primary key, not the prose**: the first five characters of a FEMA panel id are the county FIPS by convention, so `48453C0595K` → `48453` → Travis, structurally rather than by regex over English. The legal description's "TRAVIS COUNTY, TEXAS" is corroboration. Flood notes are near-universal on site plan sets.
-
-`project.jurisdiction_slug` is a shortcut when a project happens to be linked, never a requirement — the manual path has no project.
-
-**D7. `spcs_lookup` is the resolver; surveyor is not consulted.** surveyor's `native_sr` is recorded **per GIS layer**, not per county — inside Travis County's own server, `DBO.Parcels` is 2277 while `DBO.County` and `DBO.Precincts` are published as geographic WGS84 WKT. Using it requires already knowing which layer you would query, and there is **no machine-readable jurisdiction → parcel-layer registry**: `jurisdictions/austin-tx.md` is prose for an agent and `site-research/steps/1-resolve-site` is an agent step. Building that registry is real work and is not in this spec (**Q3**).
-
-**D8. Disagreement is a hard stop.** The run parks at `1.2-fetch` with a message naming the two readings and the fix (`target_srid` in `request.json`). The cases:
-
-- the plat cites a **low-distortion or county projection** — increasingly common on Texas plats — so it names a zone that is not an SPCS zone at all;
-- `basis_of_bearings.kind` is `assumed` or `deed`, so there is no zone to read;
-- the county is **split between zones** and `spcs_lookup` has no row (`_about.unassigned`);
-- the two resolve to different EPSG codes;
-- the PDF is a scan with no page-1 text layer, or names more than one county (**Q6**).
+- the ring's code is projected but **not in the plat zone's set** — the plat says Texas Central and the layer stores 2278 South Central: the registry entry points at the wrong layer, or the parcel found is in the wrong county;
+- the plat names a zone the reverse index does not know — a **low-distortion or county projection**, increasingly common on Texas plats — so the check cannot run and the plat's grid is not the layer's;
+- the layer is geographic and `spcs_lookup` has no row for the county (split between zones, `_about.unassigned`), or page 1 names no county, or more than one (**Q6**);
+- the PDF is a scan with no page-1 text layer and no `site_point` was given (a D10a stop).
 
 A wrong SRID does not fail loudly. It produces a plausible similarity transform onto the wrong grid, and `fitToRing` will cheerfully report an IoU for it. The escape hatch already exists and costs the operator one number.
 
-**How the stop is delivered (v1.2).** "Parks" has one mechanism in conductor2 and it is not the script's exit code: *a step is parked when its contract exits 75 after the step wrote `BLOCKED.md`* (conductor2 README, "Exit 75 from a contract"; the pattern is in `bureau/runbooks/lib/contract-helpers.ts:764-787`). Today `fetch.py`'s no-target path is `sys.exit(message)` — exit 1, a **failed** step that `advance` will not retry and `status` shows as an error, not as `waiting`. So:
+**How the stop is delivered.** "Parks" has one mechanism in conductor2 and it is not the script's exit code: *a step is parked when its contract exits 75 after the step wrote `BLOCKED.md`* (conductor2 README, "Exit 75 from a contract"; the pattern is in `bureau/runbooks/lib/contract-helpers.ts:764-787`). Today `fetch.py`'s no-target path is `sys.exit(message)` — exit 1, a **failed** step that `advance` will not retry and `status` shows as an error, not as `waiting`. So:
 
 1. `fetch.ts` exits 3 (its existing `NO_TARGET` code) for every D8 case and prints a one-line reason and the fix to stderr, as it does now.
-2. `fetch.py` catches 3, writes `fetch.log` as today **and** `BLOCKED.md` — the two readings, the case, and the exact `request.json` key to set (`target_srid`, or `site_point` for a D10a stop) — then exits 0.
+2. `fetch.py` catches 3, writes `fetch.log` as today **and** `BLOCKED.md` — the readings, the case, and the exact `request.json` key to set (`target_srid`, or `site_point` for a D10a stop) — then exits 0.
 3. `1.2-fetch/contract.test.ts` answers 75 when `BLOCKED.md` exists and `ws/inputs/target.json` does not, so the pass ends `waiting`, `status` names the step with `BLOCKED.md` as its readout, and editing `request.json` and advancing relaunches the step cold.
 
 The same path carries the D10a stops. Nothing here is new machinery: it is site-research's `1-resolve-site` browser-gone pattern applied to a script step.
@@ -248,16 +245,16 @@ The same path carries the D10a stops. Nothing here is new machinery: it is site-
 
 **D10. `1.2-fetch` fetches the county ring live and writes it into `geo` as a `county_api` row before solving.** This is the pattern that already runs (§1.4), with the owner removed. Concretely: find the parcel (D10a), fetch it with `arcgis_query.py … --geometry --native-ring`, then an RPC that is `sir_add_parcel_geo` with the ownership changed, then `fetch.ts` reads the row back and builds `inputs/parcels.json` exactly as it does today.
 
-**D10a. Finding the parcel is a ladder, and the ladder ends in an area gate.** The solver never needs a lat/lon; only the fetch does, and a loose file carries none (§1.5). The rungs, first match wins:
+**D10a. Finding the parcel is a ladder, and the ladder ends in an area gate.** It runs **before** the target SRID exists, because the ring is where the SRID comes from (D5). The solver never needs a lat/lon; only the fetch does, and a loose file carries none (§1.5). The layer to query is the registry entry (Q3) for the county named in the prose (D6). The rungs, first match wins:
 
 1. **`request.site_point`** (D3) → `arcgis_query.py point <layer> --lat --lon`. The operator override; always wins when present. This alone makes S1 runnable.
-2. **The plat's legal description** → `arcgis_query.py where <layer> --where "<legal-description field> LIKE …"`. The county reader (§3 item 4) already has page 1's text layer open for the FIRM panel; it takes the lot/block/subdivision line beside it (`LOTS 1 OF LENOX SPRINGS SECTION III`). The query must return **exactly one** feature after section/phase disambiguation — on White Water, four Lenox Springs rows, one `SEC III`. This is the primary derived rung because it is the parcel's own name in the county's table, needs no geocoder, and is the thing a plat cannot omit.
+2. **The plat's legal description** → `arcgis_query.py where <layer> --where "<legal-description field> LIKE …"`. The page-1 reader (§3 item 4) already has the text layer open for the county name; it takes the lot/block/subdivision line beside it (`LOTS 1 OF LENOX SPRINGS SECTION III`). The query must return **exactly one** feature after section/phase disambiguation — on White Water, four Lenox Springs rows, one `SEC III`. This is the primary derived rung because it is the parcel's own name in the county's table, needs no geocoder, and is the thing a plat cannot omit.
 3. **The address** → a locator → point → rung 1's query. Only when the jurisdiction publishes one (`Geocode/COA_Locator` for Austin). Never a national geocoder as the sole source: Census returns nothing for this 2021 plat.
 4. **Stop** (D8's mechanism), naming what was read and the fix: `site_point` in `request.json`.
 
 **The gate.** Whatever rung found the feature, `fetch.ts` compares the fetched ring's native area with the figure's `stated_area_sqft` (or `computed_area_sqft` when none is stated) and stops when they differ by more than the **Q12** tolerance. On White Water that is 43,557.77 vs 43,560. A rung-2 string match on the wrong section, or a rung-1 point in the neighbour's lot, fails here rather than producing a confident fit to the wrong parcel — the same reasoning as D8's "a wrong SRID does not fail loudly".
 
-Each rung is a §2.5 claim: rung 2 is a **read** (page 1, bbox, verbatim, `basis: "legal_description"`); rungs 1 and 3 are **computed** (`{kind: "fetched", url, where | point, feature_count, pid}`); the gate is a computed claim with both areas.
+Each rung is a §2.5 claim: rung 2 is a **read** (page 1, bbox, verbatim, `basis: "legal_description"`); rungs 1 and 3 are **computed** (`{kind: "fetched", url, where | point, feature_count, pid, native_sr}`); the gate is a computed claim with both areas. The fetched claim's `native_sr` is also the D5 SRID source, so one claim serves both ladders.
 
 What this does *not* solve: rung 2 needs the layer to have a legal-description field and the registry (Q3) to name it. TCAD's geometry layer (`MapServer/0`) has only `PID_10` and `PROP_ID`; its sibling `MapServer/8` (OmniParcel) carries `LEGAL_DESCRIPTION`. So Q3's per-jurisdiction entry is two things, not one: the parcel-ring layer and the legal-description layer + field.
 
@@ -314,16 +311,16 @@ This works with zero owners and gives `target_geo_ids` a real job — which is i
 | `scale_factor` | "COORDINATES AND DISTANCES ARE SURFACE VALUES." | 2 | `6e77e887…jpg` |
 | `scale_factor` | "COMBINED SCALE FACTOR IS 1.0000327271." | 2 | `1cea8d28…jpg` |
 
-Their `confidence.grounds` are already doing the argument's work and must be surfaced verbatim, because each names the exact limit this spec works around: the basis-of-bearings row says *"no zone number or datum realization is printed"* (which is why D6 exists), and the scale-factor row says *"the note does not say whether the factor takes grid to surface or surface to grid"* (which is a live caveat on D9, and should be shown next to the applied factor rather than buried).
+Their `confidence.grounds` are already doing the argument's work and must be surfaced verbatim, because each names the exact limit this spec works around: the basis-of-bearings row says *"no zone number or datum realization is printed"* (which is why the ring, not the plat, is the SRID source — D5, D7), and the scale-factor row says *"the note does not say whether the factor takes grid to surface or surface to grid"* (which is a live caveat on D9, and should be shown next to the applied factor rather than buried).
 
 So the anchor stores `{kind: "cited", evidence_id}` and the page renders that row's verbatim, grounds and crop. No new evidence machinery, no duplication of a reading, and the trail stays single-sourced — if a re-extraction corrects the note, the anchor page corrects with it.
 
 **D17. Read and computed claims carry what they can, and are honest about what they cannot.**
 
-- **read** — the county, off page 1's text layer (D6): `{kind: "read", value: {county: "Travis", state: "TX", fips: "48453"}, page: 1, bbox, verbatim: "FIRM PANEL NO. 48453C0595K FOR TRAVIS COUNTY", basis: "firm_panel"}`, with the legal description's "TRAVIS COUNTY, TEXAS" as a second claim marked `basis: "legal_description"`. `pdftotext -bbox` gives the box, so these render **in situ** over page 1 — `PdfPageOverlay` takes normalized `[x0,y0,x1,y1]` fractions plus a `kind` for colour and needs no stored crop image. A stored crop stays optional (**Q10**).
-- **computed** — the `spcs_lookup` resolution and the ArcGIS fetch have no page and must not pretend to: `{kind: "computed", tool: "spcs_lookup.py", input: 48453, output: {epsg: 2277, units: "ftUS", zone: "tx_central"}, table_note: "Observed on the City of Austin …MapServer/0: wkid 102739 / latestWkid 2277 (2026-09-24)"}` and `{kind: "fetched", url, pid: "0436110202", native_sr: {...}, feature_count: 1, fetched_at}`. The page renders these as a lookup and a request, not as a reading.
+- **read** — the county, off page 1's text layer (D6): `{kind: "read", value: {county: "Travis", state: "TX"}, page: 1, bbox, verbatim: "PUBLIC RECORDS TRAVIS COUNTY, TEXAS", basis: "recording_reference"}`, and the legal description for D10a rung 2. `pdftotext -bbox` gives the box, so these render **in situ** over page 1 — `PdfPageOverlay` takes normalized `[x0,y0,x1,y1]` fractions plus a `kind` for colour and needs no stored crop image. A stored crop stays optional (**Q10**).
+- **computed** — the fetch and the check have no page and must not pretend to: `{kind: "fetched", url, where | point, pid: "0436110202", native_sr: {wkid: 102739, latestWkid: 2277, projected: true}, feature_count: 1, fetched_at}` is the SRID source (D5); `{kind: "computed", tool: "spcs_lookup.py --zone", input: {zone: "TEXAS CENTRAL ZONE", datum: "NAD 83"}, output: [2277, 32139], check: "agrees"}` is the D7 check; and, only when the fallback ran, `{kind: "computed", tool: "spcs_lookup.py", input: {state: "TX", county: "Travis"}, output: {epsg: 2277, units: "ftUS", zone: "tx_central"}, table_note: "…"}`. The page renders these as a request and a lookup, not as a reading.
 
-The chain the page must make legible, end to end, is: *the plat says Texas Central / NAD 83 but prints no zone number and no unit* → *page 1's FIRM panel says Travis, FIPS 48453* → *the county table resolves 48453 to EPSG 2277, ftUS* → *they agree, so no operator input was needed* → *the TCAD layer's own `native_sr` is 2277, confirming it a third time*.
+The chain the page must make legible, end to end, is: *the plat says Texas Central / NAD 83 but prints no zone number and no unit* → *the plat's recording reference says Travis County, which picks the TCAD layer* → *the TCAD layer stores its parcels in 2277* → *2277 is a Texas Central code, so the plat agrees* → *no operator input was needed*.
 
 **D18. The derivation record travels the path `correspondences.json` already takes.** `1.2-fetch` writes it into `inputs/target.json`; `5.1-publish` carries it into `cartographer_anchors.evidence.derivation`, beside the `correspondences` key `publish.ts` already assembles. No new table.
 
@@ -349,13 +346,13 @@ One gap worth naming: **`evidence.check_md` is null on that run**, so the `3.3-c
 | 1 | `bureau/.../steps/1.1-inputs/contract.test.ts:13` | `sir_id` → optional; add optional `submission_version_id` and `site_point` (D3) |
 | 1b | `bureau/.../steps/1.2-fetch/contract.test.ts:41,56-62,64-67` | `Target.sir_id` → optional; the request-match test tolerates no SIR; the "[BLOCKING] SIR has at least one parcel ring" test becomes "parcels.json has at least one parcel ring"; **answer 75 when `BLOCKED.md` exists and `target.json` does not** (D8) |
 | 2 | `bureau/.../scripts/fetch.py` | pass the owner fields, `site_point` and the resolved SRID through; on exit 3 write `BLOCKED.md` and exit 0 (D8) |
-| 3 | `bureau/runbooks/site-research/bin/spcs_lookup.py` | add a **zone-name → EPSG + unit** reverse index over the table it already owns (D6) |
-| 4 | `bureau/runbooks/site-research/bin/` (new) | `plan_set_county.py` — page-1 text layer → `{fips, county, state, legal_description, address, evidence}`, FIRM panel first (D6); the legal description and address feed D10a rungs 2 and 3 |
+| 3 | `bureau/runbooks/site-research/bin/spcs_lookup.py` | add a **zone-name → set of EPSG codes** reverse index over the table it already owns (D7); `--state --county` by name is the fallback (D6) |
+| 4 | `bureau/runbooks/site-research/bin/` (new) | `plan_set_county.py` — page-1 text layer → `{county, state, legal_description, address, evidence}` from the recording reference and title block (D6); the county picks the layer (Q3), the legal description and address feed D10a rungs 2 and 3 |
 | 5 | `cartographer/.../scripts/fetch.ts:46-48` | `--sir` → optional; new `--submission-version`, `--site-point`; owner may be absent |
 | 5b | `cartographer/.../scripts/lib/contracts.ts:102,104,196` | `TargetFile.source` gains `'derived'`; `TargetFile.sir_id` and `AnchorsFile.sir_id` → nullable; `TargetFile` gains `derivation` (D18) |
 | 5c | `cartographer/src/lib/types/database.ts` | regenerate after item 9: `sir_id` nullable, `submission_version_id` on both tables |
-| 6 | `cartographer/.../scripts/fetch.ts:116-147` | insert the D4 ladder between the flag and the stop; every stop is exit 3 with a reason (D8) |
-| 7 | `cartographer/.../scripts/fetch.ts:152-161` | when there is no SIR: find the parcel (D10a ladder + area gate), fetch the county ring (D10), write it, read it back; `sir_geo_in_srid` is used only on the SIR path |
+| 6 | `cartographer/.../scripts/fetch.ts:116-147` | insert the D4 ladder between the flag and the stop — ring `native_sr`, else the county table — and the D7 zone check; every stop is exit 3 with a reason (D8) |
+| 7 | `cartographer/.../scripts/fetch.ts:152-161` | when there is no SIR: find the parcel (D10a ladder + area gate) **first**, fetch the county ring (D10), take the target from its `native_sr` (D5), write it, read it back; `sir_geo_in_srid` is used only on the SIR path |
 | 8 | `cartographer/.../scripts/publish.ts:119` | `sir_id` may be null; carry `submission_version_id` |
 | 9 | `substation/supabase/migrations/` (new) | `geo.sir_id` nullable + `geo.submission_version_id`; same on `cartographer_anchors` (D1, D2) |
 | 10 | `substation/supabase/functions/geo_helpers.sql` | new `add_parcel_geo` (D10, D11); `sir_put_anchored_geo` and `cartographer_anchor_decide` delete-keys → `anchor_id` (D12) |
@@ -380,12 +377,12 @@ Items 13 and 14 are the only ones that can ship on their own: §2.5's sections 2
 - **Runs:** locally against the White Water file; it is the §5 acceptance test.
 
 **S2: `fetch.ts`'s CLI** (existing)
-- **Proves:** D4–D9, D10 and D10a. The SRID ladder, the location ladder and the ring materialisation are all observable in `inputs/target.json` (`target_srid` + `source` + `derivation`) and `inputs/parcels.json`, with no database assertions needed. Each D8 and D10a stop is one invocation and one expected exit 3 with its reason on stderr; the area gate gets a case where the legal description matches the wrong section. Then one `fetch.py` case per stop proves `BLOCKED.md` is written and the 1.2 contract answers 75.
+- **Proves:** D4–D9, D10 and D10a. The location ladder, the SRID ladder and the ring materialisation are all observable in `inputs/target.json` (`target_srid` + `source` + `derivation`) and `inputs/parcels.json`, with no database assertions needed. Each D8 and D10a stop is one invocation and one expected exit 3 with its reason on stderr; the area gate gets a case where the legal description matches the wrong section. Then one `fetch.py` case per stop proves `BLOCKED.md` is written and the 1.2 contract answers 75.
 - **Prior art:** `cartographer/runbooks/anchor-geometry/scripts/lib/contracts.test.ts`, `frames.test.ts`.
 - **Runs:** `bun test` in `cartographer`, CI.
 
 **S3: the SRID resolver** (new, in `spcs_lookup.py`)
-- **Proves:** D5–D8's arithmetic alone — `("TEXAS CENTRAL ZONE", "NAD 83") + 48453 → 2277/ftUS`; zone-not-SPCS, county-unassigned, kind-not-grid and outright-disagreement each return the stop rather than a guess. The unit ambiguity (2277 vs 32139) gets a case of its own.
+- **Proves:** D6 and D7's arithmetic alone — `("TEXAS CENTRAL ZONE", "NAD 83") → {2277, 32139}`; `2277 ∈ set` agrees; `2278 ∉ set` is the stop; an unknown zone name is the stop; `--state TX --county Travis → 2277/ftUS` is the fallback; a split county returns the stop rather than a guess.
 - **Prior art:** `bureau/runbooks/site-research/bin/test_spcs_lookup.py` — same file, same style, stdlib `unittest`.
 - **Runs:** `python3 -m unittest test_spcs_lookup`, CI.
 
@@ -405,13 +402,13 @@ Items 13 and 14 are the only ones that can ship on their own: §2.5's sections 2
 
 Upload `White Water Express Car Wash 071326.pdf` to Cartographer as a loose file — **no project, no SIR, no plan set**. Run `extract-geometry-v2`. Run `anchor-geometry` with a request carrying only `{file, anchor_run_slug}`.
 
-1. `1.2-fetch` resolves **EPSG 2277** on its own, `source: "derived"`, with `fetch.log` naming both readings: `basis_of_bearings` "TEXAS CENTRAL ZONE / NAD 83" and FIRM panel `48453C0595K` → Travis → `tx_central`, `ftUS`.
-2. It finds the parcel from the plat's **legal description** (D10a rung 2, no `site_point` in the request), fetches the TCAD ring (PID `0436110202`), passes the area gate (43,557.77 vs 43,560), and writes **one** `county_api` `geo` row with no owner.
+1. `1.2-fetch` reads **Travis County, Texas** off page 1, picks the TCAD layer, finds the parcel from the plat's **legal description** (D10a rung 2, no `site_point` in the request), fetches the ring (PID `0436110202`, `native_sr` 2277), passes the area gate (43,557.77 vs 43,560), and writes **one** `county_api` `geo` row with no owner.
+2. It resolves **EPSG 2277** on its own from that ring, `source: "derived"`, with `fetch.log` naming the check: `basis_of_bearings` "TEXAS CENTRAL ZONE / NAD 83" → {2277, 32139}, agrees. No FIPS, no FIRM panel, no county table.
 3. `3.1-solve` fits LOT 1 by `ring_fit` / `gis_fit`, with the stated surface scale factor applied. **This is `fitToRing`'s first run on real data** (§1.4); the near-exact TCAD ring (§1.5) is the easiest case it will ever get, so an IoU below ~0.99 here is a solver finding, not a data finding.
 4. `/anchored` draws the anchored lot in marine over the county ring in amber.
 5. **Re-running the whole thing produces one county row, not two.**
 
-A deliberate negative: run it again with `target_srid: 32139` in the request and it must solve in metres and produce a visibly wrong result — the override has to still be an override. A second one for D8's mechanism: a request with a `basis_of_bearings.kind` of `assumed` (or a file whose page 1 has no text layer) must leave the run **`waiting`** at `1.2-fetch` with `BLOCKED.md` naming the fix, not **failed**; setting `target_srid` (or `site_point`) and advancing must relaunch the step and go through.
+A deliberate negative: run it again with `target_srid: 32139` in the request and it must solve in metres and produce a visibly wrong result — the override has to still be an override. A second one for D8's mechanism: a file whose page 1 has no text layer (or a registry entry pointed at a layer whose code is not in the plat zone's set) must leave the run **`waiting`** at `1.2-fetch` with `BLOCKED.md` naming the fix, not **failed**; setting `site_point` (or `target_srid`) and advancing must relaunch the step and go through. A third, for D7: the same file with its `basis_of_bearings.kind` edited to `assumed` must **not** park — it proceeds, and the `4.1` readout shows the zone check as unavailable.
 
 ---
 
@@ -436,13 +433,13 @@ Named only so the decoupling does not harden against north star **P5**. None is 
 
 **Q2.** Should `geo` forbid carrying both `sir_id` and `submission_version_id` (a CHECK), or are they independent provenance links with no XOR?
 
-**Q3.** Where does the **parcel layer URL** come from for a county we have not met? D10 needs one and there is no registry (D7). For v1 it can be a constant for Austin plus an optional request field — but that is the thing that stops this generalising, and it is the same gap north star **D11** names. *(v1.2)* The entry is now two things: the ring layer, and the **legal-description layer + field name** D10a rung 2 queries (Austin: `MapServer/8`, `LEGAL_DESCRIPTION`), plus optionally a locator URL for rung 3.
+**Q3.** Where does the **parcel layer URL** come from for a county we have not met? D10 needs one and there is no registry (D6). *(v1.3)* This is now the only real gap in the derivation: the county name is on every plat and the ring carries its own SRID, so everything else is a fetch. For v1 it can be a constant for Austin plus an optional request field — but that is the thing that stops this generalising, and it is the same gap north star **D11** names. *(v1.2)* The entry is now two things: the ring layer, and the **legal-description layer + field name** D10a rung 2 queries (Austin: `MapServer/8`, `LEGAL_DESCRIPTION`), plus optionally a locator URL for rung 3.
 
 **Q4.** `/anchored` currently has one rail row per anchor with a SIR subtitle. With no owner, what labels an anchor — the file name alone, or `submission_version` → `submission` → `project.name` when the chain exists?
 
 **Q5.** Does a re-run under a *new* `anchor_run_slug` reuse the county row (D11 says yes, the key is the file) or mint a fresh one per anchor run so a run's context is immutable?
 
-**Q6.** A plan set naming more than one county (a TxDOT note, an adjacent jurisdiction), or citing several FIRM panels. Stop and ask, or take the panel that appears in the flood note specifically?
+**Q6.** A plan set naming more than one county (a TxDOT note, an adjacent jurisdiction, a county-line subdivision). Stop and ask, or take the county in the recording reference specifically, since that is the one whose records hold the plat?
 
 **Q7.** Should `cartographer_anchors.target_geo_ids` get referential integrity now that D13 reads the map through it? It has already dangled once on one row (§1.4). An array FK needs a trigger or a join table.
 
