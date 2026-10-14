@@ -1,7 +1,15 @@
 # The intake-prospecting runbook
 
-**Status:** Draft v1.1
+**Status:** Draft v1.2
 **Date:** 2026-10-14
+> **Revision note v1.2 (2026-10-14, prospector integration audit):** The runbook is checked against what `bureau/runbooks/prospector/` actually is, so that nothing the Austin loop tunes is thrown away when it becomes a workstream (north-star I3). Functional design unchanged. Technical corrections:
+> - **The deliverable and the ledger are written in a bureau worktree from the first session, not in the run dir** (new `1.0-worktree`, D1, D5, D13). `lib/step-loop.ts`, `lib/audit.md` and `lib/disposition.py`, which D5 and D12 reuse, all require one: the step loop's blocking rule checks the worktree is committed and that each report names its HEAD; the audit records `reviewed_head`; disposition commits residual rows into the ledger inside the worktree. v1.1 had the ledger in the run dir and copied it at 3.1, which none of those tools would have accepted.
+> - **D2's `scope_gate` is now `gates`, and it governs 4.1-review as well as 1.5-scope.** v1.1 had no `auto` for 4.1, so a loop run (and every prospector-wrapped run) would have parked there.
+> - **D14's publish is the branch itself**: 4.2 pushes the worktree branch and opens the PR (prospector `bin/ship.py`'s shape), instead of copying files into a fresh worktree (cc-source-citations' shape). Inside prospector, 4.2 stands aside and the wrapper's mergein plus `8.1-ship-bureau` carry the commits.
+> - **§6 "the prospector wrapper" is specified** from the precedent that already exists: `prospector/review-guides/` nests `runbooks/guide-training/` unchanged behind a `2-request` step. The registration list (outer step, `WORKSTREAMS`, `WORK_TYPE`, `DELIVERABLES`, `env.json`, the ship inputs, the `metro_ahj_coverage` migration in **dsd**) is written out.
+> - Facts corrected: 46 jurisdictions (not 47) hold `codes/*submittal*|*checklist*|*application*` folders; only the four CC-family runbooks' `AGENTS.md` open with a "Rule 19 posture." paragraph, prospector has none.
+> - New D18 (Will: human gates only in the standalone lane; inside prospector the audit is the review and the checklist ships on the autonomous path; closes Q6) and Q7 (which prospector target runs intake, Will's).
+>
 > **Revision note v1.1 (2026-10-14, Will):** **Austin is the only scored scenario.** Nobody has confirmed the earlier New Braunfels and Cedar Park runs were good, so they are no longer test cases with expected answers. Non-Austin jurisdictions become unscored **smoke runs** that check only the mechanics (scraping, capture and extraction on non-Austin sites, citation validity, the file format), and they carry little weight (D16). D7's New Braunfels note is now only an illustration. Acceptance and P2/P5 changed to match, and the old Q2 is narrowed.
 
 **Parent:** `workspaces/intake/north-star/NORTH-STAR-SPEC.md`, initiative I2. Carries out north-star D2, D5, D10–D14.
@@ -46,13 +54,23 @@ completion-officer is how Austin's intake checklist was first generated. It cann
 What exists to build on (bureau `origin/main`, 2026-10-14):
 
 - **The cc-source-citations capture code.** These are reusable as a library: `capture.py` (`capture_pdf` L96, `capture_webpage` L112 → `capture_web.mjs`, `capture_municode` L221), `pdfwords.py` (word ids `p<page>w<index>`), `boxes.py` (`quote_in_words` L46, `boxes_for` L70, `find_quote` L89), `quote.ts`, `step_capture.unique_id` (L137) and `current_snapshot_for` (L128), and `upload_snapshot` (L156). All of them sit under `runbooks/cc-source-citations/scripts/lib/`, with imports relative to that package.
-- **The prospector workstream pattern.** It runs work as a step loop, then a fresh-session audit, then disposition (`runbooks/prospector/lib/audit.md`, `disposition.py` with `MAX_ROUNDS=3`), and keeps a ledger with `Surfaces` and `Attempts` tables (`lib/ledger.ts`). In the ledger, `result` is found, partial, negative-technical or negative-policy, and **a negative needs a strong model tier**.
+- **The prospector workstream pattern** (`runbooks/prospector/`, verified 2026-10-14). A workstream is a sub-runbook at `runbooks/prospector/<ws>/`, called from an outer step with `runner: runbook` and `bind: {request: 0-resolve}`. The bound folder holds `currency.json` (which workstreams are stale, the run branch `prospector/<slug>-<run>`) and a blobless **sparse** bureau clone on that branch (`jurisdictions/{slug}`, the state folder, `jurisdictions/federal`, `spec`, `tooling`, `taxonomy`, `runbooks/lib` and one review step; `bin/resolve.py` `SPARSE`). Its steps:
+  - `1-worktree`: `lib/worktree.py add` branches `<run branch>--<ws>` and writes `worktree.json`, whose `ledger` is `jurisdictions/<slug>/prospector/<ws>/ledger.md` (0-resolve drops every prior run's `ledger.md` at the start, `notes.md` stays).
+  - work: a step loop (`lib/step-loop.ts`: a cold session per round, a `sessions/NN.report.json` with `done|continue|blocked`, a cap of 8, two stalled sessions fail it). Each session ends with `worktree.py commit --path …`, and its report names the commit as `head`. **The blocking rule is that the worktree is committed and the report's head is in its history.** A step that shares the worktree declares `worktree_paths` in its `step.yaml`, so a sibling's uncommitted file is not its failure. The workstream's gate (`<ws>/lib/<ws>.ts gate`) runs when the report says done, and so does the American-spelling check.
+  - audit: the `reviewer` preset in a fresh session, `lib/audit.md`: reads the worktree deliverable, `gate.json` and the ledger through `ledger.ts auditor-view`, never the sessions; writes `findings.json` with `reviewed_head` = the worktree HEAD, `charged[]` (each with `kind`, `evidence`, `repro_cmd`), `rejudged[]`, `leads[]`.
+  - disposition: `lib/disposition.py` (`MAX_ROUNDS=3`, `--work-step`, `--audit-step`, `--worktree-step`, `--target-by-charge-kind KIND=STEP`, `--fan-out`, `--no-audit`). It reads `<worktree-step>/worktree.json`, writes `void-request.json` for a send-back, and **writes residual `## Charges` rows into the ledger inside the worktree and commits them alone**. With `--fan-out`, a charge names the items to relaunch as `<item>.md` before the first colon of its claim, else the whole fan-out relaunches.
+  - mergein: `worktree.py mergein` rebases onto the run branch, runs `tooling/verify/content-gates.sh` (the CI gates: index coverage for `programs|approvals|fees`, provenance and fidelity for `codes/`, citations for feasibility guides, American spelling for every changed jurisdiction, `verify_briefing` for `briefing/`), merges with the workstream's record as the message, pushes.
+  - **No workstream opens its own PR.** `8.1-ship-bureau/open` (`bin/ship.py`) merges origin/main into the run branch, commits a `conventions.yaml` stub for a new jurisdiction folder (`name:` from the README title), pushes and opens one PR; `8.1-ship-bureau/drive` (sonnet) answers the bot review **and merges the PR itself**; `9-record` stamps `workstream_status` (`work_type` from `bin/resolve.py` `WORK_TYPE`) once the shipped head is on origin/main. There are no human gates anywhere in a prospector run; the audit is the review.
+  - The ledger keeps `Surfaces` and `Attempts` tables (`lib/ledger.ts`): `result` is found, partial, negative-technical or negative-policy, and **a negative needs a strong model tier**.
+  - Regulatory (`prospector/regulatory/`, nine steps) is the precedent for a multi-step workstream with a fan-out: `4-read` items run in their own worktrees (`worktree.py unit`, sparse over the item's paths) and `5-sum` merges them back after a disjointness check.
+- **A standalone runbook already runs nested inside prospector.** `prospector/review-guides/` wraps `runbooks/guide-training/` **without changing it**: `2-request` writes guide-training's `request.json` from `currency.json` (or `stand-aside.json` when the workstream is current, out of scope, or cannot run), `3-train` is `runner: runbook` with `bind: {request: 2-request}`, `4-copy` copies the nested outputs into the worktree and commits them with a `gate.json`, `5-disposition` rules from that gate, `6-mergein` merges. `audit: none`, because the nested runbook has its own checks. conductor2 runs a nested runbook with the step's output folder as its run dir, and a nested step that exits 75 parks the outer run (`conductor2/README.md`, "Nested runbooks"). This is the shape I3 takes (§6).
+- **Readiness lives in the Library DB and the dsd dashboard, not bureau.** `metro_ahj_coverage` (`dsd/library/tooling/supabase/migrations/20260710204429_metro_views.sql`) counts completed rows over fixed `work_type` lists: `sir_ready` = 5 of `regulatory, sources, programs, approvals, feasibility_guides`; `review_ready` = 7, adding `comments, training`. `dsd/web/lib/prospector/types.ts` mirrors the lists. `research` gates neither. (`resolve.py` stamps review-guides as `review_guides`, while the view counts `training`; that mismatch predates this spec and is noted for whoever adds `intake`.)
 - **Prospector's outputs, as seeds for discovery:**
   - `briefing/process.md` exists for 22 jurisdictions; 6 have an intake heading (austin L46, fort-lauderdale L13, keller L34, leander L70, montgomery-township L55, san-diego L23).
-  - 96 `codes/*submittal*|*checklist*|*application*` folders across 47 jurisdictions, each with a `meta/provenance.json` `source.url`.
+  - 96 `codes/*submittal*|*checklist*|*application*` folders across 46 jurisdictions, each with a `meta/provenance.json` `source.url`.
   - `regulatory/code-inventory.md` (19 jurisdictions) routes "applications, checklists and forms" to `Owner = permit-recon` in its `## Not Regulatory` table. Celina's lists 82 such rows, for example `Site Plan Checklist | …/DocumentCenter/View/5586`.
 - **Two scoring harnesses:** cc-compare, a reference set plus blind Opus adjudication and a scorecard whose answer key grows over runs; and `runbooks/lib/eval/`, per-step `_eval` specs.
-- **Rule 19:** `runbooks/lib/AGENTS-core.md` rules 19–20 bar prior Noetic output and anything named like an answer key, and every runbook's `AGENTS.md` opens with a "Rule 19 posture." paragraph.
+- **Rule 19:** `runbooks/lib/AGENTS-core.md` rules 19–20 bar prior Noetic output and anything named like an answer key. The four CC-family runbooks' `AGENTS.md` (completeness-check, cc-compare, cc-source-citations, cc-block-attribution) open with a "Rule 19 posture." paragraph; prospector and its workstreams have no `AGENTS.md`.
 
 ---
 
@@ -64,22 +82,24 @@ What exists to build on (bureau `origin/main`, 2026-10-14):
 +│   ├── runbook.yaml            # local lane, sandbox: false, presets: research (opus-5.5 high), extract (opus-5.5 medium), reviewer
 +│   ├── AGENTS.md               # rule-19 posture (D3), completeness-not-compliance, item format
 +│   ├── scripts/ip.py           # one subcommand per script step
++│   ├── lib/intake.ts           # the workstream gate over the worktree (D13), prospector style
 +│   └── steps/
 +│       ├── 0-request/          # gate: Request (D2)
++│       ├── 1.0-worktree/       # script: the bureau worktree the run writes into; made, or taken from the request (D1)
 +│       ├── 1.1-inputs/         # script: resolve jurisdiction, collect prospector seeds (D4)
-+│       ├── 1.2-discover/       # agent, step loop: find + type sources, process shape, ledger (D5)
++│       ├── 1.2-discover/       # agent, step loop: find + type sources, process shape, ledger in the worktree (D5)
 +│       ├── 1.3-capture/        # script: snapshot every candidate source (D6)
 +│       ├── 1.4-classify/       # agent: basis + application type + scope sources (D7)
-+│       ├── 1.5-scope/          # gate: approve sources + basis (human, or auto for eval runs) (D8)
++│       ├── 1.5-scope/          # gate: approve sources + basis (human, or auto) (D8)
 +│       ├── 2.1-groups/         # agent: the group roster (D9); empty unless basis = formal
 +│       ├── 2.2-extract/<group> # fan-out, agent: items with citations picked by word id (D10)
 +│       ├── 2.3-verify/         # script: quotes → boxes, dedupe, coverage (D11)
 +│       ├── 2.4-audit/          # agent, fresh session: scope + coverage charges (D12)
 +│       ├── 2.5-disposition/    # script: send-back to 2.2 per group, ≤3 rounds (D12)
-+│       ├── 3.1-write/          # script + agent: guides, sidecars, intake.yaml (D13)
++│       ├── 3.1-write/          # script + agent: guides, sidecars, intake.yaml, committed in the worktree (D13)
 +│       ├── 3.2-contact-sheet/  # script: HTML readout
-+│       ├── 4.1-review/         # gate: approved | revise (D14)
-+│       └── 4.2-publish/        # script: upload snapshots, open one bureau PR (D14)
++│       ├── 4.1-review/         # gate: approved | revise (human, or auto) (D14)
++│       └── 4.2-publish/        # script: upload snapshots, push the branch, open one bureau PR; stands aside when wrapped (D14)
 +├── intake-score/               # separate runbook: scores a finished run against a reference (D15)
  ├── cc-source-citations/scripts/lib/   # capture/pdfwords/boxes/quote.ts move out ↓
 +└── lib/sources/                # shared source capture + word ids + quote verification (P0)
@@ -88,6 +108,10 @@ What exists to build on (bureau `origin/main`, 2026-10-14):
 **Two paths through the runbook:**
 - **`basis: formal`:** 1.x → 2.x → 3.x → 4.x. Writes a jurisdiction checklist `v1`.
 - **`none_found` / `inconclusive`:** the 2.1 roster is empty, so 2.2–2.5 pass with nothing to do. 3.1 writes only `intake.yaml` (`checklist: generic`) plus the discovery ledger as evidence.
+
+**Two ways to run it, one code path:**
+- **Standalone** (the loop, smoke runs, a human-gated publish): `0-request` holds a `Request`, `1.0-worktree` makes a bureau worktree, `4.2-publish` opens the PR.
+- **Wrapped by prospector** (I3, §6): the wrapper's `2-request` writes the same `Request` with `worktree` pointing at the workstream worktree it made, `gates: auto` and `publish: false`; `1.0-worktree` records that worktree instead of making one; `4.2-publish` stands aside; the wrapper merges the branch into the run branch and prospector ships it. Nothing between 1.1 and 4.1 knows which way it was run.
 
 ---
 
@@ -104,6 +128,11 @@ What exists to build on (bureau `origin/main`, 2026-10-14):
   - `extract`: opus-5.5, effort medium, timeout 3600 s, matching cc-source-citations' `locate`;
   - `reviewer`: opus-5.5, effort high, fresh session, for the audit.
 - Research steps declare `skills: [agent-browser, _shared-research]`, like the prospector research workstreams. WebSearch and WebFetch come with the harness.
+- **Everything that reaches bureau is written in a git worktree of bureau, from the first session.** `1.0-worktree` makes it, or records the one the request names (D2):
+  - Standalone: a blobless sparse clone of bureau at `1.0-worktree/worktree`, checked out from `origin/main` on the branch `intake-prospecting/<slug>-<run>`, with prospector's `SPARSE` paths (`bin/resolve.py`) so `jurisdictions/<slug>` and `tooling` are present. It writes `worktree.json` in prospector's shape (`workstream: intake`, `slug`, `worktree`, `ledger: jurisdictions/<slug>/prospector/intake/ledger.md`), which is what `lib/ledger.ts` `ledgerFor`, `lib/audit.md` and `lib/disposition.py` read.
+  - Wrapped: `request.worktree` names the worktree prospector's `worktree.py add --workstream intake` made, on `<run branch>--intake`; the step writes the same `worktree.json` pointing at it.
+  - The worktree holds the deliverable (D13), the ledger (D5) and nothing else of the run's: `sources.json`, `basis.json`, snapshots, `items.json`, `coverage.json`, `findings.json` and the contact sheet stay in the run dir. Each agent session that touches the worktree ends with `worktree.py commit --path …` and names the commit in its report, and each such step declares `worktree_paths` (`jurisdictions/{slug}/completeness-check`, `jurisdictions/{slug}/intake.yaml`, `jurisdictions/{slug}/prospector/intake`), so the step-loop rules apply unchanged.
+- Environment, read from `$RUN/.env` as prospector does: `BUREAU` (the clone origin and the content gates; steps that need it declare `tools: [bureau]`), `GH`, `NOETIC_SKILLS_DIR`, `CONDUCTOR_SEAT_CMD`, and for 4.2 only the app-DB pair `PUBLIC_SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` (the snapshot upload). None of prospector's `never` variables may be set.
 
 **D2. The request.** A zod `Request` in `steps/0-request/contract.test.ts`, the only definition:
 
@@ -112,14 +141,15 @@ Request = {
   jurisdiction: { slug: /^[a-z0-9-]+$/, name: string, state: string },  // need not exist in bureau yet
   application_type_hint?: string,        // e.g. "commercial site plan"; discovery may override with evidence
   seeds?: { url: string, note?: string }[],   // operator-supplied starting points
-  scope_gate: "human" | "auto",          // default "human"; "auto" for scored loop runs (D8)
-  publish: boolean,                      // default false; true requires scope_gate "human"
+  worktree?: string,                     // a bureau worktree the caller owns (the prospector wrapper, §6); absent → 1.0 makes one (D1)
+  gates: "human" | "auto",               // default "human"; governs 1.5-scope AND 4.1-review (D8, D14); "auto" for loop runs and wrapped runs
+  publish: boolean,                      // default false; true requires gates "human"
   replace?: boolean,                     // publish over an existing checklist (D14)
   requested_by: string,
 }
 ```
 
-A `jurisdiction.slug` with no `jurisdictions/<slug>/` directory is allowed; New Braunfels has none. Publishing then adds a two-line `conventions.yaml` stub (name, short_name), the legal minimum that registers the slug, so db-schema's sync can later satisfy its `jurisdictions` FK.
+A `jurisdiction.slug` with no `jurisdictions/<slug>/` directory is allowed; New Braunfels has none. 3.1-write then adds the `conventions.yaml` stub prospector's `bin/ship.py` would add (`name:`, `short_name:`), the legal minimum that registers the slug, so `sync-conventions.yml` creates the `jurisdictions` row on merge and db-schema's sync can later satisfy its FK. (`ship.py` writes the stub only when the folder has a `README.md`; a `none_found` jurisdiction may have nothing but `intake.yaml`, so this runbook writes its own.)
 
 **D3. The rule-19 posture.** `AGENTS.md` opens with it, and every sub-agent prompt restates it as a capability limit:
 
@@ -141,7 +171,7 @@ Without this bar, the Austin loop (D15) would score a copy of its own answer.
 - submittal sections under `approvals/*.md`;
 - `request.seeds`.
 
-These go into `seeds.json`, each tagged with its origin. A standalone run on a jurisdiction prospector hasn't covered (New Braunfels) gets only `request.seeds` and starts from the web. This is north-star D14's seam: in I3, prospector calls the same runbook as a sub-runbook after `1-research` and `2-regulatory`, and it gets richer seeds without any code path changing.
+These go into `seeds.json`, each tagged with its origin. The seeds are read from the worktree (D1), which in a wrapped run is a branch off the prospector run branch, so a briefing or a code folder that `1-research` or `2-regulatory` merged **in this same run** is already there; standalone, the worktree is `origin/main`, so the seeds are whatever prospector has shipped. A run on a jurisdiction prospector hasn't covered (New Braunfels) gets only `request.seeds` and starts from the web. This is north-star D14's seam: in I3 the wrapper orders the intake step after research, regulatory and permit-harvest (§6), and this step gets richer seeds without any code path changing.
 
 ### 2.2 Discovery and scope
 
@@ -165,7 +195,9 @@ It writes:
   This is north-star D2 enforced at the source. completion-officer's taxonomy (Required Submission / Reference-Template / Regulatory / Informational) let a design manual become "primary", which is how the 120 Environmental items happened. Here a source's type, not its importance, decides whether it can originate items.
 
 - **`process.md`:** whether there is a named intake step, who screens, which application type, and the timelines, each with a link.
-- **`ledger.md`:** prospector's `Surfaces` and `Attempts` tables (`lib/ledger.ts`). A negative attempt ("no completeness checklist published") needs the strong tier, so a `none_found` basis rests on recorded, strong-tier evidence, not on silence.
+- **The ledger**, in the worktree at `jurisdictions/<slug>/prospector/intake/ledger.md` (the path `worktree.json` names, D1), plus `notes.md` beside it for the lessons left to the next run: prospector's `Surfaces` and `Attempts` tables (`lib/ledger.ts`), checked by `ledgerRules` in this step's contract. A negative attempt ("no completeness checklist published") needs the strong tier, so a `none_found` basis rests on recorded, strong-tier evidence, not on silence. Each session commits the ledger with `worktree.py commit --path jurisdictions/<slug>/prospector/intake` and reports `units_verified` (the source keys it settled) and `ledger_rows_added`, which is what the step loop's stall rule counts.
+
+`sources.json` and `process.md` are run-dir outputs of this step; only the ledger reaches bureau.
 
 **D6. Every candidate source is captured before classification.** `1.3-capture` snapshots each `intake_instrument` and `template` source, and each `regulatory`/`design_manual`/`informational` source that discovery quoted, using the shared capture library (P0): direct PDF, a web page printed one panel per page, or a Municode section. Output:
 - `snapshots/<sid>/` (pages, `text/NNN.tokens.txt` with word ids);
@@ -188,7 +220,7 @@ Snapshots exist before 1.4, so classification and every later step read the same
 
 **D8. The scope gate.** `1.5-scope` is `runner: none`, `frozen`, and shows `1.4-classify/readout.md`: the sources table, the basis, and the scope sources with their quotes. A `Decision` zod union, `approved | revise`, carries `decided_by`, `notes`, and on `revise` the edits: add or remove scope sources, retype a source, or change the basis. `revise` re-runs 1.4 with the notes.
 
-Gate 0 was historically the most valuable human step (Austin: the CC Application promoted). But a scored loop must measure the runbook, not Will, so `scope_gate: auto` passes the gate with `decided_by: "auto"`. The readout is still written. `publish: true` requires `scope_gate: human` (D2).
+Gate 0 was historically the most valuable human step (Austin: the CC Application promoted). But a scored loop must measure the runbook, not Will, so `gates: auto` passes the gate with `decided_by: "auto"`. The readout is still written. `publish: true` requires `gates: human` (D2). A wrapped run (§6) is always `auto`: prospector has no human gates, and a nested step that parks at 75 parks the whole prospector run.
 
 ### 2.3 Extraction
 
@@ -222,17 +254,17 @@ Every page of every scope source is assigned to exactly one group (contract). An
 - Writes `coverage.json`: for every page or section of every scope source, the items citing it, or **uncovered**. Uncovered spans are what the audit looks at first.
 
 **D12. Audit and disposition, prospector style.**
-- **`2.4-audit`** is the `reviewer` preset in a fresh session, following `prospector/lib/audit.md`. It does not read `2.2-extract` sessions. It writes `findings.json` (`CHARGED|CLEAN`, `charged[{id, group, kind, claim, evidence}]`). Charge kinds:
+- **`2.4-audit`** is the `reviewer` preset in a fresh session, following `prospector/lib/audit.md`: it reads `items.json`, `coverage.json`, the snapshots and the ledger's auditor view, records the worktree HEAD as `reviewed_head`, and does not read `2.2-extract` sessions. It writes `findings.json` in `prospector/lib/audit.ts`'s `Findings` shape (`CHARGED|CLEAN`, `charged[{id, kind, claim, evidence, repro_cmd}]`, `rejudged[]`, `leads[]`). **A claim opens with the group files it concerns** (`cc-3.md, cc-7.md: …`), which is how `disposition.py --fan-out` names the items to relaunch; a claim that names none relaunches every group. Charge kinds:
   - `scope`: an item asks about compliance;
   - `coverage`: an uncovered scope span holds a requirement;
   - `checkability`: an agent could not verify the item from a plan set and documents;
   - `duplicate`;
   - `format`.
-- **`2.5-disposition`** reuses `prospector/lib/disposition.py` with `--fan-out`: only the groups that were charged are voided and re-run with their findings. At most 3 rounds, then `ACCEPTED_WITH_RESIDUALS` with the open charges carried into the readout.
+- **`2.5-disposition`** runs `prospector/lib/disposition.py --work-step 2.2-extract --audit-step 2.4-audit --worktree-step 1.0-worktree --fan-out`: only the groups that were charged are voided and re-run with their findings. At most 3 rounds, then `ACCEPTED_WITH_RESIDUALS` with the open charges carried into the readout. The residuals are written as `## Charges` rows in the ledger and committed in the worktree, as every prospector workstream does, so they reach bureau with the checklist. Extraction workers answer prior-round charges in the same table (`ADDRESSED` or `SCORED_BELOW_BAR`), which the 2.2 contract checks the way `fees.ts` `unansweredCharges` does.
 
 ### 2.4 Output and publish
 
-**D13. Writing.** `3.1-write` renders the db-schema file format exactly.
+**D13. Writing.** `3.1-write` renders the db-schema file format exactly, **into the worktree** (D1), and commits it (`worktree.py commit --path jurisdictions/<slug>/completeness-check --path jurisdictions/<slug>/intake.yaml …`). The step's gate, `lib/intake.ts gate --step …` in the prospector style (a `gate.json` the audit and the wrapper read), runs `lint:intake` once db-schema P2a exists (the same rules locally until then) and `tooling/verify/content-gates.sh` against the branch base. Of the content gates, only American spelling reaches `completeness-check/` and `intake.yaml` today; `lint:intake` is the folder's own gate.
 
 For `basis: formal`, under `jurisdictions/<slug>/completeness-check/`:
 - `CURRENT_VERSION`: `v1`, or the next free `vN` when `replace` is set.
@@ -254,18 +286,18 @@ For every basis:
   - `evidence.summary` from `basis.json`;
   - `evidence.sources` = the scope sources, or for `none_found` the strong-tier negative attempts;
   - `decided_by` = the run id.
-- `jurisdictions/<slug>/prospector/intake/ledger.md` + `notes.md`: the discovery ledger, at prospector's workstream path, ready for I3.
-
-The step's contract runs `lint:intake` once db-schema P2a exists. Until then it checks the same rules locally.
+- `jurisdictions/<slug>/prospector/intake/ledger.md` + `notes.md` are already there (D5, D12); this step adds nothing to them.
+- `jurisdictions/<slug>/conventions.yaml`, the stub, when the folder has none (D2).
 
 **D14. Review and publish.**
 - **`3.2-contact-sheet`** reuses cc-source-citations' contact-sheet builder. It shows the sources and basis, then each group's items with crops of their cited regions, plus the coverage gaps and residual charges.
-- **`4.1-review`** is a `runner: none` gate, `approved | revise`, with `revise` routing to 2.2 for named groups or to 3.1.
+- **`4.1-review`** is a `runner: none` gate, `approved | revise`, with `revise` routing to 2.2 for named groups or to 3.1. Under `gates: auto` it is passed with `decided_by: "auto"`, as 1.5 is (D8); the contact sheet is still written, so a loop run can be read afterwards.
 - **`4.2-publish`:**
-  - Refuses unless 4.1 is approved and `publish: true`.
-  - **Refuses if `jurisdictions/<slug>/completeness-check/` already exists, unless `replace: true`.** Austin loop runs never publish, and Cedar Park's uncurated v1 is replaced only on purpose.
-  - Uploads the snapshots to `cc-source-snapshots`.
-  - Opens one bureau PR on `intake-prospecting/<slug>-<YYYYmmdd-HHMM>`, using cc-source-citations' `step_review` publish flow: a worktree off origin/main, copy exactly the D13 files, commit, `gh pr create`, `pr.json`, or `NOTHING-TO-SHIP.md`.
+  - Stands aside (`NOTHING-TO-SHIP.md`, exit 0) when `publish` is false. That is every loop run and every wrapped run (§6).
+  - Refuses unless 4.1 is approved by a person (`gates: human`).
+  - **Refuses if `jurisdictions/<slug>/completeness-check/` already exists on origin/main, unless `replace: true`.** Austin loop runs never publish, and Cedar Park's uncurated v1 is replaced only on purpose.
+  - Uploads the snapshots to `cc-source-snapshots` (`upload_snapshot` from the shared library).
+  - **Ships the worktree branch**, the way prospector's `bin/ship.py` ships a run branch: merge `origin/main` into `intake-prospecting/<slug>-<run>` (never rebase, so the session commits keep their shas), push, `gh pr create`, `pr.json`. The PR carries exactly the D13 commits; there is no copy step. A conflict parks with a readout.
 
   Merging the PR is the publish. db-schema's sync, once it exists, carries the result to the DB.
 
@@ -308,12 +340,14 @@ M3 and M4 are also reported against Austin **v2.7-trimmed** as information only 
   - a `basis.json` whose rationale cites evidence.
 
   They have no `reference.json` and no `expected.yaml`, and nothing is judged against one. Their basis, sources and items are skimmed by a person and noted in the iteration report, but **they don't gate the bar and shouldn't steer prompt changes on their own**. Existing artefacts (Cedar Park's `v1`, New Braunfels' Gate 0 sources) are never treated as answers.
-- Loop iterations run with `scope_gate: auto` and `publish: false`, and the scorecards are collected in one Inspector General report per iteration.
+- Loop iterations run with `gates: auto` and `publish: false`, and the scorecards are collected in one Inspector General report per iteration. The worktree each iteration writes is a local branch that is never pushed; `intake-score` reads the run dir and the worktree.
 
 **D17. completion-officer is retired, not imported.** No file is copied in. Its heuristics live on in the D5, D9, D10 and D12 prompts. Once D16's bar is met (north-star Q7):
 - archive the repo;
 - delete `tools/sync-to-bureau.sh`, whose stale v2.7 copy would already fail db-schema's linter;
 - point `jurisdictions/cedar-park/completeness-check/README.md` at this runbook.
+
+**D18. Human gates exist only in the standalone lane.** [Will, 2026-10-14] A standalone run may stop at 1.5-scope and 4.1-review for a person (`gates: human`). Once the runbook is wrapped by prospector (§6), there are no human gates: the wrapper requests `gates: auto`, the fresh-session audit at 2.4 is the review, as it is for every other workstream, and the checklist ships, merges and syncs on prospector's autonomous path (`8.1-ship-bureau/drive` merges, `9-record` stamps, db-schema's sync carries it to the App DB). North-star D10's "human-reviewed merge" therefore holds for the standalone lane only; the north star is amended to say so. A curated jurisdiction is protected by 4.2's existing-checklist refusal in the standalone lane and by the wrapper never requesting `replace`.
 
 ---
 
@@ -321,11 +355,11 @@ M3 and M4 are also reported against Austin **v2.7-trimmed** as information only 
 
 **S1: each step's contract** (existing kind)
 - **Proves:**
-  - D2 (Request), D5 (`sources.json` / ledger shape, `doc_type` enum), D7 (`scope_sources` ⊆ intake_instrument ∪ template), D9 (every scope page assigned exactly once; empty roster unless `formal`);
-  - D10 (every item has a scope citation; quotes match the words), D11 (`rejected.json`, `coverage.json`);
-  - D13 (the file set, a guide table that matches `items.json`, `lint:intake`), D14 (publish refusals);
-  - D8 (`publish: true` with `scope_gate: auto` refused).
-- **Prior art:** `runbooks/cc-source-citations/steps/*/contract.test.ts` (node:test plus `runbooks/lib/contract-helpers.ts`), and `steps/2.1-locate/steps/locate/contract.test.ts` for a worker contract that checks quotes.
+  - D1 (`worktree.json` in prospector's shape; the worktree committed and each report's head in its history, via `lib/step-loop.ts` `stepLoop` with the step's `worktree_paths`), D2 (Request), D5 (`sources.json` shape, `doc_type` enum; the ledger via `ledgerRules`), D7 (`scope_sources` ⊆ intake_instrument ∪ template), D9 (every scope page assigned exactly once; empty roster unless `formal`);
+  - D10 (every item has a scope citation; quotes match the words), D11 (`rejected.json`, `coverage.json`), D12 (`findings.json` parses as `audit.ts` `Findings`; prior-round charges answered);
+  - D13 (the file set, a guide table that matches `items.json`, `lint:intake`, the content gates), D14 (publish refusals, stand-aside when `publish` is false);
+  - D8 (`publish: true` with `gates: auto` refused).
+- **Prior art:** `runbooks/cc-source-citations/steps/*/contract.test.ts` (node:test plus `runbooks/lib/contract-helpers.ts`), `steps/2.1-locate/steps/locate/contract.test.ts` for a worker contract that checks quotes, and `runbooks/prospector/fees/contract.test.ts` + `fees/lib/fees.ts` for a step-loop work contract with a workstream gate over the worktree.
 - **Runs:** `node --test` per step, over fixture run dirs, in bureau CI with the other runbook contracts.
 
 **S2: the shared source library** (existing, moved in P0)
@@ -341,7 +375,7 @@ M3 and M4 are also reported against Austin **v2.7-trimmed** as information only 
 **Acceptance (not a seam):**
 1. D16's Austin row passes twice in a row.
 2. At least one non-Austin smoke run passes its mechanical checks.
-3. One `scope_gate: human`, `publish: true` run on a non-Austin jurisdiction of Will's choosing opens a **draft** bureau PR that passes `lint:intake`.
+3. One `gates: human`, `publish: true` run on a non-Austin jurisdiction of Will's choosing opens a **draft** bureau PR that passes `lint:intake`.
 
 Whether that PR merges is Will's judgement of its content, not part of acceptance.
 
@@ -358,9 +392,9 @@ All PRs are in `bureau`.
 - **Door:** two-way.
 - **Blast radius:** cc-source-citations runs, until S2 is green.
 
-**P1: request, inputs, discovery, capture, classification, scope gate** (steps 0 – 1.5)
+**P1: request, worktree, inputs, discovery, capture, classification, scope gate** (steps 0 – 1.5)
 - **Blocked by:** P0.
-- **Delivers:** a run that stops at `1.5-scope` with `sources.json`, `process.md`, the ledger, snapshots and `basis.json`. Lands D1–D8. This is enough to measure M1 and M2, the metrics north-star D11 says to score first.
+- **Delivers:** a run that stops at `1.5-scope` with `sources.json`, `process.md`, the ledger committed in the worktree, snapshots and `basis.json`. Lands D1–D8, including the worktree step in both modes (made, or taken from `request.worktree`). This is enough to measure M1 and M2, the metrics north-star D11 says to score first.
 - **Tested at:** S1 (steps 0–1.5).
 - **Door:** two-way (a new runbook nobody else calls).
 - **Blast radius:** none.
@@ -408,12 +442,26 @@ All PRs are in `bureau`.
 - **Q3. Fail status.** Is "required / will be rejected → `fail`; recommended / may be returned → `warn`" enough? v2.7 also uses `fail-or-warn` (9 items), which the generator never produces. Leave that to human edits?
 - **Q4. Key Terms.** Austin's guides gained a Key Terms section from the bureau glossary in v2.4. Should generated guides have one, and from what? The jurisdiction has no glossary until prospector's regulatory workstream builds one.
 - **Q5. Re-generating a jurisdiction that already has a checklist.** D14 refuses without `replace`, and `replace` writes the next `vN`. Should a re-run on a **curated** checklist (Austin) ever publish, or only ever be scored?
+- **Q6. Who reviews a checklist that prospector generates?** **Decided** (Will, 2026-10-14): nobody, by design. See D18. The two alternatives considered (a `review: pending` flag in `intake.yaml` that the sync honours; prospector producing only the basis, sources and ledger and leaving publication to a standalone run) are not taken.
+- **Q7. Which prospector target runs intake?** [Will] `comment-harvest` and `review-guides` run only on `target: review` (`REVIEW_ONLY`). Intake feeds the CC review, not the SIR, so the recommendation is review-only, which keeps `sir` runs unchanged. The cost is that `intake_ready` then requires a review-target run.
 
 ## 6. Not yet specified
 
 - **Historic comments as evidence** (north-star D13). Reading Library `historic_comments` for "incomplete submittal" notices to weight `fail_status` or confirm enforcement. That needs Library DB access from a run and a classifier for intake-flavoured comments. It comes after the loop shows where the items are weak.
 - **More than one application type per jurisdiction** (north-star Q2). D7 picks one. If the loop finds jurisdictions where two application types carry site plans, the request and `intake.yaml` will need a key for it.
-- **The prospector wrapper** (north-star I3). It calls this runbook as a sub-runbook with `bind: {request: 0-resolve}`, maps its gates onto prospector's audit pattern, and adds `intake` to `workstream_status`. D4 and D13 (the ledger path) are designed so that wrapper adds code without changing this runbook.
+- **The prospector wrapper** (north-star I3, its own sub-spec `intake/prospector-workstream`). What it is, from the review-guides precedent, so I2 is built to fit it; the sizes are the point, not the detail.
+
+  A sub-runbook `runbooks/prospector/intake/` with `audit: none` (this runbook audits itself at 2.4):
+  1. `1-worktree`: `lib/worktree.py add --clone $RUN/request/worktree --out $OUT --workstream intake`, as every workstream.
+  2. `2-request`: a script that writes this runbook's `Request` from `currency.json` (`jurisdiction` from the slug, name and state; `worktree` = `1-worktree/worktree`; `gates: auto`; `publish: false`; `requested_by` = the outer request's), or `stand-aside.json` when intake is current or out of scope.
+  3. `3-run`: `runner: runbook`, `runbook: intake-prospecting`, `bind: {request: 2-request}`. Not `bind: {request: 0-resolve}`: that folder is prospector's currency record, not a `Request`.
+  4. `4-upload`: the snapshot upload 4.2 would have done (it stood aside), so `/intake-checklists/<slug>` can render the citations after the ship. This needs the app-DB pair in the run environment, which today only `review-guides` gets (`lib/env.json` `stale`); that map is keyed by variable with one workstream per entry, so it grows a list.
+  5. `5-disposition`: `disposition.json` derived from the nested `2.5-disposition/disposition.json` and `3.1-write/gate.json`, so `9-record` and the ship PR body see the residuals.
+  6. `6-mergein`: `worktree.py mergein --worktree $RUN/1-worktree/worktree --sessions <the nested 1.2 and 2.2 sessions> --disposition …`.
+
+  Registration in the outer runbook: `steps/4-intake/step.yaml` (`runner: runbook`, `runbook: prospector/intake`, `bind: {request: 0-resolve}`, inputs `1-research/output/mergein?`, `2-regulatory/output/mergein?`, `3-permit-harvest/output/mergein?`, so the seeds of D4 are on the run branch first); `intake` in `WORKSTREAMS` (`lib/outer.ts`, `bin/resolve.py`) and, per Q7, in `REVIEW_ONLY`; `WORK_TYPE["intake"] = "intake"`; `DELIVERABLES["intake"] = ("intake.yaml", 1)`, so a jurisdiction whose `intake.yaml` is on main reads as current inside the freshness window; `lib/env.json` `workstreams.intake`; `4-intake/output/mergein?` among `8.1-ship-bureau/open`'s inputs. Outside bureau: a `dsd/library` migration that adds `intake_completed_count` and `intake_ready` to `metro_ahj_coverage`, and `intake` in `dsd/web/lib/prospector/types.ts` `WORKSTREAMS`.
+
+  What is **not** reused from the standalone lane: `4.2-publish` (stands aside) and the human gates (`auto`, D18). Everything the Austin loop tunes (1.2–3.1, the scorer) runs unchanged.
 
 ## 7. Out of scope
 
@@ -421,3 +469,4 @@ All PRs are in `bureau`.
 - **The generic baseline's contents.** The `intake/baseline` sub-spec. This runbook only points `none_found` jurisdictions at `generic`.
 - **Running the CC review on a generated checklist.** That needs the CC runbook's Austin defaults removed (north-star §7).
 - **Cloud (substation) runs.** Substation is on the deprecation path, and capture needs local Playwright plus the operator's `gh`.
+- **Running the loop through prospector itself** (`directives.only: [intake]`). Prospector's `0-resolve` needs the Library DB, takes the jurisdiction lock, clones and installs surveyor, and its ship step opens and merges a PR on every run that merged a workstream. None of that belongs in a scored Austin iteration, which is why the standalone lane exists.

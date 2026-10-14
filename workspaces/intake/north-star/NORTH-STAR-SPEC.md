@@ -1,11 +1,13 @@
 # Intake north star: a checklist for every jurisdiction
 
-**Status:** Draft v1.2
+**Status:** Draft v1.3
 **Date:** 2026-10-14
 **Repos touched:** none. This is a plan of a plan. It records the 2026-10-14 discussion with Will, names where intake should end up, and lists the sub-specs that will carry out the work.
-**Repos eventually touched:** `bureau` (checklist files, the intake-prospecting runbook, the prospector workstream, the sync), `cityhall` (App-DB tables and migrations), `completion-officer` (retired)
+**Repos eventually touched:** `bureau` (checklist files, the intake-prospecting runbook, the prospector workstream, the sync), `cityhall` (App-DB tables and migrations), `dsd` (the `metro_ahj_coverage` view and the prospector dashboard, for `intake_ready`), `completion-officer` (retired)
 **Repos NOT touched:** `conductor` (legacy), `substation` (on the deprecation path)
 
+> **Revision note v1.3 (2026-10-14, prospector integration audit):** §4.4 now says what the I3 wrapper is, from the precedent in `prospector/review-guides/` (which nests `guide-training` unchanged), and names `dsd` as the home of `intake_ready`. The prospecting-runbook sub-spec is Draft v1.2, built to that wrapper; D10 is amended: the human-reviewed merge is the standalone lane's; inside prospector there are no human gates (Will; runbook D18). Q7 (which target runs intake) is Will's.
+>
 > **Revision note v1.2 (2026-10-14, Will):** D11: **Austin is the only scored case.** Nobody can confirm that the New Braunfels and Cedar Park runs were good, so they are at most unscored smoke runs for scraping and extraction on non-Austin sites, with little weight. D3's gate on P1/P2b is changed to match.
 >
 > **Revision note v1.1 (2026-10-14):** D3 now orders the work by dependency: I2 (the runbook) depends on I1's file format only, so it starts now. I1's migration and sync (P1, P2b) wait until the loop has run on two jurisdictions. Sub-spec table: `prospecting-runbook` is now Draft v1.
@@ -15,7 +17,7 @@
 | Sub-spec | Path | Status |
 |---|---|---|
 | Intake checklist DB schema + bureau sync | `workspaces/intake/db-schema/DESIGN-SPEC.md` | Draft v1 (same PR); P2a first, P1/P2b after the loop (D3) |
-| The intake-prospecting runbook | `workspaces/intake/prospecting-runbook/DESIGN-SPEC.md` | Draft v1 (same PR) |
+| The intake-prospecting runbook | `workspaces/intake/prospecting-runbook/DESIGN-SPEC.md` | Draft v1.2 (audited against prospector) |
 | The generic baseline checklist | `workspaces/intake/baseline/` | not started |
 | Intake in the prospector flow | `workspaces/intake/prospector-workstream/` | not started |
 | DB as the source of truth | `workspaces/intake/db-source-of-truth/` | later |
@@ -194,7 +196,7 @@ Moving a jurisdiction off the baseline later means it gets its own checklist wit
 
 **D9. A new version only when the content changes.** [proposed] The sync hashes the item set and records a new checklist version only when the hash changes. This is the opposite of Inspector General's cache (§2.3), which has nine identical v2.7 versions.
 
-**D10. Runbooks never write the DB; publishing goes through bureau.** [proposed] intake-prospecting publishes by opening a bureau PR, as cc-source-citations' `4.1-publish` does today. On merge, the sync (D7) carries it to the DB. This matches conductor2's rule that runbooks don't touch the DB, and gives every checklist a human-reviewed merge.
+**D10. Runbooks never write the DB; publishing goes through bureau.** [proposed] intake-prospecting publishes by opening a bureau PR, as cc-source-citations' `4.1-publish` does today. On merge, the sync (D7) carries it to the DB. This matches conductor2's rule that runbooks don't touch the DB, and gives every checklist a human-reviewed merge **in the standalone lane**. Inside prospector (I3) there are no human gates (Will, 2026-10-14; prospecting-runbook D18): the workstream's fresh-session audit is the review, and prospector's ship step merges the PR itself, as it does for every other workstream.
 
 **D11. Loop the runbook against v2-trimmed, not v2.7.** [Will: "close enough", no exact match; proposed: the target and test set]
 - v2-trimmed is the last Austin version shaped mostly by research rather than by talking with the city. Report overlap with v2.7 alongside it, but don't tune to it.
@@ -245,8 +247,9 @@ A one-time checklist curated by hand, needed before New Braunfels (or any `none_
 
 ### 4.4 I3: intake in the prospector flow (`intake/prospector-workstream`)
 
-- An `intake` workstream in `bureau/runbooks/prospector/`, fed by the upstream outputs (D14).
-- `intake` in `workstream_status`, and `intake_ready` in `metro_ahj_coverage`.
+- An `intake` workstream in `bureau/runbooks/prospector/`, fed by the upstream outputs (D14). It is a wrapper, not a port: `prospector/review-guides/` already nests `runbooks/guide-training/` unchanged behind a `2-request` step that writes the nested runbook's request from `currency.json`, and the intake workstream does the same with intake-prospecting (its spec, §6: worktree, request, nested run, snapshot upload, disposition, mergein, plus the registration in `lib/outer.ts`, `bin/resolve.py`, `lib/env.json` and the ship inputs). The runbook writes into a bureau worktree from its first session so that the wrapper copies nothing.
+- `intake` in `workstream_status` (stamped by `9-record` from `WORK_TYPE`), and `intake_ready` in `metro_ahj_coverage`, which is a migration in `dsd/library/tooling/supabase/migrations/` plus the dashboard's workstream list in `dsd/web/lib/prospector/types.ts`.
+- No human gates once wrapped (Will, 2026-10-14; prospecting-runbook D18): the audit is the review, and the checklist merges and syncs on prospector's autonomous path. One decision still Will's (prospecting-runbook Q7): whether intake runs on `sir` runs or only `review` runs.
 - Comment-harvest stops discarding intake notes (D13).
 
 ### 4.5 Later: the DB as source of truth, and the rename
