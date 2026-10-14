@@ -6,7 +6,7 @@
 <title>Intake checklist DB schema and the bureau sync</title>
 <style>
 /* ============================================================
-   spec-kit v6.6  —  winston HTML spec design system
+   spec-kit v6.7  —  winston HTML spec design system
    Inline the ENTIRE contents of this file into the spec's style block.
    Canonical source: ~/.claude/skills/winston-spec/assets/spec-kit.css
    When you change this file, bump the version above and in COMPONENTS.md.
@@ -947,6 +947,19 @@ nav.tabs button{white-space:nowrap;flex:0 0 auto}
 .ent .pkgroup .pklabel{display:block;padding:7px 12px 0 4px;font-size:var(--fs-micro);font-weight:600;letter-spacing:.04em;color:var(--ink2)}
 .ent .pkgroup .row{border-top:0;padding-left:6px}
 .ent .pkgroup .row + .row{border-top:1px solid #eef1f4}  /* dividers between key rows, starting right of the brace */
+/* v6.7 — the composite-key brace sits OUTSIDE the card, in the gutter, so key rows align with
+   every other row; each column shows its DB type on the right of its name (.dt). */
+.ent{overflow:visible}
+.ent > :first-child{border-radius:9px 9px 0 0}
+.ent > :last-child{border-radius:0 0 9px 9px}
+.ent .pkgroup{padding-left:0}
+.ent .pkgroup::before{left:-16px;top:30px;bottom:8px;width:9px}
+.ent .pkgroup::after{left:-22px;width:7px}
+.ent .pkgroup .row{padding-left:12px}
+.ent .pkgroup .pklabel{padding:7px 12px 0 12px}
+.ent .row .dt{margin-left:auto;padding-left:10px;font-family:var(--mono);font-size:12px;color:var(--ink2);white-space:nowrap}
+.ent .row .dt i{font-style:normal;color:#8a919c}
+.erd.linked{padding-left:44px}
 
 </style>
 </head>
