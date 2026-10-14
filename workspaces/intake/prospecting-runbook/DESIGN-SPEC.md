@@ -1,7 +1,8 @@
 # The intake-prospecting runbook
 
-**Status:** Draft v1.2
+**Status:** Draft v1.3
 **Date:** 2026-10-14
+> **Revision note v1.3 (2026-10-14, Will, from the Austin loop):** **A published submittal-requirements list is an `intake_instrument` whatever its format**, a webpage of panels included; v1.2's D5 table typed "the requirements webpage" `informational`. Austin's DSD "Site Plan Requirements" page is the case: runs r1 and r2 typed it informational and sat at M3 0.80–0.83, with 17 of the 18 unmatched reference items and 18 of 33 partials citing only that page; r4, with the page as an instrument, scored M3 0.897 / M4 0.976 / M5 0.021 and passed the bar. Will's ruling: the page is an intake instrument for Austin; it is imperfect (the reference was refined by hand), so a blind run trades some precision for recall, and that is acceptable. `informational` is now confined to process, fee, metrics and how-to-apply pages. Bureau PR #2112 (commit 63756cbf1e) carries the rule in the discovery and classification prompts and `AGENTS.md`. Nothing else changes.
 > **Revision note v1.2 (2026-10-14, prospector integration audit):** The runbook is checked against what `bureau/runbooks/prospector/` actually is, so that nothing the Austin loop tunes is thrown away when it becomes a workstream (north-star I3). Functional design unchanged. Technical corrections:
 > - **The deliverable and the ledger are written in a bureau worktree from the first session, not in the run dir** (new `1.0-worktree`, D1, D5, D13). `lib/step-loop.ts`, `lib/audit.md` and `lib/disposition.py`, which D5 and D12 reuse, all require one: the step loop's blocking rule checks the worktree is committed and that each report names its HEAD; the audit records `reviewed_head`; disposition commits residual rows into the ledger inside the worktree. v1.1 had the ledger in the run dir and copied it at 3.1, which none of those tools would have accepted.
 > - **D2's `scope_gate` is now `gates`, and it governs 4.1-review as well as 1.5-scope.** v1.1 had no `auto` for 4.1, so a loop run (and every prospector-wrapped run) would have parked there.
@@ -186,11 +187,11 @@ It writes:
 
   | doc_type | Meaning | Can an item exist because of it? |
   |---|---|---|
-  | `intake_instrument` | an application form, submittal or completeness checklist, or a department completeness checklist (Austin's CC Application, CC Submittal Checklist, AW Completeness Checklist) | **yes** |
+  | `intake_instrument` | an application form, submittal or completeness checklist, a department completeness checklist, or a published submittal-requirements list in any format, a webpage of panels included (Austin's CC Application, CC Submittal Checklist, AW Completeness Checklist, Site Plan Requirements webpage) | **yes** |
   | `template` | required notes, standard sheets or templates whose content must appear on the plans (Austin's Notes and Templates DOCX) | **yes** |
   | `regulatory` | code or ordinance sections | no; it can only support and cite |
   | `design_manual` | criteria and design manuals (Austin's Environmental PDF, New Braunfels' drainage manual) | no; same |
-  | `informational` | process pages, FAQs, the requirements webpage | no; same, and it may supply process facts |
+  | `informational` | process pages, FAQs, fee schedules, metrics and how-to-apply pages; never a page that lists what a submittal must contain (v1.3) | no; same, and it may supply process facts |
 
   This is north-star D2 enforced at the source. completion-officer's taxonomy (Required Submission / Reference-Template / Regulatory / Informational) let a design manual become "primary", which is how the 120 Environmental items happened. Here a source's type, not its importance, decides whether it can originate items.
 
