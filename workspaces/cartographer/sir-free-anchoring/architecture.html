@@ -426,7 +426,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 <div class="kicker">CARTOGRAPHER · SIR-FREE ANCHORING</div>
 <h1>Anchoring without a SIR: a loose PDF from upload to the map</h1>
 <p>Architecture companion to <code>DESIGN-SPEC.md</code> (winston#309). Today <code>anchor-geometry</code> cannot run on a file nothing owns: the SIR supplies the request's identity, the target coordinate system, the fitting ring and the owner of every row it writes. This spec finds the county ring from the plan set's own text, takes the target coordinate system from the ring itself, lets <code>geo</code> and <code>cartographer_anchors</code> carry no owner, and shows the derivation on a new evidence page. North star P2a + P2b.</p>
-<div class="meta">Draft v1.4 · 2026-10-14 (v1.1 2026-10-13) · companion on spec-kit v5.1 · click a tab ↓</div>
+<div class="meta">Draft v1.5 · 2026-10-14 (v1.1 2026-10-13) · companion on spec-kit v5.1 · click a tab ↓</div>
 <a class="spec-link" href="DESIGN-SPEC.html">📖 read the spec</a>
 </header>
 
@@ -507,7 +507,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 <div class="sys store chg" id="b-geo" style="grid-area:3/5"><a class="ref" href="#detail-geo">D1 · D11 ↓</a><span class="k">table</span><span class="t">geo</span><span class="d">owner optional · file_id provenance · county rows keyed by it</span></div>
 <div class="sys chg" id="b-ui" style="grid-area:3/6"><a class="ref" href="#detail-viewer">D13 ↓</a><span class="k">ui</span><span class="t">/anchored</span><span class="d">context via the SIR when there is one, else the anchor's target_geo_ids</span></div>
 
-<div class="sys ext" id="b-src" style="grid-area:4/2"><span class="k">external</span><span class="t">County parcel layer</span><span class="d">point or legal-description query · native ring</span></div>
+<div class="sys ext" id="b-src" style="grid-area:4/2"><span class="k">external</span><span class="t">County parcel layer</span><span class="d">pinned in the surveyor module's layer-identity.json · native ring + SR</span></div>
 <div class="sys chg" id="b-bin" style="grid-area:4/3"><a class="ref" href="#detail-county">D6 ↓</a><span class="k">bureau scripts</span><span class="t">plan_set_county · spcs_lookup · arcgis_query</span><span class="d">page 1 → county name, legal description, address · zone-name index for the check</span></div>
 <div class="sys chg" id="b-pub" style="grid-area:4/4"><a class="ref" href="#detail-publish">D12 · D18 ↓</a><span class="k">script</span><span class="t">publish.ts</span><span class="d">owner may be null · carries the derivation</span></div>
 <div class="sys store chg" id="b-anc" style="grid-area:4/5"><a class="ref" href="#detail-anchors">D2 · D18 ↓</a><span class="k">table</span><span class="t">cartographer_anchors</span><span class="d">sir_id nullable · evidence.derivation</span></div>
@@ -535,7 +535,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 <a class="refrow chg" data-ref="D3"><span class="chip">D3</span><span class="txt">the run request's owner fields are all optional; the only required field is file; site_point {lat, lon} is the operator's override for where the parcel is</span></a>
 <a class="refrow chg" data-ref="D4"><span class="chip">D4</span><span class="txt">the SRID ladder: the request's target_srid, then the fetched ring's native spatial reference, then the county table when the layer is published geographic, then stop; the plat's zone must agree</span></a>
 <a class="refrow chg" data-ref="D5"><span class="chip">D5</span><span class="txt">the ring brings its own coordinate system: the parcel layer returns native_sr with the feature, which is how the SIR path already gets srid_local</span></a>
-<a class="refrow chg" data-ref="D6"><span class="chip">D6</span><span class="txt">the county is a name, read off the plat's recording reference, used only to pick the layer (Q3) and as the fallback; no FIPS, no FIRM panel</span></a>
+<a class="refrow chg" data-ref="D6"><span class="chip">D6</span><span class="txt">the county is a name, read off the plat's recording reference, used only to name the surveyor module whose layer-identity.json pins the parcel layer (no second registry) and as the fallback; no FIPS, no FIRM panel; an untrained jurisdiction is a stop</span></a>
 <a class="refrow chg" data-ref="D7"><span class="chip">D7</span><span class="txt">the plat's zone is the check, not the source: zone name → the set of its codes, and the derived code must be a member; assumed or deed bearings proceed with the check recorded as unavailable</span></a>
 <a class="refrow chg" data-ref="D8"><span class="chip">D8</span><span class="txt">disagreement is a hard stop: fetch.ts exits 3, fetch.py writes BLOCKED.md and exits 0, the 1.2 contract answers 75, the run waits for request.json</span></a>
 <a class="refrow chg" data-ref="D10a" href="DESIGN-SPEC.html#D10"><span class="chip">D10a</span><span class="txt">finding the parcel is a ladder (site_point → legal description → address through a jurisdiction locator → stop) closed by an area gate against the plat's stated area</span></a>
@@ -583,7 +583,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 <text x="32" y="76">"… RECORDS TRAVIS COUNTY, TEXAS"</text>
 <text x="32" y="94">LOT 1 … LENOX SPRINGS SEC III</text>
 <text x="32" y="112">10416 Brezza Ln</text>
-<text x="342" y="40" font-weight="700">registry (Q3) → TCAD layer</text>
+<text x="342" y="40" font-weight="700">surveyor module → TCAD layer</text>
 <text x="342" y="76">where LEGAL_DESCRIPTION LIKE …</text>
 <text x="342" y="94">→ 1 feature · PID 0436110202</text>
 <text x="342" y="112">native ring · area gate</text>
@@ -634,16 +634,16 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 <h3 id="detail-county"><span class="hn">D5–D7</span>What the page-1 reader, the lookup and the fetch produce</h3>
 <div class="spectable-scroll"><table class="spectable"><thead><tr><th>Script</th><th>Reads</th><th>Produces</th><th>On White Water</th></tr></thead><tbody>
 <tr><td><code>plan_set_county.py</code> <span class="w">new</span></td><td>page 1's text layer, with boxes (<code>pdftotext -bbox</code>)</td><td><code>{county, state, legal_description, address, evidence}</code> from the recording reference and the title block; the county picks the registry entry (Q3)</td><td>line 150 <code>PUBLIC RECORDS TRAVIS COUNTY, TEXAS</code>; <code>LOTS 1 OF LENOX SPRINGS SECTION III</code>; <code>10416 Brezza Ln</code></td></tr>
-<tr><td><code>arcgis_query.py</code> <span class="r">existing</span></td><td>the registry's layer and a <code>where</code> clause, or a point</td><td>features with native rings <b>and the layer's <code>native_sr</code></b>: the SRID source (D5)</td><td><code>where LEGAL_DESCRIPTION LIKE '%LENOX SPRINGS%'</code> → 4 rows, one SEC III, PID 0436110202; <code>native_sr {wkid 102739, latestWkid 2277, projected: true}</code>; 7-point ring</td></tr>
+<tr><td><code>arcgis_query.py</code> <span class="r">existing</span></td><td>the surveyor module's <code>parcels</code> layer (from its <code>layer-identity.json</code>) and a <code>where</code> clause, or a point</td><td>features with native rings <b>and the layer's <code>native_sr</code></b>: the SRID source (D5)</td><td><code>where LEGAL_DESCRIPTION LIKE '%LENOX SPRINGS%'</code> → 4 rows, one SEC III, PID 0436110202; <code>native_sr {wkid 102739, latestWkid 2277, projected: true}</code>; 7-point ring</td></tr>
 <tr><td><code>spcs_lookup.py</code> <span class="w">extended</span></td><td>new: a zone name + datum (the reverse index, D7); as today: <code>--state --county</code> by name (the fallback, D6)</td><td>the <i>set</i> of a zone's codes; or <code>{epsg, units, zone, basis}</code>. Stdlib, zero network</td><td>("TEXAS CENTRAL ZONE", "NAD 83") → {2277, 32139}, and 2277 is a member; Travis → 2277 ftUS exists but is not needed, the layer is projected</td></tr>
 </tbody></table></div>
-<p class="claim"><b>Claim (D5, D6):</b> <code>arcgis_query.py</code> "already reports" <code>native_sr</code> and <code>sir_add_parcel_geo</code> "already stores it as <code>srid_local</code>"; the county table "was itself reconciled against this layer, so the table agreeing with the ring was partly the layer agreeing with itself"; "nothing needs a FIPS." Surveyor still cannot stand in for the registry: its <code>native_sr</code> is per layer, and Travis County's own server publishes <code>DBO.County</code> as geographic WKT.</p>
+<p class="claim"><b>Claim (D5, D6):</b> <code>arcgis_query.py</code> "already reports" <code>native_sr</code> and <code>sir_add_parcel_geo</code> "already stores it as <code>srid_local</code>"; the county table "was itself reconciled against this layer, so the table agreeing with the ring was partly the layer agreeing with itself"; "nothing needs a FIPS." <b>Claim (D6, v1.5):</b> "surveyor is the registry": 177 modules carry a machine-readable <code>layer-identity.json</code>, 95 with a parcel layer, and Austin's <code>coa-gis</code> pins the exact TCAD layer §1.5 measured; what is missing is a <code>role</code> tag and a county-name → slug convention, and "nothing is built twice." The runbook "runs only on a jurisdiction prospector has trained."</p>
 
 <h3 id="detail-location"><span class="hn">D10a</span>Finding the parcel: the location ladder, which runs before the SRID exists</h3>
 <div class="dflow">
 <div class="dq"><span class="q">request.site_point {lat, lon} is set?</span><span class="yes">yes →</span><span class="out">point query on the parcel layer · computed claim {fetched, url, point, feature_count, pid}</span></div>
 <div class="dno">no ↓ · a loose file carries no point: §1.5's coordinates came from the project this spec promises not to use</div>
-<div class="dq"><span class="q">The plat's legal description matches exactly one feature in the jurisdiction's legal-description layer, after section / phase disambiguation?</span><span class="yes">yes →</span><span class="out">that feature · read claim: page 1, bbox, verbatim, basis legal_description</span></div>
+<div class="dq"><span class="q">The module records a legal_description layer, and the plat's legal description matches exactly one feature in it after section / phase disambiguation?</span><span class="yes">yes →</span><span class="out">that feature · read claim: page 1, bbox, verbatim, basis legal_description</span></div>
 <div class="dno">no ↓ · zero rows, or several (four Lenox Springs rows, one SEC III)</div>
 <div class="dq"><span class="q">The jurisdiction publishes a locator and the title-block address scores?</span><span class="yes">yes →</span><span class="out warn">locate → point → rung 1's query · computed claim · never a national geocoder as the sole source</span></div>
 <div class="dno">no ↓ · Census returns 0 matches for a 2021 subdivision</div>
@@ -917,7 +917,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 <h3><span class="hn">order</span>What lands before what</h3>
 <div class="sysmap" style="grid-template-columns:repeat(4,1fr)">
 <div class="sys" id="ph-sub" style="grid-area:2/1"><span class="k">substation</span><span class="t">migration + RPCs</span><span class="d">items 9, 10 · nullable owners · add_parcel_geo · anchor_id delete-keys</span></div>
-<div class="sys" id="ph-bur" style="grid-area:1/2"><span class="k">bureau</span><span class="t">steps + bin scripts</span><span class="d">items 1–4 · contracts, fetch.py, the zone index in spcs_lookup, plan_set_county</span></div>
+<div class="sys" id="ph-bur" style="grid-area:1/2"><span class="k">bureau</span><span class="t">steps + bin scripts</span><span class="d">items 1–4, 4b, 15 · contracts, fetch.py, the zone index, plan_set_county, surveyor role tags, the check.md link</span></div>
 <div class="sys" id="ph-scr" style="grid-area:3/2"><span class="k">cartographer</span><span class="t">runbook scripts</span><span class="d">items 5–8, 12 · fetch.ts, contracts.ts, types, publish.ts</span></div>
 <div class="sys" id="ph-app" style="grid-area:2/3"><span class="k">cartographer</span><span class="t">app</span><span class="d">item 11 · /anchored context by target_geo_ids</span></div>
 <div class="sys" id="ph-page" style="grid-area:2/4"><span class="k">cartographer</span><span class="t">evidence page</span><span class="d">items 13, 14 · no dependency · buildable against e94fae93 today</span></div>
@@ -934,7 +934,8 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 <tr><td><span class="sn">1b</span></td><td><code>bureau/…/1.2-fetch/contract.test.ts:41,56-67</code></td><td>Target.sir_id optional; the request-match test tolerates no SIR; "SIR has at least one parcel ring" becomes "parcels.json has …"; answer 75 when BLOCKED.md exists and target.json does not (D8)</td></tr>
 <tr><td><span class="sn">2</span></td><td><code>bureau/…/scripts/fetch.py</code></td><td>pass the owner fields, site_point and the resolved SRID through; on exit 3 write BLOCKED.md and exit 0 (D8)</td></tr>
 <tr><td><span class="sn">3</span></td><td><code>site-research/bin/spcs_lookup.py</code></td><td>zone-name → set of EPSG codes reverse index over the table it already owns (D7); --state --county by name is the fallback (D6)</td></tr>
-<tr><td><span class="sn">4</span></td><td><code>site-research/bin/plan_set_county.py</code> <span class="w">new</span></td><td>page-1 text layer → {county, state, legal_description, address, evidence} from the recording reference and title block (D6); the county picks the layer, the rest feeds D10a rungs 2 and 3</td></tr>
+<tr><td><span class="sn">4</span></td><td><code>site-research/bin/plan_set_county.py</code> <span class="w">new</span></td><td>page-1 text layer → {county, state, legal_description, address, evidence} from the recording reference and title block (D6); the county names the surveyor module, the rest feeds D10a rungs 2 and 3</td></tr>
+<tr><td><span class="sn">4b</span></td><td><code>surveyor/src/sources/{coa-gis,travis-county-gis}/layer-identity.json</code></td><td>a <code>role</code> tag on the parcel entries and a new coa-gis entry for OmniParcel MapServer/8 as the legal_description layer; prospector writes the tag for new modules (Q3)</td></tr>
 <tr><td><span class="sn">5</span></td><td><code>cartographer/…/fetch.ts:46-48</code></td><td>--sir optional; new --submission-version, --site-point</td></tr>
 <tr><td><span class="sn">5b</span></td><td><code>cartographer/…/lib/contracts.ts:102,104,196</code></td><td>TargetFile.source gains 'derived'; sir_id nullable on TargetFile and AnchorsFile; TargetFile gains derivation (D18)</td></tr>
 <tr><td><span class="sn">5c</span></td><td><code>cartographer/src/lib/types/database.ts</code></td><td>regenerate after item 9</td></tr>
@@ -947,6 +948,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 <tr><td><span class="sn">12</span></td><td><code>fetch.ts</code> + <code>publish.ts</code></td><td>emit the derivation into inputs/target.json, carry it to evidence.derivation (D15–D18)</td></tr>
 <tr><td><span class="sn">13</span></td><td><code>routes/anchored/+page.svelte:183</code></td><td>tile links to /anchor/{anchor.id} (D19)</td></tr>
 <tr><td><span class="sn">14</span></td><td><code>routes/anchor/[id]/</code> <span class="w">new</span></td><td>the evidence page (D20), modelled on routes/geometry/[id]</td></tr>
+<tr><td><span class="sn">15</span></td><td><code>bureau/…/5.1-publish/step.yaml</code> + <code>publish.py</code></td><td>add 3.3-check to the inputs and link check.md into ws/; today it is never linked, which is why evidence.check_md is null on the prod anchor (Q11)</td></tr>
 </tbody></table></div>
 <p class="claim"><b>Claim (§3):</b> untouched are "<code>anchor.ts</code> and every solver; <code>extract-geometry-v2</code>; <code>cartographer_geometry_evidence</code> and <code>cartographer_geometry_crops</code> (read, never written); and anchor-geometry steps 2.1, 3.1, 3.2, 3.3, 4.1."</p>
 
@@ -978,21 +980,21 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 
 <h3><span class="hn">§7</span>Open questions</h3>
 <div class="catgrp">
-<div class="cath"><span class="cgl">Q</span> Twelve, numbered for audit sessions</div>
-<div class="uci"><span class="uid">Q1</span><span class="utxt">A fresh <code>add_parcel_geo</code> beside <code>sir_add_parcel_geo</code>, or nullable params on the old name? A rename touches cityhall's SIR publish and both test doubles.</span></div>
-<div class="uci"><span class="uid">Q2</span><span class="utxt">Should <code>geo</code> forbid carrying both <code>sir_id</code> and <code>submission_version_id</code>?</span></div>
-<div class="uci"><span class="uid">Q3</span><span class="utxt">Where does the parcel layer URL come from for a county we have not met? Now the only real gap in the derivation. Two things per jurisdiction: the ring layer, and the legal-description layer + field (Austin: MapServer/8, LEGAL_DESCRIPTION), plus optionally a locator.</span></div>
-<div class="uci"><span class="uid">Q4</span><span class="utxt">What labels an anchor with no owner on /anchored: the file name alone, or the submission → project chain when it exists?</span></div>
-<div class="uci"><span class="uid">Q5</span><span class="utxt">Does a re-run under a new anchor_run_slug reuse the county row (D11 says yes) or mint one per run so a run's context is immutable?</span></div>
-<div class="uci"><span class="uid">Q6</span><span class="utxt">A plan set naming more than one county: stop and ask, or take the one in the recording reference, since that is whose records hold the plat?</span></div>
-<div class="uci later"><span class="uid">Q7</span><span class="utxt">Referential integrity for <code>target_geo_ids</code>: decided <b>not now</b>; it stays a bare array, revisited when there is more than one anchor run.</span></div>
-<div class="uci later"><span class="uid">Q8</span><span class="utxt">Backfill posture for the 56 existing geo rows; all derive a project_id cleanly; nothing here needs it.</span></div>
-<div class="uci"><span class="uid">Q9</span><span class="utxt">Does /anchor/[id] reuse /geometry/[id]'s full PDF instrument, or a read-only viewer?</span></div>
-<div class="uci"><span class="uid">Q10</span><span class="utxt">Does the county read get a stored crop, or stay box-only? A stored crop needs a crops row from a runbook that is not the extract runbook.</span></div>
-<div class="uci"><span class="uid">Q11</span><span class="utxt"><b>Possible bug:</b> <code>evidence.check_md</code> is null on e94fae93.</span></div>
-<div class="uci"><span class="uid">Q12</span><span class="utxt">The area-gate tolerance: start at 10 %, record both areas either way, tune on the first stop.</span></div>
+<div class="cath"><span class="cgl">Q</span> Twelve, all decided in v1.5</div>
+<div class="uci later"><span class="uid">Q1</span><span class="utxt">RPC name: a fresh <code>add_parcel_geo</code> beside the old one; cityhall untouched.</span></div>
+<div class="uci later"><span class="uid">Q2</span><span class="utxt">Both owners on one row: no CHECK; the links are independent.</span></div>
+<div class="uci later"><span class="uid">Q3</span><span class="utxt"><b>Surveyor is the registry.</b> The module's <code>layer-identity.json</code> plus a <code>role</code> tag; no second registry; the runbook runs only on jurisdictions prospector has trained, and an untrained one is a D8 stop.</span></div>
+<div class="uci later"><span class="uid">Q4</span><span class="utxt">Unowned anchor label: the file name, with the project name appended when the chain exists.</span></div>
+<div class="uci later"><span class="uid">Q5</span><span class="utxt">A new anchor run reuses the county row; the run's own context is snapshotted in <code>target_geo_ids</code>.</span></div>
+<div class="uci later"><span class="uid">Q6</span><span class="utxt">Two counties on a plan set: take the recording reference's; stop only when that itself names two.</span></div>
+<div class="uci later"><span class="uid">Q7</span><span class="utxt">Integrity on <code>target_geo_ids</code>: not now.</span></div>
+<div class="uci later"><span class="uid">Q8</span><span class="utxt">Backfill of the 56 existing rows: no.</span></div>
+<div class="uci later"><span class="uid">Q9</span><span class="utxt">/anchor/[id]: a read-only viewer on <code>PdfPageOverlay</code>, not the full instrument.</span></div>
+<div class="uci later"><span class="uid">Q10</span><span class="utxt">County read: box-only in v1.</span></div>
+<div class="uci later"><span class="uid">Q11</span><span class="utxt">Settled as a bureau bug: 3.3 wrote a 15 KB <code>check.md</code>; 5.1 never links it into its workspace. Fix is §3 item 15.</span></div>
+<div class="uci later"><span class="uid">Q12</span><span class="utxt">Area-gate tolerance: start at 10 %, tune on the first stop.</span></div>
 </div>
-<div class="callout new"><span class="lab">audit closed</span>Every functional point from the audit of winston#309 is now decided and folded in: the SRID comes from the ring (v1.3); <code>geo.file_id</code> replaces the <code>source_doc</code> parse; the SIR path keeps its full parcel context; the county ring is written before the gate on purpose; <code>anchor_id</code> is indexed; Q7 is deferred (v1.4).</div>
+<div class="callout new"><span class="lab">audit closed · questions closed</span>Every functional point from the audit and every open question is decided and folded in: the SRID comes from the ring (v1.3); <code>geo.file_id</code>, the SIR path's full context, the pre-gate ring write, the <code>anchor_id</code> index, Q7 deferred (v1.4); surveyor as the registry, no backfill, the <code>check.md</code> bug, and the routine seven (v1.5).</div>
 </section>
 
 </main>

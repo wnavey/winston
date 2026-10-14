@@ -420,7 +420,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 
 </style>
 </head>
-<body class="reader" data-back="architecture.html" data-spec-sha="6befedf7916bc381">
+<body class="reader" data-back="architecture.html" data-spec-sha="686a6fbbb182d16b">
 
 <header class="masthead">
   <div class="kicker">SPEC · READER</div>
@@ -437,10 +437,10 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 <script type="text/markdown" id="spec-md">
 # Anchoring without a SIR — a loose PDF from upload to the map
 
-**Status:** Draft v1.4
+**Status:** Draft v1.5
 **Date:** 2026-10-14
-**Repos touched:** `bureau` (`anchor-geometry` steps 1.1 and 1.2; a zone-name reverse index in `spcs_lookup.py` and a page-1 reader under `site-research/bin`), `cartographer` (`runbooks/anchor-geometry/scripts/{fetch,publish}.ts`; `src/routes/anchored`; a new `src/routes/anchor/[id]`), `substation` (`geo` and `cartographer_anchors` ownership columns; the three RPCs in `geo_helpers.sql`)
-**Repos NOT touched:** `cityhall-new`, `surveyor`, `conductor2`, `claude-plugins`, `quarry`
+**Repos touched:** `bureau` (`anchor-geometry` steps 1.1 and 1.2; a zone-name reverse index in `spcs_lookup.py` and a page-1 reader under `site-research/bin`), `cartographer` (`runbooks/anchor-geometry/scripts/{fetch,publish}.ts`; `src/routes/anchored`; a new `src/routes/anchor/[id]`), `substation` (`geo` and `cartographer_anchors` ownership columns; the three RPCs in `geo_helpers.sql`), `surveyor` (a `role` tag on `layer-identity.json` entries, Austin's two modules by hand)
+**Repos NOT touched:** `cityhall-new`, `conductor2`, `claude-plugins`, `quarry`, `prospector` (follow-up: write the `role` tag when it builds a module)
 **Prod:** Supabase **Noetic App** (`mgxqsrjutswbciyrltwd`)
 **Parent:** [`../north-star/NORTH-STAR-SPEC.md`](../north-star/NORTH-STAR-SPEC.md) (winston#303) — this is **P2a + P2b**, the decoupling and the manual path, peeled off on their own.
 **Predecessor:** [`../anchoring-geometries/DESIGN-SPEC.md`](../anchoring-geometries/DESIGN-SPEC.md) (winston#279/#281) — the anchoring algorithm. Nothing here changes `anchor.ts`.
@@ -505,6 +505,18 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 > ring is written before the gate and survives a rejected fit, on purpose. **D12** gains an expression
 > index on `properties->>'anchor_id'`. **Q7** is answered *not now*: `target_geo_ids` stays a bare
 > array. §3 items 9, 10, 11 and S4 follow.
+
+> **Revision note (v1.5, 2026-10-14).** Every open question decided; §7 records each answer in
+> place. The one that changes the design is **Q3**: v1.3's D6 said surveyor "cannot stand in for
+> the registry". It can, and it already is one — every source module carries a machine-readable
+> `layer-identity.json` (service, layer id, name, `native_sr`; 177 modules, 95 with a parcel
+> layer, Austin's `coa-gis` pinning the exact TCAD layer §1.5 measured), and `source-tools.ts`
+> already resolves a jurisdiction slug to its modules. **No second registry.** What is missing is
+> a `role` tag saying which entry is the parcel layer and which the legal-description layer, and
+> a county-name → slug convention; D6 is rewritten around that. The precondition is stated as a
+> design rule: **this runbook runs only on a jurisdiction prospector has trained**, and an
+> untrained one is a D8 stop, not a fallback. **Q11** is settled as a bureau bug (5.1 never links
+> `check.md`; new §3 item 15). **Q8** is no. Q1, Q2, Q4, Q5, Q6, Q9, Q10 take the routine answer.
 
 ---
 
@@ -670,7 +682,8 @@ In every derived case the plat's own zone must agree with the result (D7).
 
 **D6. The county is a name, used for two things: finding the layer, and the fallback.** It is read from page 1's prose — `line 150: … PUBLIC RECORDS TRAVIS COUNTY, TEXAS.` — which every recorded plat carries in its recording reference and certification block. `spcs_lookup.py --state TX --county Travis` already accepts a name; nothing needs a FIPS.
 
-- *Finding the layer.* The jurisdiction → parcel-layer registry (**Q3**) is keyed by it. This is the one real gap, and it is a registry problem, not a parsing problem: `jurisdictions/austin-tx.md` is prose for an agent and `site-research/steps/1-resolve-site` is an agent step; surveyor's `native_sr` is recorded **per GIS layer**, not per county — inside Travis County's own server, `DBO.Parcels` is 2277 while `DBO.County` and `DBO.Precincts` are published as geographic WGS84 WKT — so surveyor cannot stand in for the registry either.
+- *Finding the layer.* **Surveyor is the registry** *(v1.5; v1.3 said it could not be)*. Every source module carries `src/sources/<module>/layer-identity.json` — service URL, layer id, name and `native_sr` per layer — and `src/lib/source-tools.ts` already resolves a jurisdiction slug to its modules by loading `jurisdictions/<slug>.md`. For Austin, `coa-gis` pins TCAD Parcels at `Shared/AppraisalDistricts/MapServer/0` in 2277, the layer §1.5 measured, and `travis-county-gis` pins `DBO.Parcels`, also 2277. Across the repo: 177 modules, 95 with a parcel layer, 59 of those in a State Plane code and 36 in Web Mercator or unrecorded (the D6 fallback is therefore a third of jurisdictions, not a corner case). Two things are missing and both are small: a **`role` tag** on a layer entry (`parcels` · `legal_description` · `locator`), since today "the parcel layer" is a naming convention in the `note` field; and a **county-name → slug** convention (`TRAVIS COUNTY, TEXAS` → `travis-county-tx`, with the city module preferred when the plat's title block names one). The fetch reads the module's `parcels` entry and takes the ring and its `native_sr` from there. Nothing is built twice.
+- *The precondition.* **This runbook runs only on a jurisdiction prospector has trained into surveyor tools.** A county name with no module is a D8 stop that says so; it is not a fallback to a request field or a constant. That is the same boundary site-research already lives inside.
 - *The fallback.* When the ring layer is published geographic (4326) or in Web Mercator, `native_sr` names no State Plane and the county table is the only source: `spcs_lookup.py --state TX --county Travis` → `{"epsg":2277,"units":"ftUS","zone":"tx_central","basis":"ngs_zone"}`. Stdlib, zero network, already in bureau. This is the only case where the county matters for the SRID.
 
 The FIRM panel number is **not read**. Its only advantage was a FIPS without a name lookup, which nothing needs; its costs are real — community-based panels carry a community id in the FIPS slot, panels get cited without their prefix, and flood notes are common on site plans but absent from a bare recorded plat, which is P2b's input.
@@ -711,7 +724,7 @@ The same path carries the D10a stops. Nothing here is new machinery: it is site-
 
 Each rung is a §2.5 claim: rung 2 is a **read** (page 1, bbox, verbatim, `basis: "legal_description"`); rungs 1 and 3 are **computed** (`{kind: "fetched", url, where | point, feature_count, pid, native_sr}`); the gate is a computed claim with both areas. The fetched claim's `native_sr` is also the D5 SRID source, so one claim serves both ladders.
 
-What this does *not* solve: rung 2 needs the layer to have a legal-description field and the registry (Q3) to name it. TCAD's geometry layer (`MapServer/0`) has only `PID_10` and `PROP_ID`; its sibling `MapServer/8` (OmniParcel) carries `LEGAL_DESCRIPTION`. So Q3's per-jurisdiction entry is two things, not one: the parcel-ring layer and the legal-description layer + field.
+Rung 2 is available only where the module records a `legal_description` layer *(v1.5)*. TCAD's geometry layer (`MapServer/0`) has only `PID_10` and `PROP_ID`; its sibling `MapServer/8` (OmniParcel) carries `LEGAL_DESCRIPTION`, and today only two of 177 modules record such a layer — Austin's does not. So Austin's `coa-gis` gets the entry by hand (§3 item 4b) and rung 2 lights up per jurisdiction as prospector records the layer; where it is absent the ladder skips to rung 3.
 
 Three consequences, all wanted:
 
@@ -804,7 +817,8 @@ One gap worth naming: **`evidence.check_md` is null on that run**, so the `3.3-c
 | 1b | `bureau/.../steps/1.2-fetch/contract.test.ts:41,56-62,64-67` | `Target.sir_id` → optional; the request-match test tolerates no SIR; the "[BLOCKING] SIR has at least one parcel ring" test becomes "parcels.json has at least one parcel ring"; **answer 75 when `BLOCKED.md` exists and `target.json` does not** (D8) |
 | 2 | `bureau/.../scripts/fetch.py` | pass the owner fields, `site_point` and the resolved SRID through; on exit 3 write `BLOCKED.md` and exit 0 (D8) |
 | 3 | `bureau/runbooks/site-research/bin/spcs_lookup.py` | add a **zone-name → set of EPSG codes** reverse index over the table it already owns (D7); `--state --county` by name is the fallback (D6) |
-| 4 | `bureau/runbooks/site-research/bin/` (new) | `plan_set_county.py` — page-1 text layer → `{county, state, legal_description, address, evidence}` from the recording reference and title block (D6); the county picks the layer (Q3), the legal description and address feed D10a rungs 2 and 3 |
+| 4 | `bureau/runbooks/site-research/bin/` (new) | `plan_set_county.py` — page-1 text layer → `{county, state, legal_description, address, evidence}` from the recording reference and title block (D6); the county names the surveyor module, the legal description and address feed D10a rungs 2 and 3 |
+| 4b | `surveyor/src/sources/{coa-gis,travis-county-gis}/layer-identity.json` | a `role` tag on the parcel entries (`parcels`) and a new `coa-gis` entry for OmniParcel `MapServer/8` (`legal_description`, field `LEGAL_DESCRIPTION`); prospector writes the tag for new modules thereafter (Q3) |
 | 5 | `cartographer/.../scripts/fetch.ts:46-48` | `--sir` → optional; new `--submission-version`, `--site-point`; owner may be absent |
 | 5b | `cartographer/.../scripts/lib/contracts.ts:102,104,196` | `TargetFile.source` gains `'derived'`; `TargetFile.sir_id` and `AnchorsFile.sir_id` → nullable; `TargetFile` gains `derivation` (D18) |
 | 5c | `cartographer/src/lib/types/database.ts` | regenerate after item 9: `sir_id` nullable, `submission_version_id` on both tables |
@@ -817,6 +831,7 @@ One gap worth naming: **`evidence.check_md` is null on that run**, so the `3.3-c
 | 12 | `cartographer/.../scripts/fetch.ts` + `publish.ts` | emit the derivation record into `inputs/target.json`, carry it to `evidence.derivation` (D15–D18) |
 | 13 | `cartographer/src/routes/anchored/+page.svelte:183` | tile links to `/anchor/{anchor.id}` (D19) |
 | 14 | `cartographer/src/routes/anchor/[id]/` (new) | the evidence page (D20), modelled on `routes/geometry/[id]` |
+| 15 | `bureau/.../steps/5.1-publish/step.yaml` + `scripts/publish.py` | add `3.3-check` to the inputs and link `check.md` into `ws/` — today it is never linked, which is why `evidence.check_md` is null on the one prod anchor (Q11) |
 
 **Untouched:** `anchor.ts` and every solver; `extract-geometry-v2`; `cartographer_geometry_evidence` and `cartographer_geometry_crops` (read, never written); and `anchor-geometry` steps `2.1-correspond`, `3.1-solve`, `3.2-render`, `3.3-check`, `4.1-hitl`.
 
@@ -886,29 +901,29 @@ Named only so the decoupling does not harden against north star **P5**. None is 
 
 ## 7. Open questions
 
-**Q1.** Does the new parcel RPC get a fresh name (`add_parcel_geo`) alongside `sir_add_parcel_geo`, or does `sir_add_parcel_geo` gain nullable owner params and keep its name? Duplication is cheap and explicitly acceptable; a rename touches `cityhall/src/lib/publish/sir.ts:382` (the repo is `noetic-inc/cityhall`; `cityhall-new` redirects to it) and both test doubles.
+**Q1.** Does the new parcel RPC get a fresh name (`add_parcel_geo`) alongside `sir_add_parcel_geo`, or does `sir_add_parcel_geo` gain nullable owner params and keep its name? Duplication is cheap and explicitly acceptable; a rename touches `cityhall/src/lib/publish/sir.ts:382` (the repo is `noetic-inc/cityhall`; `cityhall-new` redirects to it) and both test doubles. *(v1.5, decided: a fresh `add_parcel_geo`; cityhall untouched.)*
 
-**Q2.** Should `geo` forbid carrying both `sir_id` and `submission_version_id` (a CHECK), or are they independent provenance links with no XOR?
+**Q2.** Should `geo` forbid carrying both `sir_id` and `submission_version_id` (a CHECK), or are they independent provenance links with no XOR? *(v1.5, decided: no CHECK; independent links, as D1 and D3 already treat them.)*
 
-**Q3.** Where does the **parcel layer URL** come from for a county we have not met? D10 needs one and there is no registry (D6). *(v1.3)* This is now the only real gap in the derivation: the county name is on every plat and the ring carries its own SRID, so everything else is a fetch. For v1 it can be a constant for Austin plus an optional request field — but that is the thing that stops this generalising, and it is the same gap north star **D11** names. *(v1.2)* The entry is now two things: the ring layer, and the **legal-description layer + field name** D10a rung 2 queries (Austin: `MapServer/8`, `LEGAL_DESCRIPTION`), plus optionally a locator URL for rung 3.
+**Q3.** Where does the **parcel layer URL** come from for a county we have not met? D10 needs one and there is no registry (D6). *(v1.3)* This is now the only real gap in the derivation: the county name is on every plat and the ring carries its own SRID, so everything else is a fetch. For v1 it can be a constant for Austin plus an optional request field — but that is the thing that stops this generalising, and it is the same gap north star **D11** names. *(v1.2)* The entry is now two things: the ring layer, and the **legal-description layer + field name** D10a rung 2 queries (Austin: `MapServer/8`, `LEGAL_DESCRIPTION`), plus optionally a locator URL for rung 3. *(v1.5, decided: **surveyor is the registry** — the module's `layer-identity.json` with a `role` tag, D6; no second registry; the runbook runs only on jurisdictions prospector has trained, and an untrained one is a D8 stop.)*
 
-**Q4.** `/anchored` currently has one rail row per anchor with a SIR subtitle. With no owner, what labels an anchor — the file name alone, or `submission_version` → `submission` → `project.name` when the chain exists?
+**Q4.** `/anchored` currently has one rail row per anchor with a SIR subtitle. With no owner, what labels an anchor — the file name alone, or `submission_version` → `submission` → `project.name` when the chain exists? *(v1.5, decided: the file name, with the project name appended when the chain exists.)*
 
-**Q5.** Does a re-run under a *new* `anchor_run_slug` reuse the county row (D11 says yes, the key is the file) or mint a fresh one per anchor run so a run's context is immutable?
+**Q5.** Does a re-run under a *new* `anchor_run_slug` reuse the county row (D11 says yes, the key is the file) or mint a fresh one per anchor run so a run's context is immutable? *(v1.5, decided: reuse. The ring is the county's, not the run's; a run's own context is already snapshotted in `target_geo_ids`.)*
 
-**Q6.** A plan set naming more than one county (a TxDOT note, an adjacent jurisdiction, a county-line subdivision). Stop and ask, or take the county in the recording reference specifically, since that is the one whose records hold the plat?
+**Q6.** A plan set naming more than one county (a TxDOT note, an adjacent jurisdiction, a county-line subdivision). Stop and ask, or take the county in the recording reference specifically, since that is the one whose records hold the plat? *(v1.5, decided: the recording reference's county; stop only when that reference itself names two.)*
 
 **Q7.** Should `cartographer_anchors.target_geo_ids` get referential integrity now that D13 reads the loose-file map through it? It has already dangled once on one row (§1.4). An array FK needs a trigger or a join table. *(v1.4, decided: not now.)* It stays a bare array; the loose-file viewer tolerates a missing id by drawing what exists. Revisit when there is more than one anchor run.
 
-**Q8.** Backfill posture for the 56 existing `geo` rows. All 56 derive a `project_id` cleanly, so north star **D4** (project ownership) stays available — but this spec does not need it and does not do it. Does anything want it before P5?
+**Q8.** Backfill posture for the 56 existing `geo` rows. All 56 derive a `project_id` cleanly, so north star **D4** (project ownership) stays available — but this spec does not need it and does not do it. Does anything want it before P5? *(v1.5, decided: no backfill.)*
 
-**Q9.** Does `/anchor/[id]` reuse `/geometry/[id]`'s PDF viewer wholesale, or is the anchor page's PDF read-only (no rotation, no zoom, no selection rail)? The extracted-figure page needs the full instrument because a reader is checking 5 courses against the drawing; an anchor cites three or four claims on two pages. Reuse is tempting and the component is already extracted (`PdfPageOverlay`), but `/geometry/[id]`'s 455 lines of page are mostly the rail and the controls around it.
+**Q9.** Does `/anchor/[id]` reuse `/geometry/[id]`'s PDF viewer wholesale, or is the anchor page's PDF read-only (no rotation, no zoom, no selection rail)? The extracted-figure page needs the full instrument because a reader is checking 5 courses against the drawing; an anchor cites three or four claims on two pages. Reuse is tempting and the component is already extracted (`PdfPageOverlay`), but `/geometry/[id]`'s 455 lines of page are mostly the rail and the controls around it. *(v1.5, decided: a read-only viewer on `PdfPageOverlay`; not the full instrument.)*
 
-**Q10.** Does the **county read** (D17) get a stored crop like the extract run's readings do, or stay box-only? Box-only is free and renders identically in situ; a stored crop is what makes the two pages consistent, and is the only way the claim survives the source PDF being replaced. Storing one means writing a `cartographer_geometry_crops` row from a runbook that is not the extract runbook, against a `geometry_id` that is not really its parent — which may be a sign the crop table wants an owner other than a geometry.
+**Q10.** Does the **county read** (D17) get a stored crop like the extract run's readings do, or stay box-only? Box-only is free and renders identically in situ; a stored crop is what makes the two pages consistent, and is the only way the claim survives the source PDF being replaced. Storing one means writing a `cartographer_geometry_crops` row from a runbook that is not the extract runbook, against a `geometry_id` that is not really its parent — which may be a sign the crop table wants an owner other than a geometry. *(v1.5, decided: box-only in v1; a stored crop waits for the crop table to get an owner.)*
 
-**Q11.** **Possible bug:** `evidence.check_md` is null on anchor `e94fae93`, so `3.3-check`'s vision readout — the step whose only job is to say whether the overlay looks right — reached the database empty. `publish.ts` reads `check.md` from the run directory and tolerates its absence. Did the step write nothing, or did the file not survive to publish? Worth settling before the page is built around showing it.
+**Q11.** **Possible bug:** `evidence.check_md` is null on anchor `e94fae93`, so `3.3-check`'s vision readout — the step whose only job is to say whether the overlay looks right — reached the database empty. `publish.ts` reads `check.md` from the run directory and tolerates its absence. Did the step write nothing, or did the file not survive to publish? Worth settling before the page is built around showing it. *(v1.5, settled: the step wrote it — `3.3-check/check.md`, 15,605 bytes, on the `car-wash-anchor-1` run. `5.1-publish`'s `step.yaml` does not list `3.3-check` as an input and `publish.py` links only `anchors.json`, `correspondences.json` and `decisions.json` into `ws/`, so `publish.ts` found no `check.md` at the run root and wrote null, as it is allowed to. Fix is §3 item 15.)*
 
-**Q12.** *(v1.2)* The D10a **area-gate tolerance**. White Water is 0.005 % off; north star §9.4's ±3 ft `gis_fit` case on an older parcel is a ~3 ft band around a ~840 ft perimeter, roughly 6 % of a 1-acre lot. A tolerance that admits the second without admitting the neighbour's lot is probably ~10 % — but the right number depends on how often adjacent lots in a subdivision are near-equal in area, which is exactly the plat case. Start at 10 %, record both areas in the claim either way, and tune on the first stop.
+**Q12.** *(v1.2)* The D10a **area-gate tolerance**. White Water is 0.005 % off; north star §9.4's ±3 ft `gis_fit` case on an older parcel is a ~3 ft band around a ~840 ft perimeter, roughly 6 % of a 1-acre lot. A tolerance that admits the second without admitting the neighbour's lot is probably ~10 % — but the right number depends on how often adjacent lots in a subdivision are near-equal in area, which is exactly the plat case. Start at 10 %, record both areas in the claim either way, and tune on the first stop. *(v1.5, decided as written.)*
 
 </script>
 <script data-marked>
