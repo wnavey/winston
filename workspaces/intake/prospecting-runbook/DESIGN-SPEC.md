@@ -8,7 +8,7 @@
 > - **D14's publish is the branch itself**: 4.2 pushes the worktree branch and opens the PR (prospector `bin/ship.py`'s shape), instead of copying files into a fresh worktree (cc-source-citations' shape). Inside prospector, 4.2 stands aside and the wrapper's mergein plus `8.1-ship-bureau` carry the commits.
 > - **§6 "the prospector wrapper" is specified** from the precedent that already exists: `prospector/review-guides/` nests `runbooks/guide-training/` unchanged behind a `2-request` step. The registration list (outer step, `WORKSTREAMS`, `WORK_TYPE`, `DELIVERABLES`, `env.json`, the ship inputs, the `metro_ahj_coverage` migration in **dsd**) is written out.
 > - Facts corrected: 46 jurisdictions (not 47) hold `codes/*submittal*|*checklist*|*application*` folders; only the four CC-family runbooks' `AGENTS.md` open with a "Rule 19 posture." paragraph, prospector has none.
-> - New Q6 (prospector's ship step merges its own PR, which is not north-star D10's human-reviewed merge) and Q7 (which prospector target runs intake). Both are Will's.
+> - New D18 (Will: human gates only in the standalone lane; inside prospector the audit is the review and the checklist ships on the autonomous path; closes Q6) and Q7 (which prospector target runs intake, Will's).
 >
 > **Revision note v1.1 (2026-10-14, Will):** **Austin is the only scored scenario.** Nobody has confirmed the earlier New Braunfels and Cedar Park runs were good, so they are no longer test cases with expected answers. Non-Austin jurisdictions become unscored **smoke runs** that check only the mechanics (scraping, capture and extraction on non-Austin sites, citation validity, the file format), and they carry little weight (D16). D7's New Braunfels note is now only an illustration. Acceptance and P2/P5 changed to match, and the old Q2 is narrowed.
 
@@ -347,6 +347,8 @@ M3 and M4 are also reported against Austin **v2.7-trimmed** as information only 
 - delete `tools/sync-to-bureau.sh`, whose stale v2.7 copy would already fail db-schema's linter;
 - point `jurisdictions/cedar-park/completeness-check/README.md` at this runbook.
 
+**D18. Human gates exist only in the standalone lane.** [Will, 2026-10-14] A standalone run may stop at 1.5-scope and 4.1-review for a person (`gates: human`). Once the runbook is wrapped by prospector (§6), there are no human gates: the wrapper requests `gates: auto`, the fresh-session audit at 2.4 is the review, as it is for every other workstream, and the checklist ships, merges and syncs on prospector's autonomous path (`8.1-ship-bureau/drive` merges, `9-record` stamps, db-schema's sync carries it to the App DB). North-star D10's "human-reviewed merge" therefore holds for the standalone lane only; the north star is amended to say so. A curated jurisdiction is protected by 4.2's existing-checklist refusal in the standalone lane and by the wrapper never requesting `replace`.
+
 ---
 
 ## 3. Testing seams
@@ -440,7 +442,7 @@ All PRs are in `bureau`.
 - **Q3. Fail status.** Is "required / will be rejected → `fail`; recommended / may be returned → `warn`" enough? v2.7 also uses `fail-or-warn` (9 items), which the generator never produces. Leave that to human edits?
 - **Q4. Key Terms.** Austin's guides gained a Key Terms section from the bureau glossary in v2.4. Should generated guides have one, and from what? The jurisdiction has no glossary until prospector's regulatory workstream builds one.
 - **Q5. Re-generating a jurisdiction that already has a checklist.** D14 refuses without `replace`, and `replace` writes the next `vN`. Should a re-run on a **curated** checklist (Austin) ever publish, or only ever be scored?
-- **Q6. Who reviews a checklist that prospector generates?** [Will] North-star D10 gives every checklist "a human-reviewed merge". Inside prospector there is none: `8.1-ship-bureau/drive` answers the bot review and merges the PR itself, and `9-record` stamps the workstream completed. So in I3 a generated checklist would reach bureau main, and through db-schema's sync the App DB, on the strength of the fresh-session audit alone. Options, for the I3 sub-spec: (a) accept the audit as the review, as every other workstream does; (b) have the wrapper write `intake.yaml` with a `review: pending` field that db-schema's sync treats as not-yet-current until a person flips it in a bureau PR; (c) have prospector produce only `basis.json`, the sources and the ledger (`intake_ready` = the research is done), and leave checklist publication to a standalone `gates: human` run. The standalone runbook is the same in all three; the choice decides what the wrapper's `2-request` asks for.
+- **Q6. Who reviews a checklist that prospector generates?** **Decided** (Will, 2026-10-14): nobody, by design. See D18. The two alternatives considered (a `review: pending` flag in `intake.yaml` that the sync honours; prospector producing only the basis, sources and ledger and leaving publication to a standalone run) are not taken.
 - **Q7. Which prospector target runs intake?** [Will] `comment-harvest` and `review-guides` run only on `target: review` (`REVIEW_ONLY`). Intake feeds the CC review, not the SIR, so the recommendation is review-only, which keeps `sir` runs unchanged. The cost is that `intake_ready` then requires a review-target run.
 
 ## 6. Not yet specified
@@ -459,7 +461,7 @@ All PRs are in `bureau`.
 
   Registration in the outer runbook: `steps/4-intake/step.yaml` (`runner: runbook`, `runbook: prospector/intake`, `bind: {request: 0-resolve}`, inputs `1-research/output/mergein?`, `2-regulatory/output/mergein?`, `3-permit-harvest/output/mergein?`, so the seeds of D4 are on the run branch first); `intake` in `WORKSTREAMS` (`lib/outer.ts`, `bin/resolve.py`) and, per Q7, in `REVIEW_ONLY`; `WORK_TYPE["intake"] = "intake"`; `DELIVERABLES["intake"] = ("intake.yaml", 1)`, so a jurisdiction whose `intake.yaml` is on main reads as current inside the freshness window; `lib/env.json` `workstreams.intake`; `4-intake/output/mergein?` among `8.1-ship-bureau/open`'s inputs. Outside bureau: a `dsd/library` migration that adds `intake_completed_count` and `intake_ready` to `metro_ahj_coverage`, and `intake` in `dsd/web/lib/prospector/types.ts` `WORKSTREAMS`.
 
-  What is **not** reused from the standalone lane: `4.2-publish` (stands aside) and the human gates (`auto`). Everything the Austin loop tunes (1.2–3.1, the scorer) runs unchanged. Q6 decides what the wrapper asks for.
+  What is **not** reused from the standalone lane: `4.2-publish` (stands aside) and the human gates (`auto`, D18). Everything the Austin loop tunes (1.2–3.1, the scorer) runs unchanged.
 
 ## 7. Out of scope
 
