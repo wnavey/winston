@@ -1,17 +1,19 @@
 # Intake north star: a checklist for every jurisdiction
 
-**Status:** Draft v1
+**Status:** Draft v1.1
 **Date:** 2026-10-14
 **Repos touched:** none. This is a plan of a plan. It records the 2026-10-14 discussion with Will, names where intake should end up, and lists the sub-specs that will carry out the work.
 **Repos eventually touched:** `bureau` (checklist files, the intake-prospecting runbook, the prospector workstream, the sync), `cityhall` (App-DB tables and migrations), `completion-officer` (retired)
 **Repos NOT touched:** `conductor` (legacy), `substation` (on the deprecation path)
 
+> **Revision note v1.1 (2026-10-14):** D3 now orders the work by dependency: I2 (the runbook) depends on I1's file format only, so it starts now. I1's migration and sync (P1, P2b) wait until the loop has run on two jurisdictions. Sub-spec table: `prospecting-runbook` is now Draft v1.
+
 **Sub-specs spawned from this one:**
 
 | Sub-spec | Path | Status |
 |---|---|---|
-| Intake checklist DB schema + bureau sync | `workspaces/intake/db-schema/DESIGN-SPEC.md` | Draft v1 (same PR as this spec) |
-| The intake-prospecting runbook | `workspaces/intake/prospecting-runbook/` | not started |
+| Intake checklist DB schema + bureau sync | `workspaces/intake/db-schema/DESIGN-SPEC.md` | Draft v1 (same PR); P2a first, P1/P2b after the loop (D3) |
+| The intake-prospecting runbook | `workspaces/intake/prospecting-runbook/DESIGN-SPEC.md` | Draft v1 (same PR) |
 | The generic baseline checklist | `workspaces/intake/baseline/` | not started |
 | Intake in the prospector flow | `workspaces/intake/prospector-workstream/` | not started |
 | DB as the source of truth | `workspaces/intake/db-source-of-truth/` | later |
@@ -156,7 +158,13 @@ Each decision is marked **[Will]** if Will decided it in the 2026-10-14 discussi
 2. **I2: port completion-officer to an intake-prospecting runbook** (`intake/prospecting-runbook`), looped until it gets close enough to Austin (D11).
 3. **I3: make it a prospector workstream** (`intake/prospector-workstream`).
 
-I1 comes first because the DB is a synced copy (D7): changing its schema is cheap, and it gives I2 a concrete format to produce. I2 can start once I1's file format is agreed; it does not need I1 merged. completion-officer is retired once I2 replaces it.
+**The order of the work is not I1 → I2 → I3** (revised v1.1, Will 2026-10-14). I2 depends on I1's **file format** (db-schema D1, D3, D4), not on the database: the runbook publishes through a bureau PR (D10), and the loop compares files with files. The work runs in this order:
+1. The I1 file format is agreed. That is the db-schema spec, and it is the runbook's output contract.
+2. **I2 starts now.**
+3. I1's **P2a** (format, linter, Austin backfill) lands when convenient, ideally before the runbook's first real publish, so the linter can check runbook output.
+4. I1's **P1 + P2b** (migration and sync) wait until the loop has run on at least two jurisdictions. Applying a migration is the step that costs the most to undo, and Q1/Q2 (where formal vs none_found falls, and whether there is a checklist per application type) are likely to change the format once they are answered by running on New Braunfels and Cedar Park.
+
+completion-officer is retired once I2 replaces it.
 
 **D4. One shared generic baseline; jurisdiction-specific checklists stand alone.** [Will]
 - There is **one generic baseline checklist** that belongs to no jurisdiction. Every jurisdiction with no formal intake process points at it. If three jurisdictions have none, all three point at the same baseline items.

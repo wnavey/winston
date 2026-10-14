@@ -1,7 +1,9 @@
 # Intake checklist DB schema and the bureau sync
 
-**Status:** Draft v1
+**Status:** Draft v1.1
 **Date:** 2026-10-14
+> **Revision note v1.1 (2026-10-14):** the PR plan is resequenced per north-star D3 v1.1. P2a lands first, as the runbook's output contract; P1 and P2b wait until the loop has run on two jurisdictions.
+
 **Parent:** `workspaces/intake/north-star/NORTH-STAR-SPEC.md`, initiative I1 (D3). Carries out north-star D4–D9.
 **Repos touched:**
 - `cityhall`: four App-DB tables, one write function, tests
@@ -306,7 +308,7 @@ Dispatch again: still one revision.
 ## 4. PR plan
 
 **P1: the four intake tables and their write function** (`cityhall`)
-- **Blocked by:** nothing (can start now).
+- **Blocked by:** nothing technical. **It is scheduled after the intake-prospecting loop has run on at least two jurisdictions** (north-star D3 v1.1), so that answers to north-star Q1 and Q2 can still change the schema before the migration is applied.
 - **Delivers:**
   - `supabase/schemas/public/tables/{intake_checklists,intake_checklist_versions,intake_checklist_items,jurisdiction_intake}.sql`
   - `functions/intake_sync_version.sql`
@@ -320,7 +322,7 @@ Dispatch again: still one revision.
 - **Blast radius:** none. Nothing reads or writes these tables until P2b.
 
 **P2a: the intake files, the linter and the Austin v2.7 backfill** (`bureau`)
-- **Blocked by:** nothing (can start now, in parallel with P1).
+- **Blocked by:** nothing (can start now). It should land before the intake-prospecting runbook's first real publish, so the runbook's output is checked by `lint:intake` (north-star D3 v1.1).
 - **Delivers:**
   - `tooling/src/lib/intake/schema.ts`, the guide-row parser, the linter, `cli/lint-intake.ts`, and `lint:intake` + `test:intake` in `ci.yml`
   - `jurisdictions/austin/intake.yaml`
