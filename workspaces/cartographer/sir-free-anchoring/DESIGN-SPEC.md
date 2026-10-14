@@ -1,7 +1,7 @@
 # Anchoring without a SIR — a loose PDF from upload to the map
 
-**Status:** Draft v1.1
-**Date:** 2026-10-13
+**Status:** Draft v1.2
+**Date:** 2026-10-14
 **Repos touched:** `bureau` (`anchor-geometry` steps 1.1 and 1.2; a new SRID resolver and a county reader under `site-research/bin`), `cartographer` (`runbooks/anchor-geometry/scripts/{fetch,publish}.ts`; `src/routes/anchored`; a new `src/routes/anchor/[id]`), `substation` (`geo` and `cartographer_anchors` ownership columns; the three RPCs in `geo_helpers.sql`)
 **Repos NOT touched:** `cityhall-new`, `surveyor`, `conductor2`, `claude-plugins`, `quarry`
 **Prod:** Supabase **Noetic App** (`mgxqsrjutswbciyrltwd`)
@@ -20,6 +20,29 @@
 > per unmatched figure, 28 residuals, the overlay PNG — so the page can be built against anchor
 > `e94fae93` before any decoupling lands. New **S5**; new **Q9–Q11**, of which Q11 is a possible
 > bug: `evidence.check_md` is null on that run.
+
+> **Revision note (v1.2, 2026-10-14, after audit).** Two gaps closed and five facts corrected.
+> **(1) D10 had no location.** It fetched the ring by `--lat --lon` and nothing on the loose-file
+> path supplies a point — §1.5's coordinates came from the project this spec promises not to use.
+> New **D10a**: a location ladder — `request.site_point` (operator override, new optional field in
+> D3) → the plat's **legal description** queried against the parcel layer's legal-description
+> field → an address through a jurisdiction locator — closed by an **area gate** against the
+> plat's stated area. Measured on White Water: the legal description resolves to the same parcel
+> §1.5 found by point; the City of Austin locator scores the address 100; the free Census geocoder
+> returns **nothing** for a 2021 subdivision, which is why address is the last rung and not the
+> first. **(2) D8's "exit 75" named no mechanism.** conductor2 parks a script step only when its
+> *contract* exits 75 after `BLOCKED.md` is written; `fetch.py`'s no-target path today is
+> `sys.exit(message)`, exit 1, a failed step. D8 now says who writes what. **Corrections:** D9 is
+> already implemented (`frames.ts:230-233` → `anchor.ts:683`) and is restated as "unchanged, do not
+> break"; its "~0.9 ppm" was ~33 ppm. §1.4's `e94fae93` is a rung-1 `printed_coordinates` anchor,
+> not a ring fit — `fitToRing` has **no prod precedent**, which §5 now says. §1.5's first bearing
+> read 285.4444°, it is 285.4556°. §3 omitted three files that hard-code the SIR
+> (`1.2-fetch/contract.test.ts`, cartographer `lib/contracts.ts`, the `Database` types); added.
+> Q1's path is in `noetic-inc/cityhall` (`cityhall-new` redirects). New **Q12** (area-gate
+> tolerance); Q3 grows a second column. Audit points that would change functional logic beyond
+> these (FIRM-panel `C` check, a `file_id` column instead of parsing `source_doc`, D13's effect on
+> the SIR path, the pre-gate county write, an `anchor_id` index, Q7) are **not** folded in; they
+> are listed in the PR thread for a decision.
 
 ---
 
@@ -83,14 +106,16 @@ But it does **not** remove the SIR. `sirId` is required unconditionally at `fetc
 
 ### 1.4 The ring is the work, and it is already solved for SIRs
 
-The one anchor run in existence, `cartographer_anchors.e94fae93-b3b6-42e5-9a24-fd16c476bee1` (car-wash plat, accepted 2026-09-28), fitted to two ordinary `county_api` rows:
+The one anchor run in existence, `cartographer_anchors.e94fae93-b3b6-42e5-9a24-fd16c476bee1` (car-wash plat, Jefferson County KY, target 3089, accepted 2026-09-28), is a **rung-1 `printed_coordinates`** anchor, class `survey`: the frame was placed from the plat's own coordinate boxes, and its two ring correspondences were targets for the metrics, not the thing it was fitted to. Those targets were two ordinary `county_api` rows:
 
 | geo id | label | method | `source_doc` | area ft² |
 |---|---|---|---|---|
 | `71fd4e9f-d710-49b0-8235-e8b8117202a7` | 4401 Fegenbush Ln | `county_api` | `parcel-rings.geojson` | 44,558 |
 | `22824c2a-fe7a-49c2-a042-4b4d4c81d4a2` | 4403 Fegenbush Ln | `county_api` | `parcel-rings.geojson` | 113,595 |
 
-Those were written by `sir_add_parcel_geo` (`geo_helpers.sql:143`) at SIR publish, from the county ArcGIS fetch `site-research` had already staged. **The ring came from the county. The SIR was only the row it hung off.** So the pattern this spec needs is not new — it is the existing pattern with the owner removed.
+Those were written by `sir_add_parcel_geo` (`geo_helpers.sql:143`) at SIR publish, from the county ArcGIS fetch `site-research` had already staged. **The ring came from the county. The SIR was only the row it hung off.** So the *sourcing* pattern this spec needs is not new — it is the existing pattern with the owner removed.
+
+What *is* new is the solver rung. `fitToRing` (rung 3) has never run end to end on real data: the one prod anchor is rung 1, and White Water cannot be anything but rung 3 (§1.2). §5 step 3 is therefore a first, not a regression test, and should be read that way.
 
 Two findings from reading that run, both of which this spec acts on:
 
@@ -113,7 +138,7 @@ The ring's edges against the plat's courses:
 
 | TCAD native edge | plat course |
 |---|---|
-| 231.64 ft @ 285.4487° | `N74°32'40"W 231.66` (285.4444°) |
+| 231.64 ft @ 285.4487° | `N74°32'40"W 231.66` (285.4556°) |
 | 195.00 ft @ 15.4481° | `N15°27'20"E 195.00` (15.4556°) |
 | 217.63 ft @ 105.4480° | `S74°32'40"E 217.63` (105.4556°) |
 | 95.83 ft @ 192.8446° | `S12°50'40"W 95.83` (192.8444°) |
@@ -122,6 +147,16 @@ The ring's edges against the plat's courses:
 Area 43,557.77 ft² against the plat's 43,560. **The rung-3 fit on this file should be near-exact.** Lenox Springs Section III is a 2021 plat and TCAD digitised it from the recording; this is not representative of older parcels, which are the ±3 ft `gis_fit` case north star §9.4 warns about.
 
 One more measured fact: `project.site_outline` for this project is **vertex-identical to that live fetch** — same seven points to ≤ 1.8 × 10⁻⁹ degrees, wound the opposite way. So the parcel is already resolved and already in the database, despite there being no SIR and no site-research run. What `site_outline` lacks is everything but the shape: no `parcel_id`, no legal description, no `native_geometry`, no `native_sr`. See **D7** for why that is not good enough to build a `county_api` row from.
+
+**Where the point came from, and what else finds the parcel (v1.2).** The `--lat --lon` above were the project's `site_address` geocoded by hand — nothing a loose file carries. A parcel layer answers a point query or an attribute query and never an address, so the routes that start from the plan set's own text were measured too (2026-10-14):
+
+| route | input off the plan set | result |
+|---|---|---|
+| legal description → `arcgis_query.py where` on `…/AppraisalDistricts/MapServer/8` (OmniParcel, which has `LEGAL_DESCRIPTION`; layer 0 has only `PID_10`/`PROP_ID`) | `LOT 1 … LENOX SPRINGS SECTION III` (page 1, line 150) | 4 Lenox Springs rows, exactly one `SEC III`: `PARCEL_NUMBER 0436110202` — the same PID the point query returned |
+| address → City of Austin `Geocode/COA_Locator` | `10416 Brezza Ln` (title block) | score 100 at (30.15016, −97.79374), 12 m from the point above |
+| address → Census `geocoder/locations/onelineaddress` | same | **0 matches** — a 2021 subdivision is not in TIGER yet |
+
+The plat's legal description is the parcel's own name in the county's table and needs no geocoder; the address needs a locator the jurisdiction happens to publish; the one free national geocoder fails on precisely the new-plat case this spec is built for. That ordering is **D10a**.
 
 ### 1.6 Scope
 
@@ -148,7 +183,7 @@ There are **no RLS policies on `geo`, `cartographer_files`, `cartographer_geomet
 
 **D2. `cartographer_anchors` takes the same treatment** — `sir_id` nullable, new nullable `submission_version_id`.
 
-**D3. The run request's owner fields are all optional.** `1.1-inputs`'s `Request` becomes `{file, anchor_run_slug?, scope_note?, target_srid?, sir_id?, submission_version_id?}`. The only required field is `file`. A request naming both owners is accepted (**Q2** asks whether to forbid it).
+**D3. The run request's owner fields are all optional.** `1.1-inputs`'s `Request` becomes `{file, anchor_run_slug?, scope_note?, target_srid?, site_point?, sir_id?, submission_version_id?}`. The only required field is `file`. A request naming both owners is accepted (**Q2** asks whether to forbid it). `site_point` is `{lat, lon}` (WGS84), the operator's override for *where the parcel is* (D10a), the sibling of `target_srid`'s override for *which grid*; it is ignored on the SIR path, where the SIR's rows are the target.
 
 ### 2.2 Resolving the target SRID
 
@@ -189,7 +224,7 @@ The **FIRM panel number is the primary key, not the prose**: the first five char
 
 **D7. `spcs_lookup` is the resolver; surveyor is not consulted.** surveyor's `native_sr` is recorded **per GIS layer**, not per county — inside Travis County's own server, `DBO.Parcels` is 2277 while `DBO.County` and `DBO.Precincts` are published as geographic WGS84 WKT. Using it requires already knowing which layer you would query, and there is **no machine-readable jurisdiction → parcel-layer registry**: `jurisdictions/austin-tx.md` is prose for an agent and `site-research/steps/1-resolve-site` is an agent step. Building that registry is real work and is not in this spec (**Q3**).
 
-**D8. Disagreement is a hard stop.** The run exits 75 at `1.2-fetch` with a message naming the two readings and the fix (`target_srid` in `request.json`). The cases:
+**D8. Disagreement is a hard stop.** The run parks at `1.2-fetch` with a message naming the two readings and the fix (`target_srid` in `request.json`). The cases:
 
 - the plat cites a **low-distortion or county projection** — increasingly common on Texas plats — so it names a zone that is not an SPCS zone at all;
 - `basis_of_bearings.kind` is `assumed` or `deed`, so there is no zone to read;
@@ -199,11 +234,32 @@ The **FIRM panel number is the primary key, not the prose**: the first five char
 
 A wrong SRID does not fail loudly. It produces a plausible similarity transform onto the wrong grid, and `fitToRing` will cheerfully report an IoU for it. The escape hatch already exists and costs the operator one number.
 
-**D9. `grid_or_surface` and `combined_scale_factor` are carried into the solve, not dropped.** The plat's distances are **surface**; the target grid is not. `anchor.ts` takes this as `statedScaleFactor` (`AnchorInputs`), and on this file it is `1.0000327271`. Resolving the SRID correctly and discarding the scale factor puts the ring out by ~0.9 ppm — negligible on a 1-acre lot, and exactly the class of thing that silently poisons a fit at scale.
+**How the stop is delivered (v1.2).** "Parks" has one mechanism in conductor2 and it is not the script's exit code: *a step is parked when its contract exits 75 after the step wrote `BLOCKED.md`* (conductor2 README, "Exit 75 from a contract"; the pattern is in `bureau/runbooks/lib/contract-helpers.ts:764-787`). Today `fetch.py`'s no-target path is `sys.exit(message)` — exit 1, a **failed** step that `advance` will not retry and `status` shows as an error, not as `waiting`. So:
+
+1. `fetch.ts` exits 3 (its existing `NO_TARGET` code) for every D8 case and prints a one-line reason and the fix to stderr, as it does now.
+2. `fetch.py` catches 3, writes `fetch.log` as today **and** `BLOCKED.md` — the two readings, the case, and the exact `request.json` key to set (`target_srid`, or `site_point` for a D10a stop) — then exits 0.
+3. `1.2-fetch/contract.test.ts` answers 75 when `BLOCKED.md` exists and `ws/inputs/target.json` does not, so the pass ends `waiting`, `status` names the step with `BLOCKED.md` as its readout, and editing `request.json` and advancing relaunches the step cold.
+
+The same path carries the D10a stops. Nothing here is new machinery: it is site-research's `1-resolve-site` browser-gone pattern applied to a script step.
+
+**D9. `grid_or_surface` and `combined_scale_factor` stay in the solve — this is already the case; do not break it.** The plat's distances are **surface**; the target grid is not. `frames.ts:230-233` (`frameScaleFactor`) already lifts `combined_scale_factor` off every `surface` figure in a frame and hands it to `anchor.ts` as `statedScaleFactor` (`frames.ts:353` → `anchor.ts:683`), and on this file it is `1.0000327271`. Nothing in this spec touches that path; D9 exists so that the D4–D8 rewrite of `fetch.ts` does not drop the two fields from `inputs/geometries.json` on the way through. Discarding the factor would put the ring out by ~33 ppm (0.0076 ft on the 231.66 ft course) — negligible on a 1-acre lot, and exactly the class of thing that silently poisons a fit at scale.
 
 ### 2.3 Sourcing the fitting target
 
-**D10. `1.2-fetch` fetches the county ring live and writes it into `geo` as a `county_api` row before solving.** This is the pattern that already runs (§1.4), with the owner removed. Concretely: `arcgis_query.py point <layer> --lat --lon --geometry --native-ring`, then an RPC that is `sir_add_parcel_geo` with the ownership changed, then `fetch.ts` reads the row back and builds `inputs/parcels.json` exactly as it does today.
+**D10. `1.2-fetch` fetches the county ring live and writes it into `geo` as a `county_api` row before solving.** This is the pattern that already runs (§1.4), with the owner removed. Concretely: find the parcel (D10a), fetch it with `arcgis_query.py … --geometry --native-ring`, then an RPC that is `sir_add_parcel_geo` with the ownership changed, then `fetch.ts` reads the row back and builds `inputs/parcels.json` exactly as it does today.
+
+**D10a. Finding the parcel is a ladder, and the ladder ends in an area gate.** The solver never needs a lat/lon; only the fetch does, and a loose file carries none (§1.5). The rungs, first match wins:
+
+1. **`request.site_point`** (D3) → `arcgis_query.py point <layer> --lat --lon`. The operator override; always wins when present. This alone makes S1 runnable.
+2. **The plat's legal description** → `arcgis_query.py where <layer> --where "<legal-description field> LIKE …"`. The county reader (§3 item 4) already has page 1's text layer open for the FIRM panel; it takes the lot/block/subdivision line beside it (`LOTS 1 OF LENOX SPRINGS SECTION III`). The query must return **exactly one** feature after section/phase disambiguation — on White Water, four Lenox Springs rows, one `SEC III`. This is the primary derived rung because it is the parcel's own name in the county's table, needs no geocoder, and is the thing a plat cannot omit.
+3. **The address** → a locator → point → rung 1's query. Only when the jurisdiction publishes one (`Geocode/COA_Locator` for Austin). Never a national geocoder as the sole source: Census returns nothing for this 2021 plat.
+4. **Stop** (D8's mechanism), naming what was read and the fix: `site_point` in `request.json`.
+
+**The gate.** Whatever rung found the feature, `fetch.ts` compares the fetched ring's native area with the figure's `stated_area_sqft` (or `computed_area_sqft` when none is stated) and stops when they differ by more than the **Q12** tolerance. On White Water that is 43,557.77 vs 43,560. A rung-2 string match on the wrong section, or a rung-1 point in the neighbour's lot, fails here rather than producing a confident fit to the wrong parcel — the same reasoning as D8's "a wrong SRID does not fail loudly".
+
+Each rung is a §2.5 claim: rung 2 is a **read** (page 1, bbox, verbatim, `basis: "legal_description"`); rungs 1 and 3 are **computed** (`{kind: "fetched", url, where | point, feature_count, pid}`); the gate is a computed claim with both areas.
+
+What this does *not* solve: rung 2 needs the layer to have a legal-description field and the registry (Q3) to name it. TCAD's geometry layer (`MapServer/0`) has only `PID_10` and `PROP_ID`; its sibling `MapServer/8` (OmniParcel) carries `LEGAL_DESCRIPTION`. So Q3's per-jurisdiction entry is two things, not one: the parcel-ring layer and the legal-description layer + field.
 
 Three consequences, all wanted:
 
@@ -290,13 +346,16 @@ One gap worth naming: **`evidence.check_md` is null on that run**, so the `3.3-c
 
 | # | File | Change |
 |---|---|---|
-| 1 | `bureau/.../steps/1.1-inputs/contract.test.ts:13` | `sir_id` → optional; add optional `submission_version_id` (D3) |
-| 2 | `bureau/.../scripts/fetch.py` | pass the owner fields and the resolved SRID through; surface the D8 stop with its message |
+| 1 | `bureau/.../steps/1.1-inputs/contract.test.ts:13` | `sir_id` → optional; add optional `submission_version_id` and `site_point` (D3) |
+| 1b | `bureau/.../steps/1.2-fetch/contract.test.ts:41,56-62,64-67` | `Target.sir_id` → optional; the request-match test tolerates no SIR; the "[BLOCKING] SIR has at least one parcel ring" test becomes "parcels.json has at least one parcel ring"; **answer 75 when `BLOCKED.md` exists and `target.json` does not** (D8) |
+| 2 | `bureau/.../scripts/fetch.py` | pass the owner fields, `site_point` and the resolved SRID through; on exit 3 write `BLOCKED.md` and exit 0 (D8) |
 | 3 | `bureau/runbooks/site-research/bin/spcs_lookup.py` | add a **zone-name → EPSG + unit** reverse index over the table it already owns (D6) |
-| 4 | `bureau/runbooks/site-research/bin/` (new) | `plan_set_county.py` — page-1 text layer → `{fips, county, state, evidence}`, FIRM panel first (D6) |
-| 5 | `cartographer/.../scripts/fetch.ts:46-48` | `--sir` → optional; new `--submission-version`; owner may be absent |
-| 6 | `cartographer/.../scripts/fetch.ts:116-147` | insert the D4 ladder between the flag and the stop |
-| 7 | `cartographer/.../scripts/fetch.ts:152-161` | when there is no SIR, fetch the county ring (D10), write it, read it back; `sir_geo_in_srid` is used only on the SIR path |
+| 4 | `bureau/runbooks/site-research/bin/` (new) | `plan_set_county.py` — page-1 text layer → `{fips, county, state, legal_description, address, evidence}`, FIRM panel first (D6); the legal description and address feed D10a rungs 2 and 3 |
+| 5 | `cartographer/.../scripts/fetch.ts:46-48` | `--sir` → optional; new `--submission-version`, `--site-point`; owner may be absent |
+| 5b | `cartographer/.../scripts/lib/contracts.ts:102,104,196` | `TargetFile.source` gains `'derived'`; `TargetFile.sir_id` and `AnchorsFile.sir_id` → nullable; `TargetFile` gains `derivation` (D18) |
+| 5c | `cartographer/src/lib/types/database.ts` | regenerate after item 9: `sir_id` nullable, `submission_version_id` on both tables |
+| 6 | `cartographer/.../scripts/fetch.ts:116-147` | insert the D4 ladder between the flag and the stop; every stop is exit 3 with a reason (D8) |
+| 7 | `cartographer/.../scripts/fetch.ts:152-161` | when there is no SIR: find the parcel (D10a ladder + area gate), fetch the county ring (D10), write it, read it back; `sir_geo_in_srid` is used only on the SIR path |
 | 8 | `cartographer/.../scripts/publish.ts:119` | `sir_id` may be null; carry `submission_version_id` |
 | 9 | `substation/supabase/migrations/` (new) | `geo.sir_id` nullable + `geo.submission_version_id`; same on `cartographer_anchors` (D1, D2) |
 | 10 | `substation/supabase/functions/geo_helpers.sql` | new `add_parcel_geo` (D10, D11); `sir_put_anchored_geo` and `cartographer_anchor_decide` delete-keys → `anchor_id` (D12) |
@@ -307,7 +366,7 @@ One gap worth naming: **`evidence.check_md` is null on that run**, so the `3.3-c
 
 **Untouched:** `anchor.ts` and every solver; `extract-geometry-v2`; `cartographer_geometry_evidence` and `cartographer_geometry_crops` (read, never written); and `anchor-geometry` steps `2.1-correspond`, `3.1-solve`, `3.2-render`, `3.3-check`, `4.1-hitl`.
 
-**Deploy order:** substation (9, 10) → bureau (1–4) + cartographer scripts (5–8, 12) → cartographer app (11, 13, 14).
+**Deploy order:** substation (9, 10) → bureau (1–4) + cartographer scripts (5–8, 12) → cartographer app (11, 13, 14). Items 1b, 5b and 5c are on S1's critical path: with any one of them missing, a request without `sir_id` fails at the 1.2 contract, the 5.1 typecheck or the insert, respectively.
 
 Items 13 and 14 are the only ones that can ship on their own: §2.5's sections 2–4 render data that is already in prod on anchor `e94fae93`, so the page can be built and reviewed against the existing car-wash run before any of the decoupling lands.
 
@@ -321,7 +380,7 @@ Items 13 and 14 are the only ones that can ship on their own: §2.5's sections 2
 - **Runs:** locally against the White Water file; it is the §5 acceptance test.
 
 **S2: `fetch.ts`'s CLI** (existing)
-- **Proves:** D4–D9 and D10. The SRID ladder and the ring materialisation are both observable in `inputs/target.json` (`target_srid` + `source`) and `inputs/parcels.json`, with no database assertions needed. Each D8 stop is one invocation and one expected exit.
+- **Proves:** D4–D9, D10 and D10a. The SRID ladder, the location ladder and the ring materialisation are all observable in `inputs/target.json` (`target_srid` + `source` + `derivation`) and `inputs/parcels.json`, with no database assertions needed. Each D8 and D10a stop is one invocation and one expected exit 3 with its reason on stderr; the area gate gets a case where the legal description matches the wrong section. Then one `fetch.py` case per stop proves `BLOCKED.md` is written and the 1.2 contract answers 75.
 - **Prior art:** `cartographer/runbooks/anchor-geometry/scripts/lib/contracts.test.ts`, `frames.test.ts`.
 - **Runs:** `bun test` in `cartographer`, CI.
 
@@ -347,12 +406,12 @@ Items 13 and 14 are the only ones that can ship on their own: §2.5's sections 2
 Upload `White Water Express Car Wash 071326.pdf` to Cartographer as a loose file — **no project, no SIR, no plan set**. Run `extract-geometry-v2`. Run `anchor-geometry` with a request carrying only `{file, anchor_run_slug}`.
 
 1. `1.2-fetch` resolves **EPSG 2277** on its own, `source: "derived"`, with `fetch.log` naming both readings: `basis_of_bearings` "TEXAS CENTRAL ZONE / NAD 83" and FIRM panel `48453C0595K` → Travis → `tx_central`, `ftUS`.
-2. It fetches the TCAD ring (PID `0436110202`) and writes **one** `county_api` `geo` row with no owner.
-3. `3.1-solve` fits LOT 1 by `ring_fit` / `gis_fit`, with the stated surface scale factor applied.
+2. It finds the parcel from the plat's **legal description** (D10a rung 2, no `site_point` in the request), fetches the TCAD ring (PID `0436110202`), passes the area gate (43,557.77 vs 43,560), and writes **one** `county_api` `geo` row with no owner.
+3. `3.1-solve` fits LOT 1 by `ring_fit` / `gis_fit`, with the stated surface scale factor applied. **This is `fitToRing`'s first run on real data** (§1.4); the near-exact TCAD ring (§1.5) is the easiest case it will ever get, so an IoU below ~0.99 here is a solver finding, not a data finding.
 4. `/anchored` draws the anchored lot in marine over the county ring in amber.
 5. **Re-running the whole thing produces one county row, not two.**
 
-A deliberate negative: run it again with `target_srid: 32139` in the request and it must solve in metres and produce a visibly wrong result — the override has to still be an override.
+A deliberate negative: run it again with `target_srid: 32139` in the request and it must solve in metres and produce a visibly wrong result — the override has to still be an override. A second one for D8's mechanism: a request with a `basis_of_bearings.kind` of `assumed` (or a file whose page 1 has no text layer) must leave the run **`waiting`** at `1.2-fetch` with `BLOCKED.md` naming the fix, not **failed**; setting `target_srid` (or `site_point`) and advancing must relaunch the step and go through.
 
 ---
 
@@ -373,11 +432,11 @@ Named only so the decoupling does not harden against north star **P5**. None is 
 
 ## 7. Open questions
 
-**Q1.** Does the new parcel RPC get a fresh name (`add_parcel_geo`) alongside `sir_add_parcel_geo`, or does `sir_add_parcel_geo` gain nullable owner params and keep its name? Duplication is cheap and explicitly acceptable; a rename touches `cityhall-new/src/lib/publish/sir.ts:382` and both test doubles.
+**Q1.** Does the new parcel RPC get a fresh name (`add_parcel_geo`) alongside `sir_add_parcel_geo`, or does `sir_add_parcel_geo` gain nullable owner params and keep its name? Duplication is cheap and explicitly acceptable; a rename touches `cityhall/src/lib/publish/sir.ts:382` (the repo is `noetic-inc/cityhall`; `cityhall-new` redirects to it) and both test doubles.
 
 **Q2.** Should `geo` forbid carrying both `sir_id` and `submission_version_id` (a CHECK), or are they independent provenance links with no XOR?
 
-**Q3.** Where does the **parcel layer URL** come from for a county we have not met? D10 needs one and there is no registry (D7). For v1 it can be a constant for Austin plus an optional request field — but that is the thing that stops this generalising, and it is the same gap north star **D11** names.
+**Q3.** Where does the **parcel layer URL** come from for a county we have not met? D10 needs one and there is no registry (D7). For v1 it can be a constant for Austin plus an optional request field — but that is the thing that stops this generalising, and it is the same gap north star **D11** names. *(v1.2)* The entry is now two things: the ring layer, and the **legal-description layer + field name** D10a rung 2 queries (Austin: `MapServer/8`, `LEGAL_DESCRIPTION`), plus optionally a locator URL for rung 3.
 
 **Q4.** `/anchored` currently has one rail row per anchor with a SIR subtitle. With no owner, what labels an anchor — the file name alone, or `submission_version` → `submission` → `project.name` when the chain exists?
 
@@ -394,3 +453,5 @@ Named only so the decoupling does not harden against north star **P5**. None is 
 **Q10.** Does the **county read** (D17) get a stored crop like the extract run's readings do, or stay box-only? Box-only is free and renders identically in situ; a stored crop is what makes the two pages consistent, and is the only way the claim survives the source PDF being replaced. Storing one means writing a `cartographer_geometry_crops` row from a runbook that is not the extract runbook, against a `geometry_id` that is not really its parent — which may be a sign the crop table wants an owner other than a geometry.
 
 **Q11.** **Possible bug:** `evidence.check_md` is null on anchor `e94fae93`, so `3.3-check`'s vision readout — the step whose only job is to say whether the overlay looks right — reached the database empty. `publish.ts` reads `check.md` from the run directory and tolerates its absence. Did the step write nothing, or did the file not survive to publish? Worth settling before the page is built around showing it.
+
+**Q12.** *(v1.2)* The D10a **area-gate tolerance**. White Water is 0.005 % off; north star §9.4's ±3 ft `gis_fit` case on an older parcel is a ~3 ft band around a ~840 ft perimeter, roughly 6 % of a 1-acre lot. A tolerance that admits the second without admitting the neighbour's lot is probably ~10 % — but the right number depends on how often adjacent lots in a subdivision are near-equal in area, which is exactly the plat case. Start at 10 %, record both areas in the claim either way, and tune on the first stop.
