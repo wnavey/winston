@@ -1,0 +1,1429 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Intake checklist DB schema</title>
+<meta name="generator" content="winston spec-kit v6.4 (test)">
+<style>
+/* ============================================================
+   spec-kit v6.4  —  winston HTML spec design system
+   Inline the ENTIRE contents of this file into the spec's style block.
+   Canonical source: ~/.claude/skills/winston-spec/assets/spec-kit.css
+   When you change this file, bump the version above and in COMPONENTS.md.
+   v4: + sequence diagram (.seq*), + data table (.spectable), + prompt block (.prompt)
+   v5: + system map (.sysmap/.sys, edges drawn by spec-kit.js), + decision flow (.dflow),
+       + concept figure (figure.concept), + claim caption (.claim), + reference chip rows (.sys-refs),
+       + spec reader page (body.reader; DESIGN-SPEC.md rendered by marked, built by inline-kit.py --spec)
+   v5.1: pass-2 friction fixes — long identifiers wrap (.sys .t, .uc .nt, .ent .ty), .sysmap-scroll for
+       6+ columns, state-neutral .sm pills, .dflow jump outcomes, legend 'new trigger' dot
+   v5.2: + two-lane activity flow (.af) — an agent and the tools it calls, prompt fragment per step
+   v5.3: + before/after pair (.ba), + mass diagram (.mass), + cross-section (.xsec),
+       + call-graph collapse (.cg), + interactive state machine (.smx, driven by spec-kit.js),
+       .sm pills take .new/.chg change state
+       Colour rule: fill/border = change state only; kind = badge text + shape; legend is the
+       complete list of colour meanings on the page.
+   v6.0: readability + "pick the diagram from the question": new = blue, changed = amber;
+       kind badge becomes a quiet word; node detail 12.5px sans (nothing under 10.5px);
+       + lanes (.sysmap.lanes), + delta map (.sysmap.delta, Today/After toggle in one map),
+       + runbook graph (.sysmap.rgraph: diamonds, gate, fan-out, exits), + step list (.steps),
+       + phase lanes (.plan), + claim-as-title (.claim.lead), compact ref footer,
+       path highlighting on hover, .dfg chains go vertical instead of wrapping.
+   ============================================================ */
+
+:root{
+  /* steel-blue ramp (matches cityhall / Noetic report surfaces) */
+  --p50:#f0f5f9;--p100:#dce8f1;--p200:#b9d2e5;--p300:#8cb4d1;--p400:#6397b8;
+  --p500:#517e9e;--p600:#3f6582;--p700:#35526b;--p800:#2d4559;--p900:#273b4b;--p950:#182530;
+  --bg:#f9f9f9;--card:#ffffff;--divider:#dfdfdf;--ink:#1f2937;--muted:#6b7280;--ember:#bb4d00;
+  /* semantic: new / changed / retired */
+  --new:#2e62c9;--newbg:#e6effe;--newbd:#b9cff7;--newink:#1f4fb5;
+  --chg:#b26b00;--chgbg:#fdf1dc;--chgbd:#f2cf8e;--chgink:#8a5300;
+  --ret:#b91c1c;--retbg:#fef2f2;--retbd:#fecaca;
+  --sans:'Lexend',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  --serif:'Lora',Georgia,'Times New Roman',serif;
+  --ink2:#4b5361;--line:#c5ccd6;--lane:#f4f6f9;--wire:#8a919c;
+  --mono:'Fira Code','SF Mono',ui-monospace,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.55;font-size:15px}
+
+/* ---------- masthead ---------- */
+header.masthead{background:linear-gradient(135deg,var(--p800),var(--p600));color:#fff;padding:34px 32px 30px;position:relative;overflow:hidden}
+header.masthead::after{content:"";position:absolute;inset:0;background-image:repeating-linear-gradient(115deg,rgba(255,255,255,.06) 0 1px,transparent 1px 26px);pointer-events:none}
+header.masthead .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--p200)}
+header.masthead h1{font-family:var(--serif);font-weight:600;margin:.35em 0 .2em;font-size:29px;position:relative}
+header.masthead p{margin:0;color:var(--p100);max-width:880px;font-size:15px}
+header.masthead .meta{margin-top:14px;font-size:12.5px;color:var(--p200);font-family:var(--mono)}
+
+/* ---------- tabs ---------- */
+nav.tabs{position:sticky;top:0;z-index:20;display:flex;gap:2px;background:var(--p950);padding:0 20px;box-shadow:0 2px 8px rgba(0,0,0,.12);flex-wrap:wrap}
+nav.tabs button{appearance:none;border:0;background:transparent;color:var(--p200);font-family:var(--sans);font-size:14px;font-weight:500;padding:14px 18px;cursor:pointer;border-bottom:3px solid transparent;transition:all .15s}
+nav.tabs button .n{font-family:var(--mono);font-size:11px;opacity:.7;margin-right:7px}
+nav.tabs button:hover{color:#fff;background:rgba(255,255,255,.04)}
+nav.tabs button.active{color:#fff;border-bottom-color:var(--ember);background:rgba(255,255,255,.06)}
+
+/* ---------- layout ---------- */
+main{max-width:1140px;margin:0 auto;padding:30px 26px 90px}
+.panel{display:none;animation:fade .25s ease}
+main [id]{scroll-margin-top:74px} /* deep-link targets clear the sticky tab bar */
+.panel.active{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* Section heading: the h2 text is the PLAIN NAME of the thing the tab is about (v5.1 — it used to
+   carry a tagline while the small eyebrow carried the name; that was backwards). .eyebrow = the
+   tab number / section label, small. .sub = one plain sentence saying what is on the tab. */
+h2{font-family:var(--serif);font-weight:700;font-size:30px;line-height:1.15;letter-spacing:-.01em;margin:34px 0 10px;color:var(--p950)}
+h2:first-child{margin-top:4px}
+h2 .eyebrow{display:block;font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--p500);font-weight:400;margin-bottom:6px}
+h2 .sub{display:block;font-family:var(--sans);font-size:14px;font-weight:400;letter-spacing:0;line-height:1.5;color:var(--muted);margin-top:6px}
+h3{font-size:16px;font-weight:600;margin:28px 0 8px;color:var(--p800);display:flex;align-items:center;gap:9px}
+h3 .hn{font-family:var(--mono);font-size:12px;color:#fff;background:var(--p600);border-radius:5px;padding:2px 8px}
+h4{font-size:14px;font-weight:600;margin:18px 0 6px;color:var(--p800)}
+p{margin:.55em 0}
+.lede{font-size:15px;color:var(--p800);border-left:3px solid var(--ember);padding-left:16px;margin:12px 0 20px}
+ul{margin:.4em 0;padding-left:22px}li{margin:.28em 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px solid var(--p100);border-radius:4px;padding:1px 5px;color:var(--p800)}
+
+/* ---------- callout ---------- */
+.callout{background:var(--p50);border:1px solid var(--p200);border-left:4px solid var(--p500);border-radius:8px;padding:13px 17px;margin:16px 0}
+.callout.ember{background:#fdf6f0;border-color:#f0cba8;border-left-color:var(--ember)}
+.callout.new{background:var(--newbg);border-color:var(--newbd);border-left-color:var(--new)}
+.callout .lab{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--p600);font-weight:600;display:block;margin-bottom:3px}
+.callout.ember .lab{color:var(--ember)} .callout.new .lab{color:var(--new)}
+
+/* ---------- legend ---------- */
+.legend{display:flex;flex-wrap:wrap;gap:9px 16px;background:#fff;border:1px solid var(--divider);border-radius:10px;padding:12px 16px;margin:16px 0;font-size:12px;align-items:center}
+.legend .k{display:inline-flex;align-items:center;gap:6px}
+.swatch{width:26px;height:14px;border-radius:3px;display:inline-block;border:1px solid rgba(0,0,0,.15)}
+
+/* ---------- shared field badges (used by entity rows + legend) ---------- */
+.b{font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.04em;padding:1px 4px;border-radius:3px;text-transform:uppercase;white-space:nowrap}
+.b-pk{background:#fef3c7;color:#92600a;border:1px solid #fde68a}
+.b-fk{background:#e0edfb;color:#2456a8;border:1px solid #c3d8f2}
+.b-nn{background:#eef1f4;color:#4b5563;border:1px solid #d7dde3}
+.b-new{background:var(--newbg);color:var(--new);border:1px solid var(--newbd)}
+
+/* ============================================================
+   ER / UML entity boxes
+   ============================================================ */
+.erd{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start;margin:16px 0;background:#fbfcfd;border:1px solid var(--divider);border-radius:12px;padding:18px}
+.ent{border:1px solid var(--divider);border-radius:9px;overflow:hidden;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.05);min-width:236px;flex:0 1 auto}
+.ent .eh{padding:7px 12px;color:#fff;display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.ent .eh .en{font-family:var(--mono);font-size:12.5px;font-weight:700;letter-spacing:.02em}
+.ent .eh .stereo{font-size:11px;font-family:var(--mono);opacity:.85;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}
+.ent.exist .eh{background:var(--p700)}
+.ent.newt .eh{background:var(--new)}
+.ent.changed .eh{background:var(--chg)}
+.ent.retired .eh{background:#9ca3af}
+.ent.retired{opacity:.72}
+.ent .row{display:flex;align-items:center;gap:7px;padding:4px 11px;font-size:11.5px;border-top:1px solid #eef1f4}
+.ent .row:first-of-type{border-top:0}
+.ent .row .nm{font-family:var(--mono);font-size:11.5px;color:var(--p900);font-weight:600}
+.ent .row .ty{font-family:var(--mono);font-size:11px;color:var(--muted);margin-left:auto;text-align:right;max-width:60%;overflow-wrap:anywhere}
+.ent .row.hi{background:#fff9f2}
+.ent .row.strk .nm{text-decoration:line-through;color:var(--muted)}
+.ent .note{padding:5px 11px;font-size:11px;color:var(--muted);font-style:italic;border-top:1px dashed #e5e9ee;background:#fbfcfd}
+/* diff rows — show a table modification (column added / removed), git-style.
+   Put a "+"/"−" marker in a .gut span at the start of the row. */
+.ent .row .gut{flex:0 0 10px;width:10px;text-align:center;font-family:var(--mono);font-size:11px;font-weight:700;color:var(--muted)}
+.ent .row.add{background:var(--newbg);box-shadow:inset 3px 0 0 var(--new)}
+.ent .row.add .gut{color:var(--new)}
+.ent .row.add .nm{color:#166534}
+.ent .row.del{background:var(--retbg);box-shadow:inset 3px 0 0 var(--ret)}
+.ent .row.del .gut{color:var(--ret)}
+.ent .row.del .nm{color:var(--ret);text-decoration:line-through}
+
+/* relationships panel — crow's-foot text notation */
+.rels{background:#fff;border:1px solid var(--divider);border-radius:10px;padding:12px 16px;margin:14px 0;font-family:var(--mono);font-size:12px;line-height:1.9}
+.rels .rl{display:block;color:var(--p800)}
+.rels .rl b{color:var(--ember)}
+.rels .cf{color:var(--p500);font-weight:700}
+.rels .cmt{color:var(--muted);font-style:normal;font-family:var(--sans);font-size:11.5px}
+.rels .tag-new{color:var(--new);font-weight:700}
+.rels .tag-ret{color:var(--ret);font-weight:700}
+.rels-h{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--p600);font-weight:700;margin-bottom:6px}
+
+/* ============================================================
+   Use-case scene  (an action + its boxes-and-arrows diagram)
+   ============================================================ */
+.uc{margin:16px 0 22px;border:1px solid var(--divider);border-radius:12px;overflow:hidden;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.uc .uch{display:flex;align-items:center;gap:13px;padding:11px 16px;background:linear-gradient(135deg,var(--p700),var(--p600));color:#fff}
+.uc .uch .ucn{flex:0 0 30px;height:30px;border-radius:50%;background:rgba(255,255,255,.2);font-family:var(--mono);font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.uc .uch .uctxt{flex:1}
+.uc .uch .actor{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--p100);display:block;margin-bottom:1px}
+.uc .uch .uct{font-weight:600;font-size:15.5px;font-family:var(--serif)}
+.uc .ucsub{padding:9px 16px;font-size:12.5px;color:var(--p800);background:var(--p50);border-bottom:1px solid var(--p100)}
+.uc .ucdiag{padding:20px 16px 14px}
+.ucnote{padding:2px 16px 14px;font-size:11.5px;color:var(--muted)}
+.ucnote b{color:var(--p700);font-family:var(--mono);font-size:10.5px}
+
+/* ============================================================
+   Boxes-and-arrows flow
+   Robustness rules baked in:
+   - .dfg WRAPS (flex-wrap:wrap) so long chains never clip / never
+     need horizontal scroll. Arrows reflow with the nodes.
+   - .node is a flex COLUMN: the op-badge is an in-flow header row
+     (never position:absolute), and .nt / .nf are block-level, so a
+     table name and its fields can never smush onto one line.
+   ============================================================ */
+.dfg{display:flex;flex-wrap:wrap;align-items:stretch;gap:8px 0;margin:0}
+.node{flex:0 0 auto;width:156px;background:#fff;border:1.5px solid var(--p300);border-radius:8px;padding:9px 11px;display:flex;flex-direction:column;gap:3px}
+.node .op{align-self:flex-start;font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:1px 6px;border-radius:3px;border:1px solid;color:#fff;margin-bottom:2px}
+.node .nt{display:block;font-family:var(--mono);font-weight:700;font-size:12px;color:var(--p900);line-height:1.3;overflow-wrap:anywhere}
+.node .nf{display:block;font-family:var(--mono);font-size:11px;color:var(--muted);line-height:1.45;word-break:break-word}
+.node.created{border-color:var(--new);background:var(--newbg)} .node.created .op{background:var(--new);border-color:var(--new)}
+.node.read{border-color:var(--p400);background:#eef4fb} .node.read .op{background:var(--p500);border-color:var(--p500)}
+.node.event{border-color:var(--ember);background:#fdf6f0} .node.event .op{background:var(--ember);border-color:var(--ember)}
+.node.store{border-style:dashed;border-color:var(--p500);background:#eef3f7} .node.store .op{background:var(--p700);border-color:var(--p700)}
+.edge{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:70px;max-width:104px;padding:0 4px}
+.edge .el{font-size:10.5px;color:var(--p600);font-family:var(--mono);text-align:center;line-height:1.3;margin-bottom:2px}
+.edge .ar{color:var(--p400);font-size:20px;font-weight:700;line-height:1}
+
+/* ============================================================
+   Card grid  (keep / change / drop comparisons)
+   ============================================================ */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:820px){.grid2{grid-template-columns:1fr}.erd{padding:12px}}
+.card{background:var(--card);border:1px solid var(--divider);border-radius:9px;padding:14px 16px}
+.card.keep{border-top:3px solid var(--new)} .card.change{border-top:3px solid var(--chg)} .card.drop{border-top:3px solid var(--ret)}
+.card strong{display:block;margin-bottom:4px;font-size:13.5px}
+.card ul{font-size:12.5px;margin:2px 0}
+
+/* ============================================================
+   Lifecycle / state machine
+   ============================================================ */
+.sm{display:flex;flex-wrap:wrap;gap:7px;align-items:center;margin:14px 0}
+.sm .s{border:1px solid var(--p300);background:var(--p50);border-radius:20px;padding:5px 12px;font-size:11.5px;font-weight:600;color:var(--p800);font-family:var(--mono)}
+.sm .s .who{display:block;font-size:10.5px;font-family:var(--mono);color:var(--muted);font-weight:400;text-transform:uppercase;letter-spacing:.03em}
+.sm .s.client{border-color:var(--newbd);background:var(--newbg)}
+.sm .s.cc{border-color:#f0cba8;background:#fdf6f0}
+.sm .s.spec{border-color:var(--chgbd);background:var(--chgbg)}
+.sm .a{color:var(--p400);font-weight:700}
+/* state-neutral variants (v5.1): terminal-good / terminal-stop / dimmed. The .client/.cc/.spec
+   colours mean "whose court" and need a legend if used. */
+.sm .s.ok{border-color:var(--newbd);background:var(--newbg);color:var(--new)}
+.sm .s.stop{border-color:var(--retbd);background:var(--retbg);color:var(--ret)}
+.sm .s.dim{opacity:.6;border-style:dashed}
+
+/* ============================================================
+   Use-case catalog — grouped list of candidate use cases
+   (a scoped list, NOT a diagram — for "what would we build" inventories)
+   ============================================================ */
+.catgrp{border:1px solid var(--divider);border-radius:10px;overflow:hidden;margin:14px 0;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.catgrp .cath{background:var(--p700);color:#fff;padding:8px 14px;font-family:var(--serif);font-weight:600;font-size:14.5px;display:flex;align-items:center;gap:10px}
+.catgrp .cath .cgl{font-family:var(--mono);font-size:12px;font-weight:700;background:rgba(255,255,255,.2);border-radius:5px;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;flex:0 0 22px}
+.uci{display:flex;gap:9px;align-items:baseline;padding:7px 13px;border-top:1px solid #eef1f4;font-size:13px}
+.uci .uid{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--p600);flex:0 0 26px}
+.uci .utxt{flex:1;color:var(--ink);line-height:1.45}
+.uci .utxt b{color:var(--p900)}
+.uci .star{color:var(--ember);font-weight:700;font-size:12px;flex:0 0 auto;letter-spacing:-1px}
+.uci.later{opacity:.66}
+.utag{font-family:var(--mono);font-size:10.5px;font-weight:700;padding:1px 5px;border-radius:3px;text-transform:uppercase;letter-spacing:.03em;white-space:nowrap;flex:0 0 auto}
+.utag.t-orig{background:#e0edfb;color:#2456a8;border:1px solid #c3d8f2}
+.utag.t-add{background:var(--newbg);color:var(--new);border:1px solid var(--newbd)}
+
+/* ============================================================
+   Misc: storage strip, cross-reference box
+   ============================================================ */
+.storage{background:#eef3f7;border:1px dashed var(--p300);border-radius:8px;padding:9px 13px;font-family:var(--mono);font-size:12px;color:var(--p800);margin:12px 0}
+.storage b{color:var(--ember)}
+.xref{font-size:12px;color:var(--p600);background:var(--p50);border:1px solid var(--p100);border-radius:6px;padding:8px 12px;margin:10px 0}
+.foot{margin-top:44px;padding-top:18px;border-top:1px solid var(--divider);color:var(--muted);font-size:12px;font-family:var(--mono)}
+
+/* actor / repo chips (optional, for inline actor tags in prose) */
+.rc{display:inline-block;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;padding:1px 6px;border-radius:5px;border:1px solid;vertical-align:middle;white-space:nowrap}
+.r-ch{background:#eef4fb;color:#2456a8;border-color:#c3d8f2}
+.r-sub{background:#f3eefb;color:#6b3fa0;border-color:#dcccf0}
+.r-fa{background:#e9f7f2;color:#0f7a5f;border-color:#bfe8db}
+.r-db{background:#eaeef2;color:#2d4559;border-color:#c7d2dd}
+.r-store{background:#e6eef3;color:#35526b;border-color:#bcd0dd}
+.r-user{background:#eefaf0;color:#15803d;border-color:#bbf7d0}
+.r-mcp{background:#fdf0e6;color:#b5590d;border-color:#f2d3b3}
+
+/* ============================================================
+   Sequence diagram — swimlane message flow
+   A CSS grid: col 1 = step number, then one column per actor lane.
+   Each message is a grid item that SPANS grid-columns from its
+   source lane to its target lane, so it always sits under the right
+   headers and never smushes. Continuous lifelines are grid items
+   spanning all rows (grid-row:1/-1) — so set .seq-body's
+   grid-template-rows to repeat(STEP_COUNT, auto) for -1 to resolve.
+   Wide diagrams scroll inside .seq-scroll, never the page body.
+   Direction is an in-flow glyph (.dir ◂/▸) pushed to the target edge
+   by justify-content:space-between — never position:absolute.
+   ============================================================ */
+.seq-scroll{overflow-x:auto;margin:16px 0;border:1px solid var(--divider);border-radius:12px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.seq{min-width:840px}
+.seq-head,.seq-body{display:grid;grid-template-columns:30px repeat(6,minmax(104px,1fr))}
+.seq-head{background:linear-gradient(135deg,var(--p800),var(--p700));padding:11px 12px}
+.seq-h{display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;padding:0 4px}
+.seq-h .role{font-family:var(--mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--p200)}
+.seq-h .who{font-family:var(--mono);font-size:11px;font-weight:700;color:#fff;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.24);border-radius:6px;padding:3px 9px}
+.seq-body{position:relative;row-gap:11px;padding:16px 12px 20px}
+.seq-life{width:2px;background:var(--p100);justify-self:center;border-radius:2px;z-index:0}
+.seq-num{grid-column:1;justify-self:center;align-self:center;font-family:var(--mono);font-size:11px;font-weight:700;color:#fff;background:var(--p600);min-width:19px;height:19px;padding:0 3px;border-radius:10px;display:flex;align-items:center;justify-content:center;z-index:1}
+.seq-msg{align-self:center;display:flex;flex-direction:row;align-items:center;gap:8px;justify-content:space-between;background:#fff;border:1.5px solid var(--p300);border-radius:7px;padding:5px 10px;z-index:1;min-width:0}
+.seq-msg .mt{display:flex;flex-direction:column;gap:1px;min-width:0}
+.seq-msg .m{font-family:var(--mono);font-size:10.5px;color:var(--p900);font-weight:700;line-height:1.32;word-break:break-word}
+.seq-msg .m2{font-family:var(--mono);font-size:11px;color:var(--muted);line-height:1.3;word-break:break-word}
+.seq-msg .dir{font-size:14px;font-weight:700;color:var(--p500);flex:0 0 auto}
+.seq-msg.write{border-color:var(--new);background:var(--newbg)} .seq-msg.write .dir{color:var(--new)}
+.seq-msg.event{border-color:var(--ember);background:#fdf6f0} .seq-msg.event .dir{color:var(--ember)}
+.seq-msg.ret{border-style:dashed;background:#f6f9fb} .seq-msg.ret .m{font-weight:500;color:var(--p600)}
+.seq-msg.self{border-style:dashed;border-color:var(--p400);background:#eef3f7}
+.seq-foot{display:flex;flex-wrap:wrap;gap:8px 15px;padding:9px 14px;border-top:1px solid var(--divider);background:#fbfcfd;font-size:10.5px;font-family:var(--mono);color:var(--muted);align-items:center}
+.seq-foot .sw{display:inline-block;width:20px;height:11px;border-radius:3px;border:1.5px solid var(--p300);vertical-align:middle;margin-right:5px}
+.seq-foot .sw.write{border-color:var(--new);background:var(--newbg)} .seq-foot .sw.event{border-color:var(--ember);background:#fdf6f0}
+.seq-foot .sw.ret{border-style:dashed;background:#f6f9fb} .seq-foot .sw.self{border-style:dashed;border-color:var(--p400);background:#eef3f7}
+
+/* ============================================================
+   Data table — for step→entity maps and any tabular spec content.
+   Wrap in .spectable-scroll so wide tables scroll, not the page.
+   ============================================================ */
+.spectable-scroll{overflow-x:auto;margin:14px 0}
+.spectable{width:100%;border-collapse:collapse;font-size:12.5px;background:#fff;border:1px solid var(--divider);border-radius:10px;overflow:hidden}
+.spectable thead th{background:var(--p700);color:#fff;font-family:var(--mono);font-size:11px;letter-spacing:.04em;text-transform:uppercase;text-align:left;padding:8px 12px;font-weight:700;white-space:nowrap}
+.spectable tbody td{padding:7px 12px;border-top:1px solid #eef1f4;vertical-align:top;line-height:1.5}
+.spectable tbody tr:nth-child(even){background:#fbfcfd}
+.spectable td .sn{font-family:var(--mono);font-weight:700;color:#fff;background:var(--p600);border-radius:9px;padding:1px 7px;font-size:10.5px}
+.spectable td code{font-size:11px}
+.spectable td .none{color:var(--muted);font-style:italic;font-family:var(--sans)}
+.spectable td .w{color:var(--new);font-weight:700} /* write */
+.spectable td .r{color:var(--p500);font-weight:700} /* read/return */
+
+/* ============================================================
+   Prompt / code block — a readable mono block (LLM prompts, snippets).
+   White-space preserved; scrolls horizontally inside itself.
+   ============================================================ */
+.prompt{background:#fbfcfd;border:1px solid var(--p200);border-left:4px solid var(--p500);border-radius:8px;padding:12px 15px;margin:12px 0;font-family:var(--mono);font-size:11.5px;line-height:1.6;color:var(--p900);white-space:pre-wrap;overflow-x:auto}
+.prompt .ph{display:block;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--p600);font-weight:700;margin-bottom:6px}
+
+
+/* ============================================================
+   System map (.sysmap)  —  the Overview diagram.  v5
+   A CSS grid of nodes placed with grid-area:row/col. Column 1 is
+   always the TRIGGER (a start-dot, no box). Edges are authored as
+   hidden <a class="sys-edge" data-from data-to>label</a> and drawn as
+   SVG by spec-kit.js after layout (no hand-typed coordinates).
+   COLOUR = CHANGE STATE ONLY: white exists · amber .chg · green .new ·
+   red-dashed .gap. KIND = badge TEXT + shape (.ext dashed, .store
+   cylinder bottom, .trig dot). Badges are one colour except on
+   changed/new nodes, where they take the node's change colour.
+   ============================================================ */
+.sysmap{position:relative;display:grid;gap:40px 64px;padding:28px 16px 22px;background:#fff;border:1px solid var(--divider);border-radius:12px;margin:14px 0 6px}
+.sysmap-scroll{overflow-x:auto;margin:14px 0 6px} .sysmap-scroll .sysmap{margin:0;min-width:max-content} /* 6+ columns: use grid-template-columns:repeat(N,minmax(150px,1fr)) inside .sysmap-scroll */
+.sysmap .colh{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--p500);text-align:center;padding-bottom:6px;border-bottom:1px dashed var(--p200);align-self:end}
+.sys{position:relative;z-index:2;background:#fff;border:1.5px solid var(--p300);border-radius:9px;padding:9px 11px 8px;min-height:64px;display:flex;flex-direction:column;gap:2px;align-self:center}
+.sys .k{align-self:flex-start;font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:1px 6px;border-radius:3px;color:#fff;background:var(--p500);margin-bottom:2px}
+.sys .t{font-weight:600;font-size:12.5px;line-height:1.3;color:var(--p900);overflow-wrap:anywhere}
+.sys .d{font-family:var(--mono);font-size:11px;color:var(--muted);line-height:1.4}
+.sys.ext{border-style:dashed}
+.sys.store{border-radius:4px 4px 14px 14px}
+.sys.new{border-color:var(--new);background:var(--newbg);box-shadow:0 0 0 3px #dcfce7}.sys.new .k{background:var(--new)}
+.sys.chg{border-color:var(--chg);background:var(--chgbg)}.sys.chg .k{background:var(--chg)}
+/* trigger: a start-dot + label, never a box. Declared AFTER .new/.chg so it wins on order. */
+.sys.trig{border:none;background:none;box-shadow:none;padding:0;min-height:0;align-items:flex-start;justify-self:start;gap:5px;max-width:150px}
+.sys.trig .dot{width:16px;height:16px;border-radius:50%;background:var(--p700);border:3px solid #fff;box-shadow:0 0 0 1.5px var(--p700)}
+.sys.trig.new .dot{background:var(--new);box-shadow:0 0 0 1.5px var(--new)}
+.sys.trig.chg .dot{background:var(--chg);box-shadow:0 0 0 1.5px var(--chg)}
+.sys.trig .t{font-size:11.5px;font-weight:600;color:var(--p800);line-height:1.25}
+.sys.trig .d{font-size:11px}
+.sys.gap{border:1.5px dashed var(--ret);background:var(--retbg);color:var(--ret);align-items:center;justify-content:center;text-align:center;font-family:var(--mono);font-size:10.5px;min-height:40px}
+/* floating spec-reference tag above the box; an <a href="#detail-id"> deep-link to the zoom-in diagram */
+.sys .ref{position:absolute;top:-11px;right:8px;text-decoration:none;font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.04em;padding:1px 7px;border-radius:10px;background:#fff;border:1px solid var(--p300);color:var(--p700);white-space:nowrap}
+.sys.chg .ref{border-color:var(--chg);color:var(--chg)}.sys.new .ref{border-color:var(--new);color:var(--new)}
+.sys .ref:hover{background:var(--p50)}
+.sys-edge{display:none} /* authored edge; rendered as SVG by spec-kit.js */
+.sysmap svg.edges{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1;overflow:visible}
+.sysmap svg .e{fill:none;stroke:var(--p400);stroke-width:1.6}
+.sysmap svg .e.new{stroke:var(--new);stroke-width:2.2}
+.sysmap svg .e.chg{stroke:var(--chg);stroke-width:2}
+.sysmap svg .e.gap{stroke:var(--ret);stroke-dasharray:5 4}
+.sysmap svg .e.loop{stroke:var(--p400);stroke-dasharray:4 3}
+.sysmap svg .lbl{font:11.5px var(--mono);fill:var(--p700)}
+.sysmap svg .lbl.new{fill:var(--new);font-weight:700}.sysmap svg .lbl.chg{fill:var(--chg);font-weight:700}.sysmap svg .lbl.gap{fill:var(--ret)}
+.sysmap svg .lblbg{fill:#fff;stroke:none;opacity:.94}
+/* reference footer: stacked CHIP ROWS, one per reference, each a link into the spec reader page.
+   Markup: <div class="sys-refs"><a class="refrow" data-ref="P0a"><span class="chip">P0a</span><span class="txt">…</span></a>…</div>
+   spec-kit.js fills href = <main data-spec>#<token>. */
+.sys-refs{display:flex;flex-direction:column;gap:6px;margin:12px 0 0}
+.sys-refs .refrow{display:flex;align-items:baseline;gap:12px;padding:7px 12px;border:1px solid var(--divider);border-radius:9px;background:#fff;text-decoration:none;color:var(--p800);font-size:12.5px;line-height:1.45;transition:border-color .12s,background .12s}
+.sys-refs .refrow:hover{border-color:var(--p400);background:var(--p50)}
+.sys-refs .refrow .chip{flex:0 0 auto;font-family:var(--mono);font-size:10.5px;font-weight:700;color:var(--p700);background:var(--p50);border:1px solid var(--p200);border-radius:6px;padding:2px 8px;min-width:44px;text-align:center}
+.sys-refs .refrow.chg .chip{color:var(--chg);border-color:var(--chgbd);background:var(--chgbg)}
+.sys-refs .refrow.new .chip{color:var(--new);border-color:var(--newbd);background:var(--newbg)}
+.sys-refs .refrow .txt{flex:1}
+.sys-refs .refrow .go{flex:0 0 auto;font-family:var(--mono);font-size:11px;color:var(--p500)}
+.sys-refs .refrow[href] .go::after{content:"read §"}
+.sys-refs .refrow:not([href]) .go::after{content:"no spec reader";color:var(--muted)}
+/* citation links inside claims and ref tags (filled in by spec-kit.js) */
+.claim a.cite,.sys .ref a{color:inherit;text-decoration:underline dotted;text-underline-offset:2px}
+.claim a.cite:hover{color:var(--ember)}
+/* "read the spec" masthead link */
+header.masthead a.spec-link{display:inline-block;margin-top:12px;font-family:var(--mono);font-size:12px;color:#fff;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);border-radius:7px;padding:5px 11px;text-decoration:none;position:relative}
+header.masthead a.spec-link:hover{background:rgba(255,255,255,.24)}
+
+/* legend for a system map: the COMPLETE list of colour meanings on the page */
+.sys-legend{display:flex;flex-wrap:wrap;gap:14px;font-size:11.5px;color:var(--p800);margin:8px 4px 0}
+.sys-legend i{display:inline-block;width:22px;height:3px;vertical-align:middle;margin-right:5px;background:var(--p400)}
+.sys-legend i.new{background:var(--new)} .sys-legend i.dot{width:10px;height:10px;border-radius:50%;background:var(--p700)} .sys-legend i.dot.new{background:var(--new)}.sys-legend i.chg{background:var(--chg)}.sys-legend i.gap{background:var(--ret)}.sys-legend i.loop{background:repeating-linear-gradient(90deg,var(--p400) 0 4px,transparent 4px 7px)}
+
+/* ============================================================
+   Claim caption  —  under every diagram. Cites the spec section or
+   decision it paraphrases. "Reading:" for the author's own observation.
+   ============================================================ */
+.claim{font-size:12.5px;color:var(--p800);margin:8px 0 26px;padding:8px 12px;border-left:3px solid var(--ember);background:#fff}
+.claim b{color:var(--p900)}
+
+/* ============================================================
+   Decision flow (.dflow)  —  "try X, else Y, else Z" / gate outcomes.
+   A vertical list of question rows; "yes" exits right to an outcome,
+   "no" falls through to the next row. Text-first, no SVG.
+   ============================================================ */
+.dflow{margin:14px 0;border:1px solid var(--divider);border-radius:12px;background:#fff;padding:14px 16px 10px}
+.dflow .dq{display:grid;grid-template-columns:minmax(200px,1.4fr) auto minmax(160px,1fr);gap:10px;align-items:center}
+.dflow .dq .q{font-size:12.5px;font-weight:600;color:var(--p900);border:1.5px solid var(--p300);border-radius:8px;padding:7px 11px;background:#fff}
+.dflow .dq .yes{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--new);white-space:nowrap}
+.dflow .dq .out{font-family:var(--mono);font-size:11px;color:var(--p800);border:1.5px solid var(--newbd);background:var(--newbg);border-radius:8px;padding:6px 10px}
+.dflow .dq .out.warn{border-color:var(--chgbd);background:var(--chgbg)}
+.dflow .dq .out.fail{border-color:var(--retbd);background:var(--retbg);color:var(--ret)}
+.dflow .dno{font-family:var(--mono);font-size:11px;color:var(--muted);padding:3px 0 3px 18px}
+.dflow .dq.end .q{border-style:dashed;font-weight:500;color:var(--p700)}
+.dflow .dq .out a,.dflow .dq a.out{color:inherit;text-decoration:underline dotted;text-underline-offset:2px}
+.dflow .dq .out.jump::after{content:" ↗";color:var(--p500)} /* an outcome that jumps to another step/diagram */
+
+/* ============================================================
+   Concept figure  —  a hand-drawn inline SVG for the one mechanism
+   prose can't carry (a transform, a timeline, a shape). One figure,
+   one claim in the figcaption. See COMPONENTS.md for SVG rules.
+   ============================================================ */
+figure.concept{margin:16px 0;padding:16px 16px 10px;background:#fff;border:1px solid var(--divider);border-radius:12px;color:var(--p800)}
+figure.concept svg{display:block;max-width:100%;height:auto;margin:0 auto}
+figure.concept figcaption{font-size:12.5px;color:var(--p800);margin-top:10px;padding:8px 12px;border-left:3px solid var(--ember);background:#fbfcfd}
+figure.concept figcaption b{color:var(--p900)}
+
+
+/* ============================================================
+   Spec reader page (body.reader) — DESIGN-SPEC.md rendered by marked,
+   generated by inline-kit.py --spec. Sticky TOC + body; :target glow.
+   ============================================================ */
+body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom:1px solid rgba(255,255,255,.4)}
+.reader-wrap{display:grid;grid-template-columns:250px minmax(0,1fr);gap:34px;max-width:1240px;margin:0 auto;padding:28px 26px 90px}
+@media(max-width:900px){.reader-wrap{grid-template-columns:1fr}.toc{position:static}}
+.toc{position:sticky;top:18px;align-self:start;max-height:calc(100vh - 36px);overflow:auto;font-size:12.5px;border-right:1px solid var(--divider);padding-right:14px}
+.toc .toc-h{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--p600);font-weight:700;margin-bottom:8px}
+.toc a{display:block;color:var(--p800);text-decoration:none;padding:3px 0;line-height:1.35}
+.toc a.toc-h3{padding-left:14px;font-size:12px;color:var(--p700)}
+.toc a:hover{color:var(--ember)}
+.reader-body{max-width:860px;font-size:15px;line-height:1.6}
+.reader-body h2{margin-top:44px;padding-top:18px;border-top:1px solid var(--divider)}
+.reader-body h3{display:block;margin-top:30px;font-size:17px}
+.reader-body h4{margin-top:22px}
+.reader-body blockquote{margin:14px 0;padding:10px 16px;border-left:4px solid var(--p500);background:var(--p50);border-radius:0 8px 8px 0;color:var(--p800)}
+.reader-body blockquote p{margin:.3em 0}
+.reader-body pre{background:#fbfcfd;border:1px solid var(--p200);border-left:4px solid var(--p500);border-radius:8px;padding:12px 15px;font-family:var(--mono);font-size:11.5px;line-height:1.55;overflow-x:auto}
+.reader-body pre code{background:none;border:0;padding:0;font-size:inherit}
+.reader-body a{color:var(--p600)}
+.reader-body hr{border:0;border-top:1px solid var(--divider);margin:26px 0}
+.reader-body .spectable-scroll{margin:12px 0}
+.reader-body .spectable td code{white-space:normal}
+.reader-body .anchor{display:block;position:relative;top:-14px;height:0}
+.reader-body strong.tok{scroll-margin-top:24px}
+.reader-body :target{scroll-margin-top:18px}
+.reader-body h2:target,.reader-body h3:target,.reader-body h4:target{background:#fff8ec;box-shadow:-12px 0 0 #fff8ec,12px 0 0 #fff8ec;border-radius:3px}
+.reader-body strong.tok:target{background:#fff1cc;border-radius:3px;padding:0 3px;box-shadow:0 0 0 2px #fde68a}
+.reader-body .anchor:target + h2,.reader-body .anchor:target + h3{background:#fff8ec;box-shadow:-12px 0 0 #fff8ec,12px 0 0 #fff8ec;border-radius:3px}
+
+/* ============================================================
+   Two-lane activity flow (.af)  —  v5.2
+   An agent (left lane) and the deterministic tools it calls (right
+   lane), read top to bottom. One row = one exchange: the left box says
+   what the caller decides / types / writes, the right box what the tool
+   derives / checks; the middle column carries the call (▸, solid) and
+   the return (◂, dashed) labels. Rows inside .af-loop repeat (dashed
+   frame + label). .af-sec is a full-width "only when…" divider.
+   Notes inside a box: .cc = what this spec changes (amber), .gap = a
+   defect found (red dashed). .af-box.key = where the important value is
+   produced (heavier border, weight only, no colour).
+   Columns stack under 820px.
+   ============================================================ */
+.af{margin:16px 0;border:1px solid var(--divider);border-radius:12px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.05);padding-bottom:8px;overflow:hidden}
+.af-head,.af-row{display:grid;grid-template-columns:26px minmax(0,1.2fr) minmax(110px,.42fr) minmax(0,1fr);gap:0 12px}
+.af-head{background:linear-gradient(135deg,var(--p800),var(--p700));padding:10px 14px;color:#fff;align-items:end}
+.af-h{font-family:var(--mono);font-size:11.5px;font-weight:700;line-height:1.3}
+.af-h .role{display:block;font-size:10.5px;font-weight:400;color:var(--p200);text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px}
+.af-row{align-items:center;padding:8px 14px}
+.af-row + .af-row{border-top:1px solid #eef1f4}
+.af-n{align-self:start;margin-top:8px;font-family:var(--mono);font-size:11px;font-weight:700;color:#fff;background:var(--p600);min-width:20px;height:20px;padding:0 4px;border-radius:10px;display:flex;align-items:center;justify-content:center}
+.af-box{border:1.5px solid var(--p300);border-radius:8px;padding:8px 11px;background:#fff;display:flex;flex-direction:column;gap:5px;min-width:0}
+.af-box.key{border-width:3px;border-color:var(--p700)}
+.af-box .t{font-size:13px;font-weight:600;color:var(--p900);line-height:1.35}
+.af-box .t code{font-size:11.5px}
+.af-box .q{font-family:var(--serif);font-style:italic;font-size:12.5px;color:var(--p700);border-left:3px solid var(--p200);padding-left:9px;line-height:1.45}
+.af-box .io{font-size:12px;color:var(--ink);line-height:1.5;overflow-wrap:anywhere}
+.af-box .io > b:first-child{display:inline-block;font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--p600);background:var(--p50);border:1px solid var(--p100);border-radius:3px;padding:0 4px;margin-right:5px;vertical-align:1px}
+.af-box .io code{font-size:11px}
+.af-box .cc{font-size:11.5px;line-height:1.45;color:#7c4a03;background:var(--chgbg);border:1px solid var(--chgbd);border-radius:6px;padding:4px 8px}
+.af-box .gap{font-size:11.5px;line-height:1.45;color:var(--ret);background:var(--retbg);border:1.5px dashed var(--retbd);border-radius:6px;padding:4px 8px}
+.af-box .cc code,.af-box .gap code{font-size:10.5px}
+.af-none{font-family:var(--mono);font-size:10.5px;color:var(--muted);font-style:italic;padding:0 4px}
+.af-x{display:flex;flex-direction:column;gap:9px;justify-content:center;min-width:0}
+.af-x .c,.af-x .r{display:flex;flex-direction:column;gap:1px}
+.af-x .l{font-family:var(--mono);font-size:11px;line-height:1.3;color:var(--p800);overflow-wrap:anywhere}
+.af-x .r .l{color:var(--muted)}
+.af-x .ln{display:flex;align-items:center;font-size:13px;line-height:1;color:var(--p500)}
+.af-x .c .ln::before{content:"";flex:1;border-top:1.5px solid var(--p400);margin-right:-3px}
+.af-x .r .ln::after{content:"";flex:1;border-top:1.5px dashed var(--p400);margin-left:-3px}
+.af-loop{margin:6px 10px;border:1.5px dashed var(--p400);border-radius:10px;padding:2px 0}
+.af-loop .af-row{padding-left:4px;padding-right:4px}
+.af-lh{font-family:var(--mono);font-size:10.5px;font-weight:700;color:var(--p700);padding:6px 10px 2px}
+.af-sec{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--p600);background:var(--p50);border-top:1px solid var(--p100);border-bottom:1px solid var(--p100);padding:5px 14px 5px 52px}
+.af-legend{display:flex;flex-wrap:wrap;gap:8px 16px;font-size:11.5px;color:var(--p800);padding:8px 14px 0;align-items:center}
+.af-legend span{display:inline-flex;align-items:center;gap:6px}
+.af-legend i{display:inline-block;width:22px;height:13px;border-radius:3px;border:1.5px solid var(--p300);background:#fff}
+.af-legend i.key{border-width:3px;border-color:var(--p700)} .af-legend i.cc{background:var(--chgbg);border-color:var(--chgbd)}
+.af-legend i.gap{background:var(--retbg);border:1.5px dashed var(--retbd)} .af-legend i.loop{border:1.5px dashed var(--p400)}
+@media(max-width:820px){
+  .af-head,.af-row{grid-template-columns:26px minmax(0,1fr)}
+  .af-head > :nth-child(3),.af-head > :nth-child(4){display:none}
+  .af-row > :not(.af-n){grid-column:2}
+  .af-row > .af-x{flex-direction:row;padding:6px 0}
+}
+
+/* ============================================================
+   Before/after pair (.ba)  —  v5.3
+   The same zoom-in drawn twice, Today then After, side by side (stacked
+   under 820px, or always with .ba.stack for wide diagrams). Holds any
+   kit diagram. An amber node's zoom-in uses one so the change shows.
+   ============================================================ */
+.ba{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin:14px 0 6px;align-items:start}
+.ba.stack{grid-template-columns:minmax(0,1fr)}
+.ba-col{min-width:0}
+.ba-h{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--p600);font-weight:700;padding:0 2px 6px;border-bottom:1px dashed var(--p200)}
+.ba-col > :nth-child(2){margin-top:10px}
+@media(max-width:820px){.ba{grid-template-columns:minmax(0,1fr)}}
+
+/* sm pills carry change state too (v5.3); .cur = the live state in an .smx (weight, no colour) */
+.sm .s.new{border-color:var(--new);background:var(--newbg)}
+.sm .s.chg{border-color:var(--chg);background:var(--chgbg)}
+.sm .s.cur{box-shadow:0 0 0 2.5px var(--p950)}
+
+/* ============================================================
+   Mass diagram (.mass)  —  v5.3
+   One row per module: a solid bar for its interface (entry points,
+   params, rules a caller must know) over an outlined bar for its
+   implementation (what it hides). Lengths are relative units 1–12 set
+   with style="--u:N" (the one inline style this component allows).
+   Shallow = the two bars nearly equal; deep = short interface, long body.
+   ============================================================ */
+.mass{margin:14px 0;border:1px solid var(--divider);border-radius:12px;background:#fff;padding:10px 12px 8px;display:flex;flex-direction:column;gap:4px}
+.mass-m{display:grid;grid-template-columns:minmax(120px,.34fr) minmax(0,1fr);gap:4px 14px;align-items:center;padding:7px 8px;border:1.5px solid transparent;border-radius:8px}
+.mass-m + .mass-m{border-top-color:#eef1f4}
+.mass-m .t{grid-row:1/3;font-weight:600;font-size:12.5px;color:var(--p900);line-height:1.3;overflow-wrap:anywhere}
+.mass-m .t .d{display:block;font-family:var(--mono);font-size:11px;font-weight:400;color:var(--muted);margin-top:2px}
+.mass-bar{display:block;height:10px;border-radius:3px;width:calc(var(--u,1) / 12 * 100%);min-width:6px;max-width:100%}
+.mass-bar.if{background:var(--p600)}
+.mass-bar.impl{height:22px;background:var(--p50);border:1.5px solid var(--p400)}
+.mass-m.chg{border-color:var(--chg);background:var(--chgbg)}
+.mass-m.new{border-color:var(--new);background:var(--newbg)}
+.mass-legend{display:flex;flex-wrap:wrap;gap:8px 16px;font-size:11.5px;color:var(--p800);padding:6px 8px 0;border-top:1px solid #eef1f4;margin-top:4px}
+.mass-legend span{display:inline-flex;align-items:center;gap:6px}
+.mass-legend i{display:inline-block;width:22px;border-radius:2px}
+.mass-legend i.if{height:6px;background:var(--p600)} .mass-legend i.impl{height:12px;background:var(--p50);border:1.5px solid var(--p400)}
+
+/* ============================================================
+   Cross-section (.xsec)  —  v5.3
+   Stacked bands, top to bottom, for the layers one call passes through;
+   the line down the left is the call. .thin = a pass-through layer that
+   adds nothing, .thick = the one layer that now owns the work (weight,
+   no colour). Bands take .chg / .new / .gap like system-map nodes.
+   ============================================================ */
+.xsec{position:relative;margin:14px 0;border:1px solid var(--divider);border-radius:12px;background:#fff;padding:10px 14px 18px 40px;display:flex;flex-direction:column;gap:6px}
+.xsec::before{content:"";position:absolute;left:21px;top:34px;bottom:20px;border-left:2px solid var(--p400)}
+.xsec::after{content:"";position:absolute;left:16px;bottom:12px;border:6px solid transparent;border-top:8px solid var(--p400);border-bottom:0}
+.xs-h{font-family:var(--mono);font-size:10.5px;font-weight:700;color:var(--p700);margin:0 0 2px -26px;display:flex;align-items:center;gap:8px}
+.xs-h::before{content:"";width:12px;height:12px;border-radius:50%;background:var(--p700);border:2.5px solid #fff;box-shadow:0 0 0 1.5px var(--p700)}
+.xs-b{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 12px;border:1.5px solid var(--p300);border-left-width:4px;border-radius:6px;padding:8px 12px;background:#fff}
+.xs-b .t{font-family:var(--mono);font-weight:700;font-size:12px;color:var(--p900);overflow-wrap:anywhere}
+.xs-b .d{font-size:12px;color:var(--muted);flex:1;min-width:160px}
+.xs-b.thin{padding:3px 12px;border-style:dashed;border-left-style:solid}
+.xs-b.thin .t{font-weight:500;color:var(--p600)}
+.xs-b.thick{padding:16px 14px;border-width:3px;border-left-width:6px;border-color:var(--p700)}
+.xs-b.chg{border-color:var(--chg);background:var(--chgbg)}
+.xs-b.new{border-color:var(--new);background:var(--newbg)}
+.xs-b.gap{border:1.5px dashed var(--ret);border-left:4px solid var(--ret);background:var(--retbg)} .xs-b.gap .t{color:var(--ret)}
+
+/* ============================================================
+   Call-graph collapse (.cg)  —  v5.3
+   Nested boxes = who calls whom. .cg-f.deep is one module that now owns
+   a subtree: heavy border (weight, no colour), and the calls inside it
+   render faded and dashed because they are internal now. Boxes take
+   .chg / .new. Pair a Today tree with an After tree in a .ba.
+   ============================================================ */
+.cg{margin:14px 0;border:1px solid var(--divider);border-radius:12px;background:#fff;padding:8px 14px 14px}
+.cg-f{border:1.5px solid var(--p300);border-radius:7px;padding:6px 10px 7px;margin-top:7px;background:#fff;min-width:0}
+.cg-f .cg-f{margin-left:16px}
+.cg-f > .t{font-family:var(--mono);font-size:11.5px;font-weight:700;color:var(--p900);overflow-wrap:anywhere}
+.cg-f > .d{font-size:11px;color:var(--muted);margin-left:8px}
+.cg-f.deep{border-width:3px;border-color:var(--p700);padding:9px 12px 11px}
+.cg-f.deep .cg-f{border-style:dashed;border-color:var(--p200);background:var(--p50)}
+.cg-f.deep .cg-f > .t{color:var(--p500);font-weight:500}
+.cg-f.chg{border-color:var(--chg);background:var(--chgbg)}
+.cg-f.new{border-color:var(--new);background:var(--newbg)}
+
+/* ============================================================
+   Interactive state machine (.smx)  —  v5.3
+   An .sm row of states (each .s carries data-state) plus hidden
+   <a class="smx-t" data-ev data-from data-to data-note>label</a>
+   transitions and optional <div class="smx-walk" data-name data-steps>
+   walkthroughs. spec-kit.js adds the controls: the moves available from
+   the current state, walkthrough buttons, a reset, the path taken, and
+   a collapsed list of every transition. Static without JS: the pills.
+   ============================================================ */
+.smx{margin:14px 0;border:1px solid var(--divider);border-radius:12px;background:#fff;padding:10px 16px 12px}
+.smx > .sm{margin:4px 0 10px}
+.smx-t,.smx-walk{display:none}
+.smx-bar{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;padding:9px 0 6px;border-top:1px solid #eef1f4}
+.smx-now{font-family:var(--mono);font-size:11px;color:var(--muted)} .smx-now b{color:var(--p900)}
+.smx-moves,.smx-ctl{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.smx-ctl{margin-left:auto}
+.smx button{appearance:none;font-family:var(--mono);font-size:11px;border:1.5px solid var(--p300);background:#fff;color:var(--p800);border-radius:7px;padding:4px 10px;cursor:pointer}
+.smx button:hover:not(:disabled){border-color:var(--p600);background:var(--p50)}
+.smx button:disabled{opacity:.5;cursor:default}
+.smx .smx-btn{font-weight:700}
+.smx .smx-btn.new{border-color:var(--new);color:var(--new);background:var(--newbg)}
+.smx .smx-btn.chg{border-color:var(--chg);color:var(--chg);background:var(--chgbg)}
+.smx .smx-walkb.on{border-color:var(--p700);box-shadow:inset 0 0 0 1px var(--p700)}
+.smx-wi,.smx-end{font-family:var(--mono);font-size:10.5px;color:var(--muted)}
+.smx-log{margin:4px 0;padding-left:22px;font-size:12px;color:var(--p800)}
+.smx-log li{margin:3px 0}
+.smx-log li b{font-family:var(--mono);font-size:11px;color:var(--p900)}
+.smx-log li .n{display:block;font-size:11px;color:var(--muted)}
+.smx-log li.new b{color:var(--new)} .smx-log li.chg b{color:var(--chg)}
+.smx-log li.smx-empty{list-style:none;margin-left:-22px;color:var(--muted);font-style:italic}
+.smx-all{margin-top:6px;font-size:11.5px;color:var(--p800)}
+.smx-all summary{cursor:pointer;font-family:var(--mono);font-size:10.5px;color:var(--p600)}
+.smx-row{padding:4px 0 4px 14px;border-top:1px solid #f1f4f7;line-height:1.45}
+.smx-row code{font-size:10.5px}
+.smx-row.new{box-shadow:inset 3px 0 0 var(--new)} .smx-row.chg{box-shadow:inset 3px 0 0 var(--chg)}
+
+
+/* ============================================================
+   v6.0 layer — readability. Later rules win over the v5 rules above;
+   fold them in place when this graduates out of the test run.
+   ============================================================ */
+/* system-map nodes: the name is the loudest thing, kind is a quiet word */
+.sysmap .colh{font-family:var(--sans);font-size:12.5px;font-weight:600;letter-spacing:0;text-transform:none;color:var(--ink2);text-align:left;border-bottom:0;padding:0 2px 2px}
+.sys{border:1px solid var(--line);border-radius:8px;padding:10px 12px;min-height:72px;gap:1px}
+.sys .k{background:none;color:var(--muted);padding:0;margin:0 0 1px;font-family:var(--sans);font-size:10.5px;font-weight:600;letter-spacing:.06em;border-radius:0}
+.sys .t{font-size:14px;font-weight:600;color:var(--ink);line-height:1.3}
+.sys .d{font-family:var(--sans);font-size:12.5px;color:var(--ink2);line-height:1.4}
+.sys.ext{border:1.5px dashed var(--wire)}
+.sys.new{border:1.5px solid var(--new);background:var(--newbg);box-shadow:none}.sys.new .k{background:none;color:var(--newink)}
+.sys.chg{border:1.5px solid var(--chg);background:var(--chgbg)}.sys.chg .k{background:none;color:var(--chgink)}
+.sys .ref{font-family:var(--sans);font-size:11px;font-weight:600;padding:1px 8px;top:-12px}
+.sys.chg .ref{color:var(--chgink)}.sys.new .ref{color:var(--newink)}
+.sys.trig .t{font-size:13.5px;color:var(--ink)}.sys.trig .d{font-family:var(--sans);font-size:12px;color:var(--ink2)}
+.sys.gap{border:1.5px dashed #c2341c;background:#fff4f2;color:#9b2615;font-family:var(--sans);font-size:13px;font-weight:600;line-height:1.4;text-align:left;justify-content:center;padding:10px 14px}
+.sysmap svg .e{stroke:var(--wire);stroke-width:1.5}
+.sysmap svg .e.new{stroke:var(--new);stroke-width:2}
+.sysmap svg .e.chg{stroke:var(--chg);stroke-width:2}
+.sysmap svg .e.gap{stroke:#c2341c;stroke-dasharray:5 5;stroke-width:1.5}
+.sysmap svg .e.loop{stroke:var(--ink2);stroke-dasharray:6 4;stroke-width:1.75}
+.sysmap svg .e.happy{stroke:var(--ink);stroke-width:2.25}
+.sysmap svg .e.exit{stroke:var(--wire);stroke-dasharray:5 5}
+.sysmap svg .lbl{font:500 11.5px var(--sans);fill:var(--ink2)}
+.sysmap svg .lbl.new{fill:var(--newink);font-weight:700}.sysmap svg .lbl.chg{fill:var(--chgink);font-weight:700}.sysmap svg .lbl.gap{fill:#9b2615}
+.sysmap svg .lbl.happy{fill:var(--ink);font-weight:700}.sysmap svg .lbl.loop{fill:var(--ink2);font-weight:700}
+.sys-legend{font-size:12.5px;color:var(--ink2);gap:8px 18px;margin:4px 2px 8px}
+.sys-legend i{background:var(--wire)} .sys-legend i.chg{background:var(--chg)} .sys-legend i.new{background:var(--new)}
+.sys-legend i.box{width:18px;height:12px;border-radius:3px;border:1px solid var(--line);background:#fff}
+.sys-legend i.box.new{border:1.5px solid var(--new);background:var(--newbg)} .sys-legend i.box.chg{border:1.5px solid var(--chg);background:var(--chgbg)}
+.sys-legend i.box.gap{border:1.5px dashed #c2341c;background:#fff4f2} .sys-legend i.box.ext{border:1.5px dashed var(--wire)}
+.sys-legend i.happy{height:3px;background:var(--ink)} .sys-legend i.exit{background:repeating-linear-gradient(90deg,var(--wire) 0 5px,transparent 5px 9px)}
+.sys-legend i.loop{background:repeating-linear-gradient(90deg,var(--ink2) 0 6px,transparent 6px 10px)}
+.sys-legend i.dia{width:14px;height:14px;background:#e3e7ed;clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%)} .sys-legend i.dia.gate{background:var(--ink)}
+.sys-legend i.fan{width:16px;height:11px;border-radius:2px;border:1px solid var(--line);background:#fff;box-shadow:3px 3px 0 -1px #fff,3px 3px 0 0 var(--line)}
+/* reference footer: compact chips in a grid, not a stack of full-width rows */
+.sys-refs{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:6px;margin:10px 0 0}
+.sys-refs .refrow{padding:6px 10px;font-size:12.5px;gap:10px;align-items:center}
+.sys-refs .refrow .chip{font-family:var(--sans);font-size:11.5px;min-width:40px;padding:1px 6px}
+.sys-refs .refrow .go{display:none}
+/* claim as the diagram's title: put .claim.lead BEFORE the diagram */
+.claim.lead{font-size:18px;line-height:1.4;font-weight:600;color:var(--ink);border:0;background:none;padding:0;margin:6px 0 12px;max-width:900px}
+.claim.lead b{display:block;font-size:11.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:2px}
+.claim.lead b a.cite{color:inherit}
+.claim.lead + .how,.how{font-size:13px;color:var(--ink2);margin:-6px 0 10px}
+/* full-bleed for wide diagrams: break out of the 1140px column, still inside the viewport */
+.bleed{width:min(1320px,calc(100vw - 32px));margin-left:calc((100% - min(1320px,100vw - 32px))/2)}
+/* path highlighting (spec-kit.js): hover a node, everything off its path dims */
+.sysmap .sys,.sysmap svg .e,.sysmap svg .lbl,.sysmap svg .lblbg{transition:opacity .15s}
+.sysmap.focus .sys:not(.on){opacity:.22}
+.sysmap.focus svg .e:not(.on),.sysmap.focus svg .lbl:not(.on),.sysmap.focus svg .lblbg:not(.on){opacity:.1}
+.sysmap.focus .lane{opacity:.6}
+
+/* ---------- lanes: rows are lanes, the trigger is the lane's label (.sysmap.lanes) ---------- */
+.sysmap.lanes{row-gap:28px;padding:22px 18px 18px}
+.sysmap.lanes .lane{background:var(--lane);border-radius:10px;margin:-10px -8px;z-index:0;position:relative}
+.sysmap.lanes .sys.trig .dot{display:none}
+.sysmap.lanes .sys.trig{align-self:center;padding-left:4px;max-width:170px}
+
+/* ---------- delta map: one grid, a Today/After toggle (.sysmap.delta[data-view]) ----------
+   Elements carry data-in="today" | "after"; no data-in = in both views. Positions never move
+   between views, so the reader sees the change in place. In the After view, boxes the spec does
+   not change fade, so only the coloured ones stand out. */
+.sysmap.delta[data-view="today"] [data-in="after"],.sysmap.delta[data-view="after"] [data-in="today"]{display:none}
+[data-view-of][hidden]{display:none}
+.sysmap.delta[data-view="after"] .sys:not(.new):not(.chg):not(.gap):not(.trig){opacity:.55}
+.dview{display:inline-flex;gap:0;border:1px solid var(--line);border-radius:9px;overflow:hidden;margin:4px 0 10px;background:#fff}
+.dview button{appearance:none;border:0;background:#fff;font:600 13px var(--sans);color:var(--ink2);padding:7px 16px;cursor:pointer;min-height:36px}
+.dview button + button{border-left:1px solid var(--line)}
+.dview button[aria-pressed="true"]{background:var(--ink);color:#fff}
+
+/* ---------- runbook graph (.sysmap.rgraph): for runbooks that branch, fan out or loop ----------
+   The happy path is one row left to right; exits drop below; loops go over the top.
+   Node shapes: .dec automatic decision (grey diamond), .gate human gate (black diamond),
+   .fan step that runs ×N in parallel (stacked cards), .exit an end that isn't the goal (dashed pill). */
+.sysmap.rgraph{row-gap:44px;column-gap:44px;padding:56px 20px 22px} /* no .colh row: step numbers go in the kind word, the top strip is where loops route */
+.sys.dec,.sys.gate{border:0;border-radius:0;background:#e3e7ed;clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%);min-height:118px;padding:18px 26px;align-items:center;justify-content:center;text-align:center}
+.sys.dec .t,.sys.gate .t{font-size:13px;line-height:1.25}
+.sys.gate{background:var(--ink)} .sys.gate .t{color:#fff} .sys.gate .k{color:#c5ccd6;align-self:center}
+.sys.dec .k{align-self:center}
+.sys.fan{--stk:#fff;--stkbd:var(--line);box-shadow:6px 6px 0 -1px var(--stk),6px 6px 0 0 var(--stkbd),12px 12px 0 -1px var(--stk),12px 12px 0 0 var(--stkbd)}  /* the stack overflows into the gap; no margin, so row centres stay aligned */
+.sys.fan.new{--stk:var(--newbg);--stkbd:var(--new)} .sys.fan.chg{--stk:var(--chgbg);--stkbd:var(--chg)}
+.sys.exit{border:1.5px dashed var(--wire);border-radius:999px;min-height:52px;align-items:center;justify-content:center;text-align:center;background:#fff;padding:8px 16px}
+.sys.exit .t{font-size:13px} .sys.exit .d{font-size:12px}
+
+/* ---------- step list (.steps): a runbook that is a straight line ---------- */
+.steps{list-style:none;counter-reset:st;margin:14px 0;padding:16px 18px 6px;background:#fff;border:1px solid var(--divider);border-radius:12px}
+.steps .st{counter-increment:st;position:relative;display:grid;grid-template-columns:34px minmax(0,1fr);column-gap:14px;padding:0 0 16px;margin:0}
+.steps .st::before{content:attr(data-n);grid-row:1/4;width:28px;height:28px;border-radius:50%;background:var(--ink);color:#fff;font:600 12.5px var(--sans);display:flex;align-items:center;justify-content:center;z-index:1}
+.steps .st:not([data-n])::before{content:counter(st)}
+.steps .st::after{content:"";position:absolute;left:13.5px;top:30px;bottom:2px;border-left:1.5px solid var(--line)}
+.steps .st:last-child::after{display:none}
+.steps .sk{font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);line-height:1.4}
+.steps .sn{font-size:14.5px;font-weight:600;color:var(--ink);line-height:1.4}
+.steps .so{font-size:13px;color:var(--ink2);line-height:1.5}
+.steps .st.new::before{background:var(--new)} .steps .st.chg::before{background:var(--chg)}
+.steps .st.gate::before{border-radius:4px;transform:rotate(45deg) scale(.86)}
+
+/* ---------- phase lanes (.plan): build order. Rows = the repo that owns the work, columns = phases.
+   Dependencies are words on the card ("after P0a"), never wires. ---------- */
+.plan{margin:14px 0;display:flex;flex-direction:column;gap:10px}
+.plan-h,.plan-row{display:grid;grid-template-columns:128px repeat(var(--cols,4),minmax(0,1fr));column-gap:12px}
+.plan-h{font-size:12.5px;font-weight:600;color:var(--ink2);padding:0 0 0}
+.plan-row{background:var(--lane);border-radius:10px;padding:12px 0;align-items:start}
+.plan-who{padding:8px 14px;font-size:14px;font-weight:600;color:var(--ink)}
+.plan-cell{display:flex;flex-direction:column;gap:8px;min-width:0}
+.pc{display:flex;flex-direction:column;gap:2px;padding:10px 12px;background:#fff;border:1px solid var(--line);border-radius:8px;min-width:0}
+.pc .pid{font-family:var(--mono);font-size:11.5px;color:var(--muted)}
+.pc b{font-size:14px;font-weight:600;line-height:1.3;color:var(--ink)}
+.pc .pd{font-size:12.5px;line-height:1.4;color:var(--ink2)}
+.pc .pa{font-size:12px;line-height:1.4;color:var(--muted);margin-top:2px}
+.pc.key{border:2px solid var(--ink)}
+.pc.risk{border:1.5px solid #c2341c} .pc.risk .pid{color:#9b2615}
+@media(max-width:820px){.plan-h{display:none}.plan-row{grid-template-columns:1fr;row-gap:8px;padding:12px}.plan-who{padding:0}}
+
+/* ---------- chains (.dfg) that would wrap go vertical instead (class set by spec-kit.js) ---------- */
+.dfg.vert{flex-direction:column;align-items:flex-start;flex-wrap:nowrap}
+.dfg.vert .node{width:min(420px,100%)}
+.dfg.vert .edge{flex-direction:row;max-width:none;min-width:0;padding:6px 0 6px 64px;gap:10px;align-items:center}
+.dfg.vert .edge .ar{transform:rotate(90deg);order:-1}
+.dfg.vert .edge .el br{display:none}
+
+/* descriptive text in diagrams reads as prose, not code */
+.node .nf,.edge .el,.seq-msg .m2,.dflow .out,.dflow .dno,.dflow .yes{font-family:var(--sans)}
+.node .nf{font-size:12px;color:var(--ink2)} .dflow .out{font-size:13px} .dflow .dq .q{font-size:13.5px}
+.ent .row{font-size:12.5px} .ent .row .ty{font-size:11.5px}
+
+/* ============================================================
+   v6.1 — one type system for the whole page.
+   Five sizes, two text colours, one family (mono only for code identifiers):
+     --fs-title 28   tab title (h2)               ink
+     --fs-sec   19   section heading = its claim   ink
+     --fs-body  15   prose, lede, callouts         ink / ink2
+     --fs-small 13   legend, captions, box detail  ink2
+     --fs-micro 11   kind words, column heads      ink2
+   No eyebrow, no sub line, no letter badges, no coloured rules on prose.
+   ============================================================ */
+:root{--fs-title:28px;--fs-sec:19px;--fs-body:15px;--fs-small:13px;--fs-micro:11px;--muted:#4b5361}
+body{color:var(--ink);font-size:var(--fs-body)}
+h2{font-family:var(--sans);font-size:var(--fs-title);font-weight:650;letter-spacing:-.015em;line-height:1.2;color:var(--ink);margin:8px 0 8px}
+h2 .eyebrow,h2 .sub{display:none}
+h3{display:block;font-size:var(--fs-sec);font-weight:600;line-height:1.35;color:var(--ink);margin:44px 0 10px;max-width:880px}
+h3 .hn{display:none}
+h4{font-size:var(--fs-body);color:var(--ink)}
+h2 code,h3 code,.claim code{font-size:.9em;background:none;border:0;padding:0;color:inherit}
+.lede{font-size:16px;line-height:1.55;color:var(--ink2);border-left:0;padding-left:0;margin:4px 0 8px;max-width:860px}
+/* a section heading IS the claim of the diagram under it; the citation trails it, small and grey */
+h3.claim{border:0;background:none;padding:0;font-size:var(--fs-sec);font-weight:600;color:var(--ink);margin:44px 0 10px}
+h3.claim .src{font-size:var(--fs-small);font-weight:400;color:var(--ink2);margin-left:6px;white-space:nowrap}
+h3.claim .src a.cite{color:inherit;text-decoration:underline dotted;text-underline-offset:2px}
+/* a claim that is not a heading (a caption under a table) */
+p.claim{font-size:var(--fs-small);color:var(--ink2);border-left:0;background:none;padding:0;margin:8px 0 24px}
+p.claim b{color:var(--ink);font-weight:600}
+/* legend + view toggle share one row directly under the heading */
+.sys-legend{font-size:var(--fs-small);color:var(--ink2);margin:0 0 10px;align-items:center}
+.dview{margin:0 16px 10px 0;vertical-align:middle}
+.dview + .sys-legend{display:inline-flex;vertical-align:middle}
+.how{display:none}
+/* callouts: one style, label in the body face */
+.callout,.callout.ember,.callout.new{background:#fff;border:1px solid var(--divider);border-left:1px solid var(--divider);border-radius:10px;padding:14px 18px;font-size:var(--fs-body);color:var(--ink)}
+.callout .lab,.callout.ember .lab,.callout.new .lab{font-family:var(--sans);font-size:var(--fs-small);letter-spacing:0;text-transform:none;color:var(--ink2);font-weight:600;margin-bottom:4px}
+.callout.ember{border-color:#f2cf8e;background:#fffaf0}
+/* diagram chrome in the same scale */
+.sysmap .colh,.plan-h{font-size:var(--fs-micro);font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink2)}
+.sys .k,.steps .sk,.pc .pid{font-size:var(--fs-micro);color:var(--ink2)}
+.sys .d,.pc .pd,.steps .so,.node .nf{font-size:var(--fs-small);color:var(--ink2)}
+.pc .pa{font-size:var(--fs-small);color:var(--ink2)}
+.sys-refs .refrow{font-size:var(--fs-small);color:var(--ink2)}
+.card{font-size:var(--fs-body);color:var(--ink)} .card b{color:var(--ink)}
+.catgrp .cath{font-family:var(--sans);font-size:var(--fs-body);font-weight:600;background:#fff;color:var(--ink);border-bottom:1px solid var(--divider)}
+.catgrp .cath .cgl{background:var(--lane);color:var(--ink2)}
+.uci{font-size:var(--fs-small)} .uci .uid{color:var(--ink2)}
+.uc .uch{background:#fff;color:var(--ink);border-bottom:1px solid var(--divider)}
+.uc .uch .uct{font-family:var(--sans);font-size:var(--fs-body);font-weight:600}
+.uc .uch .actor{font-family:var(--sans);font-size:var(--fs-micro);color:var(--ink2);font-weight:600;letter-spacing:.06em}
+.uc .uch .ucn{background:var(--lane);color:var(--ink2)}
+.uc .ucsub{font-size:var(--fs-small);color:var(--ink2);background:#fff}
+.spectable{font-size:var(--fs-small)}
+.spectable thead th{font-family:var(--sans);font-size:var(--fs-micro);background:#fff;color:var(--ink2);border-bottom:1px solid var(--divider)}
+.xref,.foot{font-family:var(--sans);font-size:var(--fs-small);color:var(--ink2);background:none;border-color:var(--divider)}
+.callout .lab::first-letter{text-transform:uppercase}
+.pc .pid{font-family:var(--sans);font-weight:600;letter-spacing:.02em}
+
+/* ============================================================
+   v6.2 — linked entity diagram (.erd.linked): the relationships are
+   drawn between the entity cards by spec-kit.js (same <a class="sys-edge">
+   markup as a system map), labelled in words, arrow from the one to the
+   many. Replaces the crow's-foot .rels text panel.
+   ============================================================ */
+.erd.linked{position:relative;display:grid;gap:64px 80px;align-items:center;padding:28px 24px}
+.erd.linked .ent{position:relative;z-index:2;min-width:0;align-self:center}
+.erd.linked svg.edges{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1;overflow:visible}
+.erd.linked svg .e{fill:none;stroke:var(--wire);stroke-width:1.5}
+.erd.linked svg .e.new{stroke:var(--new);stroke-width:2}
+.erd.linked svg .e.chg{stroke:var(--chg);stroke-width:2}
+.erd.linked svg .lbl{font:600 12px var(--sans);fill:var(--ink2)}
+.erd.linked svg .lbl.new{fill:var(--newink)}
+.erd.linked svg .lblbg{fill:#fbfcfd;stroke:none}
+.erd.linked .ent,.erd.linked svg .e,.erd.linked svg .lbl{transition:opacity .15s}
+.erd.linked.focus .ent:not(.on){opacity:.25}
+.erd.linked.focus svg .e:not(.on),.erd.linked.focus svg .lbl:not(.on),.erd.linked.focus svg .lblbg:not(.on){opacity:.1}
+.ent .eh .stereo{font-family:var(--sans);font-size:var(--fs-micro);font-weight:600;letter-spacing:.06em}
+
+/* ============================================================
+   v6.2 — written content (.doc): goals, rationale, non-goals read as a
+   document — numbered paragraphs with a bold lead phrase — not as cards.
+   Cards are only for things the reader compares side by side.
+   ============================================================ */
+.doc{max-width:780px;font-size:16px;line-height:1.65;color:var(--ink)}
+.doc p{margin:0 0 14px}
+.doc ol.goals{list-style:none;counter-reset:g;padding:0;margin:14px 0 18px}
+.doc ol.goals > li{counter-increment:g;display:grid;grid-template-columns:44px minmax(0,1fr);margin:0 0 14px}
+.doc ol.goals > li::before{content:"G" counter(g);font-weight:600;color:var(--ink2);font-size:var(--fs-body);line-height:1.65}
+.doc ol.goals > li b:first-child{color:var(--ink)}
+.doc .aside{color:var(--ink2);font-size:var(--fs-small)}
+.doc code{font-size:.88em}
+/* entity cards on the page type system: change state is fill + border (like system-map boxes),
+   the column name is the only mono text, its description sits under it in grey sans */
+.ent{border:1px solid var(--line);border-radius:10px;box-shadow:none}
+.ent .eh,.ent.exist .eh{background:#fff;color:var(--ink);border-bottom:1px solid var(--divider);padding:9px 12px}
+.ent.newt{border:1.5px solid var(--new)} .ent.newt .eh{background:var(--newbg)} .ent.newt .eh .stereo{color:var(--newink)}
+.ent.changed{border:1.5px solid var(--chg)} .ent.changed .eh{background:var(--chgbg)} .ent.changed .eh .stereo{color:var(--chgink)}
+.ent .eh .en{font-size:13.5px;color:var(--ink)} .ent .eh .stereo{color:var(--ink2);opacity:1}
+.ent .row{flex-wrap:wrap;row-gap:1px;padding:6px 12px;font-size:var(--fs-small)}
+.ent .row .nm{font-size:12.5px;color:var(--ink)}
+.ent .row .ty{flex:1 0 100%;margin-left:0;max-width:none;text-align:left;font-family:var(--sans);font-size:var(--fs-small);color:var(--ink2);overflow-wrap:normal}
+.ent .row .gut + .b ~ .ty,.ent .row .gut ~ .ty{padding-left:17px}
+.ent .b{background:none;border:0;padding:0;font-family:var(--sans);font-size:10.5px;color:var(--ink2);letter-spacing:.04em}
+.ent .b-new{color:var(--newink)}
+.ent .row.hi{background:var(--lane)}
+.ent .row.add .nm{color:var(--newink)}
+.ent .note{font-family:var(--sans);font-style:normal;font-size:var(--fs-small);color:var(--ink2);background:#fff;padding:8px 12px}
+/* v6.2: figure captions match p.claim; step markers grow for 2.11-style numbers */
+figure.concept figcaption{font-size:var(--fs-small);color:var(--ink2);border-left:0;background:none;padding:0;margin-top:10px}
+figure.concept figcaption b{color:var(--ink);font-weight:600}
+.steps .st::before{width:auto;min-width:28px;padding:0 6px;border-radius:14px;box-sizing:border-box;justify-self:start}
+
+/* ============================================================
+   v6.3 — masthead and tabs on the page type system.
+   The masthead is a document title block, not a banner: light ground,
+   sans throughout, aligned to the content column, one primary action.
+     .kicker   project · topic           13px, grey, sentence case
+     h1        the spec's title          34px, ink
+     p         what the spec is about    17px, grey, ≤ 2 sentences
+     .meta     status pill, date, companion file
+     a.spec-link   "Read the spec"        the one button
+   Tabs: a light underline bar, no numbers.
+   ============================================================ */
+header.masthead{background:#fff;color:var(--ink);padding:44px max(26px,calc((100% - 1088px)/2)) 30px;border-bottom:1px solid var(--divider);overflow:visible}
+header.masthead::after{display:none}
+header.masthead .kicker{font-family:var(--sans);font-size:var(--fs-small);font-weight:600;letter-spacing:0;text-transform:none;color:var(--ink2)}
+header.masthead h1{font-family:var(--sans);font-size:34px;font-weight:700;letter-spacing:-.02em;line-height:1.15;color:var(--ink);margin:8px 0 12px;max-width:900px}
+header.masthead p{color:var(--ink2);font-size:17px;line-height:1.55;max-width:780px;margin:0}
+header.masthead p code{background:var(--lane);border:0;color:var(--ink)}
+header.masthead .meta{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;margin-top:18px;font-family:var(--sans);font-size:var(--fs-small);color:var(--ink2)}
+header.masthead .meta .status{font-weight:600;color:var(--chgink);background:var(--chgbg);border:1px solid var(--chgbd);border-radius:999px;padding:2px 10px}
+header.masthead .meta code{font-size:12px;background:none;border:0;padding:0;color:var(--ink2)}
+header.masthead a.spec-link{display:inline-flex;align-items:center;gap:6px;margin-top:20px;font:600 14px var(--sans);color:#fff;background:var(--ink);border:0;border-radius:8px;padding:10px 16px;min-height:40px;box-sizing:border-box}
+header.masthead a.spec-link:hover{background:#000}
+nav.tabs{background:#fff;box-shadow:none;border-bottom:1px solid var(--divider);gap:4px;padding:0 max(14px,calc((100% - 1088px)/2 - 12px))}
+nav.tabs button{color:var(--ink2);font-size:14.5px;font-weight:500;padding:14px 12px 12px;border-bottom:2px solid transparent;transition:color .12s,border-color .12s}
+nav.tabs button .n{display:none}
+nav.tabs button:hover{color:var(--ink);background:none}
+nav.tabs button.active{color:var(--ink);font-weight:600;border-bottom-color:var(--ink);background:none}
+nav.tabs button:focus-visible{outline:2px solid var(--new);outline-offset:-2px}
+nav.tabs{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none} nav.tabs::-webkit-scrollbar{display:none}
+nav.tabs button{white-space:nowrap;flex:0 0 auto}
+@media(max-width:640px){header.masthead{padding:28px 16px 22px} header.masthead h1{font-size:27px}}
+
+/* ============================================================
+   v6.4 — request, activity, response (.rar)
+   One call that hides work. Caller on the left, the called thing on the
+   right; the request crosses at the top, the steps run down the right,
+   the response crosses back at the bottom. A child process / sub-call
+   nests as .rar-step.child (dashed) with its own .rar-sub steps.
+   Markup: see COMPONENTS.md → Request, activity, response.
+   ============================================================ */
+.rar{display:grid;grid-template-columns:minmax(0,.9fr) 92px minmax(0,1.35fr);grid-template-rows:auto auto 1fr auto;margin:14px 0;padding:22px 22px 24px;background:#fff;border:1px solid var(--divider);border-radius:12px;align-items:start}
+.rar-h{display:flex;flex-direction:column;gap:2px;padding-bottom:14px}
+.rar-h .k{font-size:var(--fs-micro);font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink2)}
+.rar-h b{font-size:16px;font-weight:600;color:var(--ink)} .rar-h .d{font-size:var(--fs-small);color:var(--ink2)}
+.rar-h.caller{grid-area:1/1} .rar-h.called{grid-area:1/3}
+.rar-req,.rar-res{display:flex;flex-direction:column;gap:8px;padding:14px 16px;border-radius:10px}
+.rar-req{grid-area:2/1;background:var(--newbg);border:1.5px solid var(--new)}
+.rar-res{grid-area:4/1;background:var(--lane);border:1.5px solid var(--ink);align-self:end}
+.rar-req .lab,.rar-res .lab{font-size:var(--fs-micro);font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink2)}
+.rar-req .lab{color:var(--newink)}
+.rar pre{margin:0;padding:10px 12px;background:#fff;border-radius:8px;font-family:var(--mono);font-size:12px;line-height:1.55;white-space:pre-wrap;color:var(--ink);overflow-x:auto}
+.rar .note{font-size:var(--fs-small);color:var(--ink2);line-height:1.45}
+.rar-wait{grid-area:3/1;align-self:stretch;display:flex;flex-direction:column;align-items:center;gap:8px;padding:10px 0;min-height:60px}
+.rar-wait::before,.rar-wait::after{content:"";flex:1;border-left:2px dashed var(--line)}
+.rar-wait span{font-size:var(--fs-small);color:var(--ink2);text-align:center;max-width:220px}
+.rar-arrow{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:12px;font-weight:600;padding-top:30px}
+.rar-arrow.in{grid-area:2/2;color:var(--newink)} .rar-arrow.out{grid-area:4/2;color:var(--ink);align-self:end;padding-bottom:30px}
+.rar-arrow i{display:block;width:70px;height:2px;background:currentColor;position:relative}
+.rar-arrow.in i::after{content:"";position:absolute;right:-2px;top:-5px;border:6px solid transparent;border-left:9px solid currentColor;border-right:0}
+.rar-arrow.out i::before{content:"";position:absolute;left:-2px;top:-5px;border:6px solid transparent;border-right:9px solid currentColor;border-left:0}
+.rar-steps{grid-area:2/3/5/4;list-style:none;margin:0;padding:0;counter-reset:rs;display:flex;flex-direction:column}
+.rar-step{counter-increment:rs;position:relative;display:grid;grid-template-columns:28px minmax(0,1fr);column-gap:12px;padding:14px 16px;border:1px solid var(--line);border-radius:10px;background:#fff;margin-bottom:34px}
+.rar-step:last-child{margin-bottom:0}
+.rar-step::before{content:counter(rs);grid-row:1/20;width:28px;height:28px;border-radius:14px;background:var(--ink);color:#fff;font:600 12.5px var(--sans);display:flex;align-items:center;justify-content:center}
+.rar-step::after{content:"";position:absolute;left:50%;bottom:-30px;height:24px;border-left:2px solid var(--wire)}
+.rar-step:last-child::after{display:none}
+.rar-step > *{grid-column:2;min-width:0}
+.rar-step b{font-size:14.5px;font-weight:600;color:var(--ink)}
+.rar-step > span{font-size:13.5px;line-height:1.5;color:var(--ink2)}
+.rar-step pre{margin-top:8px;background:var(--lane)}
+.rar-step .branch{justify-self:start;margin-top:6px;font-size:12px;font-weight:600;color:var(--chgink);background:var(--chgbg);border:1px solid var(--chgbd);border-radius:999px;padding:2px 10px}
+.rar-step.child{border:1.5px dashed var(--ink);background:#fafbfc}
+.rar-sub{grid-column:2;list-style:none;margin:10px 0 0;padding:12px 14px;border-left:3px solid var(--ink);background:#fff;border-radius:0 8px 8px 0;display:flex;flex-direction:column;gap:22px}
+.rar-sub li{position:relative;padding:8px 10px;border:1px solid var(--line);border-radius:8px;font-size:13px;color:var(--ink2)}
+.rar-sub li b{display:block;font-size:13.5px;color:var(--ink)}
+.rar-sub li + li::before{content:"";position:absolute;left:50%;top:-20px;height:16px;border-left:2px solid var(--wire)}
+@media(max-width:820px){.rar{grid-template-columns:minmax(0,1fr);grid-template-rows:none}.rar-h.caller,.rar-h.called,.rar-req,.rar-res,.rar-steps,.rar-arrow,.rar-wait{grid-area:auto}.rar-wait{display:none}.rar-arrow{flex-direction:row;padding:8px 0}}
+
+</style>
+</head>
+<body>
+
+<header class="masthead">
+  <div class="kicker">Intake · DB schema</div>
+  <h1>Intake checklist DB schema and the bureau sync</h1>
+  <p>Intake checklist items become rows in four cityhall tables, copied one way from bureau on every merge to main. Bureau stays the source of truth; each item gets a stable ID that survives the moves and renames its legacy ID never did.</p>
+  <div class="meta"><span class="status">Draft v1.1</span><span>14 Oct 2026</span><span>Parent: intake north star, I1</span><span>Source of truth: <code>DESIGN-SPEC.md</code></span></div>
+  <a class="spec-link" href="DESIGN-SPEC.html">Read the spec →</a>
+</header>
+
+<nav class="tabs">
+  <button data-tab="overview" class="active">Overview</button>
+  <button data-tab="files">Files in bureau</button>
+  <button data-tab="tables">The tables</button>
+  <button data-tab="sync">The sync</button>
+  <button data-tab="rollout">Rollout</button>
+</nav>
+
+<main data-spec="DESIGN-SPEC.html">
+
+  <section class="panel active" id="overview">
+    <h2>Overview</h2>
+    <p class="lede">Austin's 192 intake items live only as markdown rows in 14 bureau guides, under IDs that change when an item moves. The 60 CC reviews in prod cite them by string, across 10 checklist versions (§Problem).</p>
+
+    <h3 class="claim" data-view-of="flow" data-in="today">Nothing in the App DB holds an intake item; reviews point at markdown by string <span class="src">§Problem</span></h3>
+    <h3 class="claim" data-view-of="flow" data-in="after" hidden>A merge to main writes a new checklist revision, and only when its items changed <span class="src">D8, D10, D13</span></h3>
+    <div class="sys-legend"><span><i class="box"></i>exists</span><span><i class="box new"></i>new</span><span><i class="box gap"></i>the gap</span></div>
+    <div class="sysmap lanes delta" id="flow" data-view="today" style="grid-template-columns:.8fr repeat(3,1fr)">
+      <div class="colh" style="grid-area:1/2">bureau</div>
+      <div class="colh" style="grid-area:1/3">CI and Actions</div>
+      <div class="colh" style="grid-area:1/4">App DB (cityhall)</div>
+
+      <div class="lane" style="grid-area:2/1/3/-1"></div>
+      <div class="lane" style="grid-area:3/1/4/-1"></div>
+      <div class="lane" style="grid-area:4/1/5/-1"></div>
+      <div class="lane" style="grid-area:5/1/6/-1"></div>
+
+      <div class="sys trig" id="o-t1" style="grid-area:2/1"><span class="dot"></span><span class="t">A PR edits a guide</span></div>
+      <div class="sys trig" id="o-t2" style="grid-area:3/1"><span class="dot"></span><span class="t">Merge to main</span></div>
+      <div class="sys trig" id="o-t3" style="grid-area:4/1"><span class="dot"></span><span class="t">Merge to main</span><span class="d">conventions.yaml</span></div>
+      <div class="sys trig" id="o-t4" style="grid-area:5/1"><span class="dot"></span><span class="t">A CC review runs</span></div>
+
+      <div class="sys" id="o-guides" style="grid-area:2/2"><span class="k">markdown + side files</span><span class="t">guides, v2.7-trimmed</span><span class="d">192 items in 14 guides</span></div>
+      <div class="sys new" id="o-lint" data-in="after" style="grid-area:2/3"><a class="ref" href="#detail-lint">D12 ↓</a><span class="k">CI check</span><span class="t">lint:intake</span><span class="d">sidecar must match the guides</span></div>
+
+      <div class="sys new" id="o-files" data-in="after" style="grid-area:3/2"><a class="ref" href="#detail-files">D1 · D3 ↓</a><span class="k">files</span><span class="t">intake.yaml + intake-ids.tsv</span><span class="d">ref → austin-0001 …</span></div>
+      <div class="sys new" id="o-sync" data-in="after" style="grid-area:3/3"><a class="ref" href="#detail-sync">D13 ↓</a><span class="k">GitHub Action</span><span class="t">sync-intake.yml</span><span class="d">one call per version</span></div>
+      <div class="sys store new" id="o-tables" data-in="after" style="grid-area:3/4"><a class="ref" href="#detail-tables">D6 ↓</a><span class="k">4 tables</span><span class="t">intake_checklist_*</span><span class="d">+ jurisdiction_intake</span></div>
+      <div class="sys gap" id="o-none" data-in="today" style="grid-area:3/3/4/5">no table holds an item — the only DB copy is IG's commit-keyed cache</div>
+
+      <div class="sys" id="o-conv" style="grid-area:4/3"><span class="k">the precedent</span><span class="t">sync-conventions.yml</span><span class="d">same one-way pattern</span></div>
+      <div class="sys store" id="o-jur" style="grid-area:4/4"><span class="k">table</span><span class="t">jurisdictions</span></div>
+
+      <div class="sys" id="o-cc" style="grid-area:5/3"><span class="k">runbook</span><span class="t">completeness-check</span><span class="d">unchanged</span></div>
+      <div class="sys store" id="o-rc" style="grid-area:5/4"><span class="k">table</span><span class="t">review_comments</span><span class="d">refs as strings: cc-1:CC-1-01</span></div>
+
+      <a class="sys-edge new" data-in="after" data-from="o-guides" data-to="o-lint">checked</a>
+      <a class="sys-edge new" data-in="after" data-from="o-files" data-to="o-sync"></a>
+      <a class="sys-edge happy" data-in="after" data-from="o-sync" data-to="o-tables">RPC</a>
+      <a class="sys-edge" data-from="o-conv" data-to="o-jur"></a>
+      <a class="sys-edge" data-from="o-cc" data-to="o-rc"></a>
+      <a class="sys-edge new" data-in="after" data-from="o-jur" data-to="o-tables">FK</a>
+    </div>
+    <div class="sys-refs" data-view-of="flow" data-in="after" hidden>
+      <a class="refrow new" data-ref="D1"><span class="chip">D1</span><span class="txt">intake.yaml says which checklist a jurisdiction uses, and why</span></a>
+      <a class="refrow new" data-ref="D3"><span class="chip">D3</span><span class="txt">a sidecar per version maps each review's ref to a stable ID</span></a>
+      <a class="refrow new" data-ref="D6"><span class="chip">D6</span><span class="txt">four tables, keyed naturally rather than by uuid</span></a>
+      <a class="refrow new" data-ref="D12"><span class="chip">D12</span><span class="txt">lint:intake fails a PR whose sidecar drifts from its guides</span></a>
+      <a class="refrow new" data-ref="D13"><span class="chip">D13</span><span class="txt">sync-intake.yml writes on merge, after validating everything</span></a>
+    </div>
+
+    <h3>What doesn't change</h3>
+    <div class="doc">
+      <p><b>Bureau stays the source of truth.</b> The tables are a synced copy. Nothing is deleted or updated in place, and a manual edit in the DB would be overwritten by the next sync (D8).</p>
+      <p><b>The CC runbook reads exactly what it reads today.</b> It globs <code>*.md</code> and names each TSV it uses, so it never sees <code>intake-ids.tsv</code>. Inspector General's <code>bureau_checklist_*</code> cache is untouched too.</p>
+    </div>
+  </section>
+
+  <section class="panel" id="files">
+    <h2>Files in bureau</h2>
+    <p class="lede">Two new files per jurisdiction: <code>intake.yaml</code> says which checklist it uses, and an <code>intake-ids.tsv</code> beside each synced version maps every ref to a stable ID. The baseline gets its own folder outside <code>jurisdictions/</code> (D1–D3).</p>
+
+    <h3 class="claim" id="detail-files">Each review's ref resolves to a stable ID through its version's sidecar <span class="src">D3, D4</span></h3>
+    <div class="spectable-scroll"><table class="spectable">
+      <thead><tr><th>ref (what reviews store)</th><th>id (stable)</th><th>derived_from</th></tr></thead>
+      <tbody>
+        <tr><td><code>cc-1:CC-1-01</code></td><td><code>austin-0001</code></td><td><span class="none">—</span></td></tr>
+        <tr><td><code>cc-1:CC-1-02</code></td><td><code>austin-0002</code></td><td><span class="none">—</span></td></tr>
+        <tr><td colspan="3"><span class="none">… 192 rows for v2.7-trimmed, assigned in comment-number order, so on day one austin-NNNN = comment number. That's a coincidence of the backfill, not a rule (D5).</span></td></tr>
+      </tbody>
+    </table></div>
+
+    <h3>How a jurisdiction says which checklist it uses</h3>
+    <div class="prompt"><span class="ph">jurisdictions/austin/intake.yaml (D1)</span>checklist: austin                       # own checklist id (= slug), or generic
+basis: formal                           # formal | none_found | inconclusive
+application_type: Consolidated Site Plan
+path: completeness-check                # own checklists only
+next_item: 193                          # high-water mark for new ids (D4)
+evidence:
+  summary: Austin runs a formal Completeness Check before technical review …
+  sources: [ { label: CC Submittal Checklist, url: "https://…" } ]
+decided_by: will
+decided_at: 2026-10-14</div>
+
+    <h3>The rules the files follow</h3>
+    <div class="doc">
+      <ol class="goals">
+        <li><div><b>The basis decides the checklist.</b> <code>formal</code> means the jurisdiction's own checklist; <code>none_found</code> or <code>inconclusive</code> means <code>generic</code>, the baseline. No <code>intake.yaml</code> at all means no assignment, which is different from <code>none_found</code>.</div></li>
+        <li><div><b>IDs are <code>{checklist}-{NNNN}</code> and never reused.</b> A new item takes <code>next_item</code> and the same PR raises it, so a number deleted from a folder edited in place stays retired. A text edit keeps the ID; a split mints new ones and records <code>derived_from</code>.</div></li>
+        <li><div><b>Only versions with a sidecar sync.</b> Austin v2.7-trimmed is backfilled now. The other 9 versions can follow by adding their sidecars (Q1).</div></li>
+        <li><div><b>The baseline lives at <code>bureau/intake/baseline/</code></b>, outside <code>jurisdictions/</code>, so the syncs that walk that folder never mistake it for a jurisdiction. It stays empty until its own sub-spec fills it.</div></li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="panel" id="tables">
+    <h2>The tables</h2>
+    <p class="lede">Four tables, all keyed by short text IDs rather than uuids: a version is <code>('austin', 3)</code> and an item is <code>('austin', 3, 'austin-0042')</code>. Everyone signed in can read them; only the sync writes (D6, D7).</p>
+
+    <h3 class="claim" id="detail-tables">A checklist has revisions, and each revision holds its own copy of every item <span class="src">D6, D10</span></h3>
+    <div class="sys-legend"><span><i class="box"></i>exists</span><span><i class="box new"></i>new</span><span><i class="new"></i>new relationship</span><span>arrows point from the one to the many</span></div>
+    <div class="erd linked" style="grid-template-columns:repeat(3,minmax(0,1fr))">
+      <div class="ent exist" id="t-jur" style="grid-area:1/1">
+        <div class="eh"><span class="en">jurisdictions</span><span class="stereo">EXISTS</span></div>
+        <div class="row"><span class="b b-pk">PK</span><span class="nm">slug</span><span class="ty">written by sync-conventions</span></div>
+        <div class="note">unchanged; one writer per table keeps "bureau wins" clear</div>
+      </div>
+      <div class="ent newt" id="t-ji" style="grid-area:1/2">
+        <div class="eh"><span class="en">jurisdiction_intake</span><span class="stereo">NEW</span></div>
+        <div class="row"><span class="b b-pk">PK</span><span class="b b-fk">FK</span><span class="nm">jurisdiction_slug</span></div>
+        <div class="row"><span class="b b-fk">FK</span><span class="nm">checklist_id</span><span class="ty">its own checklist, or generic</span></div>
+        <div class="row"><span class="nm">basis</span><span class="ty">formal · none_found · inconclusive</span></div>
+        <div class="row"><span class="nm">application_type · evidence</span><span class="ty">intake.yaml's evidence, verbatim</span></div>
+        <div class="row"><span class="nm">decided_by · decided_at · bureau_commit</span></div>
+        <div class="note">formal ⇔ checklist isn't generic</div>
+      </div>
+      <div class="ent newt" id="t-chk" style="grid-area:1/3">
+        <div class="eh"><span class="en">intake_checklists</span><span class="stereo">NEW</span></div>
+        <div class="row"><span class="b b-pk">PK</span><span class="nm">id</span><span class="ty">'austin' · 'generic'</span></div>
+        <div class="row"><span class="nm">kind</span><span class="ty">jurisdiction · baseline</span></div>
+        <div class="row"><span class="b b-fk">FK</span><span class="nm">jurisdiction_slug</span><span class="ty">null on the baseline</span></div>
+        <div class="row"><span class="nm">name · bureau_path · bureau_commit</span></div>
+        <div class="note">a jurisdiction's checklist id is its slug</div>
+      </div>
+      <div class="ent newt" id="t-items" style="grid-area:2/1/3/3">
+        <div class="eh"><span class="en">intake_checklist_items</span><span class="stereo">NEW</span></div>
+        <div class="row"><span class="b b-pk">PK</span><span class="nm">checklist_id · revision · item_id</span><span class="ty">'austin-0042'; must carry the checklist's prefix</span></div>
+        <div class="row hi"><span class="nm">legacy_ref</span><span class="ty">'cc-1:CC-1-01', what reviews store; unique per revision</span></div>
+        <div class="row"><span class="nm">derived_from</span><span class="ty">the IDs a split or merge came from</span></div>
+        <div class="row"><span class="nm">group_key · group_title · sort_order · comment_number</span><span class="ty">'cc-1', the guide's H1, its position, its comment number (unique per revision)</span></div>
+        <div class="row"><span class="nm">title · item_text</span><span class="ty">the authored title (or null) and the Item cell</span></div>
+        <div class="row"><span class="nm">condition · location · location_binding · requirement_source · source_type · fail_status</span><span class="ty">the guide row's cells, by header name; null where a table lacks the column</span></div>
+        <div class="row"><span class="nm">citations</span><span class="ty">the item's entry from source-citations.json</span></div>
+        <div class="row"><span class="nm">jurisdiction_slug</span><span class="ty">copied from the checklist, so "items for X" needs no join</span></div>
+      </div>
+      <div class="ent newt" id="t-ver" style="grid-area:2/3">
+        <div class="eh"><span class="en">intake_checklist_versions</span><span class="stereo">NEW</span></div>
+        <div class="row"><span class="b b-pk">PK</span><span class="nm">checklist_id · revision</span><span class="ty">1, 2, 3 … per checklist</span></div>
+        <div class="row"><span class="nm">label</span><span class="ty">the folder name, 'v2.7-trimmed'</span></div>
+        <div class="row hi"><span class="nm">content_hash</span><span class="ty">sha256 of the item rows; unique with label</span></div>
+        <div class="row"><span class="nm">is_current</span><span class="ty">at most one per checklist; follows CURRENT_VERSION</span></div>
+        <div class="row"><span class="nm">item_count · bureau_commit · synced_at</span></div>
+      </div>
+
+      <a class="sys-edge new" data-from="t-jur" data-to="t-ji">1 → 1</a>
+      <a class="sys-edge new" data-from="t-chk" data-to="t-ji">1 → many</a>
+      <a class="sys-edge new" data-from="t-chk" data-to="t-ver">1 → many</a>
+      <a class="sys-edge new" data-from="t-ver" data-to="t-items">1 → many</a>
+    </div>
+    <p class="claim"><b>Why a revision copies every item:</b> one label has held several sets of content, because v2.7-trimmed was edited in place from July to October. A review can point at any revision, so nothing is updated or deleted.</p>
+  </section>
+
+  <section class="panel" id="sync">
+    <h2>The sync</h2>
+    <p class="lede">On a merge to main, <code>sync-intake.yml</code> validates every file first, then calls <code>intake_sync_version()</code> once per version that has a sidecar, then upserts <code>jurisdiction_intake</code>. If any validation fails, nothing is written (D13).</p>
+
+    <h3 class="claim" id="detail-sync">One version is written in one transaction, and only when its hash is new <span class="src">D8, D10, D11</span></h3>
+    <div class="rar">
+      <div class="rar-h caller"><span class="k">caller</span><b>sync:intake</b><span class="d">bureau Action, service-role key, once per version dir with a sidecar</span></div>
+      <div class="rar-h called"><span class="k">called</span><b>intake_sync_version(p jsonb)</b><span class="d">cityhall DB function, SECURITY INVOKER, service_role only</span></div>
+      <div class="rar-req">
+        <span class="lab">Request</span>
+<pre>{
+  "checklist": { "id": "austin",
+    "kind": "jurisdiction",
+    "jurisdiction_slug": "austin",
+    "name": "…",
+    "bureau_path": "jurisdictions/austin/
+                    completeness-check" },
+  "version": { "label": "v2.7-trimmed",
+    "content_hash": "sha256:…",
+    "bureau_commit": "…",
+    "is_current": true },
+  "items": [ { "item_id": "austin-0001",
+    "legacy_ref": "cc-1:CC-1-01",
+    "comment_number": 1, … }, … 192 ]
+}</pre>
+        <span class="note">The hash covers every stored column, sorted by <code>sort_order</code>. Guide prose isn't stored, so editing it changes nothing (D10).</span>
+      </div>
+      <div class="rar-arrow in"><i></i>RPC</div>
+      <ol class="rar-steps">
+        <li class="rar-step"><b>Upsert the checklist row</b><span>Its name, bureau path and last commit.</span></li>
+        <li class="rar-step"><b>Is this content already stored?</b><span>It looks up <code>(checklist_id, label, content_hash)</code>.</span><span class="branch">yes → write nothing more, skip to step 4, return created: false</span></li>
+        <li class="rar-step"><b>Insert a new revision and all its items</b><span>The revision is <code>max(revision) + 1</code>. It sets <code>jurisdiction_slug</code> on every item from the checklist. One bad item rolls back the whole version.</span></li>
+        <li class="rar-step"><b>Move the current flag</b><span>If <code>is_current</code> was passed, it clears the flag on the checklist's other revisions and sets it here. The sync passes it only for the folder <code>CURRENT_VERSION</code> names.</span></li>
+      </ol>
+      <div class="rar-wait"><span>all four steps in one transaction; PostgREST alone would make each write its own</span></div>
+      <div class="rar-res">
+        <span class="lab">Response</span>
+<pre>{ "revision": 1, "created": true }
+
+// the same payload again:
+{ "revision": 1, "created": false }</pre>
+        <span class="note">The Action reports revisions created and versions unchanged per checklist, then upserts <code>jurisdiction_intake</code> from each <code>intake.yaml</code>.</span>
+      </div>
+      <div class="rar-arrow out"><i></i>JSON</div>
+    </div>
+
+    <h3 class="claim" id="detail-lint">lint:intake fails a PR whose sidecar drifts from its guides <span class="src">D12</span></h3>
+    <ol class="steps">
+      <li class="st"><span class="sk">files</span><span class="sn">An <code>intake.yaml</code> or <code>checklist.yaml</code> that doesn't parse, or breaks the basis rule</span><span class="so">one parser, shared with the sync</span></li>
+      <li class="st"><span class="sk">drift</span><span class="sn">The sidecar's refs and the guide rows differ, in either direction</span><span class="so">so a PR that edits a synced guide table must update <code>intake-ids.tsv</code> too; this also catches completion-officer copying its stale guides over bureau's</span></li>
+      <li class="st"><span class="sk">IDs</span><span class="sn">A duplicate ID, a malformed one, or one without its checklist's prefix</span><span class="so"></span></li>
+      <li class="st"><span class="sk">IDs</span><span class="sn">An ID at or above <code>next_item</code>, or a <code>next_item</code> lower than on main</span><span class="so">read with <code>git show origin/main:…</code></span></li>
+      <li class="st"><span class="sk">IDs</span><span class="sn">A <code>derived_from</code> from another checklist, or not lower-numbered than the item that names it</span><span class="so"></span></li>
+    </ol>
+  </section>
+
+  <section class="panel" id="rollout">
+    <h2>Rollout</h2>
+    <p class="lede">The bureau files and the linter land first, as the intake-prospecting runbook's output contract. The tables wait until that loop has met the Austin bar and one non-Austin smoke run has produced output in the format (v1.1, north-star D3).</p>
+
+    <h3 class="claim">The files and linter land now; the tables wait for the intake loop <span class="src">§4, north-star D3</span></h3>
+    <div class="sys-legend"><span><i class="box" style="border:2px solid var(--ink)"></i>lands first, as the runbook's output contract</span><span><i class="box"></i>waits</span><span>each card says what it waits on</span></div>
+    <div class="plan" style="--cols:3">
+      <div class="plan-h"><span></span><span>Now</span><span>After the Austin bar + a smoke run</span><span>Then</span></div>
+      <div class="plan-row"><span class="plan-who">bureau</span>
+        <div class="plan-cell"><div class="pc key"><span class="pid">P2a · D1–D5, D12 · S1</span><b>Files, linter, Austin backfill</b><span class="pd"><code>intake.yaml</code>, a 192-row sidecar, <code>lint:intake</code> in CI</span><span class="pa">waits on nothing; changes hand-editing from merge on</span></div></div>
+        <div class="plan-cell"></div>
+        <div class="plan-cell"><div class="pc"><span class="pid">P2b · D9–D11, D13 · S1</span><b>The sync and its Action</b><span class="pd">builder, <code>sync:intake</code>, <code>sync-intake.yml</code>, then the acceptance run</span><span class="pa">after P1 is applied to prod and P2a is merged</span></div></div>
+      </div>
+      <div class="plan-row"><span class="plan-who">cityhall</span>
+        <div class="plan-cell"></div>
+        <div class="plan-cell"><div class="pc"><span class="pid">P1 · D6–D8, D10 · S2</span><b>Four tables and the write function</b><span class="pd">schemas, generated migration, allowlist, DB tests</span><span class="pa">scheduled after the loop meets the bar, so Q1/Q2 can still change the schema; Jason applies it</span></div></div>
+        <div class="plan-cell"></div>
+      </div>
+    </div>
+
+    <h3 class="claim">Done means 192 rows, one revision, and the same after a second run <span class="src">§3 acceptance</span></h3>
+    <ol class="steps">
+      <li class="st"><span class="sk">dispatch</span><span class="sn">Run <code>sync-intake.yml</code> by hand after P2b merges</span><span class="so"></span></li>
+      <li class="st"><span class="sk">check prod</span><span class="sn">192 items for <code>austin</code>, one version <code>('austin', 1, 'v2.7-trimmed', current)</code>, and <code>austin | austin | formal</code> in <code>jurisdiction_intake</code></span><span class="so"></span></li>
+      <li class="st"><span class="sk">dispatch again</span><span class="sn">Still one revision</span><span class="so">the hash matched, so nothing was written</span></li>
+    </ol>
+
+    <h3>Open questions</h3>
+    <div class="doc">
+      <p><b>Q1 · Backfill older Austin versions?</b> 41 of the 60 CC reviews ran on 9 other versions. Not now; revisit when something needs to join old reviews to items.</p>
+      <p><b>Q2 · Should a review record the revision it ran against?</b> The label alone doesn't pick one, because v2.7-trimmed has had several contents. The commit does, if the sync keeps a commit-to-revision lookup.</p>
+      <p><b>Q3 · Cedar Park v1:</b> give it a sidecar now as a sparse second fixture, or wait for the intake-prospecting runbook to regenerate it?</p>
+    </div>
+  </section>
+
+</main>
+
+<script data-spec-kit-js>
+/* spec-kit v6.0 — system-map edge renderer + interactive state machines (.smx).
+   Inline the ENTIRE contents of this file into the spec's
+   <script data-spec-kit-js> block (do not <script src>).
+   Reads every .sysmap, and for each hidden <a class="sys-edge"
+   data-from="idA" data-to="idB">label</a> draws an SVG path between the
+   two nodes' nearest sides. Routing:
+     side-to-side   when A and B share a row (label rides in the row gap ABOVE the boxes)
+     top-to-bottom  when A and B share a column (label sits right of the line)
+     orthogonal     otherwise: leave A vertically into the gap beside A's whole ROW (tags
+                    included), run, drop into B (label hugs the source); a backward edge
+                    in the same row goes over the top, .loop higher still.
+   Labels clear the source's floating .ref tag, stay inside the map, and nudge up off
+   any label drawn earlier.
+   Redraws on load, font load, resize, and whenever a tab panel becomes visible.
+   .smx: builds the controls for each interactive state machine once, on DOMContentLoaded.
+   v6.0: skips nodes hidden by a delta map's view and edges whose data-in names the other view;
+   .lanes maps draw no edge out of a trigger (the trigger is the lane label); edge kinds
+   .happy / .exit for runbook graphs; Today/After toggle for .sysmap.delta; hover a node to
+   light its path (hover a footer row to light the nodes its reference tags); .dfg chains that
+   would wrap switch to a vertical stack. */
+(function(){
+  const NS='http://www.w3.org/2000/svg';
+  const COL={std:'#8a919c',new:'#2e62c9',chg:'#b26b00',gap:'#c2341c',loop:'#4b5361',happy:'#1f2937',exit:'#8a919c'};
+  const KINDS=['new','chg','gap','loop','happy','exit'];
+  function el(tag,attrs){const n=document.createElementNS(NS,tag);for(const k in attrs)n.setAttribute(k,attrs[k]);return n;}
+  function draw(map){
+    let svg=map.querySelector('svg.edges');
+    if(!svg){
+      svg=el('svg',{class:'edges'});
+      const defs=el('defs',{});
+      for(const k in COL){
+        const m=el('marker',{id:'ah-'+k,viewBox:'0 0 10 10',refX:'9',refY:'5',markerWidth:'7',markerHeight:'7',orient:'auto-start-reverse'});
+        m.appendChild(el('path',{d:'M0 0L10 5L0 10z',fill:COL[k]}));defs.appendChild(m);
+      }
+      svg.appendChild(defs);map.appendChild(svg);
+    }
+    svg.querySelectorAll('g').forEach(g=>g.remove());
+    const mr=map.getBoundingClientRect(); if(mr.width===0) return;   // hidden tab: nothing to measure
+    const paths=el('g',{class:'paths'}), labels=el('g',{class:'labels'});
+    const rect=r=>({l:r.left-mr.left,t:r.top-mr.top,r:r.right-mr.left,b:r.bottom-mr.top,cx:(r.left+r.right)/2-mr.left,cy:(r.top+r.bottom)/2-mr.top});
+    const box=n=>rect((n.querySelector('.dot')||n).getBoundingClientRect());
+    const shown=n=>n.getClientRects().length>0;
+    const erd=map.classList.contains('erd'), view=map.classList.contains('delta')?map.dataset.view:null, lanes=map.classList.contains('lanes');
+    const nodes=[...map.querySelectorAll('.sys,.ent')].filter(shown).map(n=>({n,b:box(n),ref:n.querySelector('.ref')?rect(n.querySelector('.ref').getBoundingClientRect()):null}));
+    // the vertical band a node's ROW occupies: every node overlapping it vertically, tags included
+    const band=a=>{let t=a.t,b=a.b;nodes.forEach(o=>{if(Math.min(a.b,o.b.b)-Math.max(a.t,o.b.t)>0){t=Math.min(t,o.b.t,o.ref?o.ref.t:o.b.t);b=Math.max(b,o.b.b);}});return {t,b};};
+    const placed=[];   // label boxes already drawn, for collision nudging
+    map.querySelectorAll('.sys-edge').forEach(e=>{
+      const A=map.querySelector('#'+CSS.escape(e.dataset.from||'')), B=map.querySelector('#'+CSS.escape(e.dataset.to||''));
+      if(!A||!B){console.warn('sysmap edge: missing node',e.dataset.from,e.dataset.to);return;}
+      if(!shown(A)||!shown(B)) return;                                  // hidden by the delta view
+      if(view&&e.dataset.in&&e.dataset.in!==view) return;               // edge belongs to the other view
+      if(lanes&&A.classList.contains('trig')) return;                   // a lane label has no wire
+      const a=box(A), b=box(B), aRef=A.querySelector('.ref'), aRefR=aRef?rect(aRef.getBoundingClientRect()):null;
+      const kind=KINDS.find(k=>e.classList.contains(k))||'std';
+      const sameRow=Math.min(a.b,b.b)-Math.max(a.t,b.t)>0, sameCol=Math.min(a.r,b.r)-Math.max(a.l,b.l)>0;
+      const forward=b.l>=a.r;
+      let d,lx,ly,anchor='middle';
+      const clamp=(v,lo,hi)=>Math.max(lo,Math.min(hi,v));
+      if(sameRow&&forward&&kind!=='loop'){        // side to side, left→right
+        const x1=a.r,x2=b.l,y1=a.cy,mx=(x1+x2)/2;
+        const y2=A.querySelector('.dot')?clamp(y1,b.t+10,b.b-10):b.cy;
+        d=`M${x1} ${y1}C${mx} ${y1},${mx} ${y2},${x2} ${y2}`;
+        lx=mx; ly=Math.min(a.t,b.t)-6;
+        if(aRefR&&ly>aRefR.t-2&&ly<aRefR.b+12){lx=aRefR.r+6;anchor='start';}   // clear the source's floating tag
+        if(erd){ly=(y1+y2)/2-7;}                                            // tall entity cards: label rides on the line
+      }else if(sameCol&&!sameRow){               // top to bottom; label just past the source end, right of the line
+        const down=b.t>=a.b, y1=down?a.b:a.t, y2=down?b.t:b.b, x1=a.cx, x2=b.cx, my=(y1+y2)/2;
+        d=`M${x1} ${y1}C${x1} ${my},${x2} ${my},${x2} ${y2}`;
+        // label just past the SOURCE end going down; just past the TARGET end going up (a source's
+        // top-right is where its floating tag lives)
+        lx=x1+8; ly=down?y1+14:y2+14; anchor='start';
+        if(erd){ly=my+4;}
+      }else{                                     // orthogonal, through the gap beside A's ROW (not A's box)
+        const rb=band(a); let y1,yr,y2;
+        if(sameRow){ y1=a.t; yr=rb.t-(kind==='loop'?34:22); y2=b.t; }      // backward / loop: over the whole row + its labels
+        else if(b.cy>a.cy){ y1=a.b; yr=rb.b+12; y2=b.t; }                   // down: gap below the row
+        else { y1=a.t; yr=rb.t-12; y2=b.b; }                                // up: gap above the row (above tags)
+        d=`M${a.cx} ${y1}L${a.cx} ${yr}L${b.cx} ${yr}L${b.cx} ${y2}`;
+        const rightward=b.cx>a.cx; lx=a.cx+(rightward?22:-22); anchor=rightward?'start':'end'; ly=yr-4;
+      }
+      const ft={'data-from':A.id,'data-to':B.id};
+      paths.appendChild(el('path',Object.assign({d,class:'e '+kind,'marker-end':`url(#ah-${kind})`},ft)));
+      const txt=e.textContent.trim();
+      if(txt){
+        const t=el('text',Object.assign({x:lx,y:ly,'text-anchor':anchor,class:'lbl '+kind},ft)); t.textContent=txt;
+        const bg=el('rect',Object.assign({class:'lblbg',rx:3},ft)); labels.appendChild(bg); labels.appendChild(t);
+        svg.appendChild(labels);
+        let tb=t.getBBox();
+        if(tb.x+tb.width>mr.width-6){t.setAttribute('text-anchor','end');t.setAttribute('x',anchor==='start'?lx-16:lx);tb=t.getBBox();}   // keep inside the map
+        for(let i=0;i<4;i++){const hit=placed.find(p=>!(tb.x>p.x+p.width+2||p.x>tb.x+tb.width+2||tb.y>p.y+p.height+1||p.y>tb.y+tb.height+1));if(!hit)break;t.setAttribute('y',+t.getAttribute('y')-(tb.height+3));tb=t.getBBox();}  // nudge up off an earlier label
+        placed.push(tb);
+        bg.setAttribute('x',tb.x-4);bg.setAttribute('y',tb.y-2);bg.setAttribute('width',tb.width+8);bg.setAttribute('height',tb.height+4);
+      }
+    });
+    svg.appendChild(paths); svg.appendChild(labels);   // labels above paths
+  }
+  // long identifiers break cleanly after underscores instead of mid-word
+  function softBreaks(){document.querySelectorAll('.sys .t, .uc .nt').forEach(t=>{if(t.dataset.wbr||!/_/.test(t.textContent))return;t.innerHTML=t.innerHTML.replace(/_/g,'_<wbr>');t.dataset.wbr='1';});}
+  /* ---- delta map: Today / After toggle. Elements outside the map that belong to one view carry
+     data-view-of="<map id>" data-in="today|after" (the claim title, the legend) and follow it. */
+  function deltaSetup(map){
+    if(map.dataset.deltaReady) return; map.dataset.deltaReady='1';
+    const views=(map.dataset.views||'today,after').split(',').map(x=>x.trim());
+    const names={today:'Today',after:'After'};
+    if(!map.dataset.view) map.dataset.view=views[0];
+    const bar=document.createElement('div'); bar.className='dview'; bar.setAttribute('role','group'); bar.setAttribute('aria-label','Show the map as of');
+    const holder=map.closest('.sysmap-scroll')||map;
+    const set=v=>{map.dataset.view=v;bar.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===v?'true':'false'));
+      if(map.id) document.querySelectorAll(`[data-view-of="${map.id}"]`).forEach(x=>{x.hidden=x.dataset.in!==v;});
+      draw(map);};
+    views.forEach(v=>{const b=document.createElement('button');b.type='button';b.dataset.v=v;b.textContent=names[v]||v;b.onclick=()=>set(v);bar.appendChild(b);});
+    holder.parentNode.insertBefore(bar,holder.previousElementSibling&&holder.previousElementSibling.matches('.sys-legend')?holder.previousElementSibling:holder);
+    set(map.dataset.view);
+  }
+  /* ---- path highlighting: hover a node → its upstream and downstream path stays lit */
+  function focusSetup(map){
+    if(map.dataset.focusReady) return; map.dataset.focusReady='1';
+    const lit=ids=>{map.classList.add('focus');
+      map.querySelectorAll('.sys,.ent').forEach(n=>n.classList.toggle('on',ids.has(n.id)));
+      map.querySelectorAll('svg [data-from]').forEach(p=>p.classList.toggle('on',ids.has(p.dataset.from)&&ids.has(p.dataset.to)));};
+    const clear=()=>{map.classList.remove('focus');map.querySelectorAll('.on').forEach(x=>x.classList.remove('on'));};
+    const walk=start=>{const E=[...map.querySelectorAll('svg path[data-from]')].map(p=>[p.dataset.from,p.dataset.to]);
+      const ids=new Set([start]);
+      for(const dir of [0,1]){let fr=[start];while(fr.length){const nx=[];E.forEach(e=>{if(fr.includes(e[dir])&&!ids.has(e[1-dir])){ids.add(e[1-dir]);nx.push(e[1-dir]);}});fr=nx;}}
+      return ids;};
+    map.querySelectorAll('.sys[id],.ent[id]').forEach(n=>{n.addEventListener('mouseenter',()=>lit(walk(n.id)));n.addEventListener('mouseleave',clear);});
+    // footer rows: light the nodes whose floating tag carries that reference
+    let refs=map.closest('.sysmap-scroll')||map; refs=refs.nextElementSibling;
+    while(refs&&!refs.matches('.sys-refs')&&!refs.matches('h3,h2,.sysmap,.sysmap-scroll')) refs=refs.nextElementSibling;
+    if(refs&&refs.matches('.sys-refs')) refs.querySelectorAll('.refrow[data-ref]').forEach(r=>{
+      const tok=r.dataset.ref;
+      r.addEventListener('mouseenter',()=>{const ids=new Set([...map.querySelectorAll('.sys')].filter(n=>{const a=n.querySelector('.ref');return a&&new RegExp('(^|[^\\w])'+tok+'([^\\w]|$)').test(a.textContent);}).map(n=>n.id));lit(ids);});
+      r.addEventListener('mouseleave',clear);});
+  }
+  /* ---- chains: a .dfg that would wrap (leaving an arrow alone at a line start) stacks vertically */
+  function chains(){document.querySelectorAll('.dfg').forEach(g=>{g.classList.remove('vert');const k=[...g.children];if(!k.length||!g.getClientRects().length)return;
+    const top=k[0].offsetTop;if(k.some(c=>c.offsetTop>top+4))g.classList.add('vert');});}
+  const MAPS='.sysmap,.erd.linked';   // v6.2: entity cards can be joined by drawn relationships too
+  const all=()=>{softBreaks();chains();document.querySelectorAll(MAPS).forEach(draw);};
+  window.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('.sysmap.delta').forEach(deltaSetup);document.querySelectorAll(MAPS).forEach(focusSetup);});
+  /* ---- spec links: when <main data-spec="DESIGN-SPEC.html"> is set, every reference token
+     becomes a link into the reader page: P0a → #P0a, D12 → #D12, Q6 → #Q6, S2 → #S2, §3.2 → #s3-2 */
+  function linkSpec(){
+    const main=document.querySelector('main[data-spec]'); if(!main) return;
+    const spec=main.dataset.spec;
+    const tokHref=t=>spec+'#'+(t.startsWith('§')?'s'+t.slice(1).replace(/\./g,'-'):t);
+    document.querySelectorAll('.sys-refs .refrow').forEach(r=>{
+      const tok=r.dataset.ref||(r.querySelector('.chip')||{}).textContent||''; if(!tok.trim()) return;
+      if(!r.getAttribute('href')) r.setAttribute('href',tokHref(tok.trim()));
+      if(!r.querySelector('.go')){const g=document.createElement('span');g.className='go';r.appendChild(g);}
+    });
+    document.querySelectorAll('.claim b, .claim .src, figure.concept figcaption b').forEach(b=>{
+      if(b.querySelector('a')) return;
+      b.innerHTML=b.innerHTML.replace(/(§\d+(?:\.\d+)*)|\b(P\d[a-z]?|D\d+|Q\d+|S\d+)\b/g,m=>`<a class="cite" href="${tokHref(m)}" title="read this section of the spec">${m}</a>`);
+    });
+  }
+  /* ---- interactive state machine: free play from the current state, guided walkthroughs,
+     the path taken so far, and every transition listed once. Idempotent per .smx. */
+  function smx(root){
+    if(root.dataset.smxReady) return; root.dataset.smxReady='1';
+    const mk=(tag,cls,txt)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(txt!=null)n.textContent=txt;return n;};
+    const pills=[...root.querySelectorAll('.sm .s[data-state]')];
+    const T=[...root.querySelectorAll('.smx-t')].map(a=>({ev:a.dataset.ev,from:a.dataset.from,to:a.dataset.to,label:a.textContent.trim(),note:a.dataset.note||'',cls:['new','chg'].find(k=>a.classList.contains(k))||''}));
+    const walks=[...root.querySelectorAll('.smx-walk')].map(w=>({name:w.dataset.name||'walkthrough',steps:(w.dataset.steps||'').split(',').map(x=>x.trim()).filter(Boolean)}));
+    const start=root.dataset.start||(pills[0]&&pills[0].dataset.state);
+    const live=mk('div','smx-live'); root.appendChild(live);
+    const all=mk('details','smx-all'); all.appendChild(mk('summary',null,`all transitions (${T.length})`));
+    T.forEach(t=>{const d=mk('div','smx-row '+t.cls);d.append(mk('code',null,t.from),' → ',mk('code',null,t.to),' · '+t.label+(t.note?' — '+t.note:''));all.appendChild(d);});
+    root.appendChild(all);
+    let cur=start,log=[],walk=null,wi=0;
+    const go=t=>{log.push(t);cur=t.to;render();};
+    const reset=()=>{cur=start;log=[];walk=null;wi=0;render();};
+    function render(){
+      pills.forEach(p=>p.classList.toggle('cur',p.dataset.state===cur));
+      live.innerHTML='';
+      const bar=mk('div','smx-bar'), now=mk('span','smx-now'); now.append('now: ',mk('b',null,cur)); bar.appendChild(now);
+      const moves=mk('div','smx-moves');
+      if(walk){
+        const t=wi<walk.steps.length?T.find(x=>x.ev===walk.steps[wi]&&x.from===cur):null;
+        const b=mk('button','smx-btn '+(t?t.cls:''),t?`next: ${t.label} ▸`:'walkthrough complete'); b.disabled=!t;
+        if(t){b.title=t.note;b.onclick=()=>{wi++;go(t);};}
+        moves.appendChild(b); moves.appendChild(mk('span','smx-wi',`${walk.name} · ${Math.min(wi,walk.steps.length)} of ${walk.steps.length} steps`));
+      }else{
+        const out=T.filter(x=>x.from===cur);
+        if(!out.length) moves.appendChild(mk('span','smx-end','terminal state: no moves out'));
+        out.forEach(t=>{const b=mk('button','smx-btn '+t.cls,t.label+' ▸');b.title=t.note;b.onclick=()=>go(t);moves.appendChild(b);});
+      }
+      bar.appendChild(moves);
+      const ctl=mk('div','smx-ctl');
+      walks.forEach(w=>{const b=mk('button','smx-walkb'+(walk===w?' on':''),w.name);b.onclick=()=>{reset();walk=w;render();};ctl.appendChild(b);});
+      const r=mk('button','smx-reset','reset'); r.onclick=reset; ctl.appendChild(r);
+      bar.appendChild(ctl); live.appendChild(bar);
+      const ol=mk('ol','smx-log');
+      if(!log.length) ol.appendChild(mk('li','smx-empty',`start: ${start}. Pick a move${walks.length?' or a walkthrough':''}.`));
+      log.forEach(t=>{const li=mk('li',t.cls);li.append(mk('b',null,t.from+' → '+t.to),' · '+t.label);if(t.note)li.appendChild(mk('span','n',t.note));ol.appendChild(li);});
+      live.appendChild(ol);
+    }
+    render();
+  }
+  window.addEventListener('DOMContentLoaded',()=>document.querySelectorAll('.smx').forEach(smx));
+  window.addEventListener('DOMContentLoaded',linkSpec);
+  window.addEventListener('load',all);
+  if(document.fonts&&document.fonts.ready) document.fonts.ready.then(all);
+  window.addEventListener('resize',all);
+  // redraw when a tab panel becomes visible (only panels: hover classes must not trigger a redraw)
+  new MutationObserver(ms=>{if(ms.some(m=>m.target.classList&&m.target.classList.contains('panel')))all();}).observe(document.documentElement,{attributes:true,subtree:true,attributeFilter:['class']});
+})();
+
+</script>
+<script>
+  const btns=document.querySelectorAll('nav.tabs button');
+  const panels=document.querySelectorAll('.panel');
+  const IDS=['overview','files','tables','sync','rollout']; /* KEEP IN SYNC with the data-tab / panel ids above */
+  function show(id,opts={}){
+    btns.forEach(b=>b.classList.toggle('active',b.dataset.tab===id));
+    panels.forEach(p=>p.classList.toggle('active',p.id===id));
+    if(!opts.keepHash&&location.hash.slice(1)!==id) history.replaceState(null,'','#'+id);
+    if(!opts.noScroll) window.scrollTo({top:0,behavior:opts.instant?'auto':'smooth'});
+  }
+  btns.forEach(b=>b.addEventListener('click',()=>show(b.dataset.tab)));
+  function goHash(instant){
+    const h=decodeURIComponent(location.hash.slice(1)); if(!h) return;
+    if(IDS.includes(h)){show(h,{instant});return;}
+    const el=document.getElementById(h); if(!el) return;
+    const panel=el.closest('.panel'); if(panel&&!panel.classList.contains('active')) show(panel.id,{keepHash:true,noScroll:true});
+    el.scrollIntoView({block:'start',behavior:instant?'auto':'smooth'});
+  }
+  goHash(true);
+  window.addEventListener('load',()=>goHash(true));
+  window.addEventListener('hashchange',()=>goHash(false));
+</script>
+</body>
+</html>
