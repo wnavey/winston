@@ -1,11 +1,13 @@
 # Intake north star: a checklist for every jurisdiction
 
-**Status:** Draft v1.2
+**Status:** Draft v1.3
 **Date:** 2026-10-14
 **Repos touched:** none. This is a plan of a plan. It records the 2026-10-14 discussion with Will, names where intake should end up, and lists the sub-specs that will carry out the work.
-**Repos eventually touched:** `bureau` (checklist files, the intake-prospecting runbook, the prospector workstream, the sync), `cityhall` (App-DB tables and migrations), `completion-officer` (retired)
+**Repos eventually touched:** `bureau` (checklist files, the intake-prospecting runbook, the prospector workstream, the sync), `cityhall` (App-DB tables and migrations), `dsd` (the `metro_ahj_coverage` view and the prospector dashboard, for `intake_ready`), `completion-officer` (retired)
 **Repos NOT touched:** `conductor` (legacy), `substation` (on the deprecation path)
 
+> **Revision note v1.3 (2026-10-14, prospector integration audit):** §4.4 now says what the I3 wrapper is, from the precedent in `prospector/review-guides/` (which nests `guide-training` unchanged), and names `dsd` as the home of `intake_ready`. The prospecting-runbook sub-spec is Draft v1.2, built to that wrapper; its Q6 (prospector merges its own PRs, so D10's human-reviewed merge does not hold inside prospector) and Q7 (which target runs intake) are Will's.
+>
 > **Revision note v1.2 (2026-10-14, Will):** D11: **Austin is the only scored case.** Nobody can confirm that the New Braunfels and Cedar Park runs were good, so they are at most unscored smoke runs for scraping and extraction on non-Austin sites, with little weight. D3's gate on P1/P2b is changed to match.
 >
 > **Revision note v1.1 (2026-10-14):** D3 now orders the work by dependency: I2 (the runbook) depends on I1's file format only, so it starts now. I1's migration and sync (P1, P2b) wait until the loop has run on two jurisdictions. Sub-spec table: `prospecting-runbook` is now Draft v1.
@@ -15,7 +17,7 @@
 | Sub-spec | Path | Status |
 |---|---|---|
 | Intake checklist DB schema + bureau sync | `workspaces/intake/db-schema/DESIGN-SPEC.md` | Draft v1 (same PR); P2a first, P1/P2b after the loop (D3) |
-| The intake-prospecting runbook | `workspaces/intake/prospecting-runbook/DESIGN-SPEC.md` | Draft v1 (same PR) |
+| The intake-prospecting runbook | `workspaces/intake/prospecting-runbook/DESIGN-SPEC.md` | Draft v1.2 (audited against prospector) |
 | The generic baseline checklist | `workspaces/intake/baseline/` | not started |
 | Intake in the prospector flow | `workspaces/intake/prospector-workstream/` | not started |
 | DB as the source of truth | `workspaces/intake/db-source-of-truth/` | later |
@@ -245,8 +247,9 @@ A one-time checklist curated by hand, needed before New Braunfels (or any `none_
 
 ### 4.4 I3: intake in the prospector flow (`intake/prospector-workstream`)
 
-- An `intake` workstream in `bureau/runbooks/prospector/`, fed by the upstream outputs (D14).
-- `intake` in `workstream_status`, and `intake_ready` in `metro_ahj_coverage`.
+- An `intake` workstream in `bureau/runbooks/prospector/`, fed by the upstream outputs (D14). It is a wrapper, not a port: `prospector/review-guides/` already nests `runbooks/guide-training/` unchanged behind a `2-request` step that writes the nested runbook's request from `currency.json`, and the intake workstream does the same with intake-prospecting (its spec, §6: worktree, request, nested run, snapshot upload, disposition, mergein, plus the registration in `lib/outer.ts`, `bin/resolve.py`, `lib/env.json` and the ship inputs). The runbook writes into a bureau worktree from its first session so that the wrapper copies nothing.
+- `intake` in `workstream_status` (stamped by `9-record` from `WORK_TYPE`), and `intake_ready` in `metro_ahj_coverage`, which is a migration in `dsd/library/tooling/supabase/migrations/` plus the dashboard's workstream list in `dsd/web/lib/prospector/types.ts`.
+- Two decisions the wrapper needs from Will (prospecting-runbook Q6, Q7): prospector's ship step merges its own PR, so a generated checklist would reach main and the App DB without the human-reviewed merge D10 promises; and whether intake runs on `sir` runs or only `review` runs.
 - Comment-harvest stops discarding intake notes (D13).
 
 ### 4.5 Later: the DB as source of truth, and the rename
