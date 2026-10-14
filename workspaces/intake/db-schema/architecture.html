@@ -1074,8 +1074,8 @@ decided_at: 2026-10-14</div>
         <div class="row"><span class="b b-pk">PK</span><span class="b b-fk">FK</span><span class="nm">jurisdiction_slug</span></div>
         <div class="row"><span class="b b-fk">FK</span><span class="nm">checklist_id</span><span class="ty">its own checklist, or generic</span></div>
         <div class="row"><span class="nm">basis</span><span class="ty">formal · none_found · inconclusive</span></div>
-        <div class="row"><span class="nm">application_type · evidence</span><span class="ty">intake.yaml's evidence, verbatim</span></div>
-        <div class="row"><span class="nm">decided_by · decided_at · bureau_commit</span></div>
+        <div class="row"><span class="nm">application_type, evidence</span><span class="ty">intake.yaml's evidence, verbatim</span></div>
+        <div class="row"><span class="nm">decided_by, decided_at, bureau_commit</span></div>
         <div class="note">formal ⇔ checklist isn't generic</div>
       </div>
       <div class="ent newt" id="t-chk" style="grid-area:1/3">
@@ -1083,27 +1083,31 @@ decided_at: 2026-10-14</div>
         <div class="row"><span class="b b-pk">PK</span><span class="nm">id</span><span class="ty">'austin' · 'generic'</span></div>
         <div class="row"><span class="nm">kind</span><span class="ty">jurisdiction · baseline</span></div>
         <div class="row"><span class="b b-fk">FK</span><span class="nm">jurisdiction_slug</span><span class="ty">null on the baseline</span></div>
-        <div class="row"><span class="nm">name · bureau_path · bureau_commit</span></div>
+        <div class="row"><span class="nm">name, bureau_path, bureau_commit</span></div>
         <div class="note">a jurisdiction's checklist id is its slug</div>
       </div>
       <div class="ent newt" id="t-items" style="grid-area:2/1/3/3">
         <div class="eh"><span class="en">intake_checklist_items</span><span class="stereo">NEW</span></div>
-        <div class="row"><span class="b b-pk">PK</span><span class="nm">checklist_id · revision · item_id</span><span class="ty">'austin-0042'; must carry the checklist's prefix</span></div>
+        <div class="row"><span class="b b-pk">PK</span><span class="b b-fk">FK</span><span class="nm">checklist_id</span><span class="ty">'austin'</span></div>
+        <div class="row"><span class="b b-pk">PK</span><span class="b b-fk">FK</span><span class="nm">revision</span><span class="ty">3</span></div>
+        <div class="row"><span class="b b-pk">PK</span><span class="nm">item_id</span><span class="ty">'austin-0042'; must carry the checklist's prefix</span></div>
+        <div class="row"><span class="ty">the three PK columns together are the key: one row per item per revision</span></div>
         <div class="row hi"><span class="nm">legacy_ref</span><span class="ty">'cc-1:CC-1-01', what reviews store; unique per revision</span></div>
         <div class="row"><span class="nm">derived_from</span><span class="ty">the IDs a split or merge came from</span></div>
-        <div class="row"><span class="nm">group_key · group_title · sort_order · comment_number</span><span class="ty">'cc-1', the guide's H1, its position, its comment number (unique per revision)</span></div>
-        <div class="row"><span class="nm">title · item_text</span><span class="ty">the authored title (or null) and the Item cell</span></div>
-        <div class="row"><span class="nm">condition · location · location_binding · requirement_source · source_type · fail_status</span><span class="ty">the guide row's cells, by header name; null where a table lacks the column</span></div>
+        <div class="row"><span class="nm">group_key, group_title, sort_order, comment_number</span><span class="ty">'cc-1', the guide's H1, its position, its comment number (unique per revision)</span></div>
+        <div class="row"><span class="nm">title, item_text</span><span class="ty">the authored title (or null) and the Item cell</span></div>
+        <div class="row"><span class="nm">condition, location, location_binding, requirement_source, source_type, fail_status</span><span class="ty">the guide row's cells, by header name; null where a table lacks the column</span></div>
         <div class="row"><span class="nm">citations</span><span class="ty">the item's entry from source-citations.json</span></div>
         <div class="row"><span class="nm">jurisdiction_slug</span><span class="ty">copied from the checklist, so "items for X" needs no join</span></div>
       </div>
       <div class="ent newt" id="t-ver" style="grid-area:2/3">
         <div class="eh"><span class="en">intake_checklist_versions</span><span class="stereo">NEW</span></div>
-        <div class="row"><span class="b b-pk">PK</span><span class="nm">checklist_id · revision</span><span class="ty">1, 2, 3 … per checklist</span></div>
+        <div class="row"><span class="b b-pk">PK</span><span class="b b-fk">FK</span><span class="nm">checklist_id</span><span class="ty">'austin'</span></div>
+        <div class="row"><span class="b b-pk">PK</span><span class="nm">revision</span><span class="ty">1, 2, 3 … per checklist; the two PK columns together are the key</span></div>
         <div class="row"><span class="nm">label</span><span class="ty">the folder name, 'v2.7-trimmed'</span></div>
         <div class="row hi"><span class="nm">content_hash</span><span class="ty">sha256 of the item rows; unique with label</span></div>
         <div class="row"><span class="nm">is_current</span><span class="ty">at most one per checklist; follows CURRENT_VERSION</span></div>
-        <div class="row"><span class="nm">item_count · bureau_commit · synced_at</span></div>
+        <div class="row"><span class="nm">item_count, bureau_commit, synced_at</span></div>
       </div>
 
       <a class="sys-edge new" data-from="t-jur" data-to="t-ji">1 → 1</a>
