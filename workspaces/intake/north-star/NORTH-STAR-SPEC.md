@@ -1,11 +1,16 @@
 # Intake north star: a checklist for every jurisdiction
 
-**Status:** Draft v1.3
+**Status:** Draft v1.3.1
 **Date:** 2026-10-14
 **Repos touched:** none. This is a plan of a plan. It records the 2026-10-14 discussion with Will, names where intake should end up, and lists the sub-specs that will carry out the work.
 **Repos eventually touched:** `bureau` (checklist files, the intake-prospecting runbook, the prospector workstream, the sync), `cityhall` (App-DB tables and migrations), `dsd` (the `metro_ahj_coverage` view and the prospector dashboard, for `intake_ready`), `completion-officer` (retired)
 **Repos NOT touched:** `conductor` (legacy), `substation` (on the deprecation path)
 
+> **Revision note v1.3.1 (2026-10-14, db-schema fact audit):** facts only.
+> - §2.3: a review's ref lives in `review_comments.output_json->'sourceFindings'[].ref`. `review_checklist_comment_map.checklist_item_id` holds the composite ref, not the bare ID. The IG cache holds v2.7-trimmed as versions 1–14 across 6 distinct contents, not 6–14 with identical items.
+> - §4.1: the format is the standalone `intake.yaml` (db-schema D1), not an `intake:` block in `conventions.yaml`.
+> - D6: `jurisdictions.short_name` is mostly NULL.
+>
 > **Revision note v1.3 (2026-10-14, prospector integration audit):** §4.4 now says what the I3 wrapper is, from the precedent in `prospector/review-guides/` (which nests `guide-training` unchanged), and names `dsd` as the home of `intake_ready`. The prospecting-runbook sub-spec is Draft v1.2, built to that wrapper; D10 is amended: the human-reviewed merge is the standalone lane's; inside prospector there are no human gates (Will; runbook D18). Q7 (which target runs intake) is Will's.
 >
 > **Revision note v1.2 (2026-10-14, Will):** D11: **Austin is the only scored case.** Nobody can confirm that the New Braunfels and Cedar Park runs were good, so they are at most unscored smoke runs for scraping and extraction on non-Austin sites, with little weight. D3's gate on P1/P2b is changed to match.
@@ -16,7 +21,7 @@
 
 | Sub-spec | Path | Status |
 |---|---|---|
-| Intake checklist DB schema + bureau sync | `workspaces/intake/db-schema/DESIGN-SPEC.md` | Draft v1 (same PR); P2a first, P1/P2b after the loop (D3) |
+| Intake checklist DB schema + bureau sync | `workspaces/intake/db-schema/DESIGN-SPEC.md` | Draft v1.2 (fact audit; functional findings in `AUDIT-2026-10-14.md`); P2a first, P1/P2b after the loop (D3) |
 | The intake-prospecting runbook | `workspaces/intake/prospecting-runbook/DESIGN-SPEC.md` | Draft v1.2 (audited against prospector) |
 | The generic baseline checklist | `workspaces/intake/baseline/` | not started |
 | Intake in the prospector flow | `workspaces/intake/prospector-workstream/` | not started |
@@ -104,8 +109,8 @@ From v2.1 on the edits were made by hand (`final-checklists/queued-changes/`, `r
   - `source-citations.json` + `citation-overrides.json`: from cc-source-citations (bureau#2045).
   - v2.1–v2.3 also have version-to-version mapping TSVs that record ID lineage by hand.
 - **ID schemes are mixed.** `CC-<group>-<NN>` IDs (from the Phase 5 writer) sit beside department prefixes kept from the v2 synthesis: AW (37 items), DAT, ADR, AE, AF, CMP, HCR, OSP, AEGB. Many item texts still carry an older synthesis ID in parentheses (`(INT-01)`). **The group number is part of the ID**, so moving, splitting or renaming an item changes its ID, which is why the mapping TSVs exist.
-- **How a review cites an item.** A review cites the composite ref `"{group}:{id}"` (`cc-1:CC-1-01`) in `review_comments.source_findings[].ref`, built in `bureau/runbooks/lib/review_comments_v2.py`. `review_checklist_comment_map.checklist_item_id` holds the bare ID (47,826 rows). Amend (`runbooks/lib/review_amend.py`) and cityhall triage both match on the ref. There are 60 CC reviews in prod.
-- **There is already a DB copy, but it is a cache.** Inspector General fills `bureau_checklist_version` + `bureau_checklist_item` (`inspector-general/src/lib/data/bureau-checklist-store.ts`) for evals, keyed by (bureau commit, department, path). CC has 41 version rows. v2.7-trimmed alone is versions 6–14, nine rows with the same 192 items, because a version is created per commit, not per content change.
+- **How a review cites an item.** A review cites the composite ref `"{group}:{id}"` (`cc-1:CC-1-01`) in `review_comments.output_json->'sourceFindings'[].ref`, validated in `bureau/runbooks/lib/review_comments_v2.py`. The `source_findings` column is filled only on 7 early reviews. `review_checklist_comment_map.checklist_item_id` (47,826 rows, 8,451 of them CC, filled by Inspector General) holds the same composite ref. Amend (`runbooks/lib/review_amend.py`) and cityhall triage both match on the ref. There are 60 CC reviews in prod.
+- **There is already a DB copy, but it is a cache.** Inspector General fills `bureau_checklist_version` + `bureau_checklist_item` (`inspector-general/src/lib/data/bureau-checklist-store.ts`) for evals, keyed by (bureau commit, department, path). CC has 41 version rows, including one for Cedar Park. v2.7-trimmed alone is versions 1–14: 14 rows holding only 6 distinct contents, because a version is created per commit, not per content change.
 
 ### 2.4 Other jurisdictions
 
@@ -184,7 +189,7 @@ together with the evidence and sources behind that basis.
 Moving a jurisdiction off the baseline later means it gets its own checklist with new IDs. Its old reviews keep their baseline references, and nothing is migrated. Never work out a review's jurisdiction from an item ID prefix; go through review → project.
 
 **D6. Stable short IDs.** [Will: slug prefix; proposed: the rest]
-- An item ID is `{owner-slug}-{NNNN}`, for example `austin-0042`, `new-braunfels-0007` or `generic-0012`. The jurisdiction slug is used because `jurisdictions.short_name` holds display names, not codes, and 3-letter codes would collide across the ~2,000 Library jurisdictions.
+- An item ID is `{owner-slug}-{NNNN}`, for example `austin-0042`, `new-braunfels-0007` or `generic-0012`. The jurisdiction slug is used because `jurisdictions.short_name` is not a code: it is NULL on all but 7 rows, and 3-letter codes would collide across the ~2,000 Library jurisdictions.
 - `NNNN` is a counter scoped to its owner. It encodes nothing.
 - Group, display order and comment number are attributes of an item within a checklist version, not part of its ID.
 - An edit keeps the ID and makes a new revision. A split creates new IDs that record what they came from.
@@ -194,7 +199,7 @@ Moving a jurisdiction off the baseline later means it gets its own checklist wit
 
 **D8. The App DB, with migrations in `~/noetic/cityhall`.** [Will] The current cityhall is `noetic-inc/cityhall`, the Next.js full-stack app. The old SvelteKit cityhall is already gone. Reviews, projects and `jurisdictions` (slug PK) all live in the App DB.
 
-**D9. A new version only when the content changes.** [proposed] The sync hashes the item set and records a new checklist version only when the hash changes. This is the opposite of Inspector General's cache (§2.3), which has nine identical v2.7 versions.
+**D9. A new version only when the content changes.** [proposed] The sync hashes the item set and records a new checklist version only when the hash changes. This is the opposite of Inspector General's cache (§2.3), which holds 14 v2.7 versions for 6 distinct contents.
 
 **D10. Runbooks never write the DB; publishing goes through bureau.** [proposed] intake-prospecting publishes by opening a bureau PR, as cc-source-citations' `4.1-publish` does today. On merge, the sync (D7) carries it to the DB. This matches conductor2's rule that runbooks don't touch the DB, and gives every checklist a human-reviewed merge **in the standalone lane**. Inside prospector (I3) there are no human gates (Will, 2026-10-14; prospecting-runbook D18): the workstream's fresh-session audit is the review, and prospector's ship step merges the PR itself, as it does for every other workstream.
 
@@ -223,7 +228,7 @@ Comment-harvest should keep intake and routing notes, tagged, instead of discard
 
 This defines the intake file format in bureau and the cityhall tables it syncs into:
 - the sidecar that maps legacy refs to stable IDs;
-- the `intake:` block in `conventions.yaml`;
+- `jurisdictions/<slug>/intake.yaml`, a standalone file beside `conventions.yaml` (db-schema D1);
 - a home for the baseline outside `jurisdictions/`;
 - the GitHub Action that runs the sync;
 - the Austin v2.7 backfill.

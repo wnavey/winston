@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Intake checklist DB schema</title>
-<meta name="generator" content="winston spec-kit v6.4 (test)">
+<meta name="generator" content="winston spec-kit v6.7">
 <style>
 /* ============================================================
    spec-kit v6.7  —  winston HTML spec design system
@@ -23,7 +23,7 @@
        .sm pills take .new/.chg change state
        Colour rule: fill/border = change state only; kind = badge text + shape; legend is the
        complete list of colour meanings on the page.
-   v6.0: readability + "pick the diagram from the question": new = blue, changed = amber;
+   v6.0: readability + "pick the diagram from the question" (v6.5 later set git-diff colours);
        kind badge becomes a quiet word; node detail 12.5px sans (nothing under 10.5px);
        + lanes (.sysmap.lanes), + delta map (.sysmap.delta, Today/After toggle in one map),
        + runbook graph (.sysmap.rgraph: diamonds, gate, fan-out, exits), + step list (.steps),
@@ -970,7 +970,7 @@ nav.tabs button{white-space:nowrap;flex:0 0 auto}
   <div class="kicker">Intake · DB schema</div>
   <h1>Intake checklist DB schema and the bureau sync</h1>
   <p>Intake checklist items become rows in four cityhall tables, copied one way from bureau on every merge to main. Bureau stays the source of truth; each item gets a stable ID that survives the moves and renames its legacy ID never did.</p>
-  <div class="meta"><span class="status">Draft v1.1</span><span>14 Oct 2026</span><span>Parent: intake north star, I1</span><span>Source of truth: <code>DESIGN-SPEC.md</code></span></div>
+  <div class="meta"><span class="status">Draft v1.2</span><span>14 Oct 2026</span><span>Parent: intake north star, I1</span><span>Source of truth: <code>DESIGN-SPEC.md</code></span></div>
   <a class="spec-link" href="DESIGN-SPEC.html">Read the spec →</a>
 </header>
 
@@ -986,7 +986,7 @@ nav.tabs button{white-space:nowrap;flex:0 0 auto}
 
   <section class="panel active" id="overview">
     <h2>Overview</h2>
-    <p class="lede">Austin's 192 intake items live only as markdown rows in 14 bureau guides, under IDs that change when an item moves. The 60 CC reviews in prod cite them by string, across 10 checklist versions (§Problem).</p>
+    <p class="lede">Austin's 192 intake items live only as markdown rows in 14 bureau guides, under IDs that change when an item moves. The 60 CC reviews in prod cite them by string across 9 labels, and the one label v2.7-trimmed has held 6 different contents (§Problem).</p>
 
     <h3 class="claim" data-view-of="flow" data-in="today">Nothing in the App DB holds an intake item; reviews point at markdown by string <span class="src">§Problem</span></h3>
     <h3 class="claim" data-view-of="flow" data-in="after" hidden>A merge to main writes a new checklist revision, and only when its items changed <span class="src">D8, D10, D13</span></h3>
@@ -1018,7 +1018,7 @@ nav.tabs button{white-space:nowrap;flex:0 0 auto}
       <div class="sys store" id="o-jur" style="grid-area:4/4"><span class="k">table</span><span class="t">jurisdictions</span></div>
 
       <div class="sys" id="o-cc" style="grid-area:5/3"><span class="k">runbook</span><span class="t">completeness-check</span><span class="d">unchanged</span></div>
-      <div class="sys store" id="o-rc" style="grid-area:5/4"><span class="k">table</span><span class="t">review_comments</span><span class="d">refs as strings: cc-1:CC-1-01</span></div>
+      <div class="sys store" id="o-rc" style="grid-area:5/4"><span class="k">table</span><span class="t">review_comments</span><span class="d">ref in output_json: cc-1:CC-1-01</span></div>
 
       <a class="sys-edge new" data-in="after" data-from="o-guides" data-to="o-lint">checked</a>
       <a class="sys-edge new" data-in="after" data-from="o-files" data-to="o-sync"></a>
@@ -1038,8 +1038,26 @@ nav.tabs button{white-space:nowrap;flex:0 0 auto}
     <h3>What doesn't change</h3>
     <div class="doc">
       <p><b>Bureau stays the source of truth.</b> The tables are a synced copy. Nothing is deleted or updated in place, and a manual edit in the DB would be overwritten by the next sync (D8).</p>
-      <p><b>The CC runbook reads exactly what it reads today.</b> It globs <code>*.md</code> and names each TSV it uses, so it never sees <code>intake-ids.tsv</code>. Inspector General's <code>bureau_checklist_*</code> cache is untouched too.</p>
+      <p><b>The CC runbook reads exactly what it reads today.</b> It globs <code>*.md</code> and names each TSV it uses, so no step reads <code>intake-ids.tsv</code>. Its 1.4-resolve step does copy the whole version dir into the run, sidecar included (§1). Inspector General's <code>bureau_checklist_*</code> cache is untouched too.</p>
     </div>
+
+    <h3 class="claim">The files and linter land now; the tables wait for the intake loop <span class="src">§4, north-star D3</span></h3>
+    <div class="sys-legend"><span><i class="box" style="border:2px solid var(--ink)"></i>lands first, as the runbook's output contract</span><span><i class="box"></i>waits</span><span>each card says what it waits on</span></div>
+    <div class="plan" style="--cols:3">
+      <div class="plan-h"><span></span><span>Now</span><span>After the Austin bar + a smoke run</span><span>Then</span></div>
+      <div class="plan-row"><span class="plan-who">bureau</span>
+        <div class="plan-cell"><div class="pc key"><span class="pid">P2a · D1–D5, D12 · S1</span><b>Files, linter, Austin backfill</b><span class="pd"><code>intake.yaml</code>, a 192-row sidecar, <code>lint:intake</code> in CI</span><span class="pa">waits on nothing; changes hand-editing from merge on</span></div></div>
+        <div class="plan-cell"></div>
+        <div class="plan-cell"><div class="pc"><span class="pid">P2b · D9–D11, D13 · S1</span><b>The sync and its Action</b><span class="pd">builder, <code>sync:intake</code>, <code>sync-intake.yml</code>, then the acceptance run</span><span class="pa">after P1 is applied to prod and P2a is merged</span></div></div>
+      </div>
+      <div class="plan-row"><span class="plan-who">cityhall</span>
+        <div class="plan-cell"></div>
+        <div class="plan-cell"><div class="pc"><span class="pid">P1 · D6–D8, D10 · S2</span><b>Four tables and the write function</b><span class="pd">schemas, generated migration, allowlist, DB tests</span><span class="pa">scheduled after the loop meets the bar, so Q1/Q2 can still change the schema; Jason applies it</span></div></div>
+        <div class="plan-cell"></div>
+      </div>
+    </div>
+
+    <div class="callout ember"><span class="lab">Audit pending</span>The 2026-10-14 audit (<code>AUDIT-2026-10-14.md</code>) found 17 functional issues, which await Will's ruling. They include semver versions, guide files in Storage, groups with their own IDs, and a P2a change that would break review amend. This page shows the design as it stands, v1.2.</div>
   </section>
 
   <section class="panel" id="files">
@@ -1068,14 +1086,55 @@ evidence:
 decided_by: will
 decided_at: 2026-10-14</div>
 
+    <h3 class="claim" id="detail-ids">An edit keeps an ID, a split mints new ones, and a number is never reused <span class="src">D4</span></h3>
+    <figure class="concept">
+      <svg viewBox="0 0 1060 312" role="img" aria-label="Four snapshots of one checklist: the backfill, a text edit that keeps austin-0042, a split of austin-0043 into austin-0193 and austin-0194, and a deletion of austin-0041 whose number stays retired">
+        <defs><marker id="ids-ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
+        <path d="M16 14H1040" fill="none" stroke="currentColor" stroke-width="1.5" opacity=".45" marker-end="url(#ids-ar)"/>
+        <g font-family="ui-sans-serif,system-ui,sans-serif" fill="currentColor">
+          <text x="16" y="44" font-size="14" font-weight="600">1 · Backfill (D5)</text>
+          <text x="16" y="62" font-size="12" opacity=".7">numbered in comment order</text>
+          <text x="281" y="44" font-size="14" font-weight="600">2 · A PR edits 0042's text</text>
+          <text x="281" y="62" font-size="12" opacity=".7">same ID, new revision</text>
+          <text x="546" y="44" font-size="14" font-weight="600">3 · A PR splits 0043</text>
+          <text x="546" y="62" font-size="12" opacity=".7">two new IDs from next_item</text>
+          <text x="811" y="44" font-size="14" font-weight="600">4 · A PR deletes 0041</text>
+          <text x="811" y="62" font-size="12" opacity=".7">the number stays retired</text>
+        </g>
+        <g font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="12.5">
+          <g fill="none" stroke="currentColor" stroke-width="1.3">
+            <rect x="16" y="80" width="150" height="30" rx="7"/><rect x="16" y="122" width="150" height="30" rx="7"/><rect x="16" y="164" width="150" height="30" rx="7"/>
+            <rect x="281" y="80" width="150" height="30" rx="7"/><rect x="281" y="122" width="150" height="30" rx="7" stroke-width="2.6"/><rect x="281" y="164" width="150" height="30" rx="7"/>
+            <rect x="546" y="80" width="150" height="30" rx="7"/><rect x="546" y="122" width="150" height="30" rx="7"/><rect x="546" y="164" width="150" height="30" rx="7" stroke-dasharray="4 4" opacity=".45"/>
+            <rect x="811" y="80" width="150" height="30" rx="7" stroke-dasharray="4 4" opacity=".45"/><rect x="811" y="122" width="150" height="30" rx="7"/><rect x="811" y="206" width="150" height="30" rx="7"/><rect x="811" y="248" width="150" height="30" rx="7"/>
+          </g>
+          <g fill="none" stroke="var(--new)" stroke-width="2"><rect x="546" y="206" width="150" height="30" rx="7"/><rect x="546" y="248" width="150" height="30" rx="7"/></g>
+          <g fill="currentColor" text-anchor="middle">
+            <text x="91" y="100">austin-0041</text><text x="91" y="142">austin-0042</text><text x="91" y="184">austin-0043</text>
+            <text x="356" y="100">austin-0041</text><text x="356" y="142" font-weight="700">austin-0042</text><text x="356" y="184">austin-0043</text>
+            <text x="621" y="100">austin-0041</text><text x="621" y="142">austin-0042</text><text x="621" y="184" opacity=".45" text-decoration="line-through">austin-0043</text>
+            <text x="886" y="100" opacity=".45" text-decoration="line-through">austin-0041</text><text x="886" y="142">austin-0042</text><text x="886" y="226">austin-0193</text><text x="886" y="268">austin-0194</text>
+          </g>
+          <g fill="var(--new)" font-weight="700" text-anchor="middle"><text x="621" y="226">austin-0193</text><text x="621" y="268">austin-0194</text></g>
+        </g>
+        <g font-family="ui-sans-serif,system-ui,sans-serif" font-size="12" fill="currentColor">
+          <text x="441" y="141" opacity=".7">text edited</text>
+          <text x="706" y="225" opacity=".7">from 0043</text><text x="706" y="267" opacity=".7">from 0043</text>
+          <text x="16" y="236" font-size="12.5">next_item <tspan font-weight="700">193</tspan></text>
+          <text x="281" y="236" font-size="12.5">next_item <tspan font-weight="700">193</tspan></text>
+          <text x="546" y="304" font-size="12.5">next_item <tspan font-weight="700" fill="var(--new)">195</tspan></text>
+          <text x="811" y="304" font-size="12.5">next_item <tspan font-weight="700">195</tspan> · 0041 never reused</text>
+        </g>
+      </svg>
+      <figcaption><b>Claim (D4):</b> the stable ID is a counter scoped to its checklist, and it encodes nothing. A text edit keeps the ID. A split takes new numbers from <code>next_item</code> (<span style="color:var(--new);font-weight:600">green</span>) and records <code>derived_from</code>. A deleted number is never reused, because <code>next_item</code> only rises (D12 rule 4).</figcaption>
+    </figure>
+
     <h3>The rules the files follow</h3>
     <div class="doc">
-      <ol class="goals">
-        <li><div><b>The basis decides the checklist.</b> <code>formal</code> means the jurisdiction's own checklist; <code>none_found</code> or <code>inconclusive</code> means <code>generic</code>, the baseline. No <code>intake.yaml</code> at all means no assignment, which is different from <code>none_found</code>.</div></li>
-        <li><div><b>IDs are <code>{checklist}-{NNNN}</code> and never reused.</b> A new item takes <code>next_item</code> and the same PR raises it, so a number deleted from a folder edited in place stays retired. A text edit keeps the ID; a split mints new ones and records <code>derived_from</code>.</div></li>
-        <li><div><b>Only versions with a sidecar sync.</b> Austin v2.7-trimmed is backfilled now. The other 9 versions can follow by adding their sidecars (Q1).</div></li>
-        <li><div><b>The baseline lives at <code>bureau/intake/baseline/</code></b>, outside <code>jurisdictions/</code>, so the syncs that walk that folder never mistake it for a jurisdiction. It stays empty until its own sub-spec fills it.</div></li>
-      </ol>
+      <p><b>D1 · The basis decides the checklist.</b> <code>formal</code> means the jurisdiction's own checklist; <code>none_found</code> or <code>inconclusive</code> means <code>generic</code>, the baseline. No <code>intake.yaml</code> at all means no assignment, which is different from <code>none_found</code>.</p>
+      <p><b>D2 · The baseline lives at <code>bureau/intake/baseline/</code></b>, outside <code>jurisdictions/</code>, so the syncs that walk that folder never mistake it for a jurisdiction. It stays empty until its own sub-spec fills it.</p>
+      <p><b>D3 · Only versions with a sidecar sync.</b> Austin v2.7-trimmed is backfilled now. The other 10 Austin version dirs can follow by adding their sidecars (Q1).</p>
+      <p><b>bureau#2112 already writes this format.</b> The open intake-prospecting PR emits <code>intake.yaml</code> and <code>intake-ids.tsv</code> for new jurisdictions, with no linter yet, so whichever of it and P2a merges first fixes the format on main.</p>
     </div>
   </section>
 
@@ -1085,13 +1144,13 @@ decided_at: 2026-10-14</div>
 
     <h3 class="claim" id="detail-tables">A checklist has revisions, and each revision holds its own copy of every item <span class="src">D6, D10</span></h3>
     <div class="sys-legend"><span><i class="box"></i>exists</span><span><i class="box new"></i>new</span><span><i class="new"></i>new relationship</span><span>arrows point from the one to the many</span><span>DB type on the right · <span style="font-family:var(--mono);font-size:12px;color:#8a919c">null</span> = nullable</span></div>
-    <div class="erd linked" style="grid-template-columns:repeat(3,minmax(0,1fr))">
-      <div class="ent exist" id="t-jur" style="grid-area:1/1">
+    <div class="erd linked" style="grid-template-columns:repeat(2,minmax(0,1fr))">
+      <div class="ent exist" id="t-jur" style="grid-area:1/2">
         <div class="eh"><span class="en">jurisdictions</span><span class="stereo">EXISTS</span></div>
         <div class="row"><span class="b b-pk">PK</span><span class="nm">slug</span><span class="dt">text</span><span class="ty">written by sync-conventions</span></div>
         <div class="note">unchanged; one writer per table keeps "bureau wins" clear</div>
       </div>
-      <div class="ent newt" id="t-ji" style="grid-area:1/2">
+      <div class="ent newt" id="t-ji" style="grid-area:2/2">
         <div class="eh"><span class="en">jurisdiction_intake</span><span class="stereo">NEW</span></div>
         <div class="row"><span class="b b-pk">PK</span><span class="b b-fk">FK</span><span class="nm">jurisdiction_slug</span><span class="dt">text</span></div>
         <div class="row"><span class="b b-fk">FK</span><span class="nm">checklist_id</span><span class="dt">text</span><span class="ty">its own checklist, or generic</span></div>
@@ -1104,7 +1163,7 @@ decided_at: 2026-10-14</div>
         <div class="row"><span class="nm">updated_at</span><span class="dt">timestamptz</span></div>
         <div class="note">formal ⇔ checklist isn't generic</div>
       </div>
-      <div class="ent newt" id="t-chk" style="grid-area:1/3">
+      <div class="ent newt" id="t-chk" style="grid-area:2/1">
         <div class="eh"><span class="en">intake_checklists</span><span class="stereo">NEW</span></div>
         <div class="row"><span class="b b-pk">PK</span><span class="nm">id</span><span class="dt">text</span><span class="ty">'austin' · 'generic'</span></div>
         <div class="row"><span class="nm">kind</span><span class="dt">text</span><span class="ty">jurisdiction · baseline</span></div>
@@ -1114,9 +1173,9 @@ decided_at: 2026-10-14</div>
         <div class="row"><span class="nm">bureau_commit</span><span class="dt">text<i> null</i></span></div>
         <div class="row"><span class="nm">created_at</span><span class="dt">timestamptz</span></div>
         <div class="row"><span class="nm">updated_at</span><span class="dt">timestamptz</span></div>
-        <div class="note">a jurisdiction's checklist id is its slug</div>
+        <div class="note">a jurisdiction's checklist id is its slug; FK to jurisdictions</div>
       </div>
-      <div class="ent newt" id="t-items" style="grid-area:2/1/3/3">
+      <div class="ent newt" id="t-items" style="grid-area:3/2">
         <div class="eh"><span class="en">intake_checklist_items</span><span class="stereo">NEW</span></div>
         <div class="pkgroup"><span class="pklabel">composite key · these 3 columns are one key</span>
           <div class="row"><span class="b b-pk">PK</span><span class="b b-fk">FK</span><span class="nm">checklist_id</span><span class="dt">text</span><span class="ty">'austin'</span></div>
@@ -1140,7 +1199,7 @@ decided_at: 2026-10-14</div>
         <div class="row"><span class="nm">citations</span><span class="dt">jsonb<i> null</i></span><span class="ty">the item's entry from source-citations.json</span></div>
         <div class="row"><span class="b b-fk">FK</span><span class="nm">jurisdiction_slug</span><span class="dt">text<i> null</i></span><span class="ty">copied from the checklist, so "items for X" needs no join</span></div>
       </div>
-      <div class="ent newt" id="t-ver" style="grid-area:2/3">
+      <div class="ent newt" id="t-ver" style="grid-area:3/1">
         <div class="eh"><span class="en">intake_checklist_versions</span><span class="stereo">NEW</span></div>
         <div class="pkgroup"><span class="pklabel">composite key · these 2 are one key</span>
           <div class="row"><span class="b b-pk">PK</span><span class="b b-fk">FK</span><span class="nm">checklist_id</span><span class="dt">text</span><span class="ty">'austin'</span></div>
@@ -1159,7 +1218,7 @@ decided_at: 2026-10-14</div>
       <a class="sys-edge new" data-from="t-chk" data-to="t-ver">1 → many</a>
       <a class="sys-edge new" data-from="t-ver" data-to="t-items">1 → many</a>
     </div>
-    <p class="claim"><b>Why a revision copies every item:</b> one label has held several sets of content, because v2.7-trimmed was edited in place from July to October. A review can point at any revision, so nothing is updated or deleted.</p>
+    <p class="claim"><b>Why a revision copies every item:</b> one label has held several sets of content, because v2.7-trimmed was edited in place from July to October: IG's cache holds 6 distinct contents for it across 14 commits. A review can point at any revision, so nothing is updated or deleted.</p>
   </section>
 
   <section class="panel" id="sync">
@@ -1220,23 +1279,7 @@ decided_at: 2026-10-14</div>
 
   <section class="panel" id="rollout">
     <h2>Rollout</h2>
-    <p class="lede">The bureau files and the linter land first, as the intake-prospecting runbook's output contract. The tables wait until that loop has met the Austin bar and one non-Austin smoke run has produced output in the format (v1.1, north-star D3).</p>
-
-    <h3 class="claim">The files and linter land now; the tables wait for the intake loop <span class="src">§4, north-star D3</span></h3>
-    <div class="sys-legend"><span><i class="box" style="border:2px solid var(--ink)"></i>lands first, as the runbook's output contract</span><span><i class="box"></i>waits</span><span>each card says what it waits on</span></div>
-    <div class="plan" style="--cols:3">
-      <div class="plan-h"><span></span><span>Now</span><span>After the Austin bar + a smoke run</span><span>Then</span></div>
-      <div class="plan-row"><span class="plan-who">bureau</span>
-        <div class="plan-cell"><div class="pc key"><span class="pid">P2a · D1–D5, D12 · S1</span><b>Files, linter, Austin backfill</b><span class="pd"><code>intake.yaml</code>, a 192-row sidecar, <code>lint:intake</code> in CI</span><span class="pa">waits on nothing; changes hand-editing from merge on</span></div></div>
-        <div class="plan-cell"></div>
-        <div class="plan-cell"><div class="pc"><span class="pid">P2b · D9–D11, D13 · S1</span><b>The sync and its Action</b><span class="pd">builder, <code>sync:intake</code>, <code>sync-intake.yml</code>, then the acceptance run</span><span class="pa">after P1 is applied to prod and P2a is merged</span></div></div>
-      </div>
-      <div class="plan-row"><span class="plan-who">cityhall</span>
-        <div class="plan-cell"></div>
-        <div class="plan-cell"><div class="pc"><span class="pid">P1 · D6–D8, D10 · S2</span><b>Four tables and the write function</b><span class="pd">schemas, generated migration, allowlist, DB tests</span><span class="pa">scheduled after the loop meets the bar, so Q1/Q2 can still change the schema; Jason applies it</span></div></div>
-        <div class="plan-cell"></div>
-      </div>
-    </div>
+    <p class="lede">The build order is on the Overview tab: P2a first, then P1 and P2b once the intake loop has met the Austin bar. This tab says what done looks like and what is still open (§3, §5).</p>
 
     <h3 class="claim">Done means 192 rows, one revision, and the same after a second run <span class="src">§3 acceptance</span></h3>
     <ol class="steps">
@@ -1247,9 +1290,9 @@ decided_at: 2026-10-14</div>
 
     <h3>Open questions</h3>
     <div class="doc">
-      <p><b>Q1 · Backfill older Austin versions?</b> 41 of the 60 CC reviews ran on 9 other versions. Not now; revisit when something needs to join old reviews to items.</p>
-      <p><b>Q2 · Should a review record the revision it ran against?</b> The label alone doesn't pick one, because v2.7-trimmed has had several contents. The commit does, if the sync keeps a commit-to-revision lookup.</p>
-      <p><b>Q3 · Cedar Park v1:</b> give it a sidecar now as a sparse second fixture, or wait for the intake-prospecting runbook to regenerate it?</p>
+      <p><b>Q1 · Backfill older Austin versions?</b> 41 of the 60 CC reviews ran on 8 other labels, plus one labelled <code>unknown</code>. Not now; revisit when something needs to join old reviews to items.</p>
+      <p><b>Q2 · Should a review record the revision it ran against?</b> The label alone doesn't pick one, because v2.7-trimmed has had several contents. The commit does, if the sync keeps a commit-to-revision lookup. 59 of 60 reviews record <code>bureauCommitHash</code>; the 19 on v2.7-trimmed span 14 commits.</p>
+      <p><b>Q3 · Cedar Park v1</b> (21 guides, 220 items, one row with an unescaped <code>|</code>): give it a sidecar now as a sparse second fixture, or wait for the intake-prospecting runbook to regenerate it?</p>
     </div>
   </section>
 
