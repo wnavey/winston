@@ -426,7 +426,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 <div class="kicker">CARTOGRAPHER · SIR-FREE ANCHORING</div>
 <h1>Anchoring without a SIR: a loose PDF from upload to the map</h1>
 <p>Architecture companion to <code>DESIGN-SPEC.md</code> (winston#309). Today <code>anchor-geometry</code> cannot run on a file nothing owns: the SIR supplies the request's identity, the target coordinate system, the fitting ring and the owner of every row it writes. This spec finds the county ring from the plan set's own text, takes the target coordinate system from the ring itself, lets <code>geo</code> and <code>cartographer_anchors</code> carry no owner, and shows the derivation on a new evidence page. North star P2a + P2b.</p>
-<div class="meta">Draft v1.5 · 2026-10-14 (v1.1 2026-10-13) · companion on spec-kit v5.1 · click a tab ↓</div>
+<div class="meta">Approved v1.5 · 2026-10-14 · ready to implement · companion on spec-kit v5.1 · click a tab ↓</div>
 <a class="spec-link" href="DESIGN-SPEC.html">📖 read the spec</a>
 </header>
 
@@ -637,7 +637,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 <tr><td><code>arcgis_query.py</code> <span class="r">existing</span></td><td>the surveyor module's <code>parcels</code> layer (from its <code>layer-identity.json</code>) and a <code>where</code> clause, or a point</td><td>features with native rings <b>and the layer's <code>native_sr</code></b>: the SRID source (D5)</td><td><code>where LEGAL_DESCRIPTION LIKE '%LENOX SPRINGS%'</code> → 4 rows, one SEC III, PID 0436110202; <code>native_sr {wkid 102739, latestWkid 2277, projected: true}</code>; 7-point ring</td></tr>
 <tr><td><code>spcs_lookup.py</code> <span class="w">extended</span></td><td>new: a zone name + datum (the reverse index, D7); as today: <code>--state --county</code> by name (the fallback, D6)</td><td>the <i>set</i> of a zone's codes; or <code>{epsg, units, zone, basis}</code>. Stdlib, zero network</td><td>("TEXAS CENTRAL ZONE", "NAD 83") → {2277, 32139}, and 2277 is a member; Travis → 2277 ftUS exists but is not needed, the layer is projected</td></tr>
 </tbody></table></div>
-<p class="claim"><b>Claim (D5, D6):</b> <code>arcgis_query.py</code> "already reports" <code>native_sr</code> and <code>sir_add_parcel_geo</code> "already stores it as <code>srid_local</code>"; the county table "was itself reconciled against this layer, so the table agreeing with the ring was partly the layer agreeing with itself"; "nothing needs a FIPS." <b>Claim (D6, v1.5):</b> "surveyor is the registry": 177 modules carry a machine-readable <code>layer-identity.json</code>, 95 with a parcel layer, and Austin's <code>coa-gis</code> pins the exact TCAD layer §1.5 measured; what is missing is a <code>role</code> tag and a county-name → slug convention, and "nothing is built twice." The runbook "runs only on a jurisdiction prospector has trained."</p>
+<p class="claim"><b>Claim (D5, D6):</b> <code>arcgis_query.py</code> "already reports" <code>native_sr</code> and <code>sir_add_parcel_geo</code> "already stores it as <code>srid_local</code>"; the county table "was itself reconciled against this layer, so the table agreeing with the ring was partly the layer agreeing with itself"; "nothing needs a FIPS." <b>Claim (D6):</b> "surveyor is the registry": 177 modules carry a machine-readable <code>layer-identity.json</code>, 95 with a parcel layer, and Austin's <code>coa-gis</code> pins the exact TCAD layer §1.5 measured; what is missing is a <code>role</code> tag and a county-name → slug convention, and "nothing is built twice." The runbook "runs only on a jurisdiction prospector has trained."</p>
 
 <h3 id="detail-location"><span class="hn">D10a</span>Finding the parcel: the location ladder, which runs before the SRID exists</h3>
 <div class="dflow">
@@ -905,7 +905,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 
 <div class="grid2">
 <div class="card keep"><strong>Prior art: /geometry/[id]</strong><p>Signed PDF, box overlay, a rail of claims, four queries and no joins, and an additive posture: a figure published before the evidence tables existed renders with "no evidence recorded". S5 holds the anchor page to the same bar against e94fae93, which has correspondences, residuals and an overlay and no derivation. Whether it reuses the full PDF instrument or a read-only viewer is Q9.</p></div>
-<div class="card change"><strong>Q11 · possible bug</strong><p><code>evidence.check_md</code> is null on the one prod anchor, so the 3.3 check readout, the step whose only job is to say whether the overlay looks right, reached the database empty. <code>publish.ts</code> tolerates a missing <code>check.md</code>. Did the step write nothing, or did the file not survive to publish? Worth settling before the page is built around showing it.</p></div>
+<div class="card change"><strong>Q11 · settled: a publish bug</strong><p><code>evidence.check_md</code> is null on the one prod anchor, but the 3.3 check did write its readout (15 KB, in its step folder). The 5.1 publish step never links <code>check.md</code> into its workspace and does not list 3.3 as an input, so <code>publish.ts</code> found nothing and wrote null, as it is allowed to. Fix is §3 item 15, and the page's third section depends on it.</p></div>
 </div>
 </section>
 
@@ -980,7 +980,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 
 <h3><span class="hn">§7</span>Open questions</h3>
 <div class="catgrp">
-<div class="cath"><span class="cgl">Q</span> Twelve, all decided in v1.5</div>
+<div class="cath"><span class="cgl">Q</span> Twelve, all decided</div>
 <div class="uci later"><span class="uid">Q1</span><span class="utxt">RPC name: a fresh <code>add_parcel_geo</code> beside the old one; cityhall untouched.</span></div>
 <div class="uci later"><span class="uid">Q2</span><span class="utxt">Both owners on one row: no CHECK; the links are independent.</span></div>
 <div class="uci later"><span class="uid">Q3</span><span class="utxt"><b>Surveyor is the registry.</b> The module's <code>layer-identity.json</code> plus a <code>role</code> tag; no second registry; the runbook runs only on jurisdictions prospector has trained, and an untrained one is a D8 stop.</span></div>
@@ -994,7 +994,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 <div class="uci later"><span class="uid">Q11</span><span class="utxt">Settled as a bureau bug: 3.3 wrote a 15 KB <code>check.md</code>; 5.1 never links it into its workspace. Fix is §3 item 15.</span></div>
 <div class="uci later"><span class="uid">Q12</span><span class="utxt">Area-gate tolerance: start at 10 %, tune on the first stop.</span></div>
 </div>
-<div class="callout new"><span class="lab">audit closed · questions closed</span>Every functional point from the audit and every open question is decided and folded in: the SRID comes from the ring (v1.3); <code>geo.file_id</code>, the SIR path's full context, the pre-gate ring write, the <code>anchor_id</code> index, Q7 deferred (v1.4); surveyor as the registry, no backfill, the <code>check.md</code> bug, and the routine seven (v1.5).</div>
+<div class="callout new"><span class="lab">nothing is open</span>Every decision in the spec is final and every question in §7 is answered. Implement from §3 in deploy order, substation first, and prove it with the §5 run on White Water.</div>
 </section>
 
 </main>

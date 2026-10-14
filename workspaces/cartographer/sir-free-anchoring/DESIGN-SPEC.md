@@ -1,85 +1,13 @@
 # Anchoring without a SIR — a loose PDF from upload to the map
 
-**Status:** Draft v1.5
+**Status:** Approved v1.5 — ready to implement
 **Date:** 2026-10-14
+**Start here:** nothing is open; every decision below is final and every question in §7 is answered. Implement from **§3** (the pieces, in deploy order, substation first) and prove it with **§5** (the acceptance run on White Water).
 **Repos touched:** `bureau` (`anchor-geometry` steps 1.1 and 1.2; a zone-name reverse index in `spcs_lookup.py` and a page-1 reader under `site-research/bin`), `cartographer` (`runbooks/anchor-geometry/scripts/{fetch,publish}.ts`; `src/routes/anchored`; a new `src/routes/anchor/[id]`), `substation` (`geo` and `cartographer_anchors` ownership columns; the three RPCs in `geo_helpers.sql`), `surveyor` (a `role` tag on `layer-identity.json` entries, Austin's two modules by hand)
 **Repos NOT touched:** `cityhall-new`, `conductor2`, `claude-plugins`, `quarry`, `prospector` (follow-up: write the `role` tag when it builds a module)
 **Prod:** Supabase **Noetic App** (`mgxqsrjutswbciyrltwd`)
 **Parent:** [`../north-star/NORTH-STAR-SPEC.md`](../north-star/NORTH-STAR-SPEC.md) (winston#303) — this is **P2a + P2b**, the decoupling and the manual path, peeled off on their own.
 **Predecessor:** [`../anchoring-geometries/DESIGN-SPEC.md`](../anchoring-geometries/DESIGN-SPEC.md) (winston#279/#281) — the anchoring algorithm. Nothing here changes `anchor.ts`.
-
-> **Revision note (v1.1, 2026-10-13).** Adds **§2.5 "Showing the work"** (D15–D20): an evidence
-> trail for an anchor, modelled on the one `/processed` → `/geometry/[id]` already gives an
-> extracted figure, reached by a link on the `/anchored` tile. A claim is **cited** (an existing
-> `cartographer_geometry_evidence` row, referenced by id and never copied — `basis_of_bearings`
-> and both `scale_factor` rows already exist on the White Water figure with crops, boxes and
-> grounds), **read** (the county off page 1, rendered in situ by `PdfPageOverlay` with no crop
-> upload) or **computed** (the `spcs_lookup` resolution and the ArcGIS fetch, which have no page
-> and must not pretend to). Sections 2–4 of the page are almost entirely data that is **already
-> in prod and never rendered** — correspondences' prose justifications, `metrics.notes`' reason
-> per unmatched figure, 28 residuals, the overlay PNG — so the page can be built against anchor
-> `e94fae93` before any decoupling lands. New **S5**; new **Q9–Q11**, of which Q11 is a possible
-> bug: `evidence.check_md` is null on that run.
-
-> **Revision note (v1.2, 2026-10-14, after audit).** Two gaps closed and five facts corrected.
-> **(1) D10 had no location.** It fetched the ring by `--lat --lon` and nothing on the loose-file
-> path supplies a point — §1.5's coordinates came from the project this spec promises not to use.
-> New **D10a**: a location ladder — `request.site_point` (operator override, new optional field in
-> D3) → the plat's **legal description** queried against the parcel layer's legal-description
-> field → an address through a jurisdiction locator — closed by an **area gate** against the
-> plat's stated area. Measured on White Water: the legal description resolves to the same parcel
-> §1.5 found by point; the City of Austin locator scores the address 100; the free Census geocoder
-> returns **nothing** for a 2021 subdivision, which is why address is the last rung and not the
-> first. **(2) D8's "exit 75" named no mechanism.** conductor2 parks a script step only when its
-> *contract* exits 75 after `BLOCKED.md` is written; `fetch.py`'s no-target path today is
-> `sys.exit(message)`, exit 1, a failed step. D8 now says who writes what. **Corrections:** D9 is
-> already implemented (`frames.ts:230-233` → `anchor.ts:683`) and is restated as "unchanged, do not
-> break"; its "~0.9 ppm" was ~33 ppm. §1.4's `e94fae93` is a rung-1 `printed_coordinates` anchor,
-> not a ring fit — `fitToRing` has **no prod precedent**, which §5 now says. §1.5's first bearing
-> read 285.4444°, it is 285.4556°. §3 omitted three files that hard-code the SIR
-> (`1.2-fetch/contract.test.ts`, cartographer `lib/contracts.ts`, the `Database` types); added.
-> Q1's path is in `noetic-inc/cityhall` (`cityhall-new` redirects). New **Q12** (area-gate
-> tolerance); Q3 grows a second column. Audit points that would change functional logic beyond
-> these (FIRM-panel `C` check, a `file_id` column instead of parsing `source_doc`, D13's effect on
-> the SIR path, the pre-gate county write, an `anchor_id` index, Q7) are **not** folded in; they
-> are listed in the PR thread for a decision.
-
-> **Revision note (v1.3, 2026-10-14).** Reverses how v1.2 derived the target SRID. The county
-> FIPS and the FIRM panel are gone: a FIPS is a county id, not a coordinate system, and its only
-> job was to key a county → zone table. **The ring brings its own coordinate system.** The parcel
-> layer returns `native_sr` with the feature (§1.5: `latestWkid 2277`), which is how the SIR path
-> already gets `srid_local`; the loose-file path now takes it from the same place, one row earlier.
-> **D4** is now request → ring → county table → stop; **D5** the ring is the source; **D6** the
-> county is a *name*, read from the plat's recording reference, used only to pick the layer (Q3)
-> and as the fallback when a layer is published geographic; **D7** the plat's zone is a *check*
-> (zone name → the set of its EPSG codes; the derived code must be in it), no longer a source, and
-> a plat with an `assumed` or `deed` basis proceeds with the check recorded as unavailable instead
-> of parking; **D8** keeps the hard stop and its mechanism with the cases restated. **D10a** runs
-> before the SRID exists, not after. D17's claim chain, §3 items 3, 4, 6 and 7, S3, §5 steps 1–2
-> and the second negative, Q3 and Q6 follow. The audit's FIRM-panel countywide-`C` point closes
-> itself. The `plan_set_county.py` name stays; its output drops `fips`.
-
-> **Revision note (v1.4, 2026-10-14).** The five remaining audit points, decided. **D1** adds a third
-> nullable link, `geo.file_id` → `cartographer_files`: ownership (`sir_id`, `submission_version_id`)
-> and provenance (`file_id`) are different questions, and a loose file has only the second. **D11**
-> keys on that column instead of parsing `source_doc`. **D13** keeps the SIR's full parcel set as the
-> context when an anchor has a SIR, and reads `target_geo_ids` only when it has no owner — the
-> car-wash map keeps its neighbours and its two `estimated` rows. **D10** now states that the county
-> ring is written before the gate and survives a rejected fit, on purpose. **D12** gains an expression
-> index on `properties->>'anchor_id'`. **Q7** is answered *not now*: `target_geo_ids` stays a bare
-> array. §3 items 9, 10, 11 and S4 follow.
-
-> **Revision note (v1.5, 2026-10-14).** Every open question decided; §7 records each answer in
-> place. The one that changes the design is **Q3**: v1.3's D6 said surveyor "cannot stand in for
-> the registry". It can, and it already is one — every source module carries a machine-readable
-> `layer-identity.json` (service, layer id, name, `native_sr`; 177 modules, 95 with a parcel
-> layer, Austin's `coa-gis` pinning the exact TCAD layer §1.5 measured), and `source-tools.ts`
-> already resolves a jurisdiction slug to its modules. **No second registry.** What is missing is
-> a `role` tag saying which entry is the parcel layer and which the legal-description layer, and
-> a county-name → slug convention; D6 is rewritten around that. The precondition is stated as a
-> design rule: **this runbook runs only on a jurisdiction prospector has trained**, and an
-> untrained one is a D8 stop, not a fallback. **Q11** is settled as a bureau bug (5.1 never links
-> `check.md`; new §3 item 15). **Q8** is no. Q1, Q2, Q4, Q5, Q6, Q9, Q10 take the routine answer.
 
 ---
 
@@ -185,7 +113,7 @@ Area 43,557.77 ft² against the plat's 43,560. **The rung-3 fit on this file sho
 
 One more measured fact: `project.site_outline` for this project is **vertex-identical to that live fetch** — same seven points to ≤ 1.8 × 10⁻⁹ degrees, wound the opposite way. So the parcel is already resolved and already in the database, despite there being no SIR and no site-research run. What `site_outline` lacks is everything but the shape: no `parcel_id`, no legal description, no `native_geometry`, no `native_sr`. See **D10**'s rejected alternatives for why that is not good enough to build a `county_api` row from.
 
-**Where the point came from, and what else finds the parcel (v1.2).** The `--lat --lon` above were the project's `site_address` geocoded by hand — nothing a loose file carries. A parcel layer answers a point query or an attribute query and never an address, so the routes that start from the plan set's own text were measured too (2026-10-14):
+**Where the point came from, and what else finds the parcel.** The `--lat --lon` above were the project's `site_address` geocoded by hand — nothing a loose file carries. A parcel layer answers a point query or an attribute query and never an address, so the routes that start from the plan set's own text were measured too (2026-10-14):
 
 | route | input off the plan set | result |
 |---|---|---|
@@ -214,7 +142,7 @@ The plat's legal description is the parcel's own name in the county's table and 
 
 **D1. `geo.sir_id` becomes nullable, and `geo` gains a nullable `submission_version_id` and a nullable `file_id`.** A `geo` row may be owned by a SIR (today's rows, unchanged), by a site-plan submission version, or by **nothing**. Nothing is a first-class case — it is what a loose PDF produces, and it is the case this spec exists to serve.
 
-Ownership and provenance are different questions *(v1.4)*. `sir_id` and `submission_version_id` say **who the row belongs to**; `file_id` → `cartographer_files` says **what produced it**, and every row the anchor runbook writes — the fitted lot and the county ring alike — traces to one file whether or not anyone owns that file. Today provenance is recorded as the string `source_doc = 'cartographer:' || file_id`; the column replaces the parse, and `source_doc` stays as the human-readable note. County rings site-research writes at SIR time keep `file_id` null, since no Cartographer file was involved.
+Ownership and provenance are different questions. `sir_id` and `submission_version_id` say **who the row belongs to**; `file_id` → `cartographer_files` says **what produced it**, and every row the anchor runbook writes — the fitted lot and the county ring alike — traces to one file whether or not anyone owns that file. Today provenance is recorded as the string `source_doc = 'cartographer:' || file_id`; the column replaces the parse, and `source_doc` stays as the human-readable note. County rings site-research writes at SIR time keep `file_id` null, since no Cartographer file was involved.
 
 | column | meaning | on a loose file |
 |---|---|---|
@@ -241,11 +169,11 @@ There are **no RLS policies on `geo`, `cartographer_files`, `cartographer_geomet
 
 In every derived case the plat's own zone must agree with the result (D7).
 
-**D5. The ring brings its own coordinate system.** §1.5's fetch returned `native_sr {wkid: 102739, latestWkid: 2277, projected: true, source: "layer"}` with the feature. `arcgis_query.py` already reports it, `sir_add_parcel_geo` already stores it as `srid_local`, and the SIR path's target CRS (C-b) is nothing but the modal `srid_local` of those rows. So the loose-file path derives the target the way the SIR path already does, from the layer rather than from the SIR's copy of the layer. No county id is involved. The v1.2 alternative — a county → zone table — was itself reconciled against this layer (its Travis row's note says so), so the table agreeing with the ring was partly the layer agreeing with itself.
+**D5. The ring brings its own coordinate system.** §1.5's fetch returned `native_sr {wkid: 102739, latestWkid: 2277, projected: true, source: "layer"}` with the feature. `arcgis_query.py` already reports it, `sir_add_parcel_geo` already stores it as `srid_local`, and the SIR path's target CRS (C-b) is nothing but the modal `srid_local` of those rows. So the loose-file path derives the target the way the SIR path already does, from the layer rather than from the SIR's copy of the layer. No county id is involved. The alternative, a county → zone table keyed by FIPS, was itself reconciled against this layer (its Travis row's note says so), so the table agreeing with the ring was partly the layer agreeing with itself.
 
 **D6. The county is a name, used for two things: finding the layer, and the fallback.** It is read from page 1's prose — `line 150: … PUBLIC RECORDS TRAVIS COUNTY, TEXAS.` — which every recorded plat carries in its recording reference and certification block. `spcs_lookup.py --state TX --county Travis` already accepts a name; nothing needs a FIPS.
 
-- *Finding the layer.* **Surveyor is the registry** *(v1.5; v1.3 said it could not be)*. Every source module carries `src/sources/<module>/layer-identity.json` — service URL, layer id, name and `native_sr` per layer — and `src/lib/source-tools.ts` already resolves a jurisdiction slug to its modules by loading `jurisdictions/<slug>.md`. For Austin, `coa-gis` pins TCAD Parcels at `Shared/AppraisalDistricts/MapServer/0` in 2277, the layer §1.5 measured, and `travis-county-gis` pins `DBO.Parcels`, also 2277. Across the repo: 177 modules, 95 with a parcel layer, 59 of those in a State Plane code and 36 in Web Mercator or unrecorded (the D6 fallback is therefore a third of jurisdictions, not a corner case). Two things are missing and both are small: a **`role` tag** on a layer entry (`parcels` · `legal_description` · `locator`), since today "the parcel layer" is a naming convention in the `note` field; and a **county-name → slug** convention (`TRAVIS COUNTY, TEXAS` → `travis-county-tx`, with the city module preferred when the plat's title block names one). The fetch reads the module's `parcels` entry and takes the ring and its `native_sr` from there. Nothing is built twice.
+- *Finding the layer.* **Surveyor is the registry.** Every source module carries `src/sources/<module>/layer-identity.json` — service URL, layer id, name and `native_sr` per layer — and `src/lib/source-tools.ts` already resolves a jurisdiction slug to its modules by loading `jurisdictions/<slug>.md`. For Austin, `coa-gis` pins TCAD Parcels at `Shared/AppraisalDistricts/MapServer/0` in 2277, the layer §1.5 measured, and `travis-county-gis` pins `DBO.Parcels`, also 2277. Across the repo: 177 modules, 95 with a parcel layer, 59 of those in a State Plane code and 36 in Web Mercator or unrecorded (the D6 fallback is therefore a third of jurisdictions, not a corner case). Two things are missing and both are small: a **`role` tag** on a layer entry (`parcels` · `legal_description` · `locator`), since today "the parcel layer" is a naming convention in the `note` field; and a **county-name → slug** convention (`TRAVIS COUNTY, TEXAS` → `travis-county-tx`, with the city module preferred when the plat's title block names one). The fetch reads the module's `parcels` entry and takes the ring and its `native_sr` from there. Nothing is built twice.
 - *The precondition.* **This runbook runs only on a jurisdiction prospector has trained into surveyor tools.** A county name with no module is a D8 stop that says so; it is not a fallback to a request field or a constant. That is the same boundary site-research already lives inside.
 - *The fallback.* When the ring layer is published geographic (4326) or in Web Mercator, `native_sr` names no State Plane and the county table is the only source: `spcs_lookup.py --state TX --county Travis` → `{"epsg":2277,"units":"ftUS","zone":"tx_central","basis":"ngs_zone"}`. Stdlib, zero network, already in bureau. This is the only case where the county matters for the SRID.
 
@@ -274,7 +202,7 @@ The same path carries the D10a stops. Nothing here is new machinery: it is site-
 
 ### 2.3 Sourcing the fitting target
 
-**D10. `1.2-fetch` fetches the county ring live and writes it into `geo` as a `county_api` row before solving.** This is the pattern that already runs (§1.4), with the owner removed. The write happens **before the `4.1` gate**, and a rejected fit leaves the ring in place, on purpose *(v1.4)*: the ring is true regardless of the fit, the viewer needs it to judge the overlay, and a re-run finds it by its key (D11) rather than writing it again. Concretely: find the parcel (D10a), fetch it with `arcgis_query.py … --geometry --native-ring`, then an RPC that is `sir_add_parcel_geo` with the ownership changed, then `fetch.ts` reads the row back and builds `inputs/parcels.json` exactly as it does today.
+**D10. `1.2-fetch` fetches the county ring live and writes it into `geo` as a `county_api` row before solving.** This is the pattern that already runs (§1.4), with the owner removed. The write happens **before the `4.1` gate**, and a rejected fit leaves the ring in place, on purpose: the ring is true regardless of the fit, the viewer needs it to judge the overlay, and a re-run finds it by its key (D11) rather than writing it again. Concretely: find the parcel (D10a), fetch it with `arcgis_query.py … --geometry --native-ring`, then an RPC that is `sir_add_parcel_geo` with the ownership changed, then `fetch.ts` reads the row back and builds `inputs/parcels.json` exactly as it does today.
 
 **D10a. Finding the parcel is a ladder, and the ladder ends in an area gate.** It runs **before** the target SRID exists, because the ring is where the SRID comes from (D5). The solver never needs a lat/lon; only the fetch does, and a loose file carries none (§1.5). The layer to query is the registry entry (Q3) for the county named in the prose (D6). The rungs, first match wins:
 
@@ -287,7 +215,7 @@ The same path carries the D10a stops. Nothing here is new machinery: it is site-
 
 Each rung is a §2.5 claim: rung 2 is a **read** (page 1, bbox, verbatim, `basis: "legal_description"`); rungs 1 and 3 are **computed** (`{kind: "fetched", url, where | point, feature_count, pid, native_sr}`); the gate is a computed claim with both areas. The fetched claim's `native_sr` is also the D5 SRID source, so one claim serves both ladders.
 
-Rung 2 is available only where the module records a `legal_description` layer *(v1.5)*. TCAD's geometry layer (`MapServer/0`) has only `PID_10` and `PROP_ID`; its sibling `MapServer/8` (OmniParcel) carries `LEGAL_DESCRIPTION`, and today only two of 177 modules record such a layer — Austin's does not. So Austin's `coa-gis` gets the entry by hand (§3 item 4b) and rung 2 lights up per jurisdiction as prospector records the layer; where it is absent the ladder skips to rung 3.
+Rung 2 is available only where the module records a `legal_description` layer. TCAD's geometry layer (`MapServer/0`) has only `PID_10` and `PROP_ID`; its sibling `MapServer/8` (OmniParcel) carries `LEGAL_DESCRIPTION`, and today only two of 177 modules record such a layer — Austin's does not. So Austin's `coa-gis` gets the entry by hand (§3 item 4b) and rung 2 lights up per jurisdiction as prospector records the layer; where it is absent the ladder skips to rung 3.
 
 Three consequences, all wanted:
 
@@ -311,22 +239,22 @@ where sir_id = p_sir and kind = p_kind
 
 With `p_sir` NULL this is a **never-match**, not a wrong-match: `sir_id = NULL` is NULL, so the lookup finds nothing and always inserts. Run the anchor runbook twice on the same loose PDF and you get two county rings, then three, and `/anchored`'s context layer accumulates duplicates. The naive repair (`sir_id is not distinct from p_sir`) is worse — it makes every unowned county row collide with every *other* unowned county row sharing a kind and label, across unrelated sites.
 
-So the new RPC keys on `(file_id, kind, label, method='county_api')`, with `file_id` the D1 column *(v1.4; v1.2 parsed it out of `source_doc`)*. It is stable across re-runs of both runbooks, and it makes "this file's county context" a single well-defined set regardless of whether anything owns it.
+So the new RPC keys on `(file_id, kind, label, method='county_api')`, with `file_id` the D1 column, not a parse of `source_doc`. It is stable across re-runs of both runbooks, and it makes "this file's county context" a single well-defined set regardless of whether anything owns it.
 
 ### 2.4 Publishing and the map
 
-**D12. The delete-key for an anchor's rows becomes `properties->>'anchor_id'` alone.** It appears twice — `sir_put_anchored_geo` (`geo_helpers.sql:326-328`) and the reject path of `cartographer_anchor_decide` (`:434-436`) — and both are currently `(sir_id, anchor_id)`. `anchor_id` is already sufficient and unique; the `sir_id` conjunct is redundant today and wrong once `sir_id` is nullable. This is the one place where the decoupling makes the schema simpler rather than wider. The property gets an expression index, `create index on geo ((properties->>'anchor_id'))`, in the same migration *(v1.4)*: the old key used the indexed `sir_id` column, the new one must not fall back to a scan.
+**D12. The delete-key for an anchor's rows becomes `properties->>'anchor_id'` alone.** It appears twice — `sir_put_anchored_geo` (`geo_helpers.sql:326-328`) and the reject path of `cartographer_anchor_decide` (`:434-436`) — and both are currently `(sir_id, anchor_id)`. `anchor_id` is already sufficient and unique; the `sir_id` conjunct is redundant today and wrong once `sir_id` is nullable. This is the one place where the decoupling makes the schema simpler rather than wider. The property gets an expression index, `create index on geo ((properties->>'anchor_id'))`, in the same migration: the old key used the indexed `sir_id` column, the new one must not fall back to a scan.
 
 **D13. `/anchored` finds its context through the owner when there is one, and through the anchor when there is not.**
 
 ```
 figures = geo WHERE properties->>'anchor_id' = anchor.id      -- unchanged (+page.server.ts:139)
-context = anchor.sir_id IS NOT NULL                           -- v1.4
+context = anchor.sir_id IS NOT NULL
           ? sir_parcels(anchor.sir_id)                        -- the SIR path, unchanged
           : geo WHERE id = ANY(anchor.target_geo_ids)         -- the loose-file path
 ```
 
-The SIR path is unchanged *(v1.4; v1.2 read `target_geo_ids` for both)*: on the car-wash SIR the full parcel set includes the neighbouring parcels and two `estimated` rows that are not anchor targets, and losing them from the map would be a regression for the case that already works. The loose-file branch works with zero owners and gives `target_geo_ids` its first real job; its integrity stays as it is for now (**Q7**). The SIR rail subtitle (`+page.server.ts:71`) becomes optional rather than per-anchor-required.
+The SIR path is unchanged: on the car-wash SIR the full parcel set includes the neighbouring parcels and two `estimated` rows that are not anchor targets, and losing them from the map would be a regression for the case that already works. The loose-file branch works with zero owners and gives `target_geo_ids` its first real job; its integrity stays as it is for now (**Q7**). The SIR rail subtitle (`+page.server.ts:71`) becomes optional rather than per-anchor-required.
 
 **D14. The `4.1-hitl` gate is unchanged.** It exists so a fit cannot publish itself. Even on the near-perfect car-wash run `auto_accept_suggested` was `false`, because of the C5 union-outline metric bug (north star **P0c** / winston#289 B3), so the gate is still the only real check. Removing it is a separate decision that depends on P0c.
 
@@ -462,28 +390,30 @@ Named only so the decoupling does not harden against north star **P5**. None is 
 
 ---
 
-## 7. Open questions
+## 7. Questions, decided
 
-**Q1.** Does the new parcel RPC get a fresh name (`add_parcel_geo`) alongside `sir_add_parcel_geo`, or does `sir_add_parcel_geo` gain nullable owner params and keep its name? Duplication is cheap and explicitly acceptable; a rename touches `cityhall/src/lib/publish/sir.ts:382` (the repo is `noetic-inc/cityhall`; `cityhall-new` redirects to it) and both test doubles. *(v1.5, decided: a fresh `add_parcel_geo`; cityhall untouched.)*
+Numbered so the companion page and audit sessions can cite them. Each is closed; the decision comes first, the reasoning after.
 
-**Q2.** Should `geo` forbid carrying both `sir_id` and `submission_version_id` (a CHECK), or are they independent provenance links with no XOR? *(v1.5, decided: no CHECK; independent links, as D1 and D3 already treat them.)*
+**Q1.** **A fresh `add_parcel_geo` beside `sir_add_parcel_geo`; cityhall untouched.** Duplication is cheap and explicitly acceptable; renaming the old RPC would touch `cityhall/src/lib/publish/sir.ts:382` (the repo is `noetic-inc/cityhall`; `cityhall-new` redirects to it) and both test doubles for no gain.
 
-**Q3.** Where does the **parcel layer URL** come from for a county we have not met? D10 needs one and there is no registry (D6). *(v1.3)* This is now the only real gap in the derivation: the county name is on every plat and the ring carries its own SRID, so everything else is a fetch. For v1 it can be a constant for Austin plus an optional request field — but that is the thing that stops this generalising, and it is the same gap north star **D11** names. *(v1.2)* The entry is now two things: the ring layer, and the **legal-description layer + field name** D10a rung 2 queries (Austin: `MapServer/8`, `LEGAL_DESCRIPTION`), plus optionally a locator URL for rung 3. *(v1.5, decided: **surveyor is the registry** — the module's `layer-identity.json` with a `role` tag, D6; no second registry; the runbook runs only on jurisdictions prospector has trained, and an untrained one is a D8 stop.)*
+**Q2.** **No CHECK forbidding both `sir_id` and `submission_version_id` on one row.** They are independent links, as D1 and D3 already treat them.
 
-**Q4.** `/anchored` currently has one rail row per anchor with a SIR subtitle. With no owner, what labels an anchor — the file name alone, or `submission_version` → `submission` → `project.name` when the chain exists? *(v1.5, decided: the file name, with the project name appended when the chain exists.)*
+**Q3.** **Surveyor is the registry; no second one is built.** The parcel layer for a county comes from the module's `layer-identity.json` with a `role` tag (D6, §3 item 4b). The runbook runs only on jurisdictions prospector has trained into surveyor tools; a county with no module is a D8 stop, never a fallback to a request field or a constant. The legal-description layer for D10a rung 2 is recorded the same way, per jurisdiction, as modules gain it (Austin: `MapServer/8`, `LEGAL_DESCRIPTION`, by hand first).
 
-**Q5.** Does a re-run under a *new* `anchor_run_slug` reuse the county row (D11 says yes, the key is the file) or mint a fresh one per anchor run so a run's context is immutable? *(v1.5, decided: reuse. The ring is the county's, not the run's; a run's own context is already snapshotted in `target_geo_ids`.)*
+**Q4.** **An unowned anchor is labelled by file name, with the project name appended when the `submission_version` → `submission` → `project` chain exists.** The SIR subtitle on `/anchored` becomes optional (D13).
 
-**Q6.** A plan set naming more than one county (a TxDOT note, an adjacent jurisdiction, a county-line subdivision). Stop and ask, or take the county in the recording reference specifically, since that is the one whose records hold the plat? *(v1.5, decided: the recording reference's county; stop only when that reference itself names two.)*
+**Q5.** **A re-run under a new `anchor_run_slug` reuses the county row.** The ring is the county's, not the run's (D11); a run's own context is already snapshotted in `target_geo_ids`.
 
-**Q7.** Should `cartographer_anchors.target_geo_ids` get referential integrity now that D13 reads the loose-file map through it? It has already dangled once on one row (§1.4). An array FK needs a trigger or a join table. *(v1.4, decided: not now.)* It stays a bare array; the loose-file viewer tolerates a missing id by drawing what exists. Revisit when there is more than one anchor run.
+**Q6.** **A plan set naming more than one county takes the one in the recording reference**, since that is whose records hold the plat. Stop (D8) only when the recording reference itself names two.
 
-**Q8.** Backfill posture for the 56 existing `geo` rows. All 56 derive a `project_id` cleanly, so north star **D4** (project ownership) stays available — but this spec does not need it and does not do it. Does anything want it before P5? *(v1.5, decided: no backfill.)*
+**Q7.** **`cartographer_anchors.target_geo_ids` stays a bare `uuid[]` for now.** It has already dangled once (§1.4) and D13 reads the loose-file map through it, but an array FK needs a trigger or a join table and one anchor run does not justify either. The loose-file viewer tolerates a missing id by drawing what exists. Revisit when there is more than one anchor run.
 
-**Q9.** Does `/anchor/[id]` reuse `/geometry/[id]`'s PDF viewer wholesale, or is the anchor page's PDF read-only (no rotation, no zoom, no selection rail)? The extracted-figure page needs the full instrument because a reader is checking 5 courses against the drawing; an anchor cites three or four claims on two pages. Reuse is tempting and the component is already extracted (`PdfPageOverlay`), but `/geometry/[id]`'s 455 lines of page are mostly the rail and the controls around it. *(v1.5, decided: a read-only viewer on `PdfPageOverlay`; not the full instrument.)*
+**Q8.** **No backfill of the 56 existing `geo` rows.** All 56 derive a `project_id` cleanly, so north star **D4** (project ownership) stays available later; nothing here needs it.
 
-**Q10.** Does the **county read** (D17) get a stored crop like the extract run's readings do, or stay box-only? Box-only is free and renders identically in situ; a stored crop is what makes the two pages consistent, and is the only way the claim survives the source PDF being replaced. Storing one means writing a `cartographer_geometry_crops` row from a runbook that is not the extract runbook, against a `geometry_id` that is not really its parent — which may be a sign the crop table wants an owner other than a geometry. *(v1.5, decided: box-only in v1; a stored crop waits for the crop table to get an owner.)*
+**Q9.** **`/anchor/[id]` gets a read-only PDF viewer on `PdfPageOverlay`, not `/geometry/[id]`'s full instrument.** The extracted-figure page needs rotation, zoom and a selection rail because a reader checks five courses against the drawing; an anchor cites three or four claims on two pages, and the 455-line page is mostly the controls.
 
-**Q11.** **Possible bug:** `evidence.check_md` is null on anchor `e94fae93`, so `3.3-check`'s vision readout — the step whose only job is to say whether the overlay looks right — reached the database empty. `publish.ts` reads `check.md` from the run directory and tolerates its absence. Did the step write nothing, or did the file not survive to publish? Worth settling before the page is built around showing it. *(v1.5, settled: the step wrote it — `3.3-check/check.md`, 15,605 bytes, on the `car-wash-anchor-1` run. `5.1-publish`'s `step.yaml` does not list `3.3-check` as an input and `publish.py` links only `anchors.json`, `correspondences.json` and `decisions.json` into `ws/`, so `publish.ts` found no `check.md` at the run root and wrote null, as it is allowed to. Fix is §3 item 15.)*
+**Q10.** **The county read (D17) is box-only in v1; no stored crop.** Box-only is free and renders identically in situ. A stored crop would mean writing a `cartographer_geometry_crops` row from a runbook that is not the extract runbook, against a `geometry_id` that is not really its parent, which is a sign the crop table wants an owner other than a geometry before that is done.
 
-**Q12.** *(v1.2)* The D10a **area-gate tolerance**. White Water is 0.005 % off; north star §9.4's ±3 ft `gis_fit` case on an older parcel is a ~3 ft band around a ~840 ft perimeter, roughly 6 % of a 1-acre lot. A tolerance that admits the second without admitting the neighbour's lot is probably ~10 % — but the right number depends on how often adjacent lots in a subdivision are near-equal in area, which is exactly the plat case. Start at 10 %, record both areas in the claim either way, and tune on the first stop. *(v1.5, decided as written.)*
+**Q11.** **`evidence.check_md` is null on anchor `e94fae93` because `5.1-publish` never links the file; fixed by §3 item 15.** The `3.3-check` step did write it (`3.3-check/check.md`, 15,605 bytes, on the `car-wash-anchor-1` run). `5.1-publish`'s `step.yaml` does not list `3.3-check` as an input and `publish.py` links only `anchors.json`, `correspondences.json` and `decisions.json` into `ws/`, so `publish.ts` found no `check.md` at the run root and wrote null, as it is allowed to. The evidence page's third section (D20) depends on this fix.
+
+**Q12.** **The D10a area-gate tolerance starts at 10 %, both areas are recorded in the claim either way, and it is tuned on the first stop.** White Water is 0.005 % off; north star §9.4's ±3 ft `gis_fit` case on an older parcel is a ~3 ft band around a ~840 ft perimeter, roughly 6 % of a 1-acre lot. 10 % admits that without admitting the neighbour's lot in the usual case; how often adjacent lots in a subdivision are near-equal in area is exactly the plat case, and only a real stop will say.
