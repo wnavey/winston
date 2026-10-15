@@ -13,6 +13,7 @@
 > - **Prospecting-built manifests already carry real titles**; only Austin's are label-derived. The snapshot-id grammar allows a `-n` suffix and a hash-less form; D2's regex now matches it.
 > - **Q3 is confirmed**, not "unverified", and covers `jurisdiction_departments` too; a proposal is in Q3. The review "Source ↗" link is a second, customer-visible entry point.
 > - **D14 is now a file, not a convention** (Will, 2026-10-15): `sources/sources.yaml`, the human-owned source registry, decides what counts as the same source across URL changes and holds the document title and type; capture stamps copies onto the manifest. Austin's registry is bureau#2120.
+> - **Q3 ruled** (Will, 2026-10-15): the 404 stays for now; no access change in P1.
 > - **P3 is unblocked**: bureau#2112 merged 2026-10-15. `runbook_run` from the JSON header is shown in D4 now. §7 notes db-schema audit A19 (figures).
 >
 > **Revision note v1.1 (2026-10-15, reply from the db-schema session on winston#314):**
@@ -394,7 +395,7 @@ The pages run off the bucket today and don't block on the migration. They read b
 
   Proposed: (a) for v1.
 - **Q2. Who sees these pages, and from where?** Today the only way in is the staff admin sidebar. Does the homepage get a customer-facing entry (a project's jurisdiction, or the main nav), and an index at `/intake-checklists`?
-- **Q3. The `jurisdictions` RLS gap.** Confirmed (§Problem): a signed-in user with no visible project in a jurisdiction gets a 404 today, from the item page the review "Source ↗" link targets as much as from the list. Two ways out: a narrow `security definer` function or view that exposes `slug, name, status` (and the department count) to every authenticated user, which is how db-schema D7 treats the intake tables since these are city facts; or widen the `jurisdictions` policy itself, which touches every reader of that table. Proposed: the narrow function, in P1, since the homepage is the first page a user with no project may land on. Will decides whether the gap is a bug or the intended audience (Q2).
+- **Q3. The `jurisdictions` RLS gap.** Confirmed (§Problem): a signed-in user with no visible project in a jurisdiction gets a 404 today, from the item page the review "Source ↗" link targets as much as from the list. Two ways out: a narrow `security definer` function or view that exposes `slug, name, status` (and the department count) to every authenticated user, which is how db-schema D7 treats the intake tables since these are city facts; or widen the `jurisdictions` policy itself, which touches every reader of that table. **Ruled (Will, 2026-10-15): leave it.** The 404 for a user with no project in the jurisdiction is acceptable for now; P1 adds no function or view, and the pages stay reachable by staff and by users with a project there. Revisit with Q2 when the pages get a customer-facing entry.
 - **Q4. The 2 Austin snapshots with no located item** (named only by `not_found` citations). Hide them (D5), or list them under "Captured, nothing located" so the capture is auditable?
 - **Q5. Item numbers on boxes:** the rail's local ①…ⓝ (D8), or the item's comment number? The citation JSON has no comment number, so using it needs `true-comment-num-mapping.tsv` in the bucket or the db-schema items table.
 
