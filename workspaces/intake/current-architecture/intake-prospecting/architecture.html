@@ -1,0 +1,1939 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="generator" content="winston spec-kit v6.7">
+<title>intake-prospecting, as built</title>
+<style>
+/* ============================================================
+   spec-kit v6.7  —  winston HTML spec design system
+   Inline the ENTIRE contents of this file into the spec's style block.
+   Canonical source: ~/.claude/skills/winston-spec/assets/spec-kit.css
+   When you change this file, bump the version above and in COMPONENTS.md.
+   v4: + sequence diagram (.seq*), + data table (.spectable), + prompt block (.prompt)
+   v5: + system map (.sysmap/.sys, edges drawn by spec-kit.js), + decision flow (.dflow),
+       + concept figure (figure.concept), + claim caption (.claim), + reference chip rows (.sys-refs),
+       + spec reader page (body.reader; DESIGN-SPEC.md rendered by marked, built by inline-kit.py --spec)
+   v5.1: pass-2 friction fixes — long identifiers wrap (.sys .t, .uc .nt, .ent .ty), .sysmap-scroll for
+       6+ columns, state-neutral .sm pills, .dflow jump outcomes, legend 'new trigger' dot
+   v5.2: + two-lane activity flow (.af) — an agent and the tools it calls, prompt fragment per step
+   v5.3: + before/after pair (.ba), + mass diagram (.mass), + cross-section (.xsec),
+       + call-graph collapse (.cg), + interactive state machine (.smx, driven by spec-kit.js),
+       .sm pills take .new/.chg change state
+       Colour rule: fill/border = change state only; kind = badge text + shape; legend is the
+       complete list of colour meanings on the page.
+   v6.0: readability + "pick the diagram from the question" (v6.5 later set git-diff colours);
+       kind badge becomes a quiet word; node detail 12.5px sans (nothing under 10.5px);
+       + lanes (.sysmap.lanes), + delta map (.sysmap.delta, Today/After toggle in one map),
+       + runbook graph (.sysmap.rgraph: diamonds, gate, fan-out, exits), + step list (.steps),
+       + phase lanes (.plan), + claim-as-title (.claim.lead), compact ref footer,
+       path highlighting on hover, .dfg chains go vertical instead of wrapping.
+   ============================================================ */
+
+:root{
+  /* steel-blue ramp (matches cityhall / Noetic report surfaces) */
+  --p50:#f0f5f9;--p100:#dce8f1;--p200:#b9d2e5;--p300:#8cb4d1;--p400:#6397b8;
+  --p500:#517e9e;--p600:#3f6582;--p700:#35526b;--p800:#2d4559;--p900:#273b4b;--p950:#182530;
+  --bg:#f9f9f9;--card:#ffffff;--divider:#dfdfdf;--ink:#1f2937;--muted:#6b7280;--ember:#bb4d00;
+  /* semantic: new / changed / retired */
+  --new:#1a7f37;--newbg:#dafbe1;--newbd:#aceebb;--newink:#116329;
+  --chg:#bf8700;--chgbg:#fff8c5;--chgbd:#eac54f;--chgink:#7d4e00;
+  --ret:#cf222e;--retbg:#ffebe9;--retbd:#ffcecb;--retink:#a40e26;
+  --sans:'Lexend',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  --serif:'Lora',Georgia,'Times New Roman',serif;
+  --ink2:#4b5361;--line:#c5ccd6;--lane:#f4f6f9;--wire:#8a919c;
+  --mono:'Fira Code','SF Mono',ui-monospace,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.55;font-size:15px}
+
+/* ---------- masthead ---------- */
+header.masthead{background:linear-gradient(135deg,var(--p800),var(--p600));color:#fff;padding:34px 32px 30px;position:relative;overflow:hidden}
+header.masthead::after{content:"";position:absolute;inset:0;background-image:repeating-linear-gradient(115deg,rgba(255,255,255,.06) 0 1px,transparent 1px 26px);pointer-events:none}
+header.masthead .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--p200)}
+header.masthead h1{font-family:var(--serif);font-weight:600;margin:.35em 0 .2em;font-size:29px;position:relative}
+header.masthead p{margin:0;color:var(--p100);max-width:880px;font-size:15px}
+header.masthead .meta{margin-top:14px;font-size:12.5px;color:var(--p200);font-family:var(--mono)}
+
+/* ---------- tabs ---------- */
+nav.tabs{position:sticky;top:0;z-index:20;display:flex;gap:2px;background:var(--p950);padding:0 20px;box-shadow:0 2px 8px rgba(0,0,0,.12);flex-wrap:wrap}
+nav.tabs button{appearance:none;border:0;background:transparent;color:var(--p200);font-family:var(--sans);font-size:14px;font-weight:500;padding:14px 18px;cursor:pointer;border-bottom:3px solid transparent;transition:all .15s}
+nav.tabs button .n{font-family:var(--mono);font-size:11px;opacity:.7;margin-right:7px}
+nav.tabs button:hover{color:#fff;background:rgba(255,255,255,.04)}
+nav.tabs button.active{color:#fff;border-bottom-color:var(--ember);background:rgba(255,255,255,.06)}
+
+/* ---------- layout ---------- */
+main{max-width:1140px;margin:0 auto;padding:30px 26px 90px}
+.panel{display:none;animation:fade .25s ease}
+main [id]{scroll-margin-top:74px} /* deep-link targets clear the sticky tab bar */
+.panel.active{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* Section heading: the h2 text is the PLAIN NAME of the thing the tab is about (v5.1 — it used to
+   carry a tagline while the small eyebrow carried the name; that was backwards). .eyebrow = the
+   tab number / section label, small. .sub = one plain sentence saying what is on the tab. */
+h2{font-family:var(--serif);font-weight:700;font-size:30px;line-height:1.15;letter-spacing:-.01em;margin:34px 0 10px;color:var(--p950)}
+h2:first-child{margin-top:4px}
+h2 .eyebrow{display:block;font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--p500);font-weight:400;margin-bottom:6px}
+h2 .sub{display:block;font-family:var(--sans);font-size:14px;font-weight:400;letter-spacing:0;line-height:1.5;color:var(--muted);margin-top:6px}
+h3{font-size:16px;font-weight:600;margin:28px 0 8px;color:var(--p800);display:flex;align-items:center;gap:9px}
+h3 .hn{font-family:var(--mono);font-size:12px;color:#fff;background:var(--p600);border-radius:5px;padding:2px 8px}
+h4{font-size:14px;font-weight:600;margin:18px 0 6px;color:var(--p800)}
+p{margin:.55em 0}
+.lede{font-size:15px;color:var(--p800);border-left:3px solid var(--ember);padding-left:16px;margin:12px 0 20px}
+ul{margin:.4em 0;padding-left:22px}li{margin:.28em 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px solid var(--p100);border-radius:4px;padding:1px 5px;color:var(--p800)}
+
+/* ---------- callout ---------- */
+.callout{background:var(--p50);border:1px solid var(--p200);border-left:4px solid var(--p500);border-radius:8px;padding:13px 17px;margin:16px 0}
+.callout.ember{background:#fdf6f0;border-color:#f0cba8;border-left-color:var(--ember)}
+.callout.new{background:var(--newbg);border-color:var(--newbd);border-left-color:var(--new)}
+.callout .lab{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--p600);font-weight:600;display:block;margin-bottom:3px}
+.callout.ember .lab{color:var(--ember)} .callout.new .lab{color:var(--new)}
+
+/* ---------- legend ---------- */
+.legend{display:flex;flex-wrap:wrap;gap:9px 16px;background:#fff;border:1px solid var(--divider);border-radius:10px;padding:12px 16px;margin:16px 0;font-size:12px;align-items:center}
+.legend .k{display:inline-flex;align-items:center;gap:6px}
+.swatch{width:26px;height:14px;border-radius:3px;display:inline-block;border:1px solid rgba(0,0,0,.15)}
+
+/* ---------- shared field badges (used by entity rows + legend) ---------- */
+.b{font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.04em;padding:1px 4px;border-radius:3px;text-transform:uppercase;white-space:nowrap}
+.b-pk{background:#fef3c7;color:#92600a;border:1px solid #fde68a}
+.b-fk{background:#e0edfb;color:#2456a8;border:1px solid #c3d8f2}
+.b-nn{background:#eef1f4;color:#4b5563;border:1px solid #d7dde3}
+.b-new{background:var(--newbg);color:var(--new);border:1px solid var(--newbd)}
+
+/* ============================================================
+   ER / UML entity boxes
+   ============================================================ */
+.erd{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start;margin:16px 0;background:#fbfcfd;border:1px solid var(--divider);border-radius:12px;padding:18px}
+.ent{border:1px solid var(--divider);border-radius:9px;overflow:hidden;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.05);min-width:236px;flex:0 1 auto}
+.ent .eh{padding:7px 12px;color:#fff;display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.ent .eh .en{font-family:var(--mono);font-size:12.5px;font-weight:700;letter-spacing:.02em}
+.ent .eh .stereo{font-size:11px;font-family:var(--mono);opacity:.85;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}
+.ent.exist .eh{background:var(--p700)}
+.ent.newt .eh{background:var(--new)}
+.ent.changed .eh{background:var(--chg)}
+.ent.retired .eh{background:#9ca3af}
+.ent.retired{opacity:.72}
+.ent .row{display:flex;align-items:center;gap:7px;padding:4px 11px;font-size:11.5px;border-top:1px solid #eef1f4}
+.ent .row:first-of-type{border-top:0}
+.ent .row .nm{font-family:var(--mono);font-size:11.5px;color:var(--p900);font-weight:600}
+.ent .row .ty{font-family:var(--mono);font-size:11px;color:var(--muted);margin-left:auto;text-align:right;max-width:60%;overflow-wrap:anywhere}
+.ent .row.hi{background:#fff9f2}
+.ent .row.strk .nm{text-decoration:line-through;color:var(--muted)}
+.ent .note{padding:5px 11px;font-size:11px;color:var(--muted);font-style:italic;border-top:1px dashed #e5e9ee;background:#fbfcfd}
+/* diff rows — show a table modification (column added / removed), git-style.
+   Put a "+"/"−" marker in a .gut span at the start of the row. */
+.ent .row .gut{flex:0 0 10px;width:10px;text-align:center;font-family:var(--mono);font-size:11px;font-weight:700;color:var(--muted)}
+.ent .row.add{background:var(--newbg);box-shadow:inset 3px 0 0 var(--new)}
+.ent .row.add .gut{color:var(--new)}
+.ent .row.add .nm{color:#166534}
+.ent .row.del{background:var(--retbg);box-shadow:inset 3px 0 0 var(--ret)}
+.ent .row.del .gut{color:var(--ret)}
+.ent .row.del .nm{color:var(--ret);text-decoration:line-through}
+
+/* relationships panel — crow's-foot text notation */
+.rels{background:#fff;border:1px solid var(--divider);border-radius:10px;padding:12px 16px;margin:14px 0;font-family:var(--mono);font-size:12px;line-height:1.9}
+.rels .rl{display:block;color:var(--p800)}
+.rels .rl b{color:var(--ember)}
+.rels .cf{color:var(--p500);font-weight:700}
+.rels .cmt{color:var(--muted);font-style:normal;font-family:var(--sans);font-size:11.5px}
+.rels .tag-new{color:var(--new);font-weight:700}
+.rels .tag-ret{color:var(--ret);font-weight:700}
+.rels-h{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--p600);font-weight:700;margin-bottom:6px}
+
+/* ============================================================
+   Use-case scene  (an action + its boxes-and-arrows diagram)
+   ============================================================ */
+.uc{margin:16px 0 22px;border:1px solid var(--divider);border-radius:12px;overflow:hidden;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.uc .uch{display:flex;align-items:center;gap:13px;padding:11px 16px;background:linear-gradient(135deg,var(--p700),var(--p600));color:#fff}
+.uc .uch .ucn{flex:0 0 30px;height:30px;border-radius:50%;background:rgba(255,255,255,.2);font-family:var(--mono);font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.uc .uch .uctxt{flex:1}
+.uc .uch .actor{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--p100);display:block;margin-bottom:1px}
+.uc .uch .uct{font-weight:600;font-size:15.5px;font-family:var(--serif)}
+.uc .ucsub{padding:9px 16px;font-size:12.5px;color:var(--p800);background:var(--p50);border-bottom:1px solid var(--p100)}
+.uc .ucdiag{padding:20px 16px 14px}
+.ucnote{padding:2px 16px 14px;font-size:11.5px;color:var(--muted)}
+.ucnote b{color:var(--p700);font-family:var(--mono);font-size:10.5px}
+
+/* ============================================================
+   Boxes-and-arrows flow
+   Robustness rules baked in:
+   - .dfg WRAPS (flex-wrap:wrap) so long chains never clip / never
+     need horizontal scroll. Arrows reflow with the nodes.
+   - .node is a flex COLUMN: the op-badge is an in-flow header row
+     (never position:absolute), and .nt / .nf are block-level, so a
+     table name and its fields can never smush onto one line.
+   ============================================================ */
+.dfg{display:flex;flex-wrap:wrap;align-items:stretch;gap:8px 0;margin:0}
+.node{flex:0 0 auto;width:156px;background:#fff;border:1.5px solid var(--p300);border-radius:8px;padding:9px 11px;display:flex;flex-direction:column;gap:3px}
+.node .op{align-self:flex-start;font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:1px 6px;border-radius:3px;border:1px solid;color:#fff;margin-bottom:2px}
+.node .nt{display:block;font-family:var(--mono);font-weight:700;font-size:12px;color:var(--p900);line-height:1.3;overflow-wrap:anywhere}
+.node .nf{display:block;font-family:var(--mono);font-size:11px;color:var(--muted);line-height:1.45;word-break:break-word}
+.node.created{border-color:var(--new);background:var(--newbg)} .node.created .op{background:var(--new);border-color:var(--new)}
+.node.read{border-color:var(--p400);background:#eef4fb} .node.read .op{background:var(--p500);border-color:var(--p500)}
+.node.event{border-color:var(--ember);background:#fdf6f0} .node.event .op{background:var(--ember);border-color:var(--ember)}
+.node.store{border-style:dashed;border-color:var(--p500);background:#eef3f7} .node.store .op{background:var(--p700);border-color:var(--p700)}
+.edge{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:70px;max-width:104px;padding:0 4px}
+.edge .el{font-size:10.5px;color:var(--p600);font-family:var(--mono);text-align:center;line-height:1.3;margin-bottom:2px}
+.edge .ar{color:var(--p400);font-size:20px;font-weight:700;line-height:1}
+
+/* ============================================================
+   Card grid  (keep / change / drop comparisons)
+   ============================================================ */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:820px){.grid2{grid-template-columns:1fr}.erd{padding:12px}}
+.card{background:var(--card);border:1px solid var(--divider);border-radius:9px;padding:14px 16px}
+.card.keep{border-top:3px solid var(--new)} .card.change{border-top:3px solid var(--chg)} .card.drop{border-top:3px solid var(--ret)}
+.card strong{display:block;margin-bottom:4px;font-size:13.5px}
+.card ul{font-size:12.5px;margin:2px 0}
+
+/* ============================================================
+   Lifecycle / state machine
+   ============================================================ */
+.sm{display:flex;flex-wrap:wrap;gap:7px;align-items:center;margin:14px 0}
+.sm .s{border:1px solid var(--p300);background:var(--p50);border-radius:20px;padding:5px 12px;font-size:11.5px;font-weight:600;color:var(--p800);font-family:var(--mono)}
+.sm .s .who{display:block;font-size:10.5px;font-family:var(--mono);color:var(--muted);font-weight:400;text-transform:uppercase;letter-spacing:.03em}
+.sm .s.client{border-color:var(--newbd);background:var(--newbg)}
+.sm .s.cc{border-color:#f0cba8;background:#fdf6f0}
+.sm .s.spec{border-color:var(--chgbd);background:var(--chgbg)}
+.sm .a{color:var(--p400);font-weight:700}
+/* state-neutral variants (v5.1): terminal-good / terminal-stop / dimmed. The .client/.cc/.spec
+   colours mean "whose court" and need a legend if used. */
+.sm .s.ok{border-color:var(--newbd);background:var(--newbg);color:var(--new)}
+.sm .s.stop{border-color:var(--retbd);background:var(--retbg);color:var(--ret)}
+.sm .s.dim{opacity:.6;border-style:dashed}
+
+/* ============================================================
+   Use-case catalog — grouped list of candidate use cases
+   (a scoped list, NOT a diagram — for "what would we build" inventories)
+   ============================================================ */
+.catgrp{border:1px solid var(--divider);border-radius:10px;overflow:hidden;margin:14px 0;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.catgrp .cath{background:var(--p700);color:#fff;padding:8px 14px;font-family:var(--serif);font-weight:600;font-size:14.5px;display:flex;align-items:center;gap:10px}
+.catgrp .cath .cgl{font-family:var(--mono);font-size:12px;font-weight:700;background:rgba(255,255,255,.2);border-radius:5px;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;flex:0 0 22px}
+.uci{display:flex;gap:9px;align-items:baseline;padding:7px 13px;border-top:1px solid #eef1f4;font-size:13px}
+.uci .uid{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--p600);flex:0 0 26px}
+.uci .utxt{flex:1;color:var(--ink);line-height:1.45}
+.uci .utxt b{color:var(--p900)}
+.uci .star{color:var(--ember);font-weight:700;font-size:12px;flex:0 0 auto;letter-spacing:-1px}
+.uci.later{opacity:.66}
+.utag{font-family:var(--mono);font-size:10.5px;font-weight:700;padding:1px 5px;border-radius:3px;text-transform:uppercase;letter-spacing:.03em;white-space:nowrap;flex:0 0 auto}
+.utag.t-orig{background:#e0edfb;color:#2456a8;border:1px solid #c3d8f2}
+.utag.t-add{background:var(--newbg);color:var(--new);border:1px solid var(--newbd)}
+
+/* ============================================================
+   Misc: storage strip, cross-reference box
+   ============================================================ */
+.storage{background:#eef3f7;border:1px dashed var(--p300);border-radius:8px;padding:9px 13px;font-family:var(--mono);font-size:12px;color:var(--p800);margin:12px 0}
+.storage b{color:var(--ember)}
+.xref{font-size:12px;color:var(--p600);background:var(--p50);border:1px solid var(--p100);border-radius:6px;padding:8px 12px;margin:10px 0}
+.foot{margin-top:44px;padding-top:18px;border-top:1px solid var(--divider);color:var(--muted);font-size:12px;font-family:var(--mono)}
+
+/* actor / repo chips (optional, for inline actor tags in prose) */
+.rc{display:inline-block;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;padding:1px 6px;border-radius:5px;border:1px solid;vertical-align:middle;white-space:nowrap}
+.r-ch{background:#eef4fb;color:#2456a8;border-color:#c3d8f2}
+.r-sub{background:#f3eefb;color:#6b3fa0;border-color:#dcccf0}
+.r-fa{background:#e9f7f2;color:#0f7a5f;border-color:#bfe8db}
+.r-db{background:#eaeef2;color:#2d4559;border-color:#c7d2dd}
+.r-store{background:#e6eef3;color:#35526b;border-color:#bcd0dd}
+.r-user{background:#eefaf0;color:#15803d;border-color:#bbf7d0}
+.r-mcp{background:#fdf0e6;color:#b5590d;border-color:#f2d3b3}
+
+/* ============================================================
+   Sequence diagram — swimlane message flow
+   A CSS grid: col 1 = step number, then one column per actor lane.
+   Each message is a grid item that SPANS grid-columns from its
+   source lane to its target lane, so it always sits under the right
+   headers and never smushes. Continuous lifelines are grid items
+   spanning all rows (grid-row:1/-1) — so set .seq-body's
+   grid-template-rows to repeat(STEP_COUNT, auto) for -1 to resolve.
+   Wide diagrams scroll inside .seq-scroll, never the page body.
+   Direction is an in-flow glyph (.dir ◂/▸) pushed to the target edge
+   by justify-content:space-between — never position:absolute.
+   ============================================================ */
+.seq-scroll{overflow-x:auto;margin:16px 0;border:1px solid var(--divider);border-radius:12px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.seq{min-width:840px}
+.seq-head,.seq-body{display:grid;grid-template-columns:30px repeat(6,minmax(104px,1fr))}
+.seq-head{background:linear-gradient(135deg,var(--p800),var(--p700));padding:11px 12px}
+.seq-h{display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;padding:0 4px}
+.seq-h .role{font-family:var(--mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--p200)}
+.seq-h .who{font-family:var(--mono);font-size:11px;font-weight:700;color:#fff;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.24);border-radius:6px;padding:3px 9px}
+.seq-body{position:relative;row-gap:11px;padding:16px 12px 20px}
+.seq-life{width:2px;background:var(--p100);justify-self:center;border-radius:2px;z-index:0}
+.seq-num{grid-column:1;justify-self:center;align-self:center;font-family:var(--mono);font-size:11px;font-weight:700;color:#fff;background:var(--p600);min-width:19px;height:19px;padding:0 3px;border-radius:10px;display:flex;align-items:center;justify-content:center;z-index:1}
+.seq-msg{align-self:center;display:flex;flex-direction:row;align-items:center;gap:8px;justify-content:space-between;background:#fff;border:1.5px solid var(--p300);border-radius:7px;padding:5px 10px;z-index:1;min-width:0}
+.seq-msg .mt{display:flex;flex-direction:column;gap:1px;min-width:0}
+.seq-msg .m{font-family:var(--mono);font-size:10.5px;color:var(--p900);font-weight:700;line-height:1.32;word-break:break-word}
+.seq-msg .m2{font-family:var(--mono);font-size:11px;color:var(--muted);line-height:1.3;word-break:break-word}
+.seq-msg .dir{font-size:14px;font-weight:700;color:var(--p500);flex:0 0 auto}
+.seq-msg.write{border-color:var(--new);background:var(--newbg)} .seq-msg.write .dir{color:var(--new)}
+.seq-msg.event{border-color:var(--ember);background:#fdf6f0} .seq-msg.event .dir{color:var(--ember)}
+.seq-msg.ret{border-style:dashed;background:#f6f9fb} .seq-msg.ret .m{font-weight:500;color:var(--p600)}
+.seq-msg.self{border-style:dashed;border-color:var(--p400);background:#eef3f7}
+.seq-foot{display:flex;flex-wrap:wrap;gap:8px 15px;padding:9px 14px;border-top:1px solid var(--divider);background:#fbfcfd;font-size:10.5px;font-family:var(--mono);color:var(--muted);align-items:center}
+.seq-foot .sw{display:inline-block;width:20px;height:11px;border-radius:3px;border:1.5px solid var(--p300);vertical-align:middle;margin-right:5px}
+.seq-foot .sw.write{border-color:var(--new);background:var(--newbg)} .seq-foot .sw.event{border-color:var(--ember);background:#fdf6f0}
+.seq-foot .sw.ret{border-style:dashed;background:#f6f9fb} .seq-foot .sw.self{border-style:dashed;border-color:var(--p400);background:#eef3f7}
+
+/* ============================================================
+   Data table — for step→entity maps and any tabular spec content.
+   Wrap in .spectable-scroll so wide tables scroll, not the page.
+   ============================================================ */
+.spectable-scroll{overflow-x:auto;margin:14px 0}
+.spectable{width:100%;border-collapse:collapse;font-size:12.5px;background:#fff;border:1px solid var(--divider);border-radius:10px;overflow:hidden}
+.spectable thead th{background:var(--p700);color:#fff;font-family:var(--mono);font-size:11px;letter-spacing:.04em;text-transform:uppercase;text-align:left;padding:8px 12px;font-weight:700;white-space:nowrap}
+.spectable tbody td{padding:7px 12px;border-top:1px solid #eef1f4;vertical-align:top;line-height:1.5}
+.spectable tbody tr:nth-child(even){background:#fbfcfd}
+.spectable td .sn{font-family:var(--mono);font-weight:700;color:#fff;background:var(--p600);border-radius:9px;padding:1px 7px;font-size:10.5px}
+.spectable td code{font-size:11px}
+.spectable td .none{color:var(--muted);font-style:italic;font-family:var(--sans)}
+.spectable td .w{color:var(--new);font-weight:700} /* write */
+.spectable td .r{color:var(--p500);font-weight:700} /* read/return */
+
+/* ============================================================
+   Prompt / code block — a readable mono block (LLM prompts, snippets).
+   White-space preserved; scrolls horizontally inside itself.
+   ============================================================ */
+.prompt{background:#fbfcfd;border:1px solid var(--p200);border-left:4px solid var(--p500);border-radius:8px;padding:12px 15px;margin:12px 0;font-family:var(--mono);font-size:11.5px;line-height:1.6;color:var(--p900);white-space:pre-wrap;overflow-x:auto}
+.prompt .ph{display:block;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--p600);font-weight:700;margin-bottom:6px}
+
+
+/* ============================================================
+   System map (.sysmap)  —  the Overview diagram.  v5
+   A CSS grid of nodes placed with grid-area:row/col. Column 1 is
+   always the TRIGGER (a start-dot, no box). Edges are authored as
+   hidden <a class="sys-edge" data-from data-to>label</a> and drawn as
+   SVG by spec-kit.js after layout (no hand-typed coordinates).
+   COLOUR = CHANGE STATE ONLY: white exists · amber .chg · green .new ·
+   red-dashed .gap. KIND = badge TEXT + shape (.ext dashed, .store
+   cylinder bottom, .trig dot). Badges are one colour except on
+   changed/new nodes, where they take the node's change colour.
+   ============================================================ */
+.sysmap{position:relative;display:grid;gap:40px 64px;padding:28px 16px 22px;background:#fff;border:1px solid var(--divider);border-radius:12px;margin:14px 0 6px}
+.sysmap-scroll{overflow-x:auto;margin:14px 0 6px} .sysmap-scroll .sysmap{margin:0;min-width:max-content} /* 6+ columns: use grid-template-columns:repeat(N,minmax(150px,1fr)) inside .sysmap-scroll */
+.sysmap .colh{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--p500);text-align:center;padding-bottom:6px;border-bottom:1px dashed var(--p200);align-self:end}
+.sys{position:relative;z-index:2;background:#fff;border:1.5px solid var(--p300);border-radius:9px;padding:9px 11px 8px;min-height:64px;display:flex;flex-direction:column;gap:2px;align-self:center}
+.sys .k{align-self:flex-start;font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:1px 6px;border-radius:3px;color:#fff;background:var(--p500);margin-bottom:2px}
+.sys .t{font-weight:600;font-size:12.5px;line-height:1.3;color:var(--p900);overflow-wrap:anywhere}
+.sys .d{font-family:var(--mono);font-size:11px;color:var(--muted);line-height:1.4}
+.sys.ext{border-style:dashed}
+.sys.store{border-radius:4px 4px 14px 14px}
+.sys.new{border-color:var(--new);background:var(--newbg);box-shadow:0 0 0 3px #dcfce7}.sys.new .k{background:var(--new)}
+.sys.chg{border-color:var(--chg);background:var(--chgbg)}.sys.chg .k{background:var(--chg)}
+/* trigger: a start-dot + label, never a box. Declared AFTER .new/.chg so it wins on order. */
+.sys.trig{border:none;background:none;box-shadow:none;padding:0;min-height:0;align-items:flex-start;justify-self:start;gap:5px;max-width:150px}
+.sys.trig .dot{width:16px;height:16px;border-radius:50%;background:var(--p700);border:3px solid #fff;box-shadow:0 0 0 1.5px var(--p700)}
+.sys.trig.new .dot{background:var(--new);box-shadow:0 0 0 1.5px var(--new)}
+.sys.trig.chg .dot{background:var(--chg);box-shadow:0 0 0 1.5px var(--chg)}
+.sys.trig .t{font-size:11.5px;font-weight:600;color:var(--p800);line-height:1.25}
+.sys.trig .d{font-size:11px}
+.sys.gap{border:1.5px dashed var(--ret);background:var(--retbg);color:var(--ret);align-items:center;justify-content:center;text-align:center;font-family:var(--mono);font-size:10.5px;min-height:40px}
+/* floating spec-reference tag above the box; an <a href="#detail-id"> deep-link to the zoom-in diagram */
+.sys .ref{position:absolute;top:-11px;right:8px;text-decoration:none;font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.04em;padding:1px 7px;border-radius:10px;background:#fff;border:1px solid var(--p300);color:var(--p700);white-space:nowrap}
+.sys.chg .ref{border-color:var(--chg);color:var(--chg)}.sys.new .ref{border-color:var(--new);color:var(--new)}
+.sys .ref:hover{background:var(--p50)}
+.sys-edge{display:none} /* authored edge; rendered as SVG by spec-kit.js */
+.sysmap svg.edges{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1;overflow:visible}
+.sysmap svg .e{fill:none;stroke:var(--p400);stroke-width:1.6}
+.sysmap svg .e.new{stroke:var(--new);stroke-width:2.2}
+.sysmap svg .e.chg{stroke:var(--chg);stroke-width:2}
+.sysmap svg .e.gap{stroke:var(--ret);stroke-dasharray:5 4}
+.sysmap svg .e.loop{stroke:var(--p400);stroke-dasharray:4 3}
+.sysmap svg .lbl{font:11.5px var(--mono);fill:var(--p700)}
+.sysmap svg .lbl.new{fill:var(--new);font-weight:700}.sysmap svg .lbl.chg{fill:var(--chg);font-weight:700}.sysmap svg .lbl.gap{fill:var(--ret)}
+.sysmap svg .lblbg{fill:#fff;stroke:none;opacity:.94}
+/* reference footer: stacked CHIP ROWS, one per reference, each a link into the spec reader page.
+   Markup: <div class="sys-refs"><a class="refrow" data-ref="P0a"><span class="chip">P0a</span><span class="txt">…</span></a>…</div>
+   spec-kit.js fills href = <main data-spec>#<token>. */
+.sys-refs{display:flex;flex-direction:column;gap:6px;margin:12px 0 0}
+.sys-refs .refrow{display:flex;align-items:baseline;gap:12px;padding:7px 12px;border:1px solid var(--divider);border-radius:9px;background:#fff;text-decoration:none;color:var(--p800);font-size:12.5px;line-height:1.45;transition:border-color .12s,background .12s}
+.sys-refs .refrow:hover{border-color:var(--p400);background:var(--p50)}
+.sys-refs .refrow .chip{flex:0 0 auto;font-family:var(--mono);font-size:10.5px;font-weight:700;color:var(--p700);background:var(--p50);border:1px solid var(--p200);border-radius:6px;padding:2px 8px;min-width:44px;text-align:center}
+.sys-refs .refrow.chg .chip{color:var(--chg);border-color:var(--chgbd);background:var(--chgbg)}
+.sys-refs .refrow.new .chip{color:var(--new);border-color:var(--newbd);background:var(--newbg)}
+.sys-refs .refrow .txt{flex:1}
+.sys-refs .refrow .go{flex:0 0 auto;font-family:var(--mono);font-size:11px;color:var(--p500)}
+.sys-refs .refrow[href] .go::after{content:"read §"}
+.sys-refs .refrow:not([href]) .go::after{content:"no spec reader";color:var(--muted)}
+/* citation links inside claims and ref tags (filled in by spec-kit.js) */
+.claim a.cite,.sys .ref a{color:inherit;text-decoration:underline dotted;text-underline-offset:2px}
+.claim a.cite:hover{color:var(--ember)}
+/* "read the spec" masthead link */
+header.masthead a.spec-link{display:inline-block;margin-top:12px;font-family:var(--mono);font-size:12px;color:#fff;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);border-radius:7px;padding:5px 11px;text-decoration:none;position:relative}
+header.masthead a.spec-link:hover{background:rgba(255,255,255,.24)}
+
+/* legend for a system map: the COMPLETE list of colour meanings on the page */
+.sys-legend{display:flex;flex-wrap:wrap;gap:14px;font-size:11.5px;color:var(--p800);margin:8px 4px 0}
+.sys-legend i{display:inline-block;width:22px;height:3px;vertical-align:middle;margin-right:5px;background:var(--p400)}
+.sys-legend i.new{background:var(--new)} .sys-legend i.dot{width:10px;height:10px;border-radius:50%;background:var(--p700)} .sys-legend i.dot.new{background:var(--new)}.sys-legend i.chg{background:var(--chg)}.sys-legend i.gap{background:var(--ret)}.sys-legend i.loop{background:repeating-linear-gradient(90deg,var(--p400) 0 4px,transparent 4px 7px)}
+
+/* ============================================================
+   Claim caption  —  under every diagram. Cites the spec section or
+   decision it paraphrases. "Reading:" for the author's own observation.
+   ============================================================ */
+.claim{font-size:12.5px;color:var(--p800);margin:8px 0 26px;padding:8px 12px;border-left:3px solid var(--ember);background:#fff}
+.claim b{color:var(--p900)}
+
+/* ============================================================
+   Decision flow (.dflow)  —  "try X, else Y, else Z" / gate outcomes.
+   A vertical list of question rows; "yes" exits right to an outcome,
+   "no" falls through to the next row. Text-first, no SVG.
+   ============================================================ */
+.dflow{margin:14px 0;border:1px solid var(--divider);border-radius:12px;background:#fff;padding:14px 16px 10px}
+.dflow .dq{display:grid;grid-template-columns:minmax(200px,1.4fr) auto minmax(160px,1fr);gap:10px;align-items:center}
+.dflow .dq .q{font-size:12.5px;font-weight:600;color:var(--p900);border:1.5px solid var(--p300);border-radius:8px;padding:7px 11px;background:#fff}
+.dflow .dq .yes{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--new);white-space:nowrap}
+.dflow .dq .out{font-family:var(--mono);font-size:11px;color:var(--p800);border:1.5px solid var(--newbd);background:var(--newbg);border-radius:8px;padding:6px 10px}
+.dflow .dq .out.warn{border-color:var(--chgbd);background:var(--chgbg)}
+.dflow .dq .out.fail{border-color:var(--retbd);background:var(--retbg);color:var(--ret)}
+.dflow .dno{font-family:var(--mono);font-size:11px;color:var(--muted);padding:3px 0 3px 18px}
+.dflow .dq.end .q{border-style:dashed;font-weight:500;color:var(--p700)}
+.dflow .dq .out a,.dflow .dq a.out{color:inherit;text-decoration:underline dotted;text-underline-offset:2px}
+.dflow .dq .out.jump::after{content:" ↗";color:var(--p500)} /* an outcome that jumps to another step/diagram */
+
+/* ============================================================
+   Concept figure  —  a hand-drawn inline SVG for the one mechanism
+   prose can't carry (a transform, a timeline, a shape). One figure,
+   one claim in the figcaption. See COMPONENTS.md for SVG rules.
+   ============================================================ */
+figure.concept{margin:16px 0;padding:16px 16px 10px;background:#fff;border:1px solid var(--divider);border-radius:12px;color:var(--p800)}
+figure.concept svg{display:block;max-width:100%;height:auto;margin:0 auto}
+figure.concept figcaption{font-size:12.5px;color:var(--p800);margin-top:10px;padding:8px 12px;border-left:3px solid var(--ember);background:#fbfcfd}
+figure.concept figcaption b{color:var(--p900)}
+
+
+/* ============================================================
+   Spec reader page (body.reader) — DESIGN-SPEC.md rendered by marked,
+   generated by inline-kit.py --spec. Sticky TOC + body; :target glow.
+   ============================================================ */
+body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom:1px solid rgba(255,255,255,.4)}
+.reader-wrap{display:grid;grid-template-columns:250px minmax(0,1fr);gap:34px;max-width:1240px;margin:0 auto;padding:28px 26px 90px}
+@media(max-width:900px){.reader-wrap{grid-template-columns:1fr}.toc{position:static}}
+.toc{position:sticky;top:18px;align-self:start;max-height:calc(100vh - 36px);overflow:auto;font-size:12.5px;border-right:1px solid var(--divider);padding-right:14px}
+.toc .toc-h{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--p600);font-weight:700;margin-bottom:8px}
+.toc a{display:block;color:var(--p800);text-decoration:none;padding:3px 0;line-height:1.35}
+.toc a.toc-h3{padding-left:14px;font-size:12px;color:var(--p700)}
+.toc a:hover{color:var(--ember)}
+.reader-body{max-width:860px;font-size:15px;line-height:1.6}
+.reader-body h2{margin-top:44px;padding-top:18px;border-top:1px solid var(--divider)}
+.reader-body h3{display:block;margin-top:30px;font-size:17px}
+.reader-body h4{margin-top:22px}
+.reader-body blockquote{margin:14px 0;padding:10px 16px;border-left:4px solid var(--p500);background:var(--p50);border-radius:0 8px 8px 0;color:var(--p800)}
+.reader-body blockquote p{margin:.3em 0}
+.reader-body pre{background:#fbfcfd;border:1px solid var(--p200);border-left:4px solid var(--p500);border-radius:8px;padding:12px 15px;font-family:var(--mono);font-size:11.5px;line-height:1.55;overflow-x:auto}
+.reader-body pre code{background:none;border:0;padding:0;font-size:inherit}
+.reader-body a{color:var(--p600)}
+.reader-body hr{border:0;border-top:1px solid var(--divider);margin:26px 0}
+.reader-body .spectable-scroll{margin:12px 0}
+.reader-body .spectable td code{white-space:normal}
+.reader-body .anchor{display:block;position:relative;top:-14px;height:0}
+.reader-body strong.tok{scroll-margin-top:24px}
+.reader-body :target{scroll-margin-top:18px}
+.reader-body h2:target,.reader-body h3:target,.reader-body h4:target{background:#fff8ec;box-shadow:-12px 0 0 #fff8ec,12px 0 0 #fff8ec;border-radius:3px}
+.reader-body strong.tok:target{background:#fff1cc;border-radius:3px;padding:0 3px;box-shadow:0 0 0 2px #fde68a}
+.reader-body .anchor:target + h2,.reader-body .anchor:target + h3{background:#fff8ec;box-shadow:-12px 0 0 #fff8ec,12px 0 0 #fff8ec;border-radius:3px}
+
+/* ============================================================
+   Two-lane activity flow (.af)  —  v5.2
+   An agent (left lane) and the deterministic tools it calls (right
+   lane), read top to bottom. One row = one exchange: the left box says
+   what the caller decides / types / writes, the right box what the tool
+   derives / checks; the middle column carries the call (▸, solid) and
+   the return (◂, dashed) labels. Rows inside .af-loop repeat (dashed
+   frame + label). .af-sec is a full-width "only when…" divider.
+   Notes inside a box: .cc = what this spec changes (amber), .gap = a
+   defect found (red dashed). .af-box.key = where the important value is
+   produced (heavier border, weight only, no colour).
+   Columns stack under 820px.
+   ============================================================ */
+.af{margin:16px 0;border:1px solid var(--divider);border-radius:12px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.05);padding-bottom:8px;overflow:hidden}
+.af-head,.af-row{display:grid;grid-template-columns:26px minmax(0,1.2fr) minmax(110px,.42fr) minmax(0,1fr);gap:0 12px}
+.af-head{background:linear-gradient(135deg,var(--p800),var(--p700));padding:10px 14px;color:#fff;align-items:end}
+.af-h{font-family:var(--mono);font-size:11.5px;font-weight:700;line-height:1.3}
+.af-h .role{display:block;font-size:10.5px;font-weight:400;color:var(--p200);text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px}
+.af-row{align-items:center;padding:8px 14px}
+.af-row + .af-row{border-top:1px solid #eef1f4}
+.af-n{align-self:start;margin-top:8px;font-family:var(--mono);font-size:11px;font-weight:700;color:#fff;background:var(--p600);min-width:20px;height:20px;padding:0 4px;border-radius:10px;display:flex;align-items:center;justify-content:center}
+.af-box{border:1.5px solid var(--p300);border-radius:8px;padding:8px 11px;background:#fff;display:flex;flex-direction:column;gap:5px;min-width:0}
+.af-box.key{border-width:3px;border-color:var(--p700)}
+.af-box .t{font-size:13px;font-weight:600;color:var(--p900);line-height:1.35}
+.af-box .t code{font-size:11.5px}
+.af-box .q{font-family:var(--serif);font-style:italic;font-size:12.5px;color:var(--p700);border-left:3px solid var(--p200);padding-left:9px;line-height:1.45}
+.af-box .io{font-size:12px;color:var(--ink);line-height:1.5;overflow-wrap:anywhere}
+.af-box .io > b:first-child{display:inline-block;font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--p600);background:var(--p50);border:1px solid var(--p100);border-radius:3px;padding:0 4px;margin-right:5px;vertical-align:1px}
+.af-box .io code{font-size:11px}
+.af-box .cc{font-size:11.5px;line-height:1.45;color:#7c4a03;background:var(--chgbg);border:1px solid var(--chgbd);border-radius:6px;padding:4px 8px}
+.af-box .gap{font-size:11.5px;line-height:1.45;color:var(--ret);background:var(--retbg);border:1.5px dashed var(--retbd);border-radius:6px;padding:4px 8px}
+.af-box .cc code,.af-box .gap code{font-size:10.5px}
+.af-none{font-family:var(--mono);font-size:10.5px;color:var(--muted);font-style:italic;padding:0 4px}
+.af-x{display:flex;flex-direction:column;gap:9px;justify-content:center;min-width:0}
+.af-x .c,.af-x .r{display:flex;flex-direction:column;gap:1px}
+.af-x .l{font-family:var(--mono);font-size:11px;line-height:1.3;color:var(--p800);overflow-wrap:anywhere}
+.af-x .r .l{color:var(--muted)}
+.af-x .ln{display:flex;align-items:center;font-size:13px;line-height:1;color:var(--p500)}
+.af-x .c .ln::before{content:"";flex:1;border-top:1.5px solid var(--p400);margin-right:-3px}
+.af-x .r .ln::after{content:"";flex:1;border-top:1.5px dashed var(--p400);margin-left:-3px}
+.af-loop{margin:6px 10px;border:1.5px dashed var(--p400);border-radius:10px;padding:2px 0}
+.af-loop .af-row{padding-left:4px;padding-right:4px}
+.af-lh{font-family:var(--mono);font-size:10.5px;font-weight:700;color:var(--p700);padding:6px 10px 2px}
+.af-sec{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--p600);background:var(--p50);border-top:1px solid var(--p100);border-bottom:1px solid var(--p100);padding:5px 14px 5px 52px}
+.af-legend{display:flex;flex-wrap:wrap;gap:8px 16px;font-size:11.5px;color:var(--p800);padding:8px 14px 0;align-items:center}
+.af-legend span{display:inline-flex;align-items:center;gap:6px}
+.af-legend i{display:inline-block;width:22px;height:13px;border-radius:3px;border:1.5px solid var(--p300);background:#fff}
+.af-legend i.key{border-width:3px;border-color:var(--p700)} .af-legend i.cc{background:var(--chgbg);border-color:var(--chgbd)}
+.af-legend i.gap{background:var(--retbg);border:1.5px dashed var(--retbd)} .af-legend i.loop{border:1.5px dashed var(--p400)}
+@media(max-width:820px){
+  .af-head,.af-row{grid-template-columns:26px minmax(0,1fr)}
+  .af-head > :nth-child(3),.af-head > :nth-child(4){display:none}
+  .af-row > :not(.af-n){grid-column:2}
+  .af-row > .af-x{flex-direction:row;padding:6px 0}
+}
+
+/* ============================================================
+   Before/after pair (.ba)  —  v5.3
+   The same zoom-in drawn twice, Today then After, side by side (stacked
+   under 820px, or always with .ba.stack for wide diagrams). Holds any
+   kit diagram. An amber node's zoom-in uses one so the change shows.
+   ============================================================ */
+.ba{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin:14px 0 6px;align-items:start}
+.ba.stack{grid-template-columns:minmax(0,1fr)}
+.ba-col{min-width:0}
+.ba-h{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--p600);font-weight:700;padding:0 2px 6px;border-bottom:1px dashed var(--p200)}
+.ba-col > :nth-child(2){margin-top:10px}
+@media(max-width:820px){.ba{grid-template-columns:minmax(0,1fr)}}
+
+/* sm pills carry change state too (v5.3); .cur = the live state in an .smx (weight, no colour) */
+.sm .s.new{border-color:var(--new);background:var(--newbg)}
+.sm .s.chg{border-color:var(--chg);background:var(--chgbg)}
+.sm .s.cur{box-shadow:0 0 0 2.5px var(--p950)}
+
+/* ============================================================
+   Mass diagram (.mass)  —  v5.3
+   One row per module: a solid bar for its interface (entry points,
+   params, rules a caller must know) over an outlined bar for its
+   implementation (what it hides). Lengths are relative units 1–12 set
+   with style="--u:N" (the one inline style this component allows).
+   Shallow = the two bars nearly equal; deep = short interface, long body.
+   ============================================================ */
+.mass{margin:14px 0;border:1px solid var(--divider);border-radius:12px;background:#fff;padding:10px 12px 8px;display:flex;flex-direction:column;gap:4px}
+.mass-m{display:grid;grid-template-columns:minmax(120px,.34fr) minmax(0,1fr);gap:4px 14px;align-items:center;padding:7px 8px;border:1.5px solid transparent;border-radius:8px}
+.mass-m + .mass-m{border-top-color:#eef1f4}
+.mass-m .t{grid-row:1/3;font-weight:600;font-size:12.5px;color:var(--p900);line-height:1.3;overflow-wrap:anywhere}
+.mass-m .t .d{display:block;font-family:var(--mono);font-size:11px;font-weight:400;color:var(--muted);margin-top:2px}
+.mass-bar{display:block;height:10px;border-radius:3px;width:calc(var(--u,1) / 12 * 100%);min-width:6px;max-width:100%}
+.mass-bar.if{background:var(--p600)}
+.mass-bar.impl{height:22px;background:var(--p50);border:1.5px solid var(--p400)}
+.mass-m.chg{border-color:var(--chg);background:var(--chgbg)}
+.mass-m.new{border-color:var(--new);background:var(--newbg)}
+.mass-legend{display:flex;flex-wrap:wrap;gap:8px 16px;font-size:11.5px;color:var(--p800);padding:6px 8px 0;border-top:1px solid #eef1f4;margin-top:4px}
+.mass-legend span{display:inline-flex;align-items:center;gap:6px}
+.mass-legend i{display:inline-block;width:22px;border-radius:2px}
+.mass-legend i.if{height:6px;background:var(--p600)} .mass-legend i.impl{height:12px;background:var(--p50);border:1.5px solid var(--p400)}
+
+/* ============================================================
+   Cross-section (.xsec)  —  v5.3
+   Stacked bands, top to bottom, for the layers one call passes through;
+   the line down the left is the call. .thin = a pass-through layer that
+   adds nothing, .thick = the one layer that now owns the work (weight,
+   no colour). Bands take .chg / .new / .gap like system-map nodes.
+   ============================================================ */
+.xsec{position:relative;margin:14px 0;border:1px solid var(--divider);border-radius:12px;background:#fff;padding:10px 14px 18px 40px;display:flex;flex-direction:column;gap:6px}
+.xsec::before{content:"";position:absolute;left:21px;top:34px;bottom:20px;border-left:2px solid var(--p400)}
+.xsec::after{content:"";position:absolute;left:16px;bottom:12px;border:6px solid transparent;border-top:8px solid var(--p400);border-bottom:0}
+.xs-h{font-family:var(--mono);font-size:10.5px;font-weight:700;color:var(--p700);margin:0 0 2px -26px;display:flex;align-items:center;gap:8px}
+.xs-h::before{content:"";width:12px;height:12px;border-radius:50%;background:var(--p700);border:2.5px solid #fff;box-shadow:0 0 0 1.5px var(--p700)}
+.xs-b{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 12px;border:1.5px solid var(--p300);border-left-width:4px;border-radius:6px;padding:8px 12px;background:#fff}
+.xs-b .t{font-family:var(--mono);font-weight:700;font-size:12px;color:var(--p900);overflow-wrap:anywhere}
+.xs-b .d{font-size:12px;color:var(--muted);flex:1;min-width:160px}
+.xs-b.thin{padding:3px 12px;border-style:dashed;border-left-style:solid}
+.xs-b.thin .t{font-weight:500;color:var(--p600)}
+.xs-b.thick{padding:16px 14px;border-width:3px;border-left-width:6px;border-color:var(--p700)}
+.xs-b.chg{border-color:var(--chg);background:var(--chgbg)}
+.xs-b.new{border-color:var(--new);background:var(--newbg)}
+.xs-b.gap{border:1.5px dashed var(--ret);border-left:4px solid var(--ret);background:var(--retbg)} .xs-b.gap .t{color:var(--ret)}
+
+/* ============================================================
+   Call-graph collapse (.cg)  —  v5.3
+   Nested boxes = who calls whom. .cg-f.deep is one module that now owns
+   a subtree: heavy border (weight, no colour), and the calls inside it
+   render faded and dashed because they are internal now. Boxes take
+   .chg / .new. Pair a Today tree with an After tree in a .ba.
+   ============================================================ */
+.cg{margin:14px 0;border:1px solid var(--divider);border-radius:12px;background:#fff;padding:8px 14px 14px}
+.cg-f{border:1.5px solid var(--p300);border-radius:7px;padding:6px 10px 7px;margin-top:7px;background:#fff;min-width:0}
+.cg-f .cg-f{margin-left:16px}
+.cg-f > .t{font-family:var(--mono);font-size:11.5px;font-weight:700;color:var(--p900);overflow-wrap:anywhere}
+.cg-f > .d{font-size:11px;color:var(--muted);margin-left:8px}
+.cg-f.deep{border-width:3px;border-color:var(--p700);padding:9px 12px 11px}
+.cg-f.deep .cg-f{border-style:dashed;border-color:var(--p200);background:var(--p50)}
+.cg-f.deep .cg-f > .t{color:var(--p500);font-weight:500}
+.cg-f.chg{border-color:var(--chg);background:var(--chgbg)}
+.cg-f.new{border-color:var(--new);background:var(--newbg)}
+
+/* ============================================================
+   Interactive state machine (.smx)  —  v5.3
+   An .sm row of states (each .s carries data-state) plus hidden
+   <a class="smx-t" data-ev data-from data-to data-note>label</a>
+   transitions and optional <div class="smx-walk" data-name data-steps>
+   walkthroughs. spec-kit.js adds the controls: the moves available from
+   the current state, walkthrough buttons, a reset, the path taken, and
+   a collapsed list of every transition. Static without JS: the pills.
+   ============================================================ */
+.smx{margin:14px 0;border:1px solid var(--divider);border-radius:12px;background:#fff;padding:10px 16px 12px}
+.smx > .sm{margin:4px 0 10px}
+.smx-t,.smx-walk{display:none}
+.smx-bar{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;padding:9px 0 6px;border-top:1px solid #eef1f4}
+.smx-now{font-family:var(--mono);font-size:11px;color:var(--muted)} .smx-now b{color:var(--p900)}
+.smx-moves,.smx-ctl{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.smx-ctl{margin-left:auto}
+.smx button{appearance:none;font-family:var(--mono);font-size:11px;border:1.5px solid var(--p300);background:#fff;color:var(--p800);border-radius:7px;padding:4px 10px;cursor:pointer}
+.smx button:hover:not(:disabled){border-color:var(--p600);background:var(--p50)}
+.smx button:disabled{opacity:.5;cursor:default}
+.smx .smx-btn{font-weight:700}
+.smx .smx-btn.new{border-color:var(--new);color:var(--new);background:var(--newbg)}
+.smx .smx-btn.chg{border-color:var(--chg);color:var(--chg);background:var(--chgbg)}
+.smx .smx-walkb.on{border-color:var(--p700);box-shadow:inset 0 0 0 1px var(--p700)}
+.smx-wi,.smx-end{font-family:var(--mono);font-size:10.5px;color:var(--muted)}
+.smx-log{margin:4px 0;padding-left:22px;font-size:12px;color:var(--p800)}
+.smx-log li{margin:3px 0}
+.smx-log li b{font-family:var(--mono);font-size:11px;color:var(--p900)}
+.smx-log li .n{display:block;font-size:11px;color:var(--muted)}
+.smx-log li.new b{color:var(--new)} .smx-log li.chg b{color:var(--chg)}
+.smx-log li.smx-empty{list-style:none;margin-left:-22px;color:var(--muted);font-style:italic}
+.smx-all{margin-top:6px;font-size:11.5px;color:var(--p800)}
+.smx-all summary{cursor:pointer;font-family:var(--mono);font-size:10.5px;color:var(--p600)}
+.smx-row{padding:4px 0 4px 14px;border-top:1px solid #f1f4f7;line-height:1.45}
+.smx-row code{font-size:10.5px}
+.smx-row.new{box-shadow:inset 3px 0 0 var(--new)} .smx-row.chg{box-shadow:inset 3px 0 0 var(--chg)}
+
+
+/* ============================================================
+   v6.0 layer — readability. Later rules win over the v5 rules above;
+   fold them in place when this graduates out of the test run.
+   ============================================================ */
+/* system-map nodes: the name is the loudest thing, kind is a quiet word */
+.sysmap .colh{font-family:var(--sans);font-size:12.5px;font-weight:600;letter-spacing:0;text-transform:none;color:var(--ink2);text-align:left;border-bottom:0;padding:0 2px 2px}
+.sys{border:1px solid var(--line);border-radius:8px;padding:10px 12px;min-height:72px;gap:1px}
+.sys .k{background:none;color:var(--muted);padding:0;margin:0 0 1px;font-family:var(--sans);font-size:10.5px;font-weight:600;letter-spacing:.06em;border-radius:0}
+.sys .t{font-size:14px;font-weight:600;color:var(--ink);line-height:1.3}
+.sys .d{font-family:var(--sans);font-size:12.5px;color:var(--ink2);line-height:1.4}
+.sys.ext{border:1.5px dashed var(--wire)}
+.sys.new{border:1.5px solid var(--new);background:var(--newbg);box-shadow:none}.sys.new .k{background:none;color:var(--newink)}
+.sys.chg{border:1.5px solid var(--chg);background:var(--chgbg)}.sys.chg .k{background:none;color:var(--chgink)}
+.sys .ref{font-family:var(--sans);font-size:11px;font-weight:600;padding:1px 8px;top:-12px}
+.sys.chg .ref{color:var(--chgink)}.sys.new .ref{color:var(--newink)}
+.sys.trig .t{font-size:13.5px;color:var(--ink)}.sys.trig .d{font-family:var(--sans);font-size:12px;color:var(--ink2)}
+.sys.gap{border:1.5px dashed #c2341c;background:#fff4f2;color:#9b2615;font-family:var(--sans);font-size:13px;font-weight:600;line-height:1.4;text-align:left;justify-content:center;padding:10px 14px}
+.sysmap svg .e{stroke:var(--wire);stroke-width:1.5}
+.sysmap svg .e.new{stroke:var(--new);stroke-width:2}
+.sysmap svg .e.chg{stroke:var(--chg);stroke-width:2}
+.sysmap svg .e.gap{stroke:#c2341c;stroke-dasharray:5 5;stroke-width:1.5}
+.sysmap svg .e.loop{stroke:var(--ink2);stroke-dasharray:6 4;stroke-width:1.75}
+.sysmap svg .e.happy{stroke:var(--ink);stroke-width:2.25}
+.sysmap svg .e.exit{stroke:var(--wire);stroke-dasharray:5 5}
+.sysmap svg .lbl{font:500 11.5px var(--sans);fill:var(--ink2)}
+.sysmap svg .lbl.new{fill:var(--newink);font-weight:700}.sysmap svg .lbl.chg{fill:var(--chgink);font-weight:700}.sysmap svg .lbl.gap{fill:#9b2615}
+.sysmap svg .lbl.happy{fill:var(--ink);font-weight:700}.sysmap svg .lbl.loop{fill:var(--ink2);font-weight:700}
+.sys-legend{font-size:12.5px;color:var(--ink2);gap:8px 18px;margin:4px 2px 8px}
+.sys-legend i{background:var(--wire)} .sys-legend i.chg{background:var(--chg)} .sys-legend i.new{background:var(--new)}
+.sys-legend i.box{width:18px;height:12px;border-radius:3px;border:1px solid var(--line);background:#fff}
+.sys-legend i.box.new{border:1.5px solid var(--new);background:var(--newbg)} .sys-legend i.box.chg{border:1.5px solid var(--chg);background:var(--chgbg)}
+.sys-legend i.box.gap{border:1.5px dashed #c2341c;background:#fff4f2} .sys-legend i.box.ext{border:1.5px dashed var(--wire)}
+.sys-legend i.happy{height:3px;background:var(--ink)} .sys-legend i.exit{background:repeating-linear-gradient(90deg,var(--wire) 0 5px,transparent 5px 9px)}
+.sys-legend i.loop{background:repeating-linear-gradient(90deg,var(--ink2) 0 6px,transparent 6px 10px)}
+.sys-legend i.dia{width:14px;height:14px;background:#e3e7ed;clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%)} .sys-legend i.dia.gate{background:var(--ink)}
+.sys-legend i.fan{width:16px;height:11px;border-radius:2px;border:1px solid var(--line);background:#fff;box-shadow:3px 3px 0 -1px #fff,3px 3px 0 0 var(--line)}
+/* reference footer: compact chips in a grid, not a stack of full-width rows */
+.sys-refs{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:6px;margin:10px 0 0}
+.sys-refs .refrow{padding:6px 10px;font-size:12.5px;gap:10px;align-items:center}
+.sys-refs .refrow .chip{font-family:var(--sans);font-size:11.5px;min-width:40px;padding:1px 6px}
+.sys-refs .refrow .go{display:none}
+/* claim as the diagram's title: put .claim.lead BEFORE the diagram */
+.claim.lead{font-size:18px;line-height:1.4;font-weight:600;color:var(--ink);border:0;background:none;padding:0;margin:6px 0 12px;max-width:900px}
+.claim.lead b{display:block;font-size:11.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:2px}
+.claim.lead b a.cite{color:inherit}
+.claim.lead + .how,.how{font-size:13px;color:var(--ink2);margin:-6px 0 10px}
+/* full-bleed for wide diagrams: break out of the 1140px column, still inside the viewport */
+.bleed{width:min(1320px,calc(100vw - 32px));margin-left:calc((100% - min(1320px,100vw - 32px))/2)}
+/* path highlighting (spec-kit.js): hover a node, everything off its path dims */
+.sysmap .sys,.sysmap svg .e,.sysmap svg .lbl,.sysmap svg .lblbg{transition:opacity .15s}
+.sysmap.focus .sys:not(.on){opacity:.22}
+.sysmap.focus svg .e:not(.on),.sysmap.focus svg .lbl:not(.on),.sysmap.focus svg .lblbg:not(.on){opacity:.1}
+.sysmap.focus .lane{opacity:.6}
+
+/* ---------- lanes: rows are lanes, the trigger is the lane's label (.sysmap.lanes) ---------- */
+.sysmap.lanes{row-gap:28px;padding:22px 18px 18px}
+.sysmap.lanes .lane{background:var(--lane);border-radius:10px;margin:-10px -8px;z-index:0;position:relative}
+.sysmap.lanes .sys.trig .dot{display:none}
+.sysmap.lanes .sys.trig{align-self:center;padding-left:4px;max-width:170px}
+
+/* ---------- delta map: one grid, a Today/After toggle (.sysmap.delta[data-view]) ----------
+   Elements carry data-in="today" | "after"; no data-in = in both views. Positions never move
+   between views, so the reader sees the change in place. In the After view, boxes the spec does
+   not change fade, so only the coloured ones stand out. */
+.sysmap.delta[data-view="today"] [data-in="after"],.sysmap.delta[data-view="after"] [data-in="today"]{display:none}
+[data-view-of][hidden]{display:none}
+.sysmap.delta[data-view="after"] .sys:not(.new):not(.chg):not(.gap):not(.trig){opacity:.55}
+.dview{display:inline-flex;gap:0;border:1px solid var(--line);border-radius:9px;overflow:hidden;margin:4px 0 10px;background:#fff}
+.dview button{appearance:none;border:0;background:#fff;font:600 13px var(--sans);color:var(--ink2);padding:7px 16px;cursor:pointer;min-height:36px}
+.dview button + button{border-left:1px solid var(--line)}
+.dview button[aria-pressed="true"]{background:var(--ink);color:#fff}
+
+/* ---------- runbook graph (.sysmap.rgraph): for runbooks that branch, fan out or loop ----------
+   The happy path is one row left to right; exits drop below; loops go over the top.
+   Node shapes: .dec automatic decision (grey diamond), .gate human gate (black diamond),
+   .fan step that runs ×N in parallel (stacked cards), .exit an end that isn't the goal (dashed pill). */
+.sysmap.rgraph{row-gap:44px;column-gap:44px;padding:56px 20px 22px} /* no .colh row: step numbers go in the kind word, the top strip is where loops route */
+.sys.dec,.sys.gate{border:0;border-radius:0;background:#e3e7ed;clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%);min-height:118px;padding:18px 26px;align-items:center;justify-content:center;text-align:center}
+.sys.dec .t,.sys.gate .t{font-size:13px;line-height:1.25}
+.sys.gate{background:var(--ink)} .sys.gate .t{color:#fff} .sys.gate .k{color:#c5ccd6;align-self:center}
+.sys.dec .k{align-self:center}
+.sys.fan{--stk:#fff;--stkbd:var(--line);box-shadow:6px 6px 0 -1px var(--stk),6px 6px 0 0 var(--stkbd),12px 12px 0 -1px var(--stk),12px 12px 0 0 var(--stkbd)}  /* the stack overflows into the gap; no margin, so row centres stay aligned */
+.sys.fan.new{--stk:var(--newbg);--stkbd:var(--new)} .sys.fan.chg{--stk:var(--chgbg);--stkbd:var(--chg)}
+.sys.exit{border:1.5px dashed var(--wire);border-radius:999px;min-height:52px;align-items:center;justify-content:center;text-align:center;background:#fff;padding:8px 16px}
+.sys.exit .t{font-size:13px} .sys.exit .d{font-size:12px}
+
+/* ---------- step list (.steps): a runbook that is a straight line ---------- */
+.steps{list-style:none;counter-reset:st;margin:14px 0;padding:16px 18px 6px;background:#fff;border:1px solid var(--divider);border-radius:12px}
+.steps .st{counter-increment:st;position:relative;display:grid;grid-template-columns:34px minmax(0,1fr);column-gap:14px;padding:0 0 16px;margin:0}
+.steps .st::before{content:attr(data-n);grid-row:1/4;width:28px;height:28px;border-radius:50%;background:var(--ink);color:#fff;font:600 12.5px var(--sans);display:flex;align-items:center;justify-content:center;z-index:1}
+.steps .st:not([data-n])::before{content:counter(st)}
+.steps .st::after{content:"";position:absolute;left:13.5px;top:30px;bottom:2px;border-left:1.5px solid var(--line)}
+.steps .st:last-child::after{display:none}
+.steps .sk{font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);line-height:1.4}
+.steps .sn{font-size:14.5px;font-weight:600;color:var(--ink);line-height:1.4}
+.steps .so{font-size:13px;color:var(--ink2);line-height:1.5}
+.steps .st.new::before{background:var(--new)} .steps .st.chg::before{background:var(--chg)}
+.steps .st.gate::before{border-radius:4px;transform:rotate(45deg) scale(.86)}
+
+/* ---------- phase lanes (.plan): build order. Rows = the repo that owns the work, columns = phases.
+   Dependencies are words on the card ("after P0a"), never wires. ---------- */
+.plan{margin:14px 0;display:flex;flex-direction:column;gap:10px}
+.plan-h,.plan-row{display:grid;grid-template-columns:128px repeat(var(--cols,4),minmax(0,1fr));column-gap:12px}
+.plan-h{font-size:12.5px;font-weight:600;color:var(--ink2);padding:0 0 0}
+.plan-row{background:var(--lane);border-radius:10px;padding:12px 0;align-items:start}
+.plan-who{padding:8px 14px;font-size:14px;font-weight:600;color:var(--ink)}
+.plan-cell{display:flex;flex-direction:column;gap:8px;min-width:0}
+.pc{display:flex;flex-direction:column;gap:2px;padding:10px 12px;background:#fff;border:1px solid var(--line);border-radius:8px;min-width:0}
+.pc .pid{font-family:var(--mono);font-size:11.5px;color:var(--muted)}
+.pc b{font-size:14px;font-weight:600;line-height:1.3;color:var(--ink)}
+.pc .pd{font-size:12.5px;line-height:1.4;color:var(--ink2)}
+.pc .pa{font-size:12px;line-height:1.4;color:var(--muted);margin-top:2px}
+.pc.key{border:2px solid var(--ink)}
+.pc.risk{border:1.5px solid #c2341c} .pc.risk .pid{color:#9b2615}
+@media(max-width:820px){.plan-h{display:none}.plan-row{grid-template-columns:1fr;row-gap:8px;padding:12px}.plan-who{padding:0}}
+
+/* ---------- chains (.dfg) that would wrap go vertical instead (class set by spec-kit.js) ---------- */
+.dfg.vert{flex-direction:column;align-items:flex-start;flex-wrap:nowrap}
+.dfg.vert .node{width:min(420px,100%)}
+.dfg.vert .edge{flex-direction:row;max-width:none;min-width:0;padding:6px 0 6px 64px;gap:10px;align-items:center}
+.dfg.vert .edge .ar{transform:rotate(90deg);order:-1}
+.dfg.vert .edge .el br{display:none}
+
+/* descriptive text in diagrams reads as prose, not code */
+.node .nf,.edge .el,.seq-msg .m2,.dflow .out,.dflow .dno,.dflow .yes{font-family:var(--sans)}
+.node .nf{font-size:12px;color:var(--ink2)} .dflow .out{font-size:13px} .dflow .dq .q{font-size:13.5px}
+.ent .row{font-size:12.5px} .ent .row .ty{font-size:11.5px}
+
+/* ============================================================
+   v6.1 — one type system for the whole page.
+   Five sizes, two text colours, one family (mono only for code identifiers):
+     --fs-title 28   tab title (h2)               ink
+     --fs-sec   19   section heading = its claim   ink
+     --fs-body  15   prose, lede, callouts         ink / ink2
+     --fs-small 13   legend, captions, box detail  ink2
+     --fs-micro 11   kind words, column heads      ink2
+   No eyebrow, no sub line, no letter badges, no coloured rules on prose.
+   ============================================================ */
+:root{--fs-title:28px;--fs-sec:19px;--fs-body:15px;--fs-small:13px;--fs-micro:11px;--muted:#4b5361}
+body{color:var(--ink);font-size:var(--fs-body)}
+h2{font-family:var(--sans);font-size:var(--fs-title);font-weight:650;letter-spacing:-.015em;line-height:1.2;color:var(--ink);margin:8px 0 8px}
+h2 .eyebrow,h2 .sub{display:none}
+h3{display:block;font-size:var(--fs-sec);font-weight:600;line-height:1.35;color:var(--ink);margin:44px 0 10px;max-width:880px}
+h3 .hn{display:none}
+h4{font-size:var(--fs-body);color:var(--ink)}
+h2 code,h3 code,.claim code{font-size:.9em;background:none;border:0;padding:0;color:inherit}
+.lede{font-size:16px;line-height:1.55;color:var(--ink2);border-left:0;padding-left:0;margin:4px 0 8px;max-width:860px}
+/* a section heading IS the claim of the diagram under it; the citation trails it, small and grey */
+h3.claim{border:0;background:none;padding:0;font-size:var(--fs-sec);font-weight:600;color:var(--ink);margin:44px 0 10px}
+h3.claim .src{font-size:var(--fs-small);font-weight:400;color:var(--ink2);margin-left:6px;white-space:nowrap}
+h3.claim .src a.cite{color:inherit;text-decoration:underline dotted;text-underline-offset:2px}
+/* a claim that is not a heading (a caption under a table) */
+p.claim{font-size:var(--fs-small);color:var(--ink2);border-left:0;background:none;padding:0;margin:8px 0 24px}
+p.claim b{color:var(--ink);font-weight:600}
+/* legend + view toggle share one row directly under the heading */
+.sys-legend{font-size:var(--fs-small);color:var(--ink2);margin:0 0 10px;align-items:center}
+.dview{margin:0 16px 10px 0;vertical-align:middle}
+.dview + .sys-legend{display:inline-flex;vertical-align:middle}
+.how{display:none}
+/* callouts: one style, label in the body face */
+.callout,.callout.ember,.callout.new{background:#fff;border:1px solid var(--divider);border-left:1px solid var(--divider);border-radius:10px;padding:14px 18px;font-size:var(--fs-body);color:var(--ink)}
+.callout .lab,.callout.ember .lab,.callout.new .lab{font-family:var(--sans);font-size:var(--fs-small);letter-spacing:0;text-transform:none;color:var(--ink2);font-weight:600;margin-bottom:4px}
+.callout.ember{border-color:#f2cf8e;background:#fffaf0}
+/* diagram chrome in the same scale */
+.sysmap .colh,.plan-h{font-size:var(--fs-micro);font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink2)}
+.sys .k,.steps .sk,.pc .pid{font-size:var(--fs-micro);color:var(--ink2)}
+.sys .d,.pc .pd,.steps .so,.node .nf{font-size:var(--fs-small);color:var(--ink2)}
+.pc .pa{font-size:var(--fs-small);color:var(--ink2)}
+.sys-refs .refrow{font-size:var(--fs-small);color:var(--ink2)}
+.card{font-size:var(--fs-body);color:var(--ink)} .card b{color:var(--ink)}
+.catgrp .cath{font-family:var(--sans);font-size:var(--fs-body);font-weight:600;background:#fff;color:var(--ink);border-bottom:1px solid var(--divider)}
+.catgrp .cath .cgl{background:var(--lane);color:var(--ink2)}
+.uci{font-size:var(--fs-small)} .uci .uid{color:var(--ink2)}
+.uc .uch{background:#fff;color:var(--ink);border-bottom:1px solid var(--divider)}
+.uc .uch .uct{font-family:var(--sans);font-size:var(--fs-body);font-weight:600}
+.uc .uch .actor{font-family:var(--sans);font-size:var(--fs-micro);color:var(--ink2);font-weight:600;letter-spacing:.06em}
+.uc .uch .ucn{background:var(--lane);color:var(--ink2)}
+.uc .ucsub{font-size:var(--fs-small);color:var(--ink2);background:#fff}
+.spectable{font-size:var(--fs-small)}
+.spectable thead th{font-family:var(--sans);font-size:var(--fs-micro);background:#fff;color:var(--ink2);border-bottom:1px solid var(--divider)}
+.xref,.foot{font-family:var(--sans);font-size:var(--fs-small);color:var(--ink2);background:none;border-color:var(--divider)}
+.callout .lab::first-letter{text-transform:uppercase}
+.pc .pid{font-family:var(--sans);font-weight:600;letter-spacing:.02em}
+
+/* ============================================================
+   v6.2 — linked entity diagram (.erd.linked): the relationships are
+   drawn between the entity cards by spec-kit.js (same <a class="sys-edge">
+   markup as a system map), labelled in words, arrow from the one to the
+   many. Replaces the crow's-foot .rels text panel.
+   ============================================================ */
+.erd.linked{position:relative;display:grid;gap:64px 80px;align-items:center;padding:28px 24px}
+.erd.linked .ent{position:relative;z-index:2;min-width:0;align-self:center}
+.erd.linked svg.edges{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1;overflow:visible}
+.erd.linked svg .e{fill:none;stroke:var(--wire);stroke-width:1.5}
+.erd.linked svg .e.new{stroke:var(--new);stroke-width:2}
+.erd.linked svg .e.chg{stroke:var(--chg);stroke-width:2}
+.erd.linked svg .lbl{font:600 12px var(--sans);fill:var(--ink2)}
+.erd.linked svg .lbl.new{fill:var(--newink)}
+.erd.linked svg .lblbg{fill:#fbfcfd;stroke:none}
+.erd.linked .ent,.erd.linked svg .e,.erd.linked svg .lbl{transition:opacity .15s}
+.erd.linked.focus .ent:not(.on){opacity:.25}
+.erd.linked.focus svg .e:not(.on),.erd.linked.focus svg .lbl:not(.on),.erd.linked.focus svg .lblbg:not(.on){opacity:.1}
+.ent .eh .stereo{font-family:var(--sans);font-size:var(--fs-micro);font-weight:600;letter-spacing:.06em}
+
+/* ============================================================
+   v6.2 — written content (.doc): goals, rationale, non-goals read as a
+   document — numbered paragraphs with a bold lead phrase — not as cards.
+   Cards are only for things the reader compares side by side.
+   ============================================================ */
+.doc{max-width:780px;font-size:16px;line-height:1.65;color:var(--ink)}
+.doc p{margin:0 0 14px}
+.doc ol.goals{list-style:none;counter-reset:g;padding:0;margin:14px 0 18px}
+.doc ol.goals > li{counter-increment:g;display:grid;grid-template-columns:44px minmax(0,1fr);margin:0 0 14px}
+.doc ol.goals > li::before{content:"G" counter(g);font-weight:600;color:var(--ink2);font-size:var(--fs-body);line-height:1.65}
+.doc ol.goals > li b:first-child{color:var(--ink)}
+.doc .aside{color:var(--ink2);font-size:var(--fs-small)}
+.doc code{font-size:.88em}
+/* entity cards on the page type system: change state is fill + border (like system-map boxes),
+   the column name is the only mono text, its description sits under it in grey sans */
+.ent{border:1px solid var(--line);border-radius:10px;box-shadow:none}
+.ent .eh,.ent.exist .eh{background:#fff;color:var(--ink);border-bottom:1px solid var(--divider);padding:9px 12px}
+.ent.newt{border:1.5px solid var(--new)} .ent.newt .eh{background:var(--newbg)} .ent.newt .eh .stereo{color:var(--newink)}
+.ent.changed{border:1.5px solid var(--chg)} .ent.changed .eh{background:var(--chgbg)} .ent.changed .eh .stereo{color:var(--chgink)}
+.ent .eh .en{font-size:13.5px;color:var(--ink)} .ent .eh .stereo{color:var(--ink2);opacity:1}
+.ent .row{flex-wrap:wrap;row-gap:1px;padding:6px 12px;font-size:var(--fs-small)}
+.ent .row .nm{font-size:12.5px;color:var(--ink)}
+.ent .row .ty{flex:1 0 100%;margin-left:0;max-width:none;text-align:left;font-family:var(--sans);font-size:var(--fs-small);color:var(--ink2);overflow-wrap:normal}
+.ent .row .gut + .b ~ .ty,.ent .row .gut ~ .ty{padding-left:17px}
+.ent .b{background:none;border:0;padding:0;font-family:var(--sans);font-size:10.5px;color:var(--ink2);letter-spacing:.04em}
+.ent .b-new{color:var(--newink)}
+.ent .row.hi{background:var(--lane)}
+.ent .row.add .nm{color:var(--newink)}
+.ent .note{font-family:var(--sans);font-style:normal;font-size:var(--fs-small);color:var(--ink2);background:#fff;padding:8px 12px}
+/* v6.2: figure captions match p.claim; step markers grow for 2.11-style numbers */
+figure.concept figcaption{font-size:var(--fs-small);color:var(--ink2);border-left:0;background:none;padding:0;margin-top:10px}
+figure.concept figcaption b{color:var(--ink);font-weight:600}
+.steps .st::before{width:auto;min-width:28px;padding:0 6px;border-radius:14px;box-sizing:border-box;justify-self:start}
+
+/* ============================================================
+   v6.3 — masthead and tabs on the page type system.
+   The masthead is a document title block, not a banner: light ground,
+   sans throughout, aligned to the content column, one primary action.
+     .kicker   project · topic           13px, grey, sentence case
+     h1        the spec's title          34px, ink
+     p         what the spec is about    17px, grey, ≤ 2 sentences
+     .meta     status pill, date, companion file
+     a.spec-link   "Read the spec"        the one button
+   Tabs: a light underline bar, no numbers.
+   ============================================================ */
+header.masthead{background:#fff;color:var(--ink);padding:44px max(26px,calc((100% - 1088px)/2)) 30px;border-bottom:1px solid var(--divider);overflow:visible}
+header.masthead::after{display:none}
+header.masthead .kicker{font-family:var(--sans);font-size:var(--fs-small);font-weight:600;letter-spacing:0;text-transform:none;color:var(--ink2)}
+header.masthead h1{font-family:var(--sans);font-size:34px;font-weight:700;letter-spacing:-.02em;line-height:1.15;color:var(--ink);margin:8px 0 12px;max-width:900px}
+header.masthead p{color:var(--ink2);font-size:17px;line-height:1.55;max-width:780px;margin:0}
+header.masthead p code{background:var(--lane);border:0;color:var(--ink)}
+header.masthead .meta{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;margin-top:18px;font-family:var(--sans);font-size:var(--fs-small);color:var(--ink2)}
+header.masthead .meta .status{font-weight:600;color:var(--chgink);background:var(--chgbg);border:1px solid var(--chgbd);border-radius:999px;padding:2px 10px}
+header.masthead .meta code{font-size:12px;background:none;border:0;padding:0;color:var(--ink2)}
+header.masthead a.spec-link{display:inline-flex;align-items:center;gap:6px;margin-top:20px;font:600 14px var(--sans);color:#fff;background:var(--ink);border:0;border-radius:8px;padding:10px 16px;min-height:40px;box-sizing:border-box}
+header.masthead a.spec-link:hover{background:#000}
+nav.tabs{background:#fff;box-shadow:none;border-bottom:1px solid var(--divider);gap:4px;padding:0 max(14px,calc((100% - 1088px)/2 - 12px))}
+nav.tabs button{color:var(--ink2);font-size:14.5px;font-weight:500;padding:14px 12px 12px;border-bottom:2px solid transparent;transition:color .12s,border-color .12s}
+nav.tabs button .n{display:none}
+nav.tabs button:hover{color:var(--ink);background:none}
+nav.tabs button.active{color:var(--ink);font-weight:600;border-bottom-color:var(--ink);background:none}
+nav.tabs button:focus-visible{outline:2px solid var(--new);outline-offset:-2px}
+nav.tabs{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none} nav.tabs::-webkit-scrollbar{display:none}
+nav.tabs button{white-space:nowrap;flex:0 0 auto}
+@media(max-width:640px){header.masthead{padding:28px 16px 22px} header.masthead h1{font-size:27px}}
+
+/* ============================================================
+   v6.4 — request, activity, response (.rar)
+   One call that hides work. Caller on the left, the called thing on the
+   right; the request crosses at the top, the steps run down the right,
+   the response crosses back at the bottom. A child process / sub-call
+   nests as .rar-step.child (dashed) with its own .rar-sub steps.
+   Markup: see COMPONENTS.md → Request, activity, response.
+   ============================================================ */
+.rar{display:grid;grid-template-columns:minmax(0,.9fr) 92px minmax(0,1.35fr);grid-template-rows:auto auto 1fr auto;margin:14px 0;padding:22px 22px 24px;background:#fff;border:1px solid var(--divider);border-radius:12px;align-items:start}
+.rar-h{display:flex;flex-direction:column;gap:2px;padding-bottom:14px}
+.rar-h .k{font-size:var(--fs-micro);font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink2)}
+.rar-h b{font-size:16px;font-weight:600;color:var(--ink)} .rar-h .d{font-size:var(--fs-small);color:var(--ink2)}
+.rar-h.caller{grid-area:1/1} .rar-h.called{grid-area:1/3}
+.rar-req,.rar-res{display:flex;flex-direction:column;gap:8px;padding:14px 16px;border-radius:10px}
+.rar-req{grid-area:2/1;background:var(--newbg);border:1.5px solid var(--new)}
+.rar-res{grid-area:4/1;background:var(--lane);border:1.5px solid var(--ink);align-self:end}
+.rar-req .lab,.rar-res .lab{font-size:var(--fs-micro);font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink2)}
+.rar-req .lab{color:var(--newink)}
+.rar pre{margin:0;padding:10px 12px;background:#fff;border-radius:8px;font-family:var(--mono);font-size:12px;line-height:1.55;white-space:pre-wrap;color:var(--ink);overflow-x:auto}
+.rar .note{font-size:var(--fs-small);color:var(--ink2);line-height:1.45}
+.rar-wait{grid-area:3/1;align-self:stretch;display:flex;flex-direction:column;align-items:center;gap:8px;padding:10px 0;min-height:60px}
+.rar-wait::before,.rar-wait::after{content:"";flex:1;border-left:2px dashed var(--line)}
+.rar-wait span{font-size:var(--fs-small);color:var(--ink2);text-align:center;max-width:220px}
+.rar-arrow{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:12px;font-weight:600;padding-top:30px}
+.rar-arrow.in{grid-area:2/2;color:var(--newink)} .rar-arrow.out{grid-area:4/2;color:var(--ink);align-self:end;padding-bottom:30px}
+.rar-arrow i{display:block;width:70px;height:2px;background:currentColor;position:relative}
+.rar-arrow.in i::after{content:"";position:absolute;right:-2px;top:-5px;border:6px solid transparent;border-left:9px solid currentColor;border-right:0}
+.rar-arrow.out i::before{content:"";position:absolute;left:-2px;top:-5px;border:6px solid transparent;border-right:9px solid currentColor;border-left:0}
+.rar-steps{grid-area:2/3/5/4;list-style:none;margin:0;padding:0;counter-reset:rs;display:flex;flex-direction:column}
+.rar-step{counter-increment:rs;position:relative;display:grid;grid-template-columns:28px minmax(0,1fr);column-gap:12px;padding:14px 16px;border:1px solid var(--line);border-radius:10px;background:#fff;margin-bottom:34px}
+.rar-step:last-child{margin-bottom:0}
+.rar-step::before{content:counter(rs);grid-row:1/20;width:28px;height:28px;border-radius:14px;background:var(--ink);color:#fff;font:600 12.5px var(--sans);display:flex;align-items:center;justify-content:center}
+.rar-step::after{content:"";position:absolute;left:50%;bottom:-30px;height:24px;border-left:2px solid var(--wire)}
+.rar-step:last-child::after{display:none}
+.rar-step > *{grid-column:2;min-width:0}
+.rar-step b{font-size:14.5px;font-weight:600;color:var(--ink)}
+.rar-step > span{font-size:13.5px;line-height:1.5;color:var(--ink2)}
+.rar-step pre{margin-top:8px;background:var(--lane)}
+.rar-step .branch{justify-self:start;margin-top:6px;font-size:12px;font-weight:600;color:var(--chgink);background:var(--chgbg);border:1px solid var(--chgbd);border-radius:999px;padding:2px 10px}
+.rar-step.child{border:1.5px dashed var(--ink);background:#fafbfc}
+.rar-sub{grid-column:2;list-style:none;margin:10px 0 0;padding:12px 14px;border-left:3px solid var(--ink);background:#fff;border-radius:0 8px 8px 0;display:flex;flex-direction:column;gap:22px}
+.rar-sub li{position:relative;padding:8px 10px;border:1px solid var(--line);border-radius:8px;font-size:13px;color:var(--ink2)}
+.rar-sub li b{display:block;font-size:13.5px;color:var(--ink)}
+.rar-sub li + li::before{content:"";position:absolute;left:50%;top:-20px;height:16px;border-left:2px solid var(--wire)}
+@media(max-width:820px){.rar{grid-template-columns:minmax(0,1fr);grid-template-rows:none}.rar-h.caller,.rar-h.called,.rar-req,.rar-res,.rar-steps,.rar-arrow,.rar-wait{grid-area:auto}.rar-wait{display:none}.rar-arrow{flex-direction:row;padding:8px 0}}
+
+/* ============================================================
+   v6.5 — git-diff colours (Will's call, 2026-10-14): green = added / new,
+   yellow = modified, red = deleted / dropped. Tokens: --new*, --chg*, --ret*.
+   Entity cards gain a modified row (.row.mod, "~", shows "was: …") and a
+   dropped table (.ent.dropped: red, dashed, name struck through, faded).
+   ============================================================ */
+.ent .row.mod{background:var(--chgbg);box-shadow:inset 3px 0 0 var(--chg)}
+.ent .row.mod .gut{color:var(--chgink)} .ent .row.mod .nm{color:var(--chgink)}
+.ent .row.add .nm{color:var(--newink)}
+.ent .row.del{background:var(--retbg);box-shadow:inset 3px 0 0 var(--ret)} .ent .row.del .gut,.ent .row.del .nm{color:var(--retink)}
+.ent.dropped{border:1.5px dashed var(--ret);opacity:.85}
+.ent.dropped .eh{background:var(--retbg)} .ent.dropped .eh .stereo{color:var(--retink)}
+.ent.dropped .eh .en,.ent.dropped .row .nm{text-decoration:line-through;color:var(--retink)}
+.sys-legend i.box.del{border:1.5px dashed var(--ret);background:var(--retbg)}
+/* v6.6 — composite primary key: the key's rows sit in a .pkgroup with a "{" down their left
+   edge and a small label, so "these columns together identify a row" reads at a glance. */
+.ent .pkgroup{position:relative;padding-left:18px;border-top:1px solid #eef1f4}
+.ent .pkgroup:first-child{border-top:0}
+.ent .pkgroup::before{content:"";position:absolute;left:8px;top:28px;bottom:8px;width:8px;border:2px solid var(--ink);border-right:0;border-radius:9px 0 0 9px}
+.ent .pkgroup::after{content:"";position:absolute;left:2px;top:calc(50% + 10px);width:7px;border-top:2px solid var(--ink)}
+.ent .pkgroup .pklabel{display:block;padding:7px 12px 0 4px;font-size:var(--fs-micro);font-weight:600;letter-spacing:.04em;color:var(--ink2)}
+.ent .pkgroup .row{border-top:0;padding-left:6px}
+.ent .pkgroup .row + .row{border-top:1px solid #eef1f4}  /* dividers between key rows, starting right of the brace */
+/* v6.7 — the composite-key brace sits OUTSIDE the card, in the gutter, so key rows align with
+   every other row; each column shows its DB type on the right of its name (.dt). */
+.ent{overflow:visible}
+.ent > :first-child{border-radius:9px 9px 0 0}
+.ent > :last-child{border-radius:0 0 9px 9px}
+.ent .pkgroup{padding-left:0}
+.ent .pkgroup::before{left:-16px;top:30px;bottom:8px;width:9px}
+.ent .pkgroup::after{left:-22px;width:7px}
+.ent .pkgroup .row{padding-left:12px}
+.ent .pkgroup .pklabel{padding:7px 12px 0 12px}
+.ent .row .dt{margin-left:auto;padding-left:10px;font-family:var(--mono);font-size:12px;color:var(--ink2);white-space:nowrap}
+.ent .row .dt i{font-style:normal;color:#8a919c}
+.erd.linked{padding-left:44px}
+
+</style>
+<style>
+/* page-local: prose blocks that sit between diagrams, and code blocks inside them */
+.doc p{max-width:880px}
+.doc ul{max-width:860px;margin:6px 0 10px 0;padding-left:20px}
+.doc ul li{margin:4px 0;line-height:1.55}
+.doc ol.plain{max-width:880px;margin:6px 0 10px;padding-left:22px}
+.doc ol.plain li{margin:0 0 12px;line-height:1.6;padding-left:4px}
+.prompt.tree{white-space:pre;line-height:1.5}
+td.ok{font-weight:600}
+td.no{color:var(--ink2)}
+</style>
+</head>
+<body>
+
+<header class="masthead">
+  <div class="kicker">Intake · Current architecture</div>
+  <h1>The intake-prospecting runbook, as built</h1>
+  <p>How bureau builds one jurisdiction's intake checklist from the documents that jurisdiction publishes: find them, snapshot them, extract items that cite exact words, audit the items, and write the checklist into bureau as one PR.</p>
+  <div class="meta"><span class="status">As built</span><span>15 Oct 2026</span><span>Source of truth: <code>bureau/runbooks/intake-prospecting</code> at <code>b6349fb</code> (bureau #2112)</span></div>
+  <a class="spec-link" href="https://github.com/wnavey/winston/blob/main/workspaces/intake/prospecting-runbook/DESIGN-SPEC.md">Read the design spec →</a>
+</header>
+
+<nav class="tabs">
+  <button data-tab="overview" class="active">Overview</button>
+  <button data-tab="find">Finding the documents</button>
+  <button data-tab="extract">Extracting the items</button>
+  <button data-tab="ship">Writing and shipping</button>
+  <button data-tab="fence">The fence</button>
+  <button data-tab="files">What's stored</button>
+  <button data-tab="score">How a run is scored</button>
+</nav>
+
+<main>
+
+<!-- ============================================================ OVERVIEW -->
+<section class="panel active" id="overview">
+  <h2>Overview</h2>
+  <p class="lede">One request names a jurisdiction. Seventeen steps later, bureau holds that jurisdiction's intake checklist in the db-schema format, and every item cites the exact words of a captured city document. Six steps are agent work, eight are scripts, three are gates.</p>
+
+  <h3>What the runbook is for</h3>
+  <div class="doc">
+    <ol class="plain">
+      <li><div><b>A checklist from the city's own documents.</b> Intake is the check a submittal passes before anyone reviews its content: is the application signed, is the tax certificate attached, does the site plan show the fire lane. Austin calls it the Completeness Check; other cities call it acceptance, sufficiency review or administrative completeness. Noetic's CC review runs against a per-jurisdiction checklist of those items, and until now the only one was Austin's, built by hand. This runbook builds one for any jurisdiction, from what that jurisdiction publishes.</div></li>
+      <li><div><b>Every item traces to words on a page.</b> Each document is captured as a snapshot before anyone reads it for items: a PDF, page images, and every word numbered (<code>p2w188</code> is word 188 on page 2). An item exists only if it cites a run of those word ids on an intake form or submittal checklist. The agent picks words; a script computes the boxes and throws out any quote it cannot find.</div></li>
+      <li><div><b>It never sees an answer key.</b> No session may read any jurisdiction's existing checklist, Austin's included, or any earlier Noetic intake work. Without that bar, a run scored against Austin would be scoring a copy of its own answer. The <a href="#fence">fence tab</a> shows the four layers that hold it.</div></li>
+      <li><div><b>Most of the machinery is borrowed.</b> The session loop, the research ledger, the audit prompt and the disposition ruling are prospector's, read unchanged from the bureau checkout. Snapshots, word ids and quote checks come from <code>runbooks/lib/sources</code>, the library this PR moved out of <code>cc-source-citations</code>. What is new is the intake logic: the source types, the basis decision, the extraction rules, verify, and the writer.</div></li>
+    </ol>
+  </div>
+
+  <h3 class="claim">Three gates start three phases, and each phase writes somewhere different <span class="src">runbook.yaml</span></h3>
+  <div class="sys-legend"><span><i></i>exists today (everything on this page)</span><span>dashed border = outside the runbook</span><span>cylinder = where state is kept</span></div>
+  <div class="sysmap lanes" id="ov-map" style="grid-template-columns:.8fr repeat(4,1fr)">
+    <div class="colh" style="grid-area:1/2">outside the run</div>
+    <div class="colh" style="grid-area:1/3">the runbook</div>
+    <div class="colh" style="grid-area:1/4">run dir · storage</div>
+    <div class="colh" style="grid-area:1/5">bureau</div>
+
+    <div class="lane" style="grid-area:2/1/4/-1"></div>
+    <div class="lane" style="grid-area:4/1/6/-1"></div>
+    <div class="lane" style="grid-area:6/1/8/-1"></div>
+
+    <div class="sys trig" id="ov-t1" style="grid-area:2/1/4/2"><span class="dot"></span><span class="t">Operator files a request</span><span class="d">0-request gate</span></div>
+    <div class="sys trig" id="ov-t2" style="grid-area:4/1/6/2"><span class="dot"></span><span class="t">Scope approved</span><span class="d">1.5-scope gate</span></div>
+    <div class="sys trig" id="ov-t3" style="grid-area:6/1/8/2"><span class="dot"></span><span class="t">Checklist approved</span><span class="d">4.1-review gate</span></div>
+
+    <div class="sys ext" id="ov-web" style="grid-area:2/2"><span class="k">external</span><span class="t">City websites</span><span class="d">own domain, Widen, Municode</span></div>
+    <div class="sys" id="ov-find" style="grid-area:2/3"><a class="ref" href="#find">1.0–1.4 ↓</a><span class="k">2 agent steps · 3 scripts</span><span class="t">Find, capture, classify</span><span class="d">which documents define intake</span></div>
+    <div class="sys store" id="ov-snap" style="grid-area:2/4"><span class="k">run dir</span><span class="t">snapshots + basis.json</span><span class="d">pages, words, word ids</span></div>
+    <div class="sys store" id="ov-ledger" style="grid-area:3/5"><span class="k">bureau worktree</span><span class="t">ledger.md + notes.md</span><span class="d">committed every session</span></div>
+
+    <div class="sys ext" id="ov-pros" style="grid-area:4/2"><span class="k">bureau checkout</span><span class="t">prospector's lib</span><span class="d">audit.md, disposition.py</span></div>
+    <div class="sys" id="ov-work" style="grid-area:4/3"><a class="ref" href="#extract">2.1–3.2 ↓</a><span class="k">fan-outs · scripts · audit</span><span class="t">Extract, verify, audit, write</span><span class="d">one worker per group</span></div>
+    <div class="sys store" id="ov-items" style="grid-area:4/4"><span class="k">run dir</span><span class="t">items.json + coverage</span><span class="d">verified, deduped, stable ids</span></div>
+    <div class="sys store" id="ov-cc" style="grid-area:5/5"><span class="k">bureau worktree</span><span class="t">completeness-check/vN</span><span class="d">+ intake.yaml, charges</span></div>
+
+    <div class="sys" id="ov-pub" style="grid-area:6/3"><a class="ref" href="#ship">4.2 ↓</a><span class="k">script</span><span class="t">Publish</span><span class="d">only when publish: true</span></div>
+    <div class="sys ext" id="ov-bucket" style="grid-area:7/4"><span class="k">Supabase</span><span class="t">snapshots bucket</span><span class="d">the cited snapshots</span></div>
+    <div class="sys ext" id="ov-pr" style="grid-area:6/5"><span class="k">GitHub</span><span class="t">Draft bureau PR</span><span class="d">the run's branch</span></div>
+
+    <a class="sys-edge" data-from="ov-web" data-to="ov-find">fetched</a>
+    <a class="sys-edge" data-from="ov-find" data-to="ov-snap">writes</a>
+    <a class="sys-edge" data-from="ov-find" data-to="ov-ledger">commits</a>
+    <a class="sys-edge" data-from="ov-pros" data-to="ov-work">used as is</a>
+    <a class="sys-edge" data-from="ov-work" data-to="ov-items">writes</a>
+    <a class="sys-edge" data-from="ov-work" data-to="ov-cc">commits</a>
+    <a class="sys-edge" data-from="ov-pub" data-to="ov-pr">pushes</a>
+    <a class="sys-edge" data-from="ov-pub" data-to="ov-bucket">uploads</a>
+  </div>
+  <div class="sys-refs">
+    <a class="refrow" data-ref="1.0–1.4" href="#find"><span class="chip">1.0–1.4</span><span class="txt">worktree, inputs, discover, capture, classify: the Finding the documents tab</span></a>
+    <a class="refrow" data-ref="2.1–3.2" href="#extract"><span class="chip">2.1–3.2</span><span class="txt">groups, extract, verify, audit, disposition, then prose, write and the contact sheet: the next two tabs</span></a>
+    <a class="refrow" data-ref="4.2" href="#ship"><span class="chip">4.2</span><span class="txt">publish: upload the snapshots, merge main, push, open a draft PR (Writing and shipping)</span></a>
+  </div>
+
+  <div class="doc">
+    <p><b>Two places hold a run's state.</b> The <b>run dir</b> is conductor's folder for one run: every step writes its outputs into its own subfolder (<code>1.3-capture/</code>, <code>2.3-verify/</code>, …), and later steps read them. It is local and is deleted when the run is archived. The <b>bureau worktree</b> is a git clone of bureau that 1.0 makes inside the run dir, on a branch named <code>intake-prospecting/&lt;slug&gt;-&lt;run&gt;</code>. Only four things are ever written there: the research ledger, its <code>notes.md</code>, the checklist folder and <code>intake.yaml</code>. Each is committed the moment it is written, so the branch carries the run's whole history even after the run dir is gone, and it is the branch that becomes the PR.</p>
+    <p><b>Why a worktree from the very first step.</b> prospector's session loop, ledger rules, audit prompt and disposition script all expect one: they read <code>worktree.json</code>, commit to it, and check that nothing moved under the audit. Making it first let this runbook use those tools unchanged.</p>
+    <p><b>The gates.</b> A gate is a step with no runner: conductor stops there (exit 75) until a decision file is written. The request sets <code>gates: human</code> or <code>gates: auto</code>. Under <code>auto</code>, the gate's own contract records <code>decided_by: auto</code> and passes, which is how all the Austin loop runs went end to end unattended. Publishing needs a person: <code>publish: true</code> with <code>gates: auto</code> is refused at 0-request.</p>
+  </div>
+
+  <div class="callout ember"><span class="lab">status on 15 Oct 2026</span>The runbook merged today after 19 tuning runs on Austin, each scored against Austin's hand-built checklist (the <a href="#score">scoring tab</a>). Foreman's note on the merge: none of those 19 runs ran with the final fence or the de-Austined prompts, so a quality claim should rest on a run at <code>b6349fb</code> or later. The first non-Austin run (El Paso) started on main the same day.</div>
+</section>
+
+<!-- ============================================================ FIND -->
+<section class="panel" id="find">
+  <h2>Finding the documents</h2>
+  <p class="lede">Steps 0 to 1.5 turn a jurisdiction's name into a short list of captured documents and a decision about which of them define intake. Only two of the seven steps are agent work, and only one of those touches the live web.</p>
+
+  <h3 class="claim">Three setup steps spend no tokens: a request, a worktree, and a list of leads <span class="src">steps/0-request … 1.1-inputs</span></h3>
+  <ol class="steps">
+    <li class="st gate" data-n="0"><span class="sk">gate · the operator</span><span class="sn">0-request</span><span class="so">Writes <code>request.json</code>: the jurisdiction (slug, name, state; it need not exist in bureau yet), an optional application-type hint, optional seed URLs, <code>gates</code>, <code>publish</code>, <code>replace</code> and who asked. A prospector wrapper can pass a <code>worktree</code> it already owns.</span></li>
+    <li class="st" data-n="1.0"><span class="sk">script · ip.py worktree</span><span class="sn">1.0-worktree</span><span class="so">A blobless, sparse clone of bureau from <code>origin/main</code> onto <code>intake-prospecting/&lt;slug&gt;-&lt;run&gt;</code>. Sparse means only <code>jurisdictions/&lt;slug&gt;/</code> (minus its <code>completeness-check/</code>), the state's folder, <code>federal/</code>, <code>spec/</code>, <code>tooling/</code>, <code>taxonomy/</code> and <code>runbooks/lib/</code> are on disk. Records <code>worktree.json</code> in prospector's shape. A wrapped run records the caller's worktree instead.</span></li>
+    <li class="st" data-n="1.1"><span class="sk">script · ip.py inputs</span><span class="sn">1.1-inputs</span><span class="so">Harvests leads from what prospector already shipped for the slug: links under intake-flavoured headings of <code>briefing/process.md</code>, provenance URLs of <code>codes/*submittal*|*checklist*|*application*</code> folders, the code inventory's permit-recon rows, submittal sections of <code>approvals/*.md</code>, plus the request's seeds. Writes <code>seeds.json</code>, each tagged with where it came from. A jurisdiction prospector never touched starts from the web.</span></li>
+  </ol>
+  <div class="doc">
+    <p>A typical loop-run request, the whole of what an operator supplies:</p>
+    <div class="prompt"><span class="ph">0-request/request.json</span>{ "jurisdiction": { "slug": "austin", "name": "Austin", "state": "TX" },
+  "application_type_hint": "commercial site plan",
+  "gates": "auto",
+  "publish": false,
+  "requested_by": "Will Navey" }</div>
+  </div>
+
+  <h3 class="claim">Discovery runs as a chain of cold sessions until one reports done, then a gate fixes the scope <span class="src">1.2-discover, 1.5-scope</span></h3>
+  <div class="sys-legend"><span><i class="happy"></i>main path</span><span><i class="loop"></i>goes back</span><span><i class="exit"></i>leaves the main path</span><span>grey diamond = automatic decision · black diamond = gate</span></div>
+  <div class="bleed"><div class="sysmap rgraph" id="rg-find" style="grid-template-columns:repeat(6,minmax(0,1fr))">
+    <div class="sys" id="f-disc" style="grid-area:1/1"><span class="k">agent · research</span><span class="t">1.2 discover</span><span class="d">one session per launch, up to 8</span></div>
+    <div class="sys dec" id="f-done" style="grid-area:1/2"><span class="k">session report</span><span class="t">done and gate passes?</span></div>
+    <div class="sys" id="f-cap" style="grid-area:1/3"><span class="k">script</span><span class="t">1.3 capture</span><span class="d">every source to a snapshot</span></div>
+    <div class="sys" id="f-cls" style="grid-area:1/4"><span class="k">agent · research</span><span class="t">1.4 classify</span><span class="d">basis + scope sources</span></div>
+    <div class="sys gate" id="f-scope" style="grid-area:1/5"><span class="k">gate</span><span class="t">1.5 scope</span></div>
+    <div class="sys exit" id="f-next" style="grid-area:1/6"><span class="t">on to 2.1 groups</span><span class="d">next tab</span></div>
+    <div class="sys exit" id="f-blk" style="grid-area:2/2"><span class="t">BLOCKED.md</span><span class="d">needs a person or a tool fix</span></div>
+    <div class="sys exit" id="f-fail" style="grid-area:2/3"><span class="t">step fails</span><span class="d">every capture failed</span></div>
+
+    <a class="sys-edge happy" data-from="f-disc" data-to="f-done"></a>
+    <a class="sys-edge happy" data-from="f-done" data-to="f-cap">done</a>
+    <a class="sys-edge loop" data-from="f-done" data-to="f-disc">continue</a>
+    <a class="sys-edge exit" data-from="f-done" data-to="f-blk">blocked</a>
+    <a class="sys-edge happy" data-from="f-cap" data-to="f-cls"></a>
+    <a class="sys-edge exit" data-from="f-cap" data-to="f-fail"></a>
+    <a class="sys-edge happy" data-from="f-cls" data-to="f-scope"></a>
+    <a class="sys-edge happy" data-from="f-scope" data-to="f-next">approved</a>
+    <a class="sys-edge loop" data-from="f-scope" data-to="f-cls">revise</a>
+  </div></div>
+  <div class="doc">
+    <p><b>Why discovery is a loop of sessions.</b> Finding every intake document a city publishes can outrun one context window, so 1.2 uses prospector's step loop: each launch is a fresh session that reads what earlier sessions left (their reports, logs, the ledger and <code>notes.md</code>), does about an hour and $60 of work, and ends with a report whose <code>status</code> is <code>done</code>, <code>continue</code> or <code>blocked</code>. <code>continue</code> exits 100 and conductor launches the next session, up to eight. The research runner is Opus 5.5 at high effort with a three-hour backstop per session.</p>
+    <p><b>The scope gate</b> shows a person <code>1.4-classify/readout.md</code>: the sources table, the basis with its quoted evidence, the scope sources, where the classifier disagreed with discovery's typing, and a <code>## Need you?</code> list. The person approves, or revises with edits (add or remove scope sources, retype a source, override the basis), and 1.4 re-runs with the edits and answers them in a <code>## Revision</code> section.</p>
+  </div>
+
+  <h3 class="claim">Each discovery session researches, then a script gate and a commit decide whether it may stop <span class="src">1.2-discover/prompt.md</span></h3>
+  <div class="af">
+    <div class="af-head">
+      <div></div>
+      <div class="af-h"><span class="role">agent</span>a discovery session (Opus 5.5, high)</div>
+      <div></div>
+      <div class="af-h"><span class="role">scripts · deterministic</span>intake.ts gate, worktree.py commit</div>
+    </div>
+    <div class="af-loop">
+      <div class="af-lh">each session, up to 8; each starts cold</div>
+      <div class="af-row">
+        <div class="af-n">1</div>
+        <div class="af-box">
+          <span class="t">Pick up where the last session stopped</span>
+          <span class="q">"Continue from the last report's next_steps, and read the reports and logs in sessions/, the ledger and notes.md…"</span>
+          <span class="io"><b>reads</b><code>seeds.json</code>, <code>sessions/NN.report.json</code>, the ledger</span>
+        </div>
+        <div class="af-x"></div>
+        <div class="af-none">no script</div>
+      </div>
+      <div class="af-row">
+        <div class="af-n">2</div>
+        <div class="af-box key">
+          <span class="t">Find, fetch and type every candidate document</span>
+          <span class="q">"A link's text, a search snippet or a page's own description of a document is a lead; the document is the evidence."</span>
+          <span class="io"><b>decides</b>the local name of the intake step and the application type that carries the site plan</span>
+          <span class="io"><b>types</b>each source as one of five <code>doc_type</code>s, with a quote from the document in <code>why</code></span>
+          <span class="io"><b>writes</b><code>sources.json</code>, <code>process.md</code>; ledger rows for every surface and attempt</span>
+        </div>
+        <div class="af-x"></div>
+        <div class="af-none">browses the web itself (agent-browser)</div>
+      </div>
+      <div class="af-row">
+        <div class="af-n">3</div>
+        <div class="af-box">
+          <span class="t">Run the gate and fix what fails</span>
+          <span class="io"><b>writes</b>fixes, until it passes</span>
+        </div>
+        <div class="af-x">
+          <div class="c"><span class="l">gate --step</span><span class="ln">▸</span></div>
+          <div class="r"><span class="ln">◂</span><span class="l">gate.json</span></div>
+        </div>
+        <div class="af-box">
+          <span class="t"><code>lib/intake.ts</code> discoverRules</span>
+          <span class="io"><b>checks</b>sources.json parses; every source has a government publisher; the scope question is settled (an instrument or template found, or a strong-tier negative attempt in the ledger); process.md has its three headings; American spelling; prospector's ledger rules</span>
+        </div>
+      </div>
+      <div class="af-row">
+        <div class="af-n">4</div>
+        <div class="af-box">
+          <span class="t">Commit the ledger, then write the report</span>
+          <span class="io"><b>writes</b><code>sessions/NN.log.md</code>, <code>NN.report.json</code> with status done / continue / blocked</span>
+        </div>
+        <div class="af-x">
+          <div class="c"><span class="l">commit</span><span class="ln">▸</span></div>
+          <div class="r"><span class="ln">◂</span><span class="l">session N, HEAD</span></div>
+        </div>
+        <div class="af-box">
+          <span class="t"><code>prospector/lib/worktree.py</code></span>
+          <span class="io"><b>derives</b>the session number; commits <code>prospector/intake/</code> on the run's branch</span>
+        </div>
+      </div>
+    </div>
+    <div class="af-legend">
+      <span><i></i>exists today</span><span><i class="key"></i>where the important value is produced</span><span><i class="loop"></i>repeats</span>
+    </div>
+  </div>
+  <p class="claim"><b>Reading:</b> a <code>none_found</code> answer has to be earned. Silence is not evidence: the gate passes a jurisdiction with no checklist only when the ledger records a negative attempt made at the strong model tier, after a known-positive document was fetched through the same route to prove the route answers.</p>
+
+  <h3 class="claim">Only two of the five document types can originate a checklist item <span class="src">AGENTS.md rule 1, schemas.ts SCOPE_TYPES</span></h3>
+  <div class="spectable-scroll"><table class="spectable">
+    <thead><tr><th>doc_type</th><th>What it is</th><th>Can an item exist because of it?</th></tr></thead>
+    <tbody>
+      <tr><td><code>intake_instrument</code></td><td>An application form, a submittal or completeness checklist, a department's own completeness checklist, or the jurisdiction's published submittal-requirements list in any format, a webpage of panels included</td><td class="ok">yes</td></tr>
+      <tr><td><code>template</code></td><td>Required notes, standard sheets or templates whose content must appear on the plans</td><td class="ok">yes</td></tr>
+      <tr><td><code>regulatory</code></td><td>Code or ordinance sections, such as the application-processing section</td><td class="no">no; it can supply a second citation or the trigger of a condition</td></tr>
+      <tr><td><code>design_manual</code></td><td>Criteria, design or drainage manuals, however mandatory</td><td class="no">no; supports and cites</td></tr>
+      <tr><td><code>informational</code></td><td>Process, fee, metrics, contact and how-to-apply pages</td><td class="no">no; supplies process facts</td></tr>
+    </tbody>
+  </table></div>
+  <p class="claim"><b>Will's call, 14 Oct:</b> a published submittal-requirements webpage is an instrument. Austin's DSD "Site Plan Requirements" page was typed informational in the spec; it is the source of about 70 of the reference items, and retyping it lifted item recall from 0.83 to 0.90 at some cost in precision.</p>
+
+  <h3 class="claim">Capture prints every source to pages of numbered words before anyone reads it for items <span class="src">1.3-capture, runbooks/lib/sources</span></h3>
+  <div class="rar">
+    <div class="rar-h caller"><span class="k">caller</span><b>1.3-capture</b><span class="d">script, no tokens, once per run</span></div>
+    <div class="rar-h called"><span class="k">called</span><b>ip.py capture → sources.capture</b><span class="d">the shared source library</span></div>
+    <div class="rar-req"><span class="lab">Request</span>
+<pre>// one row of 1.2-discover/sources.json
+{ "key": "cc-submittal-checklist",
+  "title": "Site Plan Completeness
+            Check Submittal Checklist",
+  "url": "https://…/content/…/pdf/….pdf",
+  "publisher": "City of Austin DSD",
+  "doc_type": "intake_instrument",
+  "kind": "pdf",
+  "why": "\"The following items must
+          be provided…\"",
+  "capture": true }</pre>
+      <span class="note">Every row is captured unless discovery set <code>capture: false</code> (a 400-page manual nothing cites, a login-walled portal).</span>
+    </div>
+    <div class="rar-arrow in"><i></i>per source</div>
+    <ol class="rar-steps">
+      <li class="rar-step"><b>Pick the recipe by kind</b><span><code>pdf</code>: download; a 200 whose body is not a PDF is refused. <code>webpage</code>: Playwright forces every panel open and prints one page per panel. <code>municode</code>: the content API's chunks for the section's node id and its descendants.</span><span class="branch">webpage under 98 % of its text visible → the contract fails it (a panel stayed shut)</span></li>
+      <li class="rar-step"><b>Number every word</b><span>Each page becomes an image, <code>NNN.words.json</code> (each word with its box) and <code>NNN.tokens.txt</code>, one line per text line, each word written <code>id:text</code>.</span></li>
+      <li class="rar-step"><b>Name the snapshot</b><span>The snapshot id is built from the title and a hash of the words, and the manifest maps each source key to it.</span></li>
+      <li class="rar-step"><b>Record success, failure or skip</b><span>A failed source keeps its error in the manifest; the step only fails if every wanted capture failed.</span></li>
+    </ol>
+    <div class="rar-wait"><span>nothing is uploaded until 4.2-publish</span></div>
+    <div class="rar-res"><span class="lab">Response</span>
+<pre>1.3-capture/
+  manifest.json      sources → snapshot ids
+  snapshots/&lt;sid&gt;/
+    document.pdf
+    pages/002.png
+    text/002.words.json
+    text/002.tokens.txt
+      p2w188:Submit p2w189:one
+      p2w190:signed p2w191:copy …</pre></div>
+    <div class="rar-arrow out"><i></i>files</div>
+  </div>
+  <div class="doc">
+    <p><b>From here on, the snapshot is the source.</b> No later agent fetches a live page. Classification, grouping, extraction, audit and prose all read <code>tokens.txt</code> (and the page image where layout matters), so every citation points at exactly what was captured, and a city editing its page tomorrow changes nothing about this run.</p>
+  </div>
+
+  <h3 class="claim">Classification picks one of three bases; only a formal basis produces a checklist <span class="src">1.4-classify/prompt.md</span></h3>
+  <div class="dflow">
+    <div class="dq"><span class="q">A published intake, submittal or application checklist for the application type that carries the site plan?</span><span class="yes">yes →</span><span class="out">formal: name the scope sources</span></div>
+    <div class="dno">no ↓</div>
+    <div class="dq"><span class="q">Nothing like it, and strong-tier negative attempts in the ledger say so?</span><span class="yes">yes →</span><span class="out warn">none_found: the generic checklist</span></div>
+    <div class="dno">no ↓</div>
+    <div class="dq end"><span class="q">otherwise (a checklist for another application type, a form with no list, a document that would not capture)</span><span class="yes"></span><span class="out warn">inconclusive: the generic checklist</span></div>
+  </div>
+  <div class="doc">
+    <p>On a formal basis the classifier also names the <b>scope sources</b>: the instruments and templates that screen this application type and have a snapshot (an uncaptured document cannot be cited by word id, so it goes to <code>## Need you?</code> instead). Where it reads a document differently from discovery, it records a <code>retype</code> with the deciding quote rather than editing <code>sources.json</code>; the gate rules read its type over discovery's. A non-formal run still finishes: extraction gets an empty roster, and 3.1 writes an <code>intake.yaml</code> that points the jurisdiction at the shared generic checklist.</p>
+  </div>
+</section>
+
+<!-- ============================================================ EXTRACT -->
+<section class="panel" id="extract">
+  <h2>Extracting the items</h2>
+  <p class="lede">The approved scope pages are divided into groups, one fresh worker per group writes items that cite word ids, a script verifies and deduplicates them, and a reviewer that never saw the workers audits the result. Charges send back only the groups they name, at most three times.</p>
+
+  <h3 class="claim">Extraction fans out per group and loops back only the groups the audit names <span class="src">2.5-disposition, disposition.py --fan-out</span></h3>
+  <div class="sys-legend"><span><i class="happy"></i>main path</span><span><i class="loop"></i>goes back</span><span><i class="exit"></i>leaves the main path</span><span>stacked box = one per group, in parallel</span></div>
+  <div class="bleed"><div class="sysmap rgraph" id="rg-extract" style="grid-template-columns:repeat(6,minmax(0,1fr))">
+    <div class="sys" id="x-grp" style="grid-area:1/1"><span class="k">agent · research</span><span class="t">2.1 groups</span><span class="d">roster of cc-1 … cc-N</span></div>
+    <div class="sys fan" id="x-ext" style="grid-area:1/2"><span class="k">agent ×N · extract</span><span class="t">2.2 extract</span><span class="d">one worker per group</span></div>
+    <div class="sys" id="x-ver" style="grid-area:1/3"><span class="k">script</span><span class="t">2.3 verify</span><span class="d">boxes, dedupe, ids, coverage</span></div>
+    <div class="sys" id="x-aud" style="grid-area:1/4"><span class="k">agent · reviewer</span><span class="t">2.4 audit</span><span class="d">fresh session</span></div>
+    <div class="sys dec" id="x-disp" style="grid-area:1/5"><span class="k">2.5 disposition</span><span class="t">charges left?</span></div>
+    <div class="sys exit" id="x-next" style="grid-area:1/6"><span class="t">on to 3.0 prose</span><span class="d">next tab</span></div>
+    <div class="sys exit" id="x-empty" style="grid-area:2/1"><span class="t">empty roster</span><span class="d">basis not formal: no items</span></div>
+    <div class="sys exit" id="x-park" style="grid-area:2/5"><span class="t">PARKED</span><span class="d">no usable audit (exit 75)</span></div>
+
+    <a class="sys-edge happy" data-from="x-grp" data-to="x-ext"></a>
+    <a class="sys-edge exit" data-from="x-grp" data-to="x-empty">not formal</a>
+    <a class="sys-edge happy" data-from="x-ext" data-to="x-ver"></a>
+    <a class="sys-edge happy" data-from="x-ver" data-to="x-aud"></a>
+    <a class="sys-edge happy" data-from="x-aud" data-to="x-disp"></a>
+    <a class="sys-edge happy" data-from="x-disp" data-to="x-next">clean</a>
+    <a class="sys-edge loop" data-from="x-disp" data-to="x-ext">send back named groups</a>
+    <a class="sys-edge exit" data-from="x-disp" data-to="x-park">parked</a>
+  </div></div>
+  <div class="doc">
+    <p><b>Groups follow the city's own instrument.</b> 2.1 reads every scope page and divides them into groups of 2 to 12 pages, one worker each, keyed <code>cc-1</code>, <code>cc-2</code>, … in the instrument's order. The ordering rule is the instrument's own sections; failing that, the reviewing department; never another jurisdiction's group list. Every page of every scope source belongs to exactly one group (the contract blocks on this). Pages of different instruments that list the same submittal items go to one group, so one worker writes each requirement once and cites every instrument; that rule came from Austin, where the application form, the intake checklist and an arborist addendum all list the same documents. Each group also gets a <code>supporting</code> list: the code sections or manuals its pages refer to, which a worker may cite beside a scope citation but never instead of one.</p>
+  </div>
+
+  <h3 class="claim">The worker picks words; the verify script computes every box and rejects what it cannot find <span class="src">extract/prompt.md, iplib/step_verify.py</span></h3>
+  <div class="af">
+    <div class="af-head">
+      <div></div>
+      <div class="af-h"><span class="role">agent</span>an extraction worker, one group (Opus 5.5, medium)</div>
+      <div></div>
+      <div class="af-h"><span class="role">script · deterministic</span>2.3 verify, all groups at once</div>
+    </div>
+    <div class="af-row">
+      <div class="af-n">1</div>
+      <div class="af-box">
+        <span class="t">Read the group's pages, whole</span>
+        <span class="q">"An item is one thing intake staff check for before anyone reviews the content… Completeness, not compliance."</span>
+        <span class="io"><b>reads</b>its pages' <code>tokens.txt</code> and images; <code>basis.json</code>; nothing live, no <code>$BUREAU</code></span>
+      </div>
+      <div class="af-x"></div>
+      <div class="af-none">no script</div>
+    </div>
+    <div class="af-row">
+      <div class="af-n">2</div>
+      <div class="af-box key">
+        <span class="t">Write one item per requirement, with word-id citations</span>
+        <span class="q">"Pick the smallest run of words that states the requirement: never a heading, a form title or a section label alone."</span>
+        <span class="io"><b>types</b>the item as the deficiency ("Application form missing or incomplete"), a condition (<code>Always</code> or <code>If …</code>), location and binding, source type, fail or warn</span>
+        <span class="io"><b>writes</b><code>items.json</code>: 1–4 citations each, the first on a scope page it owns, as <code>{snapshot, page, first_word_id, last_word_id, quote}</code></span>
+      </div>
+      <div class="af-x">
+        <div class="c"><span class="l">items.json</span><span class="ln">▸</span></div>
+        <div class="r"><span class="ln">◂</span><span class="l">rejected.json</span></div>
+      </div>
+      <div class="af-box">
+        <span class="t">Turn word picks into regions</span>
+        <span class="io"><b>checks</b>the ids are words of that page, first before last, and the quote's fragments appear in those words in order</span>
+        <span class="io"><b>derives</b>line boxes from <code>words.json</code>; a failed scope citation rejects the item, a failed supporting one is only dropped</span>
+      </div>
+    </div>
+    <div class="af-row">
+      <div class="af-n">3</div>
+      <div class="af-none"></div>
+      <div class="af-x"></div>
+      <div class="af-box">
+        <span class="t">Anchor, merge duplicates, mint ids</span>
+        <span class="io"><b>checks</b>the item has a verified scope citation on a page its group owns, else rejected</span>
+        <span class="io"><b>derives</b>merges across groups into the earlier group (below); stable ids <code>{slug}-NNNN</code> in group order from the jurisdiction's <code>next_item</code>; the Requirement Source label from the citations</span>
+      </div>
+    </div>
+    <div class="af-row">
+      <div class="af-n">4</div>
+      <div class="af-none"></div>
+      <div class="af-x"></div>
+      <div class="af-box">
+        <span class="t">Map coverage, carry the charge answers</span>
+        <span class="io"><b>derives</b><code>coverage.json</code>: every assigned scope page with the items citing it, <code>uncovered</code> where none does</span>
+        <span class="io"><b>writes</b>each worker's <code>## Charges</code> answers into the ledger, one commit (one writer, so parallel workers never race on the worktree)</span>
+      </div>
+    </div>
+    <div class="af-legend">
+      <span><i></i>exists today</span><span><i class="key"></i>where the important value is produced</span>
+    </div>
+  </div>
+  <div class="doc">
+    <p>What one verified item looks like (shape from <code>schemas.ts</code> <code>VerifiedItem</code>; values illustrative):</p>
+    <div class="prompt"><span class="ph">2.3-verify/items.json · one item</span>{ "id": "austin-0042", "group": "cc-3", "ref": "cc-3:austin-0042", "local_id": "SUB-04",
+  "title": "A signed tax certificate is included in the submittal package",
+  "item": "Tax certificate missing or unsigned",
+  "condition": "Always", "location": "tax certificate", "location_binding": "explicit",
+  "source_type": "document", "fail_status": "fail",
+  "requirement_source": "Site Plan Completeness Check Submittal Checklist p.2",
+  "citations": [ { "source_key": "cc-submittal-checklist", "snapshot": "sn_…", "scope": true,
+                   "region": { "page": 2, "word_ids": ["p2w188", "p2w203"],
+                               "quote": "Submit one signed copy of the tax certificate …",
+                               "boxes": [ { "x": 0.11, "y": 0.42, "width": 0.71, "height": 0.013 } ] } } ],
+  "merged_from": ["cc-1:APP-07"] }</div>
+    <p>The worker never writes a coordinate, and the guide table is never typed by hand: 3.1 renders it from this file.</p>
+  </div>
+
+  <h3 class="claim">Two items merge only when they state the same requirement under the same condition <span class="src">step_verify.py duplicate_of</span></h3>
+  <div class="dflow">
+    <div class="dq"><span class="q">Different condition, or the texts differ by an ordinal, a number or a scope word (first/second, existing/proposed)?</span><span class="yes">yes →</span><span class="out">two items</span></div>
+    <div class="dno">no ↓</div>
+    <div class="dq"><span class="q">Scope regions overlap, and the same title or ≥ 0.90 similar text with no differing subject word?</span><span class="yes">yes →</span><span class="out">merge into the earlier item</span></div>
+    <div class="dno">no ↓</div>
+    <div class="dq"><span class="q">Same title, or identical text, wherever the regions sit?</span><span class="yes">yes →</span><span class="out">merge: stated by another instrument</span></div>
+    <div class="dno">no ↓</div>
+    <div class="dq"><span class="q">≥ 0.92 similar text with no differing subject word?</span><span class="yes">yes →</span><span class="out">merge: stated by another instrument</span></div>
+    <div class="dno">no ↓</div>
+    <div class="dq end"><span class="q">otherwise</span><span class="yes"></span><span class="out">two items</span></div>
+  </div>
+  <div class="doc">
+    <p>The kept item gains the merged item's citations (up to four), so a requirement two instruments both state is cited by both, and each merge is recorded in <code>rejected.json</code>. Every guard in this ladder is a lesson from an Austin run: the ordinal guard (r1 merged "first owner's signature" into "second owner's signature"), the subject-word guard (r5 merged the Austin Energy notes block into the Austin Fire one), and the same guard on overlapping regions (r6 merged "Devices Cones" with "Devices Signs"). Phrasing words such as missing, incomplete or omitted never block a merge.</p>
+  </div>
+
+  <h3 class="claim">The audit charges by kind; disposition sends back only the named groups, at most three times <span class="src">2.4-audit/prompt.md, disposition.py</span></h3>
+  <div class="dflow">
+    <div class="dq"><span class="q">findings.json charged nothing (verdict CLEAN)?</span><span class="yes">yes →</span><span class="out">CLEAN; leads, if any, ship as OPEN_LEAD residuals (ACCEPTED_WITH_RESIDUALS)</span></div>
+    <div class="dno">no ↓</div>
+    <div class="dq"><span class="q">Every charge answered SCORED_BELOW_BAR by the worker this round?</span><span class="yes">yes →</span><span class="out">ACCEPTED_WITH_RESIDUALS</span></div>
+    <div class="dno">no ↓</div>
+    <div class="dq"><span class="q">Round 3 or earlier?</span><span class="yes">yes →</span><span class="out warn">send back: void-request.json for the groups the claims name (cc-3.md: …), exit 1</span></div>
+    <div class="dno">no ↓</div>
+    <div class="dq end"><span class="q">round 4</span><span class="yes"></span><span class="out warn">ACCEPTED_WITH_RESIDUALS: the rest are OPEN_AT_CAP</span></div>
+  </div>
+  <div class="doc">
+    <p><b>The audit.</b> 2.4 is prospector's <code>audit.md</code> with this runbook's paths substituted, run as a fresh Opus session at high effort. It reads the verified items, the coverage map and the snapshots, and is told never to open <code>2.2-extract/</code>, the workers' account of themselves. It attacks coverage first (every uncovered page that states a requirement), then charges by kind: <b>scope</b> (compliance rather than completeness, or a citation that doesn't state the item), <b>coverage</b>, <b>checkability</b> (needs a site visit or the city's records), <b>duplicate</b> and <b>format</b>. Each claim opens with the group files it concerns, which is how disposition knows which workers to wake. Unconfirmed suspicions go in <code>leads</code>, not charges. Later rounds are frozen in scope: they re-judge earlier charges and charge only regressions.</p>
+    <p><b>The revise round.</b> A woken worker sees the round's findings and must answer every charge naming its group in a <code>## Charges</code> table in <code>notes.md</code>, as ADDRESSED or SCORED_BELOW_BAR; its contract fails until it does. Duplicates resolve by rule, not by rewording: the higher-numbered group drops its copy and the lower one keeps it and adds the other instrument's citation. On Austin, round 1 carried between 35 and 82 charges, mostly duplicates, and the run went clean in two to four more rounds. Those duplicate charges are the main cost lever left.</p>
+  </div>
+</section>
+
+<!-- ============================================================ SHIP -->
+<section class="panel" id="ship">
+  <h2>Writing and shipping</h2>
+  <p class="lede">Writers draft each guide's prose, a script renders the guides and their side files into the worktree and commits them, a contact sheet shows every item beside a crop of its cited words, and a person's approval turns the branch into one draft bureau PR.</p>
+
+  <h3 class="claim">The write step routes revisions back before it writes anything <span class="src">iplib/step_write.py cmd_write</span></h3>
+  <div class="sys-legend"><span><i class="happy"></i>main path</span><span><i class="loop"></i>goes back</span><span><i class="exit"></i>leaves the main path</span><span>black diamond = gate · grey diamond = automatic decision</span></div>
+  <div class="bleed"><div class="sysmap rgraph" id="rg-ship" style="grid-template-columns:repeat(6,minmax(0,1fr))">
+    <div class="sys fan" id="s-prose" style="grid-area:1/1"><span class="k">agent ×N · writer</span><span class="t">3.0 prose</span><span class="d">one writer per group</span></div>
+    <div class="sys" id="s-write" style="grid-area:1/2"><span class="k">script</span><span class="t">3.1 write</span><span class="d">render, commit, intake gate</span></div>
+    <div class="sys" id="s-sheet" style="grid-area:1/3"><span class="k">script</span><span class="t">3.2 contact sheet</span><span class="d">every item beside its crop</span></div>
+    <div class="sys gate" id="s-review" style="grid-area:1/4"><span class="k">gate</span><span class="t">4.1 review</span></div>
+    <div class="sys dec" id="s-pubq" style="grid-area:1/5"><span class="k">4.2 publish</span><span class="t">publish: true?</span></div>
+    <div class="sys" id="s-pr" style="grid-area:1/6"><span class="k">GitHub</span><span class="t">Draft bureau PR</span><span class="d">pr.json</span></div>
+    <div class="sys exit" id="s-regroup" style="grid-area:2/2"><span class="t">back to 2.2 extract</span><span class="d">the groups the review names</span></div>
+    <div class="sys exit" id="s-none" style="grid-area:2/5"><span class="t">NOTHING-TO-SHIP.md</span><span class="d">the branch stays local</span></div>
+
+    <a class="sys-edge happy" data-from="s-prose" data-to="s-write"></a>
+    <a class="sys-edge loop" data-from="s-write" data-to="s-prose">spelling, revise</a>
+    <a class="sys-edge exit" data-from="s-write" data-to="s-regroup">regroup</a>
+    <a class="sys-edge happy" data-from="s-write" data-to="s-sheet"></a>
+    <a class="sys-edge happy" data-from="s-sheet" data-to="s-review"></a>
+    <a class="sys-edge loop" data-from="s-review" data-to="s-write">revise</a>
+    <a class="sys-edge happy" data-from="s-review" data-to="s-pubq">approved</a>
+    <a class="sys-edge happy" data-from="s-pubq" data-to="s-pr">yes</a>
+    <a class="sys-edge exit" data-from="s-pubq" data-to="s-none">no</a>
+  </div></div>
+  <div class="doc">
+    <p><b>3.1 is the router.</b> Gates can only wait, so a review that says revise is acted on by the next step that runs: 3.1. When <code>4.1-review/decision.json</code> says revise, 3.1 writes a <code>void-request.json</code> and exits 1. With groups named in <code>regroup</code>, those groups go back through 2.2 extraction (and verify, audit and prose after them); with none, only 3.0 prose is rewritten. Either way the guides re-render and the gate asks again. 3.1 also checks the writers' prose for British spellings before rendering, because bureau's content gate fails the commit on one, and sends just those groups back to 3.0.</p>
+    <p><b>The prose writers</b> (Opus 5.5, medium) each write one <code>prose.json</code>: a description, an overview of the requirements in the city's terms, the documents to review, method notes where "complete" needs a definition, and at least two common rejection triggers. Their contract keeps the runbook's own vocabulary (step, gate, round, contract) out of client-facing text.</p>
+  </div>
+
+  <h3 class="claim">Every file 3.1 writes is rendered from the verified items, so the guide table cannot drift <span class="src">step_write.py, db-schema D1–D4</span></h3>
+  <div class="prompt tree"><span class="ph">the worktree after 3.1-write (formal basis)</span>jurisdictions/&lt;slug&gt;/
+├── intake.yaml                       checklist, basis, application_type, path, next_item, evidence, decided_by
+├── conventions.yaml                  a registry stub, only if the folder had none
+├── prospector/intake/
+│   ├── ledger.md                     surfaces, attempts, ## Charges (committed through the run)
+│   └── notes.md
+└── completeness-check/
+    ├── CURRENT_VERSION               v1, or the next free vN (a re-run rewrites its own version)
+    ├── requirement-source-urls.tsv   label → url, merged into the jurisdiction's existing rows
+    ├── sources/manifest.json         snapshots + labels, merged, never overwritten
+    └── vN/
+        ├── cc-1.md … cc-N.md         one guide per group
+        ├── intake-ids.tsv            ref → stable id (cc-3:austin-0042 → austin-0042)
+        ├── cc-item-title-mappings.tsv
+        ├── true-comment-num-mapping.tsv   comment number = the sort order
+        └── source-citations.json     cc-source-citations' schema, regions from verify</div>
+  <div class="spectable-scroll"><table class="spectable">
+    <thead><tr><th>Guide section (cc-N.md)</th><th>Written by</th><th>From</th></tr></thead>
+    <tbody>
+      <tr><td>Description, Overview, Documents to Review, Validation Methodology, Common Rejection Triggers</td><td>3.0 writer (agent)</td><td><code>prose.json</code></td></tr>
+      <tr><td>Checklist Items: the 8-column table (ID, Item, Condition, Location, Location Binding, Requirement Source, Source Type, Fail Status), with a sub-heading per source section</td><td>3.1 (script)</td><td><code>2.3-verify/items.json</code></td></tr>
+    </tbody>
+  </table></div>
+  <div class="doc">
+    <p>After committing, 3.1 runs the intake gate: <code>intake.yaml</code> parses and agrees with the basis, <code>next_item</code> is one past the last id and never goes down against the base branch, every guide row matches <code>items.json</code> in order, every Requirement Source label has a URL, the tree is committed, and bureau's content gates pass. A non-formal basis writes only <code>intake.yaml</code> (pointing at <code>generic</code>) and the stub.</p>
+    <p><b>3.2 contact sheet</b> is what the review gate shows: one HTML page with the sources and basis, then every item as a card (id, condition, location, fail or warn) above the page image of each citation with its boxes drawn, then the uncovered pages, the residual charges, and what verify rejected and merged.</p>
+  </div>
+
+  <h3 class="claim">Publishing refuses without a person's approval, uploads the snapshots, then opens one draft PR <span class="src">step_write.py cmd_publish</span></h3>
+  <div class="rar">
+    <div class="rar-h caller"><span class="k">caller</span><b>4.2-publish</b><span class="d">script, operator's gh and service-role key (local lane only)</span></div>
+    <div class="rar-h called"><span class="k">called</span><b>ip.py publish</b><span class="d">git, Supabase storage, gh</span></div>
+    <div class="rar-req"><span class="lab">Request</span>
+<pre>request.json   { "publish": true,
+                 "replace": false }
+4.1-review/decision.json
+               { "status": "approved",
+                 "decided_by": "Will Navey",
+                 "notes": "…" }
+the worktree branch
+  intake-prospecting/&lt;slug&gt;-&lt;run&gt;</pre></div>
+    <div class="rar-arrow in"><i></i>advance</div>
+    <ol class="rar-steps">
+      <li class="rar-step"><b>Stand aside unless asked</b><span>A loop run or a wrapped run ends here with <code>NOTHING-TO-SHIP.md</code>; a prospector wrapper merges the branch itself.</span><span class="branch">publish: false → done, exit 0</span></li>
+      <li class="rar-step"><b>Require a person</b><span>The decision must be <code>approved</code> and not <code>decided_by: auto</code>.</span><span class="branch">otherwise → the step fails</span></li>
+      <li class="rar-step"><b>Refuse to overwrite</b><span>If <code>origin/main</code> already has a <code>completeness-check/</code> for the slug, publishing needs <code>replace: true</code> (the new version lands as the next vN).</span></li>
+      <li class="rar-step"><b>Upload the cited snapshots</b><span>Every snapshot in the checklist's manifest goes to the snapshots bucket under <code>&lt;slug&gt;/&lt;sid&gt;/</code>, so the app can draw the citations once the PR merges.</span></li>
+      <li class="rar-step"><b>Merge main in, never rebase</b><span>The session commits keep their shas.</span><span class="branch">conflict → abort, BLOCKED.md</span></li>
+      <li class="rar-step"><b>Push and open one draft PR</b><span>Title <code>intake-prospecting: &lt;name&gt; checklist vN</code>; the body asks for a merge commit, never a squash.</span></li>
+    </ol>
+    <div class="rar-res"><span class="lab">Response</span>
+<pre>4.2-publish/pr.json
+{ "url": "https://github.com/
+    noetic-inc/bureau/pull/…",
+  "number": …,
+  "branch": "intake-prospecting/…",
+  "head_sha": "…",
+  "draft": true,
+  "uploaded": { "sn_…": 14 } }</pre></div>
+    <div class="rar-arrow out"><i></i>files</div>
+  </div>
+  <p class="claim"><b>Reading:</b> nothing in this runbook writes to a database. Once the PR merges, the checklist is an ordinary bureau checklist; carrying it into the app DB is the db-schema sync's job (winston #310, specified, not yet built).</p>
+</section>
+
+<!-- ============================================================ FENCE -->
+<section class="panel" id="fence">
+  <h2>The fence</h2>
+  <p class="lede">Rule 19: no session may read any jurisdiction's existing checklist, or any earlier Noetic work about intake. A prompt saying so is not enough, so four layers hold it, from "the file is not on disk" down to "the step fails if a tool call touched it".</p>
+
+  <h3 class="claim">What each session can reach decides which layer protects it <span class="src">AGENTS.md, lib/rule19.ts, common.py sparse_paths</span></h3>
+  <div class="spectable-scroll"><table class="spectable">
+    <thead><tr><th>Session</th><th>Holds <code>$BUREAU</code> (the full checkout)</th><th>Worktree it reads</th><th>Live web</th><th>Tool calls scanned</th></tr></thead>
+    <tbody>
+      <tr><td>1.2 discover</td><td class="ok">yes</td><td>sparse, no checklist</td><td class="ok">yes, the point</td><td class="ok">yes</td></tr>
+      <tr><td>1.4 classify</td><td class="ok">yes</td><td>sparse, no checklist</td><td class="no">told not to; snapshots only</td><td class="ok">yes</td></tr>
+      <tr><td>2.1 groups</td><td class="ok">yes</td><td>sparse, no checklist</td><td class="no">told not to</td><td class="ok">yes</td></tr>
+      <tr><td>2.2 extract workers</td><td class="no">no</td><td>run dir only</td><td class="no">told not to</td><td class="ok">yes</td></tr>
+      <tr><td>2.4 audit</td><td class="ok">yes</td><td>sparse, no checklist</td><td class="no">told not to</td><td class="ok">yes</td></tr>
+      <tr><td>3.0 prose writers</td><td class="no">no</td><td>run dir only</td><td class="no">told not to</td><td class="ok">yes</td></tr>
+      <tr><td>3.1 write, 4.2 publish (scripts)</td><td>yes</td><td>widened to write the checklist</td><td class="no">—</td><td class="no">no agent</td></tr>
+      <tr><td><code>intake-score</code> (separate runbook)</td><td>yes</td><td colspan="3">outside the fence on purpose: it reads the reference the runbook under test never may</td></tr>
+    </tbody>
+  </table></div>
+  <div class="doc">
+    <ol class="plain">
+      <li><div><b>The folder is not on disk.</b> 1.0's sparse checkout excludes <code>jurisdictions/&lt;slug&gt;/completeness-check/</code> and checks out no other city at all, so a recursive grep of the worktree that names no barred path still cannot find a checklist.</div></li>
+      <li><div><b>The workers hold no checkout.</b> Extraction and prose workers get no <code>tools: [bureau]</code>, so they have no <code>$BUREAU</code>; the charge-answer rules they need were copied into <code>lib/charges.ts</code> so their contracts run without it.</div></li>
+      <li><div><b>Every prompt states the bar as a capability.</b> "You may not read any jurisdiction's existing completeness checklist…", never "avoid this folder" (which would tell a session where to look). Sessions that hold <code>$BUREAU</code> search with <code>--exclude-dir=examples --exclude-dir=completeness-check --exclude-dir=intake-score</code>.</div></li>
+      <li><div><b>The tripwire.</b> Each agent step's contract scans its session logs (<code>$RUN/.logs/&lt;node&gt;.*.jsonl</code>) for barred paths in the path-shaped fields of tool calls (file paths, commands, URLs, globs): any <code>completeness-check/</code>, <code>completion-officer/</code>, <code>intake-score/scenarios/</code>, a runbook's <code>examples/</code>, <code>/_eval/</code>, <code>review_comments</code>, Inspector General reports. A hit fails the step. Text a session writes, or a sub-agent prompt stating the bar, is not a read; austin-r1 failed on exactly those false positives before the scan was narrowed.</div></li>
+    </ol>
+  </div>
+
+  <h3 class="claim">Only scripts ever put the checklist folder back on disk, and they take it away before an agent runs again <span class="src">common.py widen_sparse / narrow_sparse</span></h3>
+  <div class="sm">
+    <span class="s">fenced<span class="who">1.0 makes the clone</span></span><span class="a">→</span>
+    <span class="s">widened<span class="who">3.1 writes the checklist</span></span><span class="a">→</span>
+    <span class="s">fenced again<span class="who">3.1 before any send-back</span></span><span class="a">→</span>
+    <span class="s">widened<span class="who">4.2 reads the manifest</span></span>
+  </div>
+  <p class="claim"><b>Reading:</b> the same fence protects a jurisdiction that already has a checklist. On Austin's second version, extraction cannot see v1 (or v2.7-trimmed); the write step merges this run's sources into the existing manifest and starts ids at the existing <code>next_item</code>.</p>
+</section>
+
+<!-- ============================================================ FILES -->
+<section class="panel" id="files">
+  <h2>What's stored</h2>
+  <p class="lede">Everything that passes between steps is a JSON file in the run dir, each defined once as a zod schema in <code>scripts/schemas.ts</code> that the step contracts import. The run's deliverable is the files in the worktree; nothing is written to a database.</p>
+
+  <h3 class="claim">A verified item belongs to one group and points, through one to four citations, at snapshot pages <span class="src">schemas.ts</span></h3>
+  <div class="erd linked" style="grid-template-columns:repeat(3,minmax(0,1fr))">
+    <div class="ent exist" id="e-src" style="grid-area:1/1">
+      <div class="eh"><span class="en">Source</span><span class="stereo">1.2 sources.json</span></div>
+      <div class="row"><span class="b b-pk">PK</span><span class="nm">key</span><span class="dt">string</span><span class="ty">kebab-case</span></div>
+      <div class="row"><span class="nm">title</span><span class="dt">string</span></div>
+      <div class="row"><span class="nm">url</span><span class="dt">url</span></div>
+      <div class="row"><span class="nm">publisher</span><span class="dt">string</span><span class="ty">a government</span></div>
+      <div class="row hi"><span class="nm">doc_type</span><span class="dt">enum</span><span class="ty">5 types; 2 can originate</span></div>
+      <div class="row"><span class="nm">kind</span><span class="dt">enum</span><span class="ty">pdf · webpage · municode</span></div>
+      <div class="row"><span class="nm">application_type</span><span class="dt">string<i> null</i></span></div>
+      <div class="row"><span class="nm">version_date</span><span class="dt">string<i> null</i></span></div>
+      <div class="row"><span class="nm">why</span><span class="dt">string</span><span class="ty">a quote from it</span></div>
+      <div class="row"><span class="nm">seed_origin</span><span class="dt">string</span><span class="ty">a seed origin or web</span></div>
+      <div class="row"><span class="nm">capture</span><span class="dt">boolean</span></div>
+    </div>
+    <div class="ent exist" id="e-snap" style="grid-area:1/2">
+      <div class="eh"><span class="en">Snapshot</span><span class="stereo">1.3 manifest.json</span></div>
+      <div class="row"><span class="b b-pk">PK</span><span class="nm">sid</span><span class="dt">string</span><span class="ty">title + words sha</span></div>
+      <div class="row"><span class="b b-fk">FK</span><span class="nm">source_key</span><span class="dt">string</span></div>
+      <div class="row"><span class="nm">pages</span><span class="dt">array</span><span class="ty">image, words, tokens each</span></div>
+      <div class="row"><span class="nm">fingerprints.sha256_words</span><span class="dt">string</span></div>
+      <div class="row"><span class="nm">capture.recipe</span><span class="dt">string</span><span class="ty">pdf-direct · webpage-panels · municode-section</span></div>
+      <div class="row"><span class="nm">storage_prefix</span><span class="dt">string</span><span class="ty">&lt;slug&gt;/&lt;sid&gt;/</span></div>
+      <div class="note">files under snapshots/&lt;sid&gt;/; uploaded only by 4.2</div>
+    </div>
+    <div class="ent exist" id="e-cov" style="grid-area:1/3">
+      <div class="eh"><span class="en">Coverage span</span><span class="stereo">2.3 coverage.json</span></div>
+      <div class="pkgroup"><span class="pklabel">one row per assigned scope page</span>
+        <div class="row"><span class="b b-pk">PK</span><span class="nm">snapshot</span><span class="dt">string</span></div>
+        <div class="row"><span class="b b-pk">PK</span><span class="nm">page</span><span class="dt">int</span></div>
+      </div>
+      <div class="row"><span class="nm">source</span><span class="dt">string</span></div>
+      <div class="row"><span class="b b-fk">FK</span><span class="nm">group</span><span class="dt">cc-N</span></div>
+      <div class="row"><span class="nm">items</span><span class="dt">string[]</span><span class="ty">ids citing it</span></div>
+      <div class="row hi"><span class="nm">uncovered</span><span class="dt">boolean</span><span class="ty">the audit reads these first</span></div>
+    </div>
+    <div class="ent exist" id="e-basis" style="grid-area:2/1">
+      <div class="eh"><span class="en">Basis</span><span class="stereo">1.4 basis.json</span></div>
+      <div class="row hi"><span class="nm">basis</span><span class="dt">enum</span><span class="ty">formal · none_found · inconclusive</span></div>
+      <div class="row"><span class="nm">application_type</span><span class="dt">string</span></div>
+      <div class="row"><span class="nm">scope_sources</span><span class="dt">string[]</span><span class="ty">empty unless formal</span></div>
+      <div class="row"><span class="nm">rationale</span><span class="dt">string</span></div>
+      <div class="row"><span class="nm">evidence</span><span class="dt">array</span><span class="ty">{source, quote}</span></div>
+      <div class="row"><span class="nm">retype</span><span class="dt">array</span><span class="ty">{key, doc_type, quote}</span></div>
+    </div>
+    <div class="ent exist" id="e-cit" style="grid-area:2/2">
+      <div class="eh"><span class="en">Citation</span><span class="stereo">inside an item</span></div>
+      <div class="row"><span class="b b-fk">FK</span><span class="nm">source_key</span><span class="dt">string</span></div>
+      <div class="row"><span class="b b-fk">FK</span><span class="nm">snapshot</span><span class="dt">string</span></div>
+      <div class="row"><span class="nm">scope</span><span class="dt">boolean</span><span class="ty">on a scope source</span></div>
+      <div class="row"><span class="nm">region.page</span><span class="dt">int</span></div>
+      <div class="row hi"><span class="nm">region.word_ids</span><span class="dt">[first, last]</span><span class="ty">the worker's pick</span></div>
+      <div class="row"><span class="nm">region.quote</span><span class="dt">string</span><span class="ty">verbatim, … for a gap</span></div>
+      <div class="row"><span class="nm">region.boxes</span><span class="dt">array</span><span class="ty">computed by verify, 0–1</span></div>
+    </div>
+    <div class="ent exist" id="e-grp" style="grid-area:3/1">
+      <div class="eh"><span class="en">Group</span><span class="stereo">2.1 roster.json</span></div>
+      <div class="row"><span class="b b-pk">PK</span><span class="nm">key</span><span class="dt">cc-N</span><span class="ty">no gaps</span></div>
+      <div class="row"><span class="nm">title</span><span class="dt">string</span><span class="ty">the city's words</span></div>
+      <div class="row"><span class="nm">rationale</span><span class="dt">string</span></div>
+      <div class="row"><span class="nm">assignments</span><span class="dt">array</span><span class="ty">{source, snapshot, pages, section}</span></div>
+      <div class="row"><span class="nm">supporting</span><span class="dt">string[]</span><span class="ty">may cite, never originate</span></div>
+      <div class="note">roster.ordering_rule: instrument_structure · reviewing_entity · none</div>
+    </div>
+    <div class="ent exist" id="e-item" style="grid-area:3/2">
+      <div class="eh"><span class="en">Verified item</span><span class="stereo">2.3 items.json</span></div>
+      <div class="row"><span class="b b-pk">PK</span><span class="nm">id</span><span class="dt">string</span><span class="ty">{slug}-NNNN</span></div>
+      <div class="row"><span class="b b-fk">FK</span><span class="nm">group</span><span class="dt">cc-N</span></div>
+      <div class="row"><span class="nm">ref</span><span class="dt">string</span><span class="ty">cc-N:{id}</span></div>
+      <div class="row"><span class="nm">local_id</span><span class="dt">string</span><span class="ty">SUB-01, the worker's</span></div>
+      <div class="row"><span class="nm">title</span><span class="dt">string</span><span class="ty">≤ 15 words</span></div>
+      <div class="row"><span class="nm">item</span><span class="dt">string</span><span class="ty">the deficiency</span></div>
+      <div class="row"><span class="nm">condition</span><span class="dt">string</span><span class="ty">Always · If …</span></div>
+      <div class="row"><span class="nm">location</span><span class="dt">string</span></div>
+      <div class="row"><span class="nm">location_binding</span><span class="dt">enum</span><span class="ty">explicit · inferred · flexible</span></div>
+      <div class="row"><span class="nm">source_type</span><span class="dt">enum</span><span class="ty">document · citation · guideline</span></div>
+      <div class="row"><span class="nm">fail_status</span><span class="dt">enum</span><span class="ty">fail · warn</span></div>
+      <div class="row"><span class="nm">requirement_source</span><span class="dt">string</span><span class="ty">derived from citations</span></div>
+      <div class="row"><span class="nm">section</span><span class="dt">string<i> null</i></span></div>
+      <div class="row"><span class="nm">merged_from</span><span class="dt">string[]</span></div>
+    </div>
+
+    <a class="sys-edge" data-from="e-src" data-to="e-snap">1 → 0..1</a>
+    <a class="sys-edge" data-from="e-basis" data-to="e-src">names scope</a>
+    <a class="sys-edge" data-from="e-snap" data-to="e-cit">1 page → many</a>
+    <a class="sys-edge" data-from="e-item" data-to="e-cit">1 → 1..4</a>
+    <a class="sys-edge" data-from="e-grp" data-to="e-item">1 → many</a>
+    <a class="sys-edge" data-from="e-snap" data-to="e-cov">1 → 1</a>
+  </div>
+  <p class="claim"><b>Reading:</b> the first citation of every item is on a scope source and on a page its group owns; later scope citations may sit on another group's page and count toward that page's coverage.</p>
+
+  <h3>Every file a run writes, by step</h3>
+  <div class="spectable-scroll"><table class="spectable">
+    <thead><tr><th>Step</th><th>Runner</th><th>Writes</th></tr></thead>
+    <tbody>
+      <tr><td><span class="sn">0</span> request</td><td>gate</td><td><code>request.json</code></td></tr>
+      <tr><td><span class="sn">1.0</span> worktree</td><td>script</td><td><code>worktree.json</code>, <code>worktree/</code> (the bureau clone)</td></tr>
+      <tr><td><span class="sn">1.1</span> inputs</td><td>script</td><td><code>seeds.json</code>, <code>inputs.md</code></td></tr>
+      <tr><td><span class="sn">1.2</span> discover</td><td>research, step loop</td><td><code>sources.json</code>, <code>process.md</code>, <code>gate.json</code>, <code>sessions/</code>; ledger + <code>notes.md</code> in the worktree</td></tr>
+      <tr><td><span class="sn">1.3</span> capture</td><td>script</td><td><code>manifest.json</code>, <code>capture-report.json</code>, <code>capture.md</code>, <code>snapshots/</code></td></tr>
+      <tr><td><span class="sn">1.4</span> classify</td><td>research</td><td><code>basis.json</code>, <code>readout.md</code></td></tr>
+      <tr><td><span class="sn">1.5</span> scope</td><td>gate</td><td><code>decision.json</code>, <code>decision.md</code></td></tr>
+      <tr><td><span class="sn">2.1</span> groups</td><td>research</td><td><code>roster.json</code>, <code>roster.txt</code> (the fan-out list)</td></tr>
+      <tr><td><span class="sn">2.2</span> extract/&lt;cc-N&gt;</td><td>extract ×N</td><td><code>items.json</code>, <code>notes.md</code> per group</td></tr>
+      <tr><td><span class="sn">2.3</span> verify</td><td>script</td><td><code>items.json</code>, <code>rejected.json</code>, <code>coverage.json</code>, <code>verify.md</code>; ledger charges commit</td></tr>
+      <tr><td><span class="sn">2.4</span> audit</td><td>reviewer</td><td><code>findings.json</code></td></tr>
+      <tr><td><span class="sn">2.5</span> disposition</td><td>script</td><td><code>disposition.json</code>, or <code>void-request.json</code>, or <code>PARKED.md</code>; <code>$RUN/rounds/round-N.findings.json</code></td></tr>
+      <tr><td><span class="sn">3.0</span> prose/&lt;cc-N&gt;</td><td>writer ×N</td><td><code>prose.json</code> per group</td></tr>
+      <tr><td><span class="sn">3.1</span> write</td><td>script</td><td>the checklist folder + <code>intake.yaml</code> in the worktree; <code>write.md</code>, <code>gate.json</code>, or <code>void-request.json</code></td></tr>
+      <tr><td><span class="sn">3.2</span> contact sheet</td><td>script</td><td><code>contact-sheet.html</code>, <code>readout.md</code></td></tr>
+      <tr><td><span class="sn">4.1</span> review</td><td>gate</td><td><code>decision.json</code> (approved, or revise with <code>regroup</code>), <code>decision.md</code></td></tr>
+      <tr><td><span class="sn">4.2</span> publish</td><td>script</td><td><code>pr.json</code>, or <code>NOTHING-TO-SHIP.md</code>, or <code>BLOCKED.md</code></td></tr>
+    </tbody>
+  </table></div>
+  <p class="claim">Every step has a <code>contract.test.ts</code> that validates its outputs against these schemas; a step is done only when its contract passes.</p>
+</section>
+
+<!-- ============================================================ SCORE -->
+<section class="panel" id="score">
+  <h2>How a run is scored</h2>
+  <p class="lede"><code>intake-score</code> is a second runbook that grades a finished run against Austin's hand-built checklist (v2-trimmed, 190 items). It sits outside the fence, and it is how the Austin loop tuned the prompts over 19 runs.</p>
+
+  <h3 class="claim">Blind judges score recall and precision in parallel, each verdict cached by content hash <span class="src">intake-score/runbook.yaml</span></h3>
+  <div class="sys-legend"><span><i class="happy"></i>main path</span><span>stacked box = one judge per packet, in parallel</span><span>black diamond = gate</span></div>
+  <div class="sysmap rgraph" id="rg-score" style="grid-template-columns:repeat(4,minmax(0,1fr))">
+    <div class="sys gate" id="sc-req" style="grid-area:1/1"><span class="k">gate</span><span class="t">0 request</span></div>
+    <div class="sys" id="sc-in" style="grid-area:1/2"><span class="k">script</span><span class="t">1.1 inputs</span><span class="d">M1, M2, M6; judge packets</span></div>
+    <div class="sys fan" id="sc-rec" style="grid-area:1/3"><span class="k">agent ×N · judge</span><span class="t">2.1 recall</span><span class="d">per reference group</span></div>
+    <div class="sys fan" id="sc-pre" style="grid-area:2/3"><span class="k">agent ×N · judge</span><span class="t">2.2 precision</span><span class="d">per candidate group</span></div>
+    <div class="sys" id="sc-card" style="grid-area:1/4"><span class="k">script</span><span class="t">3.1 scorecard</span><span class="d">the bar, unmatched lists</span></div>
+    <a class="sys-edge happy" data-from="sc-req" data-to="sc-in"></a>
+    <a class="sys-edge happy" data-from="sc-in" data-to="sc-rec"></a>
+    <a class="sys-edge" data-from="sc-in" data-to="sc-pre"></a>
+    <a class="sys-edge happy" data-from="sc-rec" data-to="sc-card"></a>
+    <a class="sys-edge" data-from="sc-pre" data-to="sc-card"></a>
+  </div>
+  <div class="doc">
+    <p>1.1 builds the reference from bureau's guides at the commits <code>expected.yaml</code> pins, computes the mechanical metrics from the run dir, and writes judge packets only for cache misses, so re-scoring an unchanged pair spends nothing. Recall judges see one reference group and the candidate items and rule each reference item match, partial or none. Precision judges see one candidate group and rule each item an intake item, compliance, and traced to its quote. Judges are Opus 5.5 at medium effort.</p>
+  </div>
+
+  <h3 class="claim">Six metrics, five with a bar <span class="src">scenarios/austin/expected.yaml</span></h3>
+  <div class="spectable-scroll"><table class="spectable">
+    <thead><tr><th>Metric</th><th>What it measures</th><th>How</th><th>Bar</th></tr></thead>
+    <tbody>
+      <tr><td>M1 sources</td><td>Austin's four intake documents are among the scope sources</td><td>mechanical</td><td>4 of 4</td></tr>
+      <tr><td>M2 basis</td><td>basis and application type match <code>expected.yaml</code></td><td>mechanical</td><td>must match</td></tr>
+      <tr><td>M3 recall</td><td>reference items the run found (match 1, partial 0.5)</td><td>judged</td><td>≥ 0.70</td></tr>
+      <tr><td>M4 precision</td><td>run items that match a reference item, or are ruled in-scope and traced</td><td>judged</td><td>≥ 0.85</td></tr>
+      <tr><td>M5 scope</td><td>run items judged compliance, not completeness</td><td>judged</td><td>≤ 0.05</td></tr>
+      <tr><td>M6 citations</td><td>items whose scope citation verified in 2.3 (a merge counts as verified)</td><td>mechanical</td><td>≥ 0.95</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3 class="claim">The loop lifted recall from 0.80 to about 0.93 while items roughly tripled <span class="src">IG 2026-10-14-intake-prospecting-austin-loop-iteration-1</span></h3>
+  <div class="spectable-scroll"><table class="spectable">
+    <thead><tr><th>Run</th><th>What changed before it</th><th>Items</th><th>Audit rounds</th><th>Cost</th><th>M3</th><th>M4</th><th>M5</th></tr></thead>
+    <tbody>
+      <tr><td>r1</td><td>first run</td><td>221</td><td>3</td><td>$53</td><td>0.80</td><td>0.99</td><td>0.009</td></tr>
+      <tr><td>r2</td><td>cross-source dedupe, finer form items</td><td>319</td><td>5</td><td>$51</td><td>0.83</td><td>0.98</td><td>0.003</td></tr>
+      <tr><td>r4</td><td>requirements webpage typed as an instrument</td><td>535</td><td>4</td><td>$57</td><td>0.90</td><td>0.98</td><td>0.021</td></tr>
+      <tr><td>r5</td><td>other-office documents are items; no standard figures in items</td><td>658</td><td>4</td><td>$51</td><td>0.93</td><td>0.99</td><td>0.005</td></tr>
+      <tr><td>r11</td><td>r10's prompts: letter contents follow the instrument's lines</td><td>671</td><td>4</td><td>$61</td><td>0.96</td><td>0.99</td><td>0.009</td></tr>
+      <tr><td>r19</td><td>none (r12–r19 ran unchanged prompts)</td><td>587</td><td>4</td><td>$60</td><td>0.91</td><td>0.99</td><td>0.005</td></tr>
+    </tbody>
+  </table></div>
+  <div class="doc">
+    <p>Every run passed the bar. On unchanged prompts (r12 to r19) recall held between 0.90 and 0.94, which is about the judge's own variance (re-judging identical items moved M3 by 0.016). A run took about an hour and $45 to $74 of seat spend. What still misses is mostly granularity (how finely a letter's or a plan's required contents split into items) and one web form, the Jotform CC application, that never captures.</p>
+  </div>
+  <div class="callout ember"><span class="lab">before quoting these numbers</span>All 19 runs predate the merged fence and the de-Austined prompts (Foreman's review). The scores show the method works on Austin; they are not yet a measurement of the code on main.</div>
+</section>
+
+</main>
+
+<script data-spec-kit-js>
+/* spec-kit v6.0 — system-map edge renderer + interactive state machines (.smx).
+   Inline the ENTIRE contents of this file into the spec's
+   <script data-spec-kit-js> block (do not <script src>).
+   Reads every .sysmap, and for each hidden <a class="sys-edge"
+   data-from="idA" data-to="idB">label</a> draws an SVG path between the
+   two nodes' nearest sides. Routing:
+     side-to-side   when A and B share a row (label rides in the row gap ABOVE the boxes)
+     top-to-bottom  when A and B share a column (label sits right of the line)
+     orthogonal     otherwise: leave A vertically into the gap beside A's whole ROW (tags
+                    included), run, drop into B (label hugs the source); a backward edge
+                    in the same row goes over the top, .loop higher still.
+   Labels clear the source's floating .ref tag, stay inside the map, and nudge up off
+   any label drawn earlier.
+   Redraws on load, font load, resize, and whenever a tab panel becomes visible.
+   .smx: builds the controls for each interactive state machine once, on DOMContentLoaded.
+   v6.0: skips nodes hidden by a delta map's view and edges whose data-in names the other view;
+   .lanes maps draw no edge out of a trigger (the trigger is the lane label); edge kinds
+   .happy / .exit for runbook graphs; Today/After toggle for .sysmap.delta; hover a node to
+   light its path (hover a footer row to light the nodes its reference tags); .dfg chains that
+   would wrap switch to a vertical stack. */
+(function(){
+  const NS='http://www.w3.org/2000/svg';
+  const COL={std:'#8a919c',new:'#1a7f37',chg:'#bf8700',gap:'#c2341c',loop:'#4b5361',happy:'#1f2937',exit:'#8a919c'};
+  const KINDS=['new','chg','gap','loop','happy','exit'];
+  function el(tag,attrs){const n=document.createElementNS(NS,tag);for(const k in attrs)n.setAttribute(k,attrs[k]);return n;}
+  function draw(map){
+    let svg=map.querySelector('svg.edges');
+    if(!svg){
+      svg=el('svg',{class:'edges'});
+      const defs=el('defs',{});
+      for(const k in COL){
+        const m=el('marker',{id:'ah-'+k,viewBox:'0 0 10 10',refX:'9',refY:'5',markerWidth:'7',markerHeight:'7',orient:'auto-start-reverse'});
+        m.appendChild(el('path',{d:'M0 0L10 5L0 10z',fill:COL[k]}));defs.appendChild(m);
+      }
+      svg.appendChild(defs);map.appendChild(svg);
+    }
+    svg.querySelectorAll('g').forEach(g=>g.remove());
+    const mr=map.getBoundingClientRect(); if(mr.width===0) return;   // hidden tab: nothing to measure
+    const paths=el('g',{class:'paths'}), labels=el('g',{class:'labels'});
+    const rect=r=>({l:r.left-mr.left,t:r.top-mr.top,r:r.right-mr.left,b:r.bottom-mr.top,cx:(r.left+r.right)/2-mr.left,cy:(r.top+r.bottom)/2-mr.top});
+    const box=n=>rect((n.querySelector('.dot')||n).getBoundingClientRect());
+    const shown=n=>n.getClientRects().length>0;
+    const erd=map.classList.contains('erd'), view=map.classList.contains('delta')?map.dataset.view:null, lanes=map.classList.contains('lanes');
+    const nodes=[...map.querySelectorAll('.sys,.ent')].filter(shown).map(n=>({n,b:box(n),ref:n.querySelector('.ref')?rect(n.querySelector('.ref').getBoundingClientRect()):null}));
+    // the vertical band a node's ROW occupies: every node overlapping it vertically, tags included
+    const band=a=>{let t=a.t,b=a.b;nodes.forEach(o=>{if(Math.min(a.b,o.b.b)-Math.max(a.t,o.b.t)>0){t=Math.min(t,o.b.t,o.ref?o.ref.t:o.b.t);b=Math.max(b,o.b.b);}});return {t,b};};
+    const placed=[];   // label boxes already drawn, for collision nudging
+    map.querySelectorAll('.sys-edge').forEach(e=>{
+      const A=map.querySelector('#'+CSS.escape(e.dataset.from||'')), B=map.querySelector('#'+CSS.escape(e.dataset.to||''));
+      if(!A||!B){console.warn('sysmap edge: missing node',e.dataset.from,e.dataset.to);return;}
+      if(!shown(A)||!shown(B)) return;                                  // hidden by the delta view
+      if(view&&e.dataset.in&&e.dataset.in!==view) return;               // edge belongs to the other view
+      if(lanes&&A.classList.contains('trig')) return;                   // a lane label has no wire
+      const a=box(A), b=box(B), aRef=A.querySelector('.ref'), aRefR=aRef?rect(aRef.getBoundingClientRect()):null;
+      const kind=KINDS.find(k=>e.classList.contains(k))||'std';
+      const sameRow=Math.min(a.b,b.b)-Math.max(a.t,b.t)>0, sameCol=Math.min(a.r,b.r)-Math.max(a.l,b.l)>0;
+      const forward=b.l>=a.r;
+      let d,lx,ly,anchor='middle';
+      const clamp=(v,lo,hi)=>Math.max(lo,Math.min(hi,v));
+      if(sameRow&&forward&&kind!=='loop'){        // side to side, left→right
+        const x1=a.r,x2=b.l,y1=a.cy,mx=(x1+x2)/2;
+        const y2=A.querySelector('.dot')?clamp(y1,b.t+10,b.b-10):b.cy;
+        d=`M${x1} ${y1}C${mx} ${y1},${mx} ${y2},${x2} ${y2}`;
+        lx=mx; ly=Math.min(a.t,b.t)-6;
+        if(aRefR&&ly>aRefR.t-2&&ly<aRefR.b+12){lx=aRefR.r+6;anchor='start';}   // clear the source's floating tag
+        if(erd){ly=(y1+y2)/2-7;}                                            // tall entity cards: label rides on the line
+      }else if(sameCol&&!sameRow){               // top to bottom; label just past the source end, right of the line
+        const down=b.t>=a.b, y1=down?a.b:a.t, y2=down?b.t:b.b, x1=a.cx, x2=b.cx, my=(y1+y2)/2;
+        d=`M${x1} ${y1}C${x1} ${my},${x2} ${my},${x2} ${y2}`;
+        // label just past the SOURCE end going down; just past the TARGET end going up (a source's
+        // top-right is where its floating tag lives)
+        lx=x1+8; ly=down?y1+14:y2+14; anchor='start';
+        if(erd){ly=my+4;}
+      }else{                                     // orthogonal, through the gap beside A's ROW (not A's box)
+        const rb=band(a); let y1,yr,y2;
+        if(sameRow){ y1=a.t; yr=rb.t-(kind==='loop'?34:22); y2=b.t; }      // backward / loop: over the whole row + its labels
+        else if(b.cy>a.cy){ y1=a.b; yr=rb.b+12; y2=b.t; }                   // down: gap below the row
+        else { y1=a.t; yr=rb.t-12; y2=b.b; }                                // up: gap above the row (above tags)
+        d=`M${a.cx} ${y1}L${a.cx} ${yr}L${b.cx} ${yr}L${b.cx} ${y2}`;
+        const rightward=b.cx>a.cx; lx=a.cx+(rightward?22:-22); anchor=rightward?'start':'end'; ly=yr-4;
+      }
+      const ft={'data-from':A.id,'data-to':B.id};
+      paths.appendChild(el('path',Object.assign({d,class:'e '+kind,'marker-end':`url(#ah-${kind})`},ft)));
+      const txt=e.textContent.trim();
+      if(txt){
+        const t=el('text',Object.assign({x:lx,y:ly,'text-anchor':anchor,class:'lbl '+kind},ft)); t.textContent=txt;
+        const bg=el('rect',Object.assign({class:'lblbg',rx:3},ft)); labels.appendChild(bg); labels.appendChild(t);
+        svg.appendChild(labels);
+        let tb=t.getBBox();
+        if(tb.x+tb.width>mr.width-6){t.setAttribute('text-anchor','end');t.setAttribute('x',anchor==='start'?lx-16:lx);tb=t.getBBox();}   // keep inside the map
+        for(let i=0;i<4;i++){const hit=placed.find(p=>!(tb.x>p.x+p.width+2||p.x>tb.x+tb.width+2||tb.y>p.y+p.height+1||p.y>tb.y+tb.height+1));if(!hit)break;t.setAttribute('y',+t.getAttribute('y')-(tb.height+3));tb=t.getBBox();}  // nudge up off an earlier label
+        placed.push(tb);
+        bg.setAttribute('x',tb.x-4);bg.setAttribute('y',tb.y-2);bg.setAttribute('width',tb.width+8);bg.setAttribute('height',tb.height+4);
+      }
+    });
+    svg.appendChild(paths); svg.appendChild(labels);   // labels above paths
+  }
+  // long identifiers break cleanly after underscores instead of mid-word
+  function softBreaks(){document.querySelectorAll('.sys .t, .uc .nt').forEach(t=>{if(t.dataset.wbr||!/_/.test(t.textContent))return;t.innerHTML=t.innerHTML.replace(/_/g,'_<wbr>');t.dataset.wbr='1';});}
+  /* ---- delta map: Today / After toggle. Elements outside the map that belong to one view carry
+     data-view-of="<map id>" data-in="today|after" (the claim title, the legend) and follow it. */
+  function deltaSetup(map){
+    if(map.dataset.deltaReady) return; map.dataset.deltaReady='1';
+    const views=(map.dataset.views||'today,after').split(',').map(x=>x.trim());
+    const names={today:'Today',after:'After'};
+    if(!map.dataset.view) map.dataset.view=views[0];
+    const bar=document.createElement('div'); bar.className='dview'; bar.setAttribute('role','group'); bar.setAttribute('aria-label','Show the map as of');
+    const holder=map.closest('.sysmap-scroll')||map;
+    const set=v=>{map.dataset.view=v;bar.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===v?'true':'false'));
+      if(map.id) document.querySelectorAll(`[data-view-of="${map.id}"]`).forEach(x=>{x.hidden=x.dataset.in!==v;});
+      draw(map);};
+    views.forEach(v=>{const b=document.createElement('button');b.type='button';b.dataset.v=v;b.textContent=names[v]||v;b.onclick=()=>set(v);bar.appendChild(b);});
+    holder.parentNode.insertBefore(bar,holder.previousElementSibling&&holder.previousElementSibling.matches('.sys-legend')?holder.previousElementSibling:holder);
+    set(map.dataset.view);
+  }
+  /* ---- path highlighting: hover a node → its upstream and downstream path stays lit */
+  function focusSetup(map){
+    if(map.dataset.focusReady) return; map.dataset.focusReady='1';
+    const lit=ids=>{map.classList.add('focus');
+      map.querySelectorAll('.sys,.ent').forEach(n=>n.classList.toggle('on',ids.has(n.id)));
+      map.querySelectorAll('svg [data-from]').forEach(p=>p.classList.toggle('on',ids.has(p.dataset.from)&&ids.has(p.dataset.to)));};
+    const clear=()=>{map.classList.remove('focus');map.querySelectorAll('.on').forEach(x=>x.classList.remove('on'));};
+    const walk=start=>{const E=[...map.querySelectorAll('svg path[data-from]')].map(p=>[p.dataset.from,p.dataset.to]);
+      const ids=new Set([start]);
+      for(const dir of [0,1]){let fr=[start];while(fr.length){const nx=[];E.forEach(e=>{if(fr.includes(e[dir])&&!ids.has(e[1-dir])){ids.add(e[1-dir]);nx.push(e[1-dir]);}});fr=nx;}}
+      return ids;};
+    map.querySelectorAll('.sys[id],.ent[id]').forEach(n=>{n.addEventListener('mouseenter',()=>lit(walk(n.id)));n.addEventListener('mouseleave',clear);});
+    // footer rows: light the nodes whose floating tag carries that reference
+    let refs=map.closest('.sysmap-scroll')||map; refs=refs.nextElementSibling;
+    while(refs&&!refs.matches('.sys-refs')&&!refs.matches('h3,h2,.sysmap,.sysmap-scroll')) refs=refs.nextElementSibling;
+    if(refs&&refs.matches('.sys-refs')) refs.querySelectorAll('.refrow[data-ref]').forEach(r=>{
+      const tok=r.dataset.ref;
+      r.addEventListener('mouseenter',()=>{const ids=new Set([...map.querySelectorAll('.sys')].filter(n=>{const a=n.querySelector('.ref');return a&&new RegExp('(^|[^\\w])'+tok+'([^\\w]|$)').test(a.textContent);}).map(n=>n.id));lit(ids);});
+      r.addEventListener('mouseleave',clear);});
+  }
+  /* ---- chains: a .dfg that would wrap (leaving an arrow alone at a line start) stacks vertically */
+  function chains(){document.querySelectorAll('.dfg').forEach(g=>{g.classList.remove('vert');const k=[...g.children];if(!k.length||!g.getClientRects().length)return;
+    const top=k[0].offsetTop;if(k.some(c=>c.offsetTop>top+4))g.classList.add('vert');});}
+  const MAPS='.sysmap,.erd.linked';   // v6.2: entity cards can be joined by drawn relationships too
+  const all=()=>{softBreaks();chains();document.querySelectorAll(MAPS).forEach(draw);};
+  window.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('.sysmap.delta').forEach(deltaSetup);document.querySelectorAll(MAPS).forEach(focusSetup);});
+  /* ---- spec links: when <main data-spec="DESIGN-SPEC.html"> is set, every reference token
+     becomes a link into the reader page: P0a → #P0a, D12 → #D12, Q6 → #Q6, S2 → #S2, §3.2 → #s3-2 */
+  function linkSpec(){
+    const main=document.querySelector('main[data-spec]'); if(!main) return;
+    const spec=main.dataset.spec;
+    const tokHref=t=>spec+'#'+(t.startsWith('§')?'s'+t.slice(1).replace(/\./g,'-'):t);
+    document.querySelectorAll('.sys-refs .refrow').forEach(r=>{
+      const tok=r.dataset.ref||(r.querySelector('.chip')||{}).textContent||''; if(!tok.trim()) return;
+      if(!r.getAttribute('href')) r.setAttribute('href',tokHref(tok.trim()));
+      if(!r.querySelector('.go')){const g=document.createElement('span');g.className='go';r.appendChild(g);}
+    });
+    document.querySelectorAll('.claim b, .claim .src, figure.concept figcaption b').forEach(b=>{
+      if(b.querySelector('a')) return;
+      b.innerHTML=b.innerHTML.replace(/(§\d+(?:\.\d+)*)|\b(P\d[a-z]?|D\d+|Q\d+|S\d+)\b/g,m=>`<a class="cite" href="${tokHref(m)}" title="read this section of the spec">${m}</a>`);
+    });
+  }
+  /* ---- interactive state machine: free play from the current state, guided walkthroughs,
+     the path taken so far, and every transition listed once. Idempotent per .smx. */
+  function smx(root){
+    if(root.dataset.smxReady) return; root.dataset.smxReady='1';
+    const mk=(tag,cls,txt)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(txt!=null)n.textContent=txt;return n;};
+    const pills=[...root.querySelectorAll('.sm .s[data-state]')];
+    const T=[...root.querySelectorAll('.smx-t')].map(a=>({ev:a.dataset.ev,from:a.dataset.from,to:a.dataset.to,label:a.textContent.trim(),note:a.dataset.note||'',cls:['new','chg'].find(k=>a.classList.contains(k))||''}));
+    const walks=[...root.querySelectorAll('.smx-walk')].map(w=>({name:w.dataset.name||'walkthrough',steps:(w.dataset.steps||'').split(',').map(x=>x.trim()).filter(Boolean)}));
+    const start=root.dataset.start||(pills[0]&&pills[0].dataset.state);
+    const live=mk('div','smx-live'); root.appendChild(live);
+    const all=mk('details','smx-all'); all.appendChild(mk('summary',null,`all transitions (${T.length})`));
+    T.forEach(t=>{const d=mk('div','smx-row '+t.cls);d.append(mk('code',null,t.from),' → ',mk('code',null,t.to),' · '+t.label+(t.note?' — '+t.note:''));all.appendChild(d);});
+    root.appendChild(all);
+    let cur=start,log=[],walk=null,wi=0;
+    const go=t=>{log.push(t);cur=t.to;render();};
+    const reset=()=>{cur=start;log=[];walk=null;wi=0;render();};
+    function render(){
+      pills.forEach(p=>p.classList.toggle('cur',p.dataset.state===cur));
+      live.innerHTML='';
+      const bar=mk('div','smx-bar'), now=mk('span','smx-now'); now.append('now: ',mk('b',null,cur)); bar.appendChild(now);
+      const moves=mk('div','smx-moves');
+      if(walk){
+        const t=wi<walk.steps.length?T.find(x=>x.ev===walk.steps[wi]&&x.from===cur):null;
+        const b=mk('button','smx-btn '+(t?t.cls:''),t?`next: ${t.label} ▸`:'walkthrough complete'); b.disabled=!t;
+        if(t){b.title=t.note;b.onclick=()=>{wi++;go(t);};}
+        moves.appendChild(b); moves.appendChild(mk('span','smx-wi',`${walk.name} · ${Math.min(wi,walk.steps.length)} of ${walk.steps.length} steps`));
+      }else{
+        const out=T.filter(x=>x.from===cur);
+        if(!out.length) moves.appendChild(mk('span','smx-end','terminal state: no moves out'));
+        out.forEach(t=>{const b=mk('button','smx-btn '+t.cls,t.label+' ▸');b.title=t.note;b.onclick=()=>go(t);moves.appendChild(b);});
+      }
+      bar.appendChild(moves);
+      const ctl=mk('div','smx-ctl');
+      walks.forEach(w=>{const b=mk('button','smx-walkb'+(walk===w?' on':''),w.name);b.onclick=()=>{reset();walk=w;render();};ctl.appendChild(b);});
+      const r=mk('button','smx-reset','reset'); r.onclick=reset; ctl.appendChild(r);
+      bar.appendChild(ctl); live.appendChild(bar);
+      const ol=mk('ol','smx-log');
+      if(!log.length) ol.appendChild(mk('li','smx-empty',`start: ${start}. Pick a move${walks.length?' or a walkthrough':''}.`));
+      log.forEach(t=>{const li=mk('li',t.cls);li.append(mk('b',null,t.from+' → '+t.to),' · '+t.label);if(t.note)li.appendChild(mk('span','n',t.note));ol.appendChild(li);});
+      live.appendChild(ol);
+    }
+    render();
+  }
+  window.addEventListener('DOMContentLoaded',()=>document.querySelectorAll('.smx').forEach(smx));
+  window.addEventListener('DOMContentLoaded',linkSpec);
+  window.addEventListener('load',all);
+  if(document.fonts&&document.fonts.ready) document.fonts.ready.then(all);
+  window.addEventListener('resize',all);
+  // redraw when a tab panel becomes visible (only panels: hover classes must not trigger a redraw)
+  new MutationObserver(ms=>{if(ms.some(m=>m.target.classList&&m.target.classList.contains('panel')))all();}).observe(document.documentElement,{attributes:true,subtree:true,attributeFilter:['class']});
+})();
+
+</script>
+<script>
+  const btns=document.querySelectorAll('nav.tabs button');
+  const panels=document.querySelectorAll('.panel');
+  const IDS=['overview','find','extract','ship','fence','files','score']; /* KEEP IN SYNC with the data-tab / panel ids above */
+  function show(id,opts={}){
+    btns.forEach(b=>b.classList.toggle('active',b.dataset.tab===id));
+    panels.forEach(p=>p.classList.toggle('active',p.id===id));
+    if(!opts.keepHash&&location.hash.slice(1)!==id) history.replaceState(null,'','#'+id);
+    if(!opts.noScroll) window.scrollTo({top:0,behavior:opts.instant?'auto':'smooth'});
+  }
+  btns.forEach(b=>b.addEventListener('click',()=>show(b.dataset.tab)));
+  function goHash(instant){
+    const h=decodeURIComponent(location.hash.slice(1)); if(!h) return;
+    if(IDS.includes(h)){show(h,{instant});return;}
+    const el=document.getElementById(h); if(!el) return;
+    const panel=el.closest('.panel'); if(panel&&!panel.classList.contains('active')) show(panel.id,{keepHash:true,noScroll:true});
+    el.scrollIntoView({block:'start',behavior:instant?'auto':'smooth'});
+  }
+  goHash(true);
+  window.addEventListener('load',()=>goHash(true));
+  window.addEventListener('hashchange',()=>goHash(false));
+</script>
+</body>
+</html>
