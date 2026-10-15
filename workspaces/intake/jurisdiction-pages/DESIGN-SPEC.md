@@ -12,6 +12,7 @@
 > - **Carry-forward** (D14): an unchanged snapshot already keeps every field; only the recapture path in `1.2-capture` needs the copy. The sync validator is a `looseObject`, so new fields pass it today. `doc_type` stays a plain string in cityhall.
 > - **Prospecting-built manifests already carry real titles**; only Austin's are label-derived. The snapshot-id grammar allows a `-n` suffix and a hash-less form; D2's regex now matches it.
 > - **Q3 is confirmed**, not "unverified", and covers `jurisdiction_departments` too; a proposal is in Q3. The review "Source ↗" link is a second, customer-visible entry point.
+> - **D14 is now a file, not a convention** (Will, 2026-10-15): `sources/sources.yaml`, the human-owned source registry, decides what counts as the same source across URL changes and holds the document title and type; capture stamps copies onto the manifest. Austin's registry is bureau#2120.
 > - **P3 is unblocked**: bureau#2112 merged 2026-10-15. `runbook_run` from the JSON header is shown in D4 now. §7 notes db-schema audit A19 (figures).
 >
 > **Revision note v1.1 (2026-10-15, reply from the db-schema session on winston#314):**
@@ -25,7 +26,7 @@
 **Coordinates with:** `workspaces/intake/db-schema/DESIGN-SPEC.md` v1.2 and its audit (winston#314, `AUDIT-2026-10-14.md`). §5 lists what these pages ask of the db-schema v2 tables.
 **Repos touched:**
 - `cityhall`: a jurisdiction homepage, a source page, the item list moved to `/items`, a shared source-index library, and cross-links from the item page
-- `bureau`: optional manifest fields `document_title` and `doc_type`, written by intake-prospecting and backfilled once for Austin
+- `bureau`: `sources/sources.yaml`, the human-owned source registry (Austin's is bureau#2120); capture stamps `source_id`, `document_title` and `doc_type` from it onto the manifest; `3.1-write` publishes it for prospecting-built jurisdictions
 
 **Repos NOT touched:** `conductor2`, `substation`, `inspector-general`, `dsd`, `completion-officer`, and the CC runbook
 
@@ -143,8 +144,8 @@ type SourceEntry = {
 **D2. A source is addressed by a stable slug, not by its snapshot id.**
 - A snapshot id is `sn_<slug>_<yyyymmdd>-<sha8>[-n]`, for example `sn_cc-submittal-checklist_20261007-158d3960` (`runbooks/lib/sources/snapshot.py:28-35`, `SnapshotId` in `lib/sources/schemas.ts:7`). The date and hash change on every recapture, so a URL built on them would break on the next run. The slug inside it is `slugify(title)`, cut at 40 characters (`lib/sources/capture.py:65-67`), and the title is the shortest base name among the source's citation labels (`step_capture.py:129-135`), so the slug changes whenever a label is reworded.
 - **The manifest already has a source identity: `snapshots[id].source_key`, but it means two things.** Capture chains snapshots on it (`current_snapshot_for` in `snapshot.py:18-25`; a recapture sets `supersedes` on the new snapshot of the same key). In Austin's manifest, written by cc-source-citations, it is the URL for a PDF or webpage and `municode:<code>:<nodeId,…>` for a code section. In a manifest written by intake-prospecting it is the `sources.json` `key`, a kebab slug such as `cc-submittal-checklist` (`iplib/step_capture.py:91`; `SourceKey` matches `^[a-z0-9][a-z0-9-]*$`). A URL is not URL-safe as a path segment and changes when the city moves a document, so `source_key` is not the route segment.
-- **The route segment is minted in bureau** as `snapshots[id].source_id` in `sources/manifest.json` (P3). Every snapshot of the same `source_key` carries the same `source_id`, and the two runbooks that write manifests own it; for a prospecting-built jurisdiction it is the `sources.json` `key` as it stands. Bureau is the source of truth for checklists, so the DB copies the key and never mints one (db-schema audit A18, recommended), the way db-schema D3 has item IDs minted in bureau's `intake-ids.tsv` sidecar (written by prospecting's `3.1-write`; Austin has none yet, pending db-schema P2a).
-- **Until P3 lands, the slug is derived:** the snapshot id matched by `^sn_([a-z0-9-]+)_\d{8}(-[0-9a-f]{8})?(-\d+)?$`, taking group 1 (`cc-submittal-checklist`). A snapshot id that doesn't match uses the whole id. P3's Austin backfill writes exactly these derived values, so no URL changes when the field arrives. Two different `source_key`s that derive the same slug would collide; Austin's 28 derive 28 distinct slugs, and `buildSourceIndex` throws on a duplicate so a collision is caught in S1 rather than shown.
+- **The route segment is the `key` in `sources/sources.yaml`** (D14), the human-owned registry beside the manifest, which also says which `source_key`s are the same document. Capture stamps it onto each snapshot as `snapshots[id].source_id` (P3), so the manifest carries a copy and cityhall reads the copy. For a prospecting-built jurisdiction the key is the `sources.json` `key` as it stands. Bureau is the source of truth for checklists, so the DB copies the key and never mints one (db-schema audit A18, recommended), the way db-schema D3 has item IDs minted in bureau's `intake-ids.tsv` sidecar (written by prospecting's `3.1-write`; Austin has none yet, pending db-schema P2a).
+- **Until P3 lands, the slug is derived:** the snapshot id matched by `^sn_([a-z0-9-]+)_\d{8}(-[0-9a-f]{8})?(-\d+)?$`, taking group 1 (`cc-submittal-checklist`). A snapshot id that doesn't match uses the whole id. Austin's registry keys (bureau#2120) are exactly these derived values, checked by script, so no URL changes when the stamped field arrives. Two different `source_key`s that derive the same slug would collide; Austin's 28 derive 28 distinct slugs, and `buildSourceIndex` throws on a duplicate so a collision is caught in S1 rather than shown.
 - **Which snapshot a slug shows:** the newest snapshot of that slug that the current version cites. Citations of an older snapshot of the same slug (an incremental run that recaptured only some sources) are listed in the rail with "cited on the `<date>` capture" and their boxes are not drawn, because the pages may differ. Austin's 28 snapshots all have `supersedes: null` today, so this case has no instance yet, and cityhall's zod does not yet keep `supersedes` or `source_key` (P1 adds both as optional).
 - The route is `/intake-checklists/[jurisdiction]/sources/[source]`. The fixed `sources/` segment never collides with an item key: Next.js matches a static segment before `[checklistKey]`, and it stays unambiguous once item keys become stable IDs such as `austin-0042` (north-star D6), which a bare `/austin/<source-slug>` would not be.
 
@@ -268,12 +269,28 @@ A **sort control** switches between document order (the default) and group order
 
 **D13. Access is unchanged: `requireUser()` and the bucket's authenticated-read policy** (checklist-source-ui D20). The new pages read only what the existing pages read, plus the `file` route (D5, D7), which calls `requireUser()` and signs objects in the same bucket. The `jurisdictions` policy gap is Q3; it is real (§Problem), and it already hides today's pages from the same users, so these pages don't widen it.
 
-**D14. The manifest gains three optional fields, written at publish time.**
-- `snapshots[id].source_id` is the stable source slug (D2). On a recapture it is copied from the snapshot being superseded (the one `current_snapshot_for(prev, source_key)` returns), and for a new `source_key` it is minted from the label-derived slug, suffixed `-2`, `-3`, … if another `source_key` already holds it. Two different `source_key`s may never share one; the `Manifest` `superRefine` in `scripts/schemas.ts` checks that, beside its `supersedes` and `storage_prefix` checks.
-- `snapshots[id].document_title` is the document's own title. intake-prospecting's `3.1-write` copies `sources.json` `title` into it, matching `sources.json` `key` to the snapshot's `source_key` (they are the same string in a prospecting manifest, D2).
-- `snapshots[id].doc_type` is one of `intake_instrument | template | regulatory | design_manual | informational` (`DOC_TYPES` in `runbooks/intake-prospecting/scripts/schemas.ts`), copied the same way (prospecting-runbook D5).
-- **Austin backfill:** one bureau PR sets all three fields on its 28 snapshots: `source_id` from D2's derived slug, and `document_title` and `doc_type` by hand. **Carry-forward:** on an unchanged snapshot `1.2-capture` already keeps every field, because it deep-copies the previous manifest and touches only `last_checked_at` (`step_capture.py:190-196`). On a recapture it builds a fresh record and copies only `source_key`, `storage_prefix`, `supersedes` and `last_checked_at` (`:199-200`), so P3 adds the three fields to that copy; otherwise the next changed capture of a source drops them.
-- Bureau's `Snapshot` is a `looseObject` (`lib/sources/schemas.ts:16`), so the sync validator already passes unknown fields; P3 declares the three as optional there, and `schemas.mjs --write` regenerates the JSON Schema under `runbooks/cc-source-citations/schemas/` (CI `--check`s it). cityhall's zod strips unknown keys, so P1 declares them as optional too, or the pages never see them. Old manifests keep parsing, and the UI falls back to `title` and no badge. `doc_type` stays `z.string()` in cityhall: the typing rule moved once already (prospecting-runbook v1.3 retyped the Requirements page), and a strict enum there would turn the next move into a 500 on every intake page.
+**D14. `sources/sources.yaml` is the human-owned source registry; the manifest carries copies.** Austin's is in bureau (bureau#2120): one row per document the checklist cites, 28 today, one to one with the manifest's snapshots.
+
+```yaml
+# jurisdictions/austin/completeness-check/sources/sources.yaml
+schema_version: 1
+jurisdiction: austin
+checklist: completeness-check
+sources:
+  - key: cc-submittal-checklist            # the stable source id (D2)
+    title: Consolidated Site Plan Completeness Check Submittal Checklist
+    doc_type: intake_instrument            # prospecting's DOC_TYPES
+    kind: pdf
+    publisher: City of Austin Development Services Department
+    source_keys:                           # every manifest source_key that is this document; first = current
+      - https://austin.widen.net/content/d7vma1dqla/pdf/SP_ConsolidatedSitePlanCompletenessCheckSubmittalChecklist.pdf
+```
+
+- **What is the same source** is decided here and nowhere else: two captures are the same source when their `source_key`s sit under one `key`. When the city republishes a PDF under a new widen id, a human adds the new URL to `source_keys`; capture then chains the new snapshot onto the old one (`supersedes`) and the app URL and the DB row (§5 R1) stay put. Without the row, capture fails the step rather than minting a source, so a moved document is a visible decision instead of a silent split.
+- **`title` and `doc_type` live here**, not in the manifest. They are human-authored facts, and the manifest is rewritten by every capture run. The file shares its field names and grammar with intake-prospecting's `sources.json` (`key`, `title`, `doc_type`, `kind`, `publisher`), so a prospecting-built jurisdiction gets the same file from `3.1-write` with no hand work.
+- **The manifest gains three optional fields, stamped by capture from the registry on every run:** `snapshots[id].source_id` (= `key`), `document_title` (= `title`) and `doc_type`. They are copies, so the "carry-forward" problem disappears: `1.2-capture` resolves each snapshot's `source_key` through the registry and writes all three, on unchanged snapshots and recaptures alike (today it copies only `source_key`, `storage_prefix`, `supersedes` and `last_checked_at` onto a recapture, `step_capture.py:199-200`). A `source_key` with no registry row fails the step. The Austin registry's keys equal the slugs inside today's snapshot ids, so stamping changes no URL.
+- **Validation:** one zod schema for the registry in `runbooks/lib/sources/schemas.ts` (`key` unique, `source_keys` unique across rows, `doc_type` in `DOC_TYPES`), used by capture, by `3.1-write`, and by the sync validator, which also checks that every manifest snapshot's `source_id` matches the registry row for its `source_key`. Bureau's `Snapshot` is a `looseObject` (`lib/sources/schemas.ts:16`), so the sync validator already passes the new fields; P3 declares them and `schemas.mjs --write` regenerates the JSON Schema under `runbooks/cc-source-citations/schemas/` (CI `--check`s it). cityhall's zod strips unknown keys, so P1 declares them as optional too, or the pages never see them. Old manifests keep parsing, and the UI falls back to `title` and no badge. `doc_type` stays `z.string()` in cityhall: the typing rule moved once already (prospecting-runbook v1.3 retyped the Requirements page), and a strict enum there would turn the next move into a 500 on every intake page.
+- **The registry is not uploaded to the bucket.** cityhall reads the stamped manifest fields; the registry stays a bureau file, like `conventions.yaml`.
 
 ---
 
@@ -300,7 +317,7 @@ A **sort control** switches between document order (the default) and group order
 - **Runs:** `pnpm e2e` (Playwright on the local Supabase stack).
 
 **S3: the manifest fields survive a capture** (existing)
-- **Proves:** D2, D14. `1.2-capture` keeps `source_id`, `document_title` and `doc_type` on an unchanged snapshot and on a recapture of the same source. A new source gets a `source_id` that is unique in the manifest. intake-prospecting's `3.1-write` copies the title and type from `sources.json`.
+- **Proves:** D2, D14. `1.2-capture` stamps `source_id`, `document_title` and `doc_type` from the registry on an unchanged snapshot and on a recapture of the same source; a recapture under a URL added to an existing row's `source_keys` chains onto that row's snapshot (`supersedes`) and keeps its `source_id`; a `source_key` with no row fails the step. intake-prospecting's `3.1-write` publishes a registry from `sources.json` that the same schema accepts.
 - **Prior art:** `runbooks/cc-source-citations/scripts/test_ccs.py` (snapshot-id hashing, worklist carry; nothing on manifest field carry-forward yet); `runbooks/intake-prospecting/tests/write.test.ts` for `3.1-write` output (`steps/3.1-write/contract.test.ts` only checks the gate).
 - **Runs:** `python3 -m pytest runbooks/cc-source-citations/scripts` plus the step contract tests, in bureau CI.
 
@@ -330,12 +347,12 @@ A **sort control** switches between document order (the default) and group order
 **P3: source IDs, document titles and source types in the manifest** (`bureau`)
 - **Blocked by:** nothing. bureau#2112 merged 2026-10-15 (b6349fb704); the capture library is at `runbooks/lib/sources/` and `3.1-write` exists.
 - **Delivers:**
-  - the optional fields in the manifest schema and in `sync-cc-sources.yml`'s validator;
-  - carry-forward in capture;
-  - `3.1-write` copying them from `sources.json`;
-  - the Austin backfill (D14).
+  - the registry schema in `runbooks/lib/sources/schemas.ts` and the three optional snapshot fields in the manifest schema, with the sync validator's cross-check (D14);
+  - `1.2-capture` resolving every snapshot's `source_key` through `sources/sources.yaml` and stamping `source_id`, `document_title`, `doc_type`, failing on a key with no row;
+  - `3.1-write` publishing `sources/sources.yaml` from `sources.json`;
+  - one stamping run over Austin's manifest (a capture with every source unchanged does it), so the Austin manifest carries the fields before cityhall reads them.
 
-  The cityhall zod change is in P1, as optional fields, and `buildSourceIndex` prefers `source_id` over the derived slug. The tiles show real titles once this merges and syncs.
+  Austin's registry itself is bureau#2120, which can merge before this. The cityhall zod change is in P1, as optional fields, and `buildSourceIndex` prefers `source_id` over the derived slug. The tiles show real titles once this merges and syncs.
 - **Tested at:** S3.
 - **Door:** two-way.
 - **Blast radius:** `cc-source-citations` and intake-prospecting runs, until S3 is green.
