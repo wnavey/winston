@@ -969,13 +969,14 @@ nav.tabs button{white-space:nowrap;flex:0 0 auto}
 <header class="masthead">
   <div class="kicker">Intake · DB schema · Audit</div>
   <h1>Audit of the intake DB schema spec</h1>
-  <p>Seventeen findings that would change the design of the intake checklist tables and their sync. None is applied yet. Each one ends with the decision it needs from Will.</p>
+  <p>Eighteen findings on the intake checklist tables and their sync, including whether the CC runbook should read from the DB at all. None is applied yet. Each one ends with the decision it needs from Will.</p>
   <div class="meta"><span class="status">Awaiting Will</span><span>14 Oct 2026</span><span>Audits Draft v1.1 → v1.2</span><span>Source of truth: <code>AUDIT-2026-10-14.md</code></span></div>
   <a class="spec-link" href="AUDIT-2026-10-14.html">Read the audit →</a>
 </header>
 
 <nav class="tabs">
   <button data-tab="overview" class="active">Overview</button>
+  <button data-tab="source">Files or DB</button>
   <button data-tab="versions">Versions</button>
   <button data-tab="storage">Files in Storage</button>
   <button data-tab="groups">Groups</button>
@@ -1072,6 +1073,7 @@ nav.tabs button{white-space:nowrap;flex:0 0 auto}
 
     <h3>The decisions Will needs to make</h3>
     <div class="doc">
+      <p><b>A18 · Files or DB, first.</b> Keep bureau as the source of truth, take the flip off the roadmap, and replace <code>intake/db-source-of-truth</code> with an <code>intake/refresh</code> spec. That answer shrinks A3 and A4 (the Files or DB tab).</p>
       <p><b>A8 · How to keep amend working.</b> (a) Amend hashes only the files a run reads, recommended. (b) Move the intake files out of the version dir. (c) Accept the break.</p>
       <p><b>A1 · Backfill v2.7's history?</b> Recommended: one version per distinct content, plus a commit-to-version lookup, so all 19 v2.7 reviews resolve.</p>
       <p><b>A2 · Semver.</b> Adopt it? Is regrouping or renumbering PATCH or MINOR (Q-A2a)? Start each checklist at 1.0.0 (Q-A2b)? Does a revert get a new version (Q-A2c)?</p>
@@ -1081,6 +1083,98 @@ nav.tabs button{white-space:nowrap;flex:0 0 auto}
       <p><b>A6 · Provenance.</b> The <code>generated_by</code> block, and whether a published run must have a run uuid.</p>
       <p><b>A7 · Review counting.</b> What should a count answer, and do the rules on the Runs and reviews tab hold?</p>
     </div>
+  </section>
+
+  <!-- ============================== FILES OR DB ============================== -->
+  <section class="panel" id="source">
+    <h2>Files or DB</h2>
+    <p class="lede">Prospector's 30 jurisdiction PRs of the last month changed a median of 2,256 files each and merged with no human gate. A checklist is about 20 files. Size is not the constraint; fit, traceability and who edits are (A18, §9).</p>
+
+    <h3 class="claim">Every content type is read from bureau; the DB copies feed the app <span class="src">§9.1</span></h3>
+    <div class="sys-legend"><span><i class="box"></i>exists today</span><span>no colour on this map: nothing here changes</span></div>
+    <div class="sysmap lanes" id="source-map" style="grid-template-columns:.8fr repeat(3,1fr)">
+      <div class="colh" style="grid-area:1/2">runbook that reads it</div>
+      <div class="colh" style="grid-area:1/3">bureau (source of truth)</div>
+      <div class="colh" style="grid-area:1/4">App DB / Storage copy</div>
+
+      <div class="lane" style="grid-area:2/1/3/-1"></div>
+      <div class="lane" style="grid-area:3/1/4/-1"></div>
+      <div class="lane" style="grid-area:4/1/5/-1"></div>
+
+      <div class="sys trig" id="f-t1" style="grid-area:2/1"><span class="dot"></span><span class="t">review-guides workstream</span><span class="d">prospector, no human gate</span></div>
+      <div class="sys trig" id="f-t2" style="grid-area:3/1"><span class="dot"></span><span class="t">conventions edits</span><span class="d">prospector and by hand</span></div>
+      <div class="sys trig" id="f-t3" style="grid-area:4/1"><span class="dot"></span><span class="t">Will's PRs</span><span class="d">intake-prospecting next</span></div>
+
+      <div class="sys" id="f-review" style="grid-area:2/2"><span class="k">runbook</span><span class="t">review</span><span class="d">reads the checkout</span></div>
+      <div class="sys" id="f-guides" style="grid-area:2/3"><span class="k">files</span><span class="t">review-guides/</span><span class="d">33 guides × 4 jurisdictions</span></div>
+      <div class="sys store" id="f-nodes" style="grid-area:2/4"><span class="k">replica</span><span class="t">bureau_nodes</span><span class="d">read by chat and IG only</span></div>
+
+      <div class="sys" id="f-conv" style="grid-area:3/3"><span class="k">files</span><span class="t">conventions.yaml</span><span class="d">bureau wins</span></div>
+      <div class="sys store" id="f-jur" style="grid-area:3/4"><span class="k">replica</span><span class="t">jurisdictions</span><span class="d">CC 1.4-resolve reads it</span></div>
+
+      <div class="sys" id="f-cc" style="grid-area:4/2"><span class="k">runbook</span><span class="t">completeness-check</span><span class="d">copies guides from the checkout</span></div>
+      <div class="sys" id="f-cl" style="grid-area:4/3"><span class="k">files</span><span class="t">completeness-check/</span><span class="d">2 jurisdictions today</span></div>
+      <div class="sys store" id="f-bucket" style="grid-area:4/4"><span class="k">bucket</span><span class="t">cc-source-snapshots</span><span class="d">feeds /intake-checklists</span></div>
+
+      <a class="sys-edge" data-from="f-review" data-to="f-guides">reads</a>
+      <a class="sys-edge" data-from="f-guides" data-to="f-nodes">on merge</a>
+      <a class="sys-edge" data-from="f-conv" data-to="f-jur">on merge</a>
+      <a class="sys-edge" data-from="f-cc" data-to="f-cl">reads</a>
+      <a class="sys-edge" data-from="f-cl" data-to="f-bucket">on merge</a>
+    </div>
+    <p class="claim">Making intake read from the DB would make it the one content type prospector publishes somewhere other than a bureau PR. The runbook would still need the checkout, because its own code lives in bureau (§9.3).</p>
+
+    <h3 class="claim">Files win on fit and traceability; the DB wins only on non-engineer editing <span class="src">§9.4</span></h3>
+    <div class="spectable-scroll"><table class="spectable">
+      <thead><tr><th>Criterion</th><th>F · bureau files + a read replica</th><th>D · the DB as the source</th><th>Favours</th></tr></thead>
+      <tbody>
+        <tr><td><b>Scale</b> to every US jurisdiction</td><td>about 40k small files beside today's 311k; a blobless sparse clone takes 3.8 s</td><td>about 400k rows</td><td>neither</td></tr>
+        <tr><td><b>Fit</b> with prospector and formal review</td><td>the same path as codes, guides and conventions: worktree → mergein → content gates → ship PR</td><td>a prospector run writes a bureau PR <i>and</i> the DB, with no atomicity between them</td><td><b>F</b></td></tr>
+        <tr><td><b>Changing the format</b> while Q1/Q2 are open</td><td>the linter and the writer, in one PR</td><td>a migration Jason applies, RLS, DB tests, a data migration</td><td><b>F</b></td></tr>
+        <tr><td><b>Edits by Will or an agent</b></td><td>Claude edits markdown, the PR shows the diff, Foreman reviews; 17 of v2.7's 18 edits went this way</td><td>an API or editor both must use</td><td><b>F</b></td></tr>
+        <tr><td><b>Edits by non-engineers</b></td><td>they ask someone to open a PR</td><td>an app editor (none exists) with its own review step, or edits go live unreviewed</td><td><b>D</b>, once built</td></tr>
+        <tr><td><b>How fast a fix goes live</b></td><td>CI about 10 min + merge + sync about 3 min</td><td>immediate, but unreviewed</td><td><b>D</b></td></tr>
+        <tr><td><b>Traceability</b></td><td>diff, author, PR, blame for free; a review pins the content by commit (59 of 60 CC reviews do)</td><td>versions, an audit log and authorship to build; A1, A2 and A6 rebuild part of git</td><td><b>F</b></td></tr>
+        <tr><td><b>Automatic refresh</b></td><td>a refresh run's output is a readable PR, merged autonomously</td><td>the same run, then a DB write and a diff view to build</td><td><b>F</b>, slightly</td></tr>
+        <tr><td><b>Product reads:</b> app, queries, linkage, counts, <code>intake_ready</code></td><td>through the replica, at most one sync behind</td><td>native</td><td>neither</td></tr>
+        <tr><td><b>Per-customer or per-project variants</b></td><td>don't belong in a shared repo (A15)</td><td>tenant rows under RLS</td><td><b>D</b>, for overlays only</td></tr>
+      </tbody>
+    </table></div>
+    <p class="claim">A DB read itself is cheap: the CC runbook already reads <code>jurisdictions</code>, the submission and <code>project_facts</code> through its per-run <code>workflow_run</code> token. North-star D10's "conductor2 forbids it" premise was wrong and is corrected in v1.3.1.</p>
+
+    <h3 class="claim" id="detail-refresh">Refresh is the same five steps on either store; only publishing differs <span class="src">§9.5</span></h3>
+    <ol class="steps">
+      <li class="st"><span class="sk">detect · on prospector's freshness clock</span><span class="sn">Re-fetch each intake source and compare its sha256 and etag with <code>sources/manifest.json</code></span><span class="so">the fingerprints exist (28 Austin snapshots); no job compares them today</span></li>
+      <li class="st"><span class="sk">re-extract</span><span class="sn">Run intake-prospecting on the sources that changed</span><span class="so">stop at step 1 if nothing did</span></li>
+      <li class="st"><span class="sk">match · the hard part</span><span class="sn">Pair each regenerated item with its stable ID: same, edited, split, new or gone</span><span class="so">needs D4's IDs and an LLM judge like intake-score's</span></li>
+      <li class="st"><span class="sk">bump</span><span class="sn">Compute the semver from the matched diff</span><span class="so">A2</span></li>
+      <li class="st"><span class="sk">publish · the only step storage changes</span><span class="sn">F: a bureau PR on prospector's autonomous path. D: a DB write plus a diff view</span><span class="so">proposed sibling spec <code>intake/refresh</code></span></li>
+    </ol>
+
+    <h3 class="claim">Only routine editing by non-engineers justifies the flip; overlays cover the rest <span class="src">§9.6</span></h3>
+    <div class="dflow">
+      <div class="dq"><span class="q">Do people who don't use git need to change checklist items routinely, across many jurisdictions?</span><span class="yes">yes →</span><span class="out warn">build the app editor and flip, with an export PR to keep git history (A4 M4)</span></div>
+      <div class="dno">no ↓</div>
+      <div class="dq"><span class="q">Do customers or firms need their own variants of a jurisdiction's checklist?</span><span class="yes">yes →</span><span class="out">App-DB overlay rows, <code>origin = 'app'</code>, applied at run time; bureau stays the source</span></div>
+      <div class="dno">no ↓</div>
+      <div class="dq"><span class="q">Must fixes reach live reviews within minutes, routinely?</span><span class="yes">yes →</span><span class="out">override rows, not the flip</span></div>
+      <div class="dno">no ↓</div>
+      <div class="dq end"><span class="q">otherwise (today)</span><span class="yes"></span><span class="out">bureau files + a read replica</span></div>
+    </div>
+
+    <h3>What A18 does to the other findings</h3>
+    <div class="spectable-scroll"><table class="spectable">
+      <thead><tr><th>Finding</th><th>If bureau stays the source</th></tr></thead>
+      <tbody>
+        <tr><td>A1 history backfill</td><td>keep, so the replica can link old reviews</td></tr>
+        <tr><td>A2 semver</td><td>keep; it lives in bureau, and the runbook stamps it with no DB lookup</td></tr>
+        <tr><td>A3 files in Storage</td><td><b>defer</b>; only the flip needs every byte stored</td></tr>
+        <tr><td>A4 the path to the flip</td><td>keep M1 (stamping); <b>drop M2–M4</b> and keep them as triggers</td></tr>
+        <tr><td>A5 groups</td><td>keep, in bureau form: group IDs in a sidecar</td></tr>
+        <tr><td>A6, A7, A8–A17</td><td>keep</td></tr>
+      </tbody>
+    </table></div>
+    <p class="claim"><b>Decision for Will (A18):</b> bureau stays the source of truth, <code>intake/db-source-of-truth</code> becomes "not planned", and a new <code>intake/refresh</code> spec takes its place.</p>
   </section>
 
   <!-- ============================== VERSIONS ============================== -->
@@ -1670,7 +1764,7 @@ jobs:
 <script>
   const btns=document.querySelectorAll('nav.tabs button');
   const panels=document.querySelectorAll('.panel');
-  const IDS=['overview','versions','storage','groups','runs','defects']; /* KEEP IN SYNC with the data-tab / panel ids above */
+  const IDS=['overview','source','versions','storage','groups','runs','defects']; /* KEEP IN SYNC with the data-tab / panel ids above */
   function show(id,opts={}){
     btns.forEach(b=>b.classList.toggle('active',b.dataset.tab===id));
     panels.forEach(p=>p.classList.toggle('active',p.id===id));

@@ -10,6 +10,7 @@
 > - §2.3: a review's ref lives in `review_comments.output_json->'sourceFindings'[].ref`. `review_checklist_comment_map.checklist_item_id` holds the composite ref, not the bare ID. The IG cache holds v2.7-trimmed as versions 1–14 across 6 distinct contents, not 6–14 with identical items.
 > - §4.1: the format is the standalone `intake.yaml` (db-schema D1), not an `intake:` block in `conventions.yaml`.
 > - D6: `jurisdictions.short_name` is mostly NULL.
+> - D10: the "conductor2 rule that runbooks don't touch the DB" doesn't exist. That rule is about the runner binary, and runbooks already read and write the App DB. D10 is restated as a policy choice for checklists (db-schema audit A18).
 >
 > **Revision note v1.3 (2026-10-14, prospector integration audit):** §4.4 now says what the I3 wrapper is, from the precedent in `prospector/review-guides/` (which nests `guide-training` unchanged), and names `dsd` as the home of `intake_ready`. The prospecting-runbook sub-spec is Draft v1.2, built to that wrapper; D10 is amended: the human-reviewed merge is the standalone lane's; inside prospector there are no human gates (Will; runbook D18). Q7 (which target runs intake) is Will's.
 >
@@ -201,7 +202,7 @@ Moving a jurisdiction off the baseline later means it gets its own checklist wit
 
 **D9. A new version only when the content changes.** [proposed] The sync hashes the item set and records a new checklist version only when the hash changes. This is the opposite of Inspector General's cache (§2.3), which holds 14 v2.7 versions for 6 distinct contents.
 
-**D10. Runbooks never write the DB; publishing goes through bureau.** [proposed] intake-prospecting publishes by opening a bureau PR, as cc-source-citations' `4.1-publish` does today. On merge, the sync (D7) carries it to the DB. This matches conductor2's rule that runbooks don't touch the DB, and gives every checklist a human-reviewed merge **in the standalone lane**. Inside prospector (I3) there are no human gates (Will, 2026-10-14; prospecting-runbook D18): the workstream's fresh-session audit is the review, and prospector's ship step merges the PR itself, as it does for every other workstream.
+**D10. Runbooks never write the DB; publishing goes through bureau.** [proposed] intake-prospecting publishes by opening a bureau PR, as cc-source-citations' `4.1-publish` does today. On merge, the sync (D7) carries it to the DB. This is a policy choice for checklists, not an engine rule. conductor2's DB-free rule covers the runner binary (`src/init.rs:8-10`), and runbooks do read the App DB through a per-run `workflow_run` token: the CC runbook reads `jurisdictions` at 1.4-resolve and writes `reviews` at 3.1. The choice keeps every checklist in git and gives it a human-reviewed merge **in the standalone lane**. Inside prospector (I3) there are no human gates (Will, 2026-10-14; prospecting-runbook D18): the workstream's fresh-session audit is the review, and prospector's ship step merges the PR itself, as it does for every other workstream.
 
 **D11. Loop the runbook against v2-trimmed, not v2.7.** [Will: "close enough", no exact match; proposed: the target and test set]
 - v2-trimmed is the last Austin version shaped mostly by research rather than by talking with the city. Report overlap with v2.7 alongside it, but don't tune to it.

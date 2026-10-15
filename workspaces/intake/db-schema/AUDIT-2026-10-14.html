@@ -963,7 +963,7 @@ nav.tabs button{white-space:nowrap;flex:0 0 auto}
 
 </style>
 </head>
-<body class="reader" data-back="audit.html" data-spec-sha="2083136c86285707">
+<body class="reader" data-back="audit.html" data-spec-sha="ada31edc02712768">
 
 <header class="masthead">
   <div class="kicker">SPEC · READER</div>
@@ -992,7 +992,7 @@ Will asked the audit to cover:
 - tracking the runbook runs that generated a checklist;
 - review counting.
 
-Those are §1–§6. §7 holds the other defects the audit found, and §8 proposes how to split the work into specs.
+Those are §1–§6. §7 holds the other defects the audit found, and §8 proposes how to split the work into specs. §9 (added 2026-10-15) asks whether the CC runbook should read from the DB at all.
 
 **The short version:** P1 (the migration) has not been applied, so the table shape is still cheap to change. Five findings change it:
 - A1, history;
@@ -1273,6 +1273,102 @@ Two PRs that each take `next_item: 193` make the identical edit `193 → 194`, w
 | *(optional)* **`intake/overlays`** | A15: per-project forced outcomes, per-customer numbering (north-star Q8) | whenever Q8 is answered |
 
 Recommended order: A8 and A17 first, then fold A1–A6 into db-schema v2, then the two siblings.
+
+**If A18 is accepted** (§9), `intake/db-source-of-truth` becomes "not planned; triggers in A18", A3 is deferred, and a new sibling, `intake/refresh`, takes its place. `intake/refresh` covers change detection, re-extraction, matching regenerated items to their stable IDs, and the bump.
+
+---
+
+## 9. Should the CC runbook read its checklist from the DB at all?
+
+**A18. Keep bureau files as the source of truth for jurisdiction checklists, at any scale we can foresee. The DB holds a read replica and, later, app-owned overlays. Don't plan the flip.** *(strategic; added 2026-10-15)*
+
+Will asked this before investing more in DB-ification. The question is whether the CC (intake) runbook should eventually read its items from the App DB (north-star §4.5, A4 M2–M4) rather than from bureau files. The perspective is scaling intake to every authority having jurisdiction in the US through intake-prospecting. Evidence gathered 2026-10-15, read-only.
+
+### 9.1 How the rest of the pipeline already works
+
+**Every content type prospector makes is bureau files that a runbook reads from a checkout. The DB copies feed the app.**
+- **Formal review:** it reads its guides from `$BUREAU/jurisdictions/<j>/review-guides` (`runbooks/review/steps/3.1-guides/step.yaml:11-16`). It has no request input for them.
+  - The guides come from guide-training, nested unchanged inside prospector's `4-review-guides`. They ship as bureau PRs.
+  - `sync-bureau.yml` replicates them into `bureau_nodes`: 328,970 rows, `.md` only, no commit stored. Only cityhall chat (codes) and Inspector General's citation resolver read that replica; no runbook does.
+- **Conventions:** `conventions.yaml` is replicated into `jurisdictions` and `jurisdiction_departments`, and bureau wins. The CC runbook's 1.4-resolve reads that replica through the per-run `workflow_run` token (`cc.py:258-269`). That is the one place a runbook reads bureau content from the DB, and it is reference data, not something the run's agents read.
+- **The CC checklist:** 1.4-resolve copies the guides from the checkout ("the only place the run reads guides from"). The app's `/intake-checklists` pages read the `cc-source-snapshots` bucket, which `sync-cc-sources.yml` fills on merge. No table holds an item.
+
+### 9.2 What scale looks like today
+
+- **Volume:** 507 bureau PRs merged between 2026-09-15 and 2026-10-15, about 98% agent-authored.
+- **Prospector's PRs:** its 30 jurisdiction-run PRs changed a median of **2,256 files** each (max 6,597), and merged with no human gate in a median 11.5 minutes.
+- **Bureau's size:** 311,600 tracked files, `.git` 2.6 GB. A blobless sparse clone, as prospector uses, takes 3.8 s. CI's median is 10.4 min.
+- **Concurrency:** a per-jurisdiction lock in the Library DB, plus disjoint `jurisdictions/<slug>/` paths. Conflicts park a run with `MERGE-CONFLICT.md` and are rare.
+- **A checklist is small by comparison:** about 20 files for a jurisdiction with its own checklist, and one `intake.yaml` for a baseline one. At about 2,000 jurisdictions, all with their own checklists, that is about 40,000 files, roughly 13% of bureau today. It is less, because many will be `none_found`.
+- **How checklists change:** only Austin and Cedar Park have CC content. 17 of v2.7-trimmed's 18 commits are Claude-co-authored PRs directed by Will, and edits are small (e.g. +82/−37 across 6 files).
+
+### 9.3 Facts that cut both ways
+
+- **A DB read is technically cheap.** The CC runbook already reads the App DB: the submission at 1.2, `project_facts` at 1.3 and `jurisdictions` at 1.4, all through a minted `workflow_run` JWT (`cityhall/src/lib/runbook/run-token.ts:152-169`). It also writes `reviews` at 3.1. North-star D10's premise, "conductor2's rule that runbooks don't touch the DB", is wrong. conductor2's DB-free rule is about the runner binary (`src/init.rs:8-10`), not the runbooks it runs. D10 stands only as a policy choice for checklists, and v1.3.1 of the north star now says so.
+- **The runbook needs bureau anyway.** The CC runbook's own code (`runbooks/completeness-check/`, and the `workflows/completeness-check/scripts/` it shells out to) lives in bureau. Reading items from the DB would not remove the checkout.
+- **Traceability is per-runbook work, not free.** CC reviews record `bureauCommitHash` (59 of 60) and `checklistsTreeHash`. Runbook formal reviews record neither (0 of 11), even though they read the same kind of checkout.
+- **Nothing refreshes a checklist automatically today.** `sources/manifest.json` holds fingerprints for Austin's 28 source snapshots: sha256 of the original, text and words, plus etag and Last-Modified. No job re-fetches and compares them. Prospector's freshness is age-based (`lib/freshness.json`: 14 days for active jurisdictions) and has no intake workstream. If Austin changed its CC Submittal Checklist today, nothing would notice.
+- **No editor exists.** No UI edits checklists or guides anywhere. `/intake-checklists` is read-only, and `jurisdiction_departments`' two `origin = 'app'` rows were written by a runbook, not a person.
+- **Migrations are a person's step.** "Jason pushes migrations himself" (`cityhall/AGENTS.md:114`). cityhall shipped 72 migrations in the last 30 days.
+
+### 9.4 Pros and cons
+
+F is bureau files as the source of truth, plus a read replica. D is the DB as the source of truth.
+
+| Criterion | F: bureau files + replica | D: DB as source | Favours |
+|---|---|---|---|
+| **Scale** to every US jurisdiction | about 40k small files beside 311k; prospector already ships 2k-file PRs on its own | about 400k rows, trivial | neither; size is not the constraint |
+| **Fit with prospector and formal review** | the same path as codes, guides and conventions: worktree → mergein → content gates → ship PR | intake becomes the one workstream that publishes somewhere else; a prospector run would write a bureau PR *and* a DB write, with no atomicity between them | **F** |
+| **Ease of changing the format** (Q1/Q2 are still open) | edit the linter and the writer in one PR | a migration that Jason applies, RLS, DB tests, a data migration, then the writer | **F** while the format moves |
+| **Manual edits by Will or an agent** | Claude edits markdown, the PR shows a diff, Foreman reviews, merge; 17 of 18 v2.7 edits went this way | needs an API or editor that agents and people both use | **F** |
+| **Manual edits by non-engineers** (staff, the city, a customer) | they can't edit; they ask someone to open a PR | an app editor, which doesn't exist yet and needs its own review step, or edits go live unreviewed | **D**, after building the editor |
+| **How fast a fix goes live** | PR + CI (about 10 min) + merge + sync (about 3 min) | immediate | **D**, at the cost of an unreviewed change reaching live reviews |
+| **Traceability** | diff, author, PR, review and blame for free; a review pins the exact content by commit | versions, an audit log and who-changed-what all have to be built (A1, A2 and A6 rebuild part of git) | **F** |
+| **Automatic refresh** | a refresh is a prospector run whose output is a PR with a readable diff, merged autonomously like every other workstream | the same detection and extraction, then a DB write; the diff must be built as an app view | **F**, slightly; the hard parts don't depend on storage (§9.5) |
+| **Product reads:** app pages, queries across jurisdictions, review linkage, counting, `intake_ready` | via the replica, at most one sync behind | native | neither; the replica gives the same reads |
+| **Per-customer or per-project variants** (numbering maps, forced outcomes, a firm's own checks) | don't belong in a shared repo; one project and one firm already sit in Austin's version dir (A15) | tenant rows under RLS | **D** for overlays only |
+
+### 9.5 Refresh is the same work on either store
+
+Scaling intake means keeping about 2,000 checklists current without a person in the loop. That takes five steps, and only the last depends on where items live:
+
+1. **Detect.** On prospector's freshness clock, re-fetch each intake source, compare its sha256 and etag with the manifest, and stop if nothing changed.
+2. **Re-extract** the changed sources with intake-prospecting.
+3. **Match** each regenerated item to its existing stable ID (same item, edited, split, new, or gone). This is the hard part. It needs D4's IDs and an LLM judge like the one intake-score already plans.
+4. **Bump** the semver from the matched diff (A2).
+5. **Publish:** a bureau PR on prospector's autonomous path (F), or a DB write plus a diff view (D).
+
+**Proposal:** add the refresh as a sibling spec, `intake/refresh`. It is what scaling actually needs, and none of it waits on the flip.
+
+### 9.6 When the flip would be worth it
+
+Flip, or add DB-owned overlays, only when one of these is real:
+
+| Trigger | Response |
+|---|---|
+| People who don't use git need to change checklist items routinely (weekly, across many jurisdictions) | build the app editor and flip, with an export PR to keep git history (A4 M4) |
+| Customers or firms need their own variants of a jurisdiction's checklist | **overlays:** an App-DB table of per-org or per-project adjustments (numbering, forced outcomes, added or disabled items). It is `origin = 'app'`, like `jurisdiction_departments`, applied at run time. The jurisdiction checklist stays in bureau |
+| A fix must reach live reviews in minutes, routinely | an overlay or override row, not the flip |
+
+None of these is true today.
+
+### 9.7 What this means for the other findings
+
+| Finding | If bureau stays the source |
+|---|---|
+| A1 history backfill | keep, so the replica can link old reviews |
+| A2 semver | keep; it lives in bureau and the runbook stamps it with no DB lookup |
+| A3 files in Storage | **defer**; only the flip needs every byte in Storage. The replica stores items, plus prose only if the app shows it |
+| A4 the path to the flip | keep M1 (stamping); **drop M2–M4** from the plan and keep them as §9.6's triggers |
+| A5 groups | keep, in bureau form: group IDs in a sidecar, with the DB tables following |
+| A6 provenance | keep |
+| A7 counting | keep; it reads the replica |
+| A8–A17 | keep |
+
+**Decision for Will:**
+- Bureau stays the source of truth, and the flip comes off the roadmap.
+- `intake/db-source-of-truth` becomes "not planned; triggers in A18".
+- A new `intake/refresh` sibling replaces it.
 
 </script>
 <script data-marked>
