@@ -969,7 +969,7 @@ nav.tabs button{white-space:nowrap;flex:0 0 auto}
 <header class="masthead">
   <div class="kicker">Intake · DB schema · Audit</div>
   <h1>Audit of the intake DB schema spec</h1>
-  <p>Eighteen findings on the intake checklist tables and their sync, including whether the CC runbook should read from the DB at all. None is applied yet. Each one ends with the decision it needs from Will.</p>
+  <p>Nineteen findings on the intake checklist tables and their sync, including whether the CC runbook should read from the DB at all, and where guide reference images live. None is applied yet. Each one ends with the decision it needs from Will.</p>
   <div class="meta"><span class="status">Awaiting Will</span><span>14 Oct 2026</span><span>Audits Draft v1.1 → v1.2</span><span>Source of truth: <code>AUDIT-2026-10-14.md</code></span></div>
   <a class="spec-link" href="AUDIT-2026-10-14.html">Read the audit →</a>
 </header>
@@ -977,6 +977,7 @@ nav.tabs button{white-space:nowrap;flex:0 0 auto}
 <nav class="tabs">
   <button data-tab="overview" class="active">Overview</button>
   <button data-tab="source">Files or DB</button>
+  <button data-tab="images">Reference images</button>
   <button data-tab="versions">Versions</button>
   <button data-tab="storage">Files in Storage</button>
   <button data-tab="groups">Groups</button>
@@ -1074,6 +1075,7 @@ nav.tabs button{white-space:nowrap;flex:0 0 auto}
     <h3>The decisions Will needs to make</h3>
     <div class="doc">
       <p><b>A18 · Files or DB, first.</b> Keep bureau as the source of truth, take the flip off the roadmap, and replace <code>intake/db-source-of-truth</code> with an <code>intake/refresh</code> spec. That answer shrinks A3 and A4 (the Files or DB tab).</p>
+      <p><b>A19 · Reference images.</b> Figures go in Storage, content-addressed, with <code>figures.yaml</code> in bureau, hydrated at 1.4-resolve and attached by <code>vision.ts --ref</code> with the guide's caption. This doesn't change A18; it makes A3 required for figures (the Reference images tab).</p>
       <p><b>A8 · How to keep amend working.</b> (a) Amend hashes only the files a run reads, recommended. (b) Move the intake files out of the version dir. (c) Accept the break.</p>
       <p><b>A1 · Backfill v2.7's history?</b> Recommended: one version per distinct content, plus a commit-to-version lookup, so all 19 v2.7 reviews resolve.</p>
       <p><b>A2 · Semver.</b> Adopt it? Is regrouping or renumbering PATCH or MINOR (Q-A2a)? Start each checklist at 1.0.0 (Q-A2b)? Does a revert get a new version (Q-A2c)?</p>
@@ -1168,13 +1170,156 @@ nav.tabs button{white-space:nowrap;flex:0 0 auto}
       <tbody>
         <tr><td>A1 history backfill</td><td>keep, so the replica can link old reviews</td></tr>
         <tr><td>A2 semver</td><td>keep; it lives in bureau, and the runbook stamps it with no DB lookup</td></tr>
-        <tr><td>A3 files in Storage</td><td><b>defer</b>; only the flip needs every byte stored</td></tr>
+        <tr><td>A3 files in Storage</td><td><b>defer</b> for guide text; <b>required for figures</b> (A19)</td></tr>
         <tr><td>A4 the path to the flip</td><td>keep M1 (stamping); <b>drop M2–M4</b> and keep them as triggers</td></tr>
         <tr><td>A5 groups</td><td>keep, in bureau form: group IDs in a sidecar</td></tr>
         <tr><td>A6, A7, A8–A17</td><td>keep</td></tr>
       </tbody>
     </table></div>
     <p class="claim"><b>Decision for Will (A18):</b> bureau stays the source of truth, <code>intake/db-source-of-truth</code> becomes "not planned", and a new <code>intake/refresh</code> spec takes its place.</p>
+  </section>
+
+  <!-- ============================== REFERENCE IMAGES ============================== -->
+  <section class="panel" id="images">
+    <h2>Reference images</h2>
+    <p class="lede">CRC's Lamar + Collier guides carry 125 figure files: 48.6 MB, but only 86 unique. Bureau tracks no images at all. So guide figures follow bureau's own rule for binaries: hashes in git, bytes in Storage (A19, §10).</p>
+
+    <h3 class="claim" id="detail-hydrate">Text and hashes in bureau, bytes in Storage, joined at 1.4-resolve <span class="src">§10.3</span></h3>
+    <div class="rar">
+      <div class="rar-h caller"><span class="k">caller</span><b>1.4-resolve</b><span class="d">CC runbook, once per run, after it copies the version dir</span></div>
+      <div class="rar-h called"><span class="k">called</span><b>hydrate figures</b><span class="d">host cache, then bucket <code>intake-figures</code></span></div>
+      <div class="rar-req">
+        <span class="lab">Request</span>
+<pre>checklist/figures.yaml
+- id: austin-0042/F1
+  items: [austin-0042]
+  caption: CRZ root-zone impact thresholds
+  sha256: 9f2c…
+  media_type: image/png
+- id: austin-0117/F1
+  …</pre>
+        <span class="note">The markdown already names the path each figure lands at: <code>![…](figures/austin-0042/F1.png)</code>.</span>
+      </div>
+      <div class="rar-arrow in"><i></i>by sha256</div>
+      <ol class="rar-steps">
+        <li class="rar-step"><b>Look up each hash in the host cache</b><span>A figure shared by many versions or runs downloads once.</span></li>
+        <li class="rar-step"><b>Fetch a miss from Storage</b><span><code>intake-figures/austin/&lt;sha256&gt;.png</code>, immutable, never overwritten.</span><span class="branch">missing → the run stops with a reason</span></li>
+        <li class="rar-step"><b>Verify the sha256 and write the file</b><span>At the path the markdown names, inside <code>$RUN/1.4-resolve/checklist/</code>.</span><span class="branch">mismatch → the run stops</span></li>
+        <li class="rar-step"><b>Record the list</b><span>In <code>resolved.json</code>. <code>checklistsTreeHash</code> already covers <code>figures.yaml</code>, so the review's existing provenance pins every image.</span></li>
+      </ol>
+      <div class="rar-wait"><span>only the listed figures, never the whole folder (CRC fetches a 127.5 MB PDF into every run)</span></div>
+      <div class="rar-res">
+        <span class="lab">Response</span>
+<pre>checklist/
+  cc-21.md
+  figures.yaml
+  figures/austin-0042/F1.png   ✓ 9f2c…
+  figures/austin-0117/F1.png   ✓ 41aa…</pre>
+        <span class="note">A self-contained guide dir, as CRC's agents get, but every byte is verified.</span>
+      </div>
+      <div class="rar-arrow out"><i></i>files</div>
+    </div>
+
+    <h3>What a guide and its manifest declare</h3>
+    <div class="ba">
+      <div class="ba-col"><div class="ba-h">the guide (cc-21.md)</div>
+        <div class="prompt"><span class="ph">## Figures</span>- **austin-0042/F1** — CRZ root-zone impact
+  thresholds *(reference-design)*
+
+  ![CRZ root-zone impact thresholds](figures/austin-0042/F1.png)
+
+  Six example circles: 30/40/50% impacts
+  acceptable, 50/60/75% not …
+  Constraints: min 50% of CRZ preserved at
+  natural grade; no cut/fill in Quarter CRZ.</div>
+      </div>
+      <div class="ba-col"><div class="ba-h">the manifest (figures.yaml)</div>
+        <div class="prompt"><span class="ph">one row per figure; lint:intake checks both ways</span>- id: austin-0042/F1      # item id + number
+  items: [austin-0042]
+  caption: CRZ root-zone impact thresholds
+  type: reference-design
+  sha256: 9f2c…
+  px: [938, 851]
+  bytes: 197602
+  derived_from:             # enables refresh
+    snapshot: sn_ecm-3-5_20261007-ab12cd34
+    page: 14
+    bbox: [0.12, 0.30, 0.55, 0.62]</div>
+      </div>
+    </div>
+    <p class="claim">The author uploads the blob before opening the PR, as cc-source-citations' capture step already does for snapshots. The PR carries only text.</p>
+
+    <h3 class="claim" id="detail-ref">The CLI attaches the guide's caption, not one the agent invents <span class="src">§10.3</span></h3>
+    <div class="ba">
+      <div class="ba-col"><div class="ba-h">CRC today · crc_vision_check</div>
+        <div class="prompt"><span class="ph">run 2026-09-17-145517, TPW-10</span>referenceImages: [{
+  path: "figures/TPW-10/2.png",
+  description: "Reference standard detail
+    sheet SD 440-2 … Compare the U1 sheet's
+    Collier St transition against this …"
+}]
+// the agent's words become the frame;
+// raw 2 MB PNGs, no limit on count,
+// no hash in the log</div>
+      </div>
+      <div class="ba-col"><div class="ba-h">proposed · vision.ts --ref</div>
+        <div class="prompt"><span class="ph">#312 D2, D5, made concrete</span>node $RUNBOOK/bin/vision.ts \
+  --document-id … --sheet 7 \
+  --item-ids austin-0042 \
+  --ref austin-0042/F1 \
+  --prompt "Does the tree plan show CRZ
+            impacts within these limits?"
+// caption, description and constraints come
+// from figures.yaml; resized to the view size;
+// at most 4 refs; log: {id, sha256, sent_px}</div>
+      </div>
+    </div>
+
+    <h3>What CRC's Lamar + Collier figures look like</h3>
+    <div class="spectable-scroll"><table class="spectable">
+      <thead><tr><th>Guide · item</th><th>Figure</th><th>Kind</th><th>Size</th></tr></thead>
+      <tbody>
+        <tr><td>crc-CA-1 · CA-10</td><td>CRZ root-zone impact thresholds</td><td>a manual's reference diagram</td><td>938 × 851 · 198 KB</td></tr>
+        <tr><td>crc-tpw · TPW-10</td><td>SD 440-2 bike ramp transition</td><td>city standard detail</td><td>619 × 822 · 158 KB</td></tr>
+        <tr><td>crc-tpw · TPW-10</td><td>Collier St bike lane markup</td><td>reviewer markup, site-specific</td><td>1682 × 978 · 136 KB</td></tr>
+        <tr><td>crc-DE-1 · DE-6</td><td>analysis-point runoff table</td><td>table screenshot</td><td>639 × 225 · 48 KB</td></tr>
+        <tr><td>crc-TPW-2 · TPW-15.3</td><td>shared-use path behind bus landing</td><td>TCM standard detail</td><td>925 × 741 · 149 KB</td></tr>
+        <tr><td>crc-aw-redlines · AW-RL-10</td><td>red X over SD 503S-6W</td><td>600-DPI redline crop</td><td>4000 × 3210 · 2.0 MB</td></tr>
+        <tr><td>crc-DE-2 · DE-31</td><td>site plan markup</td><td><b>a bad crop</b>, mostly whitespace</td><td>535 × 363 · 12 KB</td></tr>
+        <tr><td>crc-PR · PR-5</td><td>parkland dedication capture</td><td>the same crop as v7 APR-5, re-encoded</td><td>1069 × 834 · 472 KB</td></tr>
+      </tbody>
+    </table></div>
+    <p class="claim">Captions are written by an LLM when the guide is generated, and live in the guide's <code>## Figures</code> section. In the v8 run, 4 of 57 vision calls attached a reference.</p>
+
+    <h3>CRC's defects, and the rule that prevents each</h3>
+    <div class="spectable-scroll"><table class="spectable">
+      <thead><tr><th>CRC today</th><th>Evidence</th><th>Rule for intake</th></tr></thead>
+      <tbody>
+        <tr><td><b>Overwritten in place</b></td><td>set 4/6 repaired 07-10: 12 added, 3 replaced, 2 removed under the same paths</td><td>content-addressed blobs, never overwritten; a changed figure is a new hash and a PATCH</td></tr>
+        <tr><td><b>No hashes</b></td><td>only <code>mcr.pdf</code> is hashed; eTags unrecorded</td><td><code>sha256</code> in <code>figures.yaml</code>, verified at hydration, logged per call</td></tr>
+        <tr><td><b>Agent-written captions</b></td><td>DE-30's invented manhole; run 145517's descriptions</td><td>the CLI attaches the guide's caption</td></tr>
+        <tr><td><b>Nothing checks references</b></td><td><code>verify-phase.py</code> never parses <code>![](figures/…)</code></td><td><code>lint:intake</code>: every reference has a manifest row and vice versa; CI checks each hash is in the bucket</td></tr>
+        <tr><td><b>Slugs drift</b></td><td><code>PR5</code> vs <code>PR-5</code>, <code>SP48</code> vs <code>SP-48</code></td><td>IDs hang off stable item IDs: <code>austin-0042/F1</code></td></tr>
+        <tr><td><b>Fetch everything</b></td><td>a 127.5 MB PDF in every run</td><td>hydrate only listed figures, through a sha256 cache</td></tr>
+        <tr><td><b>No resizing</b></td><td>4000 px crops, but models view about 1568–2000 px</td><td>store the original; resize at call time; log what was sent</td></tr>
+        <tr><td><b>Duplicates</b></td><td>125 objects, 86 unique</td><td>content addressing dedups for free</td></tr>
+        <tr><td><b>Rarely used</b></td><td>4 of 57 calls</td><td>the review prompt names the figures per item</td></tr>
+      </tbody>
+    </table></div>
+
+    <h3>What A19 changes in the other findings</h3>
+    <div class="spectable-scroll"><table class="spectable">
+      <thead><tr><th>Finding</th><th>Before</th><th>With figures</th></tr></thead>
+      <tbody>
+        <tr><td>A18 files or DB</td><td>bureau is the source</td><td><b>unchanged</b>: bureau already keeps every binary's hash in git and its bytes in Storage</td></tr>
+        <tr><td>A3 files in Storage</td><td>deferred</td><td><b>required for figures</b>, not for guide text</td></tr>
+        <tr><td>A2 semver</td><td>—</td><td>a figure added, changed or removed is a PATCH</td></tr>
+        <tr><td>A5 groups</td><td>—</td><td>figure IDs hang off item IDs, so regrouping never renames one</td></tr>
+        <tr><td>A8 amend's tree hash</td><td>ignore intake-only files</td><td><code>figures.yaml</code> stays in the hash; it pins the image bytes</td></tr>
+        <tr><td>#312 P2</td><td>a <code>figures/</code> folder in git</td><td><code>figures.yaml</code> + Storage; <code>--ref</code> takes an ID from it</td></tr>
+      </tbody>
+    </table></div>
+    <p class="claim"><b>Decision for Will (A19):</b> figures go in Storage, content-addressed, with <code>figures.yaml</code> in bureau and hydration at 1.4-resolve, and #312 P2 is revised to match.</p>
   </section>
 
   <!-- ============================== VERSIONS ============================== -->
@@ -1764,7 +1909,7 @@ jobs:
 <script>
   const btns=document.querySelectorAll('nav.tabs button');
   const panels=document.querySelectorAll('.panel');
-  const IDS=['overview','source','versions','storage','groups','runs','defects']; /* KEEP IN SYNC with the data-tab / panel ids above */
+  const IDS=['overview','source','images','versions','storage','groups','runs','defects']; /* KEEP IN SYNC with the data-tab / panel ids above */
   function show(id,opts={}){
     btns.forEach(b=>b.classList.toggle('active',b.dataset.tab===id));
     panels.forEach(p=>p.classList.toggle('active',p.id===id));
