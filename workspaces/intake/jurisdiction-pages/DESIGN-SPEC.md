@@ -1,7 +1,14 @@
 # Intake checklist pages per jurisdiction: a homepage and a page per source
 
-**Status:** Draft v1
+**Status:** Draft v1.1
 **Date:** 2026-10-15
+
+> **Revision note v1.1 (2026-10-15, reply from the db-schema session on winston#314):**
+> - **None of §5 is decided.** Will has not ruled on the db-schema audit. The db-schema session will recommend R1–R4 in the shape now in §5. Its new finding A18 recommends that bureau stays the source of truth and the DB is a read replica shaped for the app; every request here is a read, so they fit either way.
+> - **D2:** the source slug is minted in bureau as `source_id` in `sources/manifest.json`, the way item IDs live in `intake-ids.tsv`. Deriving it from the snapshot id is now only the fallback until that field exists. P3 adds the field.
+> - **D4:** semver (audit A2) and the generating run (A6) show only when present.
+> - **D1:** the citation status vocabulary comes from cc-source-citations' `schemas.ts`. Neither cityhall nor the DB redefines it.
+> - **§5 R5:** item URLs once stable IDs exist, as the db-schema session proposes.
 **Parent:** `workspaces/intake/north-star/NORTH-STAR-SPEC.md`. The north star lists "customer-facing UI for checklists beyond the existing `/intake-checklists/[jurisdiction]` pages" as out of scope (§7). This spec is that UI, for the pages that exist today.
 **Builds on:** `workspaces/completeness-check/checklist-source-ui/DESIGN-SPEC.md` (Approved v2, winston#297/#298), which built today's two pages, the `cc-source-snapshots` bucket and the citation JSON.
 **Coordinates with:** `workspaces/intake/db-schema/DESIGN-SPEC.md` v1.2 and its audit (winston#314, `AUDIT-2026-10-14.md`). §5 lists what these pages ask of the db-schema v2 tables.
@@ -112,12 +119,14 @@ type SourceEntry = {
 ```
 
 - It reads nothing and calls nothing, so it can be tested on the real Austin files (S1).
+- **The citation status, confidence and flag vocabularies** are the ones cc-source-citations defines in `runbooks/cc-source-citations/scripts/schemas.ts`, which cityhall's zod already mirrors. Neither this function nor the db-schema tables adds a value.
 - Both new pages call `readChecklistSources` (unchanged) and then this function. Building the index costs one pass over 192 items and 315 citations per request, on data Next already caches for an hour.
 - When the db-schema v2 tables exist, a second reader can return the same `SourceIndex` from Postgres and the pages don't change (§5).
 
 **D2. A source is addressed by a stable slug, not by its snapshot id.**
 - A snapshot id is `sn_<slug>_<yyyymmdd>-<hash8>`, for example `sn_cc-submittal-checklist_20261007-158d3960`. The date and hash change on every recapture, so a URL built on them would break on the next run.
-- **The slug is the snapshot id with `sn_` and the `_<date>-<hash>` suffix removed** (`cc-submittal-checklist`), matched by `^sn_(.+)_\d{8}-[0-9a-f]{8}$`. A snapshot id that doesn't match uses the whole id as its slug, so a page still renders.
+- **The slug is minted in bureau** as `snapshots[id].source_id` in `sources/manifest.json` (P3). Every snapshot of the same source carries the same `source_id`, and cc-source-citations and intake-prospecting own it, the way item IDs live in `intake-ids.tsv`. Bureau is the source of truth for checklists, so the DB copies the key and never mints one (db-schema audit A18, recommended).
+- **Until P3 lands, the slug is derived:** the snapshot id with `sn_` and the `_<date>-<hash>` suffix removed (`cc-submittal-checklist`), matched by `^sn_(.+)_\d{8}-[0-9a-f]{8}$`. A snapshot id that doesn't match uses the whole id. P3's Austin backfill writes exactly these derived values, so no URL changes when the field arrives.
 - **Which snapshot a slug shows:** the newest snapshot of that slug that the current version cites. Citations of an older snapshot of the same slug (an incremental run that recaptured only some sources) are listed in the rail with "cited on the `<date>` capture" and their boxes are not drawn, because the pages may differ. Austin has no `supersedes` today, so this case has no instance yet.
 - The route is `/intake-checklists/[jurisdiction]/sources/[source]`. The fixed `sources/` segment never collides with an item key: Next.js matches a static segment before `[checklistKey]`, and it stays unambiguous once item keys become stable IDs such as `austin-0042` (north-star D6), which a bare `/austin/<source-slug>` would not be.
 
@@ -151,7 +160,7 @@ type SourceEntry = {
 **D4. The version summary is computed from the citation file.**
 - It shows the version label (`CURRENT_VERSION`), item and group counts, `bureau_commit` as a short sha linked to the bureau commit, `generated_at`, and the citation status counts from `SourceIndex.stats`.
 - It also shows one chip per group with its item count, each linking to `/items?group=<group>`.
-- When the db-schema version row exists, its semver and `generated_by` run replace the label and the commit (§5, R3). This block changes; nothing else does.
+- When the db-schema version row exists, it adds the semver (audit A2) and the generating run (`generated_by`, A6: the `runbook_runs` uuid plus the run name) (§5, R3). Both are optional and shown only when present, because Will has not ruled on A2 or A6. This block changes; nothing else does.
 - **No generated prose summary.** A model-written paragraph would be one more artifact to keep in step with the checklist. The evidence summary from `intake.yaml` (D3) is the human-reviewed prose there is.
 
 **D5. One tile per source, in two tiers.**
@@ -240,10 +249,11 @@ A **sort control** switches between document order (the default) and group order
 
 **D13. Access is unchanged: `requireUser()` and the bucket's authenticated-read policy** (checklist-source-ui D20). The new pages read only what the existing pages read. The `jurisdictions` policy gap is Q3.
 
-**D14. The manifest gains two optional fields, written at publish time.**
+**D14. The manifest gains three optional fields, written at publish time.**
+- `snapshots[id].source_id` is the stable source slug (D2). It is carried from the superseded snapshot on a recapture, and minted from the label-derived slug for a new source. Two different sources may never share one; the sync workflow's validator checks that.
 - `snapshots[id].document_title` is the document's own title. intake-prospecting's `3.1-write` copies `sources.json` `title` into it, matching on `source_key` = `url`.
 - `snapshots[id].doc_type` is one of `intake_instrument | template | regulatory | design_manual | informational`, from `sources.json` (prospecting-runbook D5).
-- **Austin backfill:** one bureau PR sets both fields by hand on its 26 cited snapshots. `cc-source-citations` `1.2-capture` must carry both fields forward on an unchanged snapshot, and on a recapture of the same slug, so the next run doesn't drop them.
+- **Austin backfill:** one bureau PR sets all three fields on its 28 snapshots: `source_id` from D2's derived slug, and `document_title` and `doc_type` by hand. `cc-source-citations` `1.2-capture` must carry all three forward on an unchanged snapshot, and on a recapture of the same source, so the next run doesn't drop them.
 - The sync workflow's JSON schema and cityhall's zod `Snapshot` both accept the fields as optional. Old manifests keep parsing, and the UI falls back to `title` and no badge.
 
 ---
@@ -271,7 +281,7 @@ A **sort control** switches between document order (the default) and group order
 - **Runs:** `pnpm e2e` (Playwright on the local Supabase stack).
 
 **S3: the manifest fields survive a capture** (existing)
-- **Proves:** D14. `1.2-capture` keeps `document_title` and `doc_type` on an unchanged snapshot and on a recapture of the same slug, and intake-prospecting's `3.1-write` copies them from `sources.json`.
+- **Proves:** D2, D14. `1.2-capture` keeps `source_id`, `document_title` and `doc_type` on an unchanged snapshot and on a recapture of the same source. A new source gets a `source_id` that is unique in the manifest. intake-prospecting's `3.1-write` copies the title and type from `sources.json`.
 - **Prior art:** `runbooks/cc-source-citations/scripts/test_ccs.py`; `runbooks/intake-prospecting/steps/3.1-write/contract.test.ts` (bureau#2112).
 - **Runs:** `python3 -m pytest runbooks/cc-source-citations/scripts` plus the step contract tests, in bureau CI.
 
@@ -298,7 +308,7 @@ A **sort control** switches between document order (the default) and group order
 - **Door:** two-way.
 - **Blast radius:** the new route, and one link per tab on the item page.
 
-**P3: document titles and source types in the manifest** (`bureau`)
+**P3: source IDs, document titles and source types in the manifest** (`bureau`)
 - **Blocked by:** bureau#2112 merging, which moves the capture library to `runbooks/lib/sources/` and adds `3.1-write`. Adding to that PR is the alternative, if it is still open when this is picked up.
 - **Delivers:**
   - the optional fields in the manifest schema and in `sync-cc-sources.yml`'s validator;
@@ -306,7 +316,7 @@ A **sort control** switches between document order (the default) and group order
   - `3.1-write` copying them from `sources.json`;
   - the Austin backfill (D14).
 
-  The cityhall zod change is in P1, as optional fields. The tiles show real titles once this merges and syncs.
+  The cityhall zod change is in P1, as optional fields, and `buildSourceIndex` prefers `source_id` over the derived slug. The tiles show real titles once this merges and syncs.
 - **Tested at:** S3.
 - **Door:** two-way.
 - **Blast radius:** `cc-source-citations` and intake-prospecting runs, until S3 is green.
@@ -317,13 +327,25 @@ P1 and P3 can run in parallel. Nothing here waits on db-schema P1. When the db-s
 
 ## 5. What these pages ask of the intake DB schema (for db-schema v2, winston#314)
 
-The pages run off the bucket today and don't block on the migration. They read best from tables shaped like the ones below, so these requests went to the db-schema session on 2026-10-15. They are written as requests, not decisions; db-schema v2 decides.
+The pages run off the bucket today and don't block on the migration. They read best from tables shaped like the ones below, so these requests went to the db-schema session on 2026-10-15.
 
-- **R1. A source as a first-class row with a stable slug.** For example `intake_sources (checklist_id, source_id, title, document_title, url, format, doc_type)`, plus a per-version link to the snapshot that version cites `(checklist_id, version, source_id, snapshot_id, storage_prefix, page_count, fetched_at)`. D2's derived slug becomes a stored key.
-- **R2. Citations and regions as rows, not a jsonb blob on items.** db-schema v1.2 stores `source-citations.json items[ref]` in `intake_checklist_items.citations jsonb`. The source page is the inverse query: every region on snapshot X, with its item. With rows such as `intake_item_citations (checklist_id, version, item_id, source_id, snapshot_id, label, status, confidence, flags)` and `… _regions (page, boxes jsonb, quote)`, that query uses an index on `(checklist_id, version, source_id)` instead of D1's scan. At Austin's size the scan is fine, so this is about shape, not speed.
-- **R3. The version row carries the summary.** The homepage would read `item_count`, a group count, citation status counts, semver (audit A2), `generated_by` (A6) and `synced_at` straight off the version row.
+**Status: recommended, not decided.** The db-schema session will recommend R1–R4 in the shapes below in db-schema v2. Will has not ruled on that spec's audit. Its finding A18 recommends that bureau stays the source of truth and the DB is a read replica shaped for the app; every request here is a read, so they fit either way. The db-schema tables (its P1) wait for the intake loop to meet the Austin bar (north-star D3), which is why these pages are built on the bucket behind `SourceIndex` (D1). These requests are cited by number here and become db-schema D-numbers once Will rules.
+
+- **R1. A source as a first-class row with a stable slug.**
+  - `intake_sources (checklist_id, source_id, title, url, format, doc_type)` holds the source.
+  - `intake_version_sources (checklist_id, version, source_id, snapshot_id, storage_prefix, page_count, thumb_path)` links each version to the snapshot it cites.
+  - `source_id` is copied from the bureau manifest (D2, D14), never minted in the DB.
+- **R2. Citations and regions as rows, replacing v1.2's `intake_checklist_items.citations jsonb`.**
+  - `intake_item_citations (checklist_id, version, item_id, source_id, snapshot_id, label, status, confidence, flags)` holds one row per citation.
+  - `intake_citation_regions (…, page, boxes jsonb, quote)` holds the regions, indexed on `(snapshot_id, page)`.
+  - The source page is then one indexed query instead of D1's scan. At Austin's size the scan is fine, so this is about shape, not speed. The status vocabulary mirrors `schemas.ts` (D1).
+- **R3. The version row carries the summary:** `item_count`, `group_count`, citation coverage counts, `generated_by` (A6) and `synced_at`, plus the semver if A2 is adopted. The homepage reads them straight off the row (D4).
 - **R4. `jurisdiction_intake` as specified** (`basis`, `application_type`, `evidence`, `decided_at`) feeds D3 directly.
-- **R5. Item URLs once stable IDs exist.** Whether `/intake-checklists/austin/austin-0042` becomes canonical, with `cc-1:CC-1-01` redirecting to it, and whether a versioned form exists for old reviews (audit A12). The `sources/` and `items/` segments are chosen so that either answer fits.
+- **R5. Item URLs once stable IDs exist** (proposed by the db-schema session):
+  - `/intake-checklists/<slug>/<item_id>` (`austin-0042`) becomes canonical.
+  - `?v=<semver>` pins a version (A2), so links from old reviews show the item as that review saw it. That fixes A12: today's pages resolve against `CURRENT_VERSION`.
+  - A legacy ref (`cc-1:CC-1-01`) redirects through the sidecar of the version it belongs to.
+  - The static `sources/` and `items/` segments keep working under this scheme. Snapshot binaries stay in `cc-source-snapshots`.
 
 ---
 
