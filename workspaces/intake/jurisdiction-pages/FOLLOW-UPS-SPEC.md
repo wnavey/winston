@@ -1,9 +1,11 @@
 # Intake jurisdiction pages: follow-ups after the MVP
 
-**Status:** Draft v1
-**Date:** 2026-10-15
+**Status:** Draft v1.1
+**Date:** 2026-10-16
+
+> **Revision note v1.1 (2026-10-16):** §2.3 added. Will wants the homepage for El Paso; its data is published but the page 404s for everyone because El Paso has no project (the parent's Q3, ruled "leave it" when only Austin mattered). E1–E3 turn it on; the PR plan now leads with them.
 **Parent:** `workspaces/intake/jurisdiction-pages/DESIGN-SPEC.md` v1.2 (winston#317), implemented 2026-10-15 as cityhall#399 (P1), cityhall#401 (P2) and bureau#2124 (P3).
-**Repos touched:** `bureau` (a registry for El Paso, the sync workflow's path filter, a CI stamp check), `cityhall` (tile wording, the document-level grouping, e2e conventions, a `source_key` type), `winston` (the parent spec's D2 text)
+**Repos touched:** `bureau` (a registry for El Paso, the sync workflow's path filter, a CI stamp check), `cityhall` (a staff-read policy on the two jurisdiction tables, the sidebar's per-jurisdiction entry, tile wording, the document-level grouping, e2e conventions, a `source_key` type), `winston` (the parent spec's D2 text)
 **Repos NOT touched:** `conductor2`, `substation`, `inspector-general`, `dsd`, `completion-officer`, the CC runbook
 
 ## Problem
@@ -33,7 +35,7 @@ Each is one small change. Numbered so a PR can cite it.
 
 ### 2.1 Bureau
 
-**F1. El Paso has no `sources/sources.yaml`, so its next `cc-source-citations` capture fails.** El Paso's checklist v1 (bureau#2123) was written by `3.1-write` before P3, so `jurisdictions/el-paso/completeness-check/sources/` holds a manifest and no registry; `1.2-capture` now refuses to run without one (§1). Any other jurisdiction written by intake-prospecting before 2026-10-15 is in the same state (today, only El Paso). **Fix:** one PR that writes El Paso's registry from its run's `sources.json` with the same code `3.1-write` uses (`merge_registry_text` over `None`), stamps the manifest with `ccs.py stamp`, and is reviewed by a person for titles and `doc_type`. The sync validator's cross-check then covers El Paso too.
+**F1. El Paso has no `sources/sources.yaml`, so its next `cc-source-citations` capture fails** (now E2, §2.3). El Paso's checklist v1 (bureau#2123) was written by `3.1-write` before P3, so `jurisdictions/el-paso/completeness-check/sources/` holds a manifest and no registry; `1.2-capture` now refuses to run without one (§1). Any other jurisdiction written by intake-prospecting before 2026-10-15 is in the same state (today, only El Paso). **Fix:** one PR that writes El Paso's registry from its run's `sources.json` with the same code `3.1-write` uses (`merge_registry_text` over `None`), stamps the manifest with `ccs.py stamp`, and is reviewed by a person for titles and `doc_type`. The sync validator's cross-check then covers El Paso too.
 
 **F2. `sync-cc-sources.yml` does not trigger on `sources/sources.yaml`.** A registry edit alone (a title fix) is not published until the manifest is re-stamped and committed, and nothing in CI says so unless the PR's dry run notices the copies differ. **Fix:** add the registry path to the workflow's `paths:` filter, and add `ccs.py stamp --check` for every jurisdiction with a registry to the `cc-source-citations runbook tests` CI step, so a registry edit without a re-stamp fails the PR with the command to run.
 
@@ -63,14 +65,24 @@ Each is one small change. Numbered so a PR can cite it.
 
 **F16. The local seed's manifest must track the bucket.** The seed copy of `austin/manifest.json` was taken before P3 stamped it; cityhall#401 refreshes it so S1 and S2 assert the registry titles prod shows. Every later re-stamp or recapture in bureau needs the same copy, by hand, until a script does it (one line in `docs/local-stack.md`, or a `pnpm` script that pulls the three files from bureau `main`).
 
-### 2.3 Parent spec and open questions
+### 2.3 Turning El Paso on (E1–E3)
+
+El Paso is the first prospecting-built jurisdiction and the first with no project in the App DB. Verified 2026-10-16: bureau `main` holds `jurisdictions/el-paso/completeness-check/` with `CURRENT_VERSION` = `v1`, 43 items in 2 groups, 88 citations all `found`, and 3 snapshots (the Detailed Site Development Plan Application PDF and two City Code §20.04 sections), every one with a `source_key` equal to its `sources.json` key and none stamped; the sync workflow published all three files to the bucket on 2026-10-15 (run `38815250847`, "unchanged el-paso/…"); the App DB has `jurisdictions` row `el-paso` ("El Paso, Texas", `active`) with 0 departments and **0 projects**. The pages themselves are jurisdiction-agnostic: once the row is visible, the homepage renders one PDF tile, two code sections and the version block with no code change.
+
+**E1. Staff read every jurisdiction.** The `authenticated: select` policies on `jurisdictions` and `jurisdiction_departments` (`supabase/schemas/public/tables/jurisdictions.sql:23-28`, `jurisdiction_departments.sql:29-34`) show a row only when the caller can see a `project` with that `jurisdiction_slug`. With no El Paso project, `readChecklistSources` gets `null` and every intake page 404s, for staff too. Both tables are catalog data (`supabase/rls-isolation-allowlist.txt:21-22` lists them as `reference`: no tenant rows), so widening is safe. **Decision:** add `OR public.is_noetic_member((SELECT auth.uid()))` to both SELECT policies, the shape `comment_triage.sql:37` already uses, so staff see every jurisdiction and customers keep seeing only the ones their projects are in. Not the wider "every authenticated user" form: today's audience is staff (Q2), and the spec's stance that the pages are city facts can widen the policy later without a second table change. Done as a declarative-schema edit plus the migration `sync` generates; `tests/db` role matrix pins that staff read `el-paso` and an outsider does not. Jason applies the migration from the PR's worktree before it merges (shipit `multi-repo.md`).
+
+**E2. El Paso's source registry and stamped manifest** (F1, moved up). Written from the run's `1.2-discover/sources.json` with the same `merge_registry_text` call `3.1-write` makes (the run dir is `~/noetic/working/intake-prospecting/el-paso`; if it is gone, the three rows are typed by hand from the manifest's titles and the sources.json kinds), reviewed by a person for `title` and `doc_type`, then `ccs.py stamp --bureau . --jurisdiction el-paso` and the stamped manifest committed. **Do this before E1 is live**: until it is, the source URLs derive from the snapshot ids, which `slugify` cuts at 40 characters (`/sources/detailed-site-development-plan-applicati`); stamping changes them to the registry keys (`/sources/dsdp-application`), and a link made before the stamp breaks.
+
+**E3. A way in.** The staff sidebar is hard-wired to `/intake-checklists/austin` (`app-shell.tsx:371`). **Decision:** the sidebar item becomes a parent with one child per jurisdiction that has a `CURRENT_VERSION` in the bucket, read the way `readChecklistSources` reads (one `list` of the bucket's top-level prefixes, no new table), or, smaller, an `/intake-checklists` index page listing those jurisdictions with the sidebar pointing at it. The index page is the smaller change and answers the parent's Q2 for staff; the customer-facing entry stays open.
+
+### 2.4 Parent spec and open questions
 
 **F13. Parent spec v1.3.** Fold §1 of this document into the parent as a revision note (D2 fallback instead of throw; D14 append-only merge; P3 offline stamp, registry-key slugs, missing-file failure; D1 names), and mark P1–P3 shipped with their PR numbers.
 
 **F14. Open questions carried from the parent, unchanged:**
 - Q1 Library-DB facts on the homepage: (a) left out in v1, as proposed.
-- Q2 who sees the pages and from where: still only the staff sidebar link and the review "Source ↗" link; no `/intake-checklists` index page. Revisit with the customer-facing entry.
-- Q3 the `jurisdictions` RLS 404: ruled, stays.
+- Q2 who sees the pages and from where: E3 gives staff an index page; the customer-facing entry stays open.
+- Q3 the `jurisdictions` RLS 404: reopened by El Paso; E1 lets staff through and leaves customers project-gated.
 - Q4 the two Austin snapshots with no located item: hidden (D5). A "Captured, nothing located" section is a small addition if the capture should be auditable from the app.
 - Q5 item numbers on boxes: the rail's local ①…ⓝ. Comment numbers need `true-comment-num-mapping.tsv` in the bucket or the db-schema items table.
 
@@ -80,20 +92,29 @@ Each is one small change. Numbered so a PR can cite it.
 
 **S2: the intake e2e spec** (existing: `e2e/intake-checklists.spec.ts`, `pnpm e2e` in CI's `check`) — F8, F9, F11.
 
-**S3: the registry and stamp tests** (existing: `runbooks/lib/sources/test_registry.py`, `runbooks/cc-source-citations/scripts/test_registry.py`, `runbooks/intake-prospecting/tests/write.test.ts`; `ccs.py stamp --check`; `sync.mjs --dry-run`) — F1, F2, F3.
+**S3: the registry and stamp tests** (existing: `runbooks/lib/sources/test_registry.py`, `runbooks/cc-source-citations/scripts/test_registry.py`, `runbooks/intake-prospecting/tests/write.test.ts`; `ccs.py stamp --check`; `sync.mjs --dry-run`) — E2/F1, F2, F3.
+
+**S4: `pnpm test:db` role matrix** (existing: `tests/db/`) — E1: staff read `jurisdictions`/`jurisdiction_departments` rows with no project; org member, viewer and outsider do not.
 
 ## 4. PR plan
 
-**P1: El Paso's registry and a stamp check in CI** — `bureau`
-- **Blocked by:** nothing (can start now).
-- **Delivers:** F1, F2. El Paso's `sources/sources.yaml` (person-reviewed), its manifest stamped, the sync workflow triggering on the registry, and `ccs.py stamp --check` in CI.
+**P0: El Paso's registry and a stamp check in CI** — `bureau`
+- **Blocked by:** nothing (can start now). Merge before P1 is live (E2).
+- **Delivers:** E2 (= F1), F2. El Paso's `sources/sources.yaml` (person-reviewed), its manifest stamped, the sync workflow triggering on the registry, and `ccs.py stamp --check` in CI.
 - **Tested at:** S3.
 - **Door:** two-way.
 - **Blast radius:** El Paso's next capture run (which fails today without it).
 
+**P1: staff read every jurisdiction, and the index page** — `cityhall`
+- **Blocked by:** P0 merged and synced (so El Paso's first visible URLs are the stamped ones).
+- **Delivers:** E1, E3. `/intake-checklists/el-paso` renders for staff; `/intake-checklists` lists Austin and El Paso.
+- **Tested at:** S2 (the e2e walks El Paso's homepage as staff and asserts the 404 as the Pape-Dunahorn viewer, who has no El Paso project; the local seed needs El Paso's three bucket files, small) and `tests/db`'s role matrix.
+- **Door:** two-way (drop the policy clause; the migration is additive).
+- **Blast radius:** every reader of `jurisdictions` and `jurisdiction_departments` gains nothing but staff rows; a customer sees what they saw.
+
 **P2: tile wording, document-level grouping, e2e note** — `cityhall`
 - **Blocked by:** nothing.
-- **Delivers:** F5, F6, F9, F11 (and F7 once P1 has stamped El Paso).
+- **Delivers:** F5, F6, F9, F11 (and F7 once P0 has stamped El Paso).
 - **Tested at:** S1, S2.
 - **Door:** two-way.
 - **Blast radius:** the intake pages only.
@@ -107,7 +128,7 @@ F3, F4, F8 and F10 are watch items, not PRs, until something changes.
 ## 5. Not yet specified
 
 - Whether imgproxy belongs in the CI stack (F8) depends on its start-up cost, which nobody has measured.
-- A "Captured, nothing located" section (Q4) and a customer-facing entry (Q2) are product calls for the parent's next revision.
+- A "Captured, nothing located" section (Q4) and the customer-facing entry (Q2, beyond E3's staff index) are product calls for the parent's next revision.
 
 ## 6. Out of scope
 
