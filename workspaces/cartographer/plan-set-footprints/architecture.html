@@ -1154,7 +1154,7 @@ table.nx-rules td.o{color:var(--ink2);font-size:12.5px;white-space:nowrap}
   <div class="kicker">Cartographer · Plan-set footprints</div>
   <h1>Building footprints from plan sets — the first proposed feature through extract-geometry-v2 and anchor-geometry</h1>
   <p>How a site plan set gets its proposed building footprint read beside the lot, registered to the lot by the property line both are drawn on, stored as a traced, proposed figure, and carried onto the county grid by the anchor run that already exists — so PostGIS can say how far the building sits from each lot line.</p>
-  <div class="meta"><span class="status">Draft v1</span><span>16 Oct 2026</span><span>Source of truth: <code>DESIGN-SPEC.md</code></span></div>
+  <div class="meta"><span class="status">Draft v1.1</span><span>16 Oct 2026</span><span>Source of truth: <code>DESIGN-SPEC.md</code></span></div>
   <a class="spec-link" href="DESIGN-SPEC.html">Read the spec →</a>
 </header>
 
@@ -1207,7 +1207,7 @@ table.nx-rules td.o{color:var(--ink2);font-size:12.5px;white-space:nowrap}
 
     <div class="sys store ext" id="ov-files" style="grid-area:2/2"><span class="k">table + bucket</span><span class="t">cartographer_files</span><span class="d">one row, its PDF</span></div>
     <div class="sys" id="ov-read-t" data-in="today" style="grid-area:2/3"><span class="k">7 agent + script steps</span><span class="t">Read the plat</span><span class="d">calls as printed, no numbers</span></div>
-    <div class="sys chg" id="ov-read-a" data-in="after" style="grid-area:2/3"><a class="ref" href="#detail-graph">D1 · D3 · D5 ↓</a><span class="k">9 agent + script steps</span><span class="t">Read the document</span><span class="d">classified; feature regions surveyed</span></div>
+    <div class="sys chg" id="ov-read-a" data-in="after" style="grid-area:2/3"><a class="ref" href="#detail-graph">D1 · D3 · D5 ↓</a><span class="k">10 agent + script steps</span><span class="t">Read the document</span><span class="d">page 1 classified; feature regions surveyed</span></div>
     <div class="sys gap" id="ov-gap" data-in="today" style="grid-area:2/4">no reader for a drawn feature</div>
     <div class="sys new ext" id="ov-trace" data-in="after" style="grid-area:2/4"><a class="ref" href="#step-3-4">D4 ↓</a><span class="k">script, via carto</span><span class="t">trace.ts</span><span class="d">outlines from the vector paths</span></div>
 
@@ -1242,7 +1242,7 @@ table.nx-rules td.o{color:var(--ink2);font-size:12.5px;white-space:nowrap}
     <a class="sys-edge chg" data-in="after" data-from="ov-anchor-a" data-to="ov-geo-a">+ posture</a>
   </div>
   <div class="sys-refs">
-    <a class="refrow chg" data-ref="D1"><span class="chip">D1</span><span class="txt">1.2-fetch classifies the document from signals it already has; a request field overrides</span></a>
+    <a class="refrow chg" data-ref="D1"><span class="chip">D1</span><span class="txt">one agent classifies the document by looking at page 1; the sheet size is a recorded signal; a request field overrides</span></a>
     <a class="refrow chg" data-ref="D3"><span class="chip">D3</span><span class="txt">on a plan set the survey reports the sheet and marks feature regions, still never a value</span></a>
     <a class="refrow new" data-ref="D4"><span class="chip">D4</span><span class="txt">tracing is a cartographer script: collect, chain, keep, rank, draw an overlay per candidate</span></a>
     <a class="refrow new" data-ref="D5"><span class="chip">D5</span><span class="txt">confirming is vision, one worker per region, and reads no coordinates</span></a>
@@ -1282,18 +1282,21 @@ table.nx-rules td.o{color:var(--ink2);font-size:12.5px;white-space:nowrap}
 <!-- ============================================================ HOW IT WORKS -->
 <section class="panel" id="how">
   <h2>How it works</h2>
-  <p class="lede">Three mechanisms carry the slice: a dumb, recorded classification of the document; a tracer that lifts outlines from vector paths and ranks them by layer name when a layer exists; and a free-scale registration of the sheet to the lot that is drawn on it. On sheet 12 the registration lands at exactly 1″ = 20′ with a 0.004 ft mean residual (§1.4, §2.1–§2.4).</p>
+  <p class="lede">Three mechanisms carry the slice: a one-page read of the cover sheet that says what the document is; a tracer that lifts outlines from vector paths and ranks them by layer name when a layer exists; and a free-scale registration of the sheet to the lot that is drawn on it. On sheet 12 the registration lands at exactly 1″ = 20′ with a 0.004 ft mean residual (§1.4, §2.1–§2.4).</p>
 
-  <h3 class="claim" id="detail-classify">The document is classified from page count, sheet size and page-1 words, and the signals are recorded <span class="src">D1</span></h3>
+  <h3 class="claim" id="detail-classify">One agent looks at page 1 and says what it is; the sheet size is recorded, never decisive <span class="src">D1</span></h3>
   <div class="dflow">
-    <div class="dq"><span class="q"><code>request.document_kind</code> is set?</span><span class="yes">yes →</span><span class="out">use it · decidedBy: request</span></div>
+    <div class="dq"><span class="q"><code>request.document_kind</code> is set?</span><span class="yes">yes →</span><span class="out">use it · decidedBy: request · nothing is read</span></div>
     <div class="dno">no ↓</div>
-    <div class="dq"><span class="q">≥ 4 pages, sheet ≥ 22 × 34 in, and page 1 carries sheet-index words?</span><span class="yes">yes →</span><span class="out">plan_set · the survey's plan-sheet vocabulary is on</span></div>
+    <div class="dq"><span class="q">Page 1 is sheet-sized (about 24 × 36 in)?</span><span class="yes">no →</span><span class="out warn">also look at the first sheet-sized page · inspectedPages: [1, n]</span></div>
+    <div class="dno">yes ↓</div>
+    <div class="dq"><span class="q">It looks like a plan set: a project title, a sheet index, an engineer's title block, a vicinity map?</span><span class="yes">yes →</span><span class="out">plan_set · the survey's plan-sheet vocabulary is on</span></div>
     <div class="dno">no ↓</div>
-    <div class="dq"><span class="q">≤ 4 pages, or page 1 carries plat words and no sheet-index words?</span><span class="yes">yes →</span><span class="out">plat · every step runs exactly as today</span></div>
+    <div class="dq"><span class="q">It looks like a recorded plat: a clerk's cover or recording stamp, a plat title, a surveyor's certificate, a legal description?</span><span class="yes">yes →</span><span class="out">plat · every step runs exactly as today</span></div>
     <div class="dno">no ↓</div>
     <div class="dq end"><span class="q">otherwise</span><span class="yes"></span><span class="out warn">unknown · the vocabulary is on; it costs nothing on a plat page</span></div>
   </div>
+  <p class="claim"><b>Claim (D1):</b> the car-wash plat is a letter-size clerk's cover followed by one 24 × 36 in sheet, and White Water is thirty 36 × 24 in sheets, so neither page count nor sheet size decides; one glance at the cover does. <code>document.json</code> records what was seen, in the sheet's own words.</p>
   <p class="claim"><b>Claim (D2):</b> the classification switches a vocabulary on; it never forks the runbook. One graph, one set of contracts, one readout.</p>
 
   <h3 class="claim" id="detail-register">One free-scale similarity puts a sheet in the lot's frame, and its scale falls out of the fit <span class="src">D7</span></h3>
@@ -1378,11 +1381,11 @@ table.nx-rules td.o{color:var(--ink2);font-size:12.5px;white-space:nowrap}
 </section>
 
 <!-- ============================================================ THE EXTRACT RUNBOOK -->
-<section class="panel" id="runbook" data-steps="1.1,1.2,2.1,2.2,3.1,3.2,3.3,3.4,3.5,4.1,4.2,5.1,5.2,6.1,6.2,7.1">
+<section class="panel" id="runbook" data-steps="1.1,1.2,1.3,2.1,2.2,3.1,3.2,3.3,3.4,3.5,4.1,4.2,5.1,5.2,6.1,6.2,7.1">
   <h2>The extract runbook</h2>
-  <p class="lede">Fourteen steps become sixteen. Two are new (trace, confirm); eight change (the request, fetch, survey, plan, assemble, place-solve, readout, publish); six are untouched (transcribe, inventory, order, merge, place-claims, the ruling). On a plat every new roster is empty and the output is byte-identical (§3.1, D2).</p>
+  <p class="lede">Fourteen steps become seventeen. Three are new (classify, trace, confirm); eight change (the request, fetch, survey, plan, assemble, place-solve, readout, publish); six are untouched (transcribe, inventory, order, merge, place-claims, the ruling). On a plat every new roster is empty and the output is byte-identical (§3.1, D2).</p>
 
-  <h3 class="claim" id="detail-graph">A tracer and a confirm fan-out branch off the plan step and rejoin at assemble; the reading path is untouched <span class="src">§3.1</span></h3>
+  <h3 class="claim" id="detail-graph">A classify step goes in before the survey; a tracer and a confirm fan-out branch off the plan step and rejoin at assemble <span class="src">§3.1</span></h3>
   <div class="sys-legend"><span><i></i>unchanged</span><span><i class="chg"></i>modified</span><span><i class="new"></i>new</span><span><i class="happy"></i>main path</span><span><i class="exit"></i>leaves the main path</span><span>stacked card = runs ×N in parallel</span></div>
   <div class="ba stack">
     <div class="ba-col"><div class="ba-h">today · reading the plat</div>
@@ -1409,27 +1412,29 @@ table.nx-rules td.o{color:var(--ink2);font-size:12.5px;white-space:nowrap}
       </div></div>
     </div>
     <div class="ba-col"><div class="ba-h">after · reading the document</div>
-      <div class="bleed"><div class="sysmap rgraph" id="rg-read-a" style="grid-template-columns:repeat(8,minmax(0,1fr));column-gap:30px">
+      <div class="bleed"><div class="sysmap rgraph" id="rg-read-a" style="grid-template-columns:repeat(9,minmax(0,1fr));column-gap:24px">
         <div class="sys chg" id="g11" style="grid-area:1/1"><a class="ref" href="#step-1-1">D1 ↓</a><span class="k">gate · input</span><span class="t">1.1 inputs</span><span class="d">+ document_kind</span></div>
-        <div class="sys chg" id="g12" style="grid-area:1/2"><a class="ref" href="#step-1-2">D1 ↓</a><span class="k">script</span><span class="t">1.2 fetch</span><span class="d">+ classifies the document</span></div>
-        <div class="sys fan chg" id="g21" style="grid-area:1/3"><a class="ref" href="#step-2-1">D3 ↓</a><span class="k">agent ×N pages</span><span class="t">2.1 survey</span><span class="d">+ sheet, feature regions</span></div>
-        <div class="sys chg" id="g22" style="grid-area:1/4"><a class="ref" href="#step-2-2">D3 ↓</a><span class="k">script</span><span class="t">2.2 plan</span><span class="d">+ feature crops</span></div>
-        <div class="sys fan" id="g31" style="grid-area:1/5"><span class="k">agent ×N regions</span><span class="t">3.1 transcribe</span><span class="d">unchanged</span></div>
-        <div class="sys" id="g32" style="grid-area:1/6"><span class="k">agent</span><span class="t">3.2 inventory</span><span class="d">unchanged</span></div>
-        <div class="sys fan" id="g33" style="grid-area:1/7"><span class="k">agent ×N figures</span><span class="t">3.3 order</span><span class="d">unchanged</span></div>
-        <div class="sys" id="g41" style="grid-area:1/8"><span class="k">agent</span><span class="t">4.1 merge</span><span class="d">mete figures only</span></div>
-        <div class="sys new" id="g34" style="grid-area:2/4"><a class="ref" href="#step-3-4">D4 ↓</a><span class="k">script · zero tokens</span><span class="t">3.4 trace</span><span class="d">candidates per feature region</span></div>
-        <div class="sys fan new" id="g35" style="grid-area:2/5"><a class="ref" href="#step-3-5">D5 ↓</a><span class="k">agent ×N regions</span><span class="t">3.5 confirm</span><span class="d">primary sheet only</span></div>
-        <div class="sys exit" id="gto42" style="grid-area:2/6"><span class="t">to 4.2 assemble</span><span class="d">appended by code</span></div>
-        <div class="sys exit" id="gnone" style="grid-area:3/3"><span class="t">run stops</span><span class="d">no page carries geometry</span></div>
+        <div class="sys chg" id="g12" style="grid-area:1/2"><a class="ref" href="#step-1-2">D1 ↓</a><span class="k">script</span><span class="t">1.2 fetch</span><span class="d">+ sheet size, OCG count</span></div>
+        <div class="sys new" id="g13" style="grid-area:1/3"><a class="ref" href="#detail-classify">D1 ↓</a><span class="k">agent · one page</span><span class="t">1.3 classify</span><span class="d">looks at page 1</span></div>
+        <div class="sys fan chg" id="g21" style="grid-area:1/4"><a class="ref" href="#step-2-1">D3 ↓</a><span class="k">agent ×N pages</span><span class="t">2.1 survey</span><span class="d">+ sheet, feature regions</span></div>
+        <div class="sys chg" id="g22" style="grid-area:1/5"><a class="ref" href="#step-2-2">D3 ↓</a><span class="k">script</span><span class="t">2.2 plan</span><span class="d">+ feature crops</span></div>
+        <div class="sys fan" id="g31" style="grid-area:1/6"><span class="k">agent ×N regions</span><span class="t">3.1 transcribe</span><span class="d">unchanged</span></div>
+        <div class="sys" id="g32" style="grid-area:1/7"><span class="k">agent</span><span class="t">3.2 inventory</span><span class="d">unchanged</span></div>
+        <div class="sys fan" id="g33" style="grid-area:1/8"><span class="k">agent ×N figures</span><span class="t">3.3 order</span><span class="d">unchanged</span></div>
+        <div class="sys" id="g41" style="grid-area:1/9"><span class="k">agent</span><span class="t">4.1 merge</span><span class="d">mete figures only</span></div>
+        <div class="sys new" id="g34" style="grid-area:2/5"><a class="ref" href="#step-3-4">D4 ↓</a><span class="k">script · zero tokens</span><span class="t">3.4 trace</span><span class="d">candidates per feature region</span></div>
+        <div class="sys fan new" id="g35" style="grid-area:2/6"><a class="ref" href="#step-3-5">D5 ↓</a><span class="k">agent ×N regions</span><span class="t">3.5 confirm</span><span class="d">primary sheet only</span></div>
+        <div class="sys exit" id="gto42" style="grid-area:2/7"><span class="t">to 4.2 assemble</span><span class="d">appended by code</span></div>
+        <div class="sys exit" id="gnone" style="grid-area:3/4"><span class="t">run stops</span><span class="d">no page carries geometry</span></div>
         <a class="sys-edge happy" data-from="g11" data-to="g12"></a>
-        <a class="sys-edge happy" data-from="g12" data-to="g21"></a>
+        <a class="sys-edge happy" data-from="g12" data-to="g13"></a>
+        <a class="sys-edge happy" data-from="g13" data-to="g21"></a>
         <a class="sys-edge happy" data-from="g21" data-to="g22"></a>
         <a class="sys-edge happy" data-from="g22" data-to="g31"></a>
         <a class="sys-edge happy" data-from="g31" data-to="g32"></a>
         <a class="sys-edge happy" data-from="g32" data-to="g33"></a>
         <a class="sys-edge happy" data-from="g33" data-to="g41"></a>
-        <a class="sys-edge new" data-from="g22" data-to="g34">feature regions</a>
+        <a class="sys-edge new" data-from="g22" data-to="g34">regions</a>
         <a class="sys-edge new" data-from="g34" data-to="g35">overlays</a>
         <a class="sys-edge new" data-from="g35" data-to="gto42">confirm.json</a>
         <a class="sys-edge exit" data-from="g21" data-to="gnone"></a>
@@ -1499,8 +1504,8 @@ table.nx-rules td.o{color:var(--ink2);font-size:12.5px;white-space:nowrap}
 
   <!-- 1.2 -->
   <section class="nx-step" id="step-1-2">
-    <div class="nx-hd"><span class="nx-id">1.2</span><div><div class="nx-k">script · scripts/fetch.py → carto fetch, carto render 150, pdfimages -list · zero tokens · modified</div><h3 class="nx-t">Fetch, rasterize and classify</h3><div class="nx-loc" data-on="1.2"></div></div><span class="nx-tpl">template <b>T2 · Stage</b></span></div>
-    <p class="nx-sum">Resolves the file row, downloads the PDF, renders every page at 150 DPI and records each page's ceiling, as today. It now also classifies the document from signals it already has in hand (page count, sheet size, creator, the OCG count, page-1 words) and writes the signals whatever the verdict, so the readout and a future rule can see what the classifier saw.</p>
+    <div class="nx-hd"><span class="nx-id">1.2</span><div><div class="nx-k">script · scripts/fetch.py → carto fetch, carto render 150, pdfimages -list, pdfinfo · zero tokens · modified</div><h3 class="nx-t">Fetch, rasterize and measure</h3><div class="nx-loc" data-on="1.2"></div></div><span class="nx-tpl">template <b>T2 · Stage</b></span></div>
+    <p class="nx-sum">Resolves the file row, downloads the PDF, renders every page at 150 DPI and records each page's ceiling, as today. It now also records what it can measure without judgment: each page's size in inches and word count, the creator, the OCG count, and whether page 1 is sheet-sized. It decides nothing; 1.3 reads these beside page 1.</p>
     <div class="ba stack">
       <div class="ba-col"><div class="ba-h">today</div>
         <div class="nx-stage">
@@ -1527,16 +1532,15 @@ ws/pages/page-&lt;n&gt;.jpg <span class="c">150 DPI survey rasters  → roster f
             <span class="nx-pill"><i>bucket</i>cartographer-files</span>
             <span class="nx-pill"><i>git</i>$CARTOGRAPHER HEAD + dirty flag</span>
             <span class="nx-pill"><i>file</i>1.1 request.json · document_kind</span>
-            <span class="nx-pill"><i>file</i><span class="nx-soft">NEW</span> pdfinfo creator · OCG count · page-1 text words</span>
+            <span class="nx-pill"><i>file</i><span class="nx-soft">NEW</span> pdfinfo creator · OCG count · page sizes · word counts</span>
           </div>
           <div class="nx-arrow">→</div>
           <div class="nx-card"><span class="nx-lab">writes · 1.2-fetch/</span>
 <pre class="nx-tree">source.json         <span class="c">as today, plus:</span>
-  document          <span class="c">NEW · kind: plat | plan_set | unknown</span>
-    signals         <span class="c">NEW · creator, producer, pageCount, sheetPt, ocgCount,</span>
-                    <span class="c">      vectorPages, medianWordsPerPage, page1 {sheetIndex, platWords}</span>
-    decidedBy       <span class="c">NEW · signals | request</span>
-addendum.md         <span class="c">+ a "Document" section naming the kind and the signals</span>
+  pages[].sizeIn    <span class="c">NEW · [36, 24] · and words: the text-layer word count</span>
+  signals           <span class="c">NEW · creator, producer, pageCount, ocgCount, vectorPages,</span>
+                    <span class="c">      page1SheetSized  → read by 1.3</span>
+addendum.md         <span class="c">+ a "Sheets" table: size, vector or scan, words, per page</span>
 ws/source.pdf       <span class="c">unchanged</span>
 ws/pages/page-&lt;n&gt;.jpg <span class="c">unchanged  → roster for 2.1</span></pre>
           </div>
@@ -1544,10 +1548,33 @@ ws/pages/page-&lt;n&gt;.jpg <span class="c">unchanged  → roster for 2.1</span>
       </div>
     </div>
     <div class="nx-checks-row">
-      <span class="nx-pill"><span class="nx-block">BLOCKING</span>source.json schema <span class="nx-soft">+ document block</span></span>
+      <span class="nx-pill"><span class="nx-block">BLOCKING</span>source.json schema <span class="nx-soft">+ sizeIn, signals</span></span>
       <span class="nx-pill">the PDF and one raster per page on disk</span>
       <span class="nx-pill">runSlug is the request's</span>
-      <span class="nx-pill"><span class="nx-soft">NEW</span> document.kind matches document_kind when the request sets it</span>
+      <span class="nx-pill"><span class="nx-soft">NEW</span> every page has a size in inches</span>
+    </div>
+  </section>
+  <hr class="nx-div">
+
+  <!-- 1.3 -->
+  <section class="nx-step" id="step-1-3">
+    <div class="nx-hd"><span class="nx-id agent">1.3</span><div><div class="nx-k">single agent · vision runner · Opus 5.5, medium · one page · new</div><h3 class="nx-t">Classify the document</h3><div class="nx-loc" data-on="1.3"></div></div><span class="nx-tpl">template <b>T6 · Single-agent judgment</b></span></div>
+    <p class="nx-sum">One reader looks at page 1 — and, when page 1 is not sheet-sized, at the first page that is — and says whether this is a recorded plat, a plan set, or neither. It reports what it saw in the sheet's own words so the readout can show its reasons. When the request names a <code>document_kind</code>, it writes that and reads nothing. The sheet size is recorded beside the verdict and never decides it: both a plat and a plan set are usually about 24 × 36 in.</p>
+    <div class="nx-judge">
+      <div class="nx-card"><span class="nx-lab">reads</span><ul class="nx-list">
+        <li><code>1.2-fetch/ws/pages/page-1.jpg</code><span class="d">tiled when needsTiling, as the survey does</span></li>
+        <li>the first sheet-sized page<span class="d">only when page 1 is not one (a clerk's cover, a transmittal)</span></li>
+        <li><code>1.2-fetch/source.json</code><span class="d">sizeIn per page, creator, ocgCount, pageCount</span></li>
+        <li><code>1.1-inputs/request.json</code><span class="d">document_kind, scope_note</span></li></ul></div>
+      <div class="nx-arrow">→</div>
+      <div class="nx-card mid"><span class="nx-lab">decides</span><ul class="nx-list">
+        <li><b>Kind</b><span class="d">plan_set · plat · unknown, from what the cover looks like (D1's decision flow)</span></li>
+        <li><b>Seen</b><span class="d">the title, a sheet index, a title block, a clerk's stamp, a certificate: quoted, not paraphrased</span></li>
+        <li><b>Inspected pages</b><span class="d">[1], or [1, n]</span></li></ul></div>
+      <div class="nx-arrow">→</div>
+      <div class="nx-card"><span class="nx-lab">writes</span><ul class="nx-list">
+        <li><code>document.json</code><span class="d"><span class="nx-block">BLOCKING</span>kind, decidedBy, inspectedPages, sheetIn, seen, signals, note · read by 2.1, 2.2, 3.4, 3.5, 6.1</span></li>
+        <li>decidedBy = request ⇒ kind = document_kind and seen is empty</li></ul></div>
     </div>
   </section>
   <hr class="nx-div">
@@ -1584,7 +1611,7 @@ ws/pages/page-&lt;n&gt;.jpg <span class="c">unchanged  → roster for 2.1</span>
           <div class="nx-stack"><span class="nx-lab">roster · roster.py pages</span><span>page-7</span><span class="on">page-12</span><span>page-13</span><span class="more">… page-30</span><span class="x">×N in parallel, one fresh session each</span></div>
           <div class="nx-arrow">→</div>
           <div class="nx-worker">
-            <div class="wh"><b>one worker · page-12 (SITE PLAN)</b><span>its own raster + source.json (document.kind) + addendum.md</span></div>
+            <div class="wh"><b>one worker · page-12 (SITE PLAN)</b><span>its own raster + source.json + addendum.md + 1.3 document.json</span></div>
             <div class="nx-belt"><span>carto tile plan · 3×3 @ 200 DPI</span><span>carto tile remap</span><span>carto crop region · rotation test</span></div>
             <ol class="nx-reads" style="--n:3">
               <li><b>Tile</b><span class="d">unchanged</span></li>
@@ -1898,9 +1925,9 @@ ws/crops/p12-r2-t1-overlay.json <span class="c">transform {op: outline, args: [t
       </div>
       <div class="ba-col"><div class="ba-h">after</div>
         <div class="nx-judge">
-          <div class="nx-card"><span class="nx-lab">reads</span><ul class="nx-list"><li><code>assemble.log</code>, <code>solve.log</code><span class="d">+ the per-figure sheet line</span></li><li>placed artifact.json, placement.json</li><li>merge.md, anomalies, inventory, survey, addendum</li><li><span class="nx-soft">NEW</span> source.json · document; 3.4 traces; 3.5 confirm.json</li></ul></div>
+          <div class="nx-card"><span class="nx-lab">reads</span><ul class="nx-list"><li><code>assemble.log</code>, <code>solve.log</code><span class="d">+ the per-figure sheet line</span></li><li>placed artifact.json, placement.json</li><li>merge.md, anomalies, inventory, survey, addendum</li><li><span class="nx-soft">NEW</span> 1.3 document.json; 3.4 traces; 3.5 confirm.json</li></ul></div>
           <div class="nx-arrow">→</div>
-          <div class="nx-card mid"><span class="nx-lab">formats</span><ul class="nx-list"><li><b>Coordinates warning first</b></li><li><b>Headline</b><span class="d"><span class="nx-soft">NEW</span> the document's kind and how it was decided</span></li><li><b>1 Figures · 2 Verbatim diffs · 3 Coverage</b></li><li><b>4 Gaps · 5 Placement · 6 Evidence and spend</b></li><li><b>7 Traced figures</b> <span class="nx-soft">NEW</span><span class="d">sheet read; scale solved vs printed; residuals vs the gate; area vs stated; a failed gate; sheets traced and not read</span></li><li><b>The ruling</b></li></ul></div>
+          <div class="nx-card mid"><span class="nx-lab">formats</span><ul class="nx-list"><li><b>Coordinates warning first</b></li><li><b>Headline</b><span class="d"><span class="nx-soft">NEW</span> the document's kind, what page 1 showed, and how it was decided</span></li><li><b>1 Figures · 2 Verbatim diffs · 3 Coverage</b></li><li><b>4 Gaps · 5 Placement · 6 Evidence and spend</b></li><li><b>7 Traced figures</b> <span class="nx-soft">NEW</span><span class="d">sheet read; scale solved vs printed; residuals vs the gate; area vs stated; a failed gate; sheets traced and not read</span></li><li><b>The ruling</b></li></ul></div>
           <div class="nx-arrow">→</div>
           <div class="nx-card"><span class="nx-lab">writes</span><ul class="nx-list"><li><code>readout.md</code></li><li>every figure id appears, traced ones included; names the three rulings</li></ul></div>
         </div>

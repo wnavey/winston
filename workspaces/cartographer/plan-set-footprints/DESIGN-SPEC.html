@@ -1147,7 +1147,7 @@ table.nx-rules td.o{color:var(--ink2);font-size:12.5px;white-space:nowrap}
 
 </style>
 </head>
-<body class="reader" data-back="architecture.html" data-spec-sha="27042929b0462f60">
+<body class="reader" data-back="architecture.html" data-spec-sha="fd33dd49bc339454">
 
 <header class="masthead">
   <div class="kicker">SPEC · READER</div>
@@ -1164,8 +1164,10 @@ table.nx-rules td.o{color:var(--ink2);font-size:12.5px;white-space:nowrap}
 <script type="text/markdown" id="spec-md">
 # Building footprints from plan sets — the first proposed feature through extract-geometry-v2 and anchor-geometry
 
-**Status:** Draft v1
+**Status:** Draft v1.1
 **Date:** 2026-10-16
+
+> **Revision note (v1.1, 2026-10-16).** D1 reworked on Will's direction: the document is classified by **looking at page 1** (an agent read of the cover sheet, with the sheet size as a recorded signal), not by a page-count rule. The car-wash plat is itself a 24 × 36 in sheet behind a letter-size recording cover, so neither page count nor sheet size can decide on their own. Classification moves from `1.2-fetch` (script) to a new single-agent step **`1.3-classify`**; D2, C2, §3.1, S4 and P2 updated to match. Nothing else changes.
 **Repos touched:** `bureau` (`extract-geometry-v2` steps 1.2, 2.1, 2.2, two new steps 3.4 and 3.5, 4.2, 6.1 and their contracts; `anchor-geometry` steps 2.1, 3.2, 3.3, 5.1), `cartographer` (new `src/lib/geometry/sheet.ts` and `src/lib/features/registry.ts`; new `runbooks/extract-geometry/scripts/trace.ts`; `crop.ts`, `assemble.ts`, `place.ts`, `publish.ts`, `lib/evidence.ts`; `runbooks/anchor-geometry/scripts/{render,publish}.ts`; `/anchored`, `/anchor/[id]`, `/geometry/[id]` colour by posture), `substation` (one migration on `cartographer_geometries`, `cartographer_geometry_evidence` and `geo`; `sir_put_anchored_geo`)
 **Repos NOT touched:** `cityhall`, `conductor2`, `surveyor`, `prospector`, `claude-plugins`, `navalbase`, `quarry`
 **Prod:** Supabase **Noetic App** (`mgxqsrjutswbciyrltwd`)
@@ -1259,7 +1261,7 @@ Every number above is reproducible from the PDF and the plat courses. None of it
 | | Where | What stops it |
 |---|---|---|
 | **C1** | `bureau/runbooks/extract-geometry-v2/steps/2.1-survey/steps/page/prompt.md`, the kinds table; `scripts/plan.py` `GEOMETRY_KINDS` | The survey's vocabulary is a plat's: `metes_and_bounds`, `line_table`, `curve_table`, `coordinate_table`, `drawing_labels`, `plat_notes`, `none`. A building outline is `none`. `plan.py` drops any other kind from the roster. |
-| **C2** | `steps/1.2-fetch/scripts/fetch.py`, `source.json` | Nothing says what kind of document this is. The run treats a 30-sheet plan set as a 30-page plat and the readout cannot say otherwise. |
+| **C2** | `steps/1.2-fetch/scripts/fetch.py`, `source.json`; `steps/2.1-survey/steps/page/prompt.md` | Nothing says what kind of document this is. The run treats a 30-sheet plan set as a 30-page plat and the readout cannot say otherwise. The survey does look at every page, but each worker sees one page and cannot tell the others what the cover sheet said. |
 | **C3** | `cartographer/runbooks/extract-geometry/scripts/lib/evidence.ts:258` `courses: z.array(courseSchema).min(2)`; `steps/4.1-merge/contract.test.ts` `courses: z.array(Course).min(2)`; `assemble.ts` walks every figure as a traverse | A figure **is** a list of courses. A traced polygon has no courses, no POB and no misclosure. |
 | **C4** | `substation/supabase/migrations/20260918170000_cartographer_geometries.sql` `mete jsonb NOT NULL`; `20260921000000` `placement_method CHECK (reference \| shared_line \| tie \| coordinates \| unplaced)`; `cartographer/src/lib/geometry/placement.ts:37` | The stored figure is mete-only, and placement has no method for "registered to the lot drawn on the same sheet". |
 | **C5** | `20260925132000_cartographer_extraction_anchor_metadata.sql`, the `role` and `source_kind` CHECK lists; `steps/3.1-transcribe/.../contract.test.ts` "every reading cites a crop" | Evidence roles are course / tie / pob / … / scale_factor; source kinds are regions, table rows, labels, notes. A vector trace is none of them, and it has a page box but no crop until one is drawn. |
@@ -1278,28 +1280,25 @@ In: one feature (the proposed building footprint), one geometry type (polygon), 
 
 ### 2.1 Classifying the document
 
-**D1. `1.2-fetch` classifies the document, zero tokens, from signals it already has in hand.** `source.json` gains a `document` block:
+**D1. The document is classified by looking at page 1, in a new single-agent step `1.3-classify`, with the sheet size as a recorded signal and no page-count rule.** A plan set announces itself on its cover sheet: a project title (*SITE PLAN FOR …*), a sheet index, an engineer's title block, a vicinity map. A recorded plat announces itself too: a county clerk's cover or recording stamp, a plat title, a surveyor's certificate, a legal description. Neither page count nor sheet size can decide on their own — the car-wash plat (`2024178771`) is a letter-size recording cover followed by one **24 × 36 in** sheet, and White Water is thirty 36 × 24 in sheets — but a reader looking at page 1 can, in one glance, and that is what this step does.
+
+`1.2-fetch` keeps writing what it can measure (zero tokens) into `source.json`: per page the size in inches, whether it is vector, its word count; per document the creator, the OCG count, and whether page 1 is sheet-sized. `1.3-classify` (runner `vision`, medium effort, one session) reads page 1's raster — and, when page 1 is not sheet-sized (a letter cover, a transmittal), the first page that is — alongside those signals, and writes `document.json`:
 
 ```jsonc
-"document": {
+{
   "kind": "plan_set",                      // plat | plan_set | unknown
-  "signals": {
-    "creator": "Autodesk Civil 3D 2021 - English 2021 (24.0s (LMS Tech))",
-    "producer": "pdfplot16.hdi 16.00.047.00000",
-    "pageCount": 30,
-    "sheetPt": [2592, 1728],
-    "ocgCount": 803,
-    "vectorPages": 30,                    // nativePpi null
-    "medianWordsPerPage": 142,
-    "page1": { "sheetIndex": true, "platWords": false }   // "SHEET INDEX" / "SITE PLAN FOR"  vs  "PLAT" / "SUBDIVISION" / "COUNTY CLERK" / "RECORDED"
-  },
-  "decidedBy": "signals"                   // signals | request
+  "decidedBy": "page1",                    // page1 | request
+  "inspectedPages": [1],                   // page 1, plus the first sheet-sized page when page 1 is not one
+  "sheetIn": [36, 24],                     // the dominant page size, inches
+  "seen": ["SITE PLAN FOR WHITEWATER EXPRESS CAR WASH", "SHEET INDEX, 30 entries", "engineer's title block, TX PE firm F-17756", "vicinity map"],
+  "signals": { "creator": "Autodesk Civil 3D 2021 …", "pageCount": 30, "ocgCount": 803, "vectorPages": 30, "page1SheetSized": true },
+  "note": "a civil site plan set; the recorded plat is reproduced as sheet 2"
 }
 ```
 
-The rule is deliberately dumb and recorded: `plan_set` when the page count is ≥ 4 **and** the sheet is ≥ 22 × 34 in **and** page 1 carries sheet-index words; `plat` when the page count is ≤ 4 **or** page 1 carries plat words and no sheet-index words; `unknown` otherwise. The signals are written whatever the verdict, so the readout and a future rule can see what the classifier saw. `request.document_kind` (new, optional, `plat | plan_set`) overrides it and is recorded as `decidedBy: "request"`.
+The reader reports what it saw, in the sheet's own words, and the kind it concludes; `unknown` is the honest answer for a scan with no cover sheet or a document that is neither (an easement exhibit, a title commitment), and it is a normal outcome, not a failure. `request.document_kind` (new on 1.1, optional, `plat | plan_set`) overrides it, recorded as `decidedBy: "request"`, and the step then writes `document.json` without reading anything. Typical sheet sizes are around 24 × 36 in for both plats and plan sets, so `sheetIn` is recorded as a signal for the readout and for a future rule, never as the deciding fact.
 
-**D2. The classification switches a vocabulary on; it does not fork the runbook.** On `plat` every step runs exactly as today and the output is byte-identical (S4a). On `plan_set` or `unknown` the survey prompt gains §2.2's plan-sheet section, `plan.py` keeps the new region kinds on the roster, and steps 3.4 and 3.5 have something to do. One graph, one set of contracts, one readout. The vocabulary costs nothing on a page that has no such regions, which is why `unknown` turns it on rather than off.
+**D2. The classification switches a vocabulary on; it does not fork the runbook.** On `plat` every step runs exactly as today and the output is byte-identical (S4a). On `plan_set` or `unknown` the survey prompt gains §2.2's plan-sheet section, `plan.py` keeps the new region kinds on the roster, and steps 3.4 and 3.5 have something to do. One graph, one set of contracts, one readout. The vocabulary costs nothing on a page that has no such regions, which is why `unknown` turns it on rather than off. The survey's page workers read `1.3-classify/document.json` the way they read the addendum today: one fact every reader shares before any page is looked at.
 
 ### 2.2 The survey learns to see a sheet
 
@@ -1481,8 +1480,9 @@ None of these change D1–D16. Trees and curbs change the geometry column; drive
 ```diff
  extract-geometry-v2
    1.1-inputs                 request.json              + document_kind? (D1)
-   1.2-fetch                  source.json               + document {kind, signals, decidedBy} (D1)
-   2.1-survey/page            survey.json               + sheet {role,title,printedScale,northArrow}; + region kind `feature` (D3)
+   1.2-fetch                  source.json               + per-page size in inches, word count; creator, ocgCount, page1SheetSized (D1 signals)
++  1.3-classify               document.json             one agent looks at page 1 (and the first sheet-sized page): plat | plan_set | unknown (D1)
+   2.1-survey/page            survey.json               reads document.json; + sheet {role,title,printedScale,northArrow}; + region kind `feature` (D3)
    2.2-plan                   regions.json              keeps `feature` regions on the roster, renders their crops (D3)
    3.1-transcribe/region      transcript.json           unchanged
    3.2-inventory              figures.json, calls.json  unchanged
@@ -1577,7 +1577,7 @@ The roster for 3.4 is every `feature` region in every `survey.json` plus one `bo
 - **Runs:** `bun test`, CI.
 
 **S4: the `extract-geometry-v2` runbook, inputs → outputs** (existing)
-- **Proves:** D1–D6 end to end, in two runs. **(a) Regression:** the car-wash plat `2024178771` with the request as today → `document.kind: plat`, empty 3.4 and 3.5 rosters, and a `raw-artifact.json` / `artifact.json` identical to run5's (`~/noetic/working/extract-geometry-v2/car-wash-2024178771-run5`). **(b) White Water:** `document.kind: plan_set` by signals; the survey marks `feature: building` on sheets 12, 13 and 14 and `sheet.role: plan_view` with `title: SITE PLAN` on 12; 3.5 runs on sheet 12 only; the readout carries the traced-figures section and names the sheets not read; 7.1 publishes **two** figures.
+- **Proves:** D1–D6 end to end, in two runs. **(a) Regression:** the car-wash plat `2024178771` with the request as today → `1.3-classify` reads the clerk's cover and the 24 × 36 plat behind it and says `plat` (`inspectedPages: [1, 2]`), empty 3.4 and 3.5 rosters, and a `raw-artifact.json` / `artifact.json` identical to run5's (`~/noetic/working/extract-geometry-v2/car-wash-2024178771-run5`). **(b) White Water:** `document.kind: plan_set` from the cover sheet (`decidedBy: page1`, `sheetIn: [36, 24]`); the survey marks `feature: building` on sheets 12, 13 and 14 and `sheet.role: plan_view` with `title: SITE PLAN` on 12; 3.5 runs on sheet 12 only; the readout carries the traced-figures section and names the sheets not read; 7.1 publishes **two** figures. A third request with `document_kind: plat` on White Water → `decidedBy: request`, nothing read, one figure.
 - **Prior art:** the step contracts themselves; the sibling spec's S1.
 - **Runs:** locally with `conductor`, against the two files; (b) is §6 step 1.
 
@@ -1611,7 +1611,7 @@ The roster for 3.4 is every `feature` region in every `survey.json` plus one `bo
 
 **P2: the extract runbook learns plan sets** — `bureau`
 - **Blocked by:** P1.
-- **Delivers:** D1–D6 and D8's readout: `document_kind` on the request, the `document` block, the survey's plan-sheet section, `plan.py` and `roster.py` for `feature` regions, steps 3.4 and 3.5 with their contracts, `assemble.py`'s append, the readout section. After it merges, §6 step 1 runs.
+- **Delivers:** D1–D6 and D8's readout: `document_kind` on the request, 1.2's size and OCG signals, the new `1.3-classify` step and its contract, the survey's plan-sheet section, `plan.py` and `roster.py` for `feature` regions, steps 3.4 and 3.5 with their contracts, `assemble.py`'s append, the readout section. After it merges, §6 step 1 runs.
 - **Tested at:** S4 (a) and (b).
 - **Door:** two-way for the runbook; **one-way for prod data** once §6 step 1 publishes, since publish replaces the file's figures and marks anchor `f290425a` stale (D12). The rollback is the anchoring spec's: the stale anchor's `geo` rows stay, flagged, until a new anchor replaces them; nothing is deleted.
 - **Blast radius:** every `extract-geometry-v2` run; S4 (a) is the guard that a plat run is unchanged.
@@ -1631,7 +1631,7 @@ Deploy order: **P0 → P3 and P1 in either order → P2 → §6.**
 
 On `cc2e3a53` as it stands (§1.2), after P0–P3:
 
-1. **Extract.** `extract-geometry-v2` with `{file: cc2e3a53…, run_slug: whitewater-cc2e3a53-v2-run2}`, no `document_kind`. Expect `document.kind: plan_set` by signals; `feature: building` regions on sheets 12, 13, 14; 3.5 on sheet 12 choosing the `C-BLDG` candidate; `assemble.log` printing `1"=20.000'`, θ ≈ −15.46°, residuals ≤ 0.01 / 0.02 ft, area 2,856 vs stated 2,856, printed scale **agrees**; the readout's traced section; a `publish` ruling → two figures (`LOT 1` mete/recorded, `CAR WASH` traced/proposed), anchor `f290425a` marked **stale**, its two `geo` rows flagged.
+1. **Extract.** `extract-geometry-v2` with `{file: cc2e3a53…, run_slug: whitewater-cc2e3a53-v2-run2}`, no `document_kind`. Expect `1.3-classify` to read the cover sheet and say `plan_set` (`decidedBy: page1`, `sheetIn: [36, 24]`, the sheet index among `seen`); `feature: building` regions on sheets 12, 13, 14; 3.5 on sheet 12 choosing the `C-BLDG` candidate; `assemble.log` printing `1"=20.000'`, θ ≈ −15.46°, residuals ≤ 0.01 / 0.02 ft, area 2,856 vs stated 2,856, printed scale **agrees**; the readout's traced section; a `publish` ruling → two figures (`LOT 1` mete/recorded, `CAR WASH` traced/proposed), anchor `f290425a` marked **stale**, its two `geo` rows flagged.
 2. **Anchor.** `anchor-geometry` with `{file, anchor_run_slug: whitewater-cc2e3a53-anchor-2}`. Expect the loose-file path to find the same TCAD ring and reuse the existing `county_api` row (sibling D11 — **one** county row, not two); `LOT 1` `same_as`, `CAR WASH` `within`; `ring_fit` / `gis_fit` with metrics matching anchor 1 to three decimals (the lot did not change); the overlay with the building dashed inside the lot; accept → **three** `geo` rows under the new `anchor_id`, `posture` `recorded` / `proposed` / `null`.
 3. **Measure.** D16's query returns `building_sqft` 2,856.0 ± 0.5, `inside_lot` true, and the five per-line distances within 0.05 ft of §1.4 (9.97 / 53.76 / 71.59 / 92.32 / 151.00). The 9.97 ft figure is handed to a human with the setback dashes' 29.5 ft beside it; what it means is a review question, not this spec's.
 4. **Regression.** S4 (a) on the car-wash plat, and the sibling spec's S1 on the car-wash anchor, both unchanged.
@@ -1642,7 +1642,7 @@ Two deliberate negatives: the same file with `document_kind: plat` in the reques
 
 ## 7. Open questions
 
-**Q1.** Is `request.document_kind` the right override, or should the operator's `scope_note` carry it as prose the way it carries everything else? A typed field is what D1 records; a note is what every other step reads. Proposed: the field, and the note may say why.
+**Q1.** Is `request.document_kind` the right override, or should the operator's `scope_note` carry it as prose the way it carries everything else? A typed field is what D1 records; a note is what every other step reads. Proposed: the field, and the note may say why. A second half, after v1.1: should `1.3-classify` look past the first sheet-sized page when that page is itself ambiguous (a plat reproduced as sheet 2 of a plan set, as on White Water), or is one glance the rule? Proposed: one glance; the survey corrects per page anyway.
 
 **Q2.** Should `registerSheet` be its own function (D7, Procrustes on an exact correspondence) or `anchor.ts`'s `fitToRing` with scale freed — the sibling spec notes `freeScale` is already computed and never applied (§6.2)? Proposed: its own function. A ring fit scores overlap of two shapes that are only approximately the same; this is the same shape twice, and the right tool is point-to-outline least squares. Reuse the metrics vocabulary (`meanDistFt`, `hausdorffFt`) so the readout reads the same.
 
