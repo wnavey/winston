@@ -1,7 +1,11 @@
 # Intake checklist DB schema and the bureau sync
 
-**Status:** Draft v2.1
+**Status:** Draft v2.2
 **Date:** 2026-10-16
+> **Revision note v2.2 (2026-10-16): the tables audited for simplicity, and a first step.** `AUDIT-2026-10-16-tables.md` audits D6's eleven tables; Will accepted its findings. In short: `intake_items`, `intake_groups`, `intake_checklist_figures` and `intake_checklist_version_commits` go; `intake_checklist_citations` and `jurisdiction_intake` wait for a reader; figures become one unversioned table, `intake_figures`, whose rows are the manifest. Five tables at the north star. D6 is rewritten to that set in v3; this revision records the acceptance and adds a **Step 1** tab to `architecture.html` with the figure table.
+> - **Step 1 is reference images, DB-first:** the figure rows and bytes live in the App DB and Storage, and bureau holds no figure manifest. That revises D17 (no `figures.yaml`, no `next_figure`, no lint rule 7) and is specified in the sibling spec `workspaces/intake/checklist-figures/DESIGN-SPEC.md`, which carries the runbook, bucket, vision CLI and cityhall changes.
+> - **Q7 is closed:** cityhall already has five `workflow_run: select <bucket>` Storage policies (`objects.sql:187` for `crc-guides`), and CRC's figure fetch downloads with the run token. The `intake-figures` read is one more policy of that shape.
+>
 > **Revision note v2.1 (2026-10-16, Will):** two decisions.
 > - **Jurisdiction codes (new D20):** every jurisdiction gets a permanent code, `{ABBR}_{ST}` (Austin `AUS_TX`, El Paso `EP_TX`), declared in `conventions.yaml` and synced to a new `jurisdictions.code` column. Checklist, item, group and figure IDs are built from it: `AUS_TX`, `AUS_TX-0042`, `AUS_TX-G01`, `AUS_TX-F0001`. The baseline is `GENERIC`. D1, D3, D4, D6, D15 and D17 change to match. The checklist-to-jurisdiction rule becomes a composite FK to `jurisdictions(slug, code)`.
 > - **Figures get their own counter (D17):** `{checklist}-F{NNNN}` from a `next_figure` high-water mark. Several items can share one figure, and `items` lists them. A new identity table, `intake_figures`, makes eleven tables (D6).

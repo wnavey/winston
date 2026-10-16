@@ -1154,7 +1154,7 @@ table.nx-rules td.o{color:var(--ink2);font-size:12.5px;white-space:nowrap}
   <div class="kicker">Intake · DB schema</div>
   <h1>Intake checklist DB schema and the bureau sync</h1>
   <p>Bureau stays the source of truth for intake checklists. Every version carries a semver, and items, groups and figures get permanent IDs built from the jurisdiction's code (<code>AUS_TX-0042</code>). Reference images are stored by hash. A merge to main copies it all into a read replica in the App DB.</p>
-  <div class="meta"><span class="status">Draft v2.1</span><span>16 Oct 2026</span><span>Parent: intake north star, I1</span><span>Source of truth: <code>DESIGN-SPEC.md</code></span></div>
+  <div class="meta"><span class="status">Draft v2.2</span><span>16 Oct 2026</span><span>Parent: intake north star, I1</span><span>Source of truth: <code>DESIGN-SPEC.md</code></span></div>
   <a class="spec-link" href="DESIGN-SPEC.html">Read the spec →</a>
 </header>
 
@@ -1164,6 +1164,7 @@ table.nx-rules td.o{color:var(--ink2);font-size:12.5px;white-space:nowrap}
   <button data-tab="tables">The tables</button>
   <button data-tab="sync">The sync</button>
   <button data-tab="run">The CC run</button>
+  <button data-tab="step1">Step 1</button>
   <button data-tab="rollout">Rollout</button>
 </nav>
 
@@ -1713,6 +1714,71 @@ checklistsContentHash = sha256 over the files a run reads,
     </div>
   </section>
 
+  <!-- ============================== STEP 1 ============================== -->
+  <section class="panel" id="step1">
+    <h2>Step 1</h2>
+    <p class="lede">Reference images come first, and they start in the App DB: one table, one bucket and one column, with no figure file in bureau. Will accepted the 2026-10-16 audit's simplifications (<a href="AUDIT-2026-10-16-tables.md"><code>AUDIT-2026-10-16-tables.md</code></a>): eleven tables become five at the north star, and the figure step needs only this one. The feature itself is the sibling spec <a href="../checklist-figures/architecture.html">intake/checklist-figures</a>.</p>
+
+    <h3 class="claim" id="detail-step1">A figure is one row under a permanent id, retired rather than deleted <span class="src">audit §3</span></h3>
+    <div class="sys-legend"><span><i class="box"></i>exists</span><span><i class="box chg"></i>modified</span><span><i class="box new"></i>new</span><span><i class="new"></i>new relationship</span><span>DB type on the right · <span style="font-family:var(--mono);font-size:12px;color:#8a919c">null</span> = nullable</span></div>
+    <div class="erd linked" style="grid-template-columns:repeat(3,minmax(0,1fr))">
+      <div class="ent changed" id="s1-jur" style="grid-area:1/1">
+        <div class="eh"><span class="en">jurisdictions</span><span class="stereo">MODIFIED</span></div>
+        <div class="row"><span class="gut"></span><span class="b b-pk">PK</span><span class="nm">slug</span><span class="dt">text</span><span class="ty">'austin'</span></div>
+        <div class="row add"><span class="gut">+</span><span class="nm">code</span><span class="dt">text<i> null</i></span><span class="ty">'AUS_TX'; UNIQUE; ^[A-Z]{2,8}_[A-Z]{2}$; permanent (D20)</span></div>
+        <div class="note">the only change to an existing table in step 1</div>
+      </div>
+      <div class="ent newt" id="s1-fig" style="grid-area:1/2">
+        <div class="eh"><span class="en">intake_figures</span><span class="stereo">NEW</span></div>
+        <div class="row"><span class="b b-pk">PK</span><span class="nm">id</span><span class="dt">text</span><span class="ty">'AUS_TX-F0001'; max + 1 per jurisdiction at insert; never reused</span></div>
+        <div class="row"><span class="b b-fk">FK</span><span class="nm">jurisdiction_slug</span><span class="dt">text</span><span class="ty">→ jurisdictions(slug)</span></div>
+        <div class="row hi"><span class="nm">item_refs</span><span class="dt">text[]</span><span class="ty">the items that use it: stable ids, or legacy refs until the sidecar lands</span></div>
+        <div class="row"><span class="nm">caption</span><span class="dt">text</span><span class="ty">attached by the vision CLI, never the agent's</span></div>
+        <div class="row"><span class="nm">type</span><span class="dt">text</span><span class="ty">reference-design · site-example · table · redline</span></div>
+        <div class="row"><span class="nm">description</span><span class="dt">text<i> null</i></span><span class="ty">what it shows, and what it does not</span></div>
+        <div class="row"><span class="nm">constraints</span><span class="dt">text<i> null</i></span></div>
+        <div class="row hi"><span class="nm">sha256</span><span class="dt">text</span><span class="ty">^[0-9a-f]{64}$; the object's name</span></div>
+        <div class="row"><span class="nm">storage_path</span><span class="dt">text</span><span class="ty">'AUS_TX/&lt;sha256&gt;.png' in intake-figures</span></div>
+        <div class="row"><span class="nm">media_type</span><span class="dt">text</span><span class="ty">image/png · image/jpeg</span></div>
+        <div class="row"><span class="nm">px_w</span><span class="dt">int</span></div>
+        <div class="row"><span class="nm">px_h</span><span class="dt">int</span></div>
+        <div class="row"><span class="nm">bytes</span><span class="dt">int</span></div>
+        <div class="row"><span class="nm">derived_from</span><span class="dt">jsonb<i> null</i></span><span class="ty">{snapshot, page, bbox}</span></div>
+        <div class="row"><span class="nm">created_at</span><span class="dt">timestamptz</span></div>
+        <div class="row"><span class="nm">created_by</span><span class="dt">text<i> null</i></span><span class="ty">a person, or a run id</span></div>
+        <div class="row hi"><span class="nm">retired_at</span><span class="dt">timestamptz<i> null</i></span><span class="ty">a changed figure is a new row; this one is retired</span></div>
+        <div class="note">RLS: authenticated and workflow_run read; only service_role writes. No next_figure counter: rows are never deleted.</div>
+      </div>
+      <div class="ent exist" id="s1-obj" style="grid-area:1/3">
+        <div class="eh"><span class="en">storage.objects</span><span class="stereo">EXISTS</span></div>
+        <div class="row"><span class="nm">bucket_id</span><span class="dt">text</span><span class="ty">'intake-figures', new and private</span></div>
+        <div class="row"><span class="nm">name</span><span class="dt">text</span><span class="ty">= storage_path; content-addressed, never overwritten</span></div>
+        <div class="note">two read policies in the shape of crc-guides' (authenticated, workflow_run); service_role writes</div>
+      </div>
+      <a class="sys-edge new" data-from="s1-jur" data-to="s1-fig">1 → many</a>
+      <a class="sys-edge new" data-from="s1-fig" data-to="s1-obj">by sha256</a>
+    </div>
+    <p class="claim"><b>Reading:</b> D17's <code>figures.yaml</code>, <code>next_figure</code>, lint rule 7 and the yaml-printing upload CLI all go: the DB row is the manifest, and 1.4-resolve reads it through the run token the way 1.3 reads <code>project_facts</code>. The checklist text stays in bureau (D19); figures are the one bounded exception.</p>
+
+    <h3>Eleven tables become five</h3>
+    <div class="spectable-scroll"><table class="spectable">
+      <thead><tr><th>Spec table (D6)</th><th>Verdict</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td><code>intake_figures</code></td><td><b>keep, as the only figure table, unversioned</b> (step 1)</td><td>immutable by sha256; a per-version split re-copies every row on each PATCH</td></tr>
+        <tr><td><code>intake_checklists</code></td><td>keep (can wait for the baseline)</td><td>the id is the jurisdiction's code until GENERIC exists</td></tr>
+        <tr><td><code>intake_checklist_versions</code></td><td>keep</td><td>the four counts are derivable</td></tr>
+        <tr><td><code>intake_checklist_groups</code></td><td>keep</td><td></td></tr>
+        <tr><td><code>intake_checklist_items</code></td><td>keep; absorbs <code>derived_from</code> and <code>citations jsonb</code></td><td></td></tr>
+        <tr><td><code>intake_items</code>, <code>intake_groups</code></td><td>drop</td><td>identity shells: no column but the key, or columns a view derives</td></tr>
+        <tr><td><code>intake_checklist_figures</code></td><td>drop</td><td>merged into <code>intake_figures</code></td></tr>
+        <tr><td><code>intake_checklist_version_commits</code></td><td>drop</td><td>stamp <code>intakeVersion</code> into the 19 v2.7 reviews once instead</td></tr>
+        <tr><td><code>intake_checklist_citations</code></td><td>defer</td><td>the jurisdiction page reads citations from the bucket today; rows when a cross-item query exists</td></tr>
+        <tr><td><code>jurisdiction_intake</code></td><td>defer</td><td>every checklist jurisdiction is <code>formal</code> until the baseline sub-spec</td></tr>
+      </tbody>
+    </table></div>
+    <p class="claim"><b>Reading:</b> the order is figures (step 1), then the replica (versions, groups, items) on a trigger, then the rest each on its own. D6 is rewritten to this set in v3; this revision adds the step and the audit only.</p>
+  </section>
+
   <!-- ============================== ROLLOUT ============================== -->
   <section class="panel" id="rollout">
     <h2>Rollout</h2>
@@ -1965,7 +2031,7 @@ checklistsContentHash = sha256 over the files a run reads,
 <script>
   const btns=document.querySelectorAll('nav.tabs button');
   const panels=document.querySelectorAll('.panel');
-  const IDS=['overview','files','tables','sync','run','rollout']; /* KEEP IN SYNC with the data-tab / panel ids above */
+  const IDS=['overview','files','tables','sync','run','step1','rollout']; /* KEEP IN SYNC with the data-tab / panel ids above */
   function show(id,opts={}){
     btns.forEach(b=>b.classList.toggle('active',b.dataset.tab===id));
     panels.forEach(p=>p.classList.toggle('active',p.id===id));
