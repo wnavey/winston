@@ -1260,7 +1260,7 @@ table.nx-rules td.o{color:var(--ink2);font-size:12.5px;white-space:nowrap}
   <h3 class="claim">Schema first, then the scripts and the anchor side in either order, then the runbook <span class="src">§5</span></h3>
   <div class="plan" style="--cols:4">
     <div class="plan-h"><span></span><span>P0 · the schema</span><span>P1 · scripts and library</span><span>P3 · the anchor side</span><span>P2 · the extract runbook</span></div>
-    <div class="plan-row"><span class="plan-who">substation</span>
+    <div class="plan-row"><span class="plan-who">cityhall-new</span>
       <div class="plan-cell"><div class="pc key"><span class="pid">P0 · D9 D10 · S5</span><b>Columns, CHECKs, the RPC default</b><span class="pd"><code>reading_method</code>, <code>trace</code>, <code>posture</code>; <code>mete</code> nullable; three CHECK lists widened; <code>geo.posture</code></span><span class="pa">waits on nothing; nothing writes the columns yet</span></div></div>
       <div class="plan-cell"></div><div class="plan-cell"></div><div class="plan-cell"></div>
     </div>
@@ -2142,7 +2142,7 @@ where b.posture = 'proposed' and l.kind = 'parcel' and l.method = 'anchored';
       <tr><td><span class="sn">S2</span> <code>registerSheet()</code> · new</td><td>D7, D8 — the fit and its gate</td><td>the lot + 95 dashes → 20.00 ± 0.1 ft/in, θ −15.46° ± 0.05°, mean ≤ 0.01 ft; rotated 90° → same; a 30 ft/in synthetic → 30; the wrong lot → gate fails</td><td>bun test, CI</td></tr>
       <tr><td><span class="sn">S3</span> the extract scripts on a run dir · existing, extended</td><td>D9, D11, D12, D13</td><td>one mete + one traced figure through assemble → place → publish --dry-run; the union refuses the two illegal shapes</td><td>bun test, CI</td></tr>
       <tr><td><span class="sn">S4</span> the extract runbook · existing</td><td>D1–D6 end to end</td><td>(a) the car-wash plat: kind plat, empty rosters, raw-artifact identical to run5; (b) White Water: kind plan_set, 3.5 on sheet 12, two figures</td><td>locally, conductor</td></tr>
-      <tr><td><span class="sn">S5</span> the RPC and migration · existing suite</td><td>D9, D10</td><td>the completeness CHECK refuses both illegal rows; posture defaults to recorded; the CHECK lists accept the new values and refuse others</td><td>substation integration, local Supabase</td></tr>
+      <tr><td><span class="sn">S5</span> the RPC and migration · existing suite</td><td>D9, D10</td><td>the completeness CHECK refuses both illegal rows; posture defaults to recorded; the CHECK lists accept the new values and refuse others</td><td>cityhall-new tests/db, local stack</td></tr>
       <tr><td><span class="sn">S6</span> the anchor runbook · existing</td><td>D14–D16</td><td>White Water re-anchored: LOT 1 same_as, CAR WASH within; three geo rows under one anchor_id; the D16 query within 0.05 ft of §1.4</td><td>locally, conductor</td></tr>
     </tbody>
   </table></div>

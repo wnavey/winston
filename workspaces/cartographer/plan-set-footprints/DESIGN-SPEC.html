@@ -1147,7 +1147,7 @@ table.nx-rules td.o{color:var(--ink2);font-size:12.5px;white-space:nowrap}
 
 </style>
 </head>
-<body class="reader" data-back="architecture.html" data-spec-sha="74f101de87f3c319">
+<body class="reader" data-back="architecture.html" data-spec-sha="969402ae87c54528">
 
 <header class="masthead">
   <div class="kicker">SPEC · READER</div>
@@ -1166,8 +1166,8 @@ table.nx-rules td.o{color:var(--ink2);font-size:12.5px;white-space:nowrap}
 
 **Status:** Draft v1
 **Date:** 2026-10-16
-**Repos touched:** `bureau` (`extract-geometry-v2` steps 1.1, 1.2, 2.1, 2.2, three new steps 1.3, 3.4 and 3.5, 4.2, 6.1 and their contracts; `anchor-geometry` steps 2.1, 3.2, 3.3, 5.1), `cartographer` (new `src/lib/geometry/sheet.ts` and `src/lib/features/registry.ts`; new `runbooks/extract-geometry/scripts/trace.ts` and `contour.ts`; `crop.ts`, `assemble.ts`, `place.ts`, `publish.ts`, `lib/evidence.ts`; `runbooks/anchor-geometry/scripts/{render,publish}.ts`; `/anchored`, `/anchor/[id]`, `/geometry/[id]` colour by posture), `substation` (one migration on `cartographer_geometries`, `cartographer_geometry_evidence` and `geo`; `sir_put_anchored_geo`)
-**Repos NOT touched:** `cityhall`, `conductor2`, `surveyor`, `prospector`, `claude-plugins`, `navalbase`, `quarry`
+**Repos touched:** `bureau` (`extract-geometry-v2` steps 1.1, 1.2, 2.1, 2.2, three new steps 1.3, 3.4 and 3.5, 4.2, 6.1 and their contracts; `anchor-geometry` steps 2.1, 3.2, 3.3, 5.1), `cartographer` (new `src/lib/geometry/sheet.ts` and `src/lib/features/registry.ts`; new `runbooks/extract-geometry/scripts/trace.ts` and `contour.ts`; `crop.ts`, `assemble.ts`, `place.ts`, `publish.ts`, `lib/evidence.ts`; `runbooks/anchor-geometry/scripts/{render,publish}.ts`; `/anchored`, `/anchor/[id]`, `/geometry/[id]` colour by posture), `cityhall-new` (the schema: one declarative change to `supabase/schemas/public/tables/{cartographer_geometries,cartographer_geometry_evidence,geo}.sql` and `functions/sir_put_anchored_geo.sql`, with the migration `supabase db schema declarative sync` writes from it)
+**Repos NOT touched:** `substation` (retired 2026-09-29; its schema and migrations now live in `cityhall-new/supabase/`), `cityhall` (the old app), `conductor2`, `surveyor`, `prospector`, `claude-plugins`, `navalbase`, `quarry`
 **Prod:** Supabase **Noetic App** (`mgxqsrjutswbciyrltwd`)
 **Parent:** [`../north-star/NORTH-STAR-SPEC.md`](../north-star/NORTH-STAR-SPEC.md) (winston#303) — this is the first slice of **P5 (plan sets)**, peeled off for one feature.
 **Sibling:** [`../sir-free-anchoring/DESIGN-SPEC.md`](../sir-free-anchoring/DESIGN-SPEC.md) (winston#309, shipped) — the decoupled anchor run this spec hangs the footprint on. Its §6 names eight seams a plan-set reader must not foreclose; §8 below says which this spec opens and which it leaves shut.
@@ -1261,9 +1261,9 @@ Every number above is reproducible from the PDF and the plat courses. None of it
 | **C1** | `bureau/runbooks/extract-geometry-v2/steps/2.1-survey/steps/page/prompt.md`, the kinds table; `scripts/plan.py` `GEOMETRY_KINDS` | The survey's vocabulary is a plat's: `metes_and_bounds`, `line_table`, `curve_table`, `coordinate_table`, `drawing_labels`, `plat_notes`, `none`. A building outline is `none`. `plan.py` drops any other kind from the roster. |
 | **C2** | `scripts/fetch.py` (the 1.2-fetch script), `source.json`; `steps/2.1-survey/steps/page/prompt.md` | Nothing says what kind of document this is. The run treats a 30-sheet plan set as a 30-page plat and the readout cannot say otherwise. The survey does look at every page, but each worker sees one page and cannot tell the others what the cover sheet said. |
 | **C3** | `cartographer/runbooks/extract-geometry/scripts/lib/evidence.ts:258` `courses: z.array(courseSchema).min(2)`; `steps/4.1-merge/contract.test.ts` `courses: z.array(Course).min(2)`; `assemble.ts` walks every figure as a traverse | A figure **is** a list of courses. A traced polygon has no courses, no POB and no misclosure. |
-| **C4** | `substation/supabase/migrations/20260918170000_cartographer_geometries.sql` `mete jsonb NOT NULL`; `20260921000000` `placement_method CHECK (reference \| shared_line \| tie \| coordinates \| unplaced)`; `cartographer/src/lib/geometry/placement.ts:37` | The stored figure is mete-only, and placement has no method for "registered to the lot drawn on the same sheet". |
-| **C5** | `20260925132000_cartographer_extraction_anchor_metadata.sql`, the `role` and `source_kind` CHECK lists; `steps/3.1-transcribe/.../contract.test.ts` "every reading cites a crop" | Evidence roles are course / tie / pob / … / scale_factor; source kinds are regions, table rows, labels, notes. A vector trace is none of them, and it has a page box but no crop until one is drawn. |
-| **C6** | north star §9.3, sir-free §6.7; `geo` has no posture column; `sir_put_anchored_geo` (`geo_helpers.sql:350-379`) writes `kind`, `label`, `method` | Nothing distinguishes *recorded* (a lot) from *proposed* (a building). §1.3 of the north star measures between the two; conflating them "would be a quiet correctness bug". |
+| **C4** | `cityhall-new/supabase/schemas/public/tables/cartographer_geometries.sql` `mete jsonb NOT NULL` (migration `20260918170000`); `20260921000000` `placement_method CHECK (reference \| shared_line \| tie \| coordinates \| unplaced)`; `cartographer/src/lib/geometry/placement.ts:37` | The stored figure is mete-only, and placement has no method for "registered to the lot drawn on the same sheet". |
+| **C5** | `cityhall-new/supabase/schemas/public/tables/cartographer_geometry_evidence.sql`, the `role` and `source_kind` CHECK lists (migration `20260925132000`); `steps/3.1-transcribe/.../contract.test.ts` "every reading cites a crop" | Evidence roles are course / tie / pob / … / scale_factor; source kinds are regions, table rows, labels, notes. A vector trace is none of them, and it has a page box but no crop until one is drawn. |
+| **C6** | north star §9.3, sir-free §6.7; `geo` has no posture column; `sir_put_anchored_geo` (`cityhall-new/supabase/schemas/public/functions/sir_put_anchored_geo.sql`; substation's `geo_helpers.sql:350-379` is the retired copy) writes `kind`, `label`, `method` | Nothing distinguishes *recorded* (a lot) from *proposed* (a building). §1.3 of the north star measures between the two; conflating them "would be a quiet correctness bug". |
 | **C7** | `cartographer/src/lib/geometry/anchor.ts` fixes scale at 1 or the stated factor; `DistanceUnits = ft \| ftUS \| varas \| m` | Page points are not a unit the anchor knows, and the sheet-to-frame transform has a scale to solve. (sir-free §6.2, §6.3.) |
 
 What is **not** a coupling, and this spec leans on: `frames.ts` `ringInFrame` and `toInputFigure` read `polygon + offset` and nothing else about how the polygon came to be; `anchor.ts:181-182` returns *every* figure of the frame in grid coordinates, `within` and unmatched ones included; `sir_put_anchored_geo` takes any (Multi)Polygon with a free-text `kind`; the `2.1-correspond` contract already has a `within` relation that "anchors nothing by itself". A traced polygon in frame-1 anchors with **zero changes to the solver, the fetch, or the correspond contract**.
@@ -1479,7 +1479,7 @@ None of these change D1–D16. Trees and curbs change the geometry column; drive
 
 ### 2.9 Hand-off from preprocessing: read the original, not the split sheet
 
-**D19. When the extract runbook is wired in after preprocessing, its fetch reads the upload's `source.pdf`, never the per-sheet PDFs.** Measured 2026-10-16 on the White Water project (`plan_set_version 6b4c9887`, bucket `submission-data/7a697ef1…/plan-set/v1/`): substation's `process-file` pipeline rewrites the upload through Ghostscript 9.56.1 `pdfwrite` twice — once to downsample images (`optimized.pdf`), once per page to split (`sheets/<n>.pdf`, the file `preprocessing-v4`'s `1.2-stage` downloads as `sheet_version.storage_path`). The vector geometry survives both passes untouched; the layer names do not:
+**D19. When the extract runbook is wired in after preprocessing, its fetch reads the upload's `source.pdf`, never the per-sheet PDFs.** Measured 2026-10-16 on the White Water project (`plan_set_version 6b4c9887`, bucket `submission-data/7a697ef1…/plan-set/v1/`): cityhall-new's `process-file` pipeline (the substation code, ported) rewrites the upload through Ghostscript 9.56.1 `pdfwrite` twice — once to downsample images (`optimized.pdf`), once per page to split (`sheets/<n>.pdf`, the file `preprocessing-v4`'s `1.2-stage` downloads as `sheet_version.storage_path`). The vector geometry survives both passes untouched; the layer names do not:
 
 | file | OCGs (layers) | vector paths, sheet 12 | path items | text words |
 |---|---|---|---|---|
@@ -1487,7 +1487,7 @@ None of these change D1–D16. Trees and curbs change the geometry column; drive
 | `optimized.pdf` | 0 | 16,479 | 61,514 | 142 |
 | `sheets/12.pdf` | 0 | 16,479 | 61,512 | 142 |
 
-The building ring chains identically in all three, so D4's geometry is safe; D4's **first rung** (rank by layer name) is not, because every `sheets/<n>.pdf` is layer-less. `plan_set_version.source_storage_path` keeps the original, so the fix is one path in the fetch. A second, untested lever is Ghostscript's `-dPreserveMarkedContent` on the optimize step (`substation/src/inngest/lib/sandbox/processing-args.ts` does not set it); whether 9.56.1 keeps the OCG dictionary with it is a thing to try, not a fact. Either way: **never count on layers in a split sheet.** This is a note for posterity as much as a decision; the wiring itself is north star P5 work after this slice.
+The building ring chains identically in all three, so D4's geometry is safe; D4's **first rung** (rank by layer name) is not, because every `sheets/<n>.pdf` is layer-less. `plan_set_version.source_storage_path` keeps the original, so the fix is one path in the fetch. A second, untested lever is Ghostscript's `-dPreserveMarkedContent` on the optimize step (`cityhall-new/src/inngest/lib/sandbox/processing-args.ts` does not set it); whether 9.56.1 keeps the OCG dictionary with it is a thing to try, not a fact. Either way: **never count on layers in a split sheet.** This is a note for posterity as much as a decision; the wiring itself is north star P5 work after this slice.
 
 ---
 
@@ -1546,7 +1546,7 @@ The roster for 3.4 is every `feature` region in every `survey.json` plus one `bo
      └── geometry/[id]/                  a traced figure shows its trace row's box + overlay crop; no courses table (D13)
 ```
 
-### 3.3 Substation
+### 3.3 cityhall-new (the schema)
 
 ```diff
  cartographer_geometries
@@ -1604,8 +1604,8 @@ The roster for 3.4 is every `feature` region in every `survey.json` plus one `bo
 
 **S5: the RPC and the migration, against a local Supabase** (existing suite)
 - **Proves:** D9, D10 — the completeness CHECK (a `traced` row with `mete` set is refused, a `mete` row with `trace` set is refused); `sir_put_anchored_geo` writes `posture` from the payload and `recorded` when absent, so a payload shaped like today's publishes unchanged; the three CHECK-list extensions accept the new values and still refuse others.
-- **Prior art:** `substation/src/lib/cartographer-anchors.integration.test.ts`, `geo-parcel-native-srid.integration.test.ts`.
-- **Runs:** substation's integration suite against a local Supabase.
+- **Prior art:** `cityhall-new/tests/db/anchor-unowned-geo.test.ts` (the sibling spec's P0 test, against the same tables and RPC); substation's `cartographer-anchors.integration.test.ts` is the retired version.
+- **Runs:** cityhall-new's `tests/db` suite against the local stack (`pnpm db:reset`, then the test runner); CI also runs `supabase db schema declarative sync --no-apply` to prove the schema files and the migration agree.
 
 **S6: the `anchor-geometry` runbook, inputs → outputs** (existing)
 - **Proves:** D14–D16 — a request `{file, anchor_run_slug}` on the re-extracted White Water → `correspondences.json` with `LOT 1` `same_as` the county ring and `CAR WASH` `within` it; `anchors.json` with both figures under frame-1; the overlay with the building dashed; three `geo` rows under one `anchor_id`; the D16 query returning §1.4's numbers within 0.05 ft.
@@ -1616,8 +1616,9 @@ The roster for 3.4 is every `feature` region in every `survey.json` plus one `bo
 
 ## 5. PR plan
 
-**P0: the schema and the RPC** — `substation`
+**P0: the schema and the RPC** — `cityhall-new`
 - **Blocked by:** nothing (can start now).
+- **How:** cityhall-new's schema is declarative. Edit the table and function files under `supabase/schemas/public/`, run `npx supabase@2.119.0 db schema declarative sync --no-apply -f plan_set_footprints`, read the migration it writes, commit both (`AGENTS.md`). The sibling spec's P0 landed this way as `20261014152335_anchor_unowned_geo.sql`.
 - **Delivers:** D9's columns and CHECKs, D10's `geo.posture`, the three evidence/placement CHECK-list extensions, `sir_put_anchored_geo` reading `posture` with a default. Nothing writes the new columns yet; today's extract and anchor publishes keep working because every new column has a default or is nullable and the RPC defaults `posture`.
 - **Tested at:** S5.
 - **Door:** two-way (revert = drop the columns and restore the CHECK lists; no data to lose until P1 writes some). `mete` NOT NULL → NULL is the one change that cannot be reverted mechanically once a traced row exists, which is after P2.
@@ -1730,8 +1731,8 @@ The sibling spec (§6) named eight seams a plan-set reader must not foreclose. W
 - **The spike (§1.4):** PyMuPDF 1.26.5 `page.get_drawings()` with `layer` per path; shapely 2.0.7; iterated Procrustes of the 95 dash midpoints onto the lot outline, scale fixed then free; lot walked from the five plat courses. Numbers as tabulated; the script is 80 lines and belongs in S2's fixture.
 - **The extract runbook:** `bureau/runbooks/extract-geometry-v2/` — `README.md` (the step map), `AGENTS.md` (agents transcribe, code computes; every image is made by the crop tool), `scripts/{fetch,plan,roster,assemble,publish}.py`, `scripts/carto`, `steps/2.1-survey/steps/page/prompt.md` (the kinds table), `steps/4.1-merge/contract.test.ts` (`courses.min(2)`), `steps/6.2-hitl/contract.test.ts` (the three rulings).
 - **The cartographer scripts:** `runbooks/extract-geometry/scripts/assemble.ts` (the honesty boundary), `place.ts` (frames, `referenceId`), `publish.ts` (delete-then-insert, `cartographer_mark_anchors_stale`), `crop.ts:75` (`TRANSFORM_OPS`), `lib/evidence.ts:252-282` (`figureSchema`), `lib/db.ts`.
-- **The anchor side:** `runbooks/anchor-geometry/scripts/lib/frames.ts` (`ringInFrame`, `toInputFigure`, `buildAnchorInputs` — `within` excluded from the fit), `src/lib/geometry/anchor.ts:173-185` (`AnchorResult.figures` includes `within` and unmatched), `bureau/runbooks/anchor-geometry/steps/2.1-correspond/{prompt.md,contract.test.ts}` (the relation enum), `substation/supabase/functions/geo_helpers.sql:291-387` (`sir_put_anchored_geo`: polygon gate at :341-347, the insert at :350-379).
-- **Migrations this touches:** `20260918170000_cartographer_geometries.sql` (`mete`, `polygon` NOT NULL), `20260921000000_cartographer_geometries_placement.sql` (`placement_method` CHECK, the completeness CHECK pattern), `20260925132000_cartographer_extraction_anchor_metadata.sql` (the `role` / `source_kind` CHECK lists).
+- **The anchor side:** `runbooks/anchor-geometry/scripts/lib/frames.ts` (`ringInFrame`, `toInputFigure`, `buildAnchorInputs` — `within` excluded from the fit), `src/lib/geometry/anchor.ts:173-185` (`AnchorResult.figures` includes `within` and unmatched), `bureau/runbooks/anchor-geometry/steps/2.1-correspond/{prompt.md,contract.test.ts}` (the relation enum), `cityhall-new/supabase/schemas/public/functions/sir_put_anchored_geo.sql` (the polygon gate and the insert; substation's `geo_helpers.sql:291-387` is the same body, retired).
+- **Schema this touches (cityhall-new `supabase/schemas/public/`):** `tables/cartographer_geometries.sql` (`mete`, `polygon` NOT NULL; `placement_method` CHECK; the completeness CHECK pattern), `tables/cartographer_geometry_evidence.sql` (the `role` / `source_kind` CHECK lists), `tables/geo.sql`, `functions/sir_put_anchored_geo.sql`, `functions/cartographer_mark_anchors_stale.sql`. The history that built them: migrations `20260918170000`, `20260921000000`, `20260925132000`, `20260925140000`, `20261014152335` (same filenames in the retired substation repo up to 2026-09-29).
 - **Prior specs:** `../north-star/NORTH-STAR-SPEC.md` (§1.3 the question, §6 plan sets, §9.3 recorded vs proposed, D14 derived geometry), `../sir-free-anchoring/DESIGN-SPEC.md` (§6 the seams, D7 the check-not-source pattern, D11 the county-row key), `../geometry-placement/DESIGN-SPEC.md` (winston#270: polygon + offset, edges), `../geometry-extraction/evidence/DESIGN-SPEC.md` (winston#274: every reading cites a crop), `../anchoring-geometries/DESIGN-SPEC.md` (winston#279 D14: stale anchors).
 - **The IG report:** §4 "Feature layers by demand" (building footprint 51 A+B / 30 A), §4 "Feasibility signal" (no CAD layers on 2008 San Antonio; "the geometry is precise and free; the identity of each line is what costs money"), §5 slice 1 (2D, plan set only, no anchoring needed — this spec takes the anchoring too, because the frame-1 transform already exists).
 
