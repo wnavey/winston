@@ -307,6 +307,20 @@ export const FEATURES = {
 
 None of these change D1–D16. Trees and curbs change the geometry column; driveways need the county join. The order the IG report suggests (building → trees → curbs/driveways) is also the order of increasing schema work, which is the argument for this slice being the building.
 
+### 2.9 Hand-off from preprocessing: read the original, not the split sheet
+
+**D19. When the extract runbook is wired in after preprocessing, its fetch reads the upload's `source.pdf`, never the per-sheet PDFs.** Measured 2026-10-16 on the White Water project (`plan_set_version 6b4c9887`, bucket `submission-data/7a697ef1…/plan-set/v1/`): substation's `process-file` pipeline rewrites the upload through Ghostscript 9.56.1 `pdfwrite` twice — once to downsample images (`optimized.pdf`), once per page to split (`sheets/<n>.pdf`, the file `preprocessing-v4`'s `1.2-stage` downloads as `sheet_version.storage_path`). The vector geometry survives both passes untouched; the layer names do not:
+
+| file | OCGs (layers) | vector paths, sheet 12 | path items | text words |
+|---|---|---|---|---|
+| `source.pdf` (the upload, byte-identical to the file §1.3 probed) | **803** | 16,479 | 61,649 | 142 |
+| `optimized.pdf` | 0 | 16,479 | 61,514 | 142 |
+| `sheets/12.pdf` | 0 | 16,479 | 61,512 | 142 |
+
+The building ring chains identically in all three, so D4's geometry is safe; D4's **first rung** (rank by layer name) is not, because every `sheets/<n>.pdf` is layer-less. `plan_set_version.source_storage_path` keeps the original, so the fix is one path in the fetch. A second, untested lever is Ghostscript's `-dPreserveMarkedContent` on the optimize step (`substation/src/inngest/lib/sandbox/processing-args.ts` does not set it); whether 9.56.1 keeps the OCG dictionary with it is a thing to try, not a fact. Either way: **never count on layers in a split sheet.** This is a note for posterity as much as a decision; the wiring itself is north star P5 work after this slice.
+
+---
+
 ---
 
 ## 3. The change, piece by piece
