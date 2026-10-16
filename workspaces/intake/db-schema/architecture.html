@@ -1153,8 +1153,8 @@ table.nx-rules td.o{color:var(--ink2);font-size:12.5px;white-space:nowrap}
 <header class="masthead">
   <div class="kicker">Intake · DB schema</div>
   <h1>Intake checklist DB schema and the bureau sync</h1>
-  <p>Bureau stays the source of truth for intake checklists. Every version carries a semver, items and groups get stable IDs, and reference images are stored by hash. A merge to main copies it all into a read replica in the App DB.</p>
-  <div class="meta"><span class="status">Draft v2</span><span>16 Oct 2026</span><span>Parent: intake north star, I1</span><span>Source of truth: <code>DESIGN-SPEC.md</code></span></div>
+  <p>Bureau stays the source of truth for intake checklists. Every version carries a semver, and items, groups and figures get permanent IDs built from the jurisdiction's code (<code>AUS_TX-0042</code>). Reference images are stored by hash. A merge to main copies it all into a read replica in the App DB.</p>
+  <div class="meta"><span class="status">Draft v2.1</span><span>16 Oct 2026</span><span>Parent: intake north star, I1</span><span>Source of truth: <code>DESIGN-SPEC.md</code></span></div>
   <a class="spec-link" href="DESIGN-SPEC.html">Read the spec →</a>
 </header>
 
@@ -1199,12 +1199,13 @@ table.nx-rules td.o{color:var(--ink2);font-size:12.5px;white-space:nowrap}
 
       <div class="sys new" id="o-files" data-in="after" style="grid-area:3/2"><a class="ref" href="#detail-files">D1 · D14 · D15 ↓</a><span class="k">files</span><span class="t">intake.yaml + version files</span><span class="d">version, ids, groups, figures</span></div>
       <div class="sys new" id="o-sync" data-in="after" style="grid-area:3/3"><a class="ref" href="#detail-sync">D13 ↓</a><span class="k">GitHub Actions job</span><span class="t">intake</span><span class="d">needs: conventions</span></div>
-      <div class="sys store new" id="o-tables" data-in="after" style="grid-area:3/4"><a class="ref" href="#detail-tables">D6 ↓</a><span class="k">10 tables</span><span class="t">intake_*</span><span class="d">identity + per-version rows</span></div>
+      <div class="sys store new" id="o-tables" data-in="after" style="grid-area:3/4"><a class="ref" href="#detail-tables">D6 ↓</a><span class="k">11 tables</span><span class="t">intake_*</span><span class="d">identity + per-version rows</span></div>
       <div class="sys gap" id="o-none" data-in="today" style="grid-area:3/3/4/5">no table holds an item; the only DB copy is IG's commit-keyed cache</div>
 
       <div class="sys" id="o-conv-t" data-in="today" style="grid-area:4/3"><span class="k">workflow</span><span class="t">sync-conventions.yml</span><span class="d">the one-way precedent</span></div>
-      <div class="sys chg" id="o-conv-a" data-in="after" style="grid-area:4/3"><a class="ref" href="#detail-workflow">D13 ↓</a><span class="k">workflow</span><span class="t">sync-conventions.yml</span><span class="d">+ the intake job</span></div>
-      <div class="sys store" id="o-jur" style="grid-area:4/4"><span class="k">table</span><span class="t">jurisdictions</span></div>
+      <div class="sys chg" id="o-conv-a" data-in="after" style="grid-area:4/3"><a class="ref" href="#detail-workflow">D13 ↓</a><span class="k">workflow</span><span class="t">sync-conventions.yml</span><span class="d">+ code; + the intake job</span></div>
+      <div class="sys store" id="o-jur-t" data-in="today" style="grid-area:4/4"><span class="k">table</span><span class="t">jurisdictions</span></div>
+      <div class="sys store chg" id="o-jur-a" data-in="after" style="grid-area:4/4"><a class="ref" href="#detail-tables">D20 ↓</a><span class="k">table</span><span class="t">jurisdictions</span><span class="d">+ code: AUS_TX</span></div>
 
       <div class="sys" id="o-cc-t" data-in="today" style="grid-area:5/3"><span class="k">runbook</span><span class="t">completeness-check</span><span class="d">copies the guide dir</span></div>
       <div class="sys chg" id="o-cc-a" data-in="after" style="grid-area:5/3"><a class="ref" href="#detail-run">D17 · D18 ↓</a><span class="k">runbook</span><span class="t">completeness-check</span><span class="d">+ hydrates figures; amend-safe</span></div>
@@ -1216,8 +1217,8 @@ table.nx-rules td.o{color:var(--ink2);font-size:12.5px;white-space:nowrap}
       <a class="sys-edge new" data-in="after" data-from="o-guides" data-to="o-lint">checked</a>
       <a class="sys-edge new" data-in="after" data-from="o-files" data-to="o-sync"></a>
       <a class="sys-edge happy" data-in="after" data-from="o-sync" data-to="o-tables">RPC</a>
-      <a class="sys-edge" data-in="today" data-from="o-conv-t" data-to="o-jur"></a>
-      <a class="sys-edge chg" data-in="after" data-from="o-conv-a" data-to="o-jur"></a>
+      <a class="sys-edge" data-in="today" data-from="o-conv-t" data-to="o-jur-t"></a>
+      <a class="sys-edge chg" data-in="after" data-from="o-conv-a" data-to="o-jur-a">+ code</a>
       <a class="sys-edge new" data-in="after" data-from="o-conv-a" data-to="o-sync">then</a>
       <a class="sys-edge" data-in="today" data-from="o-cc-t" data-to="o-rc"></a>
       <a class="sys-edge" data-in="after" data-from="o-cc-a" data-to="o-rc"></a>
@@ -1225,13 +1226,14 @@ table.nx-rules td.o{color:var(--ink2);font-size:12.5px;white-space:nowrap}
     </div>
     <div class="sys-refs" data-view-of="flow" data-in="after" hidden>
       <a class="refrow new" data-ref="D1"><span class="chip">D1</span><span class="txt">intake.yaml says which checklist a jurisdiction uses, and why</span></a>
-      <a class="refrow new" data-ref="D6"><span class="chip">D6</span><span class="txt">ten tables: identities apart from per-version placement and content</span></a>
+      <a class="refrow new" data-ref="D6"><span class="chip">D6</span><span class="txt">eleven tables: identities apart from per-version placement and content</span></a>
       <a class="refrow new" data-ref="D12"><span class="chip">D12</span><span class="txt">lint:intake on every PR and on main: sidecars, the semver bump, figures</span></a>
       <a class="refrow chg" data-ref="D13"><span class="chip">D13</span><span class="txt">the sync is an intake job after the conventions job, so the FK never races</span></a>
       <a class="refrow new" data-ref="D14"><span class="chip">D14</span><span class="txt">each version declares a semver; the linter computes the smallest bump</span></a>
       <a class="refrow new" data-ref="D15"><span class="chip">D15</span><span class="txt">groups get stable IDs apart from their guide file and number</span></a>
       <a class="refrow new" data-ref="D17"><span class="chip">D17</span><span class="txt">reference images: hashes in bureau, bytes in Storage, hydrated at 1.4-resolve</span></a>
       <a class="refrow chg" data-ref="D18"><span class="chip">D18</span><span class="txt">review amend ignores the intake-only files</span></a>
+      <a class="refrow chg" data-ref="D20"><span class="chip">D20</span><span class="txt">every jurisdiction gets a permanent code, {ABBR}_{ST}; intake IDs are built from it</span></a>
     </div>
 
     <h3>What doesn't change</h3>
@@ -1245,14 +1247,14 @@ table.nx-rules td.o{color:var(--ink2);font-size:12.5px;white-space:nowrap}
     <div class="plan" style="--cols:3">
       <div class="plan-h"><span></span><span>Now</span><span>Soon, for figures</span><span>After the Austin bar + a smoke run</span></div>
       <div class="plan-row"><span class="plan-who">bureau</span>
-        <div class="plan-cell"><div class="pc key"><span class="pid">P2a · D1–D4, D12, D14–D16, D18 · S1, S3</span><b>Files, linter, Austin sidecars, amend fix</b><span class="pd"><code>intake.yaml</code>, <code>version.yaml</code>, <code>intake-ids.tsv</code>, <code>intake-groups.tsv</code>, <code>lint:intake</code></span><span class="pa">waits on nothing; merges before bureau#2112</span></div></div>
+        <div class="plan-cell"><div class="pc key"><span class="pid">P2a · D1–D4, D12, D14–D16, D18, D20 · S1, S3</span><b>Codes, files, linter, Austin sidecars, amend fix</b><span class="pd"><code>code:</code> in conventions, <code>intake.yaml</code>, <code>version.yaml</code>, <code>intake-ids.tsv</code>, <code>intake-groups.tsv</code>, <code>lint:intake</code></span><span class="pa">after P1a; merges before bureau#2112</span></div></div>
         <div class="plan-cell"><div class="pc"><span class="pid">P2c · D17 · S1, S3</span><b>Figures in guides</b><span class="pd"><code>figures.yaml</code>, the upload CLI, hydration at 1.4-resolve, one guide with figures</span><span class="pa">after P1a and P2a; #312's <code>--ref</code> follows</span></div></div>
         <div class="plan-cell"><div class="pc"><span class="pid">P2b · D5, D9–D11, D13 · S1</span><b>The sync job and the history backfill</b><span class="pd">builder, the <code>intake</code> job, <code>backfill-history.ts</code>, then acceptance</span><span class="pa">after P1b is applied and P2a is merged</span></div></div>
       </div>
       <div class="plan-row"><span class="plan-who">cityhall</span>
         <div class="plan-cell"></div>
-        <div class="plan-cell"><div class="pc"><span class="pid">P1a · D7 · S2</span><b>The intake-figures bucket</b><span class="pd">bucket, storage policies, isolation test</span><span class="pa">waits on nothing; Jason applies it</span></div></div>
-        <div class="plan-cell"><div class="pc"><span class="pid">P1b · D6–D8, D10 · S2</span><b>Ten tables and the write function</b><span class="pd">schemas, generated migration, allowlist, DB tests</span><span class="pa">after the loop meets the bar, so north-star Q1/Q2 can still change it; Jason applies it</span></div></div>
+        <div class="plan-cell"><div class="pc"><span class="pid">P1a · D7, D20 · S2</span><b>The code column and the figures bucket</b><span class="pd"><code>jurisdictions.code</code>, the bucket, storage policies, isolation test</span><span class="pa">waits on nothing; Jason applies it</span></div></div>
+        <div class="plan-cell"><div class="pc"><span class="pid">P1b · D6–D8, D10 · S2</span><b>Eleven tables and the write function</b><span class="pd">schemas, generated migration, allowlist, DB tests</span><span class="pa">after the loop meets the bar, so north-star Q1/Q2 can still change it; Jason applies it</span></div></div>
       </div>
     </div>
 
@@ -1262,26 +1264,27 @@ table.nx-rules td.o{color:var(--ink2);font-size:12.5px;white-space:nowrap}
   <!-- ============================== FILES ============================== -->
   <section class="panel" id="files">
     <h2>Files in bureau</h2>
-    <p class="lede">One <code>intake.yaml</code> per jurisdiction, plus up to four files beside each version's guides: <code>version.yaml</code> (the semver), <code>intake-ids.tsv</code> (items), <code>intake-groups.tsv</code> (groups) and <code>figures.yaml</code> (images). All are text; image bytes live in Storage (D1, D3, D14, D15, D17).</p>
+    <p class="lede">A permanent <code>code:</code> in each <code>conventions.yaml</code>, one <code>intake.yaml</code> per jurisdiction, plus up to four files beside each version's guides: <code>version.yaml</code> (the semver), <code>intake-ids.tsv</code> (items), <code>intake-groups.tsv</code> (groups) and <code>figures.yaml</code> (images). All are text; image bytes live in Storage (D1, D3, D14, D15, D17, D20).</p>
 
     <h3 class="claim" id="detail-files">Each review's ref resolves to a stable ID through its version's sidecars <span class="src">D3, D15</span></h3>
     <div class="spectable-scroll"><table class="spectable">
       <thead><tr><th>file</th><th>key (what reviews and guides use)</th><th>stable ID</th><th>more</th></tr></thead>
       <tbody>
-        <tr><td><code>intake-ids.tsv</code></td><td><code>cc-1:CC-1-01</code></td><td><code>austin-0001</code></td><td><code>derived_from</code> for splits and merges</td></tr>
-        <tr><td><code>intake-ids.tsv</code></td><td><code>cc-1:CC-1-02</code></td><td><code>austin-0002</code></td><td><span class="none">—</span></td></tr>
-        <tr><td><code>intake-groups.tsv</code></td><td><code>cc-1</code> (the guide stem)</td><td><code>austin-g01</code></td><td>title <code>Intake &amp; Core Submittal</code>, no number</td></tr>
-        <tr><td colspan="4"><span class="none">… 192 item rows and 14 group rows for v2.7-trimmed. Items are numbered in comment-number order, so on day one austin-NNNN = comment number. That's a coincidence of the backfill, not a rule (D5).</span></td></tr>
+        <tr><td><code>intake-ids.tsv</code></td><td><code>cc-1:CC-1-01</code></td><td><code>AUS_TX-0001</code></td><td><code>derived_from</code> for splits and merges</td></tr>
+        <tr><td><code>intake-ids.tsv</code></td><td><code>cc-1:CC-1-02</code></td><td><code>AUS_TX-0002</code></td><td><span class="none">—</span></td></tr>
+        <tr><td><code>intake-groups.tsv</code></td><td><code>cc-1</code> (the guide stem)</td><td><code>AUS_TX-G01</code></td><td>title <code>Intake &amp; Core Submittal</code>, no number</td></tr>
+        <tr><td colspan="4"><span class="none">… 192 item rows and 14 group rows for v2.7-trimmed. Items are numbered in comment-number order, so on day one AUS_TX-NNNN = comment number. That's a coincidence of the backfill, not a rule (D5).</span></td></tr>
       </tbody>
     </table></div>
 
     <h3>How a jurisdiction says which checklist it uses</h3>
-    <div class="prompt"><span class="ph">jurisdictions/austin/intake.yaml (D1)</span>checklist: austin                       # own checklist id (= slug), or generic
+    <div class="prompt"><span class="ph">jurisdictions/austin/intake.yaml (D1)</span>checklist: AUS_TX                       # own checklist id (= the jurisdiction's code, D20), or GENERIC
 basis: formal                           # formal | none_found | inconclusive
 application_type: Consolidated Site Plan
 path: completeness-check                # own checklists only
 next_item: 195                          # 0193–0194 are retired by the history backfill (D5)
 next_group: 15                          # high-water mark for group ids (D15)
+next_figure: 1                          # high-water mark for figure ids (D17)
 evidence:
   summary: Austin runs a formal Completeness Check before technical review …
   sources: [ { label: CC Submittal Checklist, url: "https://…" } ]
@@ -1303,12 +1306,12 @@ format: 1                   # the file-format version; the sync refuses a major 
 generated_by:               # absent for hand edits
   runbook: intake-prospecting
   run_id: 3f2a…             # runbook_runs.id
-  run_name: new-braunfels-2026-10-20
+  run_name: NB_TX-2026-10-20
   runbook_commit: 9c1e…</div>
 
     <h3 class="claim" id="detail-ids">An edit keeps an ID, a split mints new ones, and a number is never reused <span class="src">D4</span></h3>
     <figure class="concept">
-      <svg viewBox="0 0 1060 312" role="img" aria-label="Four snapshots of one checklist: the backfill, a text edit that keeps austin-0042, a split of austin-0043 into austin-0195 and austin-0196, and a deletion of austin-0041 whose number stays retired">
+      <svg viewBox="0 0 1060 312" role="img" aria-label="Four snapshots of one checklist: the backfill, a text edit that keeps AUS_TX-0042, a split of AUS_TX-0043 into AUS_TX-0195 and AUS_TX-0196, and a deletion of AUS_TX-0041 whose number stays retired">
         <defs><marker id="ids-ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
         <path d="M16 14H1040" fill="none" stroke="currentColor" stroke-width="1.5" opacity=".45" marker-end="url(#ids-ar)"/>
         <g font-family="ui-sans-serif,system-ui,sans-serif" fill="currentColor">
@@ -1330,12 +1333,12 @@ generated_by:               # absent for hand edits
           </g>
           <g fill="none" stroke="var(--new)" stroke-width="2"><rect x="546" y="206" width="150" height="30" rx="7"/><rect x="546" y="248" width="150" height="30" rx="7"/></g>
           <g fill="currentColor" text-anchor="middle">
-            <text x="91" y="100">austin-0041</text><text x="91" y="142">austin-0042</text><text x="91" y="184">austin-0043</text>
-            <text x="356" y="100">austin-0041</text><text x="356" y="142" font-weight="700">austin-0042</text><text x="356" y="184">austin-0043</text>
-            <text x="621" y="100">austin-0041</text><text x="621" y="142">austin-0042</text><text x="621" y="184" opacity=".45" text-decoration="line-through">austin-0043</text>
-            <text x="886" y="100" opacity=".45" text-decoration="line-through">austin-0041</text><text x="886" y="142">austin-0042</text><text x="886" y="226">austin-0195</text><text x="886" y="268">austin-0196</text>
+            <text x="91" y="100">AUS_TX-0041</text><text x="91" y="142">AUS_TX-0042</text><text x="91" y="184">AUS_TX-0043</text>
+            <text x="356" y="100">AUS_TX-0041</text><text x="356" y="142" font-weight="700">AUS_TX-0042</text><text x="356" y="184">AUS_TX-0043</text>
+            <text x="621" y="100">AUS_TX-0041</text><text x="621" y="142">AUS_TX-0042</text><text x="621" y="184" opacity=".45" text-decoration="line-through">AUS_TX-0043</text>
+            <text x="886" y="100" opacity=".45" text-decoration="line-through">AUS_TX-0041</text><text x="886" y="142">AUS_TX-0042</text><text x="886" y="226">AUS_TX-0195</text><text x="886" y="268">AUS_TX-0196</text>
           </g>
-          <g fill="var(--new)" font-weight="700" text-anchor="middle"><text x="621" y="226">austin-0195</text><text x="621" y="268">austin-0196</text></g>
+          <g fill="var(--new)" font-weight="700" text-anchor="middle"><text x="621" y="226">AUS_TX-0195</text><text x="621" y="268">AUS_TX-0196</text></g>
         </g>
         <g font-family="ui-sans-serif,system-ui,sans-serif" font-size="12" fill="currentColor">
           <text x="441" y="141" opacity=".7">text edited</text>
@@ -1352,6 +1355,7 @@ generated_by:               # absent for hand edits
     <h3>The rules the files follow</h3>
     <div class="doc">
       <p><b>D1 · The basis decides the checklist.</b> <code>formal</code> means the jurisdiction's own checklist; <code>none_found</code> or <code>inconclusive</code> means <code>generic</code>, the baseline. No <code>intake.yaml</code> at all means no assignment, which is different from <code>none_found</code>.</p>
+      <p><b>D20 · Every jurisdiction has a permanent code, <code>{ABBR}_{ST}</code>.</b> Austin is <code>AUS_TX</code>, El Paso <code>EP_TX</code>, El Paso County <code>EPCO_TX</code> (Q9), and the baseline is <code>GENERIC</code>. It lives in <code>conventions.yaml</code> and is synced to <code>jurisdictions.code</code>. Once a jurisdiction has an <code>intake.yaml</code>, its code can never change, because every intake ID carries it. Slugs stay in paths and URLs.</p>
       <p><b>D2 · The baseline lives at <code>bureau/intake/baseline/</code></b>, outside <code>jurisdictions/</code>, so the syncs that walk that folder never mistake it for a jurisdiction.</p>
       <p><b>D4 · Nobody picks a number by hand.</b> <code>bun run intake:mint</code> takes the next number and raises the high-water mark. <code>lint:intake</code> also runs on <code>main</code>, which catches two PRs that took the same number.</p>
       <p><b>D15 · Groups have IDs too.</b> Moving an item between guides keeps its ID and title. Renaming a group keeps its ID. The display number is its position.</p>
@@ -1362,21 +1366,22 @@ generated_by:               # absent for hand edits
   <!-- ============================== TABLES ============================== -->
   <section class="panel" id="tables">
     <h2>The tables</h2>
-    <p class="lede">Ten tables, all keyed by short text IDs. Identity tables say what exists under IDs that never change. Per-version tables say where each item and group sits, and what it says, in one semver. Everyone signed in can read them; only the sync writes (D6, D7).</p>
+    <p class="lede">Eleven tables, all keyed by short text IDs built from the jurisdiction's code (<code>AUS_TX</code>). Identity tables say what exists under IDs that never change. Per-version tables say where each item and group sits, and what it says, in one semver. Everyone signed in can read them; only the sync writes (D6, D7).</p>
 
     <h3 class="claim" id="detail-tables">A checklist has semver versions; every folder commit points at one <span class="src">D5, D6, D14</span></h3>
     <div class="sys-legend"><span><i class="box"></i>exists</span><span><i class="box new"></i>new</span><span><i class="new"></i>new relationship</span><span>arrows point from the one to the many</span><span>DB type on the right · <span style="font-family:var(--mono);font-size:12px;color:#8a919c">null</span> = nullable</span></div>
     <div class="erd linked" style="grid-template-columns:repeat(2,minmax(0,1fr))">
-      <div class="ent exist" id="t-jur" style="grid-area:1/2">
-        <div class="eh"><span class="en">jurisdictions</span><span class="stereo">EXISTS</span></div>
-        <div class="row"><span class="b b-pk">PK</span><span class="nm">slug</span><span class="dt">text</span><span class="ty">written by sync-conventions</span></div>
-        <div class="note">unchanged; one writer per table keeps "bureau wins" clear</div>
+      <div class="ent changed" id="t-jur" style="grid-area:1/2">
+        <div class="eh"><span class="en">jurisdictions</span><span class="stereo">MODIFIED</span></div>
+        <div class="row"><span class="b b-pk">PK</span><span class="nm">slug</span><span class="dt">text</span><span class="ty">'austin'; written by sync-conventions</span></div>
+        <div class="row add"><span class="gut">+</span><span class="nm">code</span><span class="dt">text<i> null</i></span><span class="ty">'AUS_TX'; UNIQUE; ^[A-Z]{2,8}_[A-Z]{2}$; permanent (D20)</span></div>
+        <div class="note">+ UNIQUE (slug, code), the target of intake_checklists' composite FK</div>
       </div>
       <div class="ent newt" id="t-chk" style="grid-area:2/1">
         <div class="eh"><span class="en">intake_checklists</span><span class="stereo">NEW</span></div>
-        <div class="row"><span class="b b-pk">PK</span><span class="nm">id</span><span class="dt">text</span><span class="ty">'austin' · 'generic'</span></div>
+        <div class="row"><span class="b b-pk">PK</span><span class="nm">id</span><span class="dt">text</span><span class="ty">the jurisdiction's code, or 'GENERIC'</span></div>
         <div class="row"><span class="nm">kind</span><span class="dt">text</span><span class="ty">jurisdiction · baseline</span></div>
-        <div class="row"><span class="b b-fk">FK</span><span class="nm">jurisdiction_slug</span><span class="dt">text<i> null</i></span><span class="ty">null on the baseline</span></div>
+        <div class="row"><span class="b b-fk">FK</span><span class="nm">jurisdiction_slug</span><span class="dt">text<i> null</i></span><span class="ty">null on the baseline; (jurisdiction_slug, id) → jurisdictions(slug, code)</span></div>
         <div class="row"><span class="nm">name</span><span class="dt">text</span></div>
         <div class="row"><span class="nm">bureau_path</span><span class="dt">text</span></div>
         <div class="row"><span class="nm">bureau_commit</span><span class="dt">text<i> null</i></span></div>
@@ -1442,7 +1447,7 @@ generated_by:               # absent for hand edits
         <div class="eh"><span class="en">intake_groups</span><span class="stereo">NEW · IDENTITY</span></div>
         <div class="pkgroup"><span class="pklabel">composite key · these 2 are one key</span>
           <div class="row"><span class="b b-pk">PK</span><span class="nm">checklist_id</span><span class="dt">text</span></div>
-          <div class="row"><span class="b b-pk">PK</span><span class="nm">group_id</span><span class="dt">text</span><span class="ty">'austin-g01'</span></div>
+          <div class="row"><span class="b b-pk">PK</span><span class="nm">group_id</span><span class="dt">text</span><span class="ty">'AUS_TX-G01'</span></div>
         </div>
       </div>
       <div class="ent newt" id="v-cgroups" style="grid-area:1/2">
@@ -1456,20 +1461,20 @@ generated_by:               # absent for hand edits
         <div class="row"><span class="nm">title</span><span class="dt">text</span><span class="ty">'Intake &amp; Core Submittal'</span></div>
         <div class="row"><span class="nm">guide_path</span><span class="dt">text</span><span class="ty">'cc-1.md'</span></div>
       </div>
-      <div class="ent newt" id="v-figures" style="grid-area:1/3">
+      <div class="ent newt" id="v-figures" style="grid-area:3/2">
         <div class="eh"><span class="en">intake_checklist_figures</span><span class="stereo">NEW</span></div>
         <div class="pkgroup"><span class="pklabel">composite key · these 3 are one key</span>
           <div class="row"><span class="b b-pk">PK</span><span class="nm">checklist_id</span><span class="dt">text</span></div>
           <div class="row"><span class="b b-pk">PK</span><span class="nm">version</span><span class="dt">text</span></div>
-          <div class="row"><span class="b b-pk">PK</span><span class="nm">figure_id</span><span class="dt">text</span><span class="ty">'austin-0042/F1'</span></div>
+          <div class="row"><span class="b b-pk">PK</span><span class="b b-fk">FK</span><span class="nm">figure_id</span><span class="dt">text</span><span class="ty">'AUS_TX-F0001'</span></div>
         </div>
-        <div class="row"><span class="nm">item_ids</span><span class="dt">text[]</span></div>
+        <div class="row hi"><span class="nm">item_ids</span><span class="dt">text[]</span><span class="ty">every item in this version that uses it</span></div>
         <div class="row"><span class="nm">caption</span><span class="dt">text</span></div>
         <div class="row"><span class="nm">type</span><span class="dt">text</span><span class="ty">reference-design · site-example · table · redline</span></div>
         <div class="row"><span class="nm">description</span><span class="dt">text<i> null</i></span></div>
         <div class="row"><span class="nm">constraints</span><span class="dt">text<i> null</i></span></div>
         <div class="row hi"><span class="nm">sha256</span><span class="dt">text</span><span class="ty">the object in intake-figures</span></div>
-        <div class="row"><span class="nm">storage_path</span><span class="dt">text</span><span class="ty">'austin/&lt;sha256&gt;.png'</span></div>
+        <div class="row"><span class="nm">storage_path</span><span class="dt">text</span><span class="ty">'AUS_TX/&lt;sha256&gt;.png'</span></div>
         <div class="row"><span class="nm">media_type</span><span class="dt">text</span></div>
         <div class="row"><span class="nm">px_w</span><span class="dt">int</span></div>
         <div class="row"><span class="nm">px_h</span><span class="dt">int</span></div>
@@ -1480,7 +1485,7 @@ generated_by:               # absent for hand edits
         <div class="eh"><span class="en">intake_items</span><span class="stereo">NEW · IDENTITY</span></div>
         <div class="pkgroup"><span class="pklabel">composite key · these 2 are one key</span>
           <div class="row"><span class="b b-pk">PK</span><span class="nm">checklist_id</span><span class="dt">text</span></div>
-          <div class="row"><span class="b b-pk">PK</span><span class="nm">item_id</span><span class="dt">text</span><span class="ty">'austin-0042'; anchored-regex CHECK</span></div>
+          <div class="row"><span class="b b-pk">PK</span><span class="nm">item_id</span><span class="dt">text</span><span class="ty">'AUS_TX-0042'; anchored-regex CHECK</span></div>
         </div>
         <div class="row"><span class="b b-fk">FK</span><span class="nm">jurisdiction_slug</span><span class="dt">text<i> null</i></span><span class="ty">so "items for X" needs no join</span></div>
         <div class="row"><span class="nm">derived_from</span><span class="dt">text[]<i> null</i></span></div>
@@ -1525,7 +1530,18 @@ generated_by:               # absent for hand edits
         <div class="row"><span class="nm">regions</span><span class="dt">jsonb</span><span class="ty">[{page, boxes, quote}]</span></div>
         <div class="row"><span class="nm">stale</span><span class="dt">boolean</span><span class="ty">its quoted text no longer matches the item</span></div>
       </div>
+      <div class="ent newt" id="v-ifigures" style="grid-area:3/1">
+        <div class="eh"><span class="en">intake_figures</span><span class="stereo">NEW · IDENTITY</span></div>
+        <div class="pkgroup"><span class="pklabel">composite key · these 2 are one key</span>
+          <div class="row"><span class="b b-pk">PK</span><span class="nm">checklist_id</span><span class="dt">text</span></div>
+          <div class="row"><span class="b b-pk">PK</span><span class="nm">figure_id</span><span class="dt">text</span><span class="ty">'AUS_TX-F0001', from next_figure</span></div>
+        </div>
+        <div class="row"><span class="nm">minted_in_version</span><span class="dt">text</span><span class="ty">computed by the sync</span></div>
+        <div class="row"><span class="nm">retired_in_version</span><span class="dt">text<i> null</i></span></div>
+        <div class="note">its own counter: several items can share one figure</div>
+      </div>
       <a class="sys-edge new" data-from="v-groups" data-to="v-cgroups">1 → many</a>
+      <a class="sys-edge new" data-from="v-ifigures" data-to="v-figures">1 → many</a>
       <a class="sys-edge new" data-from="v-items" data-to="v-citems">1 → many</a>
       <a class="sys-edge new" data-from="v-cgroups" data-to="v-citems">1 → many</a>
       <a class="sys-edge new" data-from="v-citems" data-to="v-cites">1 → many</a>
@@ -1533,11 +1549,12 @@ generated_by:               # absent for hand edits
     <div class="spectable-scroll"><table class="spectable">
       <thead><tr><th>Change</th><th>Rows it touches in the new version</th><th>Bump</th></tr></thead>
       <tbody>
-        <tr><td>Move <code>austin-0042</code> from cc-2 to cc-5</td><td>its <code>group_id</code> and <code>position</code> (and <code>legacy_ref</code>, since the stem changed); its ID, title and every group unchanged</td><td>PATCH (Q4)</td></tr>
+        <tr><td>Move <code>AUS_TX-0042</code> from cc-2 to cc-5</td><td>its <code>group_id</code> and <code>position</code> (and <code>legacy_ref</code>, since the stem changed); its ID, title and every group unchanged</td><td>PATCH (Q4)</td></tr>
         <tr><td>Rename a group</td><td>one <code>intake_checklist_groups.title</code></td><td>PATCH</td></tr>
         <tr><td>Edit an item's condition</td><td>its row</td><td>MINOR</td></tr>
         <tr><td>Split an item</td><td>two new <code>intake_items</code>; the old one gets <code>retired_in_version</code></td><td>MAJOR</td></tr>
         <tr><td>Replace a figure</td><td>its <code>sha256</code> and <code>storage_path</code>; the old object stays</td><td>PATCH</td></tr>
+        <tr><td>Reuse a figure for another item</td><td>its <code>item_ids</code>; the figure ID stays</td><td>PATCH</td></tr>
       </tbody>
     </table></div>
   </section>
@@ -1588,9 +1605,9 @@ jobs:
     "counts": { "items": 192, "groups": 14, … },
     "generated_by": null, "is_current": true },
   "commits": [ "4343c4fec2", … ],
-  "groups":  [ { "group_id": "austin-g01", … } ],
-  "items":   [ { "item_id": "austin-0001",
-    "group_id": "austin-g01",
+  "groups":  [ { "group_id": "AUS_TX-G01", … } ],
+  "items":   [ { "item_id": "AUS_TX-0001",
+    "group_id": "AUS_TX-G01",
     "legacy_ref": "cc-1:CC-1-01", … }, … ],
   "citations": [ … ], "figures": [ … ]
 }</pre>
@@ -1663,17 +1680,17 @@ checklistsContentHash = sha256 over the files a run reads,
       <div class="rar-req">
         <span class="lab">Request</span>
 <pre>checklist/figures.yaml
-- id: austin-0042/F1
-  items: [austin-0042]
+- id: AUS_TX-F0001
+  items: [AUS_TX-0042, AUS_TX-0117]
   caption: CRZ root-zone impact thresholds
   sha256: 9f2c…
   media_type: image/png</pre>
-        <span class="note">The guide names the path: <code>![…](figures/austin-0042/F1.png)</code>. It is not in git; hydration creates it.</span>
+        <span class="note">The guide names the path: <code>![…](figures/AUS_TX-F0001.png)</code>. It is not in git; hydration creates it.</span>
       </div>
       <div class="rar-arrow in"><i></i>by sha256</div>
       <ol class="rar-steps">
         <li class="rar-step"><b>Look each hash up in the host cache</b><span>A figure shared across versions or runs downloads once.</span></li>
-        <li class="rar-step"><b>Fetch a miss from Storage</b><span><code>intake-figures/austin/&lt;sha256&gt;.png</code>, never overwritten.</span><span class="branch">missing → the run stops with a reason</span></li>
+        <li class="rar-step"><b>Fetch a miss from Storage</b><span><code>intake-figures/AUS_TX/&lt;sha256&gt;.png</code>, never overwritten.</span><span class="branch">missing → the run stops with a reason</span></li>
         <li class="rar-step"><b>Verify, then write</b><span>At the path the markdown names.</span><span class="branch">mismatch → the run stops</span></li>
         <li class="rar-step"><b>Record the list</b><span>In <code>resolved.json</code>. The tree hash already covers <code>figures.yaml</code>, so a review's provenance pins every image.</span></li>
       </ol>
@@ -1683,8 +1700,8 @@ checklistsContentHash = sha256 over the files a run reads,
 <pre>checklist/
   cc-21.md
   figures.yaml
-  figures/austin-0042/F1.png   ✓ 9f2c…</pre>
-        <span class="note">A self-contained guide dir. winston#312's <code>vision.ts --ref austin-0042/F1</code> attaches the guide's caption, never an agent-written one.</span>
+  figures/AUS_TX-F0001.png   ✓ 9f2c…</pre>
+        <span class="note">A self-contained guide dir. winston#312's <code>vision.ts --ref AUS_TX-F0001</code> attaches the guide's caption, never an agent-written one.</span>
       </div>
       <div class="rar-arrow out"><i></i>files</div>
     </div>
@@ -1704,7 +1721,7 @@ checklistsContentHash = sha256 over the files a run reads,
     <h3 class="claim">Done means every v2.7 review resolves to a version, and a re-run writes nothing <span class="src">§3 acceptance</span></h3>
     <ol class="steps">
       <li class="st"><span class="sk">dispatch</span><span class="sn">Run the workflow by hand after P2b merges, and the history backfill once</span><span class="so"></span></li>
-      <li class="st"><span class="sk">check prod</span><span class="sn">One <code>austin</code> version per distinct v2.7 folder state, the newest current; 192 items in it; <code>austin | austin | formal</code> in <code>jurisdiction_intake</code></span><span class="so"></span></li>
+      <li class="st"><span class="sk">check prod</span><span class="sn">One <code>austin</code> version per distinct v2.7 folder state, the newest current; 192 items in it; <code>austin | AUS_TX | formal</code> in <code>jurisdiction_intake</code></span><span class="so"></span></li>
       <li class="st"><span class="sk">check reviews</span><span class="sn">Each of the 19 v2.7 reviews' <code>bureauCommitHash</code> resolves through <code>intake_checklist_version_commits</code></span><span class="so"></span></li>
       <li class="st"><span class="sk">dispatch again</span><span class="sn">No new versions</span><span class="so">every semver matched its hash</span></li>
     </ol>

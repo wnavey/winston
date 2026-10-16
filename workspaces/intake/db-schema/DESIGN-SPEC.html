@@ -1147,7 +1147,7 @@ table.nx-rules td.o{color:var(--ink2);font-size:12.5px;white-space:nowrap}
 
 </style>
 </head>
-<body class="reader" data-back="architecture.html" data-spec-sha="e70a4e181fc7e1ec">
+<body class="reader" data-back="architecture.html" data-spec-sha="0738846d678c14e1">
 
 <header class="masthead">
   <div class="kicker">SPEC · READER</div>
@@ -1164,13 +1164,17 @@ table.nx-rules td.o{color:var(--ink2);font-size:12.5px;white-space:nowrap}
 <script type="text/markdown" id="spec-md">
 # Intake checklist DB schema and the bureau sync
 
-**Status:** Draft v2
+**Status:** Draft v2.1
 **Date:** 2026-10-16
+> **Revision note v2.1 (2026-10-16, Will):** two decisions.
+> - **Jurisdiction codes (new D20):** every jurisdiction gets a permanent code, `{ABBR}_{ST}` (Austin `AUS_TX`, El Paso `EP_TX`), declared in `conventions.yaml` and synced to a new `jurisdictions.code` column. Checklist, item, group and figure IDs are built from it: `AUS_TX`, `AUS_TX-0042`, `AUS_TX-G01`, `AUS_TX-F0001`. The baseline is `GENERIC`. D1, D3, D4, D6, D15 and D17 change to match. The checklist-to-jurisdiction rule becomes a composite FK to `jurisdictions(slug, code)`.
+> - **Figures get their own counter (D17):** `{checklist}-F{NNNN}` from a `next_figure` high-water mark. Several items can share one figure, and `items` lists them. A new identity table, `intake_figures`, makes eleven tables (D6).
+>
 > **Revision note v2 (2026-10-16): the audit folded in.** Every finding in `AUDIT-2026-10-14.md` is now a decision here, except the judgment calls, which are Q4–Q8 with stated defaults. The audit stays as the record of why.
 > - **A18 → new D19:** bureau stays the source of truth; the DB is a read replica; the flip is not planned; per-customer files are overlays.
 > - **A1 → D5 rewritten:** backfill v2.7-trimmed's history, one version per distinct folder state, plus `intake_checklist_version_commits`. The two items dropped on 07-09 get retired IDs 0193–0194; `next_item` is 195.
 > - **A2 → new D14:** a semver per version in `version.yaml`, with the bump computed by the linter. D6, D8, D10 and D11 are re-keyed from a revision counter to the semver. A revert is a new version (A13).
-> - **A5 → new D15:** groups get stable IDs (`austin-g01`) through `intake-groups.tsv`. D6 splits identity tables (`intake_items`, `intake_groups`) from per-version placement and content (`intake_checklist_groups`, `intake_checklist_items`).
+> - **A5 → new D15:** groups get stable IDs (`AUS_TX-G01`) through `intake-groups.tsv`. D6 splits identity tables (`intake_items`, `intake_groups`) from per-version placement and content (`intake_checklist_groups`, `intake_checklist_items`).
 > - **A6 → new D16:** `generated_by` in `version.yaml`; `minted_in_version` and `retired_in_version` are computed. D1's `decided_by` means only who ruled on the basis.
 > - **A19 → new D17:** reference images are listed in `figures.yaml` by sha256, stored in the `intake-figures` bucket, and hydrated at 1.4-resolve. New P1a (the bucket) and P2c (figures). A3 is narrowed to figures only.
 > - **A8 → new D18:** amend compares a content hash that ignores intake-only files.
@@ -1205,8 +1209,9 @@ table.nx-rules td.o{color:var(--ink2);font-size:12.5px;white-space:nowrap}
 
 **Parent:** `workspaces/intake/north-star/NORTH-STAR-SPEC.md`, initiative I1 (D3). Carries out north-star D4–D9.
 **Repos touched:**
-- `cityhall`: ten App-DB tables, one write function, the `intake-figures` bucket, tests
+- `cityhall`: eleven App-DB tables, a `code` column on `jurisdictions`, one write function, the `intake-figures` bucket, tests
 - `bureau`:
+  - `conventions.yaml` gains `code:`, with its schema, lint and sync (D20);
   - `intake.yaml`, and per-version `version.yaml`, `intake-ids.tsv`, `intake-groups.tsv` and `figures.yaml`;
   - a CI linter;
   - the sync library, CLI and job;
@@ -1286,17 +1291,18 @@ Intake (completeness-check) checklist items exist only as markdown tables in bur
 
 ## 1. The design at a glance
 
-**Bureau is the source of truth for checklist text; the App DB holds a read replica; Storage holds the figure bytes** (D19). Every checklist version carries a semver that bureau declares and the linter checks (D14). Items and groups have stable IDs that never encode their position (D4, D15). Reference images are listed by sha256 in bureau and hydrated into each run (D17).
+**Bureau is the source of truth for checklist text; the App DB holds a read replica; Storage holds the figure bytes** (D19). Every checklist version carries a semver that bureau declares and the linter checks (D14). Items, groups and figures have stable IDs built from the jurisdiction's permanent code (`AUS_TX-0042`), and they never encode position (D4, D15, D17, D20). Reference images are listed by sha256 in bureau and hydrated into each run (D17).
 
 ```diff
  bureau/
  ├── intake/
 +│   └── baseline/                          # the generic baseline (north-star D4); filled by intake/baseline
-+│       ├── checklist.yaml                 # id: generic, name, next_item, next_group
++│       ├── checklist.yaml                 # id: GENERIC, name, next_item, next_group, next_figure
 +│       ├── CURRENT_VERSION
 +│       └── <version>/                     # same layout as a jurisdiction's version dir
  ├── jurisdictions/austin/
-+│   ├── intake.yaml                        # which checklist, basis, evidence, next_item, next_group (D1)
+~│   ├── conventions.yaml                   # + code: AUS_TX (D20)
++│   ├── intake.yaml                        # which checklist, basis, evidence, next_item / next_group / next_figure (D1)
  │   └── completeness-check/
  │       ├── CURRENT_VERSION                # v2.7-trimmed (unchanged)
  │       └── v2.7-trimmed/
@@ -1321,11 +1327,13 @@ Intake (completeness-check) checklist items exist only as markdown tables in bur
 
  cityhall/supabase/schemas/
  ├── public/tables/
+~│   ├── jurisdictions.sql                  # + code text UNIQUE, UNIQUE (slug, code) (D20)
 +│   ├── intake_checklists.sql              # one row per checklist
 +│   ├── intake_checklist_versions.sql      # one row per semver
 +│   ├── intake_checklist_version_commits.sql # bureau commit → version (D5)
 +│   ├── intake_groups.sql                  # group identity (D15)
 +│   ├── intake_items.sql                   # item identity (D4)
++│   ├── intake_figures.sql                 # figure identity (D17)
 +│   ├── intake_checklist_groups.sql        # a group's place and title in a version
 +│   ├── intake_checklist_items.sql         # an item's place and content in a version
 +│   ├── intake_checklist_citations.sql     # one row per citation (D9)
@@ -1359,12 +1367,13 @@ Intake (completeness-check) checklist items exist only as markdown tables in bur
 
 ```yaml
 # jurisdictions/austin/intake.yaml
-checklist: austin                     # own checklist id (= slug) or `generic`
+checklist: AUS_TX                     # own checklist id (= the jurisdiction's code, D20) or `GENERIC`
 basis: formal                         # formal | none_found | inconclusive  (north-star D5)
 application_type: Consolidated Site Plan   # what the checklist covers (north-star Q2); free text
 path: completeness-check              # versions dir, relative to the jurisdiction (own checklists only)
 next_item: 195                        # high-water mark for item ids (D4); own checklists only
 next_group: 15                        # high-water mark for group ids (D15); own checklists only
+next_figure: 1                        # high-water mark for figure ids (D17); own checklists only
 evidence:
   summary: >-
     Austin runs a formal Completeness Check before technical review, with a
@@ -1376,17 +1385,17 @@ decided_by: will                      # who ruled on the basis: a person, or a r
 decided_at: 2026-10-14
 ```
 
-- **A jurisdiction on the baseline** sets `checklist: generic` and a `basis` of `none_found` or `inconclusive`, and has no `path`, `next_item` or `next_group`.
+- **A jurisdiction on the baseline** sets `checklist: GENERIC` and a `basis` of `none_found` or `inconclusive`, and has no `path`, `next_item`, `next_group` or `next_figure`.
 - **Absence is meaningful:** a jurisdiction with no `intake.yaml` has no assignment, which is different from `none_found`.
 - **Validation:** `tooling/src/lib/intake/schema.ts` is the single parser, shared by the linter and the sync, following the `conventions/schema.ts` pattern.
 - **The rule for `basis`:**
-  - `basis: formal` requires `checklist` = the jurisdiction's slug;
-  - any other basis requires `checklist: generic`.
+  - `basis: formal` requires `checklist` = the jurisdiction's code (D20);
+  - any other basis requires `checklist: GENERIC`.
 - **`decided_by` means one thing:** who ruled on the basis. The run that generated a checklist version is recorded in that version's `version.yaml` (D16), not here. For a run, `decided_by` holds the `runbook_runs` uuid, not the run directory's name.
 
 **D2. The baseline lives at `bureau/intake/baseline/`.**
 - It sits outside `jurisdictions/`, so it never looks like a jurisdiction to the syncs that walk that directory: `sync-conventions` reads every `jurisdictions/*/` dir, and `sync-bureau.yml` fires on `jurisdictions/**`.
-- It has the same layout as a jurisdiction's versions dir, plus `checklist.yaml` (`id: generic`, `name`, `next_item`, `next_group`).
+- It has the same layout as a jurisdiction's versions dir, plus `checklist.yaml` (`id: GENERIC`, `name`, `next_item`, `next_group`, `next_figure`).
 - This spec defines the location and the schema only. The folder stays empty until the `intake/baseline` sub-spec fills it, and the sync skips it while it has no version.
 
 **D3. An item sidecar per version: `<version>/intake-ids.tsv`.** One row per item. Columns:
@@ -1394,14 +1403,14 @@ decided_at: 2026-10-14
 | column | example | rule |
 |---|---|---|
 | `ref` | `cc-1:CC-1-01` | `{guide stem}:{ID cell}`, exactly the composite ref reviews already store |
-| `id` | `austin-0001` | the stable item ID (D4) |
-| `derived_from` | `austin-0097` | optional; comma-separated IDs this item was split or merged from |
+| `id` | `AUS_TX-0001` | the stable item ID (D4) |
+| `derived_from` | `AUS_TX-0097` | optional; comma-separated IDs this item was split or merged from |
 
 - **Why per version and not per jurisdiction:** refs change between versions (`CC-15-09a` → `CC-15-09`), and moving an item to another guide changes its ref (`cc-2:X` → `cc-5:X`). A review's ref resolves through the sidecar of the version it ran against.
-- **New jurisdictions** generated by intake-prospecting put the stable ID directly in the guide's ID column, so the sidecar maps `cc-1:new-braunfels-0007` → `new-braunfels-0007`. The format is the same everywhere. Open bureau#2112 already writes this file.
+- **New jurisdictions** generated by intake-prospecting put the stable ID directly in the guide's ID column, so the sidecar maps `cc-1:NB_TX-0007` → `NB_TX-0007`. The format is the same everywhere. Open bureau#2112 already writes this file.
 
 **D4. Item ID format and minting.** [north-star D6]
-- **Format:** an item ID is `{checklist id}-{NNNN}`: at least four digits, zero-padded, matching `^[a-z0-9-]+-[0-9]{4,}$`.
+- **Format:** an item ID is `{checklist id}-{NNNN}`: the checklist's code (D20) or `GENERIC`, then at least four digits, zero-padded, matching `^([A-Z]{2,8}_[A-Z]{2}|GENERIC)-[0-9]{4,}$`. Example: `AUS_TX-0042`.
 - **Minting:** a new item takes `next_item` from its checklist's `intake.yaml` (or the baseline's `checklist.yaml`), and the same PR increments it. `bun run intake:mint <checklist> [n]` does both, so nobody picks a number by hand.
 - **Why `next_item` exists:** a folder is edited in place, so a deleted item's number appears in no sidecar on disk. The high-water mark keeps it retired.
 - **Edits keep the ID.** A split or merge mints new IDs and records `derived_from`. A move to another group keeps the ID (D15).
@@ -1416,9 +1425,9 @@ decided_at: 2026-10-14
   1. It walks `git log -- jurisdictions/austin/completeness-check/v2.7-trimmed` and builds the version rows for each distinct content state, in commit order.
   2. It assigns each state a semver under D14's rules, starting at `1.0.0` (Q5).
   3. It writes every folder commit into `intake_checklist_version_commits`.
-- **IDs:** `austin-0001` … `austin-0192` are assigned in today's `true-comment-num-mapping.tsv` order.
+- **IDs:** `AUS_TX-0001` … `AUS_TX-0192` are assigned in today's `true-comment-num-mapping.tsv` order.
   - Day one is a coincidence: each item's number equals its comment number. Nothing may derive one from the other, and the two diverge with the next insertion.
-  - The two items that left on 2026-07-09 (194 → 192) get `austin-0193` and `austin-0194`, retired in the version that dropped them.
+  - The two items that left on 2026-07-09 (194 → 192) get `AUS_TX-0193` and `AUS_TX-0194`, retired in the version that dropped them.
   - `next_item` starts at 195.
 - **How a review finds its version:** through `reviews.metadata.bureauCommitHash`. The newest folder commit that is an ancestor of that commit names the version. 59 of the 60 CC reviews record the hash.
 - **Scope:** the other 10 Austin version dirs (`legacy`, `v1`, `v2`, `v2-trimmed`, `v2.1-trimmed` … `v2.6-trimmed`) are not backfilled (Q1).
@@ -1453,13 +1462,13 @@ generated_by: …             # D16; absent for hand edits
   - **title and section:** its H1 (`# CC-1: …`) is parsed for the title, which becomes each comment's section slug;
   - **comment numbers:** they follow group order.
 - **This spec gives groups an identity of their own** without changing any of that at run time:
-  - **The ID:** `{checklist}-g{NN}` (e.g. `austin-g01`), minted from `next_group` like items.
+  - **The ID:** `{checklist}-G{NN}` (e.g. `AUS_TX-G01`), minted from `next_group` like items.
   - **The sidecar:** `<version>/intake-groups.tsv` maps each guide stem to its group:
 
     | column | example |
     |---|---|
     | `stem` | `cc-1` |
-    | `group_id` | `austin-g01` |
+    | `group_id` | `AUS_TX-G01` |
     | `title` | `Intake & Core Submittal` (the H1 without its `CC-N:` number; the display number is positional) |
 
   - **In the DB:** moving an item changes only its row's `group_id` and `position` in the new version (D6). The item's ID and title stay, and every group's ID and title stay. Renaming a group changes one title; reordering changes positions.
@@ -1471,7 +1480,7 @@ generated_by: …             # D16; absent for hand edits
 generated_by:
   runbook: intake-prospecting
   run_id: 3f2a…               # runbook_runs.id, the uuid conductor init creates
-  run_name: new-braunfels-2026-10-20
+  run_name: NB_TX-2026-10-20
   runbook_commit: 9c1e…
 ```
 
@@ -1483,8 +1492,8 @@ generated_by:
 - **The manifest:** a version dir with figures holds `figures.yaml`, one row per figure:
 
   ```yaml
-  - id: austin-0042/F1            # the item's stable id + a number; survives regrouping
-    items: [austin-0042]
+  - id: AUS_TX-F0001            # its own counter, from next_figure; never reused
+    items: [AUS_TX-0042, AUS_TX-0117]   # every item that uses it
     caption: CRZ root-zone impact thresholds
     type: reference-design        # reference-design | site-example | table | redline
     description: >-               # what it shows, and what it does NOT show
@@ -1500,7 +1509,10 @@ generated_by:
       bbox: [0.12, 0.30, 0.55, 0.62]
   ```
 
-- **The guide:** each figure appears in the guide's `## Figures` section as `![caption](figures/austin-0042/F1.png)`, the format CRC's generated guides already use. The path does not exist in git; hydration creates it.
+- **Figure IDs have their own counter:** `{checklist}-F{NNNN}`, minted from `next_figure` by `bun run intake:mint --figure`, never reused, and independent of any item.
+  - Several items can share one figure, and its `items` list names them all.
+  - Splitting or retiring an item never renames a figure; it only edits `items`.
+- **The guide:** each guide that has an item using a figure lists that figure in its `## Figures` section, as `- **AUS_TX-F0001** · AUS_TX-0042, AUS_TX-0117 — caption *(type)*` followed by `![caption](figures/AUS_TX-F0001.png)`. That is CRC's format, with stable IDs. The path does not exist in git; hydration creates it.
 - **The bytes:** Storage bucket `intake-figures`, path `<checklist_id>/<sha256>.<ext>`. Objects are never overwritten: a changed figure is a new hash, and a PATCH.
   - **Read:** `authenticated` and `workflow_run` can read (Q7).
   - **Write:** only `service_role` can write.
@@ -1533,14 +1545,34 @@ generated_by:
 
 - **Overlays stay out of the version.** `1700-s-lamar-forced-outcomes.tsv` belongs to one project and `pape-dawson-comment-num-mapping.tsv` to one firm. They are excluded from the version's content, its semver bump and the sync. Where they should live is north-star Q8.
 
+**D20. Every jurisdiction gets a permanent code, `{ABBR}_{ST}`, and intake IDs are built from it.** [Will, 2026-10-16; amends north-star D6]
+- **Format:** 2–8 uppercase letters, an underscore, and the two-letter state: `^[A-Z]{2,8}_[A-Z]{2}$`.
+  - Examples: Austin `AUS_TX`, El Paso `EP_TX`, New Braunfels `NB_TX`, Cedar Park `CP_TX`.
+  - The state suffix scopes collisions to one state.
+  - Within a state, a county takes a distinguishing abbreviation, e.g. `EPCO_TX` for El Paso County (Q9).
+  - `GENERIC` is reserved for the baseline.
+- **Where it lives:** bureau is the source (D19).
+  - `code:` goes in each jurisdiction's `conventions.yaml`.
+  - `sync-conventions` writes it to a new `jurisdictions.code text` column, with `UNIQUE (code)`, `UNIQUE (slug, code)` and the format CHECK.
+  - The column is nullable until every jurisdiction has one; a code is required before a jurisdiction gets an `intake.yaml`.
+  - `short_name` is not reused: it holds display names and is NULL on all but 7 rows.
+- **It is permanent.** A code is inside every item, group and figure ID and every review link, and IDs are never reused. So `lint:conventions` refuses a change to the code of any jurisdiction that has an `intake.yaml`, even if the city is renamed or merged. It also refuses a code that another jurisdiction already uses.
+- **Uses in intake:**
+  - `intake_checklists.id` is the code;
+  - items are `AUS_TX-0042`, groups `AUS_TX-G01`, figures `AUS_TX-F0001`;
+  - the composite FK `(jurisdiction_slug, id) → jurisdictions(slug, code)` replaces v2's `id = jurisdiction_slug` CHECK.
+- **Slugs stay** as the `jurisdictions` key, in bureau paths and in URLs: `/intake-checklists/austin/AUS_TX-0042`.
+- **The Library DB** (about 2,000 jurisdictions, uuid keys, no slugs) can adopt codes later; they are only required where a checklist exists.
+- **Timing:** no intake ID exists yet. Austin's sidecar is unwritten, and bureau#2112's `{slug}-0001` IDs haven't merged, so this costs nothing now and a lot later. #2112 must mint codes before it merges (A17).
+
 ### 2.2 Tables in cityhall
 
-**D6. Ten tables, keyed naturally rather than by uuid: identity apart from per-version placement and content.** [north-star D5, D6; audit A1, A2, A5, A11, A12, A14, A19; Will prefers short IDs to uuids]
+**D6. Eleven tables, keyed naturally rather than by uuid: identity apart from per-version placement and content.** [north-star D5, D6; audit A1, A2, A5, A11, A12, A14, A19; D20; Will prefers short IDs to uuids]
 
 ```sql
 -- identity: what exists, under ids that never change
 intake_checklists
-  id                text PK          -- 'austin' | 'generic'   CHECK (id ~ '^[a-z0-9-]+$')
+  id                text PK          -- 'AUS_TX' | 'GENERIC'   CHECK (id ~ '^([A-Z]{2,8}_[A-Z]{2}|GENERIC)$')
   kind              text NOT NULL    -- 'jurisdiction' | 'baseline'
   jurisdiction_slug text NULL  FK → jurisdictions(slug)
   name              text NOT NULL
@@ -1548,11 +1580,12 @@ intake_checklists
   bureau_commit     text             -- last sync that touched this row
   created_at, updated_at
   CHECK ((kind = 'baseline') = (jurisdiction_slug IS NULL))
-  CHECK (kind <> 'jurisdiction' OR id = jurisdiction_slug)       -- relaxed if north-star Q2 says per application type
+  FK (jurisdiction_slug, id) → jurisdictions(slug, code)          -- a jurisdiction's checklist id IS its code; relaxed if north-star Q2 says per application type
+  CHECK ((kind = 'baseline') = (id = 'GENERIC'))
 
 intake_items
   checklist_id      text FK → intake_checklists
-  item_id           text             -- 'austin-0042'
+  item_id           text             -- 'AUS_TX-0042'
   jurisdiction_slug text NULL FK → jurisdictions(slug)   -- = the checklist's; NULL on the baseline
   derived_from      text[] NULL
   minted_in_version text NOT NULL    -- computed by the sync
@@ -1562,9 +1595,17 @@ intake_items
 
 intake_groups
   checklist_id      text FK → intake_checklists
-  group_id          text             -- 'austin-g01'
+  group_id          text             -- 'AUS_TX-G01'
   PK (checklist_id, group_id)
-  CHECK (group_id ~ ('^' || checklist_id || '-g[0-9]{2,}$'))
+  CHECK (group_id ~ ('^' || checklist_id || '-G[0-9]{2,}$'))
+
+intake_figures
+  checklist_id      text FK → intake_checklists
+  figure_id         text             -- 'AUS_TX-F0001'
+  minted_in_version text NOT NULL    -- computed by the sync
+  retired_in_version text NULL       -- computed by the sync
+  PK (checklist_id, figure_id)
+  CHECK (figure_id ~ ('^' || checklist_id || '-F[0-9]{4,}$'))
 
 -- versions
 intake_checklist_versions
@@ -1633,13 +1674,13 @@ intake_checklist_citations
 
 intake_checklist_figures
   checklist_id, version              FK → intake_checklist_versions
-  figure_id         text             -- 'austin-0042/F1'
-  item_ids          text[] NOT NULL
+  figure_id         text             FK (checklist_id, figure_id) → intake_figures
+  item_ids          text[] NOT NULL  -- every item in this version that uses it; checked by the sync
   caption           text NOT NULL
   type              text NOT NULL
   description, constraints  text NULL
   sha256            text NOT NULL    CHECK (sha256 ~ '^[0-9a-f]{64}$')
-  storage_path      text NOT NULL    -- 'austin/<sha256>.png' in bucket intake-figures
+  storage_path      text NOT NULL    -- 'AUS_TX/<sha256>.png' in bucket intake-figures
   media_type        text NOT NULL
   px_w, px_h, bytes int NOT NULL
   derived_from      jsonb NULL       -- {snapshot, page, bbox}
@@ -1656,13 +1697,13 @@ jurisdiction_intake
   decided_at        date NULL
   bureau_commit     text NOT NULL
   updated_at        timestamptz NOT NULL DEFAULT now()
-  CHECK ((basis = 'formal') = (checklist_id <> 'generic'))
+  CHECK ((basis = 'formal') = (checklist_id <> 'GENERIC'))
 ```
 
-- **Names.** `intake_checklist_items` is the table Will named. It holds an item's place and content in one version. `intake_items` and `intake_groups` hold identities only, so something that must point at "the item, whatever version" has a key to point at.
-- **No row has a uuid.** A version is `('austin', '1.4.2')` and an item in it is `('austin', '1.4.2', 'austin-0042')`.
+- **Names.** `intake_checklist_items` is the table Will named. It holds an item's place and content in one version. `intake_items`, `intake_groups` and `intake_figures` hold identities only, so something that must point at "the item, whatever version" has a key to point at.
+- **No row has a uuid.** A version is `('AUS_TX', '1.4.2')` and an item in it is `('AUS_TX', '1.4.2', 'AUS_TX-0042')`. `checklist_id` repeats the item ID's prefix on purpose: it carries the composite FKs, and the anchored CHECKs keep the two equal.
 - **`jurisdiction_slug` lives on `intake_items`.** Will asked for the column so "items for jurisdiction X" needs no join. It always equals the checklist's slug, and the sync sets it.
-- **The ID CHECKs are anchored regexes.** A `LIKE checklist_id || '-%'` check would accept `new-braunfels-0007` in a checklist named `new`.
+- **The ID CHECKs are anchored regexes,** so an ID can only carry its own checklist's code.
 - **`fail_status` stores the runtime's value.** `checklist-policy.ts` treats a missing column as `fail`, so 71 Austin rows store `fail` with `fail_status_declared = false`.
 - **Citations are rows,** not a jsonb blob on items. That is so the per-source page in winston#316/#317 can ask "every region on snapshot X, page N" in one indexed query. Snapshot bytes stay in `cc-source-snapshots`.
 - **Why `jurisdiction_intake` is a separate table** rather than columns on `jurisdictions`: the conventions sync writes `jurisdictions`, and one writer per table keeps "bureau wins" unambiguous.
@@ -1696,9 +1737,9 @@ In a single transaction it does the following.
    - with a different hash, it raises `version_hash_mismatch`, because someone changed content without bumping.
 3. **It checks each figure's `storage_path`** exists in `storage.objects` for bucket `intake-figures`, and raises `figure_missing` if one doesn't.
 4. **It checks identities.**
-   - It upserts `intake_groups` and `intake_items`.
-   - It sets `minted_in_version` for each new item, and `retired_in_version` for each item that left.
-   - It raises `item_id_reused` if an item ID that was retired in an earlier version reappears (D4: numbers are never reused).
+   - It upserts `intake_groups`, `intake_items` and `intake_figures`.
+   - It sets `minted_in_version` for each new item and figure, and `retired_in_version` for each one that left.
+   - It raises `id_reused` if an item or figure ID that was retired in an earlier version reappears (numbers are never reused).
 5. It inserts the version, its groups, items, citations and figures.
 6. If `is_current` was passed, it clears the flag on the checklist's other versions and sets it on this one.
 
@@ -1738,11 +1779,11 @@ In a single transaction it does the following.
 
 1. an `intake.yaml`, `checklist.yaml` or `version.yaml` that doesn't parse, breaks the D1 basis rule, or declares a `format` the tooling doesn't know;
 2. a mismatch, in either direction, between `intake-ids.tsv`'s refs and the guide rows (`{stem}:{ID}`), or between `intake-groups.tsv`'s stems and the guide files;
-3. an item or group ID that is duplicated within a version, doesn't match D4's or D15's pattern, or doesn't carry its checklist's prefix;
-4. an ID number ≥ `next_item` / `next_group`, or a high-water mark lower than on `origin/main`;
+3. an item, group or figure ID that is duplicated within a version, doesn't match D4's, D15's or D17's pattern, or doesn't carry its checklist's code;
+4. an ID number ≥ `next_item` / `next_group` / `next_figure`, or a high-water mark lower than on `origin/main`;
 5. a `derived_from` ID that belongs to another checklist, or is not lower-numbered than the item that names it;
 6. **a declared semver smaller than the computed bump** against `origin/main` (D14);
-7. **a figure mismatch:** a `## Figures` reference with no `figures.yaml` row or the reverse, a figure ID not prefixed by one of its items, or a figure whose sha256 is not in the `intake-figures` bucket. The last check needs the service key, which `sync-cc-sources.yml` already uses; on PRs from forks it is skipped with a warning;
+7. **a figure mismatch:** a `## Figures` reference with no `figures.yaml` row or the reverse, a guide listing a figure none of its items uses, an `items` entry that isn't in the version, or a figure whose sha256 is not in the `intake-figures` bucket. The last check needs the service key, which `sync-cc-sources.yml` already uses; on PRs from forks it is skipped with a warning;
 8. **a table row whose cell count differs from its header's,** which catches unescaped pipes such as Cedar Park `cc-21.md:86`.
 
 Rule 2 keeps the sidecars from drifting: a PR that edits a synced version's guide tables must update them in the same PR. It also catches a run of completion-officer's `tools/sync-to-bureau.sh`, which would copy its stale v2.7 guides, missing `CC-22-12`, over bureau's.
@@ -1766,13 +1807,13 @@ Rule 2 keeps the sidecars from drifting: a PR that edits a synced version's guid
 
 **S1: the snapshot builder and linter, given a bureau tree** (new)
 - **Proves:**
-  - D3, D4, D15: sidecar and ID rules, including concurrent minting caught on `main`.
+  - D3, D4, D15, D17, D20: sidecar and ID rules for items, groups and figures, including concurrent minting caught on `main`. A changed jurisdiction code is refused once an `intake.yaml` exists.
   - D9: column mapping, including a version with no title map and no citations, a table without `Fail Status` (stored as `fail`, not declared), and a stale citation.
   - D14: the computed bump for each kind of change: a removed item → MAJOR, an edited condition → MINOR, a moved item or edited prose → PATCH. A revert still bumps forward.
   - D17: figure manifest checks in both directions; a missing blob fails.
   - D12 rules 1–8, each with a failing fixture.
   - The golden check against `checklist-policy.ts` (D9).
-  - The real Austin v2.7 tree builds 192 items `austin-0001` … `austin-0192`, 14 groups and comment numbers 1–192.
+  - The real Austin v2.7 tree builds 192 items `AUS_TX-0001` … `AUS_TX-0192`, 14 groups `AUS_TX-G01` … and comment numbers 1–192.
   - The history backfill builds one version per distinct folder state and resolves all 19 v2.7 reviews' commits (D5).
 - **Prior art:** `bureau/tooling/src/lib/conventions/sync-conventions.test.ts`, which has no test runner and exits 1 on failure.
 - **Runs:** `cd tooling && bun run test:intake` locally, and in `ci.yml` beside `test:conventions`.
@@ -1781,7 +1822,8 @@ Rule 2 keeps the sidecars from drifting: a PR that edits a synced version's guid
 - **Proves:**
   - **D6 constraints reject:**
     - a baseline with a slug;
-    - an item ID with another checklist's prefix (`new-braunfels-0007` in `new`);
+    - an item ID with another checklist's code (`NB_TX-0007` in `AUS_TX`);
+    - a checklist whose id isn't its jurisdiction's code (the composite FK);
     - `formal` with `generic`.
   - **D8:**
     - everything in a version lands together, and an invalid row rolls back the whole version;
@@ -1808,7 +1850,7 @@ Rule 2 keeps the sidecars from drifting: a PR that edits a synced version's guid
 - `intake_checklist_versions` for `austin` holds one row per distinct v2.7 folder state. The newest is current.
 - `intake_checklist_items` for the current version holds 192 rows.
 - `intake_checklist_version_commits` resolves each of the 19 v2.7 reviews' `bureauCommitHash` to a version.
-- `jurisdiction_intake` holds `austin | austin | formal`.
+- `jurisdiction_intake` holds `austin | AUS_TX | formal`.
 
 Dispatch again: no new versions.
 
@@ -1816,25 +1858,30 @@ Dispatch again: no new versions.
 
 ## 4. PR plan
 
-**P2a: the intake files, the linter, the Austin sidecars and the amend fix** (`bureau`)
-- **Blocked by:** nothing (can start now). **It should merge before bureau#2112,** so the runbook's output is checked against the contract. #2112 then rebases and adds `version.yaml`, `intake-groups.tsv` and `generated_by.run_id`.
+**P2a: jurisdiction codes, the intake files, the linter, the Austin sidecars and the amend fix** (`bureau`)
+- **Blocked by:** P1a applied (`sync-conventions` writes the new column). **It should merge before bureau#2112,** so the runbook's output is checked against the contract. #2112 then rebases and adds `version.yaml`, `intake-groups.tsv` and `generated_by.run_id`.
 - **Delivers:**
+  - `code:` in `conventions.yaml`. It is required for Austin and Cedar Park now, and for any jurisdiction before it gets an `intake.yaml`. The conventions schema, lint (format, uniqueness, permanence) and sync are extended to match (D20);
   - `tooling/src/lib/intake/` schema, guide parser, bump calculator and linter; `cli/lint-intake.ts` and `cli/intake-mint.ts`; `lint:intake` + `test:intake` in `ci.yml`, on PRs and on `main`;
   - `jurisdictions/austin/intake.yaml`;
   - v2.7-trimmed's `intake-ids.tsv` (192 rows), `intake-groups.tsv` (14 rows) and `version.yaml`;
   - `intake/baseline/README.md` stating D2;
   - the amend change (D18): `checklistsContentHash` at 1.4-resolve, and amend's comparison.
 
-  Lands D1–D4, D12, D14 (file side), D15 (file side), D16 and D18.
+  Lands D1–D4, D12, D14 (file side), D15 (file side), D16, D18 and D20.
 - **Tested at:** S1 (the linter half and the real Austin tree), S3 (amend).
 - **Door:** two-way.
 - **Blast radius:**
   - every bureau PR that edits v2.7-trimmed's guide tables must now update the sidecars and bump `version.yaml`. That is intended, but it changes Will's hand-editing workflow;
   - amend's comparison changes for every CC review.
 
-**P1a: the `intake-figures` bucket and its policies** (`cityhall`)
-- **Blocked by:** nothing. It is small, and figures are wanted soon.
-- **Delivers:** the bucket, its storage policies, and the storage-isolation test entry. Lands D7's bucket half. Jason applies it.
+**P1a: the jurisdiction code column and the `intake-figures` bucket** (`cityhall`)
+- **Blocked by:** nothing. It is small, and both P2a and figures need it.
+- **Delivers:**
+  - `jurisdictions.code` (nullable, UNIQUE, the format CHECK, and `UNIQUE (slug, code)`);
+  - the `intake-figures` bucket, its storage policies, and the storage-isolation test entry.
+
+  Lands D20's DB half and D7's bucket half. Jason applies it.
 - **Tested at:** S2 (bucket cases).
 - **Door:** two-way (an empty bucket).
 - **Blast radius:** none.
@@ -1842,7 +1889,7 @@ Dispatch again: no new versions.
 **P2c: figures in guides** (`bureau`)
 - **Blocked by:** P1a, P2a.
 - **Delivers:**
-  - the `figures.yaml` schema and lint rule 7;
+  - the `figures.yaml` schema, `next_figure` minting, and lint rule 7;
   - `cli/intake-figure-upload.ts`;
   - hydration in 1.4-resolve;
   - one guide with real figures (winston#312 Q1's pick).
@@ -1855,7 +1902,7 @@ Dispatch again: no new versions.
 **P1b: the tables and their write function** (`cityhall`)
 - **Blocked by:** nothing technical. **It is scheduled after the intake-prospecting loop has met the Austin bar and at least one non-Austin smoke run has produced output in the format** (north-star D3 v1.1), so that north-star Q1/Q2 can still change the schema before the migration is applied.
 - **Delivers:**
-  - the ten table files;
+  - the eleven table files;
   - `functions/intake_sync_version.sql`;
   - the generated migration;
   - allowlist entries;
@@ -1891,6 +1938,8 @@ Dispatch again: no new versions.
 - **Q6. What should review counting answer?** Per-item fail rates, reviews per version, reviews per jurisdiction? The proposed rules are in the review-linkage sibling (§6).
 - **Q7. Can `workflow_run` read a Storage bucket?** No storage policy targets that role today. If it can't, cloud runs hydrate figures through a signed-URL step run with the service key at launch (D7, D17).
 - **Q8. When does the source manifest get a stable `source_id`?** Today `source_key` means two things: a URL or `municode:…` in Austin's manifest, and a kebab slug in a prospecting manifest. The jurisdiction-pages spec (winston#316/#317, its D14 and P3) mints `source_id` in bureau as a separate field. Until then, `intake_checklist_citations.source_id` is NULL.
+
+- **Q9. How do counties and cities that share a name get their codes?** The default is a `CO` suffix on the county's abbreviation: `EP_TX` for El Paso and `EPCO_TX` for El Paso County. Codes are minted by hand in `conventions.yaml` until prospector mints them.
 
 ## 6. Not yet specified
 

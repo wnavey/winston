@@ -1,11 +1,13 @@
 # Intake north star: a checklist for every jurisdiction
 
-**Status:** Draft v1.4
+**Status:** Draft v1.5
 **Date:** 2026-10-16
 **Repos touched:** none. This is a plan of a plan. It records the 2026-10-14 discussion with Will, names where intake should end up, and lists the sub-specs that will carry out the work.
 **Repos eventually touched:** `bureau` (checklist files, the intake-prospecting runbook, the prospector workstream, the sync), `cityhall` (App-DB tables and migrations), `dsd` (the `metro_ahj_coverage` view and the prospector dashboard, for `intake_ready`), `completion-officer` (retired)
 **Repos NOT touched:** `conductor` (legacy), `substation` (on the deprecation path)
 
+> **Revision note v1.5 (2026-10-16, Will):** D6 amended. Item IDs use a permanent jurisdiction code, `{ABBR}_{ST}` (`AUS_TX-0042`), declared in `conventions.yaml` and synced to `jurisdictions.code` (db-schema D20). The state suffix answers the collision concern that originally ruled codes out. Groups and figures get their own counters (`AUS_TX-G01`, `AUS_TX-F0001`).
+>
 > **Revision note v1.4 (2026-10-16, db-schema v2):** D7 is amended. Bureau stays the source of truth with no flip planned, and the DB is a read replica (db-schema D19, audit A18). Making the DB the source is no longer the end goal: it is reconsidered only on D19's triggers. §4.5 and the sub-spec table change to match: `db-source-of-truth` is not planned, and two siblings are added, `review-linkage` and `refresh`. D1's rename no longer waits on a flip (Q4). Reference images follow db-schema D17.
 >
 > **Revision note v1.3.1 (2026-10-14, db-schema fact audit):** facts only.
@@ -193,8 +195,12 @@ together with the evidence and sources behind that basis.
 
 Moving a jurisdiction off the baseline later means it gets its own checklist with new IDs. Its old reviews keep their baseline references, and nothing is migrated. Never work out a review's jurisdiction from an item ID prefix; go through review → project.
 
-**D6. Stable short IDs.** [Will: slug prefix; proposed: the rest]
-- An item ID is `{owner-slug}-{NNNN}`, for example `austin-0042`, `new-braunfels-0007` or `generic-0012`. The jurisdiction slug is used because `jurisdictions.short_name` is not a code: it is NULL on all but 7 rows, and 3-letter codes would collide across the ~2,000 Library jurisdictions.
+**D6. Stable short IDs.** [Will: a jurisdiction code prefix (v1.5; was the slug); proposed: the rest]
+- An item ID is `{owner code}-{NNNN}`, for example `AUS_TX-0042`, `NB_TX-0007` or `GENERIC-0012`.
+  - The owner code is the jurisdiction's permanent code, `{ABBR}_{ST}`. It is declared in `conventions.yaml` and synced to a new `jurisdictions.code` column (db-schema D20). The baseline's is `GENERIC`.
+  - The state suffix keeps codes from colliding across the ~2,000 Library jurisdictions. Uniqueness is linted.
+  - `jurisdictions.short_name` is not reused: it holds display names and is NULL on all but 7 rows.
+  - A code never changes once a checklist uses it.
 - `NNNN` is a counter scoped to its owner. It encodes nothing.
 - Group, display order and comment number are attributes of an item within a checklist version, not part of its ID.
 - An edit keeps the ID and makes a new revision. A split creates new IDs that record what they came from.

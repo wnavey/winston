@@ -1,8 +1,13 @@
 # The intake-prospecting runbook
 
-**Status:** Draft v1.2.1
+**Status:** Draft v1.2.2
 **Date:** 2026-10-16
-> **Revision note v1.2.1 (2026-10-16, db-schema v2):** D13's output follows db-schema Draft v2's contract. 3.1-write also emits `v1/version.yaml` (`version: 1.0.0`, `format: 1`, `generated_by` with the `runbook_runs` uuid; db-schema D14, D16) and `v1/intake-groups.tsv` (group ids `{slug}-g01…`, db-schema D15), and `intake.yaml` gains `next_group`. `decided_by` is the `runbook_runs` uuid, not the run directory's name. No functional change to the runbook's steps.
+> **Revision note v1.2.2 (2026-10-16, db-schema v2.1):** IDs use the jurisdiction code (db-schema D20).
+> - 3.1-write's `conventions.yaml` stub gains `code:`. For a new jurisdiction the runbook proposes `{ABBR}_{ST}` and checks that it is unique against every `conventions.yaml` on `origin/main`; for an existing one it reads the code.
+> - Items are `{code}-0001`…, groups `{code}-G01`…, and figures `{code}-F0001`… from `next_figure`.
+> - `checklist` in `intake.yaml` is the code.
+>
+> **Revision note v1.2.1 (2026-10-16, db-schema v2):** D13's output follows db-schema Draft v2's contract. 3.1-write also emits `v1/version.yaml` (`version: 1.0.0`, `format: 1`, `generated_by` with the `runbook_runs` uuid; db-schema D14, D16) and `v1/intake-groups.tsv` (group ids `{code}-G01…`, db-schema D15), and `intake.yaml` gains `next_group`. `decided_by` is the `runbook_runs` uuid, not the run directory's name. No functional change to the runbook's steps.
 >
 > **Revision note v1.2 (2026-10-14, prospector integration audit):** The runbook is checked against what `bureau/runbooks/prospector/` actually is, so that nothing the Austin loop tunes is thrown away when it becomes a workstream (north-star I3). Functional design unchanged. Technical corrections:
 > - **The deliverable and the ledger are written in a bureau worktree from the first session, not in the run dir** (new `1.0-worktree`, D1, D5, D13). `lib/step-loop.ts`, `lib/audit.md` and `lib/disposition.py`, which D5 and D12 reuse, all require one: the step loop's blocking rule checks the worktree is committed and that each report names its HEAD; the audit records `reviewed_head`; disposition commits residual rows into the ledger inside the worktree. v1.1 had the ledger in the run dir and copied it at 3.1, which none of those tools would have accepted.
@@ -109,7 +114,7 @@ What exists to build on (bureau `origin/main`, 2026-10-14):
 
 **Two paths through the runbook:**
 - **`basis: formal`:** 1.x → 2.x → 3.x → 4.x. Writes a jurisdiction checklist `v1`.
-- **`none_found` / `inconclusive`:** the 2.1 roster is empty, so 2.2–2.5 pass with nothing to do. 3.1 writes only `intake.yaml` (`checklist: generic`) plus the discovery ledger as evidence.
+- **`none_found` / `inconclusive`:** the 2.1 roster is empty, so 2.2–2.5 pass with nothing to do. 3.1 writes only `intake.yaml` (`checklist: GENERIC`) plus the discovery ledger as evidence.
 
 **Two ways to run it, one code path:**
 - **Standalone** (the loop, smoke runs, a human-gated publish): `0-request` holds a `Request`, `1.0-worktree` makes a bureau worktree, `4.2-publish` opens the PR.
@@ -151,7 +156,7 @@ Request = {
 }
 ```
 
-A `jurisdiction.slug` with no `jurisdictions/<slug>/` directory is allowed; New Braunfels has none. 3.1-write then adds the `conventions.yaml` stub prospector's `bin/ship.py` would add (`name:`, `short_name:`), the legal minimum that registers the slug, so `sync-conventions.yml` creates the `jurisdictions` row on merge and db-schema's sync can later satisfy its FK. (`ship.py` writes the stub only when the folder has a `README.md`; a `none_found` jurisdiction may have nothing but `intake.yaml`, so this runbook writes its own.)
+A `jurisdiction.slug` with no `jurisdictions/<slug>/` directory is allowed; New Braunfels has none. 3.1-write then adds the `conventions.yaml` stub prospector's `bin/ship.py` would add (`name:`, `short_name:`, and now `code:`, db-schema D20), the legal minimum that registers the slug, so `sync-conventions.yml` creates the `jurisdictions` row on merge and db-schema's sync can later satisfy its FK. (`ship.py` writes the stub only when the folder has a `README.md`; a `none_found` jurisdiction may have nothing but `intake.yaml`, so this runbook writes its own.)
 
 **D3. The rule-19 posture.** `AGENTS.md` opens with it, and every sub-agent prompt restates it as a capability limit:
 
@@ -274,10 +279,10 @@ For `basis: formal`, under `jurisdictions/<slug>/completeness-check/`:
   - The checklist table is **rendered by the script from `items.json`** with the 8 columns (`ID | Item | Condition | Location | Location Binding | Requirement Source | Source Type | Fail Status`), so the table can't drift from the items.
   - The prose sections (Description, Overview, Documents to Review, Validation Methodology where the method isn't obvious, and Common Rejection Triggers, at least 2) are written by one agent per group from that group's items and sources.
 - `v1/intake-ids.tsv` (db-schema D3):
-  - Items are numbered in group order, then table order, as `{slug}-0001` and up, and the ID column of each guide **is** that stable ID (db-schema D3, new jurisdictions).
+  - Items are numbered in group order, then table order, as `{code}-0001` and up, and the ID column of each guide **is** that stable ID (db-schema D3, new jurisdictions).
   - `ref` = `cc-N:{id}`.
   - `next_item` = count + 1.
-- `v1/intake-groups.tsv` (db-schema D15): one row per group, `cc-N` → `{slug}-gNN` in roster order, with the group title without its number. `next_group` = group count + 1.
+- `v1/intake-groups.tsv` (db-schema D15): one row per group, `cc-N` → `{code}-GNN` in roster order, with the group title without its number. `next_group` = group count + 1.
 - `v1/version.yaml` (db-schema D14, D16): `version: 1.0.0`, `format: 1`, and `generated_by` = {runbook, `run_id` (the `runbook_runs` uuid), `run_name`, `runbook_commit`}.
 - `v1/cc-item-title-mappings.tsv` and `v1/true-comment-num-mapping.tsv` (comment number = sort order).
 - `v1/source-citations.json`: cc-source-citations' schema, built from the verified regions, so `/intake-checklists/<slug>` can show the citations once the bucket syncs.
