@@ -1178,7 +1178,7 @@ table.nx-rules td.o{color:var(--ink2);font-size:12.5px;white-space:nowrap}
   <div class="doc">
     <ol class="plain">
       <li><div><b>The north star's plan-set half, started with the feature that pays most.</b> The IG report ranks the building footprint second in demand across 134 geometric comments (51 A+B, 30 A-tier, the most of any layer), and it is one side of the headline question: how far is the proposed building from the recorded lot line. <span class="aside">§1.1, sizing note</span></div></li>
-      <li><div><b>The geometry is already in the PDF; the identity is what costs.</b> A Civil 3D export writes every line as a vector path in page coordinates. On White Water the CAD layer names survived too (803 optional content groups; the building is <code>JCE BASE|C-BLDG</code>, one closed 55-vertex ring). On 2008 San Antonio nothing survived but stroke styles. The reader is layer-first with a style-and-vision fallback. <span class="aside">§1.3, D4</span></div></li>
+      <li><div><b>The geometry is already in the PDF; the identity is what costs.</b> A Civil 3D export writes every line as a vector path in page coordinates. On White Water the CAD layer names survived too (803 optional content groups; the building is <code>JCE BASE|C-BLDG</code>, one closed 54-vertex ring). On 2008 San Antonio nothing survived but stroke styles. The reader is layer-first with a style-and-vision fallback. <span class="aside">§1.3, D4</span></div></li>
       <li><div><b>Code traces, an agent picks, points, and only as a last resort draws.</b> The tracer climbs four rungs: a named CAD layer, then stroke style on a layer-less vector sheet, then a contour flooded from a point the worker gives on a raster sheet, then a polygon the worker draws. The first three keep every coordinate out of the model; the fourth is labelled as the exception, and the rung travels with the figure into geo. <span class="aside">D4–D6, D15</span></div></li>
       <li><div><b>The lot registers the sheet.</b> The property line is drawn on every plan-view sheet and the run already reads its calls there as context evidence. Fitting the sheet's boundary linework to the extracted lot gives the sheet's scale and rotation without reading the title block: on sheet 12 exactly 1″ = 20′, −15.46°, 0.004 ft mean residual. <span class="aside">§1.4, D7</span></div></li>
       <li><div><b>Recorded and proposed stay distinguishable all the way down.</b> A new <code>posture</code> column on both tables, so a review query can say <code>WHERE posture = 'proposed'</code> and measure between the two. <span class="aside">D10</span></div></li>
@@ -1767,7 +1767,7 @@ ws/crops/p12-r2-t1-overlay.json <span class="c">transform {op: outline, args: [t
       <div class="dq end"><span class="q">The worker draws the polygon as fractions of the crop; code maps it through the sidecar</span><span class="yes"></span><span class="out fail">rung 4 · vision_drawn · about 0.3 ft; the only rung where a model produces a coordinate</span></div>
     </div>
     <p class="claim"><b>Claim (D4):</b> a worker may not draw over a region that holds a closed vector ring, and may not point before rungs 1–2 have been tried; the rung travels as <code>trace.method</code> and into <code>geo.properties.trace_method</code> (D15).</p>
-    <p class="claim"><b>Claim (§1.3):</b> on sheet 12 the <code>C-BLDG</code> layer's 54 segments chain into one closed 55-vertex ring of 37,014 pt²; the property line is 95 dashes that an end-to-end chain cannot join, which is what the bridging is for.</p>
+    <p class="claim"><b>Claim (§1.3):</b> on sheet 12 the <code>C-BLDG</code> layer's 54 line segments chain into one closed 54-vertex ring of 37,014 pt²; the property line is 95 dashes that an end-to-end chain cannot join, which is what the bridging is for.</p>
   </section>
   <hr class="nx-div">
 
@@ -2050,7 +2050,7 @@ from geo b join geo l on l.properties->>'anchor_id' = b.properties->>'anchor_id'
 where b.posture = 'proposed' and l.kind = 'parcel' and l.method = 'anchored';
 
 -- expected on White Water: 2,856.0 · true · 9.97, and per lot line 53.76 / 9.97 / 71.59 / 92.32 / 151.00</div>
-  <p class="claim"><b>Claim (D16):</b> this is the north star's §1.3 question with the plan-set half supplied; the 9.97 ft is handed to a human with the setback dashes' 29.5 ft beside it, and what it means is a review question, not this spec's.</p>
+  <p class="claim"><b>Claim (D16):</b> this is the north star's §1.3 question with the plan-set half supplied; the 9.97 ft is handed to a human with the note that the sheet draws no setback line along course 2 (the C-SETBACK BLDG layer's 10 ft line runs along courses 3, 4 and 5 only), and what it means is a review question, not this spec's.</p>
 </section>
 
 <!-- ============================================================ WHAT'S STORED -->
@@ -2138,7 +2138,7 @@ where b.posture = 'proposed' and l.kind = 'parcel' and l.method = 'anchored';
   <div class="spectable-scroll"><table class="spectable">
     <thead><tr><th>Seam</th><th>Proves</th><th>Fixture</th><th>Runs</th></tr></thead>
     <tbody>
-      <tr><td><span class="sn">S1</span> <code>trace.ts</code> CLI · new</td><td>D4, D17 — collect, chain with dash bridging, keep, rank</td><td>sheet 12 → one ranked C-BLDG ring, 55 vertices, 37,014 pt²; boundary → 95 segments; 2008 San Antonio sheet 10 → layers [], rung 2, no throw; sheet 45 (raster) → vector: false; with --seed → a raster_contour candidate within 2 % of the vector area; with --vertices → a vision_drawn candidate</td><td>bun test, CI</td></tr>
+      <tr><td><span class="sn">S1</span> <code>trace.ts</code> CLI · new</td><td>D4, D17 — collect, chain with dash bridging, keep, rank</td><td>sheet 12 → one ranked C-BLDG ring, 54 vertices, 37,014 pt²; boundary → 95 segments; 2008 San Antonio sheet 10 → layers [], rung 2, no throw; sheet 45 (raster) → vector: false; with --seed → a raster_contour candidate within 2 % of the vector area; with --vertices → a vision_drawn candidate</td><td>bun test, CI</td></tr>
       <tr><td><span class="sn">S2</span> <code>registerSheet()</code> · new</td><td>D7, D8 — the fit and its gate</td><td>the lot + 95 dashes → 20.00 ± 0.1 ft/in, θ −15.46° ± 0.05°, mean ≤ 0.01 ft; rotated 90° → same; a 30 ft/in synthetic → 30; the wrong lot → gate fails</td><td>bun test, CI</td></tr>
       <tr><td><span class="sn">S3</span> the extract scripts on a run dir · existing, extended</td><td>D9, D11, D12, D13</td><td>one mete + one traced figure through assemble → place → publish --dry-run; the union refuses the two illegal shapes</td><td>bun test, CI</td></tr>
       <tr><td><span class="sn">S4</span> the extract runbook · existing</td><td>D1–D6 end to end</td><td>(a) the car-wash plat: kind plat, empty rosters, raw-artifact identical to run5; (b) White Water: kind plan_set, 3.5 on sheet 12, two figures</td><td>locally, conductor</td></tr>
