@@ -1147,7 +1147,7 @@ table.nx-rules td.o{color:var(--ink2);font-size:12.5px;white-space:nowrap}
 
 </style>
 </head>
-<body class="reader" data-back="architecture.html" data-spec-sha="caa8b7f20981948b">
+<body class="reader" data-back="architecture.html" data-spec-sha="269c9c87aeadf50b">
 
 <header class="masthead">
   <div class="kicker">SPEC · READER</div>
@@ -1164,11 +1164,9 @@ table.nx-rules td.o{color:var(--ink2);font-size:12.5px;white-space:nowrap}
 <script type="text/markdown" id="spec-md">
 # Building footprints from plan sets — the first proposed feature through extract-geometry-v2 and anchor-geometry
 
-**Status:** Draft v1.1
+**Status:** Draft v1
 **Date:** 2026-10-16
-
-> **Revision note (v1.1, 2026-10-16).** D1 reworked on Will's direction: the document is classified by **looking at page 1** (an agent read of the cover sheet, with the sheet size as a recorded signal), not by a page-count rule. The car-wash plat is itself a 24 × 36 in sheet behind a letter-size recording cover, so neither page count nor sheet size can decide on their own. Classification moves from `1.2-fetch` (script) to a new single-agent step **`1.3-classify`**; D2, C2, §3.1, S4 and P2 updated to match. Nothing else changes.
-**Repos touched:** `bureau` (`extract-geometry-v2` steps 1.2, 2.1, 2.2, two new steps 3.4 and 3.5, 4.2, 6.1 and their contracts; `anchor-geometry` steps 2.1, 3.2, 3.3, 5.1), `cartographer` (new `src/lib/geometry/sheet.ts` and `src/lib/features/registry.ts`; new `runbooks/extract-geometry/scripts/trace.ts`; `crop.ts`, `assemble.ts`, `place.ts`, `publish.ts`, `lib/evidence.ts`; `runbooks/anchor-geometry/scripts/{render,publish}.ts`; `/anchored`, `/anchor/[id]`, `/geometry/[id]` colour by posture), `substation` (one migration on `cartographer_geometries`, `cartographer_geometry_evidence` and `geo`; `sir_put_anchored_geo`)
+**Repos touched:** `bureau` (`extract-geometry-v2` steps 1.1, 1.2, 2.1, 2.2, three new steps 1.3, 3.4 and 3.5, 4.2, 6.1 and their contracts; `anchor-geometry` steps 2.1, 3.2, 3.3, 5.1), `cartographer` (new `src/lib/geometry/sheet.ts` and `src/lib/features/registry.ts`; new `runbooks/extract-geometry/scripts/trace.ts` and `contour.ts`; `crop.ts`, `assemble.ts`, `place.ts`, `publish.ts`, `lib/evidence.ts`; `runbooks/anchor-geometry/scripts/{render,publish}.ts`; `/anchored`, `/anchor/[id]`, `/geometry/[id]` colour by posture), `substation` (one migration on `cartographer_geometries`, `cartographer_geometry_evidence` and `geo`; `sir_put_anchored_geo`)
 **Repos NOT touched:** `cityhall`, `conductor2`, `surveyor`, `prospector`, `claude-plugins`, `navalbase`, `quarry`
 **Prod:** Supabase **Noetic App** (`mgxqsrjutswbciyrltwd`)
 **Parent:** [`../north-star/NORTH-STAR-SPEC.md`](../north-star/NORTH-STAR-SPEC.md) (winston#303) — this is the first slice of **P5 (plan sets)**, peeled off for one feature.
@@ -1272,7 +1270,7 @@ What is **not** a coupling, and this spec leans on: `frames.ts` `ringInFrame` an
 
 ### 1.6 Scope
 
-In: one feature (the proposed building footprint), one geometry type (polygon), vector plan sheets, one figure per document, the registry shape that the next features plug into, and the posture axis on `geo`. Out (§9): every other feature, lines and points, raster sheets, the PostGIS tool surface, multi-sheet identity.
+In: one feature (the proposed building footprint), one geometry type (polygon), vector and raster plan sheets, one figure per document, the registry shape that the next features plug into, and the posture axis on `geo`. Out (§9): every other feature, lines and points, the PostGIS tool surface, multi-sheet identity.
 
 ---
 
@@ -1320,31 +1318,35 @@ A `feature` region is a padded box around one drawn feature of a registered kind
 
 ### 2.3 Code traces, an agent confirms
 
-**D4. Tracing is a script, and it is cartographer's.** A new `runbooks/extract-geometry/scripts/trace.ts`, run through `carto trace <page> <regionBox> <feature>`, writes `traces/<regionId>.json`: the candidate outlines for one `feature` region, in page points, with everything the picker and the readout need to know about each:
+**D4. Tracing is a script, and it is cartographer's; it climbs a four-rung ladder from exact to approximate and records the rung it stopped on.** A new `runbooks/extract-geometry/scripts/trace.ts`, run through `carto trace <page> <regionBox> <feature>`, writes `traces/<regionId>.json`: the candidate outlines for one `feature` region, in page points, with everything the picker and the readout need to know about each:
 
 ```jsonc
 {
   "regionId": "p12-r2", "page": 12, "feature": "building",
-  "raster": false,                                   // true on a page with no vector content: no candidates, the region is `untraceable`
+  "vector": true,                                    // the region holds vector paths; false on a raster-only page
   "layers": ["JCE BASE|C-BLDG", "JCE BASE|C-BLDG CANOPY", "JCE BASE|C-BLDG TEXT", "JCE BASE|C-SETBACK BLDG", …],   // every OCG with paths inside the box, or []
+  "rung": "vector_layer",                            // the highest rung that produced a candidate: vector_layer | vector_style | raster_contour | vision_drawn | none
   "candidates": [
-    { "id": "p12-r2-t1", "layer": "JCE BASE|C-BLDG", "style": { "width": 0.72, "dashes": null, "fill": null },
+    { "id": "p12-r2-t1", "rung": "vector_layer", "layer": "JCE BASE|C-BLDG", "style": { "width": 0.72, "dashes": null, "fill": null },
       "closed": true, "vertices": 55, "areaPt2": 37014, "bboxPage": [0.33, 0.25, 0.55, 0.58],
       "pathPt": [[1021.4, 612.0], …], "rank": 1, "why": "layer name matches building; closed; largest in region" },
-    { "id": "p12-r2-t2", "layer": "JCE BASE|C-BLDG CANOPY", "closed": false, "vertices": 3, "rank": null, "why": "open; layer excluded by pattern (CANOPY)" }
+    { "id": "p12-r2-t2", "rung": "vector_style", "layer": "JCE BASE|C-BLDG CANOPY", "closed": false, "vertices": 3, "rank": null, "why": "open; layer excluded by pattern (CANOPY)" }
   ]
 }
 ```
 
-How it gets there, in order, and all of it deterministic:
+The ladder, from the drafter's own coordinates down to a model's hand:
 
-1. **Collect** every path whose bbox lies inside the region box, with its layer (OCG name, or `null`) and its stroke style.
-2. **Chain** segments into polylines by endpoint coincidence, then bridge collinear gaps up to a dash tolerance so an exploded linetype rejoins (the 2,367-dash LOC in the IG spike; the 95-dash property line here). Chaining is per (layer, style) group, never across groups.
-3. **Keep** what the feature's geometry type wants: for a polygon feature, closed rings above a floor area (a building is not 20 ft²).
-4. **Rank**, in this order: a layer whose name matches the feature's registry patterns (D17) and not its exclusions; then closed; then area, largest first. On a layer-less page every candidate is unranked-by-layer and the order is closed-then-area; the picker (D5) does the rest.
-5. **Draw** one overlay crop per candidate through the crop tool (D13), so the picker looks at the same kind of image a transcriber does and the choice is citable.
+| rung | when | who does what | how exact |
+|---|---|---|---|
+| **1 `vector_layer`** | the page is vector and an OCG name inside the box matches the feature's registry patterns (`BLDG`, `BUILDING`, …) and not its exclusions (`CANOPY`, `TEXT`, `SETBACK`, `EXIST`, `DEMO`) | code chains that layer's segments into rings and ranks them; the 3.5 worker confirms | the PDF's vertices: exact (White Water's upload) |
+| **2 `vector_style`** | the page is vector but no layer matches (no OCGs at all, or names that fit no pattern) | code chains every segment group by (layer, style), bridging the gaps of an exploded dash pattern, keeps the closed rings above the feature's floor area, ranks by area; the 3.5 worker picks | the PDF's vertices: exact (2008 San Antonio; every `sheets/<n>.pdf` after preprocessing, D19) |
+| **3 `raster_contour`** | the box holds no vector paths (a raster-only sheet, 2 of 53 on 2008 San Antonio), or rungs 1–2 chained nothing closed | the 3.5 worker **points**: a seed box or point inside the building on the region crop. New `contour.ts` thresholds the crop at the source's resolution, floods from the seed to the outline, takes the outer contour, simplifies it (Douglas–Peucker at one pixel), and maps the vertices to page points through the crop's sidecar. The overlay goes back to the worker to confirm, like any other candidate | the pixel: 0.03 ft at 600 DPI on a 1″ = 20′ sheet; the failure is semantic (a leak through a gap in the outline, a hug of the hatch instead of the wall), which the confirm catches |
+| **4 `vision_drawn`** | the contour fails too (a broken outline, labels overprinting it, a poor scan) | the 3.5 worker **draws**: a vertex list as fractions of the crop image it is looking at; code maps them to the page through the same sidecar. The only rung where a model produces a coordinate | about 0.3 ft: a crop reaches the model at ~1568 px, so on a 5-inch building region at 1″ = 20′ one delivered pixel is ~0.06 ft, and a model places a vertex within a few pixels — the same band the IG spike measured for the review agent's eyeballed figures |
 
-No model, no threshold that moves a vertex. The `pathPt` is the PDF's own vector data, which the IG spike found accurate to the plat to 0.3 ft on another set and this probe found accurate to **0.004 ft** on this one.
+Rungs 1 and 2 run in `3.4-trace` with no model. Rungs 3 and 4 need the worker's seed or vertices, so they run inside `3.5-confirm`: the worker answers, the tracer is called again with the answer (`carto trace … --seed` / `--vertices`), and the new candidate's overlay is shown to the worker for the same confirm. A region whose trace file says `vector: true` with candidates never reaches rung 3; a worker may not draw a polygon over a region that has a closed vector ring in it. Every candidate carries its `rung`, the figure carries the chosen candidate's rung as `trace.method` (D9), and the anchor publish carries it into `geo` (D15), so a reviewer reading a distance can see whether it came from the drafter's coordinates or a model's hand.
+
+Step 5 of each rung is the same: **draw** one overlay crop per candidate through the crop tool (D13), so the picker looks at the same kind of image a transcriber does and the choice is citable. No threshold in rungs 1–3 moves a vertex by judgment; rung 4 is the exception and is labelled as one.
 
 **D5. Confirming is vision, reads no coordinates, and is one worker per region.** New step `3.5-confirm` (runner `vision`, fan-out over the trace roster) looks at the region crop and the candidate overlays and writes `confirm.json`:
 
@@ -1355,10 +1357,12 @@ No model, no threshold that moves a vertex. The `pathPt` is the PDF's own vector
   "statedArea": { "verbatim": "2,856 s.f.", "value": 2856, "cropId": "p12-r2-lbl", "location": [...] },
   "attributes": { "ffe": { "verbatim": "FFE = 651.0", "value": 651.0, "cropId": "…", "location": [...] } },   // read, carried, not used
   "printedScale": { "verbatim": "1\"=20'", "ftPerIn": 20, "cropId": "…", "location": [...] },                 // a check for D8, never the source
+  "seed": null,                                       // rung 3 only: { "cropId": "p12-r2", "box": [x0,y0,x1,y1] } inside the building, fractions of that crop
+  "vertices": null,                                   // rung 4 only: [[x,y], …] fractions of the named crop, in drawing order
   "why": "the red outline follows the hatched building; the canopy and dumpster pad are separate outlines" }
 ```
 
-The contract refuses a `chosen` that is not a candidate, a reading with no crop sidecar, and any key that looks like a coordinate or an area the worker computed. The worker's job is the one thing code cannot do on a layer-less sheet: say which of the closed rings in the box is the building. On a layered sheet it is a check on the ranker; on a raster sheet (`raster: true`) it reports `chosen: null, why: "no vector content"` and the region is published nowhere (Q7).
+The contract refuses a `chosen` that is not a candidate, a reading with no crop sidecar, an area the worker computed, and any page coordinate. `seed` is accepted only when the trace file's `rung` is `none` or every candidate is open; `vertices` only after a rung-3 attempt is on disk and failed its confirm. On a layered sheet the worker's pick is a check on the ranker; on a layer-less vector sheet it is the one thing code cannot do, which ring is the building; on a raster sheet it points, and only when pointing fails does it draw (D4).
 
 **D6. One figure per feature per document, from the primary sheet.** The trace step runs on every `feature: building` region the survey marked (zero tokens, so cheap). The confirm step runs on the regions of the **primary sheet** only — the `plan_view` sheet whose title is the site plan, else the first `plan_view` sheet with a building region — and that is the reading that becomes the figure. The other sheets' traces are counted in the readout ("a building outline is drawn on sheets 12, 13, 14; sheet 12 was read") and compared to nothing in v1. Cross-sheet consistency (the IG's `ST_HausdorffDistance` tool, #9) is **Q6** and the obvious second slice: the traces are already on disk.
 
@@ -1377,6 +1381,8 @@ One 2D similarity, **scale free** (the one place in Cartographer where it is), r
 
 Where the boundary segments come from is the tracer's job (D4) with a second feature kind the registry already needs: `boundary` (geometry `polyline`, patterns `BNDY | BOUNDARY | PROP | P/L | PL`, no exclusions). On a layered sheet that is `C-BNDY LINE`. On a layer-less sheet the tracer takes every segment within a band of the lot's edges under the label-initialised transform, which is what the labels are for: the transcribers already put a box around each course call on the sheet (§1.2), and a call sits on its line.
 
+**On a raster sheet** the property line is pixels, not segments, and the registration takes the same input the course labels already give it: the label boxes seed the transform, and the fit runs against the **edge pixels** of the region crop (a Canny edge map at the source's resolution, from `contour.ts`) instead of segment midpoints. Same similarity, same gate, same residuals in feet; `trace.sheet.input` records `segments` or `edge_pixels`.
+
 **Which lot.** The figure whose courses were read on that page — as `course` or as `context` evidence — is the sheet's lot. White Water has one. A sheet that shows two lots, or a plan set whose lot is not in the file at all, is **Q4**; v1 stops with the reason.
 
 **D8. The printed scale and the north arrow are checks, not sources.** The confirm step reads the title block's scale when it can (D5); `assemble.ts` compares it with the solved `scaleFtPerIn` and reports agreement, disagreement or `unavailable`, exactly as the sibling spec treats the plat's zone against the ring's SRID (its D7). The sheet's rotation is reported in degrees from plat north; nothing checks it against a drawn arrow in v1.
@@ -1389,7 +1395,7 @@ Where the boundary segments come from is the tracer's job (D4) with a second fea
 |---|---|---|
 | `reading_method` | `text NOT NULL DEFAULT 'mete'`, CHECK `mete \| traced` | how the shape was read |
 | `mete` | becomes **nullable** | null on a traced figure |
-| `trace` | `jsonb`, nullable | `{page, layer, style, pathPt, sheet: {ftPerPt, thetaRad, tPt, residualMeanFt, residualMaxFt, scaleFtPerIn, printedScale?, check}, attributes?}` — the source description of a traced figure, as `mete` is of a walked one |
+| `trace` | `jsonb`, nullable | `{method: vector_layer \| vector_style \| raster_contour \| vision_drawn, page, layer, style, pathPt, sheet: {input, ftPerPt, thetaRad, tPt, residualMeanFt, residualMaxFt, scaleFtPerIn, printedScale?, check}, attributes?}` — the source description of a traced figure, as `mete` is of a walked one; `method` is D4's rung |
 | `posture` | `text NOT NULL DEFAULT 'recorded'`, CHECK `recorded \| proposed \| existing` | D10 |
 
 with a completeness CHECK in the style of `cartographer_geometries_placement_complete_check`: `reading_method = 'mete'` ⇔ `mete IS NOT NULL AND trace IS NULL`, and the converse for `traced`. Every existing row is `mete` / `recorded` by default and nothing behaves differently.
@@ -1405,7 +1411,7 @@ The derived columns keep their meaning: `polygon` is the ring in **frame feet wi
 ```jsonc
 { "id": "figure-2", "readingMethod": "traced", "label": "CAR WASH", "kind": "building", "posture": "proposed",
   "sourcePages": [12], "statedAreaSqft": 2856, "statedArea": { …reading… },
-  "trace": { "page": 12, "regionId": "p12-r2", "candidate": "p12-r2-t1", "layer": "JCE BASE|C-BLDG",
+  "trace": { "method": "vector_layer", "page": 12, "regionId": "p12-r2", "candidate": "p12-r2-t1", "layer": "JCE BASE|C-BLDG",
              "style": {…}, "pathPt": [[…]], "cropId": "p12-r2-t1-overlay", "bboxPage": […],
              "lot": "figure-1", "boundary": { "candidate": "p12-r1-b1", "segments": 95 },
              "attributes": { "ffe": {…} }, "printedScale": {…} },
@@ -1422,14 +1428,14 @@ The derived columns keep their meaning: `polygon` is the ring in **frame feet wi
 
 **D13. A traced value is cited like any other: a page box and an image the crop tool made.** Two additions:
 
-- `crop.ts` gains a mode, **`outline`**: `carto crop outline <parentCropId> <cropId> <traceId>` renders the parent crop with one candidate's path drawn on it (the path comes from `traces/*.json`, mapped into the crop through the sidecar's page box) and records it as a transform with `op: "outline"` and `args: [traceId]`. It keeps the crop's footprint, which is the rule `TRANSFORM_OPS` (`crop.ts:75`) enforces for every transform; it is the first that adds ink, and it says so in the sidecar.
-- Evidence gets a role **`trace`** and a source kind **`vector_path`**: one row per traced figure, `bbox` = the ring's box on the page, `crop_id` = the overlay crop, `verbatim` = the layer name or the style summary, `value` = `{vertices, areaPt2, candidate}`. The label and the stated area reuse `stated_area` / `area_statement` and a `label` role (new, `source_kind: marker`), each citing the crop the confirm worker read them on. `/geometry/[id]` draws the trace row's box over the sheet with no new UI: it is a box with a crop, like a course.
+- `crop.ts` gains a mode, **`outline`**, and a sibling script **`contour.ts`** (threshold, flood, outer contour, simplify, edge map; pixels in, page points out through the sidecar) does rung 3's and the raster registration's arithmetic. `outline`: `carto crop outline <parentCropId> <cropId> <traceId>` renders the parent crop with one candidate's path drawn on it (the path comes from `traces/*.json`, mapped into the crop through the sidecar's page box) and records it as a transform with `op: "outline"` and `args: [traceId]`. It keeps the crop's footprint, which is the rule `TRANSFORM_OPS` (`crop.ts:75`) enforces for every transform; it is the first that adds ink, and it says so in the sidecar.
+- Evidence gets a role **`trace`** and source kinds **`vector_path`**, **`raster_contour`** and **`vision_drawn`** (one per D4 rung family): one row per traced figure, `bbox` = the ring's box on the page, `crop_id` = the overlay crop, `verbatim` = the layer name, the style summary, or the worker's seed / vertex count, `value` = `{rung, vertices, areaPt2, candidate}`. A rung-3 or rung-4 row also cites the crop the worker pointed at or drew on, so the trail shows the hand as well as the result. The label and the stated area reuse `stated_area` / `area_statement` and a `label` role (new, `source_kind: marker`), each citing the crop the confirm worker read them on. `/geometry/[id]` draws the trace row's box over the sheet with no new UI: it is a box with a crop, like a course.
 
 ### 2.7 Anchoring a proposed figure
 
 **D14. The anchor run needs no new inputs and no solver change.** `fetch.ts` → `geometries.json` already carries every figure of the frame as `polygon + offset` (`frames.ts` `ringInFrame`, `toInputFigure`); it gains `posture` and `reading_method` as pass-through fields on `InputFigure`. `2.1-correspond`'s prompt tells the agent that a `posture: proposed` figure is claimed **`within`** its parcel ring (the relation exists, contract unchanged) and is never a fit target; `frames.ts` already excludes `within` from `ringTargets`' fit set. `anchorFrame` transforms it with the frame (`anchor.ts:181`). `3.2-render` draws proposed figures in a second colour and a dashed stroke; `3.3-check` asks one more question — *does the building sit inside its lot where the sheet shows it, and does the overlay's offset from the lot lines look like the sheet's dimension strings?* — and quotes nothing it computed.
 
-**D15. `5.1-publish` passes posture through, and `geo` gets its first proposed row.** `publish.ts` adds `posture` to each `p_figures[]` entry; `sir_put_anchored_geo` writes `geo.posture` (D10) and `geo.kind = 'building'`. The lot and the building land as sibling `anchored` rows under one `anchor_id`, which is what makes §6's query a one-liner. `/anchored` and `/anchor/[id]` colour by posture.
+**D15. `5.1-publish` passes posture and the trace method through, and `geo` gets its first proposed row.** `publish.ts` adds `posture` and `trace_method` to each `p_figures[]` entry; `sir_put_anchored_geo` writes `geo.posture` (D10), `geo.kind = 'building'`, and `properties.trace_method` beside the anchor's `accuracy_class`, so a consumer reads two honesty labels on every proposed row: how the shape was read, and how its frame was placed. The lot and the building land as sibling `anchored` rows under one `anchor_id`, which is what makes §6's query a one-liner. `/anchored` and `/anchor/[id]` colour by posture.
 
 **D16. The payoff is a query, and it is the acceptance test.** With the three rows of §6 in `geo`:
 
@@ -1442,7 +1448,7 @@ from geo b join geo l on l.properties->>'anchor_id' = b.properties->>'anchor_id'
 where b.posture = 'proposed' and l.kind = 'parcel' and l.method = 'anchored';
 ```
 
-and per lot line, `st_distance(b.geom_local, st_makeline(v1, v2))` over `st_dumppoints(st_exteriorring(l.geom_local))`. The expected numbers are §1.4's. This is the north star's §1.3 with the plan-set half supplied.
+and per lot line, `st_distance(b.geom_local, st_makeline(v1, v2))` over `st_dumppoints(st_exteriorring(l.geom_local))`. The expected numbers are §1.4's. The readout of any such number carries `b.properties->>'trace_method'` and `l.properties->>'accuracy_class'` next to it: "9.97 ft, vector, ring fit" is a different claim from "9.9 ft, drawn, about 0.3 ft", and the tool surface must say which (north star §9.4). This is the north star's §1.3 with the plan-set half supplied.
 
 ### 2.8 The registry: how the next feature arrives
 
@@ -1454,7 +1460,7 @@ export const FEATURES = {
     geometry: 'polygon', posture: 'proposed', kind: 'building',
     layerPatterns: [/\bBLDG\b/, /\bBUILDING\b/, /\bA-(BLDG|FOOT)/], layerExclude: [/CANOPY/, /TEXT/, /SETBACK/, /EXIST/, /DEMO/],
     labelPatterns: [/\bs\.?\s?f\.?\b/i, /\bBUILDING\b|\bBLDG\b/i],
-    minAreaFt2: 100, tracer: 'closed_ring',
+    minAreaFt2: 100, tracer: 'closed_ring',           // rungs 1–4 apply to every polygon feature; the registry only names the floor and the patterns
     survey: 'a proposed building: heavy closed outline, usually hatched, labelled with its use and area; not a canopy, a dumpster enclosure, or an existing building marked to be removed',
   },
   boundary: { geometry: 'polyline', posture: 'recorded', kind: 'boundary', layerPatterns: [/\bBNDY\b/, /BOUNDARY/, /\bPROP/, /\bP\/?L\b/], layerExclude: [/TEXT/, /ADJ/, /CRNR/], tracer: 'segments', survey: null /* never surveyed: found from the lot */ },
@@ -1501,8 +1507,8 @@ The building ring chains identically in all three, so D4's geometry is safe; D4'
    3.1-transcribe/region      transcript.json           unchanged
    3.2-inventory              figures.json, calls.json  unchanged
    3.3-order/figure           order.json                unchanged
-+  3.4-trace                  traces/<region>.json      script, zero tokens: carto trace per `feature` region + the sheet's `boundary` (D4, D7); overlay crops (D13)
-+  3.5-confirm/region         confirm.json              vision fan-out over the PRIMARY sheet's feature regions: pick, label, stated area, printed scale (D5, D6)
++  3.4-trace                  traces/<region>.json      script, zero tokens: carto trace per `feature` region + the sheet's `boundary`, rungs 1–2 (D4, D7); overlay crops (D13)
++  3.5-confirm/region         confirm.json              vision fan-out over the PRIMARY sheet's feature regions: pick, label, stated area, printed scale; on a raster region point (rung 3) or draw (rung 4), re-trace, confirm (D5, D6)
    4.1-merge                  raw-artifact.json         unchanged (mete figures only)
    4.2-assemble               ws/artifact.json          assemble.py appends traced figures (D11); assemble.ts registers the sheet (D7, D8) and derives them
    5.1-place-claims           claims.json               unchanged
@@ -1525,7 +1531,8 @@ The roster for 3.4 is every `feature` region in every `survey.json` plus one `bo
 +├── src/lib/features/registry.ts        FEATURES (D17)
  ├── runbooks/extract-geometry/scripts/
  │   ├── crop.ts                         + `outline` mode (D13)
-+│   ├── trace.ts                        collect → chain → keep → rank → overlay (D4)
++│   ├── trace.ts                        collect → chain → keep → rank → overlay; --seed / --vertices for rungs 3–4 (D4)
++│   ├── contour.ts                      threshold → flood → outer contour → simplify; Canny edge map for raster registration (D4, D7)
  │   ├── assemble.ts                     traced figures: register, derive, check the printed scale (D8, D11)
  │   ├── place.ts                        the sheet_registration edge (D9)
  │   ├── publish.ts                      reading_method, trace, posture, the trace/label evidence rows (D12, D13)
@@ -1576,7 +1583,7 @@ The roster for 3.4 is every `feature` region in every `survey.json` plus one `bo
 ## 4. Testing seams
 
 **S1: `trace.ts`'s CLI** (new)
-- **Proves:** D4 and D17 — collect, chain with dash bridging, keep, rank. Fixtures: White Water sheet 12, the `building` region → exactly one ranked candidate, `JCE BASE|C-BLDG`, closed, 55 vertices, 37,014 pt² (±1); the `boundary` item → 95 segments on `C-BNDY LINE`; sheet 13 → the same ring; 2008 San Antonio sheet 10 (0 OCGs) → `layers: []`, candidates present, none layer-ranked, no throw; a raster page → `raster: true`, no candidates. Fixture PDFs are the two sets already on disk; the test checks against the recorded numbers, not against a model.
+- **Proves:** D4 and D17 — collect, chain with dash bridging, keep, rank. Fixtures: White Water sheet 12, the `building` region → exactly one ranked candidate, `JCE BASE|C-BLDG`, closed, 55 vertices, 37,014 pt² (±1); the `boundary` item → 95 segments on `C-BNDY LINE`; sheet 13 → the same ring; 2008 San Antonio sheet 10 (0 OCGs) → `layers: []`, candidates present, none layer-ranked (rung 2), no throw; 2008 San Antonio sheet 45 (a raster image) → `vector: false`, `rung: none`; the same region with a `--seed` inside the building → one `raster_contour` candidate whose area is within 2 % of the vector reading of the same building on sheet 10; with `--vertices` → one `vision_drawn` candidate mapped through the sidecar to the page box given. Fixture PDFs are the two sets already on disk; the test checks against the recorded numbers, not against a model.
 - **Prior art:** `cartographer/runbooks/extract-geometry/scripts/lib/evidence.test.ts`, `lib/page.test.ts`.
 - **Runs:** `bun test` in `cartographer`, CI.
 
@@ -1586,7 +1593,7 @@ The roster for 3.4 is every `feature` region in every `survey.json` plus one `bo
 - **Runs:** `bun test`, CI.
 
 **S3: the extract scripts on a run directory with a traced figure** (existing seam, extended)
-- **Proves:** D9, D11, D12, D13 — a `raw-artifact.json` with one mete and one traced figure through `assemble.ts` → `derived[figure-2].polygon` with vertex 0 at (0, 0), area 2,856 ± 1, `derived[figure-2].sheet` with the registration; `place.ts solve` → `figure-2` in `frame-1`, method `sheet_registration`, offset = the lot's offset + the registered vertex; `publish.ts --dry-run` (new flag, mirroring the anchor publisher's) → the rows it would insert: `reading_method: traced`, `mete: null`, `posture: proposed`, one `trace` evidence row citing an `outline` crop. The schema union refuses a traced figure with courses and a mete figure with a trace.
+- **Proves:** D9, D11, D12, D13 — a `raw-artifact.json` with one mete and one traced figure (`method: vector_layer`), and a second with a `vision_drawn` figure, through `assemble.ts` → `derived[figure-2].polygon` with vertex 0 at (0, 0), area 2,856 ± 1, `derived[figure-2].sheet` with the registration; `place.ts solve` → `figure-2` in `frame-1`, method `sheet_registration`, offset = the lot's offset + the registered vertex; `publish.ts --dry-run` (new flag, mirroring the anchor publisher's) → the rows it would insert: `reading_method: traced`, `mete: null`, `posture: proposed`, one `trace` evidence row citing an `outline` crop; the `vision_drawn` figure publishes with `source_kind: vision_drawn` and its `trace.method`. The schema union refuses a traced figure with courses and a mete figure with a trace.
 - **Prior art:** `cartographer/runbooks/anchor-geometry/scripts/anchor-e2e.test.ts` (a run directory as the fixture), `src/lib/geometry/__fixtures__`.
 - **Runs:** `bun test`, CI.
 
@@ -1656,7 +1663,7 @@ Two deliberate negatives: the same file with `document_kind: plat` in the reques
 
 ## 7. Open questions
 
-**Q1.** Is `request.document_kind` the right override, or should the operator's `scope_note` carry it as prose the way it carries everything else? A typed field is what D1 records; a note is what every other step reads. Proposed: the field, and the note may say why. A second half, after v1.1: should `1.3-classify` look past the first sheet-sized page when that page is itself ambiguous (a plat reproduced as sheet 2 of a plan set, as on White Water), or is one glance the rule? Proposed: one glance; the survey corrects per page anyway.
+**Q1.** Is `request.document_kind` the right override, or should the operator's `scope_note` carry it as prose the way it carries everything else? A typed field is what D1 records; a note is what every other step reads. Proposed: the field, and the note may say why. A second half: should `1.3-classify` look past the first sheet-sized page when that page is itself ambiguous (a plat reproduced as sheet 2 of a plan set, as on White Water), or is one glance the rule? Proposed: one glance; the survey corrects per page anyway.
 
 **Q2.** Should `registerSheet` be its own function (D7, Procrustes on an exact correspondence) or `anchor.ts`'s `fitToRing` with scale freed — the sibling spec notes `freeScale` is already computed and never applied (§6.2)? Proposed: its own function. A ring fit scores overlap of two shapes that are only approximately the same; this is the same shape twice, and the right tool is point-to-outline least squares. Reuse the metrics vocabulary (`meanDistFt`, `hausdorffFt`) so the readout reads the same.
 
@@ -1666,9 +1673,9 @@ Two deliberate negatives: the same file with `document_kind: plat` in the reques
 
 **Q5.** The canopy. `C-BLDG CANOPY` is 80 open segments on sheet 12 and Austin counts canopies as impervious cover but not as building coverage. Proposed: a separate registry entry `canopy` later; v1's exclusion pattern keeps it out of `building`.
 
-**Q6.** Multi-sheet consistency (D6). The traces for sheets 13 and 14 are on disk after 3.4; registering those sheets costs one `registerSheet` each and the comparison is one Hausdorff. Is that v1.1 of this spec or part of the identity work (north star P1c)? Proposed: v1.1 here — it is a readout flag, not a feature.
+**Q6.** Multi-sheet consistency (D6). The traces for sheets 13 and 14 are on disk after 3.4; registering those sheets costs one `registerSheet` each and the comparison is one Hausdorff. Is that a follow-up slice of this spec or part of the identity work (north star P1c)? Proposed: a follow-up here — it is a readout flag, not a feature.
 
-**Q7.** Raster sheets (two of 53 on 2008 San Antonio). `trace.ts` reports `raster: true` and 3.5 confirms nothing. Vision tracing (the model outlines the building on a crop) is a different reader with a different accuracy class. Proposed: out of scope until there is a plan set where the site plan itself is raster.
+**Q7.** Rung 3's thresholds (D4): the binarisation level, the flood tolerance, the simplification epsilon, and the rule for when a contour is judged failed and the worker is allowed to draw. 2008 San Antonio's two raster sheets are hardscape and planting plans, not the site plan, so the first real rung-3 site plan has not been seen. Proposed: start at Otsu's threshold, one-pixel epsilon, and "failed" = the confirm says no, and tune on the first scanned set.
 
 **Q8.** Who owns the layer patterns in D17, and how firm-specific prefixes (`JCE BASE|`) are handled. The patterns match on the suffix after the last `|`. Proposed: the registry in `cartographer` owns them; a pattern that misses on a new firm's set is a one-line PR, and the confirm step is what keeps a miss from being silent.
 
@@ -1699,6 +1706,7 @@ The sibling spec (§6) named eight seams a plan-set reader must not foreclose. W
 
 - **The dash-bridging tolerance** in `trace.ts` step 2 — how far along a line two collinear segments may be apart and still join. The IG spike and §1.4's 95 dashes give two data points; the first layer-less plan set will set it.
 - **Candidate ranking without layers.** On 2008 San Antonio sheet 10 there are no closed paths at all, so the tracer has to chain open segments by style before it has any ring to rank. How many candidates to show the confirm worker, and how to cap the overlay crops, waits for that run.
+- **The rung-3 and rung-4 prompts.** What the worker is told about pointing versus drawing, and how a drawn polygon is shown back for confirmation, come with P2 and the first raster set.
 - **What the readout shows for a registration that fails the gate** — the attempt's numbers, the overlay, or both; and whether a failed registration should still publish the figure `unplaced` or hold the run at 6.2.
 - **The survey prompt's plan-sheet paragraph** in full. D3 says what it must say; the words come with P2 and the first survey outputs.
 
@@ -1706,7 +1714,6 @@ The sibling spec (§6) named eight seams a plan-set reader must not foreclose. W
 
 - Trees, curbs, driveways and every other registry entry (D18 names the shape and the cost; each is its own slice).
 - Line and point geometry; the `polygon` → `geometry` expand/migrate/contract (D18, sir-free §6.4).
-- Raster plan sheets and vision tracing (Q7).
 - Multi-sheet identity and consistency beyond the readout count (Q6; north star P1c).
 - The PostGIS tool surface for agents (north star P4); D16 is a query a person runs.
 - Additive publish / keeping an anchor across re-extraction (Q9; a change to winston#266 D5).

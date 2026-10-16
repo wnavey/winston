@@ -1154,7 +1154,7 @@ table.nx-rules td.o{color:var(--ink2);font-size:12.5px;white-space:nowrap}
   <div class="kicker">Cartographer · Plan-set footprints</div>
   <h1>Building footprints from plan sets — the first proposed feature through extract-geometry-v2 and anchor-geometry</h1>
   <p>How a site plan set gets its proposed building footprint read beside the lot, registered to the lot by the property line both are drawn on, stored as a traced, proposed figure, and carried onto the county grid by the anchor run that already exists — so PostGIS can say how far the building sits from each lot line.</p>
-  <div class="meta"><span class="status">Draft v1.1</span><span>16 Oct 2026</span><span>Source of truth: <code>DESIGN-SPEC.md</code></span></div>
+  <div class="meta"><span class="status">Draft v1</span><span>16 Oct 2026</span><span>Source of truth: <code>DESIGN-SPEC.md</code></span></div>
   <a class="spec-link" href="DESIGN-SPEC.html">Read the spec →</a>
 </header>
 
@@ -1179,7 +1179,7 @@ table.nx-rules td.o{color:var(--ink2);font-size:12.5px;white-space:nowrap}
     <ol class="plain">
       <li><div><b>The north star's plan-set half, started with the feature that pays most.</b> The IG report ranks the building footprint second in demand across 134 geometric comments (51 A+B, 30 A-tier, the most of any layer), and it is one side of the headline question: how far is the proposed building from the recorded lot line. <span class="aside">§1.1, sizing note</span></div></li>
       <li><div><b>The geometry is already in the PDF; the identity is what costs.</b> A Civil 3D export writes every line as a vector path in page coordinates. On White Water the CAD layer names survived too (803 optional content groups; the building is <code>JCE BASE|C-BLDG</code>, one closed 55-vertex ring). On 2008 San Antonio nothing survived but stroke styles. The reader is layer-first with a style-and-vision fallback. <span class="aside">§1.3, D4</span></div></li>
-      <li><div><b>Code traces, an agent only picks.</b> No agent produces a coordinate: the tracer lifts candidate outlines, draws each on a crop through the crop tool, and a vision worker says which one is the building. On a layered sheet that is a check on the ranker; on a layer-less sheet it is the one thing code cannot do. <span class="aside">D4–D6</span></div></li>
+      <li><div><b>Code traces, an agent picks, points, and only as a last resort draws.</b> The tracer climbs four rungs: a named CAD layer, then stroke style on a layer-less vector sheet, then a contour flooded from a point the worker gives on a raster sheet, then a polygon the worker draws. The first three keep every coordinate out of the model; the fourth is labelled as the exception, and the rung travels with the figure into geo. <span class="aside">D4–D6, D15</span></div></li>
       <li><div><b>The lot registers the sheet.</b> The property line is drawn on every plan-view sheet and the run already reads its calls there as context evidence. Fitting the sheet's boundary linework to the extracted lot gives the sheet's scale and rotation without reading the title block: on sheet 12 exactly 1″ = 20′, −15.46°, 0.004 ft mean residual. <span class="aside">§1.4, D7</span></div></li>
       <li><div><b>Recorded and proposed stay distinguishable all the way down.</b> A new <code>posture</code> column on both tables, so a review query can say <code>WHERE posture = 'proposed'</code> and measure between the two. <span class="aside">D10</span></div></li>
       <li><div><b>The next features are registry entries.</b> Trees, curbs and driveways each add one entry and one survey paragraph, plus the seam each opens: lines and points for trees and curbs, the county join for driveways. <span class="aside">D17–D18, §8</span></div></li>
@@ -1731,7 +1731,7 @@ ws/pages/page-&lt;n&gt;.jpg <span class="c">unchanged  → roster for 2.1</span>
   <!-- 3.4 -->
   <section class="nx-step" id="step-3-4">
     <div class="nx-hd"><span class="nx-id">3.4</span><div><div class="nx-k">script · scripts/trace.py → carto trace, carto crop outline · zero tokens · new</div><h3 class="nx-t">Trace candidate outlines</h3><div class="nx-loc" data-on="3.4"></div></div><span class="nx-tpl">template <b>T2 · Stage</b> + <b>T8 · ranking ladder</b></span></div>
-    <p class="nx-sum">For every <code>feature</code> region on every sheet, and for the sheet's property line, the tracer collects the PDF's vector paths inside the box, chains segments into polylines (bridging the gaps of an exploded dash pattern), keeps the closed rings a polygon feature wants, and ranks them. It draws one overlay crop per candidate through the crop tool so the picker looks at a citable image. No model, no threshold that moves a vertex: the coordinates are the PDF's own.</p>
+    <p class="nx-sum">For every <code>feature</code> region on every sheet, and for the sheet's property line, the tracer collects the PDF's vector paths inside the box, chains segments into polylines (bridging the gaps of an exploded dash pattern), keeps the closed rings a polygon feature wants, and ranks them: by a matching layer name first (rung 1), by stroke style when there are no layers (rung 2). It draws one overlay crop per candidate through the crop tool so the picker looks at a citable image. A region with no vector content is marked <code>vector: false</code> and waits for 3.5, where the worker points (rung 3, a contour) or draws (rung 4). The rung a candidate came from is recorded on it.</p>
     <div class="nx-stage">
       <div class="nx-card nx-src"><span class="nx-lab">reads</span>
         <span class="nx-pill"><i>file</i>2.2 regions.json · features</span>
@@ -1741,8 +1741,8 @@ ws/pages/page-&lt;n&gt;.jpg <span class="c">unchanged  → roster for 2.1</span>
       </div>
       <div class="nx-arrow">→</div>
       <div class="nx-card"><span class="nx-lab">writes · 3.4-trace/</span>
-<pre class="nx-tree">traces/p12-r2.json      <span class="c">region, page, feature, raster, layers[], candidates[]</span>
-                        <span class="c">per candidate: id, layer, style, closed, vertices,</span>
+<pre class="nx-tree">traces/p12-r2.json      <span class="c">region, page, feature, vector, layers[], rung, candidates[]</span>
+                        <span class="c">per candidate: id, rung, layer, style, closed, vertices,</span>
                         <span class="c">areaPt2, bboxPage, pathPt[], rank, why</span>
 traces/p12-boundary.json <span class="c">the property-line segments (feature: boundary)</span>
 ws/crops/p12-r2-t1-overlay.jpg <span class="c">carto crop outline: one path drawn on the crop</span>
@@ -1753,19 +1753,20 @@ ws/crops/p12-r2-t1-overlay.json <span class="c">transform {op: outline, args: [t
     <div class="nx-checks-row">
       <span class="nx-pill"><span class="nx-block">BLOCKING</span>one traces file per feature region, none extra</span>
       <span class="nx-pill">every candidate's overlay crop has a sidecar</span>
-      <span class="nx-pill">a raster page ⇒ raster: true and no candidates</span>
+      <span class="nx-pill">a raster page ⇒ vector: false, rung none, no candidates yet</span>
       <span class="nx-pill">a plat document ⇒ an empty roster, the step completes</span>
     </div>
-    <h3 class="claim" style="font-size:16px;margin-top:26px">A layer name ranks a candidate first; without layers the picker does the rest <span class="src">D4</span></h3>
+    <h3 class="claim" style="font-size:16px;margin-top:26px">Four rungs, from the drafter's coordinates down to a model's hand, and the figure records which <span class="src">D4</span></h3>
     <div class="dflow">
-      <div class="dq"><span class="q">The page has vector paths inside the region?</span><span class="yes">yes →</span><span class="out">collect them with their OCG layer and stroke style</span></div>
-      <div class="dno">no ↓ raster: true · no candidates (Q7)</div>
-      <div class="dq"><span class="q">Chained by (layer, style) with dash bridging: any closed ring above the floor area (100 ft²)?</span><span class="yes">yes →</span><span class="out">these are the candidates</span></div>
-      <div class="dno">no ↓ no candidates · the readout names the region</div>
-      <div class="dq"><span class="q">A candidate's layer matches the registry (BLDG, BUILDING, A-BLDG) and not an exclusion (CANOPY, TEXT, SETBACK, EXIST, DEMO)?</span><span class="yes">yes →</span><span class="out">rank 1 by layer, then closed, then area</span></div>
+      <div class="dq"><span class="q">The page is vector and an OCG name in the box matches the registry (BLDG, BUILDING) and not an exclusion (CANOPY, TEXT, SETBACK, EXIST, DEMO)?</span><span class="yes">yes →</span><span class="out">rung 1 · vector_layer · code chains that layer; the worker confirms · exact</span></div>
       <div class="dno">no ↓</div>
-      <div class="dq end"><span class="q">otherwise (2008 San Antonio: 0 OCGs, 0 closed paths)</span><span class="yes"></span><span class="out warn">unranked by layer · closed-then-area · 3.5 picks</span></div>
+      <div class="dq"><span class="q">The page is vector: chained by (layer, style) with dash bridging, any closed ring above the floor area?</span><span class="yes">yes →</span><span class="out">rung 2 · vector_style · closed-then-area; the worker picks · exact (every split sheet after preprocessing, D19)</span></div>
+      <div class="dno">no ↓ raster-only, or nothing closed</div>
+      <div class="dq"><span class="q">In 3.5 the worker points at the building (a seed box on the crop); contour.ts floods, takes the outer contour, simplifies, maps through the sidecar; the worker confirms the overlay?</span><span class="yes">yes →</span><span class="out warn">rung 3 · raster_contour · the pixel: 0.03 ft at 600 DPI, 1"=20'</span></div>
+      <div class="dno">no ↓ leaked, hugged the hatch, or refused</div>
+      <div class="dq end"><span class="q">The worker draws the polygon as fractions of the crop; code maps it through the sidecar</span><span class="yes"></span><span class="out fail">rung 4 · vision_drawn · about 0.3 ft; the only rung where a model produces a coordinate</span></div>
     </div>
+    <p class="claim"><b>Claim (D4):</b> a worker may not draw over a region that holds a closed vector ring, and may not point before rungs 1–2 have been tried; the rung travels as <code>trace.method</code> and into <code>geo.properties.trace_method</code> (D15).</p>
     <p class="claim"><b>Claim (§1.3):</b> on sheet 12 the <code>C-BLDG</code> layer's 54 segments chain into one closed 55-vertex ring of 37,014 pt²; the property line is 95 dashes that an end-to-end chain cannot join, which is what the bridging is for.</p>
   </section>
   <hr class="nx-div">
@@ -1773,15 +1774,17 @@ ws/crops/p12-r2-t1-overlay.json <span class="c">transform {op: outline, args: [t
   <!-- 3.5 -->
   <section class="nx-step" id="step-3-5">
     <div class="nx-hd"><span class="nx-id fan">3.5</span><div><div class="nx-k">agent fan-out · one fresh picker per feature region on the primary sheet · vision runner, Opus 5.5, high · new</div><h3 class="nx-t">Confirm the outline</h3><div class="nx-loc" data-on="3.5"></div></div><span class="nx-tpl">template <b>T4 · Agent fan-out</b></span></div>
-    <p class="nx-sum">One worker per feature region of the primary sheet (the site plan; other sheets are traced but not confirmed in v1, D6). It looks at the region crop and the candidate overlays and says which outline is the building, reads the label and the stated area as printed, and reads the title block's scale if it can see one. It writes no coordinate and no area it computed; the contract refuses a key that looks like one.</p>
+    <p class="nx-sum">One worker per feature region of the primary sheet (the site plan; other sheets are traced but not confirmed in v1, D6). It looks at the region crop and the candidate overlays and says which outline is the building, reads the label and the stated area as printed, and reads the title block's scale if it can see one. On a region with no vector ring it points (a seed box, rung 3) and, only if the contour fails its confirm, draws (crop-fraction vertices, rung 4); the tracer is re-run with the answer and the new overlay comes back for the same confirm. It never writes a page coordinate or an area it computed.</p>
     <div class="nx-fan">
       <div class="nx-stack"><span class="nx-lab">roster · roster.py features · primary sheet</span><span class="on">p12-r2</span><span class="more">… one per building region on the site plan</span><span class="x">×N in parallel, one fresh session each</span></div>
       <div class="nx-arrow">→</div>
       <div class="nx-worker">
         <div class="wh"><b>one worker · p12-r2</b><span>the region crop, every candidate overlay, the survey note, the trace file</span></div>
         <div class="nx-belt"><span>carto crop subcrop</span><span>carto crop grid</span></div>
-        <ol class="nx-reads" style="--n:5">
+        <ol class="nx-reads" style="--n:4">
           <li><b>Pick</b><span class="d">chosen: a candidate id, or null with why</span></li>
+          <li><b>Point</b><span class="d">rung 3 only: seed {cropId, box} inside the building; accepted only when no vector ring exists</span></li>
+          <li><b>Draw</b><span class="d">rung 4 only: vertices as fractions of the named crop; accepted only after a failed contour</span></li>
           <li><b>Label</b><span class="d">verbatim, with the crop and box it was read on: CAR WASH=2,856 s.f.</span></li>
           <li><b>Stated area</b><span class="d">verbatim + value: 2,856</span></li>
           <li><b>Attributes</b><span class="d">FFE = 651.0 · read, carried, not used</span></li>
@@ -1793,20 +1796,20 @@ ws/crops/p12-r2-t1-overlay.json <span class="c">transform {op: outline, args: [t
       <div class="nx-contracts">
         <div class="nx-card"><span class="nx-lab">per worker</span><ul class="nx-list">
           <li><span class="nx-block">BLOCKING</span>chosen is a candidate id in the trace file, or null</li>
-          <li>no key that looks like a coordinate or an area the worker computed</li>
+          <li>no page coordinate and no area the worker computed</li><li>seed / vertices only on the rung the trace file allows</li>
           <li>every cited crop has a sidecar</li></ul></div>
         <div class="nx-card"><span class="nx-lab">count-back · family</span><ul class="nx-list"><li>one folder per primary-sheet feature region, no strays</li></ul></div>
       </div>
     </div>
     <h3 class="claim" style="font-size:16px;margin-top:26px">Three answers, and only one of them becomes a figure <span class="src">D5</span></h3>
     <div class="dflow">
-      <div class="dq"><span class="q">The region's trace file says raster: true?</span><span class="yes">yes →</span><span class="out warn">chosen: null, why "no vector content" · published nowhere</span></div>
+      <div class="dq"><span class="q">The region's trace file says vector: false, or every candidate is open?</span><span class="yes">yes →</span><span class="out warn">point (seed) → contour → confirm; else draw (vertices) → confirm · rungs 3–4, D4</span></div>
       <div class="dno">no ↓</div>
       <div class="dq"><span class="q">One candidate's overlay follows the hatched, labelled building outline?</span><span class="yes">yes →</span><span class="out">chosen: that id · becomes figure-N at 4.2</span></div>
       <div class="dno">no ↓</div>
       <div class="dq end"><span class="q">otherwise</span><span class="yes"></span><span class="out fail">chosen: null with why · the readout names the region; only the lot publishes</span></div>
     </div>
-    <p class="claim"><b>Claim (D5):</b> on a layered sheet the pick is a check on the ranker; on a layer-less sheet it is the one thing code cannot do.</p>
+    <p class="claim"><b>Claim (D5):</b> on a layered sheet the pick is a check on the ranker; on a layer-less vector sheet it is the one thing code cannot do; on a raster sheet the worker points, and draws only when pointing fails.</p>
   </section>
   <hr class="nx-div">
 
@@ -2071,7 +2074,7 @@ where b.posture = 'proposed' and l.kind = 'parcel' and l.method = 'anchored';
       <div class="row"><span class="gut"></span><span class="nm">label · kind</span><span class="ty">text · kind free: parcel, easement, building</span></div>
       <div class="row add"><span class="gut">+</span><span class="b b-new">NEW</span><span class="nm">reading_method</span><span class="ty">text NOT NULL DEFAULT mete · CHECK mete | traced</span></div>
       <div class="row mod"><span class="gut">~</span><span class="nm">mete</span><span class="ty">jsonb · nullable · was: NOT NULL</span></div>
-      <div class="row add"><span class="gut">+</span><span class="b b-new">NEW</span><span class="nm">trace</span><span class="ty">jsonb · {page, layer, style, pathPt, sheet, attributes?}</span></div>
+      <div class="row add"><span class="gut">+</span><span class="b b-new">NEW</span><span class="nm">trace</span><span class="ty">jsonb · {method, page, layer, style, pathPt, sheet, attributes?} · method = D4's rung</span></div>
       <div class="row add"><span class="gut">+</span><span class="b b-new">NEW</span><span class="nm">posture</span><span class="ty">text NOT NULL DEFAULT recorded · CHECK recorded | proposed | existing</span></div>
       <div class="row"><span class="gut"></span><span class="nm">polygon</span><span class="ty">jsonb · frame feet, vertex 0 at (0,0)</span></div>
       <div class="row"><span class="gut"></span><span class="nm">closed · misclosure_feet</span><span class="ty">true · null on a traced figure</span></div>
@@ -2086,7 +2089,7 @@ where b.posture = 'proposed' and l.kind = 'parcel' and l.method = 'anchored';
       <div class="row"><span class="gut"></span><span class="b b-fk">FK</span><span class="nm">geometry_id</span><span class="ty">→ cartographer_geometries · cascade</span></div>
       <div class="row"><span class="gut"></span><span class="b b-fk">FK</span><span class="nm">crop_id</span><span class="ty">→ cartographer_geometry_crops · the outline overlay</span></div>
       <div class="row mod"><span class="gut">~</span><span class="nm">role</span><span class="ty">CHECK + trace, label · was: 10 values</span></div>
-      <div class="row mod"><span class="gut">~</span><span class="nm">source_kind</span><span class="ty">CHECK + vector_path · was: 8 values</span></div>
+      <div class="row mod"><span class="gut">~</span><span class="nm">source_kind</span><span class="ty">CHECK + vector_path, raster_contour, vision_drawn · was: 8 values</span></div>
       <div class="row"><span class="gut"></span><span class="nm">bbox · page</span><span class="ty">the ring's box on sheet 12</span></div>
       <div class="row"><span class="gut"></span><span class="nm">verbatim · value</span><span class="ty">the layer name · {vertices, areaPt2, candidate}</span></div>
     </div>
@@ -2105,7 +2108,7 @@ where b.posture = 'proposed' and l.kind = 'parcel' and l.method = 'anchored';
       <div class="row"><span class="gut"></span><span class="nm">kind · label · method</span><span class="ty">building · CAR WASH · anchored</span></div>
       <div class="row add"><span class="gut">+</span><span class="b b-new">NEW</span><span class="nm">posture</span><span class="ty">text · nullable · CHECK recorded | proposed | existing</span></div>
       <div class="row"><span class="gut"></span><span class="nm">geom_local · srid_local</span><span class="ty">geometry · 2277</span></div>
-      <div class="row"><span class="gut"></span><span class="nm">properties</span><span class="ty">jsonb · anchor_id, frame_key, accuracy_class, stale</span></div>
+      <div class="row"><span class="gut"></span><span class="nm">properties</span><span class="ty">jsonb · anchor_id, frame_key, accuracy_class, trace_method, stale</span></div>
       <div class="note">written by sir_put_anchored_geo from p_figures[].posture, default recorded; county rings keep null</div>
     </div>
     <a class="sys-edge" data-from="ent-files" data-to="ent-geoms">1 → many</a>
@@ -2135,7 +2138,7 @@ where b.posture = 'proposed' and l.kind = 'parcel' and l.method = 'anchored';
   <div class="spectable-scroll"><table class="spectable">
     <thead><tr><th>Seam</th><th>Proves</th><th>Fixture</th><th>Runs</th></tr></thead>
     <tbody>
-      <tr><td><span class="sn">S1</span> <code>trace.ts</code> CLI · new</td><td>D4, D17 — collect, chain with dash bridging, keep, rank</td><td>sheet 12 → one ranked C-BLDG ring, 55 vertices, 37,014 pt²; boundary → 95 segments; 2008 San Antonio sheet 10 → layers [], no throw; a raster page → raster: true</td><td>bun test, CI</td></tr>
+      <tr><td><span class="sn">S1</span> <code>trace.ts</code> CLI · new</td><td>D4, D17 — collect, chain with dash bridging, keep, rank</td><td>sheet 12 → one ranked C-BLDG ring, 55 vertices, 37,014 pt²; boundary → 95 segments; 2008 San Antonio sheet 10 → layers [], rung 2, no throw; sheet 45 (raster) → vector: false; with --seed → a raster_contour candidate within 2 % of the vector area; with --vertices → a vision_drawn candidate</td><td>bun test, CI</td></tr>
       <tr><td><span class="sn">S2</span> <code>registerSheet()</code> · new</td><td>D7, D8 — the fit and its gate</td><td>the lot + 95 dashes → 20.00 ± 0.1 ft/in, θ −15.46° ± 0.05°, mean ≤ 0.01 ft; rotated 90° → same; a 30 ft/in synthetic → 30; the wrong lot → gate fails</td><td>bun test, CI</td></tr>
       <tr><td><span class="sn">S3</span> the extract scripts on a run dir · existing, extended</td><td>D9, D11, D12, D13</td><td>one mete + one traced figure through assemble → place → publish --dry-run; the union refuses the two illegal shapes</td><td>bun test, CI</td></tr>
       <tr><td><span class="sn">S4</span> the extract runbook · existing</td><td>D1–D6 end to end</td><td>(a) the car-wash plat: kind plat, empty rosters, raw-artifact identical to run5; (b) White Water: kind plan_set, 3.5 on sheet 12, two figures</td><td>locally, conductor</td></tr>
