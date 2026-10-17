@@ -3,11 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="generator" content="winston spec-kit v6.7">
+<meta name="generator" content="winston spec-kit v6.8">
 <title>intake-prospecting, as built</title>
 <style>
 /* ============================================================
-   spec-kit v6.7  —  winston HTML spec design system
+   spec-kit v6.8  —  winston HTML spec design system
    Inline the ENTIRE contents of this file into the spec's style block.
    Canonical source: ~/.claude/skills/winston-spec/assets/spec-kit.css
    When you change this file, bump the version above and in COMPONENTS.md.
@@ -29,6 +29,9 @@
        + runbook graph (.sysmap.rgraph: diamonds, gate, fan-out, exits), + step list (.steps),
        + phase lanes (.plan), + claim-as-title (.claim.lead), compact ref footer,
        path highlighting on hover, .dfg chains go vertical instead of wrapping.
+   v6.8: + runbook page (.nx-*): the runbook graph, then one "graph node explained" step
+       block per node, each drawn with one of 14 step templates (T1–T14); spec-kit.js
+       fills each step's locator strip (.nx-loc).
    ============================================================ */
 
 :root{
@@ -962,6 +965,187 @@ nav.tabs button{white-space:nowrap;flex:0 0 auto}
 .ent .row .dt i{font-style:normal;color:#8a919c}
 .erd.linked{padding-left:44px}
 
+/* ============================================================
+   v6.8 — runbook page: "graph node explained" (.nx-*)
+   A runbook tab = the runbook graph (.sysmap.rgraph) first, then one .nx-step per
+   graph node in graph order: header (badge shape = executor, kind line, name,
+   locator strip, template chip) → 2–3 sentence summary → the step's template
+   diagram → hr.nx-div. 14 templates (T1–T14), one per KIND of step; T5, T8, T11
+   and T13 reuse kit primitives (.rgraph, .dflow, .uc). Colour stays reserved for
+   change state; executor kind is a word + shape. COMPONENTS.md → Runbook page.
+   ============================================================ */
+
+/* ---- step block: header + summary + diagram, then a divider ---- */
+.nx-step{padding:6px 0 4px}
+.nx-hd{display:grid;grid-template-columns:auto minmax(0,1fr) auto;column-gap:16px;align-items:start}
+.nx-id{font:650 15px var(--mono);color:#fff;background:var(--ink);border-radius:8px;padding:7px 10px;line-height:1;margin-top:3px}
+.nx-id.gate{border-radius:3px}
+.nx-id.agent{background:#fff;color:var(--ink);box-shadow:inset 0 0 0 2px var(--ink)}
+.nx-id.fan{background:#fff;color:var(--ink);box-shadow:inset 0 0 0 2px var(--ink),4px 4px 0 -1px #fff,4px 4px 0 0 var(--ink)}
+.nx-k{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink2)}
+.nx-t{margin:2px 0 0;font-size:21px;font-weight:650;line-height:1.25;color:var(--ink)}
+.nx-tpl{font-size:12px;color:var(--ink2);border:1px solid var(--line);border-radius:999px;padding:4px 11px;background:#fff;white-space:nowrap;margin-top:4px}
+.nx-tpl b{color:var(--ink);font-weight:600}
+.nx-loc{display:flex;flex-wrap:wrap;gap:4px;margin:10px 0 0}
+.nx-loc span,.nx-loc a{font:500 11px var(--mono);color:var(--ink2);background:var(--lane);border-radius:5px;padding:2px 6px}
+.nx-loc .on{background:var(--ink);color:#fff}
+.nx-sum{font-size:15.5px;line-height:1.6;color:var(--ink);margin:14px 0 16px;max-width:900px}
+.nx-sum code{font-size:.88em}
+hr.nx-div{border:0;border-top:1px solid var(--divider);margin:36px 0 30px}
+
+/* shared atoms */
+.nx-card{background:#fff;border:1px solid var(--divider);border-radius:12px;padding:18px 20px}
+.nx-lab{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink2);margin-bottom:8px;display:block}
+.nx-arrow{display:flex;align-items:center;justify-content:center;color:var(--wire);font-size:22px}
+.nx-pill{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;border:1px solid var(--line);border-radius:999px;padding:3px 10px;background:#fff;color:var(--ink);line-height:1.4}
+.nx-pill i{font-style:normal;font-size:10px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--ink2)}
+.nx-block{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.05em;color:#fff;background:var(--ink);border-radius:4px;padding:1px 6px;margin-right:6px;vertical-align:1px}
+.nx-soft{display:inline-block;font-size:10px;font-weight:600;letter-spacing:.05em;color:var(--ink2);border:1px solid var(--line);border-radius:4px;padding:0 5px;margin-right:6px;vertical-align:1px}
+.nx-note{font-size:13px;color:var(--ink2);margin-top:12px;line-height:1.5}
+.nx-note b{color:var(--ink)}
+ul.nx-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:7px}
+ul.nx-list li{font-size:13.5px;line-height:1.45;color:var(--ink)}
+ul.nx-list li .d{display:block;font-size:12.5px;color:var(--ink2)}
+.nx-tree{font:12.5px/1.75 var(--mono);color:var(--ink);white-space:pre;margin:0}
+.nx-tree .c{color:var(--ink2)}
+
+/* T1 input gate: the request as a form, beside its contract */
+.nx-form{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:16px}
+.nx-field{display:grid;grid-template-columns:150px minmax(0,1fr);gap:10px;padding:7px 0;border-top:1px solid #eef1f4;font-size:13px}
+.nx-field:first-of-type{border-top:0}
+.nx-field .n{font-family:var(--mono);font-size:12.5px;color:var(--ink)}
+.nx-field .v{color:var(--ink2)}
+.nx-wait{margin-top:12px;display:flex;gap:10px;align-items:center;font-size:13px;color:var(--ink2)}
+.nx-wait b{font-family:var(--mono);font-size:12px;color:#fff;background:var(--ink2);border-radius:5px;padding:1px 6px}
+
+/* T2 stage: sources → what lands on disk; checks below */
+.nx-stage{display:grid;grid-template-columns:minmax(0,.9fr) 44px minmax(0,1.2fr);gap:0 8px;align-items:stretch}
+.nx-src{display:flex;flex-direction:column;gap:8px}
+.nx-src .nx-pill{border-radius:10px;justify-content:space-between;padding:7px 12px}
+.nx-checks-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+
+/* T3 roster planner */
+.nx-roster{display:grid;grid-template-columns:minmax(0,1fr) 44px minmax(0,1.3fr);gap:0 8px}
+.nx-chips{display:flex;flex-wrap:wrap;gap:6px}
+.nx-chips span{font:12px var(--mono);background:#fff;border:1px solid var(--line);border-radius:6px;padding:3px 8px}
+.nx-chips span.more{border-style:dashed;color:var(--ink2)}
+
+/* T4 agent fan-out: roster → one worker zoomed → contracts */
+.nx-fan{display:grid;grid-template-columns:150px 30px minmax(0,1fr) 30px 230px;align-items:stretch}
+.nx-stack{display:flex;flex-direction:column;gap:6px;position:relative}
+.nx-stack span{font:12px var(--mono);background:#fff;border:1px solid var(--line);border-radius:8px;padding:7px 10px}
+.nx-stack span.on{border:2px solid var(--ink);font-weight:600}
+.nx-stack span.more{border-style:dashed;color:var(--ink2)}
+.nx-stack .x{font-size:12px;color:var(--ink2);margin-top:4px}
+.nx-stack span.nx-lab,.nx-stack span.x{font-family:var(--sans);background:none;border:0;padding:0;border-radius:0}
+.nx-stack span.nx-lab{font-size:11px}
+.nx-worker{border:2px solid var(--ink);border-radius:14px;background:#fff;padding:16px 18px;display:flex;flex-direction:column;gap:12px}
+.nx-worker .wh{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+.nx-worker .wh b{font-size:15px}
+.nx-worker .wh span{font-size:12px;color:var(--ink2)}
+.nx-belt{display:flex;flex-wrap:wrap;gap:6px}
+.nx-belt span{font:12px var(--mono);background:var(--lane);border:1px solid var(--line);border-radius:6px;padding:3px 8px}
+.nx-belt span::before{content:"⚙ ";color:var(--ink2)}
+ol.nx-reads{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(var(--n,4),minmax(0,1fr));gap:8px;counter-reset:r}
+ol.nx-reads li{counter-increment:r;background:var(--lane);border-radius:10px;padding:10px 12px;font-size:13px;line-height:1.4;position:relative}
+ol.nx-reads li::before{content:counter(r);display:inline-flex;width:20px;height:20px;border-radius:50%;background:var(--ink);color:#fff;font:600 11px var(--sans);align-items:center;justify-content:center;margin-right:6px;vertical-align:1px}
+ol.nx-reads li b{font-weight:600}
+ol.nx-reads li .d{display:block;font-size:12px;color:var(--ink2);margin-top:3px}
+.nx-out{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:12.5px;color:var(--ink2)}
+.nx-out code{font-size:12px;background:#fff;border:1px solid var(--ink);border-radius:6px;padding:2px 7px;color:var(--ink)}
+.nx-contracts{display:flex;flex-direction:column;gap:10px}
+.nx-contracts .nx-card{padding:12px 14px}
+.nx-contracts ul.nx-list li{font-size:12.5px}
+
+/* T5 convergence loop sits on the kit runbook graph (.sysmap.rgraph) */
+
+/* T6 single-agent judgment: reads → decides → writes */
+.nx-judge{display:grid;grid-template-columns:minmax(0,1fr) 30px minmax(0,1.15fr) 30px minmax(0,1fr);align-items:stretch}
+.nx-judge .mid{border:2px solid var(--ink)}
+
+/* T7 session chain */
+.nx-chain{display:flex;align-items:stretch;gap:0;flex-wrap:nowrap}
+.nx-sess{flex:1 1 0;min-width:0;background:#fff;border:2px solid var(--ink);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:4px}
+.nx-sess .k{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink2)}
+.nx-sess b{font-size:14px}
+.nx-sess .d{font-size:12.5px;color:var(--ink2);line-height:1.4}
+.nx-sess.ghost{border-style:dashed;border-color:var(--line);background:transparent}
+.nx-hand{flex:0 0 112px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:11.5px;color:var(--ink2);text-align:center;gap:2px;padding:0 4px}
+.nx-hand .ar{font-size:20px;color:var(--wire);line-height:1}
+.nx-ends{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:14px}
+.nx-end{border:1.5px dashed var(--wire);border-radius:999px;padding:8px 16px;font-size:13px;background:#fff;text-align:center}
+.nx-end b{font-family:var(--mono);font-size:12px}
+.nx-ledger{margin-top:12px;display:flex;gap:10px;align-items:center;background:var(--lane);border-radius:10px;padding:10px 14px;font-size:13px;color:var(--ink2)}
+.nx-ledger b{color:var(--ink)}
+
+/* T9 fan-in: N folders → one rule → one output, with the accounting */
+.nx-funnel{display:grid;grid-template-columns:200px 30px minmax(0,1fr) 30px 230px;align-items:center}
+.nx-rule{border:2px solid var(--ink);border-radius:14px;background:#fff;padding:16px 18px}
+.nx-rule ol{margin:6px 0 0;padding-left:20px;font-size:13.5px;line-height:1.55}
+.nx-rule ol li{margin:3px 0}
+.nx-rule ol li .d{color:var(--ink2);font-size:12.5px}
+.nx-acct{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:14px;font-size:13px;color:var(--ink2)}
+.nx-acct span{background:#fff;border:1px solid var(--line);border-radius:8px;padding:4px 10px;color:var(--ink)}
+.nx-acct span b{font-family:var(--mono)}
+.nx-acct em{font-style:normal;font-weight:600;color:var(--ink2)}
+
+/* T10 deterministic checks */
+table.nx-rules{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--divider);border-radius:12px;overflow:hidden;font-size:13.5px}
+table.nx-rules th{text-align:left;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink2);background:var(--lane);padding:9px 14px}
+table.nx-rules td{padding:9px 14px;border-top:1px solid #eef1f4;vertical-align:top;line-height:1.45}
+table.nx-rules td.o{color:var(--ink2);font-size:12.5px;white-space:nowrap}
+
+/* T12 human gate: readout → decision → one row per outcome */
+.nx-gate{display:grid;grid-template-columns:minmax(0,.95fr) 120px minmax(0,1.3fr);gap:0 18px;align-items:center}
+.nx-dia{width:104px;height:104px;background:var(--ink);clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%);display:flex;align-items:center;justify-content:center;color:#fff;font-size:12.5px;font-weight:600;text-align:center;justify-self:center}
+.nx-outs{display:flex;flex-direction:column;gap:10px}
+.nx-o{display:grid;grid-template-columns:170px minmax(0,1fr);gap:12px;align-items:start;background:#fff;border:1px solid var(--divider);border-radius:12px;padding:11px 14px}
+.nx-o .v{font:600 12.5px var(--mono);color:var(--ink)}
+.nx-o .w{font-size:13px;line-height:1.45;color:var(--ink)}
+.nx-o .w .d{display:block;font-size:12px;color:var(--ink2);margin-top:2px}
+.nx-o.loop{border:1.5px dashed var(--ink2)}
+.nx-o.loop .v::before{content:"↺ ";color:var(--ink2)}
+.nx-o.go .v::before{content:"→ ";color:var(--ink2)}
+.nx-o.stop .v::before{content:"■ ";color:var(--ink2);font-size:10px}
+
+/* T13 publish: kit .uc chain + refusals */
+.nx-refuse{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:12px;font-size:13px;color:var(--ink2)}
+.nx-refuse code{font-size:12px;background:#fff;border:1.5px dashed var(--ink2);border-radius:6px;padding:2px 8px;color:var(--ink)}
+.nx-lanes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:12px}
+
+/* T14 side sink */
+.nx-sink{display:grid;grid-template-columns:minmax(0,1fr) 30px minmax(0,1fr) 30px minmax(0,1fr);align-items:stretch}
+.nx-sink .nx-card.dash{border:1.5px dashed var(--ink2)}
+
+/* template catalogue */
+.nx-cat{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.nx-tcard{background:#fff;border:1px solid var(--divider);border-radius:12px;padding:16px 18px;display:flex;flex-direction:column;gap:8px}
+.nx-tcard .top{display:flex;gap:10px;align-items:baseline}
+.nx-tcard .num{font:650 12px var(--mono);color:#fff;background:var(--ink);border-radius:6px;padding:3px 7px}
+.nx-tcard h4{margin:0;font-size:16.5px;font-weight:650}
+.nx-tcard .q{font-size:13.5px;color:var(--ink);line-height:1.45}
+.nx-tcard .slots{font-size:12.5px;color:var(--ink2);line-height:1.5}
+.nx-tcard .slots b{color:var(--ink);font-weight:600}
+.nx-tcard .use{display:flex;flex-wrap:wrap;gap:5px}
+.nx-tcard .use span{font:11.5px var(--mono);border-radius:5px;padding:2px 6px;background:var(--lane);color:var(--ink)}
+.nx-tcard .use span i{font-style:normal;color:var(--ink2)}
+.nx-tcard .base{font-size:12px;color:var(--ink2)}
+.nx-tcard .base code{font-size:11.5px}
+.nx-loc a{text-decoration:none} .nx-loc a:hover{background:var(--p100);color:var(--ink)}
+.nx-step[id]{scroll-margin-top:74px}
+/* narrow screens: every template stacks to one column and drops its arrows */
+@media (max-width:820px){
+  .nx-form,.nx-stage,.nx-roster,.nx-fan,.nx-judge,.nx-funnel,.nx-gate,.nx-sink,.nx-cat,.nx-lanes{grid-template-columns:minmax(0,1fr);gap:10px}
+  .nx-form>.nx-arrow,.nx-stage>.nx-arrow,.nx-roster>.nx-arrow,.nx-fan>.nx-arrow,.nx-judge>.nx-arrow,.nx-funnel>.nx-arrow,.nx-sink>.nx-arrow{transform:rotate(90deg);height:24px}
+  .nx-chain{flex-direction:column} .nx-hand{flex-basis:auto;flex-direction:row;padding:6px 0}
+  .nx-hand .ar{transform:rotate(90deg)}
+  .nx-ends{grid-template-columns:minmax(0,1fr)}
+  ol.nx-reads{grid-template-columns:minmax(0,1fr)}
+  .nx-hd{grid-template-columns:auto minmax(0,1fr)} .nx-tpl{grid-column:1/-1;justify-self:start}
+  .nx-o{grid-template-columns:minmax(0,1fr)}
+  .nx-dia{width:84px;height:84px}
+}
+
 </style>
 <style>
 /* page-local: prose blocks that sit between diagrams, and code blocks inside them */
@@ -981,12 +1165,13 @@ td.no{color:var(--ink2)}
   <div class="kicker">Intake · Current architecture</div>
   <h1>The intake-prospecting runbook, as built</h1>
   <p>How bureau builds one jurisdiction's intake checklist from the documents that jurisdiction publishes: find them, snapshot them, extract items that cite exact words, audit the items, and write the checklist into bureau as one PR.</p>
-  <div class="meta"><span class="status">As built</span><span>15 Oct 2026</span><span>Source of truth: <code>bureau/runbooks/intake-prospecting</code> at <code>b6349fb</code> (bureau #2112)</span></div>
+  <div class="meta"><span class="status">As built</span><span>16 Oct 2026</span><span>Source of truth: <code>bureau/runbooks/intake-prospecting</code> at <code>0e21e72</code> (bureau #2112, #2124)</span></div>
   <a class="spec-link" href="https://github.com/wnavey/winston/blob/main/workspaces/intake/prospecting-runbook/DESIGN-SPEC.md">Read the design spec →</a>
 </header>
 
 <nav class="tabs">
   <button data-tab="overview" class="active">Overview</button>
+  <button data-tab="runbook">Full Runbook</button>
   <button data-tab="find">Finding the documents</button>
   <button data-tab="extract">Extracting the items</button>
   <button data-tab="ship">Writing and shipping</button>
@@ -1064,6 +1249,471 @@ td.no{color:var(--ink2)}
   </div>
 
   <div class="callout ember"><span class="lab">status on 15 Oct 2026</span>The runbook merged today after 19 tuning runs on Austin, each scored against Austin's hand-built checklist (the <a href="#score">scoring tab</a>). Foreman's note on the merge: none of those 19 runs ran with the final fence or the de-Austined prompts, so a quality claim should rest on a run at <code>b6349fb</code> or later. The first non-Austin run (El Paso) started on main the same day.</div>
+</section>
+
+<!-- ============================================================ FULL RUNBOOK -->
+<section class="panel" id="runbook" data-steps="0,1.0,1.1,1.2,1.3,1.4,1.5,2.1,2.2,2.3,2.4,2.5,3.0,3.1,3.2,4.1,4.2">
+  <h2>Full Runbook</h2>
+  <p class="lede">All seventeen steps of <code>bureau/runbooks/intake-prospecting</code> as one graph, then one block per step in graph order. Each block names the step's executor (the badge), its runner and model, and the template that fits what the step does: six are agent sessions, eight are scripts that spend no tokens, three are gates where the run waits.</p>
+
+  <h3 class="claim">Three gates open three phases; two loops send work back, and only named groups ever re-run <span class="src">runbook.yaml, steps/*/step.yaml</span></h3>
+  <div class="sys-legend"><span><i class="happy"></i>main path</span><span><i class="loop"></i>goes back</span><span><i class="exit"></i>leaves the main path</span><span>stacked card = runs ×N in parallel · black diamond = human gate · grey diamond = automatic decision · dashed box = outside the runbook</span></div>
+  <div class="bleed"><div class="sysmap rgraph" id="rg-full" style="grid-template-columns:repeat(7,minmax(0,1fr));column-gap:36px">
+    <div class="sys gate" id="fr-0" style="grid-area:1/1"><span class="k">gate · input</span><span class="t">0 request</span></div>
+    <div class="sys" id="fr-10" style="grid-area:1/2"><span class="k">script</span><span class="t">1.0 worktree</span><span class="d">sparse bureau clone</span></div>
+    <div class="sys" id="fr-11" style="grid-area:1/3"><span class="k">script</span><span class="t">1.1 inputs</span><span class="d">leads from prospector</span></div>
+    <div class="sys" id="fr-12" style="grid-area:1/4"><span class="k">agent · research · ≤8 sessions</span><span class="t">1.2 discover</span><span class="d">the live web</span></div>
+    <div class="sys" id="fr-13" style="grid-area:1/5"><span class="k">script</span><span class="t">1.3 capture</span><span class="d">pages of numbered words</span></div>
+    <div class="sys" id="fr-14" style="grid-area:1/6"><span class="k">agent · research</span><span class="t">1.4 classify</span><span class="d">basis + scope sources</span></div>
+    <div class="sys gate" id="fr-15" style="grid-area:1/7"><span class="k">gate</span><span class="t">1.5 scope</span></div>
+    <div class="sys exit" id="fr-blk" style="grid-area:2/4"><span class="t">BLOCKED.md</span><span class="d">needs a person or a tool fix · exit 75</span></div>
+
+    <div class="sys" id="fr-21" style="grid-area:3/2"><span class="k">agent · research</span><span class="t">2.1 groups</span><span class="d">roster cc-1 … cc-N; empty unless formal</span></div>
+    <div class="sys fan" id="fr-22" style="grid-area:3/3"><span class="k">agent ×N · extract</span><span class="t">2.2 extract</span><span class="d">one worker per group</span></div>
+    <div class="sys" id="fr-23" style="grid-area:3/4"><span class="k">script</span><span class="t">2.3 verify</span><span class="d">boxes, dedupe, ids, coverage</span></div>
+    <div class="sys" id="fr-24" style="grid-area:3/5"><span class="k">agent · reviewer</span><span class="t">2.4 audit</span><span class="d">never reads 2.2</span></div>
+    <div class="sys dec" id="fr-25" style="grid-area:3/6"><span class="k">2.5 disposition</span><span class="t">charges left?</span></div>
+    <div class="sys exit" id="fr-park" style="grid-area:4/6"><span class="t">PARKED.md</span><span class="d">no usable audit · exit 75</span></div>
+
+    <div class="sys fan" id="fr-30" style="grid-area:5/1"><span class="k">agent ×N · writer</span><span class="t">3.0 prose</span><span class="d">one writer per group</span></div>
+    <div class="sys" id="fr-31" style="grid-area:5/2"><span class="k">script</span><span class="t">3.1 write</span><span class="d">route, render, commit, gate</span></div>
+    <div class="sys" id="fr-32" style="grid-area:5/3"><span class="k">script</span><span class="t">3.2 contact sheet</span><span class="d">every item beside its crop</span></div>
+    <div class="sys gate" id="fr-41" style="grid-area:5/4"><span class="k">gate</span><span class="t">4.1 review</span></div>
+    <div class="sys" id="fr-42" style="grid-area:5/5"><span class="k">script · frozen</span><span class="t">4.2 publish</span><span class="d">upload, merge main, push</span></div>
+    <div class="sys ext" id="fr-pr" style="grid-area:5/6"><span class="k">GitHub</span><span class="t">Draft bureau PR</span><span class="d">pr.json</span></div>
+    <div class="sys exit" id="fr-none" style="grid-area:6/5"><span class="t">NOTHING-TO-SHIP.md</span><span class="d">publish: false · the branch stays local</span></div>
+
+    <a class="sys-edge happy" data-from="fr-0" data-to="fr-10"></a>
+    <a class="sys-edge happy" data-from="fr-10" data-to="fr-11"></a>
+    <a class="sys-edge happy" data-from="fr-11" data-to="fr-12"></a>
+    <a class="sys-edge happy" data-from="fr-12" data-to="fr-13">done</a>
+    <a class="sys-edge exit" data-from="fr-12" data-to="fr-blk">blocked</a>
+    <a class="sys-edge happy" data-from="fr-13" data-to="fr-14"></a>
+    <a class="sys-edge happy" data-from="fr-14" data-to="fr-15"></a>
+    <a class="sys-edge loop" data-from="fr-15" data-to="fr-14">revise + edits</a>
+    <a class="sys-edge happy" data-from="fr-15" data-to="fr-21">approved</a>
+
+    <a class="sys-edge happy" data-from="fr-21" data-to="fr-22"></a>
+    <a class="sys-edge happy" data-from="fr-22" data-to="fr-23"></a>
+    <a class="sys-edge happy" data-from="fr-23" data-to="fr-24"></a>
+    <a class="sys-edge happy" data-from="fr-24" data-to="fr-25"></a>
+    <a class="sys-edge loop" data-from="fr-25" data-to="fr-22">charged groups only · ≤3 rounds</a>
+    <a class="sys-edge exit" data-from="fr-25" data-to="fr-park"></a>
+    <a class="sys-edge happy" data-from="fr-25" data-to="fr-30">clean, or residuals</a>
+
+    <a class="sys-edge happy" data-from="fr-30" data-to="fr-31"></a>
+    <a class="sys-edge happy" data-from="fr-31" data-to="fr-32"></a>
+    <a class="sys-edge loop" data-from="fr-31" data-to="fr-22">regroup</a>
+    <a class="sys-edge happy" data-from="fr-32" data-to="fr-41"></a>
+    <a class="sys-edge loop" data-from="fr-41" data-to="fr-31">revise</a>
+    <a class="sys-edge happy" data-from="fr-41" data-to="fr-42">approved</a>
+    <a class="sys-edge happy" data-from="fr-42" data-to="fr-pr">publish: true</a>
+    <a class="sys-edge exit" data-from="fr-42" data-to="fr-none"></a>
+  </div></div>
+  <p class="claim"><b>Reading:</b> a run never restarts. Every loop is a <code>void-request.json</code> that re-runs only the step folders it names (a revise at 1.5 re-runs 1.4; a send-back from 2.5 or a <code>regroup</code> from 4.1 re-runs the named <code>cc-N</code> workers and everything after them), and under <code>gates: auto</code> both black diamonds pass on their own, so a loop run goes end to end unattended and stops at NOTHING-TO-SHIP.</p>
+
+  <hr class="nx-div">
+
+  <!-- 0 -->
+  <section class="nx-step" id="step-0">
+    <div class="nx-hd"><span class="nx-id gate">0</span><div><div class="nx-k">gate · runner none · written by the operator, the loop driver or a prospector wrapper</div><h3 class="nx-t">Operator request</h3><div class="nx-loc" data-on="0"></div></div><span class="nx-tpl">template <b>T1 · Input gate</b></span></div>
+    <p class="nx-sum">The run has no subject until a valid <code>request.json</code> exists. It names one jurisdiction, which need not exist in bureau yet, and settles up front whether a person will sit at the two gates and whether anything may reach bureau. Publishing with automatic gates is refused here, so no unattended run can ever open a PR.</p>
+    <div class="nx-form">
+      <div class="nx-card"><span class="nx-lab">request.json · the fields</span>
+        <div class="nx-field"><span class="n">jurisdiction</span><span class="v">slug, name, state; it need not exist in bureau yet</span></div>
+        <div class="nx-field"><span class="n">application_type_hint</span><span class="v">e.g. "commercial site plan"; a claim discovery tests, not a fact</span></div>
+        <div class="nx-field"><span class="n">seeds[]</span><span class="v">urls (with a note) discovery must fetch; never dropped</span></div>
+        <div class="nx-field"><span class="n">worktree</span><span class="v">a bureau worktree the caller already owns (the prospector wrapper); absent, 1.0 makes one</span></div>
+        <div class="nx-field"><span class="n">gates</span><span class="v">human (default) or auto; governs 1.5-scope and 4.1-review</span></div>
+        <div class="nx-field"><span class="n">publish</span><span class="v">default false; true means 4.2 opens the PR</span></div>
+        <div class="nx-field"><span class="n">replace</span><span class="v">publish over an existing checklist as the next vN</span></div>
+        <div class="nx-field"><span class="n">requested_by</span><span class="v">who asked</span></div>
+      </div>
+      <div class="nx-card"><span class="nx-lab">contract · contract.test.ts</span>
+        <ul class="nx-list">
+          <li><span class="nx-block">BLOCKING</span>zod <code>Request</code> in <code>scripts/schemas.ts</code>, <code>schema_version: 1</code></li>
+          <li><span class="nx-block">BLOCKING</span><code>publish: true</code> with <code>gates: auto</code> is refused<span class="d">D8: a person approves what reaches bureau</span></li>
+          <li><span class="nx-block">BLOCKING</span>a named worktree exists on disk</li>
+        </ul>
+        <div class="nx-wait"><b>exit 75</b>the run parks until the contract passes</div>
+      </div>
+    </div>
+  </section>
+  <hr class="nx-div">
+
+  <!-- 1.0 -->
+  <section class="nx-step" id="step-1-0">
+    <div class="nx-hd"><span class="nx-id">1.0</span><div><div class="nx-k">script · ip.py worktree · zero tokens · tools bureau (the clone origin)</div><h3 class="nx-t">Bureau worktree</h3><div class="nx-loc" data-on="1.0"></div></div><span class="nx-tpl">template <b>T2 · Stage</b> (git checkout variant)</span></div>
+    <p class="nx-sum">Makes the git clone of bureau that every later session writes into, before any agent runs. It is sparse on purpose: the jurisdiction's own <code>completeness-check/</code> folder and every other city are left off disk, which is the first layer of the fence. prospector's session loop, ledger and audit all expect this worktree, so making it first lets the runbook use them unchanged.</p>
+    <div class="nx-stage">
+      <div class="nx-card nx-src"><span class="nx-lab">reads</span>
+        <span class="nx-pill"><i>git</i>$BUREAU's origin · <code>origin/main</code></span>
+        <span class="nx-pill"><i>file</i>request.worktree, when a wrapper passed one</span>
+        <span class="nx-pill"><i>left out</i>jurisdictions/&lt;slug&gt;/completeness-check/</span>
+        <span class="nx-pill"><i>left out</i>every other jurisdiction</span>
+      </div>
+      <div class="nx-arrow">→</div>
+      <div class="nx-card"><span class="nx-lab">writes · 1.0-worktree/</span>
+<pre class="nx-tree">worktree.json   <span class="c">prospector's shape: path, branch, ledger</span>
+worktree/       <span class="c">blobless sparse clone, branch</span>
+                <span class="c">intake-prospecting/&lt;slug&gt;-&lt;run&gt;</span>
+  jurisdictions/&lt;slug&gt;/   <span class="c">minus completeness-check/</span>
+  jurisdictions/&lt;state&gt;/  federal/  spec/
+  tooling/  taxonomy/  runbooks/lib/</pre>
+      </div>
+    </div>
+    <div class="nx-checks-row">
+      <span class="nx-pill"><span class="nx-block">BLOCKING</span>the worktree exists, is a git checkout on the recorded branch, and its ledger path names this slug</span>
+      <span class="nx-pill">a made worktree is on intake-prospecting/&lt;slug&gt;-&lt;run&gt;; a recorded one is the one the request named</span>
+    </div>
+  </section>
+  <hr class="nx-div">
+
+  <!-- 1.1 -->
+  <section class="nx-step" id="step-1-1">
+    <div class="nx-hd"><span class="nx-id">1.1</span><div><div class="nx-k">script · ip.py inputs · zero tokens</div><h3 class="nx-t">Seeds for discovery</h3><div class="nx-loc" data-on="1.1"></div></div><span class="nx-tpl">template <b>T9 · Fan-in</b> (merge variant)</span></div>
+    <p class="nx-sum">Joins everything prospector already shipped for the slug into one list of leads, each tagged with where it came from, so discovery starts from what is known rather than from a search box. A jurisdiction prospector never touched gets an empty list and discovery starts from the web.</p>
+    <div class="nx-funnel">
+      <div class="nx-stack"><span class="nx-lab">in · the worktree + the request</span><span>briefing/process.md · intake links</span><span>codes/* · provenance urls</span><span>code inventory · permit recon</span><span>approvals/*.md · submittals</span><span>request.seeds</span></div>
+      <div class="nx-arrow">→</div>
+      <div class="nx-rule"><span class="nx-lab">the rule</span><ol>
+        <li>harvest each origin, tag every lead with it <span class="d">briefing · codes · inventory · approvals</span></li>
+        <li>add the request's seeds, origin <code>request</code></li>
+        <li>dedupe by url <span class="d">discovery fetches each once</span></li></ol>
+        <div class="nx-note">nothing shipped for the slug → an empty seeds.json, and 1.2 starts from the web</div></div>
+      <div class="nx-arrow">→</div>
+      <div class="nx-card"><span class="nx-lab">out</span><ul class="nx-list"><li><code>seeds.json</code><span class="d">read by 1.2, 1.4</span></li><li><code>inputs.md</code><span class="d">the same, for a person</span></li></ul></div>
+    </div>
+    <div class="nx-acct"><span>every request seed <b>∈</b> seeds.json, origin request</span><span>seed urls <b>unique</b></span></div>
+  </section>
+  <hr class="nx-div">
+
+  <!-- 1.2 -->
+  <section class="nx-step" id="step-1-2">
+    <div class="nx-hd"><span class="nx-id agent">1.2</span><div><div class="nx-k">agent in a step loop · research runner · Opus 5.5, high · agent-browser · tools bureau · 3 h backstop per session</div><h3 class="nx-t">Discover the intake documents</h3><div class="nx-loc" data-on="1.2"></div></div><span class="nx-tpl">template <b>T7 · Session chain</b></span></div>
+    <p class="nx-sum">Finding every intake document a city publishes can outrun one context window, so each launch is a fresh session that picks up from the last one's report and the git-committed ledger. A session fetches every candidate itself, types it as one of five document types, and may only report <code>done</code> once a script gate passes. This is the only step that touches the live web.</p>
+    <div class="nx-chain">
+      <div class="nx-sess"><span class="k">session 01</span><b>seeds + the official hosts</b><span class="d">city domain, Widen, CivicPlus, Municode, the portal · ~1 h · ~$60</span></div>
+      <div class="nx-hand"><span class="ar">→</span>status continue<br>exit 100</div>
+      <div class="nx-sess"><span class="k">session 02</span><b>reads 01's report, log + ledger</b><span class="d">works the open surfaces; a negative needs a known-positive through the same route</span></div>
+      <div class="nx-hand"><span class="ar">→</span>status continue<br>exit 100</div>
+      <div class="nx-sess"><span class="k">session 03</span><b>gate passes · done</b><span class="d">sources.json, process.md, gate.json</span></div>
+      <div class="nx-hand"><span class="ar">⋯</span>cap</div>
+      <div class="nx-sess ghost"><span class="k">session 08</span><b>the cap</b><span class="d">step-loop.ts DEFAULT_CAP · the step fails</span></div>
+    </div>
+    <div class="nx-ledger"><b>Hand-off, every session:</b><span><code>node lib/intake.ts gate --step</code> → <code>gate.json</code>; <code>worktree.py commit</code> of <code>prospector/intake/</code> (ledger Surfaces + Attempts, <code>notes.md</code>); then <code>sessions/NN.log.md</code> and <code>NN.report.json</code> with <code>status</code>, <code>head</code>, <code>units_verified</code>, <code>next_steps</code>.</span></div>
+    <div class="nx-ends">
+      <div class="nx-end"><b>done</b> · every surface covered, every candidate typed, gate passes → 1.3</div>
+      <div class="nx-end"><b>blocked</b> · BLOCKED.md, blocked_on {kind, what} · exit 75</div>
+      <div class="nx-end"><b>rule 19</b> · tool calls scanned for barred reads; a hit fails the step</div>
+    </div>
+  </section>
+  <hr class="nx-div">
+
+  <!-- 1.3 -->
+  <section class="nx-step" id="step-1-3">
+    <div class="nx-hd"><span class="nx-id">1.3</span><div><div class="nx-k">script · ip.py capture → runbooks/lib/sources · zero tokens · Playwright from runbooks/render</div><h3 class="nx-t">Snapshot every source</h3><div class="nx-loc" data-on="1.3"></div></div><span class="nx-tpl">template <b>T2 · Stage / snapshot</b></span></div>
+    <p class="nx-sum">Prints every source discovery listed to pages of numbered words before anyone reads it for items. From here on the snapshot is the source: no later agent fetches a live page, so every citation points at exactly what was captured and a city editing its page tomorrow changes nothing about this run.</p>
+    <div class="nx-stage">
+      <div class="nx-card nx-src"><span class="nx-lab">reads · one recipe per source kind</span>
+        <span class="nx-pill"><i>web</i>pdf · direct download; a 200 that is not a PDF is refused</span>
+        <span class="nx-pill"><i>web</i>webpage · Playwright opens every panel, one page per panel</span>
+        <span class="nx-pill"><i>web</i>municode · the content API's chunks for the node ids</span>
+        <span class="nx-pill"><i>left out</i>sources with capture: false</span>
+        <span class="nx-pill"><i>left out</i>any upload: nothing leaves the run dir until 4.2</span>
+      </div>
+      <div class="nx-arrow">→</div>
+      <div class="nx-card"><span class="nx-lab">writes · 1.3-capture/</span>
+<pre class="nx-tree">manifest.json        <span class="c">source key → snapshot id; failures keep their error</span>
+capture-report.json  capture.md
+snapshots/&lt;sid&gt;/     <span class="c">sid = title + sha of the words</span>
+  document.pdf
+  pages/NNN.png      <span class="c">the image, where layout matters</span>
+  text/NNN.words.json  <span class="c">each word with its box → 2.3's regions</span>
+  text/NNN.tokens.txt  <span class="c">p2w188:Submit p2w189:one …</span>
+                       <span class="c">→ the pages 2.1 assigns and 2.2 reads</span></pre>
+      </div>
+    </div>
+    <div class="nx-checks-row">
+      <span class="nx-pill"><span class="nx-block">BLOCKING</span>each snapshot has document.pdf and, per page, an image, words and tokens</span>
+      <span class="nx-pill">every listed source has a manifest entry: captured, failed with its error, or skipped on purpose</span>
+      <span class="nx-pill">a webpage snapshot shows ≥ 98 % of its text (below that a panel stayed shut)</span>
+      <span class="nx-pill">every intake_instrument and template captured, or its failure named in capture.md</span>
+      <span class="nx-pill">the step fails only when every wanted capture failed</span>
+    </div>
+  </section>
+  <hr class="nx-div">
+
+  <!-- 1.4 -->
+  <section class="nx-step" id="step-1-4">
+    <div class="nx-hd"><span class="nx-id agent">1.4</span><div><div class="nx-k">single agent · research runner · Opus 5.5, high · tools bureau · no live web</div><h3 class="nx-t">Classify the basis</h3><div class="nx-loc" data-on="1.4"></div></div><span class="nx-tpl">template <b>T6 · Single-agent judgment</b></span></div>
+    <p class="nx-sum">One session reads every captured page and decides whether this jurisdiction has a formal intake basis at all, which application type carries the site plan, and which captured documents items may exist because of. It also writes the readout a person sees at the scope gate, and on a revise it re-runs with that person's edits and answers them.</p>
+    <div class="nx-judge">
+      <div class="nx-card"><span class="nx-lab">reads</span><ul class="nx-list">
+        <li>every captured page's <code>tokens.txt</code><span class="d">plus the image for a form or table</span></li>
+        <li><code>1.2 sources.json</code> + <code>process.md</code></li>
+        <li>the ledger<span class="d">through ledger.ts auditor-view</span></li>
+        <li><code>1.5-scope/decision.json</code> on a revise<span class="d">an input read with no ordering (<code>??</code>)</span></li></ul></div>
+      <div class="nx-arrow">→</div>
+      <div class="nx-card mid"><span class="nx-lab">decides</span><ul class="nx-list">
+        <li><b>Basis</b><span class="d">formal: a published checklist for this application type · none_found: nothing, and strong-tier negative attempts say so · inconclusive: anything else</span></li>
+        <li><b>Application type</b><span class="d">the city's own name; the request's hint is a claim to test</span></li>
+        <li><b>Scope sources</b><span class="d">intake_instrument or template, with a snapshot, screening this application type; empty unless formal</span></li>
+        <li><b>Retype</b><span class="d">where it reads a source differently from discovery, with the deciding quote; sources.json is never edited</span></li></ul></div>
+      <div class="nx-arrow">→</div>
+      <div class="nx-card"><span class="nx-lab">writes</span><ul class="nx-list">
+        <li><code>basis.json</code><span class="d">read by 2.1, 2.2, 2.3, 2.4, 3.0, 3.1, 3.2; evidence is a quote per scope source</span></li>
+        <li><code>readout.md</code><span class="d">shown at 1.5: Sources · Basis · Scope sources · Typing notes · Need you? · Revision</span></li></ul></div>
+    </div>
+  </section>
+  <hr class="nx-div">
+
+  <!-- 1.5 -->
+  <section class="nx-step" id="step-1-5">
+    <div class="nx-hd"><span class="nx-id gate">1.5</span><div><div class="nx-k">human gate · runner none · frozen · decision schema generated from the zod Decision in contract.test.ts</div><h3 class="nx-t">Scope gate</h3><div class="nx-loc" data-on="1.5"></div></div><span class="nx-tpl">template <b>T12 · Human gate</b></span></div>
+    <p class="nx-sum">A person reads the classifier's readout and either approves the basis and scope sources or sends them back with edits. Fixing the scope here is what makes the extraction fan-out cheap to get right: every worker downstream reads only pages this decision approved. Under <code>gates: auto</code> the contract records <code>decided_by: auto</code> and passes.</p>
+    <div class="nx-gate">
+      <div class="nx-card"><span class="nx-lab">shown · 1.4 readout.md</span><ul class="nx-list"><li>Sources table<span class="d">key · title · doc_type · kind · snapshot · pages · in scope?</span></li><li>Basis, application type, rationale, evidence quotes</li><li>Scope sources, each with its quote</li><li>Typing notes · Need you?</li></ul></div>
+      <div class="nx-dia">decision<br>.json</div>
+      <div class="nx-outs">
+        <div class="nx-o go"><span class="v">approved</span><span class="w">→ 2.1 groups builds the roster<span class="d">gates: auto writes this itself; gates: human requires decided_by ≠ auto</span></span></div>
+        <div class="nx-o loop"><span class="v">revise + edits</span><span class="w">1.4 re-runs with <code>edits.add_scope</code>, <code>remove_scope</code>, <code>retype</code>, <code>basis</code> and the notes, answers in <code>## Revision</code> → the gate asks again<span class="d">a revise never passes the contract; the loop is the only way on</span></span></div>
+      </div>
+    </div>
+  </section>
+  <hr class="nx-div">
+
+  <!-- 2.1 -->
+  <section class="nx-step" id="step-2-1">
+    <div class="nx-hd"><span class="nx-id agent">2.1</span><div><div class="nx-k">single agent · research runner · Opus 5.5, high · tools bureau · reads only the run's files</div><h3 class="nx-t">Group roster</h3><div class="nx-loc" data-on="2.1"></div></div><span class="nx-tpl">template <b>T3 · Roster planner</b></span></div>
+    <p class="nx-sum">Decides how wide the extraction fan-out is and what one worker owns: a group of 2 to 12 scope pages, keyed in the instrument's own order. Pages of different instruments that list the same submittal items go to one group, so one worker writes each requirement once and cites every instrument, instead of three workers writing three duplicates for the audit to charge.</p>
+    <div class="nx-roster">
+      <div class="nx-card"><span class="nx-lab">inputs</span><ul class="nx-list">
+        <li><code>basis.json</code> · the scope sources</li>
+        <li>every scope page's <code>tokens.txt</code><span class="d">the image where layout matters</span></li>
+        <li><code>sources.json</code> · <code>1.5 decision.json</code> notes</li></ul>
+        <div class="nx-note"><b>Ordering rule</b>, in order: the instrument's own sections (<code>instrument_structure</code>); else the reviewing department (<code>reviewing_entity</code>); never another jurisdiction's group list. <b>Not formal</b> → an empty roster, and the run goes on with no items.</div></div>
+      <div class="nx-arrow">→</div>
+      <div class="nx-card"><span class="nx-lab">roster.txt · one key per line → 2.2 extract, 3.0 prose</span>
+        <div class="nx-chips"><span>cc-1</span><span>cc-2</span><span>cc-3</span><span>cc-4</span><span class="more">… cc-N</span></div>
+        <div class="nx-note">roster.json gives each group a title in the city's words, a rationale, <code>assignments</code> {source, snapshot, pages, section} and <code>supporting</code>: the code sections and manuals a worker may cite beside a scope citation, never instead of one.</div>
+        <div class="nx-checks-row"><span class="nx-pill"><span class="nx-block">BLOCKING</span>every page of every scope source in exactly one group; no non-scope source, no page the snapshot lacks</span><span class="nx-pill">keys cc-1 … cc-N with no gap = roster.txt</span><span class="nx-pill">roster empty iff basis ≠ formal</span><span class="nx-pill">supporting = discovery's non-scope sources</span></div></div>
+    </div>
+  </section>
+  <hr class="nx-div">
+
+  <!-- 2.2 -->
+  <section class="nx-step" id="step-2-2">
+    <div class="nx-hd"><span class="nx-id fan">2.2</span><div><div class="nx-k">agent fan-out · one fresh worker per roster line · extract runner · Opus 5.5, medium · no $BUREAU, no tools</div><h3 class="nx-t">Extract one group's items</h3><div class="nx-loc" data-on="2.2"></div></div><span class="nx-tpl">template <b>T4 · Agent fan-out</b> (no-tools variant)</span></div>
+    <p class="nx-sum">Each group gets its own session, and the sessions run in parallel. A worker reads only its pages and writes one item per requirement they state, each cited as a run of word ids; it never produces a coordinate. Workers hold no bureau checkout at all, which is the second layer of the fence.</p>
+    <div class="nx-fan">
+      <div class="nx-stack"><span class="nx-lab">roster · roster.txt</span><span>cc-1</span><span class="on">cc-2</span><span>cc-3</span><span class="more">… cc-N</span><span class="x">×N in parallel, one fresh session each</span></div>
+      <div class="nx-arrow">→</div>
+      <div class="nx-worker">
+        <div class="wh"><b>one worker · cc-2</b><span>reads its pages' tokens + images, basis, sources; nothing live</span></div>
+        <ol class="nx-reads" style="--n:4">
+          <li><b>Read every assigned page, whole</b><span class="d">a supporting source only to word a Condition</span></li>
+          <li><b>One item per requirement</b><span class="d">as the deficiency a reviewer cites; completeness, never compliance; one per section or checkbox block of a form</span></li>
+          <li><b>Cite the smallest run of words that states it</b><span class="d">1–4 citations; the first on a scope page it owns; never a heading alone</span></li>
+          <li><b>On a revise round, answer every charge</b><span class="d">## Charges: ADDRESSED or SCORED_BELOW_BAR; a duplicate resolves by rule, the higher group drops</span></li>
+        </ol>
+        <div class="nx-out">writes <code>items.json</code><code>notes.md</code><span>Hard calls · Skipped · Charges</span></div>
+      </div>
+      <div class="nx-arrow">→</div>
+      <div class="nx-contracts">
+        <div class="nx-card"><span class="nx-lab">per worker</span><ul class="nx-list">
+          <li><span class="nx-block">BLOCKING</span>every item's first citation is on a scope source, on a page this group owns</li>
+          <li>every citation names real words, first before last, and its quote is in them</li>
+          <li>supporting citations only name sources the roster gave this group</li>
+          <li>every prior charge naming this group is answered</li>
+          <li>rule 19: tool calls scanned</li></ul></div>
+        <div class="nx-card"><span class="nx-lab">count-back · family</span><ul class="nx-list"><li>one folder per roster line (conductor's <code>foreach</code>)</li></ul></div>
+      </div>
+    </div>
+  </section>
+  <hr class="nx-div">
+
+  <!-- 2.3 -->
+  <section class="nx-step" id="step-2-3">
+    <div class="nx-hd"><span class="nx-id">2.3</span><div><div class="nx-k">script · ip.py verify (iplib/step_verify.py) · zero tokens · the one writer to the ledger</div><h3 class="nx-t">Verify, dedupe, mint ids</h3><div class="nx-loc" data-on="2.3"></div></div><span class="nx-tpl">template <b>T9 · Fan-in</b></span></div>
+    <p class="nx-sum">The join over every worker's output. It turns word picks into line boxes and throws out any quote it cannot find, merges the same requirement stated by two instruments into one item with both citations, and mints the stable ids the guides will carry. Nothing an agent wrote reaches the checklist without passing through here.</p>
+    <div class="nx-funnel">
+      <div class="nx-stack"><span class="nx-lab">in · N folders</span><span>2.2 · items.json ×N</span><span>1.3 · text/NNN.words.json</span><span>2.1 · roster.json</span><span>2.2 · notes.md ## Charges ×N</span></div>
+      <div class="nx-arrow">→</div>
+      <div class="nx-rule"><span class="nx-lab">the rule</span><ol>
+        <li>verify each citation: the ids are words of that page, first before last, the quote's fragments appear in order → line boxes from <code>words.json</code> <span class="d">a failed scope citation rejects the item; a failed supporting one is only dropped</span></li>
+        <li>anchor: a verified scope citation on a page its group owns, else rejected</li>
+        <li>dedupe across groups → merge into the earlier item, up to 4 citations <span class="d">same condition, same requirement; ordinal, number and subject-word guards</span></li>
+        <li>mint <code>{slug}-NNNN</code> in group order from the jurisdiction's <code>next_item</code>; derive the Requirement Source label</li>
+        <li><code>coverage.json</code>: every assigned scope page, <code>uncovered</code> where no item cites it</li>
+        <li>carry the workers' charge answers into the ledger, one commit</li></ol></div>
+      <div class="nx-arrow">→</div>
+      <div class="nx-card"><span class="nx-lab">out</span><ul class="nx-list"><li><code>items.json</code><span class="d">read by 2.4, 3.0, 3.1, 3.2</span></li><li><code>rejected.json</code><span class="d">rejections and merges</span></li><li><code>coverage.json</code><span class="d">the audit reads uncovered first</span></li><li><code>verify.md</code></li></ul></div>
+    </div>
+    <div class="nx-acct"><span>rejected <b>+</b> merged <b>+</b> verified <b>=</b> extracted</span><span>ids <b>unique</b>, consecutive in group order</span><span>every assigned page listed <b>once</b></span></div>
+  </section>
+  <hr class="nx-div">
+
+  <!-- 2.4 -->
+  <section class="nx-step" id="step-2-4">
+    <div class="nx-hd"><span class="nx-id agent">2.4</span><div><div class="nx-k">fresh session · reviewer runner · Opus 5.5, high · prospector's audit.md with this runbook's paths · never reads 2.2-extract/</div><h3 class="nx-t">Clean-context audit</h3><div class="nx-loc" data-on="2.4"></div></div><span class="nx-tpl">template <b>T11 · Audit and loop-back</b> (the audit half)</span></div>
+    <p class="nx-sum">A reviewer that never saw the workers judges the verified items against the snapshots and the coverage map. It attacks uncovered pages first, then charges by kind, and every claim opens with the group files it concerns, which is how the next step knows which workers to wake. Later rounds re-judge earlier charges and charge only regressions.</p>
+    <div class="sys-legend"><span><i class="happy"></i>main path</span><span><i class="loop"></i>goes back</span><span><i class="exit"></i>leaves the main path</span></div>
+    <div class="bleed"><div class="sysmap rgraph" id="rg-full-audit" style="grid-template-columns:repeat(6,minmax(0,1fr))">
+      <div class="sys fan" id="fa-1" style="grid-area:1/1"><span class="k">agent ×N groups</span><span class="t">2.2 extract</span><span class="d">notes.md stays behind the wall</span></div>
+      <div class="sys" id="fa-2" style="grid-area:1/2"><span class="k">script</span><span class="t">2.3 verify</span><span class="d">items, coverage, rejected</span></div>
+      <div class="sys" id="fa-3" style="grid-area:1/3"><span class="k">agent · reviewer</span><span class="t">2.4 audit</span><span class="d">≥3 items per group sampled, repro_cmd each</span></div>
+      <div class="sys dec" id="fa-4" style="grid-area:1/4"><span class="k">2.5 disposition</span><span class="t">charges left?</span></div>
+      <div class="sys exit" id="fa-5" style="grid-area:1/5"><span class="t">CLEAN</span><span class="d">→ 3.0 prose</span></div>
+      <div class="sys exit" id="fa-6" style="grid-area:2/4"><span class="t">ACCEPTED_WITH_RESIDUALS</span><span class="d">round cap, or all SCORED_BELOW_BAR</span></div>
+      <a class="sys-edge happy" data-from="fa-1" data-to="fa-2"></a>
+      <a class="sys-edge happy" data-from="fa-2" data-to="fa-3"></a>
+      <a class="sys-edge happy" data-from="fa-3" data-to="fa-4"></a>
+      <a class="sys-edge happy" data-from="fa-4" data-to="fa-5">none</a>
+      <a class="sys-edge loop" data-from="fa-4" data-to="fa-1">charged groups only</a>
+      <a class="sys-edge exit" data-from="fa-4" data-to="fa-6">round 3</a>
+    </div></div>
+    <p class="claim"><b>Charge kinds:</b> <code>scope</code> (compliance, or a citation that does not state the item) · <code>coverage</code> (an uncovered page that states a requirement) · <code>checkability</code> (needs a site visit or the city's records) · <code>duplicate</code> · <code>format</code>. Each claim opens <code>cc-3.md: …</code> and names the item by <code>ref</code>; a charge naming no group sends every group back. Suspicions go in <code>leads</code>, not charges. Output: <code>findings.json</code>.</p>
+  </section>
+  <hr class="nx-div">
+
+  <!-- 2.5 -->
+  <section class="nx-step" id="step-2-5">
+    <div class="nx-hd"><span class="nx-id">2.5</span><div><div class="nx-k">script · prospector/lib/disposition.py --fan-out · zero tokens · exit 0 pass · exit 1 send-back · exit 75 parked</div><h3 class="nx-t">Rule on the audit</h3><div class="nx-loc" data-on="2.5"></div></div><span class="nx-tpl">template <b>T11 · Audit and loop-back</b> (the disposition half)</span></div>
+    <p class="nx-sum">prospector's ruling, read unchanged from the bureau checkout. A clean audit passes; otherwise it writes a <code>void-request.json</code> for exactly the <code>cc-N</code> folders the charges name and exits 1, which makes conductor re-run those workers and everything after them. The round count is capped so a stubborn disagreement ships as a named residual instead of looping forever.</p>
+    <div class="dflow">
+      <div class="dq"><span class="q">findings.json says CHARGED but lists no charge?</span><span class="yes">yes →</span><span class="out fail">PARKED.md · exit 75 · a person reads the audit</span></div>
+      <div class="dno">no ↓</div>
+      <div class="dq"><span class="q">The audit charged nothing (verdict CLEAN)?</span><span class="yes">yes →</span><span class="out">disposition.json CLEAN; any leads ship as OPEN_LEAD residuals</span></div>
+      <div class="dno">no ↓</div>
+      <div class="dq"><span class="q">Every charge answered SCORED_BELOW_BAR by its worker this round?</span><span class="yes">yes →</span><span class="out">ACCEPTED_WITH_RESIDUALS · residual rows committed to the ledger</span></div>
+      <div class="dno">no ↓</div>
+      <div class="dq"><span class="q">Round 3 or earlier? (MAX_ROUNDS = 3; an operator void restarts the count)</span><span class="yes">yes →</span><a class="out warn jump" href="#step-2-2">void-request.json for the named groups (the whole fan-out when a charge names none) · exit 1</a></div>
+      <div class="dno">no ↓</div>
+      <div class="dq end"><span class="q">round 4</span><span class="yes"></span><span class="out warn">ACCEPTED_WITH_RESIDUALS · the rest are OPEN_AT_CAP</span></div>
+    </div>
+    <p class="claim"><b>Reading:</b> each round's findings are copied to <code>$RUN/rounds/round-N.findings.json</code>, and the woken workers must answer every charge in <code>## Charges</code> before their contract passes. On Austin, round 1 carried 35 to 82 charges, mostly duplicates, and runs went clean in two to four more rounds.</p>
+  </section>
+  <hr class="nx-div">
+
+  <!-- 3.0 -->
+  <section class="nx-step" id="step-3-0">
+    <div class="nx-hd"><span class="nx-id fan">3.0</span><div><div class="nx-k">agent fan-out · one writer per roster line · writer runner · Opus 5.5, medium · no $BUREAU, no tools</div><h3 class="nx-t">Write one guide's prose</h3><div class="nx-loc" data-on="3.0"></div></div><span class="nx-tpl">template <b>T4 · Agent fan-out</b> (no-tools variant)</span></div>
+    <p class="nx-sum">The same shape as extraction with a gentler worker. Each writer drafts the five prose sections of one guide from its group's verified items and the pages they cite, in the jurisdiction's own terms. It never writes the checklist table: 3.1 renders that from <code>items.json</code>, so the prose and the table cannot disagree.</p>
+    <div class="nx-fan">
+      <div class="nx-stack"><span class="nx-lab">roster · roster.txt</span><span class="on">cc-1</span><span>cc-2</span><span class="more">… cc-N</span><span class="x">×N in parallel, after disposition passes</span></div>
+      <div class="nx-arrow">→</div>
+      <div class="nx-worker">
+        <div class="wh"><b>one writer · cc-1</b><span>reads its roster entry, its verified items, the cited pages, source titles, basis</span></div>
+        <ol class="nx-reads" style="--n:5">
+          <li><b>Description</b><span class="d">what this guide verifies</span></li>
+          <li><b>Overview</b><span class="d">≥120 chars, grouped as the source groups it, the source's own phrasing</span></li>
+          <li><b>Documents to review</b><span class="d"><code>**Sheet** -- what to look at</code></span></li>
+          <li><b>Validation methodology</b><span class="d">per local_id where the method is not obvious</span></li>
+          <li><b>Common rejection triggers</b><span class="d">at least two</span></li>
+        </ol>
+        <div class="nx-out">writes <code>prose.json</code><span>on a revise round it reads 4.1's notes</span></div>
+      </div>
+      <div class="nx-arrow">→</div>
+      <div class="nx-contracts">
+        <div class="nx-card"><span class="nx-lab">per writer</span><ul class="nx-list">
+          <li>prose.json names this group</li>
+          <li>process vocabulary (step, gate, round, contract) stays out of client-facing text<span class="d">core rule 21</span></li>
+          <li>American spelling<span class="d">3.1 checks and sends a British one back</span></li></ul></div>
+        <div class="nx-card"><span class="nx-lab">count-back · family</span><ul class="nx-list"><li>one folder per roster line</li></ul></div>
+      </div>
+    </div>
+  </section>
+  <hr class="nx-div">
+
+  <!-- 3.1 -->
+  <section class="nx-step" id="step-3-1">
+    <div class="nx-hd"><span class="nx-id">3.1</span><div><div class="nx-k">script · ip.py write (iplib/step_write.py) · zero tokens · widens the sparse checkout to write, narrows it before any send-back</div><h3 class="nx-t">Route, render, commit</h3><div class="nx-loc" data-on="3.1"></div></div><span class="nx-tpl">template <b>T9 · Fan-in</b> (render variant) + <b>T10 · Deterministic checks</b></span></div>
+    <p class="nx-sum">Gates can only wait, so a review that says revise is acted on by the next step that runs, and that is this one: it routes the revise back before writing anything. Otherwise it renders every file of the db-schema checklist format from the verified items and the writers' prose, commits them to the worktree branch, and runs the intake gate over what it wrote.</p>
+    <div class="nx-funnel">
+      <div class="nx-stack"><span class="nx-lab">in</span><span>2.3 · items.json</span><span>3.0 · prose.json ×N</span><span>1.3 · manifest.json</span><span>1.2 · sources.json + sources/sources.yaml</span><span>4.1 · decision.json (a prior round)</span></div>
+      <div class="nx-arrow">→</div>
+      <div class="nx-rule"><span class="nx-lab">the rule</span><ol>
+        <li><b>route a revise first:</b> 4.1 says revise → <code>void-request.json</code>, exit 1 <span class="d">regroup named → 2.2 for those groups; none → 3.0 only</span></li>
+        <li>a British spelling in the prose → send just those groups back to 3.0</li>
+        <li>basis not formal → <code>intake.yaml</code> pointing at <code>generic</code> and a conventions stub, nothing else</li>
+        <li>render <code>cc-N.md</code>: the prose sections, then the 8-column table from items.json with a sub-heading per source section</li>
+        <li>side files: <code>intake-ids.tsv</code>, the two mapping TSVs, <code>source-citations.json</code>, <code>requirement-source-urls.tsv</code> and <code>sources/manifest.json</code> stamped from <code>sources.yaml</code> (merged, never overwritten), the registry merged into the jurisdiction's, <code>intake.yaml</code>, <code>CURRENT_VERSION</code> = next vN</li>
+        <li>commit to the branch, then run the intake gate (below)</li></ol></div>
+      <div class="nx-arrow">→</div>
+      <div class="nx-card"><span class="nx-lab">out</span><ul class="nx-list"><li>worktree · <code>completeness-check/vN/</code>, <code>intake.yaml</code><span class="d">committed</span></li><li><code>write.md</code> + <code>gate.json</code></li><li>or <code>void-request.json</code> + <code>review-findings.md</code></li></ul></div>
+    </div>
+    <div class="nx-acct"><span class="nx-block">BLOCKING</span><span>written and gated (gate.json) <em>or</em> a revise routed (void-request.json), exactly one</span></div>
+    <h3 class="claim" style="font-size:16px;margin-top:26px">The intake gate: what 3.1 checks over its own commit before the run moves on <span class="src">lib/intake.ts, step_write.py cmd_write</span></h3>
+    <table class="nx-rules">
+      <thead><tr><th>Rule</th><th>Blocks?</th><th>On failure</th></tr></thead>
+      <tbody>
+        <tr><td><code>intake.yaml</code> parses and agrees with <code>basis.json</code></td><td>fails the step</td><td class="o">gate.json records it · fix and re-run</td></tr>
+        <tr><td><code>next_item</code> is one past the last id and never goes down against the base branch</td><td>fails the step</td><td class="o">gate.json records it</td></tr>
+        <tr><td>every guide table row matches <code>items.json</code>, in order</td><td>fails the step</td><td class="o">gate.json records it</td></tr>
+        <tr><td>every Requirement Source label has a URL in <code>requirement-source-urls.tsv</code></td><td>fails the step</td><td class="o">gate.json records it</td></tr>
+        <tr><td>the tree is committed; bureau's content gates pass on the worktree</td><td>fails the step</td><td class="o">gate.json records it</td></tr>
+      </tbody>
+    </table>
+  </section>
+  <hr class="nx-div">
+
+  <!-- 3.2 -->
+  <section class="nx-step" id="step-3-2">
+    <div class="nx-hd"><span class="nx-id">3.2</span><div><div class="nx-k">script · ip.py sheet · zero tokens</div><h3 class="nx-t">Contact sheet</h3><div class="nx-loc" data-on="3.2"></div></div><span class="nx-tpl">template <b>T9 · Fan-in</b> (render variant)</span></div>
+    <p class="nx-sum">Renders the one page the review gate shows: every verified item beside a crop of the words it cites, with the boxes verify computed drawn on the page image. A reviewer approves what they can see, so the contract fails the sheet if any item is missing its crop.</p>
+    <div class="nx-funnel">
+      <div class="nx-stack"><span class="nx-lab">in</span><span>2.3 · items.json, coverage.json, rejected.json</span><span>1.3 · pages/NNN.png</span><span>2.5 · disposition residuals</span><span>1.4 · basis.json · 1.2 · sources</span></div>
+      <div class="nx-arrow">→</div>
+      <div class="nx-rule"><span class="nx-lab">the rule</span><ol>
+        <li>the sources and the basis, as a header</li>
+        <li>one card per item: id, condition, location, fail or warn, then each citation's page image with its boxes drawn</li>
+        <li>the uncovered pages</li>
+        <li>the residual charges</li>
+        <li>what verify rejected and merged</li></ol></div>
+      <div class="nx-arrow">→</div>
+      <div class="nx-card"><span class="nx-lab">out</span><ul class="nx-list"><li><code>contact-sheet.html</code></li><li><code>readout.md</code><span class="d">what 4.1 shows</span></li></ul></div>
+    </div>
+    <div class="nx-acct"><span>every verified item appears by id with <b>≥1</b> crop</span></div>
+  </section>
+  <hr class="nx-div">
+
+  <!-- 4.1 -->
+  <section class="nx-step" id="step-4-1">
+    <div class="nx-hd"><span class="nx-id gate">4.1</span><div><div class="nx-k">human gate · runner none · frozen · answered in the console or on disk</div><h3 class="nx-t">Review gate</h3><div class="nx-loc" data-on="4.1"></div></div><span class="nx-tpl">template <b>T12 · Human gate</b></span></div>
+    <p class="nx-sum">A person reads the contact sheet and approves the checklist for a bureau PR, or sends it back. A revise does not restart the run: it names the groups to re-extract, or names none to have only the prose rewritten, and 3.1 routes it. Under <code>gates: auto</code> the contract passes on its own, and 4.2 then refuses to publish.</p>
+    <div class="nx-gate">
+      <div class="nx-card"><span class="nx-lab">shown · 3.2 readout.md + contact-sheet.html</span><ul class="nx-list"><li>sources and basis</li><li>every item with the crop of its cited passage</li><li>uncovered pages · residual charges</li><li>what verify rejected and merged</li></ul></div>
+      <div class="nx-dia">decision<br>.json</div>
+      <div class="nx-outs">
+        <div class="nx-o go"><span class="v">approved</span><span class="w">→ 4.2 publishes<span class="d">only with publish: true and decided_by ≠ auto; otherwise 4.2 stands aside</span></span></div>
+        <div class="nx-o loop"><span class="v">revise + regroup [cc-N…]</span><span class="w">3.1 voids those groups in 2.2 → verify, audit, disposition, prose, write, sheet again → the gate asks again<span class="d">void-request.json · the other groups keep their output</span></span></div>
+        <div class="nx-o loop"><span class="v">revise, no regroup</span><span class="w">only 3.0 prose is rewritten with the notes → 3.1, 3.2 → the gate asks again</span></div>
+      </div>
+    </div>
+  </section>
+  <hr class="nx-div">
+
+  <!-- 4.2 -->
+  <section class="nx-step" id="step-4-2">
+    <div class="nx-hd"><span class="nx-id">4.2</span><div><div class="nx-k">script · ip.py publish · frozen · zero tokens · local lane only: the operator's gh and service-role key</div><h3 class="nx-t">Publish</h3><div class="nx-loc" data-on="4.2"></div></div><span class="nx-tpl">template <b>T13 · Publish</b> (git commit + PR variant)</span></div>
+    <p class="nx-sum">The only step that writes outside the run dir and the worktree. It uploads the cited snapshots so the app can draw the citations once the PR merges, brings the branch up to date by merging main in (never a rebase, so the session commits keep their shas), and opens one draft PR. Nothing here writes to a database.</p>
+    <div class="uc">
+      <div class="uch"><div class="ucn">1</div><div class="uctxt"><span class="actor">script · after approved</span><span class="uct">Ship one jurisdiction's checklist</span></div></div>
+      <div class="ucdiag"><div class="dfg">
+        <div class="node read"><span class="op">read</span><span class="nt">request + decision</span><span class="nf">publish: true · status approved<br>decided_by ≠ auto · replace?</span></div>
+        <div class="edge"><span class="el">the checklist's manifest</span><span class="ar">→</span></div>
+        <div class="node store"><span class="op">put</span><span class="nt">snapshots bucket</span><span class="nf">&lt;slug&gt;/&lt;sid&gt;/ · every cited snapshot<br>service-role key</span></div>
+        <div class="edge"><span class="el">then git</span><span class="ar">→</span></div>
+        <div class="node created"><span class="op">merge + push</span><span class="nt">intake-prospecting/&lt;slug&gt;-&lt;run&gt;</span><span class="nf">git merge origin/main, never rebase<br>conflict → BLOCKED.md</span></div>
+        <div class="edge"><span class="el">gh</span><span class="ar">→</span></div>
+        <div class="node created"><span class="op">PR</span><span class="nt">noetic-inc/bureau · draft</span><span class="nf">"intake-prospecting: &lt;name&gt; checklist vN"<br>asks for a merge commit, never a squash → pr.json</span></div>
+      </div></div>
+      <div class="ucnote"><b>stands aside</b>: <code>publish: false</code> (every loop run, every wrapped run) ends with <code>NOTHING-TO-SHIP.md</code> and exit 0; a prospector wrapper merges the branch itself.</div>
+    </div>
+    <div class="nx-refuse">refuses, no retry: <code>not approved by a person (status ≠ approved, or decided_by auto)</code><code>completeness-check/ already on origin/main without replace: true</code></div>
+    <p class="claim"><b>Reading:</b> the checklist becomes an ordinary bureau checklist when the PR merges; carrying it into the app DB is the db-schema sync's job (winston #310), not this runbook's.</p>
+  </section>
 </section>
 
 <!-- ============================================================ FIND -->
@@ -1722,7 +2372,8 @@ the worktree branch
    .lanes maps draw no edge out of a trigger (the trigger is the lane label); edge kinds
    .happy / .exit for runbook graphs; Today/After toggle for .sysmap.delta; hover a node to
    light its path (hover a footer row to light the nodes its reference tags); .dfg chains that
-   would wrap switch to a vertical stack. */
+   would wrap switch to a vertical stack.
+   v6.8: fills the runbook page's step locator strips (.nx-loc). */
 (function(){
   const NS='http://www.w3.org/2000/svg';
   const COL={std:'#8a919c',new:'#1a7f37',chg:'#bf8700',gap:'#c2341c',loop:'#4b5361',happy:'#1f2937',exit:'#8a919c'};
@@ -1903,6 +2554,16 @@ the worktree branch
     }
     render();
   }
+  /* ---- v6.8 runbook page: each .nx-loc strip lists the page's steps (data-steps on the closest
+     [data-steps] ancestor, comma-separated) and lights its own (data-on). A step whose block has
+     id="step-<n with dots as dashes>" (step-2-2) becomes a link to it. */
+  function nxLoc(){document.querySelectorAll('.nx-loc').forEach(l=>{if(l.children.length)return;
+    const host=l.closest('[data-steps]');if(!host)return;
+    host.dataset.steps.split(',').map(x=>x.trim()).filter(Boolean).forEach(id=>{
+      const t=document.getElementById('step-'+id.replace(/\./g,'-'));
+      const n=document.createElement(t?'a':'span');n.textContent=id;
+      if(t)n.href='#'+t.id; if(id===l.dataset.on)n.className='on'; l.appendChild(n);});});}
+  window.addEventListener('DOMContentLoaded',nxLoc);
   window.addEventListener('DOMContentLoaded',()=>document.querySelectorAll('.smx').forEach(smx));
   window.addEventListener('DOMContentLoaded',linkSpec);
   window.addEventListener('load',all);
@@ -1916,7 +2577,7 @@ the worktree branch
 <script>
   const btns=document.querySelectorAll('nav.tabs button');
   const panels=document.querySelectorAll('.panel');
-  const IDS=['overview','find','extract','ship','fence','files','score']; /* KEEP IN SYNC with the data-tab / panel ids above */
+  const IDS=['overview','runbook','find','extract','ship','fence','files','score']; /* KEEP IN SYNC with the data-tab / panel ids above */
   function show(id,opts={}){
     btns.forEach(b=>b.classList.toggle('active',b.dataset.tab===id));
     panels.forEach(p=>p.classList.toggle('active',p.id===id));
