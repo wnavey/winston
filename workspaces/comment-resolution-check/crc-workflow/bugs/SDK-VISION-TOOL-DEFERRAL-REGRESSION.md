@@ -1,6 +1,6 @@
 # CRC vision tool goes nearly unused after a claude-agent-sdk upgrade — tools get deferred behind "tool search" and the review agent never calls them
 
-> **Status:** Diagnosed 2026-09-17. **Stopgap fix shipped** as conductor **PR #295** (pin `@anthropic-ai/claude-agent-sdk` to `0.3.214`). Root cause lives in the **conductor ⇄ claude-agent-sdk tool-registration boundary**, exposed by an SDK version bump (`^0.3.235` → `^0.3.258`, conductor #288, 2026-09-10). Discovered while auditing CRC review `1eeddd0a-880d-4698-9fe6-93acb53c93c3` (workflow_run `e9fc8220-6692-4214-ade3-79d4a5e7c8a2`, Lamar+Collier svn8/U1, project `23301a8a-4cdb-4751-ac0c-93b97f0f5c12`). **Presents as a "the model stopped using vision" quality regression — it is actually a tool-availability/registration regression in the SDK.** A verified fix-forward (§10) exists but is deliberately deferred; the pin is the verified path.
+> **Status:** Diagnosed 2026-09-17. **Stopgap fix shipped** as conductor **PR #295** (pin `@anthropic-ai/claude-agent-sdk` to `0.3.214`). Root cause lives in the **conductor ⇄ claude-agent-sdk tool-registration boundary**, exposed by an SDK version bump (`^0.3.235` → `^0.3.258`, conductor #288, 2026-09-10). Discovered while auditing CRC review `1eeddd0a-880d-4698-9fe6-93acb53c93c3` (workflow_run `e9fc8220-6692-4214-ade3-79d4a5e7c8a2`, Lamar+Collier svn8/U1, project `23301a8a-4cdb-4751-ac0c-93b97f0f5c12`). **Presents as a "the model stopped using vision" quality regression — it is actually a tool-availability/registration regression in the SDK.** **Update 2026-09-18:** the leading fix-forward — `createSdkMcpServer({ alwaysLoad: true })` on an un-pinned SDK (conductor **#297**) — was implemented and tested locally on SDK `0.3.274` and **did NOT restore vision** (see §10). The pin (#295) remains the only verified fix; the SDK-side root cause is still open.
 
 ---
 
@@ -169,17 +169,24 @@ alwaysLoad?: boolean;
 **Shipped (verified) — the pin:**
 - **conductor PR #295** — pin `@anthropic-ai/claude-agent-sdk` to exact `0.3.214` (+ regenerated lockfile so the sandbox `npm ci` honors it). Restores vision now. Deliberate stopgap; loses ~2 months of other SDK fixes, so it should be temporary.
 
-**Fix-forward (NOT yet implemented — directions for the implementing agent; most principled first):**
+**Attempted 2026-09-18 and FAILED — `alwaysLoad: true` (conductor #297):**
 
-1. **Opt conductor's tools out of tool-search deferral — the real fix.** In `conductor/src/tools/index.ts:323`:
-   ```ts
-   mcpServers.conductor_tools = createSdkMcpServer({
-     name: 'conductor_tools',
-     tools: toolList,
-     alwaysLoad: true,   // keep conductor tools in the prompt; never defer behind tool search
-   });
-   ```
-   Then un-pin the SDK (back to `^0.3.258` or latest). **This must be verified before shipping** — re-run the §12 A/B on `0.3.258` *with* `alwaysLoad: true` and confirm vision returns to `0.3.214`-level frequency with `runIndex` stamped. (An `alwaysLoad: true` edit was prepared this session but intentionally **not** validated — the pin was chosen as the verified path under time pressure.) If a whole-server flag is too broad, the per-tool `tool({ alwaysLoad })` form exists and is OR'd with the server flag.
+The SDK's documented opt-out was implemented and tested. **It did not restore vision.**
+
+- **Change:** un-pin `@anthropic-ai/claude-agent-sdk` `0.3.214` → `^0.3.274` (latest 0.3.x) and pass `alwaysLoad: true` to `createSdkMcpServer` for `conductor_tools` (`conductor/src/tools/index.ts:323`). Type-checks clean against 0.3.274 (`alwaysLoad?: boolean` is a valid `CreateSdkMcpServerOptions` field). Shipped as **conductor PR #297 — do NOT merge; the premise is disproven.**
+- **Test:** the §12 A/B recipe — `crc-CA`, `runs=1`, `maxWorkers=1`, model `claude-sonnet-5`, `--step=review`, on SDK `0.3.274` *with* `alwaysLoad: true`.
+- **Result: still broken.** Zero vision calls (no `vision-log.jsonl` written), empty `tools_used` across all 29 items, and **no `crc_vision_check` tool-use anywhere**. Instead the review agent fired 10+ `ToolSearch` queries hunting for the tool and never received a callable one:
+  ```
+  ToolSearch "semantic-search-blocks crc-vision-check"
+  ToolSearch "select:semantic-search-blocks,crc-vision-check"
+  ToolSearch "vision check crc" → "vision" → "search" → "crc" → "block"
+  ```
+  The model clearly **wanted** vision (it kept searching) but the tool was never loaded into its callable set — so a server-level `alwaysLoad: true` did **not** un-defer the tools. (Unlike the 0.3.258 cloud run, this run emitted **no** "tool unavailable" disclaimers — just silent `ToolSearch` flailing, a slightly different surface of the same failure.)
+- **What this rules in/out:** `alwaysLoad` is documented to work by stamping `_meta['anthropic/alwaysLoad']` on each tool, and it is the *only* documented opt-out — 0.3.274's types expose **no** query-level "disable tool search" switch (only `defer_loading`, which `alwaysLoad` is supposed to set). So either the SDK isn't honoring the server-level flag (bug, or it never stamps the `_meta`), a tool-count threshold force-enables tool-search regardless, or there's a subtlety in how conductor hands `mcpServers` to `query()`. **Unresolved — needs SDK-side investigation.**
+
+**Still-open fix directions (the pin #295 holds until one lands; most principled first):**
+
+1. **Root-cause why `alwaysLoad` isn't honored on 0.3.274.** Inspect whether `createSdkMcpServer` actually stamps `_meta['anthropic/alwaysLoad']` on each tool in this version (dump the built server config / a live `query()` payload); try the per-tool `tool({ alwaysLoad })` form (OR'd with the server flag per the SDK docs); check for a tool-count threshold that force-enables tool-search. If the flag is genuinely ignored, file an SDK issue with the #297 repro attached.
 
 2. **Bisect the exact regressing SDK version** (`0.3.214 → 0.3.258`) so the un-pin can target the newest-good version instead of rolling all the way back, and so the SDK-side behavior change is documented. Resolves the §5 open question.
 
