@@ -294,9 +294,10 @@ code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px s
       <span class="s client">2.1-briefs<span class="who">agent · haiku</span></span><span class="a">→</span>
       <span class="s client">2.2-digest<span class="who">agent · writes the readout</span></span><span class="a">→</span>
       <span class="s cc">2.3-hitl<span class="who">runner: none · THE GATE</span></span><span class="a">→</span>
-      <span class="s client">2.4-snapshot<span class="who">agent · resumes after</span></span>
+      <span class="s client">3.1-classify<span class="who">declares 2.3 as an input</span></span>
     </div>
-    <p>Only <b>2.3</b> is a gate. <b>2.2</b> matters because its output is the readout the gate shows. <b>2.1</b> and <b>2.4</b> are ordinary agent steps — they neither ask nor answer.</p>
+    <p>Only <b>2.3</b> is a gate. <b>2.2</b> matters because its output is the readout the gate shows. <b>3.1</b> is what the gate actually blocks — it declares <code>inputs: [2.1-briefs, 2.3-hitl]</code>, and that dependency is the whole reason a park stops anything.</p>
+    <p><b>2.4-snapshot is not on this path.</b> It depends only on <code>1.1-inputs</code>, so it runs in parallel and finishes <em>before</em> the gate parks — in the 2026-09-18 run, 2.4 exited at 10:50:26 and 2.3 parked at 10:50:54. A gate blocks its dependents, not the clock.</p>
 
     <h3><span class="hn">2</span>The loop</h3>
     <div class="uc">
