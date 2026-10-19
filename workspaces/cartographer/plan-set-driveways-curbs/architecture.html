@@ -1267,7 +1267,7 @@ table.nx-rules td.o{color:var(--ink2);font-size:12.5px;white-space:nowrap}
   <div class="plan" style="--cols:5">
     <div class="plan-h"><span></span><span>P0 · the schema</span><span>P1 · reader, tracer, modules</span><span>P3 · the anchor side</span><span>P2 · the extract runbook</span><span>P4 · the frontage context</span></div>
     <div class="plan-row"><span class="plan-who">cityhall-new</span>
-      <div class="plan-cell"><div class="pc key"><span class="pid">P0 · D9 D10 D11 D13 · S6</span><b>geometry (backfilled), length_ft, derived, the line branch, sir_put_context_geo</b><span class="pd">expand only; <code>polygon</code> nullable with a type CHECK</span><span class="pa">waits on nothing; geometry stays nullable until P1b flips it</span></div></div>
+      <div class="plan-cell"><div class="pc key"><span class="pid">P0 · D9 D10 D11 D13 · S6</span><b>geometry (backfilled), length_ft, derived, the line branch, cartographer_put_context_geo</b><span class="pd">expand only; <code>polygon</code> nullable with a type CHECK</span><span class="pa">waits on nothing; geometry stays nullable until P1b flips it</span></div></div>
       <div class="plan-cell"><div class="pc"><span class="pid">P1b · D10</span><b>geometry NOT NULL</b><span class="pd">one line, once the writer is live</span><span class="pa">after P1</span></div></div>
       <div class="plan-cell"></div><div class="plan-cell"></div><div class="plan-cell"></div>
     </div>
@@ -1947,7 +1947,7 @@ ws/crops/p12-r3-t1-overlay.jpg <span class="c">every chain of the set, drawn on 
     <a class="refrow chg" data-ref="D10"><span class="chip">D10</span><span class="txt">every reader of polygon moves to geometry</span></a>
     <a class="refrow chg" data-ref="D11"><span class="chip">D11</span><span class="txt">the RPC's line branch; measures and trace_method in properties</span></a>
     <a class="refrow chg" data-ref="D12"><span class="chip">D12</span><span class="txt">carried: placed by the frame's transform, claimed against nothing</span></a>
-    <a class="refrow new" data-ref="D13"><span class="chip">D13</span><span class="txt">1.3-frontage and sir_put_context_geo</span></a>
+    <a class="refrow new" data-ref="D13"><span class="chip">D13</span><span class="txt">1.3-frontage and cartographer_put_context_geo</span></a>
     <a class="refrow chg" data-ref="D15"><span class="chip">D15</span><span class="txt">the anchor readout's frontage table</span></a>
   </div>
   <p class="claim"><b>Claim (D12):</b> <code>fitSets</code> already skips <code>within</code> figures and <code>anchorFrame</code> already transforms every figure of the frame, so a carried line reaches the grid with no change to the solver.</p>
@@ -1971,7 +1971,7 @@ ws/crops/p12-r3-t1-overlay.jpg <span class="c">every chain of the set, drawn on 
         <li class="st" data-n="3.1"><span class="sk">script</span><span class="sn">solve</span><span class="so">unchanged; carried figures transformed like within</span></li>
         <li class="st chg" data-n="3.2"><span class="sk">script</span><span class="sn">render</span><span class="so">lines by posture, the derived driveway filled, the ortho tile underneath</span></li>
         <li class="st chg" data-n="3.3"><span class="sk">agent</span><span class="sn">check</span><span class="so">+ do the existing curbs sit on the aerial's curbs; does each opening sit on an apron or at the sawcut; + the frontage table</span></li>
-        <li class="st chg" data-n="5.1"><span class="sk">script</span><span class="sn">publish</span><span class="so">geometry by type, measures; then sir_put_context_geo(frontage/*.json)</span></li>
+        <li class="st chg" data-n="5.1"><span class="sk">script</span><span class="sn">publish</span><span class="so">geometry by type, measures; then cartographer_put_context_geo(frontage/*.json)</span></li>
       </ol>
     </div>
   </div>
@@ -2108,7 +2108,7 @@ scratch/*.json       <span class="c">every raw answer and every error, arcgis_qu
           <div class="edge"><span class="el">①</span><span class="ar">→</span></div>
           <div class="node created"><span class="op">rpc</span><span class="nt">sir_put_anchored_geo</span><span class="nf">+ LineString branch<br>+ properties.measures</span></div>
           <div class="edge"><span class="el">② NEW</span><span class="ar">→</span></div>
-          <div class="node created"><span class="op">rpc</span><span class="nt">sir_put_context_geo</span><span class="nf">openings · inlets · ROW<br>method city_gis · posture existing</span></div>
+          <div class="node created"><span class="op">rpc</span><span class="nt">cartographer_put_context_geo</span><span class="nf">openings · inlets · ROW<br>method city_gis · posture existing</span></div>
         </div></div></div>
       </div>
     </div>

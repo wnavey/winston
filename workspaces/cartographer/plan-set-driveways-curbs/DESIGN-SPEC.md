@@ -2,7 +2,7 @@
 
 **Status:** Draft v1
 **Date:** 2026-10-19
-**Repos touched:** `bureau` (`extract-geometry-v2` steps 1.2, 2.1, 3.4, 3.5, 4.2, 6.1 and their contracts; `anchor-geometry` steps 2.1, 3.2, 3.3, 5.1 and one new step `1.3-frontage`; one new data file under `runbooks/site-research/data/`), `cartographer` (`src/lib/features/registry.ts`; `runbooks/extract-geometry/scripts/lib/{pdf_paths.py,trace.ts,evidence.ts,traced.ts}`; new `lib/curb.ts`, `lib/frontage.ts`, `lib/driveway.ts`; `trace.ts`, `assemble.ts`, `place.ts`, `publish.ts`; `runbooks/anchor-geometry/scripts/{fetch,render,publish}.ts` and `lib/{contracts,frames}.ts`; `/geometry/[id]`, `/anchored`, `/anchor/[id]` draw lines), `cityhall-new` (the schema: `supabase/schemas/public/tables/{cartographer_geometries,cartographer_geometry_evidence,geo}.sql`, `functions/sir_put_anchored_geo.sql`, one new function `sir_put_context_geo.sql`, and the migration `supabase db schema declarative sync` writes)
+**Repos touched:** `bureau` (`extract-geometry-v2` steps 1.2, 2.1, 3.4, 3.5, 4.2, 6.1 and their contracts; `anchor-geometry` steps 2.1, 3.2, 3.3, 5.1 and one new step `1.3-frontage`; one new data file under `runbooks/site-research/data/`), `cartographer` (`src/lib/features/registry.ts`; `runbooks/extract-geometry/scripts/lib/{pdf_paths.py,trace.ts,evidence.ts,traced.ts}`; new `lib/curb.ts`, `lib/frontage.ts`, `lib/driveway.ts`; `trace.ts`, `assemble.ts`, `place.ts`, `publish.ts`; `runbooks/anchor-geometry/scripts/{fetch,render,publish}.ts` and `lib/{contracts,frames}.ts`; `/geometry/[id]`, `/anchored`, `/anchor/[id]` draw lines), `cityhall-new` (the schema: `supabase/schemas/public/tables/{cartographer_geometries,cartographer_geometry_evidence,geo}.sql`, `functions/sir_put_anchored_geo.sql`, one new function `cartographer_put_context_geo.sql`, and the migration `supabase db schema declarative sync` writes)
 **Repos NOT touched:** `substation` (retired 2026-09-29), `cityhall` (the old app), `conductor2`, `surveyor` (Q5 asks whether the Austin street layers should move into its registry; v1 keeps them in bureau data), `prospector`, `claude-plugins`, `navalbase`, `quarry`
 **Prod:** Supabase **Noetic App** (`mgxqsrjutswbciyrltwd`)
 **Parent:** [`../north-star/NORTH-STAR-SPEC.md`](../north-star/NORTH-STAR-SPEC.md) (winston#303) — the second slice of **P5 (plan sets)**, and the first use of its **D14** (derived geometry is a fourth path).
@@ -23,6 +23,8 @@ Two things make this harder than the building footprint, and the spec is organis
 2. **Dimensioning adjacent driveways is a regulatory requirement, and the sheet does not carry them.** TCM 7.6.2's spacing is measured to the next driveway along the street; the review guide reads a 200 ft window on each side, the completeness check 300 ft; the White Water survey base stops 10–35 ft past the lot. The answer has to come from somewhere the plan set is not, and it has to land on the same grid as the proposed driveway so one `ST_Distance` can compare them.
 
 On names: the extract runbook is `extract-geometry-v2` (the conductor port). The anchor runbook is `anchor-geometry` — there is no `-v2` directory in bureau; the version this spec changes is the one winston#322 P3 left (`bureau/runbooks/anchor-geometry/`, eight steps).
+
+**No SIR is needed anywhere in this spec, and the acceptance fixture has none.** The anchor run's loose-file path (sir-free anchoring, winston#309, shipped) finds the county ring from the plat's page-1 county and legal description; `cartographer_anchors.sir_id` and `geo.sir_id` are nullable; `sir_put_anchored_geo` writes whatever `sir_id` the anchor carries, and its own comment reads *"sir_id may be NULL on an unowned anchor"*. White Water (`cc2e3a53`) has `project_id: null`, no SIR, an accepted anchor and four `geo` rows (§1.6). The `sir_` prefix on that RPC is a legacy of `geo`'s first life as the SIR map's table, not a dependency; the new RPC in D13 is named `cartographer_put_context_geo` so it does not repeat the misdirection, and `1.3-frontage` needs only the parcel ring and the target SRID that `1.2-fetch` writes on either path. A plan set uploaded to Cartographer with nothing else attached runs every step below.
 
 ### 1.2 What a reviewer measures, and against what
 
@@ -256,7 +258,7 @@ The layers are named per jurisdiction in a new bureau data file, `runbooks/site-
 - the `right_of_way` polygon(s) touching the frontage, when the layer has one;
 - the ortho tile: `exportImage` with `bbox` = the frontage grown 300 ft along and 150 ft across, `imageSR` = the target SRID, 6 in pixels, with its world file — the georeferenced picture `3.2-render` draws the overlay on and `3.3-check` looks at.
 
-**Publish.** A new RPC `sir_put_context_geo(p_anchor_id, p_features)` (sibling of `sir_put_anchored_geo`, same anchor key, same `properties.anchor_id`, same stale-together behaviour) writes one `geo` row per opening, inlet and right-of-way polygon with `method: 'city_gis'`, `posture: 'existing'`, `kind: 'driveway_opening' | 'curb_inlet' | 'right_of_way'`, and `properties: {source_layer, object_id, source_vintage, accuracy_class: 'digitized', frontage, street, street_level, level_source}`. The anchored figures and their context share an `anchor_id`, which is what makes D14 a join and not a search. Why a second RPC rather than a branch in the first: `sir_put_anchored_geo` writes `method: 'anchored'` and the anchor's `accuracy_class` on every row, and a context row has neither; two short functions with one honest signature each beat one with a mode flag (Q9).
+**Publish.** A new RPC `cartographer_put_context_geo(p_anchor_id, p_features)` (sibling of `sir_put_anchored_geo`, same anchor key, same `properties.anchor_id`, same stale-together behaviour) writes one `geo` row per opening, inlet and right-of-way polygon with `method: 'city_gis'`, `posture: 'existing'`, `kind: 'driveway_opening' | 'curb_inlet' | 'right_of_way'`, and `properties: {source_layer, object_id, source_vintage, accuracy_class: 'digitized', frontage, street, street_level, level_source}`. The anchored figures and their context share an `anchor_id`, which is what makes D14 a join and not a search. It is keyed by the anchor alone — no SIR, project or submission version is read or required — exactly as `sir_put_anchored_geo` is on a loose file. Why a second RPC rather than a branch in the first: `sir_put_anchored_geo` writes `method: 'anchored'` and the anchor's `accuracy_class` on every row, and a context row has neither; two short functions with one honest signature each beat one with a mode flag (Q9).
 
 **D14. The payoff is a set of queries, and they are the acceptance test.** With the rows of §6 in `geo`:
 
@@ -350,7 +352,7 @@ The 3.4 roster is every `feature` region of a tracer-bearing kind on every sheet
  │   ├── fetch.ts                        reads geometry, not polygon (D10)
 +│   ├── frontage.ts                     1.3-frontage: layers by role, openings from paved ∩ road, inlets, ROW, the ortho tile (D13)
  │   ├── render.ts                       lines by posture over the ortho tile (D12)
- │   └── publish.ts                      by geometry type; p_figures[].measures; sir_put_context_geo for frontage/*.json (D11, D13)
+ │   └── publish.ts                      by geometry type; p_figures[].measures; cartographer_put_context_geo for frontage/*.json (D11, D13)
  └── src/routes/
      ├── geometry/[id]/                  draws paths; a derived figure shows its parents and measures (D10)
      └── anchored/, anchor/[id]/         lines by posture; context rows as a layer (D12, D13)
@@ -371,7 +373,7 @@ The 3.4 roster is every `feature` region of a tracer-bearing kind on every sheet
    (no DDL: geom columns already take a line; posture already admits existing)
  sir_put_anchored_geo(p_anchor_id, p_figures)
 +  LineString | MultiLineString branch: st_collectionextract(st_makevalid(g), 2); measures into properties   (D11)
-+sir_put_context_geo(p_anchor_id, p_features)
++cartographer_put_context_geo(p_anchor_id, p_features)
 +  one row per opening / inlet / right-of-way polygon: method city_gis, posture existing, kind by role, properties {source_layer, object_id, source_vintage, accuracy_class: digitized, frontage, street, street_level, level_source, side, on_subject}   (D13)
 ```
 
@@ -387,7 +389,7 @@ The 3.4 roster is every `feature` region of a tracer-bearing kind on every sheet
    3.2-render                 lines by posture, the derived driveway filled, over the ortho tile (D12)
    3.3-check                  + the two line questions; + the frontage table in the readout (D12, D15)
    4.1-hitl                   unchanged
-   5.1-publish                figures by type with measures; context rows through sir_put_context_geo (D11, D13)
+   5.1-publish                figures by type with measures; context rows through cartographer_put_context_geo (D11, D13)
 ```
 
 ---
@@ -420,7 +422,7 @@ The 3.4 roster is every `feature` region of a tracer-bearing kind on every sheet
 - **Runs:** locally with `conductor`, against the two files; (b) is §6 step 1.
 
 **S6: the RPCs and the migration, against a local Supabase** (existing suite)
-- **Proves:** D9, D10, D11, D13 — the migration backfills `geometry` for every existing row and the CHECKs then hold (a polygon row with `polygon: null` refused; a line row with `polygon` set refused; `reading_method: derived` with `mete` set refused); `sir_put_anchored_geo` accepts a `LineString` payload and writes a `ST_LineString` row with `posture: existing` and `properties.measures`, refuses a `Point`, and still publishes yesterday's payload unchanged; `sir_put_context_geo` writes rows with `method: city_gis` under the anchor's id, and `cartographer_mark_anchors_stale` flags them with the anchored rows.
+- **Proves:** D9, D10, D11, D13 — the migration backfills `geometry` for every existing row and the CHECKs then hold (a polygon row with `polygon: null` refused; a line row with `polygon` set refused; `reading_method: derived` with `mete` set refused); `sir_put_anchored_geo` accepts a `LineString` payload and writes a `ST_LineString` row with `posture: existing` and `properties.measures`, refuses a `Point`, and still publishes yesterday's payload unchanged; `cartographer_put_context_geo` writes rows with `method: city_gis` under the anchor's id, and `cartographer_mark_anchors_stale` flags them with the anchored rows.
 - **Prior art:** `cityhall-new/tests/db/anchor-unowned-geo.test.ts`; the sibling's S5.
 - **Runs:** `tests/db` against the local stack; CI's `supabase db schema declarative sync --no-apply`.
 
@@ -436,7 +438,7 @@ The 3.4 roster is every `feature` region of a tracer-bearing kind on every sheet
 **P0: the schema and the two RPCs** — `cityhall-new`
 - **Blocked by:** nothing (can start now).
 - **How:** edit the declarative files under `supabase/schemas/public/`, `npx supabase@2.119.0 db schema declarative sync --no-apply -f plan_set_driveways_curbs`, read the migration, add the `geometry` backfill statement to it by hand (declarative sync writes the column, not the data), commit both.
-- **Delivers:** D9's CHECKs, D10's `geometry` (backfilled) and `length_ft`, the `derivation` role, D11's line branch, D13's `sir_put_context_geo`. Nothing writes the new columns yet; today's extract and anchor publishes keep working because `geometry` is filled by the backfill for old rows and `publish.ts` (P1) for new ones — **until P1 merges, a new extract publish would fail the `geometry NOT NULL`**, so P0 ships with `geometry` nullable and **P1 flips it** to `NOT NULL` in a second one-line migration once the writer is live. That is the expand discipline, stated so nobody is surprised.
+- **Delivers:** D9's CHECKs, D10's `geometry` (backfilled) and `length_ft`, the `derivation` role, D11's line branch, D13's `cartographer_put_context_geo`. Nothing writes the new columns yet; today's extract and anchor publishes keep working because `geometry` is filled by the backfill for old rows and `publish.ts` (P1) for new ones — **until P1 merges, a new extract publish would fail the `geometry NOT NULL`**, so P0 ships with `geometry` nullable and **P1 flips it** to `NOT NULL` in a second one-line migration once the writer is live. That is the expand discipline, stated so nobody is surprised.
 - **Tested at:** S6.
 - **Door:** two-way for the columns and CHECKs; **one-way for the backfill** in the sense that it is data (it can be re-run: `geometry` is a pure function of `polygon`). The rollback for everything else is dropping the columns and restoring the two CHECK lists.
 - **Blast radius:** none until P1; a wrong CHECK refuses the next publish, which S6 catches.
@@ -463,7 +465,7 @@ The 3.4 roster is every `feature` region of a tracer-bearing kind on every sheet
 - **Blast radius:** every anchor publish; the RPC's unchanged polygon branch is the guard.
 
 **P4: the frontage context** — `bureau` + `cartographer`
-- **Blocked by:** P0 (`sir_put_context_geo`) and P3 (the anchor publish that calls it).
+- **Blocked by:** P0 (`cartographer_put_context_geo`) and P3 (the anchor publish that calls it).
 - **Delivers:** D13 — `frontage-layers.json` for `austin`, the `1.3-frontage` step and its contract, `frontage.ts`, the ortho tile under the render, the context rows in publish, the readout table. After it merges, §6 step 2 produces D14's rows.
 - **Tested at:** S7.
 - **Door:** two-way (the context rows are keyed by `anchor_id` and go stale with it).
@@ -504,7 +506,7 @@ Two deliberate negatives: a `curb` region whose worker answers `chosen: null` pu
 
 **Q8.** Raster sheets (D3). A scanned plan set's curbs are pixels; `contour.ts` floods a region, it does not trace a line. Proposed: out until a raster plan set is on disk; `handAllowed` refuses cleanly.
 
-**Q9.** One RPC or two (D13). `sir_put_context_geo` beside `sir_put_anchored_geo`, or one function with a `p_method`. Proposed: two; the audit may disagree if cityhall-new's function count is a cost.
+**Q9.** One RPC or two (D13). `cartographer_put_context_geo` beside `sir_put_anchored_geo`, or one function with a `p_method`. Proposed: two; the audit may disagree if cityhall-new's function count is a cost.
 
 **Q10.** The Street Level when the ASMP has no segment (D13). Brezza Lane is not on the ASMP network; TCM's tables key on Level. Proposed: `1` with `level_source: 'default'` and the fact in the readout, because the ASMP covers Level 2 and up by design — but the audit should confirm that reading of the ASMP with a transportation reviewer before a Table 7-5 number is ever quoted on a defaulted Level.
 
