@@ -3,6 +3,8 @@
 **Status:** Draft v1
 **Date:** 2026-10-16
 **Parent:** `../db-schema/DESIGN-SPEC.md` (v2.2, its Step 1) and `../db-schema/AUDIT-2026-10-16-tables.md` §3. Revises `../../completeness-check/vision-reference-images/DESIGN-SPEC.md` (winston#312) D2 and P2: the figures live in the App DB and Storage, not in a `figures/` folder in bureau.
+> **Iteration 2 (2026-10-19):** `iteration-2/DESIGN-SPEC.md` changes D2 (one `description` column; `caption`, `constraints`, `type` dropped; `item_refs` kept for people to read), D6 (no ref checks or skips at hydration), D8 (the text sent with a figure), D9 (the prompt bullet) and D11 (the guide's Validation Methodology, not `item_refs`, links a figure to an item and says how to use it). This file is left as built.
+
 **Repos touched:**
 - `cityhall`: the `intake_figures` table, `jurisdictions.code`, the `intake-figures` bucket and its policies, a figures section on the intake-checklists pages, a signed-URL route
 - `bureau`: an `intake-figure` CLI (upload, retire, list); figure hydration at 1.4-resolve; `--ref` in the CC vision CLI; the review prompt; amend and publish metadata
