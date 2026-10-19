@@ -1147,7 +1147,7 @@ table.nx-rules td.o{color:var(--ink2);font-size:12.5px;white-space:nowrap}
 
 </style>
 </head>
-<body class="reader" data-back="implementation-architecture.html" data-spec-sha="5ed625b1aacca679">
+<body class="reader" data-back="implementation-architecture.html" data-spec-sha="655ae6c61df321c9">
 
 <header class="masthead">
   <div class="kicker">SPEC · READER</div>
@@ -1252,6 +1252,7 @@ A call with no `--ref` is unchanged from before figures existed.
 - **Who can read figures (D3):** reads follow the `jurisdictions` policy rather than any signed-in user, and the bucket is readable only through a row the user can see.
 - **`jurisdiction_code`:** each row also carries `jurisdiction_code`, with `(jurisdiction_slug, jurisdiction_code)` a composite foreign key to `jurisdictions(slug, code)`. The id prefix and `storage_path` are built from it, so a JPEG is stored as `.jpeg`.
 - **The prompt (D9):** one bullet plus a clause on the existing never-open line, instead of a three-bullet section.
+- **Editing a figure's text (D2):** the spec allows fixing a typo in `description` in place, with a reworded caption becoming a new figure. The CLI has no edit command (only `upload`, `retire`, `list`), and a review records figures by image hash only, so an in-place text edit would not be caught by amend's figure check. In practice any text change is a new upload plus a retire.
 
 ## 8. Worked example: `AUS_TX-F0001` on 2008 San Antonio
 
@@ -1285,6 +1286,22 @@ Run `~/noetic/working/completeness-check/sa2008-v1-cc15-figures` (runbook run `0
 
 - **P5, the cityhall figures view** (D10): a Figures section on `/intake-checklists/[jurisdiction]`, figures on each item page, and a signed-URL file route. It waits on regenerated cityhall types (`pnpm gen-types`).
 - **How the agent should frame a question around a figure.** The prompt says when to attach one, not how to ask about it; agents wrote good questions in the §8 run without it.
+
+## 12. Who sees a figure, and the three text columns
+
+**1.4-resolve runs no model.** It is a script: it reads rows, checks refs, downloads and hashes the images, and writes the run's copy. Nothing looks at an image there.
+
+| | Reads the text (caption, description, constraints) | Sees the image |
+|---|---|---|
+| 1.4-resolve (script) | copies it into `figures.json`, does not interpret it | no; hashes the bytes only |
+| 2.1-review agent | yes: it reads `figures.json` (id, `item_refs`, all three text fields) | no: the prompt forbids it, and 2.11 counts a direct read as a `binary_read` |
+| Vision model | yes, with the image | yes, but only on a call where the agent passed `--ref` |
+
+So the review agent knows *about* the figures from their text and decides when to attach one; only the vision model looks at the picture.
+
+**The three columns** (DESIGN-SPEC D2): `caption` is required, one line naming the figure; `description` (optional) says what the image shows and what it does not; `constraints` (optional) was meant for "the numbers to check against, if any". `AUS_TX-F0001` uses `constraints` for rules instead (only an R.P.L.S. seal counts; within 5 years; the example's name and date are illustrative).
+
+**The code treats them the same.** `refText()` (`bin/vision.ts:125`) joins them into one string, `REFERENCE <id> — <caption>. <description> Constraints: <constraints>.`, which is all the vision model gets with the image in both modes; the agent gets all three as plain fields in `figures.json`. The only differences: `caption` cannot be empty, the constraints get a `Constraints:` label in the joined text, and the planned P5 pages would show only the caption in the figures grid.
 
 </script>
 <script data-marked>
