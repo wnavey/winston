@@ -1153,8 +1153,8 @@ table.nx-rules td.o{color:var(--ink2);font-size:12.5px;white-space:nowrap}
 <header class="masthead">
   <div class="kicker">Cartographer · Plan-set driveways and curbs</div>
   <h1>Driveways and curbs from plan sets — existing and proposed, with widths, lengths and return radii, and the adjacent driveways the sheet leaves off</h1>
-  <p>How a site plan set gives up its proposed and existing curb lines with their arcs' radii, how each driveway is derived from the curbs that cross the lot's frontage with the numbers TCM Section 7 asks for, and how the anchor run joins them, on the county grid, to the driveways next door, the intersecting street and the curb inlets that no sheet shows.</p>
-  <div class="meta"><span class="status">Draft v1.1</span><span>19 Oct 2026</span><span>Source of truth: <code>DESIGN-SPEC.md</code></span></div>
+  <p>Phase 1: how a site plan set gives up its proposed and existing curb lines with their arcs' radii, how each driveway is derived from the curbs that cross the lot's frontage — as it exists and as it will exist — and how the anchor run carries them to the county grid. Phase 2: how the driveways next door, the street, its Level and the curb inlets are fetched from the city's layers and joined to those rows.</p>
+  <div class="meta"><span class="status">Draft v2</span><span>19 Oct 2026</span><span>Source of truth: <code>DESIGN-SPEC.md</code></span></div>
   <a class="spec-link" href="DESIGN-SPEC.html">Read the spec →</a>
 </header>
 
@@ -1163,6 +1163,7 @@ table.nx-rules td.o{color:var(--ink2);font-size:12.5px;white-space:nowrap}
   <button data-tab="how">How it works</button>
   <button data-tab="runbook">The extract runbook</button>
   <button data-tab="anchor">The anchor runbook</button>
+  <button data-tab="phase2">Phase 2: adjacent</button>
   <button data-tab="stored">What's stored</button>
   <button data-tab="rollout">Rollout</button>
 </nav>
@@ -1172,22 +1173,22 @@ table.nx-rules td.o{color:var(--ink2);font-size:12.5px;white-space:nowrap}
 <!-- ============================================================ OVERVIEW -->
 <section class="panel active" id="overview">
   <h2>Overview</h2>
-  <p class="lede">Three registry entries, one of them derived. The tracer the footprint slice shipped learns to keep arcs and to trace a set of chains; code pairs face and back, finds the lot's frontage, and derives each driveway with its five numbers; lines enter the figure model through an expand-only column; and the anchor run carries them to the grid and fetches the 300 ft context Austin publishes, so one join answers the spacing question (§1.1, §1.6).</p>
+  <p class="lede">Two phases. Phase 1 reads the sheet: three registry entries, a tracer that keeps arcs and traces sets of chains, code that pairs face and back, finds the lot's frontage and derives each driveway twice (existing condition, resulting condition), an expand-only geometry column, and the anchor run carrying lines to the grid. Phase 2 reads off the sheet: the city's layers, found by role, published beside Phase 1's rows under one anchor id (§1.1, §1.7).</p>
 
-  <h3>What this slice is for</h3>
+  <h3>What this spec is for</h3>
   <div class="doc">
     <ol class="plain">
-      <li><div><b>The fifth- and tenth-most-demanded layers, and the one measurement the sheet cannot carry.</b> Curbs and returns are wanted by 34 of 134 geometric comments (18 A-tier), driveways by 19 (12 A-tier), and the report names "neighbouring driveways" among the county-side geometry that 46 % of comments need. TCM 7.6.2 measures spacing to the next driveway along the street; the White Water survey base stops 10–35 ft past the lot. <span class="aside">sizing note, §1.2, §1.3</span></div></li>
-      <li><div><b>A curb is a line with arcs.</b> The returns on sheet 12 are 44 cubic Béziers on the face layer and 38 on the back; a circle fit gives R 20.02 / 25.02 / 28.02 against the printed <code>R20.0'</code> / <code>R25.0'</code> / <code>R28.0'</code>, and the back set sits at R − 0.50 ft on every one of 17 pairs — a six-inch curb, read from geometry. The footprint reader flattens every Bézier to eight chords and throws the radius away; this spec keeps it. <span class="aside">§1.4, D2</span></div></li>
-      <li><div><b>Same tracer, one more branch.</b> A polyline feature's candidate is a <i>set</i> of chains, by layer when the layers survived and by stroke style when they did not; the confirm worker may remove a chain from the set and nothing else. Two of the three plan sets on disk are layer-less on the site plan, so the style rung is the common case. <span class="aside">§1.3, D3</span></div></li>
-      <li><div><b>The driveway is derived, not read.</b> North star D14's fourth path, used for the first time: the polygon between two curb faces where they cross the lot's frontage course, with width at the right-of-way line, throat width, return radii, angle and throat depth computed once in lot feet. Every driveway is derived twice, as the existing condition and the resulting condition, one row each. On White Water both give the same shared 33.2 ft opening at the right-of-way line, with only the throat altered — and that is the acceptance test. <span class="aside">D6, D7, §6</span></div></li>
-      <li><div><b>Lines enter through an expand, never a contract.</b> A <code>geometry</code> column beside <code>polygon</code>, backfilled, with every reader moved over; dropping <code>polygon</code> is a later spec. <code>geo</code> needs no DDL: its geometry columns already take a line. <span class="aside">D10, D11</span></div></li>
-      <li><div><b>Off the sheet, the opening is derivable even where it is not labelled.</b> Austin's 2023 impervious layer has no <code>Driveways</code>-class polygon within 300 ft of the site, but 16 paved areas and 2 paved roads; the boundary between them is a driveway opening, at about ±2 ft. A new anchor step fetches it with the street, its Level, the inlets and a 6 in orthophoto, and publish writes it beside the anchored figures under one <code>anchor_id</code>. <span class="aside">§1.5, D13, D14</span></div></li>
+      <li><div><b>The fifth- and tenth-most-demanded layers, and the one measurement the sheet cannot carry.</b> Curbs and returns are wanted by 34 of 134 geometric comments (18 A-tier), driveways by 19 (12 A-tier), and the report names "neighbouring driveways" among the county-side geometry that 46 % of comments need. TCM 7.6.2 measures spacing to the next driveway along the street; the City asks for adjacent driveways within 300 ft; the White Water survey base stops 10–35 ft past the lot. <span class="aside">sizing note, §1.2, §1.3</span></div></li>
+      <li><div><b>Phase 1: a curb is a line with arcs.</b> The returns on sheet 12 are 44 cubic Béziers on the face layer and 38 on the back; a circle fit gives R 20.02 / 25.02 / 28.02 against the printed <code>R20.0'</code> / <code>R25.0'</code> / <code>R28.0'</code>, and the back set sits at R − 0.50 ft on every one of 17 pairs — a six-inch curb, read from geometry. The footprint reader flattens every Bézier to eight chords and throws the radius away; this spec keeps it. <span class="aside">§1.4, D2</span></div></li>
+      <li><div><b>Phase 1: same tracer, one more branch; the worker may only trim.</b> A polyline feature's candidate is a <i>set</i> of chains, by layer when the layers survived and by stroke style when they did not. Two of the three plan sets on disk are layer-less on the site plan. No geometric rule tells face from back on such a sheet (the best scored 12 of 17), so the pair is reported, never guessed. <span class="aside">§1.3, §1.4, D3, D4</span></div></li>
+      <li><div><b>Phase 1: the driveway is derived, twice.</b> North star D14's fourth path: the polygon between two curb faces where they cross the lot's frontage course, with width at the right-of-way line, throat width, return radii, angle and throat depth, computed once for the existing condition and once for the resulting condition, one row each. On White Water both give the same shared 33.2 ft opening — the removed curb begins 24.4 ft inside the lot — and only the throat changes. That is the acceptance test. <span class="aside">D5, D6, §7.1</span></div></li>
+      <li><div><b>Phase 1: lines enter through an expand, never a contract.</b> A <code>geometry</code> column beside <code>polygon</code>, backfilled, every reader moved over; dropping <code>polygon</code> is a later spec. <code>geo</code> needs no DDL: its geometry columns already take a line. No SIR is needed anywhere. <span class="aside">§1.1, D9, D10</span></div></li>
+      <li><div><b>Phase 2: off the sheet, the opening is derivable even where it is not labelled.</b> Austin's 2023 impervious layer has no <code>Driveways</code>-class polygon within 300 ft of the site, but 16 paved areas and 2 paved roads; the boundary between them is a driveway opening, at about ±2 ft. The layers are found by role in surveyor's layer-identity registry, Austin tagged by hand; making prospector tag every trained jurisdiction is its own spec. <span class="aside">§1.5, D15–D22</span></div></li>
     </ol>
   </div>
 
   <h3 class="claim" data-view-of="ov" data-in="today">Today a plan set gives up one closed ring per feature, and nothing reaches past the lot line <span class="src">§1.6</span></h3>
-  <h3 class="claim" data-view-of="ov" data-in="after" hidden>After, curbs and a derived driveway sit beside the lot, and the anchor run joins them to the city's layers in geo <span class="src">§3</span></h3>
+  <h3 class="claim" data-view-of="ov" data-in="after" hidden>After Phase 1, curbs and two derived driveway rows sit beside the lot, and the anchor run carries them to geo; the lot line is still the edge of what we know <span class="src">§2</span></h3>
   <div class="sys-legend"><span><i></i>exists today</span><span><i class="chg"></i>modified</span><span><i class="new"></i>new</span><span><i class="gap"></i>the gap</span><span>dashed border = outside the runbooks · cylinder = where state is kept</span></div>
   <div class="sysmap lanes delta" id="ov" data-view="today" style="grid-template-columns:.8fr repeat(4,1fr)">
     <div class="colh" style="grid-area:1/2">sources</div>
@@ -1203,7 +1204,7 @@ table.nx-rules td.o{color:var(--ink2);font-size:12.5px;white-space:nowrap}
     <div class="sys trig" id="ov-t1" style="grid-area:2/1"><span class="dot"></span><span class="t">Operator files an extract request</span><span class="d">1.1 gate</span></div>
     <div class="sys trig" id="ov-t2" style="grid-area:3/1"><span class="dot"></span><span class="t">Readings written</span><span class="d">confirm.json, frontage.json</span></div>
     <div class="sys trig" id="ov-t3" style="grid-area:4/1"><span class="dot"></span><span class="t">Engineer rules publish</span><span class="d">6.2 gate</span></div>
-    <div class="sys trig" id="ov-t4" style="grid-area:5/1"><span class="dot"></span><span class="t">Operator anchors the file</span><span class="d">anchor-geometry</span></div>
+    <div class="sys trig" id="ov-t4" style="grid-area:5/1"><span class="dot"></span><span class="t">Operator anchors the file</span><span class="d">anchor-geometry, no SIR</span></div>
 
     <div class="sys store ext" id="ov-files" style="grid-area:2/2"><span class="k">table + bucket</span><span class="t">cartographer_files</span><span class="d">one row, its PDF</span></div>
     <div class="sys" id="ov-read-t" data-in="today" style="grid-area:2/3"><span class="k">10 agent + script steps</span><span class="t">Read the document</span><span class="d">one building region per sheet</span></div>
@@ -1212,21 +1213,20 @@ table.nx-rules td.o{color:var(--ink2);font-size:12.5px;white-space:nowrap}
     <div class="sys ext chg" id="ov-trace-a" data-in="after" style="grid-area:2/5"><a class="ref" href="#detail-trace">D2 · D3 ↓</a><span class="k">script, via carto</span><span class="t">trace.ts</span><span class="d">+ sets of chains, arcs kept</span></div>
 
     <div class="sys" id="ov-calc-t" data-in="today" style="grid-area:3/3"><span class="k">2 scripts · 1 agent</span><span class="t">Assemble and place</span><span class="d">the sheet registered to the lot</span></div>
-    <div class="sys chg" id="ov-calc-a" data-in="after" style="grid-area:3/3"><a class="ref" href="#detail-assemble">D4 · D6 · D7 ↓</a><span class="k">2 scripts · 1 agent</span><span class="t">Assemble and place</span><span class="d">+ pairs, frontage, the derived driveway</span></div>
+    <div class="sys chg" id="ov-calc-a" data-in="after" style="grid-area:3/3"><a class="ref" href="#detail-assemble">D4 · D5 · D6 ↓</a><span class="k">2 scripts · 1 agent</span><span class="t">Assemble and place</span><span class="d">+ pairs, frontage, both driveway conditions</span></div>
     <div class="sys gap" id="ov-gap3" data-in="today" style="grid-area:3/5">no pairing, no frontage, no driveway</div>
-    <div class="sys ext new" id="ov-mods" data-in="after" style="grid-area:3/5"><a class="ref" href="#detail-derive">D7 ↓</a><span class="k">library</span><span class="t">curb.ts · frontage.ts · driveway.ts</span><span class="d">pure; every number in lot feet</span></div>
+    <div class="sys ext new" id="ov-mods" data-in="after" style="grid-area:3/5"><a class="ref" href="#detail-derive">D6 ↓</a><span class="k">library</span><span class="t">curb.ts · frontage.ts · driveway.ts</span><span class="d">pure; every number in lot feet</span></div>
 
     <div class="sys" id="ov-pub-t" data-in="today" style="grid-area:4/3"><span class="k">script · frozen</span><span class="t">Publish</span><span class="d">polygon, mete | traced</span></div>
-    <div class="sys chg" id="ov-pub-a" data-in="after" style="grid-area:4/3"><a class="ref" href="#detail-stored">D9 · D10 ↓</a><span class="k">script · frozen</span><span class="t">Publish</span><span class="d">+ geometry, length_ft, derived</span></div>
+    <div class="sys chg" id="ov-pub-a" data-in="after" style="grid-area:4/3"><a class="ref" href="#detail-stored">D8 · D9 ↓</a><span class="k">script · frozen</span><span class="t">Publish</span><span class="d">+ geometry, length_ft, derived</span></div>
     <div class="sys store ext" id="ov-geoms-t" data-in="today" style="grid-area:4/4"><span class="k">table</span><span class="t">cartographer_geometries</span><span class="d">polygon NOT NULL</span></div>
-    <div class="sys store ext chg" id="ov-geoms-a" data-in="after" style="grid-area:4/4"><a class="ref" href="#detail-stored">D10 ↓</a><span class="k">table</span><span class="t">cartographer_geometries</span><span class="d">geometry beside polygon</span></div>
+    <div class="sys store ext chg" id="ov-geoms-a" data-in="after" style="grid-area:4/4"><a class="ref" href="#detail-stored">D9 ↓</a><span class="k">table</span><span class="t">cartographer_geometries</span><span class="d">geometry beside polygon</span></div>
 
-    <div class="sys gap" id="ov-gap5" data-in="today" style="grid-area:5/2">nothing reaches past the lot line</div>
-    <div class="sys ext new" id="ov-austin" data-in="after" style="grid-area:5/2"><a class="ref" href="#detail-frontage">D13 ↓</a><span class="k">external · keyless</span><span class="t">Austin layers + StratMap ortho</span><span class="d">streets, paved areas, inlets, 6 in pixels</span></div>
+    <div class="sys gap" id="ov-gap5" style="grid-area:5/2">nothing reaches past the lot line · Phase 2</div>
     <div class="sys" id="ov-anchor-t" data-in="today" style="grid-area:5/3"><span class="k">8 steps · ring fit</span><span class="t">anchor-geometry</span><span class="d">polygons only</span></div>
-    <div class="sys chg" id="ov-anchor-a" data-in="after" style="grid-area:5/3"><a class="ref" href="#detail-anchor">D12 · D13 ↓</a><span class="k">9 steps · ring fit</span><span class="t">anchor-geometry</span><span class="d">lines carried; + 1.3-frontage</span></div>
+    <div class="sys chg" id="ov-anchor-a" data-in="after" style="grid-area:5/3"><a class="ref" href="#detail-anchor">D11 ↓</a><span class="k">8 steps · ring fit</span><span class="t">anchor-geometry</span><span class="d">lines carried; the solve untouched</span></div>
     <div class="sys store ext" id="ov-geo-t" data-in="today" style="grid-area:5/4"><span class="k">table</span><span class="t">geo</span><span class="d">polygons; lot, building</span></div>
-    <div class="sys store ext chg" id="ov-geo-a" data-in="after" style="grid-area:5/4"><a class="ref" href="#detail-stored">D11 · D14 ↓</a><span class="k">table</span><span class="t">geo</span><span class="d">+ lines, city_gis rows; one join</span></div>
+    <div class="sys store ext chg" id="ov-geo-a" data-in="after" style="grid-area:5/4"><a class="ref" href="#detail-stored">D10 · D12 ↓</a><span class="k">table</span><span class="t">geo</span><span class="d">+ lines; existing beside resulting</span></div>
 
     <a class="sys-edge" data-in="today" data-from="ov-files" data-to="ov-read-t">PDF</a>
     <a class="sys-edge" data-in="after" data-from="ov-files" data-to="ov-read-a">PDF</a>
@@ -1243,55 +1243,52 @@ table.nx-rules td.o{color:var(--ink2);font-size:12.5px;white-space:nowrap}
     <a class="sys-edge" data-in="today" data-from="ov-geoms-t" data-to="ov-anchor-t">frames</a>
     <a class="sys-edge" data-in="after" data-from="ov-geoms-a" data-to="ov-anchor-a">frames</a>
     <a class="sys-edge gap" data-in="today" data-from="ov-gap5" data-to="ov-anchor-t"></a>
-    <a class="sys-edge new" data-in="after" data-from="ov-austin" data-to="ov-anchor-a">300 ft sweep</a>
+    <a class="sys-edge gap" data-in="after" data-from="ov-gap5" data-to="ov-anchor-a"></a>
     <a class="sys-edge" data-in="today" data-from="ov-anchor-t" data-to="ov-geo-t">anchored rows</a>
-    <a class="sys-edge chg" data-in="after" data-from="ov-anchor-a" data-to="ov-geo-a">+ context rows</a>
+    <a class="sys-edge chg" data-in="after" data-from="ov-anchor-a" data-to="ov-geo-a">+ lines</a>
   </div>
   <div class="sys-refs">
     <a class="refrow chg" data-ref="D1"><span class="chip">D1</span><span class="txt">curbs are two registry entries by posture; the driveway is a third with no tracer</span></a>
     <a class="refrow chg" data-ref="D2"><span class="chip">D2</span><span class="txt">the reader emits every Bézier as its chords and as an arc record beside them</span></a>
     <a class="refrow chg" data-ref="D3"><span class="chip">D3</span><span class="txt">a polyline feature's candidate is a set of chains, and the worker's only edit is to remove from it</span></a>
-    <a class="refrow chg" data-ref="D4"><span class="chip">D4</span><span class="txt">face and back are paired in code; the curb's width is measured, not read</span></a>
-    <a class="refrow chg" data-ref="D6"><span class="chip">D6</span><span class="txt">the frontage is found by code from the lot and the existing curbs; a worker names the street</span></a>
-    <a class="refrow new" data-ref="D7"><span class="chip">D7</span><span class="txt">a driveway is a derived figure: the polygon between two curb faces where they cross the right-of-way line, with its measures computed once</span></a>
-    <a class="refrow chg" data-ref="D9"><span class="chip">D9</span><span class="txt">reading_method gains derived, and the trace says what it was derived from</span></a>
-    <a class="refrow chg" data-ref="D10"><span class="chip">D10</span><span class="txt">lines enter the figure through an expand-only change: geometry beside polygon</span></a>
-    <a class="refrow chg" data-ref="D11"><span class="chip">D11</span><span class="txt">geo needs no DDL for a line; the RPC needs one more branch</span></a>
-    <a class="refrow chg" data-ref="D12"><span class="chip">D12</span><span class="txt">a line figure rides the frame and is claimed against nothing: the relation carried</span></a>
-    <a class="refrow new" data-ref="D13"><span class="chip">D13</span><span class="txt">a new anchor step fetches the 300 ft context of every frontage from the city's layers; publish writes it beside the anchored figures</span></a>
-    <a class="refrow chg" data-ref="D14"><span class="chip">D14</span><span class="txt">the payoff is a set of queries on one anchor_id, with two honesty labels, and they are the acceptance test</span></a>
+    <a class="refrow chg" data-ref="D4"><span class="chip">D4</span><span class="txt">face and back are paired in code; on a layer-less sheet the pair is reported, never guessed</span></a>
+    <a class="refrow chg" data-ref="D5"><span class="chip">D5</span><span class="txt">the frontage is found by code from the lot and the existing curbs; a worker names the street</span></a>
+    <a class="refrow new" data-ref="D6"><span class="chip">D6</span><span class="txt">a driveway is a derived figure, derived twice: the existing condition and the resulting condition, one row each</span></a>
+    <a class="refrow chg" data-ref="D8"><span class="chip">D8</span><span class="txt">reading_method gains derived, and the trace says what it was derived from</span></a>
+    <a class="refrow chg" data-ref="D9"><span class="chip">D9</span><span class="txt">lines enter the figure through an expand-only change: geometry beside polygon</span></a>
+    <a class="refrow chg" data-ref="D10"><span class="chip">D10</span><span class="txt">geo needs no DDL for a line; the RPC needs one more branch</span></a>
+    <a class="refrow chg" data-ref="D11"><span class="chip">D11</span><span class="txt">a line figure rides the frame and is claimed against nothing: the relation carried</span></a>
+    <a class="refrow chg" data-ref="D12"><span class="chip">D12</span><span class="txt">Phase 1's payoff is a set of queries that need only this file's rows, and they are its acceptance test</span></a>
   </div>
-  <p class="claim"><b>Reading:</b> nothing on the After map is a new table or a new runbook. Three pure modules and one script step are new; everything else is a column, a registry entry, a prompt paragraph or a branch in a function that already exists.</p>
+  <p class="claim"><b>Reading:</b> nothing on the After map is a new table or a new runbook. Three pure modules are new; everything else is a column, a registry entry, a prompt paragraph or a branch in a function that already exists. The gap past the lot line is Phase 2's, on its own tab.</p>
 
-  <h3 class="claim">Schema first; the scripts and the anchor side in either order; the extract runbook; then the frontage context <span class="src">§5</span></h3>
-  <div class="plan" style="--cols:5">
-    <div class="plan-h"><span></span><span>P0 · the schema</span><span>P1 · reader, tracer, modules</span><span>P3 · the anchor side</span><span>P2 · the extract runbook</span><span>P4 · the frontage context</span></div>
+  <h3 class="claim">Phase 1 ships as four PRs: schema first, the scripts and the anchor side in either order, then the extract runbook <span class="src">§6.1</span></h3>
+  <div class="plan" style="--cols:4">
+    <div class="plan-h"><span></span><span>P0 · the schema</span><span>P1 · reader, tracer, modules</span><span>P3 · the anchor side</span><span>P2 · the extract runbook</span></div>
     <div class="plan-row"><span class="plan-who">cityhall-new</span>
-      <div class="plan-cell"><div class="pc key"><span class="pid">P0 · D9 D10 D11 D13 · S6</span><b>geometry (backfilled), length_ft, derived, the line branch, cartographer_put_context_geo</b><span class="pd">expand only; <code>polygon</code> nullable with a type CHECK</span><span class="pa">waits on nothing; geometry stays nullable until P1b flips it</span></div></div>
-      <div class="plan-cell"><div class="pc"><span class="pid">P1b · D10</span><b>geometry NOT NULL</b><span class="pd">one line, once the writer is live</span><span class="pa">after P1</span></div></div>
-      <div class="plan-cell"></div><div class="plan-cell"></div><div class="plan-cell"></div>
+      <div class="plan-cell"><div class="pc key"><span class="pid">P0 · D8 D9 D10 · S6</span><b>geometry (backfilled), length_ft, derived, the line branch</b><span class="pd">expand only; <code>polygon</code> nullable with a type CHECK</span><span class="pa">waits on nothing; geometry stays nullable until P1b flips it</span></div></div>
+      <div class="plan-cell"><div class="pc"><span class="pid">P1b · D9</span><b>geometry NOT NULL</b><span class="pd">one line, once the writer is live</span><span class="pa">after P1</span></div></div>
+      <div class="plan-cell"></div><div class="plan-cell"></div>
     </div>
     <div class="plan-row"><span class="plan-who">cartographer</span>
       <div class="plan-cell"></div>
-      <div class="plan-cell"><div class="pc"><span class="pid">P1 · D1–D4 D6–D10 · S1–S4</span><b>arcs, the polyline branch, curb.ts, frontage.ts, driveway.ts, the union</b><span class="pd">every reader of <code>polygon</code> moved to <code>geometry</code>; <code>/geometry/[id]</code> draws paths</span><span class="pa">after P0; a building-only run exercises none of it</span></div></div>
-      <div class="plan-cell"><div class="pc"><span class="pid">P3 · D11 D12 · S7</span><b>geometryType, carried, lines through the solver and the publisher</b><span class="pd">render by posture; measures in the payload</span><span class="pa">after P0; nothing changes until a line figure exists</span></div></div>
+      <div class="plan-cell"><div class="pc"><span class="pid">P1 · D1–D9 · S1–S4</span><b>arcs, the polyline branch, curb.ts, frontage.ts, driveway.ts, the union</b><span class="pd">every reader of <code>polygon</code> moved to <code>geometry</code>; <code>/geometry/[id]</code> draws paths</span><span class="pa">after P0; a building-only run exercises none of it</span></div></div>
+      <div class="plan-cell"><div class="pc"><span class="pid">P3 · D10 D11 · S6</span><b>geometryType, carried, lines through the solver and the publisher</b><span class="pd">render by posture; condition and measures in the payload</span><span class="pa">after P0; nothing changes until a line figure exists</span></div></div>
       <div class="plan-cell"></div>
-      <div class="plan-cell"><div class="pc"><span class="pid">P4 · D13 · S7</span><b>frontage.ts; context rows in publish</b><span class="pd">openings from paved ∩ road; the ortho tile under the render</span><span class="pa">after P0 and P3</span></div></div>
     </div>
     <div class="plan-row"><span class="plan-who">bureau</span>
       <div class="plan-cell"></div><div class="plan-cell"></div>
-      <div class="plan-cell"><div class="pc"><span class="pid">P3 · D12 · S7</span><b>correspond prompt and enum; the two check questions</b><span class="pd">a curb or driveway figure is <code>carried</code></span><span class="pa">after P0</span></div></div>
-      <div class="plan-cell"><div class="pc risk"><span class="pid">P2 · D1–D8 D15 · S5</span><b>The extract runbook learns curbs, frontages and driveways</b><span class="pd">survey paragraphs from the registry, trace.py on polylines, the confirm contract, the frontage item, assemble.py, the readout</span><span class="pa">after P1; its first publish stales anchor 53d65a90 by design</span></div></div>
-      <div class="plan-cell"><div class="pc"><span class="pid">P4 · D13 D15 · S7</span><b>1.3-frontage and frontage-layers.json</b><span class="pd">seven Austin layers by role; tolerates not found</span><span class="pa">after P0 and P3</span></div></div>
+      <div class="plan-cell"><div class="pc"><span class="pid">P3 · D11 · S6</span><b>correspond prompt and enum; the on-site check question</b><span class="pd">a curb or driveway figure is <code>carried</code></span><span class="pa">after P0</span></div></div>
+      <div class="plan-cell"><div class="pc risk"><span class="pid">P2 · D1–D7 D13 · S5</span><b>The extract runbook learns curbs, frontages and driveways</b><span class="pd">survey paragraphs from the registry, trace.py on polylines, the confirm contract, the frontage item, assemble.py, the readout</span><span class="pa">after P1; its first publish stales anchor 53d65a90 by design</span></div></div>
     </div>
   </div>
-  <p class="claim"><b>Claim (§5):</b> every PR keeps today's plat runs byte-identical and today's building-only runs unchanged; the car-wash plat and the sibling's footprint fixtures are the guards at every phase.</p>
+  <p class="claim"><b>Claim (§6.1):</b> every PR keeps today's plat runs byte-identical and today's building-only runs unchanged; the car-wash plat and the sibling's footprint fixtures are the guards at every phase. Phase 2's PRs (P4–P7) are on its tab.</p>
 </section>
 
 <!-- ============================================================ HOW IT WORKS -->
 <section class="panel" id="how">
   <h2>How it works</h2>
-  <p class="lede">Five mechanisms, in the order the run meets them: the reader keeps each arc; the tracer offers a set of chains and a worker trims it; code pairs the curb's two edges, finds which lot edge fronts a street, and derives the driveway between the curb faces that cross it; and, after anchoring, a new step fetches what Austin publishes within 300 ft and the join is one query (§1.4, §2.2–§2.7).</p>
+  <p class="lede">Phase 1's mechanisms, in the order the run meets them: the reader keeps each arc; the tracer offers a set of chains and a worker trims it; code pairs the curb's two edges, finds which lot edge fronts a street, and derives the driveway between the curb faces that cross it, once for what exists and once for what will; and the anchor run carries it all to the grid, where the on-site queries are one file's rows (§1.4, §2).</p>
 
   <h3 class="claim" id="detail-registry">Three registry entries, and only the driveway brings a new mechanism <span class="src">D1</span></h3>
   <div class="ba">
@@ -1327,13 +1324,13 @@ table.nx-rules td.o{color:var(--ink2);font-size:12.5px;white-space:nowrap}
       <tr><td><span class="sn">R</span> 28.02 ft</td><td>1 · 90.0°</td><td>27.52</td><td><code>R28.0'</code> — the tie-in to the existing driveway</td></tr>
       <tr><td><span class="sn">R</span> 20.02 ft</td><td>1 · 88.6°</td><td>19.52</td><td><code>R20.0'</code> — the southwest return</td></tr>
       <tr><td><span class="sn">R</span> 25.02 ft</td><td>1 / 5 · 24.2° / 22.9°</td><td>25.52 / 24.52</td><td><code>R25.0'</code></td></tr>
-      <tr><td><span class="sn">R</span> 15.02 ft</td><td>2 · 92.6°</td><td>15.52</td><td><code>R15.0'</code></td></tr>
+      <tr><td><span class="sn">R</span> 15.02 ft</td><td>2 · 92.6°</td><td>15.52</td><td><code>R15.0'</code> — pavement on the inside of the curve</td></tr>
       <tr><td><span class="sn">R</span> 10.02 / 10.01 ft</td><td>6 / 4 · 62.6° / 44.3°</td><td>9.52 / 9.49</td><td><code>R10.0'</code></td></tr>
       <tr><td><span class="sn">R</span> 20.05 ft</td><td>9 · 47.6°</td><td>19.52</td><td>the drive-through loop</td></tr>
       <tr><td><span class="sn">R</span> 5.01 / 3.02 / 2.02 / 1.52 ft</td><td>3 / 2 / 2 / 4</td><td>4.52 / 2.52 / 1.52 / 1.02</td><td><code>R5.0'</code>, the pad corners</td></tr>
     </tbody>
   </table></div>
-  <p class="claim"><b>Claim (D2):</b> nineteen centres on the face, seventeen matched on the back at R − 0.50 ft — the curb is six inches wide, as <code>6" CURB</code> says, read from the geometry with no label; 894 ft of face of curb in 170 chains, and the two demolition chains are 86 and 85 ft against the note's 84 LF.</p>
+  <p class="claim"><b>Claim (D2, D4):</b> nineteen centres on the face, seventeen matched on the back at R − 0.50 ft — the curb is six inches wide, read from the geometry with no label. With the layers withheld, the best rule for which member is the face scores 12 of 17 (nearer the striping) and the radius rule 16 of 17, so on a layer-less sheet both lines are carried and every width is reported as a pair.</p>
 
   <h3 class="claim" id="detail-trace">The tracer gains a polyline branch: sets of chains by layer, then by style, that a worker may only trim <span class="src">D3</span></h3>
   <div class="ba">
@@ -1361,36 +1358,29 @@ table.nx-rules td.o{color:var(--ink2);font-size:12.5px;white-space:nowrap}
   <div class="sys-legend"><span><i class="chg"></i>the branch this spec adds</span></div>
   <p class="claim"><b>Claim (D3):</b> the chord output of <code>pdf_paths.py</code> is byte-identical to today's, so <code>chain</code>, <code>bridge</code> and every footprint fixture are untouched; the arcs ride on the <code>PathRecord</code> and onto the chains that contain their chords.</p>
 
-  <h3 class="claim" id="detail-derive">A driveway is the polygon between two curb faces where they cross the frontage course, and its five numbers fall out <span class="src">D7</span></h3>
+  <h3 class="claim" id="detail-derive">A driveway is the polygon between two curb faces where they cross the frontage course, derived once for each condition <span class="src">D6</span></h3>
   <figure class="concept">
     <svg viewBox="0 0 1000 400" role="img" aria-label="A street edge, the right-of-way line, two curb faces with return arcs, a throat line, and the measures: width at the right-of-way line, throat width, return radii, angle and throat depth">
       <defs><marker id="dw-ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
       <text x="60" y="30" font-size="12" font-weight="600">the lot · feet, north up · frame-1</text>
-      <!-- the street -->
       <line x1="60" y1="330" x2="940" y2="330" stroke="currentColor" stroke-width="2"/>
       <text x="60" y="350" font-size="11">street's pavement edge · a curb_existing chain (V-ASPHALT-LINE), outside the lot</text>
       <line x1="60" y1="270" x2="940" y2="270" stroke="currentColor" stroke-width="1.6" stroke-dasharray="10 5 2 5"/>
       <text x="60" y="264" font-size="11">right-of-way line · the lot's frontage course</text>
       <text x="940" y="304" font-size="11" text-anchor="end" fill-opacity=".8">offset 10.8–11.6 ft on White Water</text>
-      <!-- curb faces: vertical throat edges, R returns to the right-of-way, then on to the street -->
       <path d="M400 70 L400 180 A70 70 0 0 0 330 250 L330 330" fill="none" stroke="var(--new)" stroke-width="2.4"/>
       <path d="M600 70 L600 180 A70 70 0 0 1 670 250 L670 330" fill="none" stroke="var(--new)" stroke-width="2.4"/>
       <path d="M396 70 L396 180 A74 74 0 0 0 326 250 L326 330" fill="none" stroke="var(--new)" stroke-width="1" stroke-opacity=".5"/>
       <path d="M604 70 L604 180 A74 74 0 0 1 674 250 L674 330" fill="none" stroke="var(--new)" stroke-width="1" stroke-opacity=".5"/>
-      <!-- the apron polygon -->
       <path d="M330 270 L330 250 A70 70 0 0 1 400 180 L600 180 A70 70 0 0 1 670 250 L670 270 Z" fill="var(--new)" fill-opacity=".10" stroke="none"/>
-      <!-- throat line -->
       <line x1="400" y1="180" x2="600" y2="180" stroke="currentColor" stroke-width="1.2" stroke-dasharray="4 3"/>
       <line x1="600" y1="180" x2="700" y2="180" stroke="currentColor" stroke-width=".8" stroke-dasharray="2 3"/>
       <text x="704" y="184" font-size="11">throat line · at the farther point of tangency</text>
-      <!-- width at the right-of-way line -->
       <line x1="330" y1="292" x2="670" y2="292" stroke="currentColor" stroke-width="1" marker-end="url(#dw-ar)" marker-start="url(#dw-ar)"/>
       <text x="500" y="314" font-size="11" text-anchor="middle">widthAtRowFt · face to face on the right-of-way line (SAC-03)</text>
-      <!-- throat width -->
       <line x1="400" y1="140" x2="600" y2="140" stroke="currentColor" stroke-width="1" marker-end="url(#dw-ar)" marker-start="url(#dw-ar)"/>
       <line x1="300" y1="140" x2="398" y2="140" stroke="currentColor" stroke-width=".8" stroke-dasharray="2 3"/>
       <text x="294" y="144" font-size="11" text-anchor="end">throatWidthFt · face to face · Table 7-2</text>
-      <!-- radii -->
       <line x1="330" y1="180" x2="400" y2="180" stroke="currentColor" stroke-width=".8" stroke-dasharray="2 3"/>
       <line x1="330" y1="180" x2="330" y2="250" stroke="currentColor" stroke-width=".8" stroke-dasharray="2 3"/>
       <circle cx="330" cy="180" r="2.5" fill="currentColor"/>
@@ -1400,26 +1390,23 @@ table.nx-rules td.o{color:var(--ink2);font-size:12.5px;white-space:nowrap}
       <line x1="670" y1="180" x2="670" y2="250" stroke="currentColor" stroke-width=".8" stroke-dasharray="2 3"/>
       <circle cx="670" cy="180" r="2.5" fill="currentColor"/>
       <text x="704" y="204" font-size="11">returnRadiusFt.right · no arc = a flare, with its angle</text>
-      <!-- axis and angle -->
       <line x1="500" y1="270" x2="500" y2="76" stroke="currentColor" stroke-width="1" stroke-dasharray="6 4" marker-end="url(#dw-ar)"/>
       <text x="508" y="112" font-size="11">axis · angleDeg to the street edge</text>
       <text x="508" y="126" font-size="11">90 = perpendicular (7.5.1.3)</text>
-      <!-- first interruption and throat depth -->
       <line x1="430" y1="70" x2="570" y2="70" stroke="currentColor" stroke-width="2"/>
       <text x="500" y="58" font-size="11" text-anchor="middle">first interruption · an aisle's curb or a striping line</text>
       <line x1="250" y1="270" x2="250" y2="70" stroke="currentColor" stroke-width="1" marker-end="url(#dw-ar)" marker-start="url(#dw-ar)"/>
       <line x1="250" y1="70" x2="428" y2="70" stroke="currentColor" stroke-width=".8" stroke-dasharray="2 3"/>
       <text x="242" y="220" font-size="11" text-anchor="end">throatDepthFt · from the right-of-way line</text>
       <text x="242" y="234" font-size="11" text-anchor="end">to the first interruption · Table 9-5</text>
-      <!-- legend -->
       <text x="704" y="100" font-size="11" fill="var(--new)">green = the curb faces, proposed or existing</text>
       <text x="704" y="116" font-size="11" fill-opacity=".8">filled = the derived driveway polygon</text>
       <text x="704" y="132" font-size="11" fill-opacity=".8">thin = the back of curb, 0.50 ft off</text>
     </svg>
-    <figcaption><b>Claim (D7):</b> the five measures are functions of two traced figures and one walked course (on White Water course 5, <code>N74°32'40"W 231.66</code>), computed once in lot feet; every coordinate is the PDF's. It runs twice — the existing condition (existing chains only) and the resulting condition (retained existing plus proposed) — one row each. On Brezza Lane both give the same 33.2 ft opening at stations 77.8–111.0 ft with both edges retained; the 86 ft of curb removed begins 24.4 ft inside the lot, so only the throat changes — which is the finding, not a miss.</figcaption>
+    <figcaption><b>Claim (D6):</b> the five measures are functions of two traced figures and one walked course, computed once per condition in lot feet; every coordinate is the PDF's. The existing condition takes existing chains only; the resulting condition takes retained existing plus proposed; one row each, same frontage and station, so the diff between them is the alteration. On Brezza Lane both give the same 33.2 ft opening at stations 77.8–111.0 ft with both edges retained — the 86 ft of curb removed begins 24.4 ft inside the lot — so only the throat changes, which is the finding, not a miss.</figcaption>
   </figure>
 
-  <h3 class="claim" id="detail-assemble">assemble.ts adds four stages after the sheet registration, and place.ts gives a derived figure its parents' frame <span class="src">D4</span></h3>
+  <h3 class="claim" id="detail-assemble">assemble.ts adds five stages after the sheet registration, and place.ts gives a derived figure its parents' frame <span class="src">D4</span></h3>
   <div class="ba">
     <div class="ba-col"><div class="ba-h">today · after the traverses</div>
       <ol class="steps">
@@ -1432,51 +1419,40 @@ table.nx-rules td.o{color:var(--ink2);font-size:12.5px;white-space:nowrap}
       <ol class="steps">
         <li class="st"><span class="sk">script</span><span class="sn">register each traced figure's sheet to its lot</span><span class="so">unchanged; a curb registers like a building</span></li>
         <li class="st chg"><span class="sk">script</span><span class="sn">derive each figure in lot feet</span><span class="so">a polygon as today; a line set as a MultiLineString with its length and its arcs in feet</span></li>
-        <li class="st new"><span class="sk">curb.ts</span><span class="sn">pair face and back; group the arcs</span><span class="so">0.33–1.0 ft apart over ≥ 80 % of the length → widthFt; one Return per centre</span></li>
+        <li class="st new"><span class="sk">curb.ts</span><span class="sn">pair face and back; group the arcs</span><span class="so">0.33–1.0 ft apart over ≥ 80 % of the length → widthFt; one Return per centre; edge unknown on a layer-less sheet</span></li>
         <li class="st new"><span class="sk">frontage.ts</span><span class="sn">find the frontage candidates</span><span class="so">an existing-curb chain outside the lot, parallel within 8°, 3–60 ft off, over half the edge; the worker's street names applied</span></li>
-        <li class="st new"><span class="sk">driveway.ts</span><span class="sn">derive the driveways</span><span class="so">crossings → openings → returns → throat → angle → depth → polygon — twice: the existing condition, then the resulting condition</span></li>
+        <li class="st new"><span class="sk">driveway.ts</span><span class="sn">derive the driveways, twice</span><span class="so">crossings → openings → returns → throat → angle → depth → side lines → polygon; the existing condition, then the resulting condition</span></li>
         <li class="st chg"><span class="sk">script</span><span class="sn">check every printed dimension</span><span class="so">radius, width, length labels against the nearest derived number, 0.1 ft: agrees / disagrees / unlabelled</span></li>
         <li class="st chg"><span class="sk">script</span><span class="sn">place.ts solve</span><span class="so">sheet_registration per curb figure; a derived figure takes its parents' frame and offset</span></li>
       </ol>
     </div>
   </div>
   <div class="sys-legend"><span><i class="chg"></i>modified stage</span><span><i class="new"></i>new stage</span></div>
-  <p class="claim"><b>Claim (D8):</b> printed dimensions are checks, never sources: <code>R20.0'</code> / <code>R25.0'</code> / <code>R28.0'</code> agree with 20.02 / 25.02 / 28.02; <code>84 LF</code> disagrees with 86 by two feet, and the readout shows exactly that.</p>
+  <p class="claim"><b>Claim (D7):</b> printed dimensions are checks, never sources: <code>R20.0'</code> / <code>R25.0'</code> / <code>R28.0'</code> agree with 20.02 / 25.02 / 28.02; <code>84 LF</code> disagrees with 86 by two feet, and the readout shows exactly that.</p>
 
-  <h3 class="claim" id="detail-frontage">Off the sheet, an opening is a paved area's boundary against the paved road, and the orthophoto is the check <span class="src">D13</span></h3>
-  <div class="dflow">
-    <div class="dq"><span class="q">The jurisdiction has frontage layers in frontage-layers.json (today: austin)?</span><span class="yes">no →</span><span class="out fail">frontage/none.json with why · the run continues (T8)</span></div>
-    <div class="dno">yes ↓</div>
-    <div class="dq"><span class="q">A streets segment runs within 60 ft of a lot edge and parallel to it?</span><span class="yes">yes →</span><span class="out">a frontage: name, class, speed; the ASMP Level within 60 ft, else 1 with level_source: default (Q10)</span></div>
-    <div class="dno">per frontage ↓</div>
-    <div class="dq"><span class="q">A paved_areas polygon (Pavement, Paved Parking, or origin Driveways) comes within 3 ft of the Paved Road polygon's boundary, for ≥ 8 ft?</span><span class="yes">yes →</span><span class="out">an opening: width, station, side, the abutting parcel, {source_layer, object_id, Imagery 2023}</span></div>
-    <div class="dno">and ↓</div>
-    <div class="dq"><span class="q">sidewalk_inventory segments of type DRIVEWAY; curb_inlets within 300 ft; a right_of_way polygon touching the frontage?</span><span class="yes">yes →</span><span class="out">the cross-check list, the inlets as points, the right-of-way where the layer has one</span></div>
-    <div class="dno">then ↓</div>
-    <div class="dq end"><span class="q">exportImage · StratMap21 · bbox the frontage ± 300 ft along, 150 across · imageSR = the target SRID</span><span class="yes"></span><span class="out warn">a 6 in georeferenced tile with its world file: under the overlay for 3.2, in front of the checker for 3.3; not a source of coordinates in v1 (Q7)</span></div>
-  </div>
-  <p class="claim"><b>Claim (§1.5):</b> within 300 ft of the site Austin's 2023 layer holds 0 <code>Driveways</code>-class polygons, 16 <code>Pavement</code>, 3 <code>Paved Parking</code> and 2 <code>Paved Road</code>; no layer names driveways reliably on a commercial frontage, but the boundary between a paved area and the road does, at about ±2 ft — enough for Table 7-5, whose smallest number is 50 ft.</p>
+  <h3>The on-site payoff, as queries on one file's rows</h3>
+  <div class="prompt"><span class="ph">D12 · the existing condition beside the resulting condition, and the return against the lot's side lines</span>select e.label, e.properties->>'station_ft' as station,
+       e.properties->'measures' as existing, r.properties->'measures' as resulting
+from geo e join geo r on r.properties->>'anchor_id' = e.properties->>'anchor_id'
+  and r.kind = 'driveway' and r.properties->>'condition' = 'resulting'
+  and r.properties->>'station_ft' = e.properties->>'station_ft'
+where e.kind = 'driveway' and e.properties->>'condition' = 'existing';
 
-  <h3>The payoff, as a query on one anchor_id</h3>
-  <div class="prompt"><span class="ph">D14 · spacing to every opening on the same frontage, inside edge to inside edge (TCM Table 7-5)</span>select d.label, o.properties->>'street' as street, o.properties->>'street_level' as level,
-       round(st_distance(d.geom_local, o.geom_local)::numeric, 1) as spacing_ft,
-       o.properties->>'accuracy_class' as theirs, d.properties->>'trace_method' as ours
-from geo d join geo o on o.properties->>'anchor_id' = d.properties->>'anchor_id'
-where d.kind = 'driveway' and o.kind = 'driveway_opening'
-  and o.properties->>'side' = 'same' order by spacing_ft;
+select d.label, d.properties->'measures'->>'sideLineClear' as clear,
+       round(st_distance(d.geom_local, st_exteriorring(l.geom_local))::numeric, 2) as to_lot_line_ft
+from geo d join geo l on l.properties->>'anchor_id' = d.properties->>'anchor_id' and l.kind = 'parcel' and l.method = 'anchored'
+where d.kind = 'driveway';
 
--- plus: the nearest curb inlet (10 ft, 7.6.2(C)); the count per frontage (Table 7-4);
--- the opposing offset, throat edge to throat edge (80 ft, 7.6.3); the corner clearance.
--- every readout carries both labels: "33.2 ft, vector, ring fit" vs "a 2023 digitized opening, about ±2 ft".</div>
-  <p class="claim"><b>Claim (D14):</b> a spacing computed between a ±0.01 ft line and a ±2 ft polygon is a ±2 ft number and says so, which is north star §9.4 made concrete.</p>
+-- plus feet of curb by posture and every return radius; every number carries trace_method and the anchor's accuracy class.</div>
+  <p class="claim"><b>Claim (D12):</b> the readout prints each measure beside the TCM row it belongs to, for every Street Level, and names the Level only when the sheet states it; looking it up is Phase 2.</p>
 </section>
 
 <!-- ============================================================ THE EXTRACT RUNBOOK -->
 <section class="panel" id="runbook" data-steps="1.1,1.2,1.3,2.1,2.2,3.1,3.2,3.3,3.4,3.5,4.1,4.2,5.1,5.2,6.1,6.2,7.1">
   <h2>The extract runbook</h2>
-  <p class="lede">Seventeen steps stay seventeen. No step is new; eight change (fetch, survey, trace, confirm, assemble, place-solve, readout, publish) and confirm's fan-out gains one item per primary sheet, the frontage. On a plat every roster is empty and the output is byte-identical; on a building-only plan set nothing new runs (§3.1).</p>
+  <p class="lede">Seventeen steps stay seventeen. No step is new; eight change (fetch, survey, trace, confirm, assemble, place-solve, readout, publish) and confirm's fan-out gains one item per primary sheet, the frontage. On a plat every roster is empty and the output is byte-identical; on a building-only plan set nothing new runs. Phase 2 touches none of this (§4.1).</p>
 
-  <h3 class="claim" id="detail-graph">The graph does not change shape; the trace and confirm branch learns a second feature geometry and a frontage item <span class="src">§3.1</span></h3>
+  <h3 class="claim" id="detail-graph">The graph does not change shape; the trace and confirm branch learns a second feature geometry and a frontage item <span class="src">§4.1</span></h3>
   <div class="sys-legend"><span><i></i>unchanged</span><span><i class="chg"></i>modified</span><span><i class="happy"></i>main path</span><span><i class="exit"></i>leaves the main path</span><span>stacked card = runs ×N in parallel</span></div>
   <div class="ba stack">
     <div class="ba-col"><div class="ba-h">today · after winston#322</div>
@@ -1508,7 +1484,7 @@ where d.kind = 'driveway' and o.kind = 'driveway_opening'
         <a class="sys-edge exit" data-from="t21" data-to="tnone"></a>
       </div></div>
     </div>
-    <div class="ba-col"><div class="ba-h">after</div>
+    <div class="ba-col"><div class="ba-h">after Phase 1</div>
       <div class="bleed"><div class="sysmap rgraph" id="rg-read-a" style="grid-template-columns:repeat(9,minmax(0,1fr));column-gap:24px">
         <div class="sys" id="g11" style="grid-area:1/1"><span class="k">gate · input</span><span class="t">1.1 inputs</span><span class="d">unchanged</span></div>
         <div class="sys chg" id="g12" style="grid-area:1/2"><a class="ref" href="#detail-registry">D1 ↓</a><span class="k">script</span><span class="t">1.2 fetch</span><span class="d">features.json: + curb, curb_existing, driveway</span></div>
@@ -1520,7 +1496,7 @@ where d.kind = 'driveway' and o.kind = 'driveway_opening'
         <div class="sys fan" id="g33" style="grid-area:1/8"><span class="k">agent ×N figures</span><span class="t">3.3 order</span><span class="d">unchanged</span></div>
         <div class="sys" id="g41" style="grid-area:1/9"><span class="k">agent</span><span class="t">4.1 merge</span><span class="d">unchanged</span></div>
         <div class="sys chg" id="g34" style="grid-area:2/5"><a class="ref" href="#detail-trace">D2 · D3 ↓</a><span class="k">script</span><span class="t">3.4 trace</span><span class="d">+ sets of chains with arcs</span></div>
-        <div class="sys fan chg" id="g35" style="grid-area:2/6"><a class="ref" href="#step-3-5">D3 · D6 ↓</a><span class="k">agent ×N regions + 1</span><span class="t">3.5 confirm</span><span class="d">trim a set; read labels; name the streets</span></div>
+        <div class="sys fan chg" id="g35" style="grid-area:2/6"><a class="ref" href="#step-3-5">D3 · D5 ↓</a><span class="k">agent ×N regions + 1</span><span class="t">3.5 confirm</span><span class="d">trim a set; read labels; name the streets</span></div>
         <div class="sys exit" id="gto42" style="grid-area:2/7"><span class="t">to 4.2 assemble</span><span class="d">appended, paired, derived by code</span></div>
         <div class="sys exit" id="gnone" style="grid-area:3/4"><span class="t">run stops</span><span class="d">no page carries geometry</span></div>
         <a class="sys-edge happy" data-from="g11" data-to="g12"></a>
@@ -1542,19 +1518,19 @@ where d.kind = 'driveway' and o.kind = 'driveway_opening'
     <a class="refrow chg" data-ref="D1"><span class="chip">D1</span><span class="txt">three registry entries; the survey reads their paragraphs from features.json</span></a>
     <a class="refrow chg" data-ref="D2"><span class="chip">D2</span><span class="txt">the reader keeps the arc</span></a>
     <a class="refrow chg" data-ref="D3"><span class="chip">D3</span><span class="txt">a polyline candidate is a set of chains; the worker may only remove from it</span></a>
-    <a class="refrow chg" data-ref="D6"><span class="chip">D6</span><span class="txt">the frontage: code proposes the candidate edges, a worker names the street on each</span></a>
+    <a class="refrow chg" data-ref="D5"><span class="chip">D5</span><span class="txt">the frontage: code proposes the candidate edges, a worker names the street on each</span></a>
   </div>
   <p class="claim"><b>Reading:</b> 3.4's roster is every <code>feature</code> region of a tracer-bearing kind on every sheet; <code>driveway</code> regions are not traced, they are counted. 3.5's roster is the primary sheet's curb regions plus one <code>frontage</code> item.</p>
 
-  <h3 class="claim">Four of the six computing and ruling steps change, and neither gate does <span class="src">§3.1</span></h3>
+  <h3 class="claim">Four of the six computing and ruling steps change, and neither gate does <span class="src">§4.1</span></h3>
   <div class="bleed"><div class="sysmap rgraph" id="rg-rule" style="grid-template-columns:repeat(7,minmax(0,1fr));column-gap:36px">
     <div class="sys" id="r41" style="grid-area:1/1"><span class="k">agent</span><span class="t">4.1 merge</span><span class="d">mete figures</span></div>
-    <div class="sys chg" id="r42" style="grid-area:1/2"><a class="ref" href="#detail-assemble">D4 · D6 · D7 · D8 ↓</a><span class="k">script</span><span class="t">4.2 assemble</span><span class="d">+ pairs, frontages, driveways, label checks</span></div>
+    <div class="sys chg" id="r42" style="grid-area:1/2"><a class="ref" href="#detail-assemble">D4 · D5 · D6 · D7 ↓</a><span class="k">script</span><span class="t">4.2 assemble</span><span class="d">+ pairs, frontages, both conditions, label checks</span></div>
     <div class="sys" id="r51" style="grid-area:1/3"><span class="k">agent</span><span class="t">5.1 place-claims</span><span class="d">unchanged</span></div>
-    <div class="sys chg" id="r52" style="grid-area:1/4"><a class="ref" href="#detail-assemble">D7 ↓</a><span class="k">script</span><span class="t">5.2 place-solve</span><span class="d">a derived figure takes its parents' frame</span></div>
-    <div class="sys chg" id="r61" style="grid-area:1/5"><a class="ref" href="#step-6-1">D15 ↓</a><span class="k">agent</span><span class="t">6.1 readout</span><span class="d">+ curbs and driveways section</span></div>
+    <div class="sys chg" id="r52" style="grid-area:1/4"><a class="ref" href="#detail-assemble">D6 ↓</a><span class="k">script</span><span class="t">5.2 place-solve</span><span class="d">a derived figure takes its parents' frame</span></div>
+    <div class="sys chg" id="r61" style="grid-area:1/5"><a class="ref" href="#step-6-1">D13 ↓</a><span class="k">agent</span><span class="t">6.1 readout</span><span class="d">+ curbs and driveways section</span></div>
     <div class="sys gate" id="r62" style="grid-area:1/6"><span class="k">human gate</span><span class="t">6.2 hitl</span><span class="d">publish · stop · reread</span></div>
-    <div class="sys chg" id="r71" style="grid-area:1/7"><a class="ref" href="#detail-stored">D9 · D10 ↓</a><span class="k">script · frozen</span><span class="t">7.1 publish</span><span class="d">+ geometry, length_ft, derived</span></div>
+    <div class="sys chg" id="r71" style="grid-area:1/7"><a class="ref" href="#detail-stored">D8 · D9 ↓</a><span class="k">script · frozen</span><span class="t">7.1 publish</span><span class="d">+ geometry, length_ft, derived</span></div>
     <div class="sys exit" id="rstop" style="grid-area:2/6"><span class="t">SKIPPED.md</span><span class="d">stop: nothing written</span></div>
     <a class="sys-edge happy" data-from="r41" data-to="r42"></a>
     <a class="sys-edge happy" data-from="r42" data-to="r51"></a>
@@ -1566,14 +1542,14 @@ where d.kind = 'driveway' and o.kind = 'driveway_opening'
     <a class="sys-edge loop" data-from="r62" data-to="r41">reread</a>
   </div></div>
   <div class="sys-refs">
-    <a class="refrow chg" data-ref="D4"><span class="chip">D4</span><span class="txt">face and back paired in code</span></a>
-    <a class="refrow new" data-ref="D7"><span class="chip">D7</span><span class="txt">the driveway derived with its measures</span></a>
-    <a class="refrow chg" data-ref="D8"><span class="chip">D8</span><span class="txt">printed dimensions are checks, never sources</span></a>
-    <a class="refrow chg" data-ref="D9"><span class="chip">D9</span><span class="txt">reading_method gains derived</span></a>
-    <a class="refrow chg" data-ref="D10"><span class="chip">D10</span><span class="txt">geometry beside polygon; length_ft</span></a>
-    <a class="refrow chg" data-ref="D15"><span class="chip">D15</span><span class="txt">the readouts gain the curbs-and-driveways section and the frontage table</span></a>
+    <a class="refrow chg" data-ref="D4"><span class="chip">D4</span><span class="txt">face and back paired in code; the pair reported on a layer-less sheet</span></a>
+    <a class="refrow new" data-ref="D6"><span class="chip">D6</span><span class="txt">the driveway derived twice, with its measures</span></a>
+    <a class="refrow chg" data-ref="D7"><span class="chip">D7</span><span class="txt">printed dimensions are checks, never sources</span></a>
+    <a class="refrow chg" data-ref="D8"><span class="chip">D8</span><span class="txt">reading_method gains derived</span></a>
+    <a class="refrow chg" data-ref="D9"><span class="chip">D9</span><span class="txt">geometry beside polygon; length_ft</span></a>
+    <a class="refrow chg" data-ref="D13"><span class="chip">D13</span><span class="txt">the readouts gain the curbs-and-driveways section and the per-driveway table</span></a>
   </div>
-  <p class="claim"><b>Claim (§3.1):</b> the ruling step and the merge agent are untouched; a derived figure enters the artifact through <code>assemble.py</code> and <code>assemble.ts</code>, the same door the traced building uses.</p>
+  <p class="claim"><b>Claim (§4.1):</b> the ruling step and the merge agent are untouched; a derived figure enters the artifact through <code>assemble.py</code> and <code>assemble.ts</code>, the same door the traced building uses.</p>
   <hr class="nx-div">
 
   <!-- 1.1 -->
@@ -1598,7 +1574,7 @@ where d.kind = 'driveway' and o.kind = 'driveway_opening'
     <div class="nx-stage">
       <div class="nx-card nx-src"><span class="nx-lab">reads</span>
         <span class="nx-pill"><i>table</i>cartographer_files</span>
-        <span class="nx-pill"><i>bucket</i>the upload's source.pdf, never a split sheet (D16)</span>
+        <span class="nx-pill"><i>bucket</i>the upload's source.pdf, never a split sheet (D14)</span>
         <span class="nx-pill"><i>file</i>registry.ts via features.ts</span>
       </div>
       <div class="nx-arrow">→</div>
@@ -1751,9 +1727,9 @@ ws/crops/p12-r3-t1-overlay.jpg <span class="c">every chain of the set, drawn on 
         <ol class="steps">
           <li class="st chg"><span class="sk">pick</span><span class="sn">chosen · one set id, or null with why</span><span class="so">the overlay follows the curb, returns included</span></li>
           <li class="st new"><span class="sk">trim</span><span class="sn">exclude · chain ids in the set that are not the curb</span><span class="so">remove only; a chain not in the set is refused</span></li>
-          <li class="st new"><span class="sk">read</span><span class="sn">labels · R20.0', 6" CURB, 84 LF, 2–3' CURB CUTS</span><span class="so">verbatim + parsed {kind, valueFt}; checks for D8, never sources</span></li>
-          <li class="st new"><span class="sk">read</span><span class="sn">faceSide · on a layer-less sheet, which line the gutter is on</span><span class="so">optional; recorded as a reading</span></li>
-          <li class="st new"><span class="sk">frontage</span><span class="sn">per candidate edge: street name or null, verbatim, crop, why</span><span class="so">BREZZA LANE on course 5; null on course 1 ("the apartments' parking")</span></li>
+          <li class="st new"><span class="sk">read</span><span class="sn">labels · R20.0', 6" CURB, 84 LF, 2–3' CURB CUTS</span><span class="so">verbatim + parsed {kind, valueFt}; checks for D7, never sources</span></li>
+          <li class="st new"><span class="sk">read</span><span class="sn">faceSide · on a layer-less sheet, which line the gutter is on</span><span class="so">optional; recorded as a reading, never assumed (D4)</span></li>
+          <li class="st new"><span class="sk">frontage</span><span class="sn">per candidate edge: street name or null, verbatim, crop, why; a joint-access label on a side</span><span class="so">BREZZA LANE on course 5; null on course 1 ("the apartments' parking")</span></li>
         </ol>
       </div>
     </div>
@@ -1783,16 +1759,16 @@ ws/crops/p12-r3-t1-overlay.jpg <span class="c">every chain of the set, drawn on 
 
   <!-- 4.2 -->
   <section class="nx-step" id="step-4-2">
-    <div class="nx-hd"><span class="nx-id">4.2</span><div><div class="nx-k">script · scripts/assemble.py assemble → carto assemble, carto place brief · zero tokens · modified</div><h3 class="nx-t">Assemble, register, pair, find the frontage, derive</h3><div class="nx-loc" data-on="4.2"></div></div><span class="nx-tpl">template <b>T9 · Fan-in</b> (enrich variant)</span></div>
-    <p class="nx-sum"><code>assemble.py</code> appends one traced figure per confirmed set (posture and kind from the registry, the excluded chains dropped, the labels carried) and hands <code>frontage.json</code> along; <code>assemble.ts</code> registers each sheet as today, derives the line sets in lot feet, pairs face and back, groups the arcs, applies the worker's street names to the frontage candidates, derives the driveways, and checks every printed dimension. The honesty boundary holds in both directions: no agent produced a coordinate, and no script decided which chains are the curb or which edge is the street.</p>
+    <div class="nx-hd"><span class="nx-id">4.2</span><div><div class="nx-k">script · scripts/assemble.py assemble → carto assemble, carto place brief · zero tokens · modified</div><h3 class="nx-t">Assemble, register, pair, find the frontage, derive twice</h3><div class="nx-loc" data-on="4.2"></div></div><span class="nx-tpl">template <b>T9 · Fan-in</b> (enrich variant)</span></div>
+    <p class="nx-sum"><code>assemble.py</code> appends one traced figure per confirmed set (posture and kind from the registry, the excluded chains dropped, the labels carried) and hands <code>frontage.json</code> along; <code>assemble.ts</code> registers each sheet as today, derives the line sets in lot feet, pairs face and back, groups the arcs, applies the worker's street names to the frontage candidates, derives the driveways for the existing condition and again for the resulting condition, and checks every printed dimension. No agent produced a coordinate, and no script decided which chains are the curb or which edge is the street.</p>
     <div class="nx-funnel">
       <div class="nx-stack"><span class="nx-lab">in</span><span>4.1 raw-artifact.json</span><span>3.5 confirm.json ×N + frontage.json</span><span>3.4 traces/*.json</span><span>the boundary files</span></div>
       <div class="nx-arrow">→</div>
       <div class="nx-rule"><span class="nx-lab">the rule</span><ol><li>append traced figures <span class="d">curb, curb_existing</span></li><li>register, derive <span class="d">polygon or MultiLineString; length; arcs in feet</span></li><li>pair, group <span class="d">curb.ts</span></li><li>frontages <span class="d">frontage.ts + the worker's names</span></li><li>driveways <span class="d">driveway.ts; one derived figure per opening per condition</span></li><li>label checks <span class="d">agrees / disagrees / unlabelled</span></li></ol></div>
       <div class="nx-arrow">→</div>
-      <div class="nx-card"><span class="nx-lab">out</span><ul class="nx-list"><li><code>ws/artifact.json</code><span class="d">derived[…].geometry, .sheet, .curb, .driveway</span></li><li><code>traced.json</code>, <code>frontage.json</code>, <code>derived.json</code><span class="d">what was appended, named, derived, and what was not</span></li><li><code>assemble.log</code><span class="d">one line per figure and per driveway</span></li></ul></div>
+      <div class="nx-card"><span class="nx-lab">out</span><ul class="nx-list"><li><code>ws/artifact.json</code><span class="d">derived[…].geometry, .sheet, .curb, .driveway</span></li><li><code>traced.json</code>, <code>frontage.json</code>, <code>derived.json</code><span class="d">what was appended, named, derived, and what was not</span></li><li><code>assemble.log</code><span class="d">one line per figure and per driveway per condition</span></li></ul></div>
     </div>
-    <div class="nx-acct"><span class="nx-block">BLOCKING</span><span>confirmed sets <b>=</b> appended line figures <b>+</b> not-confirmed; openings derived <b>+</b> unpaired crossings <b>=</b> crossings found</span></div>
+    <div class="nx-acct"><span class="nx-block">BLOCKING</span><span>confirmed sets <b>=</b> appended line figures <b>+</b> not-confirmed; per condition, openings derived <b>+</b> unpaired crossings <b>=</b> crossings found</span></div>
   </section>
   <hr class="nx-div">
 
@@ -1839,7 +1815,7 @@ ws/crops/p12-r3-t1-overlay.jpg <span class="c">every chain of the set, drawn on 
           <li class="st"><span class="sk">section</span><span class="sn">figures and closure</span><span class="so">unchanged</span></li>
           <li class="st"><span class="sk">section</span><span class="sn">placement and its checks</span><span class="so">unchanged</span></li>
           <li class="st"><span class="sk">section</span><span class="sn">traced figures</span><span class="so">unchanged</span></li>
-          <li class="st new"><span class="sk">section</span><span class="sn">curbs and driveways</span><span class="so">per region: set, excluded chains, pairs and unpaired, feet by posture, every return with its label check; per frontage: the street named, the offset, openings with measures, survey regions matched and unmatched, unpaired proposed returns — in words</span></li>
+          <li class="st new"><span class="sk">section</span><span class="sn">curbs and driveways</span><span class="so">per region: set, excluded chains, pairs and unpaired, feet by posture, every return with its label check; per frontage: the street named, the offset, the openings in each condition with the diff between them, survey regions matched and unmatched, unpaired crossings — in words</span></li>
         </ol>
       </div>
     </div>
@@ -1866,7 +1842,7 @@ ws/crops/p12-r3-t1-overlay.jpg <span class="c">every chain of the set, drawn on 
   <!-- 7.1 -->
   <section class="nx-step" id="step-7-1">
     <div class="nx-hd"><span class="nx-id">7.1</span><div><div class="nx-k">script · scripts/publish.py → carto publish (publish.ts) · frozen · zero tokens · modified</div><h3 class="nx-t">Publish</h3><div class="nx-loc" data-on="7.1"></div></div><span class="nx-tpl">template <b>T13 · Publish</b></span></div>
-    <p class="nx-sum">Delete-then-insert, as today. Every row now carries <code>geometry</code>; a polygon row also carries <code>polygon</code> until the contract phase; a line row carries <code>length_ft</code> and <code>has_approximated_curves</code>; a derived row carries <code>reading_method: derived</code> and a <code>derivation</code> evidence row.</p>
+    <p class="nx-sum">Delete-then-insert, as today. Every row now carries <code>geometry</code>; a polygon row also carries <code>polygon</code> until the contract phase; a line row carries <code>length_ft</code> and <code>has_approximated_curves</code>; a derived row carries <code>reading_method: derived</code>, its condition and a <code>derivation</code> evidence row.</p>
     <div class="uc">
       <div class="uch"><div class="ucn">1</div><div class="uctxt"><span class="actor">publish.ts · on a publish ruling</span><span class="uct">Replace the file's figures</span></div></div>
       <div class="ucdiag"><div class="dfg">
@@ -1874,11 +1850,11 @@ ws/crops/p12-r3-t1-overlay.jpg <span class="c">every chain of the set, drawn on 
         <div class="edge"><span class="el">① delete</span><span class="ar">→</span></div>
         <div class="node created"><span class="op">rpc</span><span class="nt">cartographer_mark_anchors_stale</span><span class="nf">anchor 53d65a90 → stale</span></div>
         <div class="edge"><span class="el">② insert</span><span class="ar">→</span></div>
-        <div class="node created"><span class="op">insert</span><span class="nt">cartographer_geometries</span><span class="nf">geometry · polygon?<br>length_ft · reading_method<br>trace · posture</span></div>
+        <div class="node created"><span class="op">insert</span><span class="nt">cartographer_geometries</span><span class="nf">geometry · polygon?<br>length_ft · reading_method<br>trace (condition) · posture</span></div>
         <div class="edge"><span class="el">③</span><span class="ar">→</span></div>
         <div class="node created"><span class="op">insert</span><span class="nt">cartographer_geometry_evidence</span><span class="nf">trace · label · derivation rows</span></div>
         <div class="edge"><span class="el">④</span><span class="ar">→</span></div>
-        <div class="node store"><span class="op">put</span><span class="nt">crops bucket</span><span class="nf">set overlays, apron overlay</span></div>
+        <div class="node store"><span class="op">put</span><span class="nt">crops bucket</span><span class="nf">set overlays, apron overlays</span></div>
       </div></div>
       <div class="ucnote"><b>note</b> — the crop objects and evidence rows go under the new geometry ids; a line row's <code>polygon</code> is null and the type CHECK says so.</div>
     </div>
@@ -1886,13 +1862,13 @@ ws/crops/p12-r3-t1-overlay.jpg <span class="c">every chain of the set, drawn on 
   </section>
 </section>
 
-<!-- ============================================================ THE ANCHOR RUNBOOK -->
-<section class="panel" id="anchor" data-steps="1.1a,1.2a,1.3a,2.1a,3.1a,3.2a,3.3a,4.1a,5.1a">
+<!-- ============================================================ THE ANCHOR RUNBOOK (PHASE 1) -->
+<section class="panel" id="anchor" data-steps="1.1a,1.2a,2.1a,3.1a,3.2a,3.3a,4.1a,5.1a">
   <h2>The anchor runbook</h2>
-  <p class="lede">Eight steps become nine. One is new (the frontage context); five change a reader, a prompt word, a colour, two questions and a payload; the solver is untouched, because a line figure is carried by the frame's transform and claimed against nothing (§3.4, D12, D13).</p>
+  <p class="lede">Phase 1: eight steps stay eight. Five change a reader, a prompt word, a colour, one question and a payload; the solver is untouched, because a line figure is carried by the frame's transform and claimed against nothing. No SIR is read on any path (§1.1, §4.4, D11).</p>
 
-  <h3 class="claim" id="detail-anchor">A fetch of the city's layers goes in before correspond, and the solve stays exactly as it is <span class="src">D13</span></h3>
-  <div class="sys-legend"><span><i></i>unchanged</span><span><i class="chg"></i>modified</span><span><i class="new"></i>new</span><span><i class="happy"></i>main path</span><span><i class="loop"></i>goes back</span><span>black diamond = the human gate</span></div>
+  <h3 class="claim" id="detail-anchor">Five steps change and the solve does not; nothing new goes into the graph until Phase 2 <span class="src">D11</span></h3>
+  <div class="sys-legend"><span><i></i>unchanged</span><span><i class="chg"></i>modified</span><span><i class="happy"></i>main path</span><span><i class="loop"></i>goes back</span><span>black diamond = the human gate</span></div>
   <div class="ba stack">
     <div class="ba-col"><div class="ba-h">today</div>
       <div class="bleed"><div class="sysmap rgraph" id="rg-anchor-t" style="grid-template-columns:repeat(8,minmax(0,1fr));column-gap:28px">
@@ -1916,43 +1892,38 @@ ws/crops/p12-r3-t1-overlay.jpg <span class="c">every chain of the set, drawn on 
         <a class="sys-edge loop" data-from="a41" data-to="a21">revise</a>
       </div></div>
     </div>
-    <div class="ba-col"><div class="ba-h">after</div>
-      <div class="bleed"><div class="sysmap rgraph" id="rg-anchor-a" style="grid-template-columns:repeat(9,minmax(0,1fr));column-gap:24px">
+    <div class="ba-col"><div class="ba-h">after Phase 1</div>
+      <div class="bleed"><div class="sysmap rgraph" id="rg-anchor-a" style="grid-template-columns:repeat(8,minmax(0,1fr));column-gap:28px">
         <div class="sys" id="b11" style="grid-area:1/1"><span class="k">gate · input</span><span class="t">1.1 inputs</span><span class="d">unchanged</span></div>
-        <div class="sys chg" id="b12" style="grid-area:1/2"><a class="ref" href="#detail-anchor-steps">D10 · D12 ↓</a><span class="k">script</span><span class="t">1.2 fetch</span><span class="d">reads geometry; geometryType through</span></div>
-        <div class="sys new" id="b13" style="grid-area:1/3"><a class="ref" href="#detail-frontage">D13 ↓</a><span class="k">script · zero tokens</span><span class="t">1.3 frontage</span><span class="d">streets, openings, inlets, ROW, the ortho</span></div>
-        <div class="sys chg" id="b21" style="grid-area:1/4"><a class="ref" href="#detail-anchor-steps">D12 ↓</a><span class="k">agent</span><span class="t">2.1 correspond</span><span class="d">+ carried</span></div>
-        <div class="sys" id="b31" style="grid-area:1/5"><span class="k">script</span><span class="t">3.1 solve</span><span class="d">unchanged</span></div>
-        <div class="sys chg" id="b32" style="grid-area:1/6"><a class="ref" href="#detail-anchor-steps">D12 ↓</a><span class="k">script</span><span class="t">3.2 render</span><span class="d">lines by posture, over the ortho</span></div>
-        <div class="sys chg" id="b33" style="grid-area:1/7"><a class="ref" href="#detail-anchor-steps">D12 · D15 ↓</a><span class="k">agent</span><span class="t">3.3 check</span><span class="d">+ two line questions; the frontage table</span></div>
-        <div class="sys gate" id="b41" style="grid-area:1/8"><span class="k">human gate</span><span class="t">4.1 hitl</span><span class="d">unchanged</span></div>
-        <div class="sys chg" id="b51" style="grid-area:1/9"><a class="ref" href="#detail-publish">D11 · D13 ↓</a><span class="k">script · frozen</span><span class="t">5.1 publish</span><span class="d">by geometry type; + context rows</span></div>
-        <div class="sys exit" id="bstop" style="grid-area:2/8"><span class="t">SKIPPED.md</span><span class="d">reject · stop</span></div>
-        <div class="sys exit" id="bnone" style="grid-area:2/3"><span class="t">frontage/none.json</span><span class="d">no layers for this jurisdiction; the run continues</span></div>
+        <div class="sys chg" id="b12" style="grid-area:1/2"><a class="ref" href="#detail-anchor-steps">D9 · D11 ↓</a><span class="k">script</span><span class="t">1.2 fetch</span><span class="d">reads geometry; geometryType through</span></div>
+        <div class="sys chg" id="b21" style="grid-area:1/3"><a class="ref" href="#detail-anchor-steps">D11 ↓</a><span class="k">agent</span><span class="t">2.1 correspond</span><span class="d">+ carried</span></div>
+        <div class="sys" id="b31" style="grid-area:1/4"><span class="k">script</span><span class="t">3.1 solve</span><span class="d">unchanged</span></div>
+        <div class="sys chg" id="b32" style="grid-area:1/5"><a class="ref" href="#detail-anchor-steps">D11 ↓</a><span class="k">script</span><span class="t">3.2 render</span><span class="d">lines by posture, both conditions</span></div>
+        <div class="sys chg" id="b33" style="grid-area:1/6"><a class="ref" href="#detail-anchor-steps">D11 · D13 ↓</a><span class="k">agent</span><span class="t">3.3 check</span><span class="d">+ the on-site line question; the per-driveway table</span></div>
+        <div class="sys gate" id="b41" style="grid-area:1/7"><span class="k">human gate</span><span class="t">4.1 hitl</span><span class="d">unchanged</span></div>
+        <div class="sys chg" id="b51" style="grid-area:1/8"><a class="ref" href="#detail-publish">D10 ↓</a><span class="k">script · frozen</span><span class="t">5.1 publish</span><span class="d">by geometry type; condition and measures</span></div>
+        <div class="sys exit" id="bstop" style="grid-area:2/7"><span class="t">SKIPPED.md</span><span class="d">reject · stop</span></div>
         <a class="sys-edge happy" data-from="b11" data-to="b12"></a>
-        <a class="sys-edge happy" data-from="b12" data-to="b13"></a>
-        <a class="sys-edge happy" data-from="b13" data-to="b21"></a>
+        <a class="sys-edge happy" data-from="b12" data-to="b21"></a>
         <a class="sys-edge happy" data-from="b21" data-to="b31"></a>
         <a class="sys-edge happy" data-from="b31" data-to="b32"></a>
         <a class="sys-edge happy" data-from="b32" data-to="b33"></a>
         <a class="sys-edge happy" data-from="b33" data-to="b41"></a>
         <a class="sys-edge happy" data-from="b41" data-to="b51">accept</a>
         <a class="sys-edge exit" data-from="b41" data-to="bstop"></a>
-        <a class="sys-edge exit" data-from="b13" data-to="bnone"></a>
         <a class="sys-edge loop" data-from="b41" data-to="b21">revise</a>
       </div></div>
     </div>
   </div>
   <div class="sys-refs">
-    <a class="refrow chg" data-ref="D10"><span class="chip">D10</span><span class="txt">every reader of polygon moves to geometry</span></a>
-    <a class="refrow chg" data-ref="D11"><span class="chip">D11</span><span class="txt">the RPC's line branch; measures and trace_method in properties</span></a>
-    <a class="refrow chg" data-ref="D12"><span class="chip">D12</span><span class="txt">carried: placed by the frame's transform, claimed against nothing</span></a>
-    <a class="refrow new" data-ref="D13"><span class="chip">D13</span><span class="txt">1.3-frontage and cartographer_put_context_geo</span></a>
-    <a class="refrow chg" data-ref="D15"><span class="chip">D15</span><span class="txt">the anchor readout's frontage table</span></a>
+    <a class="refrow chg" data-ref="D9"><span class="chip">D9</span><span class="txt">every reader of polygon moves to geometry</span></a>
+    <a class="refrow chg" data-ref="D10"><span class="chip">D10</span><span class="txt">the RPC's line branch; condition, station and measures in properties</span></a>
+    <a class="refrow chg" data-ref="D11"><span class="chip">D11</span><span class="txt">carried: placed by the frame's transform, claimed against nothing</span></a>
+    <a class="refrow chg" data-ref="D13"><span class="chip">D13</span><span class="txt">the anchor readout's per-driveway table</span></a>
   </div>
-  <p class="claim"><b>Claim (D12):</b> <code>fitSets</code> already skips <code>within</code> figures and <code>anchorFrame</code> already transforms every figure of the frame, so a carried line reaches the grid with no change to the solver.</p>
+  <p class="claim"><b>Claim (D11):</b> <code>fitSets</code> already skips <code>within</code> figures and <code>anchorFrame</code> already transforms every figure of the frame, so a carried line reaches the grid with no change to the solver.</p>
 
-  <h3 class="claim" id="detail-anchor-steps">Five steps change a reader, a word, a colour, two questions and a payload; the solve does not <span class="src">D12</span></h3>
+  <h3 class="claim" id="detail-anchor-steps">A reader, a word, a colour, one question and a payload change; the solve does not <span class="src">D11</span></h3>
   <div class="ba">
     <div class="ba-col"><div class="ba-h">today</div>
       <ol class="steps">
@@ -1964,25 +1935,25 @@ ws/crops/p12-r3-t1-overlay.jpg <span class="c">every chain of the set, drawn on 
         <li class="st" data-n="5.1"><span class="sk">script</span><span class="sn">publish</span><span class="so">sir_put_anchored_geo({label, kind, geometry: Polygon, posture, trace_method})</span></li>
       </ol>
     </div>
-    <div class="ba-col"><div class="ba-h">after</div>
+    <div class="ba-col"><div class="ba-h">after Phase 1</div>
       <ol class="steps">
-        <li class="st chg" data-n="1.2"><span class="sk">script</span><span class="sn">fetch</span><span class="so">geometryInFrame(geometry) → InputFigure.coords + geometryType</span></li>
+        <li class="st chg" data-n="1.2"><span class="sk">script</span><span class="sn">fetch</span><span class="so">geometryInFrame(geometry) → InputFigure.coords + geometryType; no SIR on either path</span></li>
         <li class="st chg" data-n="2.1"><span class="sk">agent</span><span class="sn">correspond</span><span class="so">+ carried: a curb or driveway figure, never a fit target, no claim on the ring</span></li>
         <li class="st" data-n="3.1"><span class="sk">script</span><span class="sn">solve</span><span class="so">unchanged; carried figures transformed like within</span></li>
-        <li class="st chg" data-n="3.2"><span class="sk">script</span><span class="sn">render</span><span class="so">lines by posture, the derived driveway filled, the ortho tile underneath</span></li>
-        <li class="st chg" data-n="3.3"><span class="sk">agent</span><span class="sn">check</span><span class="so">+ do the existing curbs sit on the aerial's curbs; does each opening sit on an apron or at the sawcut; + the frontage table</span></li>
-        <li class="st chg" data-n="5.1"><span class="sk">script</span><span class="sn">publish</span><span class="so">geometry by type, measures; then cartographer_put_context_geo(frontage/*.json)</span></li>
+        <li class="st chg" data-n="3.2"><span class="sk">script</span><span class="sn">render</span><span class="so">lines by posture; the derived driveways filled, the resulting condition over the existing</span></li>
+        <li class="st chg" data-n="3.3"><span class="sk">agent</span><span class="sn">check</span><span class="so">+ does the street curb run parallel to the frontage edge at the sheet's offset; does each driveway sit on that edge; + the per-driveway table</span></li>
+        <li class="st chg" data-n="5.1"><span class="sk">script</span><span class="sn">publish</span><span class="so">geometry by type; condition, station_ft, measures in each p_figures entry</span></li>
       </ol>
     </div>
   </div>
   <div class="sys-legend"><span><i class="chg"></i>modified step</span></div>
-  <p class="claim"><b>Claim (D12):</b> <code>within</code> stays the word for a proposed polygon inside the lot; <code>carried</code> is for a line that may lie outside it (the street's curb) or across its edge (a driveway).</p>
+  <p class="claim"><b>Claim (D11):</b> <code>within</code> stays the word for a proposed polygon inside the lot; <code>carried</code> is for a line that may lie outside it (the street's curb) or across its edge (a driveway).</p>
   <hr class="nx-div">
 
   <!-- 1.1 -->
   <section class="nx-step" id="step-1-1a">
     <div class="nx-hd"><span class="nx-id gate">1.1</span><div><div class="nx-k">gate · runner none · unchanged</div><h3 class="nx-t">Operator request</h3><div class="nx-loc" data-on="1.1a"></div></div><span class="nx-tpl">template <b>T1 · Input gate</b></span></div>
-    <p class="nx-sum">Unchanged. A file and an anchor run slug; a SIR is optional since winston#309.</p>
+    <p class="nx-sum">Unchanged. A file and an anchor run slug; a SIR is optional since winston#309 and nothing in this spec needs one.</p>
     <div class="nx-form">
       <div class="nx-card"><span class="nx-lab">request.json</span><div class="nx-field"><span class="n">file</span><span class="v">a cartographer_files id</span></div><div class="nx-field"><span class="n">anchor_run_slug</span><span class="v">unique per publish</span></div><div class="nx-field"><span class="n">sir?</span><span class="v">the SIR, when there is one</span></div></div>
       <div class="nx-card"><span class="nx-lab">contract</span><ul class="nx-list"><li><span class="nx-block">BLOCKING</span>zod schema</li></ul><div class="nx-wait"><b>exit 75</b>parks until it passes</div></div>
@@ -1993,31 +1964,13 @@ ws/crops/p12-r3-t1-overlay.jpg <span class="c">every chain of the set, drawn on 
   <!-- 1.2 -->
   <section class="nx-step" id="step-1-2a">
     <div class="nx-hd"><span class="nx-id">1.2</span><div><div class="nx-k">script · scripts/fetch.py → fetch.ts, arcgis_query.py via locate · zero tokens · modified: one reader</div><h3 class="nx-t">Fetch the frames and the county ring</h3><div class="nx-loc" data-on="1.2a"></div></div><span class="nx-tpl">template <b>T2 · Stage</b></span></div>
-    <p class="nx-sum">Reads every figure of the file as <code>geometry</code> plus offset instead of <code>polygon</code> plus offset, and passes the geometry type, posture and reading method through on each input figure. The loose-file path to the county ring is untouched.</p>
+    <p class="nx-sum">Reads every figure of the file as <code>geometry</code> plus offset instead of <code>polygon</code> plus offset, and passes the geometry type, posture and reading method through on each input figure. The loose-file path to the county ring — page-1 county, legal description, surveyor's <code>parcels</code> role — is untouched.</p>
     <div class="nx-stage">
-      <div class="nx-card nx-src"><span class="nx-lab">reads</span><span class="nx-pill"><i>table</i>cartographer_geometries · geometry, offsets, posture, reading_method</span><span class="nx-pill"><i>web</i>the county parcel layer (surveyor registry)</span><span class="nx-pill"><i>table</i>geo · the county row, reused</span></div>
+      <div class="nx-card nx-src"><span class="nx-lab">reads</span><span class="nx-pill"><i>table</i>cartographer_geometries · geometry, offsets, posture, reading_method</span><span class="nx-pill"><i>web</i>the county parcel layer (surveyor registry, role parcels)</span><span class="nx-pill"><i>table</i>geo · the county row, reused</span></div>
       <div class="nx-arrow">→</div>
       <div class="nx-card"><span class="nx-lab">writes · 1.2-fetch/ws/</span><pre class="nx-tree">geometries.json  <span class="c">InputFigure[]: coords, geometryType, posture, reading_method</span>
 targets.json     <span class="c">the parcel ring(s), target_srid</span></pre></div>
     </div>
-  </section>
-  <hr class="nx-div">
-
-  <!-- 1.3 -->
-  <section class="nx-step" id="step-1-3a">
-    <div class="nx-hd"><span class="nx-id">1.3</span><div><div class="nx-k">script · scripts/frontage.py → frontage.ts, arcgis_query.py, exportImage · zero tokens · new</div><h3 class="nx-t">Fetch the frontage context</h3><div class="nx-loc" data-on="1.3a"></div></div><span class="nx-tpl">template <b>T8 · External lookup</b></span></div>
-    <p class="nx-sum">For every lot edge a public street runs along, within 300 ft: the street and its Level, the openings derived from the city's paved areas against its paved roads, the sidewalk inventory's driveway segments, the curb inlets, the right-of-way polygon where one exists, and a 6 in georeferenced orthophoto. A layer that fails is an error in the file; a layer that answers nothing is recorded as nothing; a jurisdiction with no layers writes <code>frontage/none.json</code> and the run goes on.</p>
-    <div class="nx-stage">
-      <div class="nx-card nx-src"><span class="nx-lab">reads</span><span class="nx-pill"><i>file</i>1.2 targets.json · the ring, target_srid</span><span class="nx-pill"><i>file</i>site-research/data/frontage-layers.json · austin: 7 layers by role + the ImageServer</span><span class="nx-pill"><i>web</i>services.arcgis.com/0L95CJ0VTaxqcmED · keyless, paged, outSR 4326</span><span class="nx-pill"><i>web</i>StratMap21 exportImage · imageSR = target_srid</span><span class="nx-pill"><i>left out</i>anything the sheet drew</span></div>
-      <div class="nx-arrow">→</div>
-      <div class="nx-card"><span class="nx-lab">writes · 1.3-frontage/</span><pre class="nx-tree">frontage/1.json      <span class="c">BREZZA LN · class 8 · 30 mph · level 1 (default)</span>
-                     <span class="c">openings[] {side, station, width, polygon, parcel, object_id, source}</span>
-                     <span class="c">sidewalk_driveways[], inlets[] (3), right_of_way (1)</span>
-frontage/1.tif + .tfw <span class="c">the ortho tile, 6 in pixels, in 2277</span>
-frontage/none.json   <span class="c">only when no layers are registered</span>
-scratch/*.json       <span class="c">every raw answer and every error, arcgis_query.py's way</span></pre></div>
-    </div>
-    <div class="nx-checks-row"><span class="nx-pill"><span class="nx-block">BLOCKING</span>a layer that errors is an error, never an absence</span><span class="nx-pill">an opening under 8 ft is dropped as noise</span><span class="nx-pill">a frontage the sheet named that no street segment matches is reported, not invented</span></div>
   </section>
   <hr class="nx-div">
 
@@ -2030,7 +1983,7 @@ scratch/*.json       <span class="c">every raw answer and every error, arcgis_qu
       <div class="nx-arrow">→</div>
       <div class="nx-card mid"><span class="nx-lab">decides</span><ul class="nx-list"><li><b>relation</b><span class="d">same_as · union_of · within · <b>carried</b></span></li><li><b>corner pairs</b><span class="d">for a same_as polygon only</span></li></ul></div>
       <div class="nx-arrow">→</div>
-      <div class="nx-card"><span class="nx-list"><span class="nx-lab">writes</span><ul class="nx-list"><li><code>correspondences.json</code><span class="d"><span class="nx-block">BLOCKING</span>a line figure is carried, nothing else</span></li></ul></span></div>
+      <div class="nx-card"><span class="nx-lab">writes</span><ul class="nx-list"><li><code>correspondences.json</code><span class="d"><span class="nx-block">BLOCKING</span>a line figure is carried, nothing else</span></li></ul></div>
     </div>
   </section>
   <hr class="nx-div">
@@ -2049,11 +2002,11 @@ scratch/*.json       <span class="c">every raw answer and every error, arcgis_qu
   <!-- 3.2 -->
   <section class="nx-step" id="step-3-2a">
     <div class="nx-hd"><span class="nx-id">3.2</span><div><div class="nx-k">script · render.ts · zero tokens · modified</div><h3 class="nx-t">Render the overlay</h3><div class="nx-loc" data-on="3.2a"></div></div><span class="nx-tpl">template <b>T9 · Fan-in</b> (render variant)</span></div>
-    <p class="nx-sum">Draws the county rings and every figure on the grid, as today, with lines in the posture colours and the derived driveway filled, over the orthophoto 1.3 fetched when there is one. The picture the checker and the operator look at.</p>
+    <p class="nx-sum">Draws the county rings and every figure on the grid, as today, with lines in the posture colours and the two derived driveway polygons filled, the resulting condition over the existing. The picture the checker and the operator look at.</p>
     <div class="nx-funnel">
-      <div class="nx-stack"><span class="nx-lab">in</span><span>anchors.json</span><span>targets.json</span><span>frontage/*.tif</span></div>
+      <div class="nx-stack"><span class="nx-lab">in</span><span>anchors.json</span><span>targets.json</span></div>
       <div class="nx-arrow">→</div>
-      <div class="nx-rule"><span class="nx-lab">the rule</span><ol><li>the tile underneath, when any</li><li>county rings; the figures on top</li><li>proposed solid, existing lighter, derived filled, context rows outlined</li></ol></div>
+      <div class="nx-rule"><span class="nx-lab">the rule</span><ol><li>county rings; the figures on top</li><li>proposed solid, existing lighter, derived filled</li></ol></div>
       <div class="nx-arrow">→</div>
       <div class="nx-card"><span class="nx-lab">out</span><ul class="nx-list"><li><code>overlay.png</code></li></ul></div>
     </div>
@@ -2062,14 +2015,14 @@ scratch/*.json       <span class="c">every raw answer and every error, arcgis_qu
 
   <!-- 3.3 -->
   <section class="nx-step" id="step-3-3a">
-    <div class="nx-hd"><span class="nx-id agent">3.3</span><div><div class="nx-k">single agent · vision runner · Opus 5.5, medium · modified: two questions, one table</div><h3 class="nx-t">Check, and write the readout</h3><div class="nx-loc" data-on="3.3a"></div></div><span class="nx-tpl">template <b>T6 · Single-agent judgment</b> (verifier)</span></div>
-    <p class="nx-sum">Looks at the overlay and answers the sibling's questions plus two: do the existing curb lines sit on the aerial's curbs, and does each driveway opening sit on an apron in the aerial (existing) or at the sawcut (proposed)? Then formats the frontage table with D14's numbers and both honesty labels. It quotes nothing it computed.</p>
+    <div class="nx-hd"><span class="nx-id agent">3.3</span><div><div class="nx-k">single agent · vision runner · Opus 5.5, medium · modified: one question, one table</div><h3 class="nx-t">Check, and write the readout</h3><div class="nx-loc" data-on="3.3a"></div></div><span class="nx-tpl">template <b>T6 · Single-agent judgment</b> (verifier)</span></div>
+    <p class="nx-sum">Looks at the overlay and answers the sibling's questions plus one: does the existing street curb run parallel to the lot's frontage edge at the offset the sheet gives, and does each derived driveway sit on that edge where the sheet draws it? Then formats the per-driveway table with D12's numbers and the honesty labels. It quotes nothing it computed.</p>
     <div class="nx-judge">
-      <div class="nx-card"><span class="nx-lab">reads</span><ul class="nx-list"><li>overlay.png</li><li>anchors.json · metrics</li><li>frontage/*.json</li></ul></div>
+      <div class="nx-card"><span class="nx-lab">reads</span><ul class="nx-list"><li>overlay.png</li><li>anchors.json · metrics</li></ul></div>
       <div class="nx-arrow">→</div>
-      <div class="nx-card mid"><span class="nx-lab">checks</span><ul class="nx-list"><li><b>Right parcel, right way round</b></li><li><b>Curbs on the aerial's curbs</b><span class="d">leaf-off 2021 vs a 2026 plan: disagreements named</span></li><li><b>Each opening on an apron, or at the sawcut</b></li></ul></div>
+      <div class="nx-card mid"><span class="nx-lab">checks</span><ul class="nx-list"><li><b>Right parcel, right way round</b></li><li><b>The street curb parallel to the frontage edge</b></li><li><b>Each driveway on that edge</b></li></ul></div>
       <div class="nx-arrow">→</div>
-      <div class="nx-card"><span class="nx-lab">writes</span><ul class="nx-list"><li><code>check.json</code></li><li><code>readout.md</code><span class="d">+ the frontage table</span></li></ul></div>
+      <div class="nx-card"><span class="nx-lab">writes</span><ul class="nx-list"><li><code>check.json</code></li><li><code>readout.md</code><span class="d">+ the per-driveway table</span></li></ul></div>
     </div>
   </section>
   <hr class="nx-div">
@@ -2077,9 +2030,9 @@ scratch/*.json       <span class="c">every raw answer and every error, arcgis_qu
   <!-- 4.1 -->
   <section class="nx-step" id="step-4-1a">
     <div class="nx-hd"><span class="nx-id gate">4.1</span><div><div class="nx-k">human gate · runner none · unchanged</div><h3 class="nx-t">Operator's ruling</h3><div class="nx-loc" data-on="4.1a"></div></div><span class="nx-tpl">template <b>T12 · Human gate</b></span></div>
-    <p class="nx-sum">Unchanged. Accept publishes the anchor and every row under it, context included; revise goes back to correspond.</p>
+    <p class="nx-sum">Unchanged. Accept publishes the anchor and every row under it; revise goes back to correspond.</p>
     <div class="nx-gate">
-      <div class="nx-card"><span class="nx-lab">shown · readout.md</span><ul class="nx-list"><li>the overlay</li><li>metrics and class</li><li>the frontage table</li></ul></div>
+      <div class="nx-card"><span class="nx-lab">shown · readout.md</span><ul class="nx-list"><li>the overlay</li><li>metrics and class</li><li>the per-driveway table</li></ul></div>
       <div class="nx-dia">decision<br>.json</div>
       <div class="nx-outs">
         <div class="nx-o go"><span class="v">accept</span><span class="w">5.1 publishes</span></div>
@@ -2093,7 +2046,7 @@ scratch/*.json       <span class="c">every raw answer and every error, arcgis_qu
   <!-- 5.1 -->
   <section class="nx-step" id="step-5-1a">
     <div class="nx-hd"><span class="nx-id">5.1</span><div><div class="nx-k">script · publish.py → publish.ts · frozen · zero tokens · modified</div><h3 class="nx-t">Publish</h3><div class="nx-loc" data-on="5.1a"></div></div><span class="nx-tpl">template <b>T13 · Publish</b></span></div>
-    <p class="nx-sum">Records the anchor, replaces its <code>geo</code> rows through the RPC with each figure's geometry by type, then writes the frontage context through the sibling RPC under the same anchor id, so the two go stale together and D14's join is one predicate.</p>
+    <p class="nx-sum">Records the anchor and replaces its <code>geo</code> rows through the RPC with each figure's geometry by type, its condition, station and measures in the payload. The RPC reads no SIR; it is keyed by the anchor alone.</p>
     <div class="ba" id="detail-publish">
       <div class="ba-col"><div class="ba-h">today</div>
         <div class="uc"><div class="ucdiag"><div class="dfg">
@@ -2102,33 +2055,238 @@ scratch/*.json       <span class="c">every raw answer and every error, arcgis_qu
           <div class="node created"><span class="op">rpc</span><span class="nt">sir_put_anchored_geo</span><span class="nf">p_figures[] · Polygon only<br>kind · posture · trace_method</span></div>
         </div></div></div>
       </div>
-      <div class="ba-col"><div class="ba-h">after</div>
+      <div class="ba-col"><div class="ba-h">after Phase 1</div>
         <div class="uc"><div class="ucdiag"><div class="dfg">
           <div class="node created"><span class="op">insert</span><span class="nt">cartographer_anchors</span><span class="nf">unchanged</span></div>
           <div class="edge"><span class="el">①</span><span class="ar">→</span></div>
-          <div class="node created"><span class="op">rpc</span><span class="nt">sir_put_anchored_geo</span><span class="nf">+ LineString branch<br>+ properties.measures</span></div>
-          <div class="edge"><span class="el">② NEW</span><span class="ar">→</span></div>
-          <div class="node created"><span class="op">rpc</span><span class="nt">cartographer_put_context_geo</span><span class="nf">openings · inlets · ROW<br>method city_gis · posture existing</span></div>
+          <div class="node created"><span class="op">rpc</span><span class="nt">sir_put_anchored_geo</span><span class="nf">+ LineString branch<br>+ condition, station_ft, measures</span></div>
         </div></div></div>
       </div>
     </div>
-    <div class="sys-legend"><span><i class="new"></i>the new call</span></div>
+    <div class="sys-legend"><span><i class="chg"></i>the branch this spec adds</span></div>
     <div class="nx-refuse">refuses, no retry: <code>not_accepted</code><code>not_a_line_after_validation</code><code>not_a_polygon_after_validation</code></div>
   </section>
+</section>
+
+<!-- ============================================================ PHASE 2 -->
+<section class="panel" id="phase2">
+  <h2>Phase 2: adjacent</h2>
+  <p class="lede">Blocked by Phase 1's acceptance. One script step joins the anchor run and fetches the 300 ft context of every frontage from the jurisdiction's layers, found by role in surveyor's registry; publish writes the openings, inlets and right-of-way under the same anchor id as Phase 1's rows, so spacing is one join. Austin is tagged by hand; the prospector change that tags every trained jurisdiction is its own spec (§3, D15–D22).</p>
+
+  <h3 class="claim" data-view-of="p2" data-in="today">After Phase 1 the anchor run knows the parcel and the sheet, and nothing past the lot line <span class="src">§3</span></h3>
+  <h3 class="claim" data-view-of="p2" data-in="after" hidden>After Phase 2 the city's layers reach geo under the same anchor id, found by role, never by name <span class="src">D15</span></h3>
+  <div class="sys-legend"><span><i></i>exists after Phase 1</span><span><i class="chg"></i>modified</span><span><i class="new"></i>new</span><span><i class="gap"></i>the gap</span><span>dashed border = outside the runbooks · cylinder = where state is kept</span></div>
+  <div class="sysmap lanes delta" id="p2" data-view="today" style="grid-template-columns:.8fr repeat(4,1fr)">
+    <div class="colh" style="grid-area:1/2">sources</div>
+    <div class="colh" style="grid-area:1/3">the runbooks</div>
+    <div class="colh" style="grid-area:1/4">Supabase · writes</div>
+    <div class="colh" style="grid-area:1/5">surveyor</div>
+
+    <div class="lane" style="grid-area:2/1/3/-1"></div>
+    <div class="lane" style="grid-area:3/1/4/-1"></div>
+
+    <div class="sys trig" id="p2-t1" style="grid-area:2/1"><span class="dot"></span><span class="t">Operator anchors the file</span><span class="d">anchor-geometry, no SIR</span></div>
+    <div class="sys trig" id="p2-t2" style="grid-area:3/1"><span class="dot"></span><span class="t">Prospector trains a jurisdiction</span><span class="d">sources runbook</span></div>
+
+    <div class="sys gap" id="p2-gap" data-in="today" style="grid-area:2/2">nothing reaches past the lot line</div>
+    <div class="sys ext new" id="p2-austin" data-in="after" style="grid-area:2/2"><a class="ref" href="#detail-frontage">D16 · D17 · D18 ↓</a><span class="k">external · keyless</span><span class="t">Austin layers + StratMap ortho</span><span class="d">streets, paved areas, inlets, ROW, 6 in pixels</span></div>
+    <div class="sys" id="p2-anchor-t" data-in="today" style="grid-area:2/3"><span class="k">8 steps · ring fit</span><span class="t">anchor-geometry</span><span class="d">lines carried</span></div>
+    <div class="sys chg" id="p2-anchor-a" data-in="after" style="grid-area:2/3"><a class="ref" href="#detail-anchor2-steps">D16 ↓</a><span class="k">9 steps · ring fit</span><span class="t">anchor-geometry</span><span class="d">+ 1.3-frontage; the aerial under the overlay</span></div>
+    <div class="sys store ext" id="p2-geo-t" data-in="today" style="grid-area:2/4"><span class="k">table</span><span class="t">geo</span><span class="d">anchored rows only</span></div>
+    <div class="sys store ext chg" id="p2-geo-a" data-in="after" style="grid-area:2/4"><a class="ref" href="#detail-context">D19 · D20 ↓</a><span class="k">table</span><span class="t">geo</span><span class="d">+ city_gis rows; one join</span></div>
+    <div class="sys store ext" id="p2-reg-t" data-in="today" style="grid-area:2/5"><span class="k">registry</span><span class="t">layer-identity.json</span><span class="d">roles: parcels, legal_description, locator</span></div>
+    <div class="sys store ext chg" id="p2-reg-a" data-in="after" style="grid-area:2/5"><a class="ref" href="#detail-roles">D15 ↓</a><span class="k">registry</span><span class="t">layer-identity.json</span><span class="d">+ 7 roles; Austin tagged by hand</span></div>
+    <div class="sys gap" id="p2-prosp" style="grid-area:3/5">no role tags written by prospector · its own spec</div>
+
+    <a class="sys-edge gap" data-in="today" data-from="p2-gap" data-to="p2-anchor-t"></a>
+    <a class="sys-edge new" data-in="after" data-from="p2-austin" data-to="p2-anchor-a">300 ft sweep</a>
+    <a class="sys-edge" data-in="today" data-from="p2-anchor-t" data-to="p2-geo-t">anchored rows</a>
+    <a class="sys-edge chg" data-in="after" data-from="p2-anchor-a" data-to="p2-geo-a">+ context rows</a>
+    <a class="sys-edge" data-in="today" data-from="p2-reg-t" data-to="p2-geo-t">parcels role</a>
+    <a class="sys-edge chg" data-in="after" data-from="p2-reg-a" data-to="p2-geo-a">by role</a>
+    <a class="sys-edge gap" data-from="p2-prosp" data-to="p2-reg-t"></a>
+    <a class="sys-edge gap" data-from="p2-prosp" data-to="p2-reg-a"></a>
+  </div>
+  <div class="sys-refs">
+    <a class="refrow chg" data-ref="D15"><span class="chip">D15</span><span class="txt">the frontage layers are found through surveyor's layer-identity registry, by role; Austin tagged by hand</span></a>
+    <a class="refrow new" data-ref="D16"><span class="chip">D16</span><span class="txt">a new anchor step, 1.3-frontage, fetches the 300 ft context of every frontage</span></a>
+    <a class="refrow new" data-ref="D17"><span class="chip">D17</span><span class="txt">an opening is the boundary where a paved area meets the paved road; the window is 300 ft, the City's own number</span></a>
+    <a class="refrow new" data-ref="D18"><span class="chip">D18</span><span class="txt">the Street Level is looked up, never defaulted</span></a>
+    <a class="refrow chg" data-ref="D19"><span class="chip">D19</span><span class="txt">publish writes the context rows through a second RPC keyed by the anchor alone</span></a>
+    <a class="refrow chg" data-ref="D20"><span class="chip">D20</span><span class="txt">the adjacency payoff is the join on anchor_id, with two honesty labels</span></a>
+  </div>
+  <p class="claim"><b>Reading:</b> the anchor fetch already finds the parcels layer through the same registry (winston#309 D6); Phase 2 adds roles to it, not a second registry. The prospector gap stays red in both views because closing it is D22's spec, not this one.</p>
+
+  <h3 class="claim" id="detail-anchor2">A fetch of the city's layers goes in before correspond, and the solve stays exactly as it is <span class="src">D16</span></h3>
+  <div class="bleed"><div class="sysmap rgraph" id="rg-anchor-p2" style="grid-template-columns:repeat(9,minmax(0,1fr));column-gap:24px">
+    <div class="sys" id="c11" style="grid-area:1/1"><span class="k">gate · input</span><span class="t">1.1 inputs</span><span class="d">unchanged</span></div>
+    <div class="sys" id="c12" style="grid-area:1/2"><span class="k">script</span><span class="t">1.2 fetch</span><span class="d">as after Phase 1</span></div>
+    <div class="sys new" id="c13" style="grid-area:1/3"><a class="ref" href="#detail-frontage">D16 ↓</a><span class="k">script · zero tokens</span><span class="t">1.3 frontage</span><span class="d">streets, openings, inlets, ROW, the ortho</span></div>
+    <div class="sys" id="c21" style="grid-area:1/4"><span class="k">agent</span><span class="t">2.1 correspond</span><span class="d">as after Phase 1</span></div>
+    <div class="sys" id="c31" style="grid-area:1/5"><span class="k">script</span><span class="t">3.1 solve</span><span class="d">unchanged</span></div>
+    <div class="sys chg" id="c32" style="grid-area:1/6"><a class="ref" href="#detail-anchor2-steps">D21 ↓</a><span class="k">script</span><span class="t">3.2 render</span><span class="d">over the ortho; context rows outlined</span></div>
+    <div class="sys chg" id="c33" style="grid-area:1/7"><a class="ref" href="#detail-anchor2-steps">D21 ↓</a><span class="k">agent</span><span class="t">3.3 check</span><span class="d">+ two aerial questions; the frontage table</span></div>
+    <div class="sys gate" id="c41" style="grid-area:1/8"><span class="k">human gate</span><span class="t">4.1 hitl</span><span class="d">unchanged</span></div>
+    <div class="sys chg" id="c51" style="grid-area:1/9"><a class="ref" href="#detail-context">D19 ↓</a><span class="k">script · frozen</span><span class="t">5.1 publish</span><span class="d">+ context rows</span></div>
+    <div class="sys exit" id="cstop" style="grid-area:2/8"><span class="t">SKIPPED.md</span><span class="d">reject · stop</span></div>
+    <div class="sys exit" id="cnone" style="grid-area:2/3"><span class="t">frontage/none.json</span><span class="d">no roles tagged for this jurisdiction; the run continues</span></div>
+    <a class="sys-edge happy" data-from="c11" data-to="c12"></a>
+    <a class="sys-edge happy" data-from="c12" data-to="c13"></a>
+    <a class="sys-edge happy" data-from="c13" data-to="c21"></a>
+    <a class="sys-edge happy" data-from="c21" data-to="c31"></a>
+    <a class="sys-edge happy" data-from="c31" data-to="c32"></a>
+    <a class="sys-edge happy" data-from="c32" data-to="c33"></a>
+    <a class="sys-edge happy" data-from="c33" data-to="c41"></a>
+    <a class="sys-edge happy" data-from="c41" data-to="c51">accept</a>
+    <a class="sys-edge exit" data-from="c41" data-to="cstop"></a>
+    <a class="sys-edge exit" data-from="c13" data-to="cnone"></a>
+    <a class="sys-edge loop" data-from="c41" data-to="c21">revise</a>
+  </div></div>
+  <div class="sys-refs">
+    <a class="refrow chg" data-ref="D21"><span class="chip">D21</span><span class="txt">the anchor run's render, check and readout gain the frontage</span></a>
+  </div>
+  <p class="claim"><b>Claim (D16):</b> the step needs only the parcel ring and the target SRID, which fetch writes on either path; a layer that fails is an error in the file, a layer that answers nothing is recorded as nothing, and a jurisdiction with no tagged roles writes a none file and the run goes on.</p>
+
+  <h3 class="claim" id="detail-anchor2-steps">Three steps change in Phase 2, and one is new <span class="src">D21</span></h3>
+  <div class="ba">
+    <div class="ba-col"><div class="ba-h">after Phase 1</div>
+      <ol class="steps">
+        <li class="st" data-n="1.2"><span class="sk">script</span><span class="sn">fetch</span><span class="so">frames as geometry + offset; the county ring by the parcels role</span></li>
+        <li class="st" data-n="3.2"><span class="sk">script</span><span class="sn">render</span><span class="so">county rings, figures on top, lines by posture</span></li>
+        <li class="st" data-n="3.3"><span class="sk">agent</span><span class="sn">check</span><span class="so">the on-site questions; the per-driveway table</span></li>
+        <li class="st" data-n="5.1"><span class="sk">script</span><span class="sn">publish</span><span class="so">sir_put_anchored_geo, by geometry type</span></li>
+      </ol>
+    </div>
+    <div class="ba-col"><div class="ba-h">after Phase 2</div>
+      <ol class="steps">
+        <li class="st" data-n="1.2"><span class="sk">script</span><span class="sn">fetch</span><span class="so">unchanged</span></li>
+        <li class="st new" data-n="1.3"><span class="sk">script</span><span class="sn">frontage</span><span class="so">per frontage: street, class, Level or null; openings from paved ∩ road within 300 ft, both sides; inlets; ROW; the 6 in ortho tile with its world file</span></li>
+        <li class="st chg" data-n="3.2"><span class="sk">script</span><span class="sn">render</span><span class="so">the tile underneath; context rows outlined</span></li>
+        <li class="st chg" data-n="3.3"><span class="sk">agent</span><span class="sn">check</span><span class="so">+ do the existing curbs sit on the aerial's curbs; does each opening sit on an apron; told that 2021 leaf-off imagery and a 2026 plan will disagree where the site changed; + the frontage table</span></li>
+        <li class="st chg" data-n="5.1"><span class="sk">script</span><span class="sn">publish</span><span class="so">then cartographer_put_context_geo(frontage/*.json) under the same anchor_id</span></li>
+      </ol>
+    </div>
+  </div>
+  <div class="sys-legend"><span><i class="chg"></i>modified step</span><span><i class="new"></i>new step</span></div>
+  <p class="claim"><b>Claim (D21):</b> the aerial is the picture a checker sees under the overlay, never a source of coordinates in Phase 2; reading openings off it by vision is Q7.</p>
+
+  <h3 class="claim" id="detail-roles">The layers are found by role in surveyor's registry, the one the anchor fetch already reads for parcels <span class="src">D15</span></h3>
+  <div class="ba">
+    <div class="ba-col"><div class="ba-h">today · LayerRole</div>
+      <div class="spectable-scroll"><table class="spectable">
+        <thead><tr><th>role</th><th>fields</th><th>tagged</th></tr></thead>
+        <tbody>
+          <tr><td><code>parcels</code></td><td>parcel_id</td><td>coa-gis, travis-county-gis</td></tr>
+          <tr><td><code>legal_description</code></td><td>legal_description, parcel_id</td><td>coa-gis (OmniParcel)</td></tr>
+          <tr><td><code>locator</code></td><td>—</td><td>—</td></tr>
+        </tbody>
+      </table></div>
+    </div>
+    <div class="ba-col"><div class="ba-h">after Phase 2</div>
+      <div class="spectable-scroll"><table class="spectable">
+        <thead><tr><th>role</th><th>fields</th><th>Austin layer</th></tr></thead>
+        <tbody>
+          <tr><td><code>streets</code> <span class="w">NEW</span></td><td>name, class, speed</td><td>TRANSPORTATION_street_segment</td></tr>
+          <tr><td><code>street_levels</code> <span class="w">NEW</span></td><td>name, level</td><td>TRANSPORTATION_asmp_street_network</td></tr>
+          <tr><td><code>paved_areas</code> <span class="w">NEW</span></td><td>feature, origin, source</td><td>impervious_cover_2023</td></tr>
+          <tr><td><code>sidewalk_inventory</code> <span class="w">NEW</span></td><td>type</td><td>TRANSPORTATION_sidewalks</td></tr>
+          <tr><td><code>curb_inlets</code> <span class="w">NEW</span></td><td>—</td><td>UTILITIESCOMMUNICATION_CurbInlet</td></tr>
+          <tr><td><code>right_of_way</code> <span class="w">NEW</span></td><td>document</td><td>PLANNINGCADASTRE_right_of_way</td></tr>
+          <tr><td><code>orthoimagery</code> <span class="w">NEW</span></td><td>ImageServer URL, pixel size</td><td>StratMap21 CapArea, 6 in</td></tr>
+        </tbody>
+      </table></div>
+    </div>
+  </div>
+  <div class="sys-legend"><span><i class="new"></i>new role</span></div>
+  <p class="claim"><b>Claim (D15, D22):</b> only two of 128 surveyor modules carry any role today, not even <code>parcels</code>, and prospector's sources runbooks mention none; tagging every trained jurisdiction, and backfilling, is the follow-up spec that also unblocks SIR-free anchoring outside Austin.</p>
+
+  <h3 class="claim" id="detail-frontage">Off the sheet, an opening is a paved area's boundary against the paved road, and the orthophoto is the check <span class="src">D17</span></h3>
+  <div class="dflow">
+    <div class="dq"><span class="q">The jurisdiction's module carries the frontage roles?</span><span class="yes">no →</span><span class="out fail">frontage/none.json with why · the run continues (T8)</span></div>
+    <div class="dno">yes ↓</div>
+    <div class="dq"><span class="q">A streets segment runs within 60 ft of a lot edge and parallel to it?</span><span class="yes">yes →</span><span class="out">a frontage: name, class, speed; the ASMP Level within 60 ft, else null with level_source: absent from ASMP (D18)</span></div>
+    <div class="dno">per frontage ↓</div>
+    <div class="dq"><span class="q">A paved_areas polygon (Pavement, Paved Parking, or origin Driveways) comes within 3 ft of the Paved Road polygon's boundary, for ≥ 8 ft?</span><span class="yes">yes →</span><span class="out">an opening: width, station, side, on_subject, the abutting parcel, {source_layer, object_id, source_vintage}</span></div>
+    <div class="dno">and ↓</div>
+    <div class="dq"><span class="q">sidewalk_inventory segments of type DRIVEWAY; curb_inlets within 300 ft; a right_of_way polygon touching the frontage?</span><span class="yes">yes →</span><span class="out">the cross-check list, the inlets as points, the right-of-way where the layer has one</span></div>
+    <div class="dno">then ↓</div>
+    <div class="dq end"><span class="q">exportImage · bbox the frontage ± 300 ft along, 150 across · imageSR = the target SRID</span><span class="yes"></span><span class="out warn">a 6 in georeferenced tile with its world file: under the overlay for 3.2, in front of the checker for 3.3; not a source of coordinates (Q7)</span></div>
+  </div>
+  <p class="claim"><b>Claim (§1.5, D18):</b> within 300 ft of the site Austin's 2023 layer holds 0 <code>Driveways</code>-class polygons, 16 <code>Pavement</code>, 3 <code>Paved Parking</code> and 2 <code>Paved Road</code>; Brezza Lane is absent from the ASMP (which carries 29,256 Level 1 segments) and classed <code>A45 City Collector</code> by the street layer, so its Level is null and every Table 7-5 row is reported as unresolved.</p>
+
+  <h3 class="claim" id="detail-context">One more RPC writes the context rows under the anchor's id, and they go stale with the anchored rows <span class="src">D19</span></h3>
+  <div class="ba">
+    <div class="ba-col"><div class="ba-h">after Phase 1</div>
+      <div class="uc"><div class="ucdiag"><div class="dfg">
+        <div class="node created"><span class="op">insert</span><span class="nt">cartographer_anchors</span><span class="nf">one row per frame</span></div>
+        <div class="edge"><span class="el">①</span><span class="ar">→</span></div>
+        <div class="node created"><span class="op">rpc</span><span class="nt">sir_put_anchored_geo</span><span class="nf">polygons and lines<br>method anchored</span></div>
+      </div></div></div>
+    </div>
+    <div class="ba-col"><div class="ba-h">after Phase 2</div>
+      <div class="uc"><div class="ucdiag"><div class="dfg">
+        <div class="node created"><span class="op">insert</span><span class="nt">cartographer_anchors</span><span class="nf">unchanged</span></div>
+        <div class="edge"><span class="el">①</span><span class="ar">→</span></div>
+        <div class="node created"><span class="op">rpc</span><span class="nt">sir_put_anchored_geo</span><span class="nf">unchanged</span></div>
+        <div class="edge"><span class="el">② NEW</span><span class="ar">→</span></div>
+        <div class="node created"><span class="op">rpc</span><span class="nt">cartographer_put_context_geo</span><span class="nf">openings · inlets · ROW<br>method city_gis · posture existing<br>no SIR, project or submission read</span></div>
+      </div></div></div>
+    </div>
+  </div>
+  <div class="sys-legend"><span><i class="new"></i>the new call</span></div>
+  <p class="claim"><b>Claim (D19):</b> two short functions with one honest signature each beat one with a mode flag: the anchored RPC stamps <code>method: anchored</code> and the anchor's accuracy class on every row, and a context row has neither.</p>
+
+  <h3>The adjacency payoff, as a join on one anchor_id</h3>
+  <div class="prompt"><span class="ph">D20 · spacing to every opening on the same frontage, inside edge to inside edge (TCM Table 7-5)</span>select d.label, o.properties->>'street' as street, o.properties->>'street_level' as level, o.properties->>'level_source' as level_source,
+       round(st_distance(d.geom_local, o.geom_local)::numeric, 1) as spacing_ft,
+       o.properties->>'accuracy_class' as theirs, d.properties->>'trace_method' as ours
+from geo d join geo o on o.properties->>'anchor_id' = d.properties->>'anchor_id'
+where d.kind = 'driveway' and d.properties->>'condition' = 'resulting'
+  and o.kind = 'driveway_opening' and o.properties->>'side' = 'same' and o.properties->>'on_subject' = 'false'
+order by spacing_ft;
+
+-- plus: the nearest curb inlet (10 ft, 7.6.2(C)); the count per frontage (Table 7-4);
+-- the opposing offset along the street centreline, throat edge to throat edge (80 ft, 7.6.3); the corner clearance.
+-- "33.2 ft at the right-of-way line, vector, ring fit" vs "a 2023 digitized opening, about ±2 ft".</div>
+  <p class="claim"><b>Claim (D20):</b> the site's own driveway appears from both sources — the sheet's row at 0.01 ft and the city's opening with on_subject true at ±2 ft — and their agreement is Phase 2's first check.</p>
+
+  <h3 class="claim">Phase 2 ships as four PRs after Phase 1's acceptance: the roles and the RPC in either order, then the scripts, then the step <span class="src">§6.2</span></h3>
+  <div class="plan" style="--cols:4">
+    <div class="plan-h"><span></span><span>P4 · the roles</span><span>P5 · the context RPC</span><span>P6 · the scripts</span><span>P7 · the step</span></div>
+    <div class="plan-row"><span class="plan-who">surveyor</span>
+      <div class="plan-cell"><div class="pc key"><span class="pid">P4 · D15 · S7</span><b>LayerRole + 7 roles; Austin tagged</b><span class="pd"><code>coa-gis/layer-identity.json</code>, <code>LAYER-IDENTITY.md</code></span><span class="pa">after §7.1 by policy; nothing consumes it before P6</span></div></div>
+      <div class="plan-cell"></div><div class="plan-cell"></div><div class="plan-cell"></div>
+    </div>
+    <div class="plan-row"><span class="plan-who">cityhall-new</span>
+      <div class="plan-cell"></div>
+      <div class="plan-cell"><div class="pc"><span class="pid">P5 · D19 · S9</span><b>cartographer_put_context_geo</b><span class="pd">stale together with the anchored rows</span><span class="pa">after §7.1 by policy</span></div></div>
+      <div class="plan-cell"></div><div class="plan-cell"></div>
+    </div>
+    <div class="plan-row"><span class="plan-who">cartographer</span>
+      <div class="plan-cell"></div><div class="plan-cell"></div>
+      <div class="plan-cell"><div class="pc"><span class="pid">P6 · D16–D18 D21 · S8 S9</span><b>frontage.ts; render over the tile; the context publish</b><span class="pd">openings from paved ∩ road; Level or null</span><span class="pa">after P4, P5 and P3</span></div></div>
+      <div class="plan-cell"></div>
+    </div>
+    <div class="plan-row"><span class="plan-who">bureau</span>
+      <div class="plan-cell"></div><div class="plan-cell"></div><div class="plan-cell"></div>
+      <div class="plan-cell"><div class="pc risk"><span class="pid">P7 · D16 D21 · S9</span><b>1.3-frontage and its contract; the check prompts; the readout table</b><span class="pd">seven network calls more per Austin anchor run</span><span class="pa">after P6; a layer outage is an error in the file, never a failed run</span></div></div>
+    </div>
+  </div>
+  <p class="claim"><b>Claim (§6.2):</b> the prospector generalisation (D22) blocks nothing here; Phase 2 works for Austin with the roles tagged by hand.</p>
 </section>
 
 <!-- ============================================================ WHAT'S STORED -->
 <section class="panel" id="stored">
   <h2>What's stored</h2>
-  <p class="lede">Two tables change, one function gains a branch and one function is new; no table is new. A figure gains a geometry column beside its polygon and a third reading method; evidence gains a role; <code>geo</code> gains row kinds and a method, not columns (D9–D11, D13).</p>
+  <p class="lede">Phase 1 changes two tables and one function; no table is new. A figure gains a geometry column beside its polygon and a third reading method; evidence gains a role; <code>geo</code> gains row kinds, not columns. Phase 2 adds one function and one method value (D8–D10, D19).</p>
 
-  <h3 class="claim" id="detail-stored">A line figure is one row with its geometry where a polygon keeps both; a derived figure's trace names its parents <span class="src">D10</span></h3>
+  <h3 class="claim" id="detail-stored">A line figure is one row with its geometry where a polygon keeps both; a derived figure's trace names its parents and its condition <span class="src">D9</span></h3>
   <div class="erd linked" style="grid-template-columns:repeat(3,minmax(0,1fr))">
     <div class="ent exist" id="ent-files" style="grid-area:1/1">
       <div class="eh"><span class="en">cartographer_files</span><span class="stereo">EXISTS</span></div>
       <div class="row"><span class="gut"></span><span class="b b-pk">PK</span><span class="nm">id</span><span class="ty">uuid</span></div>
       <div class="row"><span class="gut"></span><span class="nm">metadata</span><span class="ty">jsonb · lastGeometryRun, figureCount</span></div>
-      <div class="note">White Water: cc2e3a53, run2 published, 2 figures</div>
+      <div class="note">White Water: cc2e3a53, run2 published, 2 figures, no project, no SIR</div>
     </div>
     <div class="ent changed" id="ent-geoms" style="grid-area:1/2">
       <div class="eh"><span class="en">cartographer_geometries</span><span class="stereo">MODIFIED</span></div>
@@ -2139,7 +2297,7 @@ scratch/*.json       <span class="c">every raw answer and every error, arcgis_qu
       <div class="row mod"><span class="gut">~</span><span class="nm">polygon</span><span class="ty">jsonb · nullable · was: NOT NULL · CHECK set ⇔ geometry is a polygon</span></div>
       <div class="row add"><span class="gut">+</span><span class="b b-new">NEW</span><span class="nm">length_ft</span><span class="ty">double precision · a line's length</span></div>
       <div class="row mod"><span class="gut">~</span><span class="nm">reading_method</span><span class="ty">CHECK mete | traced | derived · was: 2 values</span></div>
-      <div class="row"><span class="gut"></span><span class="nm">trace</span><span class="ty">jsonb · a line: chains, arcs, excluded; derived: rule, from, frontage, measures, edges</span></div>
+      <div class="row"><span class="gut"></span><span class="nm">trace</span><span class="ty">jsonb · a line: chains, arcs, excluded; derived: rule, condition, from, frontage, measures, edges</span></div>
       <div class="row"><span class="gut"></span><span class="nm">posture</span><span class="ty">existing written for the first time</span></div>
       <div class="row"><span class="gut"></span><span class="nm">closed</span><span class="ty">false on a chain set</span></div>
       <div class="row mod"><span class="gut">~</span><span class="nm">has_approximated_curves</span><span class="ty">true when trace.arcs is non-empty · was: always false</span></div>
@@ -2153,25 +2311,25 @@ scratch/*.json       <span class="c">every raw answer and every error, arcgis_qu
       <div class="row"><span class="gut"></span><span class="b b-fk">FK</span><span class="nm">crop_id</span><span class="ty">→ crops · the set overlay, the apron overlay</span></div>
       <div class="row mod"><span class="gut">~</span><span class="nm">role</span><span class="ty">CHECK + derivation · was: 12 values</span></div>
       <div class="row"><span class="gut"></span><span class="nm">verbatim</span><span class="ty">the layer, or the printed label</span></div>
-      <div class="row"><span class="gut"></span><span class="nm">value</span><span class="ty">{chains, lengthPt, arcs} · {rule, from, measures}</span></div>
+      <div class="row"><span class="gut"></span><span class="nm">value</span><span class="ty">{chains, lengthPt, arcs} · {rule, condition, from, measures}</span></div>
     </div>
     <div class="ent exist" id="ent-anchors" style="grid-area:1/3">
       <div class="eh"><span class="en">cartographer_anchors</span><span class="stereo">EXISTS</span></div>
       <div class="row"><span class="gut"></span><span class="b b-pk">PK</span><span class="nm">id</span><span class="ty">uuid</span></div>
       <div class="row"><span class="gut"></span><span class="nm">file_id</span><span class="ty">uuid</span></div>
-      <div class="row"><span class="gut"></span><span class="nm">run_slug</span><span class="ty">text</span></div>
+      <div class="row"><span class="gut"></span><span class="nm">sir_id</span><span class="ty">uuid · nullable · null on White Water</span></div>
       <div class="row"><span class="gut"></span><span class="nm">frame_key</span><span class="ty">text</span></div>
       <div class="row"><span class="gut"></span><span class="nm">status</span><span class="ty">53d65a90 accepted → stale on the next publish</span></div>
     </div>
     <div class="ent changed" id="ent-geo" style="grid-area:2/3">
       <div class="eh"><span class="en">geo</span><span class="stereo">MODIFIED · row kinds</span></div>
       <div class="row"><span class="gut"></span><span class="b b-pk">PK</span><span class="nm">id</span><span class="ty">uuid</span></div>
-      <div class="row"><span class="gut"></span><span class="nm">file_id</span><span class="ty">uuid · nullable</span></div>
-      <div class="row mod"><span class="gut">~</span><span class="nm">kind</span><span class="ty">text · + curb, driveway, driveway_opening, curb_inlet</span></div>
-      <div class="row mod"><span class="gut">~</span><span class="nm">method</span><span class="ty">text · + city_gis · was: anchored, county_api, estimated</span></div>
+      <div class="row"><span class="gut"></span><span class="nm">sir_id</span><span class="ty">uuid · nullable · null on every row this spec writes</span></div>
+      <div class="row mod"><span class="gut">~</span><span class="nm">kind</span><span class="ty">text · + curb, driveway (Phase 1); + driveway_opening, curb_inlet (Phase 2)</span></div>
+      <div class="row mod"><span class="gut">~</span><span class="nm">method</span><span class="ty">text · + city_gis (Phase 2) · was: anchored, county_api, estimated</span></div>
       <div class="row mod"><span class="gut">~</span><span class="nm">geom_local</span><span class="ty">geometry · + ST_LineString rows · no DDL</span></div>
       <div class="row"><span class="gut"></span><span class="nm">posture</span><span class="ty">existing written by both RPCs</span></div>
-      <div class="row mod"><span class="gut">~</span><span class="nm">properties</span><span class="ty">jsonb · + measures; + source_layer, object_id, source_vintage, accuracy_class: digitized, street, street_level, level_source, side, on_subject</span></div>
+      <div class="row mod"><span class="gut">~</span><span class="nm">properties</span><span class="ty">jsonb · + condition, station_ft, measures (Phase 1); + source_layer, object_id, source_vintage, accuracy_class: digitized, street, street_class, street_level, level_source, side, on_subject (Phase 2)</span></div>
       <div class="note">anchored rows and context rows share an anchor_id and go stale together</div>
     </div>
     <a class="sys-edge" data-from="ent-files" data-to="ent-geoms">1 → many</a>
@@ -2179,7 +2337,7 @@ scratch/*.json       <span class="c">every raw answer and every error, arcgis_qu
     <a class="sys-edge" data-from="ent-anchors" data-to="ent-geo">1 → many · by anchor_id</a>
   </div>
   <div class="sys-legend"><span><i class="chg"></i>modified table or column</span><span><i class="new"></i>new column</span></div>
-  <p class="claim"><b>Claim (D10):</b> the expand is the whole of this spec's schema risk: <code>polygon</code> keeps being written for every polygon figure, so nothing that reads it breaks before it is migrated, and dropping it is Q12's spec.</p>
+  <p class="claim"><b>Claim (D9):</b> the expand is the whole of Phase 1's schema risk: <code>polygon</code> keeps being written for every polygon figure, so nothing that reads it breaks before it is migrated, and dropping it is Q12's spec.</p>
 
   <h3>The raw artifact becomes a three-way union</h3>
   <div class="spectable-scroll"><table class="spectable">
@@ -2191,51 +2349,54 @@ scratch/*.json       <span class="c">every raw answer and every error, arcgis_qu
       <tr><td><span class="sn">4</span> BREZZA LANE driveway 1 · one row per condition (existing, resulting)</td><td><code>derived</code></td><td>no pathPt; trace {rule: driveway/1, condition, from: [3, 3′], frontage, stationFt, measures, edges[{retained}], labels}</td><td>assemble.ts, from the two curb figures and the lot</td></tr>
     </tbody>
   </table></div>
-  <p class="claim">The union refuses a derived figure with <code>pathPt</code>, a traced polyline with <code>courses</code>, and a <code>curb_existing</code> figure with posture <code>proposed</code> (S4).</p>
+  <p class="claim">The union refuses a derived figure with <code>pathPt</code>, a derived figure without <code>condition</code>, a traced polyline with <code>courses</code>, and a <code>curb_existing</code> figure with posture <code>proposed</code> (S4).</p>
 </section>
 
 <!-- ============================================================ ROLLOUT -->
 <section class="panel" id="rollout">
   <h2>Rollout</h2>
-  <p class="lede">Seven seams, five PRs plus a one-line follow-up, one acceptance run on the file whose lot and building are already anchored. The car-wash plat and the building-only fixtures are the guards at every phase (§4–§6).</p>
+  <p class="lede">Phase 1: six seams, four PRs plus a one-line follow-up, one acceptance run on the file whose lot and building are already anchored. Phase 2: three seams, four PRs, a second anchor run on the same file. The car-wash plat and the building-only fixtures are the guards at every step (§5–§7).</p>
 
   <h3>Testing seams</h3>
   <div class="spectable-scroll"><table class="spectable">
     <thead><tr><th>Seam</th><th>Proves</th><th>Fixture</th><th>Runs</th></tr></thead>
     <tbody>
-      <tr><td><span class="sn">S1</span> <code>trace.ts</code> CLI on a polyline · extended</td><td>D1, D3, D4</td><td>sheet 12 → FOC 170 chains / 894 ft, BOC 43; 44 arcs on the chains; 17 pairs at 0.50 ± 0.02; sheet 7 → demolish chains 86 / 85; --exclude; 1700 S Lamar sheet 15 → rung 2 sets; 2008 San Antonio sheet 10 → the entrance's curbs; --seed on a line → refused; building fixtures byte-identical</td><td>bun test, CI</td></tr>
+      <tr><td><span class="sn">S1</span> <code>trace.ts</code> CLI on a polyline · extended</td><td>D1, D3, D4</td><td>sheet 12 → FOC 170 chains / 894 ft, BOC 43; 44 arcs; 17 pairs at 0.50 ± 0.02; layers withheld → pairs found, edge unknown; sheet 7 → demolish chains 86 / 85; --exclude; 1700 S Lamar sheet 15 → rung 2 sets; 2008 San Antonio sheet 10 → the entrance's curbs; --seed on a line → refused; building fixtures byte-identical</td><td>bun test, CI</td></tr>
       <tr><td><span class="sn">S2</span> <code>pdf_paths.py</code> arcs + <code>groupArcs()</code> · new</td><td>D2</td><td>a κ = 0.5523 circle Bézier → R within 0.03 %; an S-curve → chords only; sheet 12 → 19 centres, 20.0 / 28.0 / 25.0 / 15.0 / 10.0 / 5.0 within 0.02; the chord output unchanged</td><td>bun test + pytest, CI</td></tr>
-      <tr><td><span class="sn">S3</span> <code>findFrontages()</code>, <code>deriveDriveways()</code> · new, pure</td><td>D6, D7</td><td>White Water → 3 candidates; existing and resulting conditions both one opening at 77.8 / 111.0, 33.2 ft, both edges retained, throat depth differing; a synthetic expansion → 24.0 then 34.0 ft; a synthetic 24 ft driveway with R15 returns → 24.0 / 24.0 / 15.0 / 90.0; at 75° → 75.0; a flare → angle, no radius; crossings 70 ft apart → unpaired</td><td>bun test, CI</td></tr>
-      <tr><td><span class="sn">S4</span> the extract scripts on a run dir · extended</td><td>D9, D10</td><td>lot + two curb sets + readings → MultiLineString at the origin, 894 ± 2, arcs; the derived driveway; place by parents; publish --dry-run rows; the union's three refusals</td><td>bun test, CI</td></tr>
-      <tr><td><span class="sn">S5</span> the extract runbook · existing</td><td>D1–D8, D15</td><td>(a) the car-wash plat byte-identical; (b) White Water run3: six figures, the assemble.log lines, the readout section, anchor 53d65a90 stale</td><td>locally, conductor</td></tr>
-      <tr><td><span class="sn">S6</span> the RPCs and migration · existing suite</td><td>D9, D10, D11, D13</td><td>the backfill; the CHECKs' three refusals; a LineString accepted, a Point refused, yesterday's payload unchanged; context rows under the anchor id, stale together</td><td>cityhall-new tests/db, local stack</td></tr>
-      <tr><td><span class="sn">S7</span> the anchor runbook · existing</td><td>D12–D14</td><td>White Water anchor-3: Brezza Lane Level 1 default, openings from paved ∩ road, 3 inlets, 1 ROW polygon, the tile; carried lines; metrics equal to anchor 2's; the D14 numbers within 3 ft of a hand measurement on the 2023 imagery</td><td>locally, conductor</td></tr>
+      <tr><td><span class="sn">S3</span> <code>findFrontages()</code>, <code>deriveDriveways()</code> · new, pure</td><td>D5, D6</td><td>White Water → 3 candidates; existing and resulting conditions both one opening at 77.8 / 111.0, 33.2 ft, both edges retained, throat depth differing, west edge shared; a synthetic 24 ft driveway with R15 returns → 24.0 / 24.0 / 15.0 / 90.0; at 75° → 75.0; a flare → angle, no radius; an expansion → 24.0 then 34.0 ft; a return across the projected side line → sideLineClear false; crossings 70 ft apart → unpaired</td><td>bun test, CI</td></tr>
+      <tr><td><span class="sn">S4</span> the extract scripts on a run dir · extended</td><td>D8, D9</td><td>lot + two curb sets + readings → MultiLineString at the origin, 894 ± 2, arcs; two derived driveway figures; place by parents; publish --dry-run rows; the union's four refusals</td><td>bun test, CI</td></tr>
+      <tr><td><span class="sn">S5</span> the extract runbook · existing</td><td>D1–D7, D13</td><td>(a) the car-wash plat byte-identical; (b) White Water run3: six figures, the assemble.log lines, the readout section, anchor 53d65a90 stale</td><td>locally, conductor</td></tr>
+      <tr><td><span class="sn">S6</span> the RPC, the migration, the anchor runbook · existing suites</td><td>D8–D12</td><td>the backfill; the CHECKs' refusals; a LineString accepted, a Point refused, yesterday's payload unchanged; anchor-3: carried lines and both driveway rows, metrics equal to anchor 2's, seven anchored rows, the D12 numbers</td><td>cityhall-new tests/db; the runbook locally</td></tr>
+      <tr><td><span class="sn">S7</span> surveyor's layer-identity with the new roles · Phase 2</td><td>D15</td><td>coa-gis tagged with seven roles and fields; the guard still holds; a role lookup for austin-tx, none records elsewhere</td><td>surveyor tests, CI</td></tr>
+      <tr><td><span class="sn">S8</span> <code>frontage.ts</code> on recorded layer answers · Phase 2</td><td>D16–D18</td><td>recorded answers at the site point → Brezza Lane A45 City Collector, Level null (absent from ASMP); openings from paved ∩ road, the site's own on_subject; 3 inlets; 1 ROW polygon; a Driveways-class polygon → an opening; no roles → none.json, exit 0; a layer error → .err.json, non-zero</td><td>bun test, CI</td></tr>
+      <tr><td><span class="sn">S9</span> the context RPC and the anchor runbook with the step · Phase 2</td><td>D19–D21</td><td>context rows under the anchor's id, stale together, no SIR read; anchor-4 on White Water: the live answers, the tile, the aerial under the overlay; D20's numbers; the site's own opening from both sources within 3 ft</td><td>cityhall-new tests/db; the runbook locally</td></tr>
     </tbody>
   </table></div>
 
-  <h3>The acceptance run, on cc2e3a53</h3>
+  <h3>The acceptance runs, on cc2e3a53</h3>
   <ol class="steps">
-    <li class="st"><span class="sk">extract · run3</span><span class="sn">curb regions on 12 and 13, existing on 7 and 12, one driveway region; 3.5 picks the FOC and BOC sets and names BREZZA LANE; assemble.log: 17 pairs at 0.50, R20.0'/R25.0'/R28.0' agree, 84 LF disagrees (86), one frontage, one opening at 33.2 ft in both conditions, both edges retained, the throat altered</span><span class="so">publish → six figures; anchor 53d65a90 stale</span></li>
-    <li class="st"><span class="sk">anchor · run3</span><span class="sn">1.3-frontage: Brezza Lane, Level 1 by default; openings from paved ∩ road (the site's own among them, on_subject); 3 inlets; 1 ROW polygon; the aerial under the overlay. Correspond: lot same_as, building within, lines and driveway carried. Metrics equal to anchor 2's</span><span class="so">accept → anchored polygons, lines, the derived polygon, and the context rows under one anchor_id</span></li>
-    <li class="st"><span class="sk">measure</span><span class="sn">D14's queries: the driveway's measures; spacing_ft to each opening with both labels; inlet_ft; the count on the frontage (1, existing, shared)</span><span class="so">the readout hands a person the finding and decides nothing</span></li>
-    <li class="st"><span class="sk">regression</span><span class="sn">S5 (a) on the car-wash plat; the sibling's S6 on the car-wash anchor; a building-only run publishes two figures with geometry and polygon both set</span><span class="so">plus two negatives: chosen: null publishes no curb and no driveway; an unnamed frontage derives nothing and lists its crossings</span></li>
+    <li class="st"><span class="sk">Phase 1 · extract run3</span><span class="sn">curb regions on 12 and 13, existing on 7 and 12, one driveway region; 3.5 picks the FOC and BOC sets and names BREZZA LANE; assemble.log: 17 pairs at 0.50, R20.0'/R25.0'/R28.0' agree, 84 LF disagrees (86), one frontage, one opening at 33.2 ft in both conditions, both edges retained, the throat altered, the west edge shared</span><span class="so">publish → six figures; anchor 53d65a90 stale</span></li>
+    <li class="st"><span class="sk">Phase 1 · anchor run3</span><span class="sn">lot same_as, building within, lines and both driveway rows carried; metrics equal to anchor 2's; the overlay with lines by posture and the two driveway polygons</span><span class="so">accept → seven anchored rows under one anchor_id, postures recorded / proposed / existing</span></li>
+    <li class="st"><span class="sk">Phase 1 · measure</span><span class="sn">D12's queries: existing beside resulting; curb feet by posture; the 19 radii; the driveway against the lot's side lines; the readout hands a person the finding with the Level left to the reader</span><span class="so">plus the regression: the car-wash plat, the car-wash anchor, a building-only run with geometry and polygon both set</span></li>
+    <li class="st"><span class="sk">Phase 2 · anchor run4</span><span class="sn">1.3-frontage: Brezza Lane A45 City Collector, Level null, absent from ASMP; the openings from paved ∩ road, the site's own on_subject; 3 inlets; 1 ROW polygon; the aerial under the overlay</span><span class="so">accept → the anchored rows and the context rows under one anchor_id</span></li>
+    <li class="st"><span class="sk">Phase 2 · measure</span><span class="sn">D20's queries: spacing_ft to each same-side opening with both labels and the Level reported as unresolved; inlet_ft; the count on the frontage; the site's own opening from both sources within 3 ft</span><span class="so">the frontage table says which numbers are ±2 ft and why the Table 7-5 row is unresolved</span></li>
   </ol>
 
   <h3>The seams this opens, against the sibling's list</h3>
   <div class="spectable-scroll"><table class="spectable">
     <thead><tr><th>sir-free §6</th><th>this spec</th></tr></thead>
     <tbody>
-      <tr><td>6.1 frame identity</td><td><span class="none">still shut</span> — curbs register to the lot's frame; the driveway is derived in it; the context rows are keyed by anchor_id, not a frame. The sibling's D18 said driveways open this seam; they do not, because the right-of-way line is the lot's own course.</td></tr>
+      <tr><td>6.1 frame identity</td><td><span class="none">still shut</span> — curbs register to the lot's frame; the driveway is derived in it; Phase 2's context rows are keyed by anchor_id, not a frame. The sibling's D18 said driveways open this seam; they do not, because the right-of-way line is the lot's own course.</td></tr>
       <tr><td>6.2 fixed scale</td><td><span class="none">unchanged</span></td></tr>
       <tr><td>6.3 units</td><td><span class="none">not opened</span> — page points stay inside the tracer</td></tr>
       <tr><td>6.4 polygon-only</td><td><span class="w">opened, expand only</span> — geometry beside polygon; the contract is Q12</td></tr>
       <tr><td>6.5 reading model</td><td><span class="w">opened further</span> — derived beside mete and traced</td></tr>
       <tr><td>6.6 correspondence vocabulary</td><td><span class="w">opened</span> — carried</td></tr>
       <tr><td>6.7 posture</td><td><span class="w">existing written for the first time</span></td></tr>
-      <tr><td>6.8 provenance</td><td><span class="w">opened on the context side</span> — source_layer, object_id, source_vintage on every city_gis row</td></tr>
+      <tr><td>6.8 provenance</td><td><span class="w">opened on the context side (Phase 2)</span> — source_layer, object_id, source_vintage on every city_gis row</td></tr>
     </tbody>
   </table></div>
-  <p class="claim"><b>Claim (§8):</b> what needs the anchor is the <i>adjacent</i> driveway, and that is a join on the grid, not a frame.</p>
+  <p class="claim"><b>Claim (§9):</b> what needs the anchor is the <i>adjacent</i> driveway, and that is a join on the grid, not a frame.</p>
 </section>
 
 </main>
@@ -2465,7 +2626,7 @@ scratch/*.json       <span class="c">every raw answer and every error, arcgis_qu
 <script>
   const btns=document.querySelectorAll('nav.tabs button');
   const panels=document.querySelectorAll('.panel');
-  const IDS=['overview','how','runbook','anchor','stored','rollout'];
+  const IDS=['overview','how','runbook','anchor','phase2','stored','rollout'];
   function show(id,opts={}){
     btns.forEach(b=>b.classList.toggle('active',b.dataset.tab===id));
     panels.forEach(p=>p.classList.toggle('active',p.id===id));
