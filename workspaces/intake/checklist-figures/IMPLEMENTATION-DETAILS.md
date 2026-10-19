@@ -121,8 +121,7 @@ Run `~/noetic/working/completeness-check/sa2008-v1-cc15-figures` (runbook run `0
 ## 11. Not built yet
 
 - **P5, the cityhall figures view** (D10): a Figures section on `/intake-checklists/[jurisdiction]`, figures on each item page, and a signed-URL file route. It waits on regenerated cityhall types (`pnpm gen-types`).
-- **How the agent should frame a question around a figure.** The prompt says when to attach one, not how to ask about it; agents wrote good questions in the §8 run without it. §13 proposes the fix.
-- **One `guidance` field and agent judgement on attaching:** proposed in §13, not started.
+- **How the agent should frame a question around a figure,** one text column, and agent judgement on attaching: specified in `iteration-2/DESIGN-SPEC.md` (§13).
 
 ## 12. Who sees a figure, and the three text columns
 
@@ -140,37 +139,6 @@ So the review agent knows *about* the figures from their text and decides when t
 
 **The code treats them the same.** `refText()` (`bin/vision.ts:125`) joins them into one string, `REFERENCE <id> — <caption>. <description> Constraints: <constraints>.`, which is all the vision model gets with the image in both modes; the agent gets all three as plain fields in `figures.json`. The only differences: `caption` cannot be empty, the constraints get a `Constraints:` label in the joined text, and the planned P5 pages would show only the caption in the figures grid.
 
-## 13. Proposed next change: one `guidance` field, and the agent decides when to attach
+## 13. Next change: iteration 2
 
-**Status:** proposed by Will on 2026-10-19, not started. A new session implements it.
-
-### 13.1 What Will wants
-
-1. **The point of a figure varies per checklist item, and the figure says which.** Examples: "look for this kind of icon"; "this does NOT count as a {thing you're checking for}"; "the drawing has to match this shape exactly". Today's prompt frames every figure as something to compare against ("images that show what an item looks like or must be checked against"), and claude mode tells the vision model the references "are for comparison" (`bin/vision.ts:411`). Both are wrong for a "this does not count" figure.
-2. **The agent uses judgement about attaching.** It may settle an item without the figure, though usually it should attach it. Today's bullet reads as mandatory: every CC-15-01 call in the §8 run attached the figure.
-3. **`caption`, `description` and `constraints` collapse into one field.** The split carries no meaning the code uses (§12): `refText()` joins them into one string.
-
-### 13.2 Proposed changes
-
-- **G1. One required free-text field, `guidance`,** replaces `caption`, `description` and `constraints`. It says what the figure is and how to use it, in whatever form fits the item. `type` stays: it records what the image is (reference-design, site-example, table, redline), not what it is for. The P5 figures grid would show the first line of `guidance` as the label. *Open (Q-G1): keep a short `caption` beside `guidance` as a label for that grid? Will's lean is one field.*
-- **G2. The vision model is told to follow each figure's guidance,** not to compare. `refText()` becomes `REFERENCE <id>: <guidance>`, and the claude-mode "Reference figures" section says each comes "with guidance on how to use it", keeping "never report anything you see in them as being on the file you analyze".
-- **G3. The review prompt bullet** (`steps/2.1-review/steps/review/prompt.md:45`) becomes, in draft:
-
-  > `$RUN/1.4-resolve/checklist/figures.json` lists reference figures for some items. Each has `guidance` saying what it is for: an example to look for, an example of what does not count, a form the drawing must match, or something else. Read the guidance for your guide's items before you start. When you check one of those items on a drawing, attach its figures with `--ref <id>` (at most 4, only that item's figures) unless you can settle the item without them, and in `--prompt` say how the figure should be used. If you skip a figure, say why in your observation. A figure is never evidence of what the plans show.
-
-  A prompt change needs Will's sign-off on the final wording.
-- **G4. Fill `guidance` for `AUS_TX-F0001`** from its current three fields, in the migration. There is one row today, so this is the cheapest moment to change the schema.
-
-### 13.3 Where it lands
-
-| Repo | Change |
-|---|---|
-| cityhall | Migration: add `guidance text NOT NULL` (backfilled for the existing row), drop `caption`, `description`, `constraints`; schema file `supabase/schemas/public/tables/intake_figures.sql` and its column comments; `tests/db/intake-figures.test.ts` (inserts name `caption`); `pnpm gen-types`. Jason applies the migration before the bureau PR merges, as for P1. |
-| bureau | `tooling/src/cli/intake-figure.ts` and `tooling/src/lib/intake-figures/store.ts` (`--guidance` replaces the three flags), `tooling/src/types/database.types.ts`; `runbooks/completeness-check/scripts/cc.py` (`FIGURE_COLUMNS`) and `test_cc.py`; `steps/1.4-resolve/contract.test.ts` (the `Figures` schema); `bin/vision.ts` (`refText`, `claudePrompt` wording) and `vision.test.ts`; the prompt bullet (G3). |
-| winston | A revision note on `DESIGN-SPEC.md` D2, D8 and D9 pointing here. |
-
-Order: the cityhall migration is applied first; until the bureau PR merges, every run's 1.4-resolve would fail on the missing columns, so the two should land together (migration applied, then the bureau PR merged at once), or the bureau PR should read `guidance` with a fallback to the old columns for one release.
-
-### 13.4 How to check it
-
-Re-run the §8 acceptance (`reviewFiles: ["cc-15"]`, 3 runs, claude vision, 2008 San Antonio) and check: `figures.json` carries `guidance`; the vision log's `refs` as before; each CC-15-01 observation either attaches the figure or says why it didn't; the `--prompt` text says how the figure is used; the CC-15-01 verdict stays fail.
+**Superseded.** The one-`guidance`-field proposal that stood here (2026-10-19) was replaced the same day by `iteration-2/DESIGN-SPEC.md`: the guide's Validation Methodology cites a figure by id and says how to use it; the row keeps one neutral `description` and `item_refs` (for people to read); hydration drops its ref checks and skips; the agent states each figure's role in `--prompt`; the acceptance run adds a negative-example figure. That spec's D numbers are the reference for the change.
