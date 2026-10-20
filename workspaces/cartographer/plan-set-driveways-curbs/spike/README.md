@@ -11,6 +11,7 @@ PyMuPDF 1.26.5 + shapely 2.0.7, run against the local White Water PDF named in A
 | `probe5.py` | the frontage edge (nearest `V-ASPHALT-LINE`), P/L-to-pavement offsets, which chains cross the Brezza Lane line and at what station (existing driveway 77.8–111.0 ft; sidewalk 66.6–71.0) |
 | `probe6.py` | the demolished chains' nearest approach to the right-of-way line (24.4 ft at stations 106.6–107.4) and the proposed FOC ends |
 | `probe7.py` | the face/back test: pairs FOC/BOC geometrically with layers withheld and scores four "which member is the face" rules against the layer truth (best 12 of 17) |
+| `probe8.py` | Q13 (2026-10-20): whether the existing-concrete layer redraws the demolition chains — on sheet 7 the two `C-DEMO CONC` chains (86.0 / 84.7 ft) lie 0 % within 0.25–1.5 ft of `C-EXIST CONC` (155 ft, all elsewhere) and 0.6–3.5 % of `V-CONC-LINE` (the crossings only); the removed stretch is drawn once, on the demolition layer |
 | `content-block-hybrid-hits.json` | the `search_content_blocks_hybrid` answers for five curb queries on the three plan set versions (§1.3, "What the content blocks say") |
 
 The lot in page space is the convex hull of the `C-BNDY LINE` dash endpoints; stations are `LineString.project` along the frontage edge; 1″ = 20′ (0.27778 ft/pt) is the registration winston#322 solved, not the title block.
