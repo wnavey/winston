@@ -1154,7 +1154,7 @@ table.nx-rules td.o{color:var(--ink2);font-size:12.5px;white-space:nowrap}
   <div class="kicker">Cartographer · Plan-set driveways and curbs</div>
   <h1>Driveways and curbs from plan sets — existing and proposed, with widths, lengths and return radii, and the adjacent driveways the sheet leaves off</h1>
   <p>Phase 1: how a site plan set gives up its proposed and existing curb lines with their arcs' radii, how each driveway is derived from the curbs that cross the lot's frontage — as it exists and as it will exist — and how the anchor run carries them to the county grid. Phase 2: how the driveways next door, the street, its Level and the curb inlets are fetched from the city's layers and joined to those rows.</p>
-  <div class="meta"><span class="status">Draft v3.4</span><span>20 Oct 2026</span><span>Source of truth: <code>DESIGN-SPEC.md</code></span></div>
+  <div class="meta"><span class="status">v3.5 · as built</span><span>20 Oct 2026</span><span>Source of truth: <code>DESIGN-SPEC.md</code></span></div>
   <a class="spec-link" href="DESIGN-SPEC.html">Read the spec →</a>
 </header>
 
@@ -1224,7 +1224,7 @@ table.nx-rules td.o{color:var(--ink2);font-size:12.5px;white-space:nowrap}
 
     <div class="sys gap" id="ov-gap5" style="grid-area:5/2">nothing reaches past the lot line · Phase 2</div>
     <div class="sys" id="ov-anchor-t" data-in="today" style="grid-area:5/3"><span class="k">8 steps · ring fit</span><span class="t">anchor-geometry</span><span class="d">polygons only</span></div>
-    <div class="sys chg" id="ov-anchor-a" data-in="after" style="grid-area:5/3"><a class="ref" href="#detail-anchor">D11 ↓</a><span class="k">8 steps · ring fit</span><span class="t">anchor-geometry</span><span class="d">lines carried; the solve untouched</span></div>
+    <div class="sys chg" id="ov-anchor-a" data-in="after" style="grid-area:5/3"><a class="ref" href="#detail-anchor">D11 ↓</a><span class="k">8 steps · ring fit</span><span class="t">anchor-geometry</span><span class="d">lines and derived figures ride the frame; the solve untouched</span></div>
     <div class="sys store ext" id="ov-geo-t" data-in="today" style="grid-area:5/4"><span class="k">table</span><span class="t">geo</span><span class="d">polygons; lot, building</span></div>
     <div class="sys store ext chg" id="ov-geo-a" data-in="after" style="grid-area:5/4"><a class="ref" href="#detail-stored">D10 · D12 ↓</a><span class="k">table</span><span class="t">geo</span><span class="d">+ lines; existing beside resulting</span></div>
 
@@ -1258,7 +1258,7 @@ table.nx-rules td.o{color:var(--ink2);font-size:12.5px;white-space:nowrap}
     <a class="refrow new" data-ref="D23"><span class="chip">D23</span><span class="txt">every published row says what it is (kind, edge, feature_key), where it came from (source_pages, source_figure_id, source_crop_id) and what it was checked against (labels); returns and frontages are rows of their own</span></a>
     <a class="refrow chg" data-ref="D9"><span class="chip">D9</span><span class="txt">lines enter the figure through an expand-only change: geometry beside polygon</span></a>
     <a class="refrow chg" data-ref="D10"><span class="chip">D10</span><span class="txt">geo needs no DDL for a line; the RPC needs one more branch</span></a>
-    <a class="refrow chg" data-ref="D11"><span class="chip">D11</span><span class="txt">a line figure rides the frame and is claimed against nothing: the relation carried</span></a>
+    <a class="refrow chg" data-ref="D11"><span class="chip">D11</span><span class="txt">a line or derived figure rides the frame and is claimed against nothing; listed unmatched, no new relation (v3.5)</span></a>
     <a class="refrow chg" data-ref="D12"><span class="chip">D12</span><span class="txt">Phase 1's payoff is a set of queries that need only this file's rows, and they are its acceptance test</span></a>
   </div>
   <p class="claim"><b>Reading:</b> nothing on the After map is a new table or a new runbook. Three pure modules are new; everything else is a column, a registry entry, a prompt paragraph or a branch in a function that already exists. The gap past the lot line is Phase 2's, on its own tab.</p>
@@ -1274,14 +1274,14 @@ table.nx-rules td.o{color:var(--ink2);font-size:12.5px;white-space:nowrap}
     <div class="plan-row"><span class="plan-who">cartographer</span>
       <div class="plan-cell"></div>
       <div class="plan-cell"><div class="pc"><span class="pid">P1 · D1–D4 D7 D9 · S1 S2 S4</span><b>arcs, the polyline branch, curb.ts, lines in the figure model</b><span class="pd">every reader of <code>polygon</code> moved to <code>geometry</code>; <code>/geometry/[id]</code> draws paths</span><span class="pa">after P0; a building-only run exercises none of it</span></div></div>
-      <div class="plan-cell"><div class="pc"><span class="pid">P3 · D10 D11 D23 · S6</span><b>geometryType, carried, lines through the solver and the publisher</b><span class="pd">render by posture; source_* on every row; one curb_return row per arc; a derived figure's fields pass through when present</span><span class="pa">after P0; nothing changes until a line figure exists</span></div></div>
+      <div class="plan-cell"><div class="pc"><span class="pid">P3 · D10 D11 D23 · S6</span><b>geometry_type and lines through the frame and the publisher; lines refused in ring matches</b><span class="pd">render by posture; source_* on every row; one curb_return row per arc; a derived figure's fields pass through when present</span><span class="pa">after P0; nothing changes until a line figure exists</span></div></div>
       <div class="plan-cell"></div>
       <div class="plan-cell"><div class="pc"><span class="pid">P4 · D1 D5–D8 D23 · S3 S4</span><b>frontage.ts, driveway.ts, the three-way union, derivation evidence</b><span class="pd">code-only frontages, published as rows; collapse, clip, both conditions; width verdicts</span><span class="pa">after §7.1a is accepted (Q13 measured: the removed stretch is drawn once)</span></div></div>
       <div class="plan-cell"></div>
     </div>
     <div class="plan-row"><span class="plan-who">bureau</span>
       <div class="plan-cell"></div><div class="plan-cell"></div>
-      <div class="plan-cell"><div class="pc"><span class="pid">P3 · D11 · S6</span><b>correspond prompt and enum; the on-site check question</b><span class="pd">a curb or driveway figure is <code>carried</code></span><span class="pa">after P0</span></div></div>
+      <div class="plan-cell"><div class="pc"><span class="pid">P3 · D11 · S6</span><b>correspond prompt and contract; the on-site check question</b><span class="pd">a curb or driveway figure is listed <code>unmatched</code>, why "carried"</span><span class="pa">after P0</span></div></div>
       <div class="plan-cell"><div class="pc risk"><span class="pid">P2 · D1–D4 D7 D13 · S5</span><b>The extract runbook learns curbs</b><span class="pd">two survey paragraphs, trace.py on polylines, the confirm contract (labels, faceSide; no exclude), assemble.py, the curbs readout</span><span class="pa">after P1; its first publish stales anchor 53d65a90 by design</span></div></div>
       <div class="plan-cell"></div>
       <div class="plan-cell"><div class="pc risk"><span class="pid">P5 · D5–D7 D13 · S5 S6</span><b>The extract runbook derives driveways</b><span class="pd">frontage.json, the derivation readout with its <i>no frontage found</i> line</span><span class="pa">after P4; stales anchor 3</span></div></div>
@@ -1761,7 +1761,7 @@ ws/crops/p12-r3-t1-overlay.jpg <span class="c">every chain of the set, drawn on 
   <!-- 4.2 -->
   <section class="nx-step" id="step-4-2">
     <div class="nx-hd"><span class="nx-id">4.2</span><div><div class="nx-k">script · scripts/assemble.py assemble → carto assemble, carto place brief · zero tokens · modified</div><h3 class="nx-t">Assemble, register, pair; in 1b find the frontages and derive twice</h3><div class="nx-loc" data-on="4.2"></div></div><span class="nx-tpl">template <b>T9 · Fan-in</b> (enrich variant)</span></div>
-    <p class="nx-sum"><code>assemble.py</code> appends one traced figure per confirmed set (posture and kind from the registry, the labels carried); <code>assemble.ts</code> registers each sheet as today, derives the line sets in lot feet, pairs face and back, groups the arcs and checks the radius and length labels (1a); in 1b it also finds every frontage candidate by code (street null), clips the existing chains by the demolition, derives the driveways for the existing condition and again for the resulting condition, and checks the width labels. No agent produced a coordinate, and no script decided which chains are the curb.</p>
+    <p class="nx-sum"><code>assemble.py</code> appends one traced figure per edge of the confirmed sets (face, back, or unknown) (posture and kind from the registry, the labels carried); <code>assemble.ts</code> registers each sheet as today, derives the line sets in lot feet, pairs face and back, groups the arcs and checks the radius and length labels (1a); in 1b it also finds every frontage candidate by code (street null), clips the existing chains by the demolition, derives the driveways for the existing condition and again for the resulting condition, and checks the width labels. No agent produced a coordinate, and no script decided which chains are the curb.</p>
     <div class="nx-funnel">
       <div class="nx-stack"><span class="nx-lab">in</span><span>4.1 raw-artifact.json</span><span>3.5 confirm.json ×N</span><span>3.4 traces/*.json</span><span>the boundary files</span></div>
       <div class="nx-arrow">→</div>
@@ -1897,7 +1897,7 @@ ws/crops/p12-r3-t1-overlay.jpg <span class="c">every chain of the set, drawn on 
       <div class="bleed"><div class="sysmap rgraph" id="rg-anchor-a" style="grid-template-columns:repeat(8,minmax(0,1fr));column-gap:28px">
         <div class="sys" id="b11" style="grid-area:1/1"><span class="k">gate · input</span><span class="t">1.1 inputs</span><span class="d">unchanged</span></div>
         <div class="sys chg" id="b12" style="grid-area:1/2"><a class="ref" href="#detail-anchor-steps">D9 · D11 ↓</a><span class="k">script</span><span class="t">1.2 fetch</span><span class="d">reads geometry; geometryType through</span></div>
-        <div class="sys chg" id="b21" style="grid-area:1/3"><a class="ref" href="#detail-anchor-steps">D11 ↓</a><span class="k">agent</span><span class="t">2.1 correspond</span><span class="d">+ carried</span></div>
+        <div class="sys chg" id="b21" style="grid-area:1/3"><a class="ref" href="#detail-anchor-steps">D11 ↓</a><span class="k">agent</span><span class="t">2.1 correspond</span><span class="d">lines listed unmatched</span></div>
         <div class="sys" id="b31" style="grid-area:1/4"><span class="k">script</span><span class="t">3.1 solve</span><span class="d">unchanged</span></div>
         <div class="sys chg" id="b32" style="grid-area:1/5"><a class="ref" href="#detail-anchor-steps">D11 ↓</a><span class="k">script</span><span class="t">3.2 render</span><span class="d">lines by posture, both conditions</span></div>
         <div class="sys chg" id="b33" style="grid-area:1/6"><a class="ref" href="#detail-anchor-steps">D11 · D13 ↓</a><span class="k">agent</span><span class="t">3.3 check</span><span class="d">+ the on-site line question; the per-driveway table</span></div>
@@ -1919,10 +1919,10 @@ ws/crops/p12-r3-t1-overlay.jpg <span class="c">every chain of the set, drawn on 
   <div class="sys-refs">
     <a class="refrow chg" data-ref="D9"><span class="chip">D9</span><span class="txt">every reader of polygon moves to geometry</span></a>
     <a class="refrow chg" data-ref="D10"><span class="chip">D10</span><span class="txt">the RPC's line branch; condition, station and measures in properties</span></a>
-    <a class="refrow chg" data-ref="D11"><span class="chip">D11</span><span class="txt">carried: placed by the frame's transform, claimed against nothing</span></a>
+    <a class="refrow chg" data-ref="D11"><span class="chip">D11</span><span class="txt">a line or derived figure: placed by the frame's transform, claimed against nothing</span></a>
     <a class="refrow chg" data-ref="D13"><span class="chip">D13</span><span class="txt">the anchor readout's per-driveway table</span></a>
   </div>
-  <p class="claim"><b>Claim (D11):</b> <code>fitSets</code> already skips <code>within</code> figures and <code>anchorFrame</code> already transforms every figure of the frame, so a carried line reaches the grid with no change to the solver.</p>
+  <p class="claim"><b>Claim (D11):</b> <code>fitSets</code> already skips <code>within</code> figures and <code>anchorFrame</code> already transforms every figure of the frame, so a line (kept out of the solver, refused in any ring match) reaches the grid with no change to the solver.</p>
 
   <h3 class="claim" id="detail-anchor-steps">A reader, a word, a colour, one question and a payload change; the solve does not <span class="src">D11</span></h3>
   <div class="ba">
@@ -1939,8 +1939,8 @@ ws/crops/p12-r3-t1-overlay.jpg <span class="c">every chain of the set, drawn on 
     <div class="ba-col"><div class="ba-h">after Phase 1</div>
       <ol class="steps">
         <li class="st chg" data-n="1.2"><span class="sk">script</span><span class="sn">fetch</span><span class="so">geometryInFrame(geometry) → InputFigure.coords + geometryType; no SIR on either path</span></li>
-        <li class="st chg" data-n="2.1"><span class="sk">agent</span><span class="sn">correspond</span><span class="so">+ carried: a curb or driveway figure, never a fit target, no claim on the ring</span></li>
-        <li class="st" data-n="3.1"><span class="sk">script</span><span class="sn">solve</span><span class="so">unchanged; carried figures transformed like within</span></li>
+        <li class="st chg" data-n="2.1"><span class="sk">agent</span><span class="sn">correspond</span><span class="so">a curb, frontage or driveway figure is listed unmatched (why "carried"): never a fit target, no claim on the ring</span></li>
+        <li class="st" data-n="3.1"><span class="sk">script</span><span class="sn">solve</span><span class="so">unchanged; lines and derived figures transformed like within</span></li>
         <li class="st chg" data-n="3.2"><span class="sk">script</span><span class="sn">render</span><span class="so">lines by posture; the derived driveways filled, the resulting condition over the existing</span></li>
         <li class="st chg" data-n="3.3"><span class="sk">agent</span><span class="sn">check</span><span class="so">+ does the street curb run parallel to the frontage edge at the sheet's offset; does each driveway sit on that edge; + the per-driveway table</span></li>
         <li class="st chg" data-n="5.1"><span class="sk">script</span><span class="sn">publish</span><span class="so">geometry by type; condition, station_ft, measures in each p_figures entry</span></li>
@@ -1948,7 +1948,7 @@ ws/crops/p12-r3-t1-overlay.jpg <span class="c">every chain of the set, drawn on 
     </div>
   </div>
   <div class="sys-legend"><span><i class="chg"></i>modified step</span></div>
-  <p class="claim"><b>Claim (D11):</b> <code>within</code> stays the word for a proposed polygon inside the lot; <code>carried</code> is for a line that may lie outside it (the street's curb) or across its edge (a driveway).</p>
+  <p class="claim"><b>Claim (D11):</b> <code>within</code> stays the word for a proposed polygon inside the lot; a line that may lie outside it (the street's curb) or a derived figure across its edge (a driveway) gets no relation at all and is listed <code>unmatched</code> (v3.5: the <code>carried</code> relation was dropped in review).</p>
   <hr class="nx-div">
 
   <!-- 1.1 -->
@@ -1978,13 +1978,13 @@ targets.json     <span class="c">the parcel ring(s), target_srid</span></pre></d
   <!-- 2.1 -->
   <section class="nx-step" id="step-2-1a">
     <div class="nx-hd"><span class="nx-id agent">2.1</span><div><div class="nx-k">single agent · judgment runner · Opus 5.5, high · modified: one relation word</div><h3 class="nx-t">Correspond</h3><div class="nx-loc" data-on="2.1a"></div></div><span class="nx-tpl">template <b>T6 · Single-agent judgment</b></span></div>
-    <p class="nx-sum">Says which figure is which parcel, by ids and indices only. A curb or a driveway figure is <code>carried</code>: placed by its frame's transform, never a fit target, and making no claim about the parcel ring, because the street's curb lies outside it and a driveway straddles its line.</p>
+    <p class="nx-sum">Says which figure is which parcel, by ids and indices only. A curb, frontage or driveway figure is listed <code>unmatched</code> with why "carried": placed by its frame's transform, never a fit target, and making no claim about the parcel ring, because the street's curb lies outside it and a driveway straddles its line.</p>
     <div class="nx-judge">
       <div class="nx-card"><span class="nx-lab">reads</span><ul class="nx-list"><li>geometries.json · kind, posture, geometryType</li><li>targets.json</li></ul></div>
       <div class="nx-arrow">→</div>
-      <div class="nx-card mid"><span class="nx-lab">decides</span><ul class="nx-list"><li><b>relation</b><span class="d">same_as · union_of · within · <b>carried</b></span></li><li><b>corner pairs</b><span class="d">for a same_as polygon only</span></li></ul></div>
+      <div class="nx-card mid"><span class="nx-lab">decides</span><ul class="nx-list"><li><b>relation</b><span class="d">same_as · union_of · within (a line or derived figure: none, listed unmatched)</span></li><li><b>corner pairs</b><span class="d">for a same_as polygon only</span></li></ul></div>
       <div class="nx-arrow">→</div>
-      <div class="nx-card"><span class="nx-lab">writes</span><ul class="nx-list"><li><code>correspondences.json</code><span class="d"><span class="nx-block">BLOCKING</span>a line figure is carried, nothing else</span></li></ul></div>
+      <div class="nx-card"><span class="nx-lab">writes</span><ul class="nx-list"><li><code>correspondences.json</code><span class="d"><span class="nx-block">BLOCKING</span>a line or derived figure is in no ring match and is listed unmatched</span></li></ul></div>
     </div>
   </section>
   <hr class="nx-div">
@@ -1994,7 +1994,7 @@ targets.json     <span class="c">the parcel ring(s), target_srid</span></pre></d
     <div class="nx-hd"><span class="nx-id">3.1</span><div><div class="nx-k">script · solve.ts → anchor.ts · zero tokens · unchanged</div><h3 class="nx-t">Solve</h3><div class="nx-loc" data-on="3.1a"></div></div><span class="nx-tpl">template <b>T10 · Deterministic checks</b></span></div>
     <p class="nx-sum">Unchanged. The ladder fits the polygons claimed <code>same_as</code> or <code>union_of</code>; every other figure of the frame — within or carried — is transformed by the result.</p>
     <table class="nx-rules"><thead><tr><th>Rule</th><th>Blocks?</th><th>On failure</th></tr></thead><tbody>
-      <tr><td>Only Polygon figures with same_as / union_of enter the fit set</td><td><span class="nx-block">BLOCKING</span></td><td class="o">a carried figure in the fit set is a contract failure</td></tr>
+      <tr><td>Only Polygon figures with same_as / union_of enter the fit set</td><td><span class="nx-block">BLOCKING</span></td><td class="o">a line or derived figure in a ring match is a CorrespondenceError</td></tr>
       <tr><td>Metrics: IoU, mean boundary distance, Hausdorff, free scale</td><td><span class="nx-soft">RECORD</span></td><td class="o">anchors.json; the accuracy class</td></tr>
     </tbody></table>
   </section>
@@ -2376,9 +2376,9 @@ order by spacing_ft;
   <h3>The acceptance runs, on cc2e3a53</h3>
   <ol class="steps">
     <li class="st"><span class="sk">Phase 1a · extract run3</span><span class="sn">curb_proposed regions on 12 and 13, existing on 7 and 12; 3.5 picks the FOC and BOC sets on 12 and the existing set on 7, whole; assemble.log: 17 pairs at 0.50, R20.0'/R25.0'/R28.0' agree, 84 LF disagrees (86), the unpaired chains counted</span><span class="so">publish → five figures (the proposed curb as face and back); anchor 53d65a90 stale</span></li>
-    <li class="st"><span class="sk">Phase 1a · anchor-3</span><span class="sn">lot same_as, building within, the three line figures carried; metrics equal to anchor 2's; the overlay with lines by posture</span><span class="so">accept → six anchored rows and 19 curb_return rows under one anchor_id, every one with source_pages and a feature_key; D12's curb queries: 894 ft of face, 19 radii with tangent points</span></li>
+    <li class="st"><span class="sk">Phase 1a · anchor-3</span><span class="sn">lot same_as, building within, the three line figures unmatched (why "carried"); metrics equal to anchor 2's; the overlay with lines by posture</span><span class="so">accept → six anchored rows and 19 curb_return rows under one anchor_id, every one with source_pages and a feature_key; D12's curb queries: 894 ft of face, 19 radii with tangent points</span></li>
     <li class="st"><span class="sk">Phase 1b · extract run4</span><span class="sn">(Q13: the existing layer does not redraw the removed 84 LF, so the demolish chains drop out of the resulting set) + three frontage candidates with street null, one opening on course 5 at 33.2 ft in both conditions, both edges retained, the throat altered, radii null at the line, the west edge shared from the note</span><span class="so">publish → ten figures (three frontage rows, street null); anchor 3 stale</span></li>
-    <li class="st"><span class="sk">Phase 1b · anchor-4, measure</span><span class="sn">both driveway rows carried; D12's driveway queries: existing beside resulting; the driveway against the lot's side lines; the readout hands a person the finding with the street and the Level left to the reader</span><span class="so">plus the regression: the car-wash plat, the car-wash anchor, a building-only run, and 1a's curbs-only run unchanged; the radius-at-the-line path is proven synthetic-only and says so</span></li>
+    <li class="st"><span class="sk">Phase 1b · anchor-4, measure</span><span class="sn">both driveway rows unmatched; D12's driveway queries: existing beside resulting; the driveway against the lot's side lines; the readout hands a person the finding with the street and the Level left to the reader</span><span class="so">plus the regression: the car-wash plat, the car-wash anchor, a building-only run, and 1a's curbs-only run unchanged; the radius-at-the-line path is proven synthetic-only and says so</span></li>
     <li class="st"><span class="sk">Phase 2 · anchor-5</span><span class="sn">1.3-frontage: Brezza Lane A45 City Collector, Level null, absent from ASMP; the openings from paved ∩ road, the site's own on_subject; 3 inlets; 1 ROW polygon; the aerial under the overlay</span><span class="so">accept → the anchored rows and the context rows under one anchor_id</span></li>
     <li class="st"><span class="sk">Phase 2 · measure</span><span class="sn">D20's queries: spacing_ft to each same-side opening with both labels and the Level reported as unresolved; inlet_ft; the count on the frontage; the site's own opening from both sources within 3 ft</span><span class="so">the frontage table says which numbers are ±2 ft and why the Table 7-5 row is unresolved</span></li>
   </ol>
@@ -2392,7 +2392,7 @@ order by spacing_ft;
       <tr><td>6.3 units</td><td><span class="none">not opened</span> — page points stay inside the tracer</td></tr>
       <tr><td>6.4 polygon-only</td><td><span class="w">opened, expand only</span> — geometry beside polygon; the contract is Q12</td></tr>
       <tr><td>6.5 reading model</td><td><span class="w">opened further</span> — derived beside mete and traced</td></tr>
-      <tr><td>6.6 correspondence vocabulary</td><td><span class="w">opened</span> — carried</td></tr>
+      <tr><td>6.6 correspondence vocabulary</td><td>not opened — no new relation (v3.5)</td></tr>
       <tr><td>6.7 posture</td><td><span class="w">existing written for the first time</span></td></tr>
       <tr><td>6.8 provenance</td><td><span class="w">opened on the context side (Phase 2)</span> — source_layer, object_id, source_vintage on every city_gis row</td></tr>
     </tbody>
