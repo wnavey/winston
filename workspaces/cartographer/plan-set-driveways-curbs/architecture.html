@@ -1154,7 +1154,7 @@ table.nx-rules td.o{color:var(--ink2);font-size:12.5px;white-space:nowrap}
   <div class="kicker">Cartographer · Plan-set driveways and curbs</div>
   <h1>Driveways and curbs from plan sets — existing and proposed, with widths, lengths and return radii, and the adjacent driveways the sheet leaves off</h1>
   <p>Phase 1: how a site plan set gives up its proposed and existing curb lines with their arcs' radii, how each driveway is derived from the curbs that cross the lot's frontage — as it exists and as it will exist — and how the anchor run carries them to the county grid. Phase 2: how the driveways next door, the street, its Level and the curb inlets are fetched from the city's layers and joined to those rows.</p>
-  <div class="meta"><span class="status">Draft v3.3</span><span>20 Oct 2026</span><span>Source of truth: <code>DESIGN-SPEC.md</code></span></div>
+  <div class="meta"><span class="status">Draft v3.4</span><span>20 Oct 2026</span><span>Source of truth: <code>DESIGN-SPEC.md</code></span></div>
   <a class="spec-link" href="DESIGN-SPEC.html">Read the spec →</a>
 </header>
 
@@ -2346,7 +2346,7 @@ order by spacing_ft;
       <tr><td><span class="sn">1</span> LOT 1</td><td><code>mete</code></td><td>courses, pob, statedArea, basisOfBearings, controlPoints — as today</td><td>the 4.1 merge agent</td></tr>
       <tr><td><span class="sn">2</span> CAR WASH</td><td><code>traced</code></td><td>a closed ring; trace {page, candidate, layer, pathPt, lot, boundary} — as today</td><td>assemble.py, from confirm.json</td></tr>
       <tr><td><span class="sn">3</span> curb proposed · face, curb proposed · back, curb existing · unknown · 1a (one row per edge)</td><td><code>traced</code></td><td>a chain set; trace {page, candidate, layer, chains[{pathPt, arcs}], edge, pairId, demolish, labels}</td><td>assemble.py, from confirm.json</td></tr>
-      <tr><td><span class="sn">4</span> driveway 1 · course 5 · one row per condition (existing, resulting) · 1b</td><td><code>derived</code></td><td>no pathPt; trace {rule: driveway/1, condition, from: [3, 3′], frontage {courseIndex, street: null}, stationFt, measures, edges[{retained}], labels}</td><td>assemble.ts, from the two curb figures and the lot</td></tr>
+      <tr><td><span class="sn">4</span> driveway 1 · course 5 · one row per condition (existing, resulting); posture from the edges — existing if all retained, else proposed (Q14) · 1b</td><td><code>derived</code></td><td>no pathPt; trace {rule: driveway/1, condition, from: [3, 3′], frontage {courseIndex, street: null}, stationFt, measures, edges[{retained}], labels}</td><td>assemble.ts, from the two curb figures and the lot</td></tr>
     </tbody>
   </table></div>
   <p class="claim">The union refuses a derived figure with <code>pathPt</code>, a derived figure without <code>condition</code>, a traced polyline with <code>courses</code>, and a <code>curb_existing</code> figure with posture <code>proposed</code> (S4).</p>
