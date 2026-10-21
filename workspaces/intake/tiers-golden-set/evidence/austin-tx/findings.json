@@ -1,0 +1,1364 @@
+{
+ "generated": "2026-10-20",
+ "method": "Full keyset scans per jurisdiction via PostgREST (read-only), local regex/metadata analysis; Phoenix 1.6M rows scanned separately. Scripts + raw scans in this folder (scan/*.jsonl).",
+ "jurisdictions": [
+  {
+   "jurisdiction": "San Antonio",
+   "state": "TX",
+   "jurisdiction_id": "36adac2f-fcec-43e2-abf8-1b4523cdda52",
+   "vendor": "Accela",
+   "rows": 258397,
+   "rows_estimated": false,
+   "category": "intake_stage_in_data_comments_issuing_admin",
+   "stage_key": "raw_metadata.review_cycle (raw_metadata stored as JSON string on all rows)",
+   "stage_values_full_scan": {
+    "Technical Review": 201162,
+    "Post Permit Review": 19944,
+    "Completeness Review": 19063,
+    "Completeness Review Zoning": 16392,
+    "Application Intake": 918,
+    "(~165 other junk values: inspection notes)": "<1%"
+   },
+   "intake_stage": {
+    "COM-PRJ-APP (commercial project application; carries site work)": {
+     "Completeness Review": {
+      "rows": 10525,
+      "records": 5961,
+      "discipline": "Completeness Review",
+      "status": {
+       "Additional Information Required": 6051,
+       "Additional Information Received": 2397,
+       "Withdrawn": 1801,
+       "Approved": 269
+      },
+      "reviewers_top": [
+       "Mark Celestino 2867",
+       "EPermit User 2266",
+       "Juan Alvarado 1936",
+       "Christopher Delgado 1578"
+      ]
+     },
+     "Completeness Review Zoning": {
+      "rows": 16392,
+      "records": 14958,
+      "status": {
+       "Approved": 14173,
+       "Additional Information Required": 1239,
+       "Withdrawn": 588
+      },
+      "reviewers_top": [
+       "Mark Celestino 5588",
+       "Juan Alvarado 4500",
+       "Christopher Delgado 2932"
+      ]
+     }
+    },
+    "LAND-PLAT": {
+     "Application Intake": {
+      "rows": 918,
+      "records": 868,
+      "content": "fee-payment requests"
+     },
+     "Completeness Review": {
+      "rows": 8538,
+      "records": 3360,
+      "disciplines": {
+       "SAWS": 3751,
+       "Engineering Trees": 2430,
+       "Engineering TIA": 1791,
+       "CPS Energy": 370,
+       "TCI": 110,
+       "Bexar County": 41
+      }
+     }
+    }
+   },
+   "clock_quote": "The resubmittal of required documents will be processed within 3 business days upon receipt. (in 1,192 COM completeness AIR comments)",
+   "samples": {
+    "COM Completeness Review": [
+     {
+      "id": "39d9043b-91b1-4d0a-a19d-ec00ca461a90",
+      "project_number": "COM-PRJ-APP21-39802054",
+      "meta": {
+       "review_cycle": "Completeness Review",
+       "discipline": "Completeness Review",
+       "status": "Additional Information Required",
+       "reviewer": "Andrew Palmieri",
+       "review_date": "07/26/2021"
+      },
+      "excerpt": "Please email me the square footage of the work area for the remodel. currently 0 value entered in system. Email andrew.palmieri@sanantonio.gov"
+     },
+     {
+      "id": "928d56f3-5d13-47c5-b590-5b3da233e60d",
+      "project_number": "COM-PRJ-APP24-39802088",
+      "meta": {
+       "review_cycle": "Completeness Review",
+       "discipline": "Completeness Review",
+       "status": "Additional Information Required",
+       "reviewer": "Mark Celestino",
+       "review_date": "09/17/2024"
+      },
+      "excerpt": "Scope of work states, \"irrigation system install\". Irrigation has already been permitted under site work permit COM-SIT-PMT23-40100237. Please schedule irrigation final inspection under the existing site work permit and withdraw application COM-PRJ-APP24-39802088. If you should have any questions contact mark Celestino at mark.celestino@sanantonio.gov or at (210)207-0019."
+     },
+     {
+      "id": "eee72427-26c6-4410-a3d3-6249906bae6f",
+      "project_number": "COM-PRJ-APP24-39800144",
+      "meta": {
+       "review_cycle": "Completeness Review",
+       "discipline": "Completeness Review",
+       "status": "Additional Information Required",
+       "reviewer": "Juan Alvarado",
+       "review_date": "01/24/2024"
+      },
+      "excerpt": "Per my email earlier this morning, I have updated your application status to 'additional information required' on the presumption that you should instead apply for a \"New Revision\" under the original application, rather than applying for a new Remodel application.  If this is true, please let me know and I can withdraw this application.  You can reach me via email at Juan.Alvarado@sanantonio.gov."
+     },
+     {
+      "id": "db74dedd-1d63-4c55-9a83-e9a332bca24f",
+      "project_number": "COM-PRJ-APP24-39801540",
+      "meta": {
+       "review_cycle": "Completeness Review",
+       "discipline": "Completeness Review",
+       "status": "Additional Information Required",
+       "reviewer": "Mark Celestino",
+       "review_date": "07/16/2024"
+      },
+      "excerpt": "The pay station canopy, the 2 vacuum canopies and the quarterback station building are not listed on the permit application. Will they be permitted under this application? If yes please e-mail me the square footage and construction valuation of each of these structures and I will update the application to include them. Also, these additional structures will require building numbers. Please request"
+     },
+     {
+      "id": "6220bfa6-7955-4561-9005-99d9c769340a",
+      "project_number": "COM-PRJ-APP25-39801919",
+      "meta": {
+       "review_cycle": "Completeness Review",
+       "discipline": "Completeness Review",
+       "status": "Additional Information Required",
+       "reviewer": "Juan Alvarado",
+       "review_date": "09/10/2025"
+      },
+      "excerpt": "Per my email earlier this morning, Base Zone C-2 will not allow for the proposed use of outdoor athletic fields/courts.  Before we move forward, you will need to get in touch with our Zoning Department in order to resolve this issue.  They can be reached via email at DSD.Zoning@sanantonio.gov.  Also, once this is resolved, please be sure to submit a TDLR Architectural Barriers Registration Report."
+     }
+    ],
+    "COM Completeness Review Zoning": [
+     {
+      "id": "ffe344c4-c2b0-48e5-ada6-17b9e7400571",
+      "project_number": "COM-PRJ-APP20-39800296",
+      "meta": {
+       "review_cycle": "Completeness Review Zoning",
+       "discipline": "Completeness Review Zoning",
+       "status": "Approved",
+       "reviewer": "Olivia Rodriguez",
+       "review_date": "01/06/2021"
+      },
+      "excerpt": "Conditional approval only for verification of Permitted Use only.   Hospital exterior repairs permitted in  C-3 S base zone. UDC Zoning Review pending."
+     },
+     {
+      "id": "f2f836db-a71a-42bc-a1f6-ea81fc8bf530",
+      "project_number": "COM-PRJ-APP25-39800326",
+      "meta": {
+       "review_cycle": "Completeness Review Zoning",
+       "discipline": "Completeness Review Zoning",
+       "status": "Approved",
+       "reviewer": "Christopher Delgado",
+       "review_date": "02/17/2025"
+      },
+      "excerpt": "Verification of Permitted Use only, Office use permitted in C-3 base zone, UDC Zoning review pending."
+     },
+     {
+      "id": "25e1ad5f-af23-4ce4-8be1-09444b512d55",
+      "project_number": "COM-PRJ-APP21-39801866",
+      "meta": {
+       "review_cycle": "Completeness Review Zoning",
+       "discipline": "Completeness Review Zoning",
+       "status": "Approved",
+       "reviewer": "Mark Celestino",
+       "review_date": "07/01/2021"
+      },
+      "excerpt": "VERIFICATION OF PERMITTED USE ONLY. MEDICAL OFFICE CLIINIC PERMITTED IN C-3 MLOD-2 GC-2 AHOD ZONING DISTRICT. UDC ZONING REVIEW PENDING."
+     },
+     {
+      "id": "40a92442-4e1d-445c-8108-938de527178a",
+      "project_number": "COM-PRJ-APP25-39802401",
+      "meta": {
+       "review_cycle": "Completeness Review Zoning",
+       "discipline": "Completeness Review Zoning",
+       "status": "Approved",
+       "reviewer": "Mark Celestino",
+       "review_date": "11/25/2025"
+      },
+      "excerpt": "VERIFICATION OF PERMITTED USE ONLY. LABORATORY RESEARCH OR TESTING PERMITTED IN I-1 AND C-3R BASE ZONE. UDC ZONING REVIEW PENDING."
+     },
+     {
+      "id": "065de458-1a4a-4796-96ad-223f2d4c4ce8",
+      "project_number": "COM-PRJ-APP23-39800045",
+      "meta": {
+       "review_cycle": "Completeness Review Zoning",
+       "discipline": "Completeness Review Zoning",
+       "status": "Approved",
+       "reviewer": "Mark Celestino",
+       "review_date": "01/06/2023"
+      },
+      "excerpt": "VERIFICATION OF PERMITTED USE ONLY. APARTMENTS PERMITTED IN C-2 MLOD-2 GC-2 AHOD BASE ZONE. UDC ZONING REVIEW PENDING."
+     }
+    ],
+    "LAND Completeness Review": [
+     {
+      "id": "8ed525c0-a9e4-4823-bd2a-32e0d4eeb5ef",
+      "project_number": "LAND-PLAT-20-11800367",
+      "meta": {
+       "review_cycle": "Completeness Review",
+       "discipline": "Engineering TIA",
+       "status": "Additional Information Required",
+       "reviewer": "Nicole Salinas",
+       "review_date": "08/13/2020"
+      },
+      "excerpt": "TIA worksheet required; upload document and label type as \"TIA Worksheet\"."
+     },
+     {
+      "id": "292a2cfd-2e36-478b-a772-0f71a1715b35",
+      "project_number": "LAND-PLAT-20-11800478",
+      "meta": {
+       "review_cycle": "Completeness Review",
+       "discipline": "SAWS",
+       "status": "Additional Information Required",
+       "reviewer": "Kyle Harvey",
+       "review_date": "10/06/2020"
+      },
+      "excerpt": "pending saws items for review:\n\nsaws app. for plat review\nedu calculation sheet\nsigned and sealed well letter\nplat\nwater plans\nwater cost estimate\nwater utility layout\nsewer plans\nsewer cost estimate\nsewer utility layout\nutility service agreement"
+     },
+     {
+      "id": "07fd6fd3-4669-4feb-b180-37554beb6054",
+      "project_number": "LAND-PLAT-24-11800455",
+      "meta": {
+       "review_cycle": "Completeness Review",
+       "discipline": "SAWS",
+       "status": "Additional Information Required",
+       "reviewer": "Marisa Wachal",
+       "review_date": "11/18/2024"
+      },
+      "excerpt": "pending:\n\nsaws application\nedu calculation sheet\nsigned and sealed well letter\nmaster plan\nfire flow letter\nwater plans\nwater cost estimate\nsewer plans\nsewer cost estimate\nutility service agreement (if applicable)\nplat\n\nplease let me know by e-mail once items have been uploaded"
+     },
+     {
+      "id": "97245a8b-6ba4-4cf6-95b8-b4a63ac55cd1",
+      "project_number": "LAND-PLAT-20-11800572",
+      "meta": {
+       "review_cycle": "Completeness Review",
+       "discipline": "CPS Energy",
+       "status": "Additional Information Required",
+       "reviewer": "Edward Sanchez",
+       "review_date": "11/30/2020"
+      },
+      "excerpt": "Please upload PDF of plat and CAD file."
+     },
+     {
+      "id": "cf4d22dd-45e1-4ada-8d96-585142ebb889",
+      "project_number": "LAND-PLAT-22-11800276",
+      "meta": {
+       "review_cycle": "Completeness Review",
+       "discipline": "Engineering Trees",
+       "status": "Completeness Materials Received",
+       "reviewer": "Herminio Griego",
+       "review_date": "05/27/2022"
+      },
+      "excerpt": "Applicant submitted an online tree application TRE-APP-APP22-38801017."
+     }
+    ],
+    "LAND Application Intake": [
+     {
+      "id": "ca6b8ea9-b2bd-4f7d-a285-e70c59ee108c",
+      "project_number": "LAND-PLAT-25-11800337",
+      "meta": {
+       "review_cycle": "Application Intake",
+       "discipline": "Application Intake",
+       "status": "Additional Information Required",
+       "reviewer": "Amariah Williams"
+      },
+      "excerpt": "Pay initial fees"
+     },
+     {
+      "id": "64c7636e-39e6-413b-8dfe-519c8fa5e7c9",
+      "project_number": "LAND-PLAT-20-11800236",
+      "meta": {
+       "review_cycle": "Application Intake",
+       "discipline": "Application Intake",
+       "status": "Additional Information Required",
+       "reviewer": "Joshua Orton"
+      },
+      "excerpt": "Please remit fees due in order to proceed to technical review - JTO 5/18"
+     },
+     {
+      "id": "f314e0d7-7fdf-4a71-8430-8f5cbdceef47",
+      "project_number": "LAND-PLAT-26-11800033",
+      "meta": {
+       "review_cycle": "Application Intake",
+       "discipline": "Application Intake",
+       "status": "Additional Information Required",
+       "reviewer": "Stephanie Leef"
+      },
+      "excerpt": "Please pay all fees to initiate review of project."
+     },
+     {
+      "id": "9fb718a5-590e-4210-9c84-7b5e9cb064a9",
+      "project_number": "LAND-PLAT-26-11800059",
+      "meta": {
+       "review_cycle": "Application Intake",
+       "discipline": "Application Intake",
+       "status": "Additional Information Required",
+       "reviewer": "Stephanie Leef"
+      },
+      "excerpt": "Please pay all fees to initiate review of project."
+     },
+     {
+      "id": "2e2cd93a-37a9-4049-b213-d187b500f300",
+      "project_number": "LAND-PLAT-22-11800158",
+      "meta": {
+       "review_cycle": "Application Intake",
+       "discipline": "Application Intake",
+       "status": "Additional Information Required",
+       "reviewer": "Tiffany Turner"
+      },
+      "excerpt": "pay fees"
+     }
+    ]
+   },
+   "F2": "COM: a small intake/permit-tech team (same 3-5 names across both completeness cycles, e.g. Mark Celestino, Juan Alvarado, Christopher Delgado) - not discipline reviewers. Zoning completeness = permitted-use verification by the same team. LAND-PLAT: discipline/agency reviewers (SAWS, Engineering Trees, Engineering TIA, CPS Energy, TCI) each run their own completeness review.",
+   "F3": "Written comments the applicant must answer, iterating (Additional Information Required -> Additional Information Received). Content is administrative: missing/unsigned/unsealed documents, wrong permit type, valuation, missing uploads; zoning completeness is a one-line permitted-use check ('Verification of Permitted Use only ... UDC Zoning review pending'). Of 6,051 COM completeness AIR comments, ~75% match document/upload/seal/permit-type vocabulary; even code-term matches were administrative on inspection.",
+   "F6": "STRONG: separate review_cycle values 'Completeness Review', 'Completeness Review Zoning', 'Application Intake' distinct from 'Technical Review' on ~36k rows/~20k records.",
+   "read": "Distinct, named, comment-issuing pre-technical stage with its own clock (3 business days). Comments are admin/document deficiencies, not substantive plan-review comments. Tier A on F1/F5/F6 shape; F3 content is closer to B. Note site plan in SA is reviewed inside the commercial building permit (COM-PRJ-APP), not a standalone site plan application.",
+   "confidence": "high"
+  },
+  {
+   "jurisdiction": "El Paso",
+   "state": "TX",
+   "jurisdiction_id": "39122c8b-fe92-4492-b277-7fe51c7f98e9",
+   "vendor": "Accela",
+   "rows": 29153,
+   "rows_estimated": false,
+   "category": "intake_stage_in_data_comments_issuing_admin",
+   "stage_key": "raw_metadata.discipline (Accela task name) + raw_metadata.review_status",
+   "stage_values_full_scan": {
+    "note": "accela-planning-review-comments (3,049 rows) and accela-building-plan-review-comments (22,944 rows); discipline = Accela review task",
+    "planning tasks": {
+     "Planned Land Dev Plat Review": 914,
+     "BPI Review": 799,
+     "Pre-Application Review": 465,
+     "EPWU Review": 226,
+     "Fire Review": 159,
+     "Land Development Review": 131,
+     "Zoning Review": 128
+    },
+    "review_status": {
+     "Failed": 16782,
+     "Passed": 4978,
+     "Recommend Approval": 1700,
+     "Passed With Conditions": 1053,
+     "Incomplete": 464
+    }
+   },
+   "intake_stage": {
+    "Pre-Application Review": {
+     "rows": 465,
+     "records": 415,
+     "review_status": "Incomplete on 464/465",
+     "by_record_type": {
+      "Rezoning Record": 151,
+      "Combination Subdivision": 137,
+      "Detailed Site Plan": 95,
+      "Special Permit": 69,
+      "Zoning Condition Amendment": 11
+     },
+     "DSP_records": 90,
+     "reviewers": {
+      "Andrew Salloum": 163,
+      "Saul Pina": 85,
+      "Nina Rodriguez": 74,
+      "Alex Alejandre": 69,
+      "Adriana Martinez": 54
+     }
+    },
+    "record_status 'Pre App Denied'/'Pre App Completed'": "108/49 rows"
+   },
+   "key_quote": "Note: This is only a completeness check. Formal technical review begins once all documents are received and fees are paid. (14 rows, Saul Pina, Pre-Application Review task)",
+   "samples": {
+    "Pre-Application Review on Detailed Site Plan": [
+     {
+      "id": "8f778b7a-7b27-45c2-a11a-07c06bb07b63",
+      "project_number": "PZDS23-00041",
+      "meta": {
+       "discipline": "Pre-Application Review",
+       "record_type": "Detailed Site Plan",
+       "review_status": "Incomplete",
+       "record_status": "Cancelled",
+       "reviewer": "Nina Rodriguez",
+       "date": "2023-09-22"
+      },
+      "excerpt": "This project requires a special permit application. Therefore, this application will be cancelled. Please fill out the attached Special Permit application and send it back. In addition to revising the application we also require further documentation:\n\u2022\tNeighborhood Association Notification:\no\tSpecial Permits require neighborhood association notifications. Please find the attached notes, towards t"
+     },
+     {
+      "id": "0b788bf9-be52-4929-a6c4-08d8b1ba5f0f",
+      "project_number": "PZDS25-00044",
+      "meta": {
+       "discipline": "Pre-Application Review",
+       "record_type": "Detailed Site Plan",
+       "review_status": "Incomplete",
+       "record_status": "Approved",
+       "reviewer": "Saul Pina",
+       "date": "2026-01-06"
+      },
+      "excerpt": "- The detailed site development plan application has been deemed INCOMPLETE due to the following:\n\n1. Confirm whether the applicant is also the representative. Since no representative was identified, please include a contact email address if available.\n2. Provide a property survey accompanied by a metes-and-bounds description.\n3. The provided warranty deed indicates a different owner than what is "
+     },
+     {
+      "id": "51d41518-466f-46a6-bbca-32d0777545ad",
+      "project_number": "PZDS26-00026",
+      "meta": {
+       "discipline": "Pre-Application Review",
+       "record_type": "Detailed Site Plan",
+       "review_status": "Incomplete",
+       "record_status": "In Review",
+       "reviewer": "Saul Pina",
+       "date": "2026-07-07"
+      },
+      "excerpt": "- The application for a Detailed Site Development Plan (CPC) is INCOMPLETE due to the following:\n\n\t1. Ownership: Provide the warranty deed. Additionally, please include the articles of incorporation or a certificate of formation to verify the company's authorized signatory or designee.\n\nPlease upload these items to the Accela Citizen Access Portal or reply directly to this email. All revisions mus"
+     },
+     {
+      "id": "6f36ff09-2dbe-4260-9d5c-e64229bf1e92",
+      "project_number": "PZDS23-00036",
+      "meta": {
+       "discipline": "Pre-Application Review",
+       "record_type": "Detailed Site Plan",
+       "review_status": "Incomplete",
+       "record_status": "Cancelled",
+       "reviewer": "Nina Rodriguez",
+       "date": "2023-08-21"
+      },
+      "excerpt": "Application missing owner and applicant signatures on first page of application and proof of ownership."
+     },
+     {
+      "id": "e047eff0-60a4-432a-887e-31fceca401d6",
+      "project_number": "PZDS26-00007",
+      "meta": {
+       "discipline": "Pre-Application Review",
+       "record_type": "Detailed Site Plan",
+       "review_status": "Incomplete",
+       "record_status": "Cancelled",
+       "reviewer": "Saul Pina",
+       "date": "2026-02-18"
+      },
+      "excerpt": "- The application has been deemed INCOMPLETE due to the following:\n\n1. Narrative: Please confirm if the total parking count will remain the same. If the count changes, provide a comparison in the narrative between the existing and proposed parking spaces.\n2. Narrative: Please confirm if the current landscape requirements will remain. If there are changes, provide a comparison in the narrative of t"
+     }
+    ],
+    "completeness-check wording": [
+     {
+      "id": "c7589fe7-966a-4e74-821f-a8eacbbd485e",
+      "project_number": "PZDS26-00035",
+      "meta": {
+       "discipline": "Pre-Application Review",
+       "record_type": "Detailed Site Plan",
+       "review_status": "Incomplete",
+       "reviewer": "Saul Pina",
+       "date": "2026-08-25"
+      },
+      "excerpt": "- Your application for detailed site development plan (administrative modification) has been received and determined to be INCOMPLETE for the following reasons:\n\n\t1. Application: Submit a fully completed application including all required representative contact information and signatures.\n\t2. Submittal verification form: Revise form to clarify the designated representative. The representative list"
+     },
+     {
+      "id": "90eacccb-7fed-45a5-883a-a9466d03d97b",
+      "project_number": "PZRZ26-00030",
+      "meta": {
+       "discipline": "Pre-Application Review",
+       "record_type": "Rezoning Record",
+       "review_status": "Incomplete",
+       "reviewer": "Saul Pina",
+       "date": "2026-10-01"
+      },
+      "excerpt": "- Your application for rezoning has been received and determined to be INCOMPLETE for the following reasons:\n\n\t1. Proof of ownership: Submit a recorded warranty deed to confirm ownership, along with a certificate of formation (or similar organizational document) to confirm signatory authority.\n\t2. Neighborhood notice: Provide proof of notice sent to all registered neighborhood associations in the "
+     },
+     {
+      "id": "c50f5f26-f706-44c3-8107-a11889987084",
+      "project_number": "PZDS26-00034",
+      "meta": {
+       "discipline": "Pre-Application Review",
+       "record_type": "Detailed Site Plan",
+       "review_status": "Incomplete",
+       "reviewer": "Saul Pina",
+       "date": "2026-08-25"
+      },
+      "excerpt": "- Your application for detailed site development plan (administrative modification) has been received and determined to be INCOMPLETE for the following reasons:\n\n\t1. Narrative of changes: Provide a narrative stating if parking, landscaping, or building areas will change. Include an existing vs. proposed comparison, or list current quantities if remaining the same.\n\t2. Detailed Site Development Pla"
+     }
+    ]
+   },
+   "F2": "Planning staff (a handful of planners) acting as intake screeners; not discipline reviewers.",
+   "F3": "Written numbered deficiency lists ('deemed INCOMPLETE due to the following: 1. ... 2. ...') with a resubmittal deadline; applicant uploads and the record proceeds. Mostly administrative (ownership deed, signatures, submittal verification form, survey/metes-and-bounds) with some light plan-content asks (elevations, narrative of parking/landscape changes).",
+   "F6": "MEDIUM-STRONG: the Accela task is literally named 'Pre-Application Review' (misleading - it is not a pre-app meeting; it is the completeness screen) and its own review_status 'Incomplete'. Applies to the planning-module Detailed Site Development Plan (PZDS) record. Commercial building permits (where most site work is reviewed via 'Land Development Review') show no intake task in the data.",
+   "read": "Named completeness step (in Accela labelled 'Pre-Application Review') that issues written, iterating deficiency comments by planners; administrative content. Tier B+ (comment-issuing admin screen).",
+   "confidence": "high that the stage exists for DSDP; medium on how it maps to the runbook's 'formal'"
+  },
+  {
+   "jurisdiction": "Atlanta",
+   "state": "GA",
+   "jurisdiction_id": "655d44a7-cc99-4a79-8e91-0e85b1851098",
+   "vendor": "Accela",
+   "rows": 69134,
+   "rows_estimated": false,
+   "category": "intake_stage_in_data_comments_issuing_admin",
+   "stage_key": "raw_metadata.discipline (Accela workflow task name), module Building/Planning",
+   "stage_values_full_scan": {
+    "Application Intake": 1081,
+    "BoP Prereview": 220,
+    "OZD PreReview": 104,
+    "Arborist Preliminary Review": 1108,
+    "Plan Coordination": 601,
+    "Plan Distribution": 165,
+    "Site Development Review": 6776,
+    "Zoning Review": 2681,
+    "(114 task names total)": ""
+   },
+   "intake_stage": {
+    "Application Intake": {
+     "rows": 1081,
+     "records": 997,
+     "by_prefix": {
+      "LD": 302,
+      "RB": 208,
+      "BB": 195,
+      "V": 145,
+      "SAP": 105
+     },
+     "LD_rows": 302,
+     "LD_records": 268,
+     "LD_rows_with_deficiency_language": 72,
+     "undefined_or_empty_LD": 126
+    },
+    "BoP Prereview (SAP/BL/CT, Planning)": 220,
+    "OZD PreReview (overlay zoning, Planning)": 104
+   },
+   "key_quote": "I have performed a preliminary precursory review of your drawings for acceptance. Please see the deficiencies listed below: ... These items will need to be addressed before your permit may be routed to the plan reviewer for initial review.",
+   "samples": {
+    "Application Intake on LD (Land Development permit)": [
+     {
+      "id": "bc00ad7b-28fb-4272-9e9c-2d84bc51e855",
+      "project_number": "LD-202300213",
+      "meta": {
+       "module": "Building",
+       "discipline": "Application Intake",
+       "reviewer": "Angelyn Sabir"
+      },
+      "excerpt": "12/18/2023: Dear Applicant,\nThe plans you have submitted for review are not legible and must include \"Issued for Construction\" or \"Released for Construction\". Please resubmit digital plans for review. This are not acceptable. I have removed them from this record for your reupload.\nShould you have any questions, please reach out to Angelyn Sabir at asabir@atlantaga.gov or 470-755-3965.\nRegards, \nAn"
+     },
+     {
+      "id": "871d4865-0932-4d46-98dc-6ea1dea626be",
+      "project_number": "LD-202400178",
+      "meta": {
+       "module": "Building",
+       "discipline": "Application Intake",
+       "reviewer": "Kourtney Mosley"
+      },
+      "excerpt": "Dear Customer, The Commercial/ Light Commercial Team has received the above BB for processing. Please note that we are allowing (10) business days for the necessary changes before closing; thereafter, requiring a resubmittal. The correction(s) is/are as follows: \nThank you for your patience and submittal. I will need to discuss your project further with management to determine whether you should b"
+     },
+     {
+      "id": "d21f7f54-32c8-4bc2-a21c-5002aba060a8",
+      "project_number": "LD-202300177",
+      "meta": {
+       "module": "Building",
+       "discipline": "Application Intake",
+       "reviewer": "Emily Clarkson"
+      },
+      "excerpt": "Hi,\nThank you for your new application submittal for \u20263397 GREENBRIAR PKWY \nI have performed a preliminary review of your drawings/application for acceptance. Please see the deficiencies listed below: \n1) Please upload the SAP APPROVAL LETTER from zoning.\n2) Please upload all plans separately using the naming convention. (I will email you the sheet in a separate email) but a quick example would be"
+     },
+     {
+      "id": "5467b8ad-4bb6-4e0b-98b3-e96385ea481c",
+      "project_number": "LD-202600029",
+      "meta": {
+       "module": "Building",
+       "discipline": "Application Intake",
+       "reviewer": "Dominic Dellapina"
+      },
+      "excerpt": "Hello,\nThank you for your new application submittal for 350 Spelman. I have performed a preliminary precursory review of your drawings for acceptance. Please see the deficiencies listed below: \n- Scope of work on LD should only be infrastructure, not building itself. Please amend or remove from scope\n- Is the cost of infrastructure laying $2.2m or does the cost include the 7 story building?\n-----\n"
+     },
+     {
+      "id": "632f09d2-5b23-467b-a4a8-d4bbcfbdbaa8",
+      "project_number": "LD-202600047",
+      "meta": {
+       "module": "Building",
+       "discipline": "Application Intake",
+       "reviewer": "Dominic Dellapina"
+      },
+      "excerpt": "Hello,\nThank you for your new application submittal for 3260 Northside Dr. I have performed a preliminary review of your drawings for acceptance. Please see the deficiencies listed below: \n- Arborist Pre-Submittal Meeting (Schedule through emailing arborist.dcpd@atlantaga.gov)\n- LD can only be for development of future project. Renovation of middle/upper school, classroom/cafeteria addition, parki"
+     }
+    ]
+   },
+   "F2": "Intake/permit staff (Dominic Dellapina, Nicholas Allison, Angelyn Sabir, Kourtney Mosley...) - not discipline reviewers.",
+   "F3": "Accept/return with a written deficiency list (missing SAP approval letter, cost of construction, codes on cover, 'Released for construction' stamps, arborist pre-submittal form); 10-business-day correction window quoted in some. Administrative, not substantive.",
+   "F6": "STRONG: 'Application Intake' is its own Accela task distinct from 'Site Development Review', 'Zoning Review' etc.",
+   "read": "Tier B (administrative acceptance screen with written deficiencies). Site plan vehicle in Atlanta = LD (Land Development) permit, which has this intake step.",
+   "confidence": "high"
+  },
+  {
+   "jurisdiction": "Austin",
+   "state": "TX",
+   "jurisdiction_id": "a4d41482-a44a-489e-937e-145bfd2a0a84",
+   "vendor": "AMANDA",
+   "rows": 151029,
+   "rows_estimated": false,
+   "category": "no_stage_field_text_evidence_strong",
+   "stage_key": null,
+   "stage_values_full_scan": {
+    "note": "Bulk AMANDA import; raw_metadata only notes/source_system/extraction_*; project_number null on all rows"
+   },
+   "text_hits": {
+    "'completeness check' (any)": 229,
+    "of which FLASH DRIVE boilerplate": "majority",
+    "comments made AT/DURING completeness check, or responses to them": 46
+   },
+   "key_quotes": [
+    "Per the Engineer's Report and comment responses to completeness check comments, the 500-yr FEMA floodplain is delineated as the stand-in ...",
+    "Address completeness check comment DE 3 made on 6/16/2021. Provided drainage area maps show an increase in flow in drainage area 2. ...",
+    "My comments I made during completeness check were to update the building identifiers ...",
+    "No density bonus will be applied to this site per applicant response to completeness check comment of affordability minimums ...",
+    "City Arborist completeness check will not be considered 'complete' until this information is provided."
+   ],
+   "samples": {
+    "completeness-check references": [
+     {
+      "id": "23cd34a1-7010-4884-8329-0acb78641142",
+      "project_number": null,
+      "meta": {},
+      "excerpt": "Based on the completeness check comments from RSMP, the note about RSMP participation on Sheet 11 (located under the drainage calculations) may not be accurate. Please ensure that the information provided with this note is accurate for this project."
+     },
+     {
+      "id": "e6cb25b2-dbbc-4f36-8dd5-bd6d64eae0d4",
+      "project_number": null,
+      "meta": {},
+      "excerpt": "In order to participate in the Regional Stormwater Management Program, modeling will need to be required in order to show no adverse impact downstream. To request the City's existing StormCAD or HEC-HMS models, please visit www.austintexas.gov/floodpro. When using a downloaded HEC-HMS file, please check the version of HEC-HMS before opening the model. A model opened in a newer version may not work"
+     },
+     {
+      "id": "2b0e851b-7904-4313-a32a-2c541553e983",
+      "project_number": null,
+      "meta": {},
+      "excerpt": "Per \u00a725-9: As directed during completeness check with FYI comments, the site is served by a dead end 6\" main. To determine the ability of said main to meet project demands within allowable velocities and pressures, the landowner must obtain City approval of a Service Extension Request for water service. For more information pertaining to the Service Extension Request process and submittal requirem"
+     },
+     {
+      "id": "a55c9baa-d633-4033-a74a-58dede73d73f",
+      "project_number": null,
+      "meta": {},
+      "excerpt": "No density bonus will be applied to this site per applicant response to completeness check comment of affordability minimums and signed approval letter from Housing Department. The site is not applying for any density bonus and developers are trying to build a Class-A project."
+     },
+     {
+      "id": "dec49133-2dac-4383-8cd6-5f67b1f376de",
+      "project_number": null,
+      "meta": {},
+      "excerpt": "Per the Engineer's Report and comment responses to completeness check comments, the 500-yr FEMA floodplain is delineated as the stand-in for the Atlas 14 floodplain. Therefore, the 500-yr FEMA floodplain is considered the City of Austin 100-yr regulatory floodplain. Please provide a copy of the model used for the delineation to confirm that the correct delineation is shown and for the case file."
+     }
+    ]
+   },
+   "F2": "Discipline reviewers issue completeness-check comments (drainage 'DE 3', RSMP, City Arborist, Housing/density bonus, water utility).",
+   "F3": "Yes - numbered discipline comments at completeness check that the applicant responds to ('comment responses to completeness check comments'); substantive (floodplain, drainage flows).",
+   "F6": "TEXT ONLY: no stage field; completeness-check comments themselves are not separately labelled in the import - only referenced by later formal-review comments.",
+   "read": "Reference tier A confirmed from the comment corpus: discipline reviewers write substantive, numbered comments at completeness check that carry into formal review.",
+   "confidence": "high (text), but cannot count completeness-check comments directly"
+  },
+  {
+   "jurisdiction": "Seattle",
+   "state": "WA",
+   "jurisdiction_id": "b8053513-56ea-450c-9e1a-3f9fcc3c3590",
+   "vendor": "Accela",
+   "rows": 197602,
+   "rows_estimated": false,
+   "category": "no_stage_field_text_evidence_admin",
+   "stage_key": "raw_metadata.reviewcycle (numeric 1..10 only) - no named stage",
+   "stage_values_full_scan": {
+    "reviewcycle": {
+     "1": 8932,
+     "2": 3294,
+     "3": 1034,
+     "4+": 492,
+     "None": 183850
+    },
+    "documentType": {
+     "PUBLISHED Decision/Recommendation": 72121,
+     "Correction Letter": 38440
+    }
+   },
+   "text_hits": {
+    "Land Use Intake specialist / re-screen / screening correction": 12,
+    "intake (any)": 174
+   },
+   "key_quotes": [
+    "Please upload the updated Statement of Financial responsibility, SEPA checklist and SEPA Greenhouse Gas Emissions worksheet into the next available Land Use intake appointment to be re-screened. ... Sandra Montgomery Land Use Permit Specialist",
+    "Regarding the Land Use Intake screening correction in the communication record ...",
+    "3027749- Screening corrections.pdf ... I took your plans to the zoning plans examiner who asked for these clarifications"
+   ],
+   "samples": {
+    "intake screening": [
+     {
+      "id": "07ef481c-1ce4-4a3a-ba09-25901d7ffddd",
+      "project_number": "3027749-LU",
+      "meta": {
+       "vein": "records-rooms-archives",
+       "documentType": "Correction Letter",
+       "department": null
+      },
+      "excerpt": "3027749 - CORRECTIONS TO PLANS\nDate: Tuesday, January 23, 2018 2:46:00 PM\nAttachments: Plan SetV2.pdf\n image001.png\n image003.png\n image004.png\n image005.png\n 3027749- Screening corrections.pdf\n 3027749 Quarter- section map.png\n 3027749 GIS MAP.png\n image002.png\nKyle,\nI took your plans to the zoning plans examiner who asked for these clarifications on the\nplans.\nPlease see page 1 and 2 from previo"
+     },
+     {
+      "id": "3629d6a6-7300-43db-b4f8-91463b8af6e9",
+      "project_number": "3029272-LU",
+      "meta": {
+       "vein": "records-rooms-archives",
+       "documentType": "Correction Letter",
+       "department": null
+      },
+      "excerpt": "3029272 - Site plan required\nDate: Friday, February 02, 2018 5:08:00 PM\nAttachments: image001.png\n image002.png\n image003.png\n image004.png\n image005.png\nI do not see a dimensioned site plan, of any sort, in plan set 2 in response to my 1st\ncorrection. Please submit a dimensioned site plan per TIP 103 or 103B.\nThanks,\n-san\nSandra Montgomery\nDevelopment Site Team | Land Use Intake Permit Specialist"
+     },
+     {
+      "id": "7dfe8cfe-c694-4c88-9350-9f41d1532418",
+      "project_number": "3026522-LU",
+      "meta": {
+       "vein": "records-rooms-archives",
+       "documentType": "Correction Letter",
+       "department": null
+      },
+      "excerpt": "RE: 3026522 - Rezone/ MHA upzone on 3026522\nMy understanding is legislation has passed for this upzone area and your site is pending mayors\nsignature. I\u2019ll check with the expert MHA person to see what we do next. Your planners out until the\n16th; however, we defer to department the MHA liaison.\nsan\nSandra Montgomery\nDevelopment Site Analyst | Land Use Intake Permit Specialist\nSeattle Department of"
+     },
+     {
+      "id": "b75e23d2-b277-4be0-a33d-8b171a691019",
+      "project_number": "3029882-LU",
+      "meta": {
+       "vein": "records-rooms-archives",
+       "documentType": "Correction Letter",
+       "department": null
+      },
+      "excerpt": "3029882 - Clarification of correction - Addressing\nDate: Wednesday, March 14, 2018 10:35:00 AM\nAttachments: image001.png\n image002.png\n image003.png\n image004.png\n image005.png\n image006.png\nIzabella,\nI met with Sue P to discuss the correction Items. To clarify:\nCorrection Item 2 of my correction (see below) I asked to see the Lot Block detail by showing the\nexisting lot numbers on sheet 2, below "
+     }
+    ]
+   },
+   "F2": "Land Use Intake Permit Specialists screen; sometimes consult a zoning plans examiner.",
+   "F3": "Written 'screening corrections' before the MUP is accepted; mostly documents/forms/site-plan presence.",
+   "F6": "WEAK: text only (correction-letter emails); numeric review cycles do not distinguish screening.",
+   "read": "Tier B (intake screening with written corrections) for Seattle MUP; low count.",
+   "confidence": "medium"
+  },
+  {
+   "jurisdiction": "Fort Lauderdale",
+   "state": "FL",
+   "jurisdiction_id": "9f39329c-84e2-4345-9fd0-0a29ef7b6092",
+   "vendor": "Accela",
+   "rows": 24681,
+   "rows_estimated": false,
+   "category": "no_stage_field_text_evidence_admin",
+   "stage_key": "raw_metadata.review_cycle holds DRC meeting DATES only (e.g. 'October 22, 2024'); discipline = DRC reviewing division",
+   "stage_values_full_scan": {
+    "vein": {
+     "records-rooms-archives": 17596,
+     "portal-firehose": 4862,
+     "agenda-minutes-packets": 1771
+    },
+    "subvein drc-response-pairs": 1430
+   },
+   "text_hits": {
+    "completeness email / completeness determination": 136,
+    "projects": 125
+   },
+   "key_quotes": [
+    "Pursuant to State Statute 166.033(1) the application must be deemed approved, approved with conditions, or denied within 120 days of completeness determination ...",
+    "... unless the applicant submits a waiver of these timeframes as provided in the completeness email from the City."
+   ],
+   "samples": {
+    "completeness determination boilerplate": [
+     {
+      "id": "7b25cabe-b235-479f-9adb-dae88eb02660",
+      "project_number": "UDP-P24002",
+      "meta": {
+       "vein": "records-rooms-archives",
+       "discipline": "URBAN DESIGN & PLANNING"
+      },
+      "excerpt": "Pursuant to State Statute 166.033(1) the application must be deemed approved, approved with conditions, or denied within 180 days of completeness determination, on or before July 17, 2024, unless a mutually agreed upon time extension is established between the City and the applicant. Failure to meet the applicable timeframe or request an extension may result in the application being denied by the "
+     },
+     {
+      "id": "08237953-b719-465e-aa46-297389564be1",
+      "project_number": "UDP-S23071",
+      "meta": {
+       "vein": "records-rooms-archives",
+       "discipline": "URBAN DESIGN AND PLANNING"
+      },
+      "excerpt": "Pursuant to State Statute 166.033(1) the application must be deemed approved, approved with conditions, or denied within 120 days of completeness determination, on or before April 26, 2024, unless a mutually agreed upon time extension is established between the City and the applicant. Failure to meet the applicable timeframe or request an extension may result in the application being denied by the"
+     },
+     {
+      "id": "572e8d87-279b-40e9-b10d-def54ce722da",
+      "project_number": "UDP-EV24008",
+      "meta": {
+       "vein": "records-rooms-archives",
+       "discipline": "URBAN DESIGN & PLANNING"
+      },
+      "excerpt": "Pursuant to State Statute 166.033(1) the application must be deemed approved, approved with conditions, or denied within 180 days of completeness determination, on or before April 30, 2025, unless a mutually agreed upon time extension is established between the City and the applicant. Please provide a statement requesting and agreeing to a waiver of these timeframes or request a specified amount o"
+     }
+    ]
+   },
+   "F2": "Completeness determination issued by the City (email) - unspecified who; DRC comments are by divisions (Urban Design & Planning, Engineering, Landscape, Police, Solid Waste...).",
+   "F3": "No comments attributable to the completeness step; only a completeness email starting the FS 166.033 clock.",
+   "F6": "NONE as a stage; boilerplate in DRC (Development Review Committee) comment reports.",
+   "read": "Tier B (statutory administrative completeness determination, F7 = FS 166.033). No comment-issuing intake stage in the data.",
+   "confidence": "medium-high"
+  },
+  {
+   "jurisdiction": "Charlotte",
+   "state": "NC",
+   "jurisdiction_id": "9f3753a3-287d-4509-badc-362ad8f5108b",
+   "vendor": "Accela",
+   "rows": 51784,
+   "rows_estimated": false,
+   "category": "no_stage_field_text_evidence_comments",
+   "stage_key": null,
+   "stage_values_full_scan": {
+    "reviewer-comment rows (Accela LDC/LDCP/SDRMF)": 3329,
+    "records": 1711
+   },
+   "text_hits": {
+    "gateway (in reviewer comments)": 26
+   },
+   "key_quotes": [
+    "Missing items per gateway checklist: ... Once plans are uploaded meeting the standards outlined in our gateway checklist, the plans will be accepted for review. The commercial gateway checklist can be found here - https://charlottenc.gov/DevelopmentCenter/Documents/Checklist/Gateway%20Checklist%20-%20Commercial%20Plans.pdf",
+    "Approved rezoning has architectural requirements. Project is missing required building elevations. Please upload building elevations to pass gateway and advance the project into a review cycle.",
+    "Gateway review by Brendan Smith ... Please include intersection sight distance plan and profile in the plan for the proposed driveway."
+   ],
+   "samples": {
+    "gateway": [
+     {
+      "id": "0137890b-ca54-4f4c-b3a4-40694e4db593",
+      "project_number": "LDCP-2024-00554",
+      "meta": {
+       "record_type": "LDCP",
+       "record_id": "LDCP-2024-00554"
+      },
+      "excerpt": "Based on the scope of work of the project at the time of gateway, no further review by Commercial Zoning is triggered. If the project changes at any point during the review to any use other than single family detached or duplex lots, a new project submittal may be required."
+     },
+     {
+      "id": "9e471c55-8f46-43e4-8eb9-87714f61f232",
+      "project_number": "LDCP-2024-00705",
+      "meta": {
+       "record_type": "LDCP",
+       "record_id": "LDCP-2024-00705"
+      },
+      "excerpt": "Approved rezoning has architectural requirements. Project is missing required building elevations. Please upload building elevations to pass gateway and advance the project into a review cycle."
+     },
+     {
+      "id": "3540f867-3758-4e66-b53b-743b75ad2df9",
+      "project_number": "LDC-2021-00138",
+      "meta": {
+       "record_type": "LDC",
+       "record_id": "LDC-2021-00138"
+      },
+      "excerpt": "The gateway was reviewed by Keith Schell, keith.schell@charlottenc.gov, 704-579-3758. The following need to be included on the plans: tax parcel number, zoning, watershed overlay district, SWIM/PCSO buffers, floodplain boundaries, driveway type, intersection sight distance plan for driveway, erosion control plan, construction sequence, erosion control notes, site area (acres), denuded area (acres)"
+     },
+     {
+      "id": "f3f274d9-6041-452b-a776-ad10f293a575",
+      "project_number": "LDC-2021-00042",
+      "meta": {
+       "record_type": "LDC",
+       "record_id": "LDC-2021-00042"
+      },
+      "excerpt": "Gateway review by Brendan Smith bmsmith@charlottenc.gov 704-579-9605 ****** Please include intersection sight distance plan and profile in the plan for the proposed driveway. ************"
+     },
+     {
+      "id": "8c910225-c64d-427d-b0fc-cbe0226a936b",
+      "project_number": "LDC-2021-00017",
+      "meta": {
+       "record_type": "LDC",
+       "record_id": "LDC-2021-00017"
+      },
+      "excerpt": "Missing items per gateway checklist: -Clearly label all driveways (type, radii, dimensions, etc) -Missing completed PCSO table -Missing intersection sight distance plan -PDFs cannot had \"AutoCAD SHX\" items Once plans are uploaded meeting the standards outlined in our gateway checklist, the plans will be accepted for review. The commercial gateway checklist can be found here - https://charlottenc.g"
+     }
+    ]
+   },
+   "F2": "Named staff incl. zoning and CDOT/engineering reviewers do the gateway.",
+   "F3": "Written comments with checklist items, some substantive (sight distance, elevations vs rezoning conditions); applicant must fix to 'pass gateway'.",
+   "F6": "TEXT ONLY.",
+   "read": "Possible tier A/B boundary (named 'Gateway' stage with checklist and discipline staff). Not in focus list; worth a web check.",
+   "confidence": "medium"
+  },
+  {
+   "jurisdiction": "Nashville",
+   "state": "TN",
+   "jurisdiction_id": "2bf79404-5a5e-40fe-9882-c2b2d1400123",
+   "vendor": "Custom in-house ePermits (GeoCivix ePlans for plan review)",
+   "rows": 51076,
+   "rows_estimated": false,
+   "category": "no_stage_field_text_evidence_admin",
+   "stage_key": null,
+   "stage_values_full_scan": {
+    "content_type": {
+     "portal_reviewer_comment": 14293,
+     "staff_report_condition": "majority of rest"
+    },
+    "note": "portal comments are mostly legacy planning case notes (1996-2011 conversion)"
+   },
+   "text_hits": {
+    "incomplete/sufficiency/filing deadline (portal comments)": 274
+   },
+   "key_quotes": [
+    "Rejected for 6.12.08 filing deadline due to lack of sufficiency and lack of proof of payment of capacities.",
+    "The surveyor has been informed that the application is incomplete until an active availability from W&S is furnished"
+   ],
+   "samples": {
+    "incomplete notes": [
+     {
+      "id": "23fb2bc7-f505-4df7-a594-444650ed0e2c",
+      "project_number": "2000000217",
+      "meta": {
+       "caseType": "PLSB"
+      },
+      "excerpt": "08/28/2010  -  Only Conversion:  \r\nCP and D: [3-22-2000ba]This plat is requesting to combine two platted commercial lots into one lot. There will not be any bonds or variances required. The surveyor has been informed that the application is incomplete until an active availability from W&S is furnished for the subdivision file. This will be an administrative review item, pending availability."
+     },
+     {
+      "id": "6504933d-9d82-451c-869f-686008995ae3",
+      "project_number": "2000000447",
+      "meta": {
+       "caseType": "PLSB"
+      },
+      "excerpt": "08/28/2010  -  Only Conversion:  \r\nCP and D: [10/4/00 TC] My notes indicate that this is an incomplete application due to some expired State sewer plans?"
+     },
+     {
+      "id": "4226d771-553c-467c-b095-cb5c074c6d2c",
+      "project_number": "1999000418",
+      "meta": {
+       "caseType": "PLSB"
+      },
+      "excerpt": "08/28/2010  -  Only Conversion:  \r\n7/19/99:  Caption with PUD.7/6/99:  Defer until August, 1999 agenda because brining in final PUD plans.\r\n08/28/2010  -  Only Conversion:  \r\nCP and D: [9-13-99ba]DRC Same position as 8-30-99, Public Works still not approving plans for roadways. Water and Sewer is waiting on revisions to the utility extension plans.[8-30-99ba]Public Works reports that construction "
+     },
+     {
+      "id": "96b2df58-3454-4252-943e-2f9d29c28e0f",
+      "project_number": "2006000409",
+      "meta": {
+       "caseType": "PLSB"
+      },
+      "excerpt": "08/28/2010  -  Only Conversion:  \r\nCP: Alan Treadway in Real Property Services filed this application.  He knows it is incomplete.  Will be filing a mandatory referral to go along with it.  See list of items he still needs to submit in file.   Part of the Southeast Arterial crosses over the northern portion of this property, will Metro reserve or dedicate r.o.w. for the arterial?"
+     }
+    ]
+   },
+   "F2": "Planning case planners' notes; Metro Stormwater 'sufficiency' as a prerequisite.",
+   "F3": "Accept/reject notes for agenda filing; not applicant-facing comment cycles.",
+   "F6": "WEAK, legacy-era only.",
+   "read": "Tier B signals (filing-deadline completeness + stormwater sufficiency prerequisite), old data.",
+   "confidence": "low-medium"
+  },
+  {
+   "jurisdiction": "Houston",
+   "state": "TX",
+   "jurisdiction_id": "6afcda72-2364-4940-8ebd-dee8625a56e7",
+   "vendor": "Avolve ProjectDox",
+   "rows": 966,
+   "rows_estimated": false,
+   "category": "stage_data_no_intake",
+   "stage_key": "raw_metadata.department / trans_type / note_status",
+   "stage_values_full_scan": {
+    "trans_type": {
+     "PLX1010/PLX1011": 966
+    },
+    "note_status": {
+     "Correction Necessary": 966
+    },
+    "department": {
+     "PLANNING": 328,
+     "STORM DRAIN": 300,
+     "UTIL. REVIEW": 211,
+     "FLOOD PLAIN": 78,
+     "UTIL. INFRA.": 26,
+     "FIRE MARSHAL": 12
+    }
+   },
+   "intake_stage": null,
+   "text_hits": {
+    "completeness": 2,
+    "intake": 0
+   },
+   "samples": {
+    "examples": [
+     {
+      "id": "8aaa1058-f40e-4632-b8b3-61e49fa30e86",
+      "project_number": "22021429",
+      "meta": {
+       "department": "STORM DRAIN",
+       "note_status": "Correction Necessary",
+       "trans_type": "PLX1010/PLX1011"
+      },
+      "excerpt": "3. ROOF DRAINAGE All plans for new buildings and/or canopies shall show method of draining. Please provide the general location of the downspouts and show that the downspouts are connected and/or being directed to the main drainage system."
+     },
+     {
+      "id": "25b48d40-b605-4704-a2e4-6e654c923d65",
+      "project_number": "26002238",
+      "meta": {
+       "department": "STORM DRAIN",
+       "note_status": "Correction Necessary",
+       "trans_type": "PLX1010/PLX1011"
+      },
+      "excerpt": "4. CURB CUT When a curb cut is necessary, a 6 restrictor shall be reduced to a 4 PVC sch. 40 pipe connection before going through the curb. Residential Storm Water outfall piping to curb cut shall be schedule 40 PVC from private property through ROW and curb. Provide detail of curb cut and callout on the drainage plan."
+     },
+     {
+      "id": "9a93173c-8d29-4a79-afa0-bd8eadaf7111",
+      "project_number": "21002167",
+      "meta": {
+       "department": "PLANNING",
+       "note_status": "Correction Necessary",
+       "trans_type": "PLX1010/PLX1011"
+      },
+      "excerpt": "2. The parking spaces shown on the site plan are located in the ROW and cannot be counted toward the off-street parking requirements. Parking spaces must be located fully within the property to count toward Ch.26 requirements."
+     }
+    ]
+   },
+   "F6": "No intake stage among ILMS plan-review notes; only discipline corrections.",
+   "read": "Weak negative: small sample (966 rows) of one ILMS transaction type; an intake screen could exist but not be captured as notes.",
+   "confidence": "low"
+  },
+  {
+   "jurisdiction": "Phoenix",
+   "state": "AZ",
+   "jurisdiction_id": "685454cc-1bd2-4ea7-950b-54ba3b219cbc",
+   "vendor": "Salesforce/Clariti",
+   "rows": 1589998,
+   "rows_estimated": false,
+   "category": "stage_data_no_intake",
+   "stage_key": "raw_metadata.review_description (KIVA review type) + raw_metadata.action_code; doc_type kiva-actionnotes (~1.04M portal rows)",
+   "stage_values_full_scan": {
+    "review_description_distinct": 77,
+    "top": {
+     "SITE PLAN REVIEW": "~54k in first 481k rows",
+     "MECH/PLBG CODE REVIEW": "",
+     "BLDG CODE REVIEW": "",
+     "DSGN REV/ZONING": "",
+     "GRADING & DRAINAGE REVIEW": ""
+    },
+    "action_code": {
+     "PR 1-C": 833863,
+     "PR 2-C": 130769,
+     "PR 1-S": 23929,
+     "PR 3-C": 19774,
+     "PR 1-OUT": 16952,
+     "PR 2-S": 6430,
+     "PR 2-OUT": 5306,
+     "PR 3-S": 1149
+    }
+   },
+   "intake_stage": null,
+   "intake_like_review_types": "none of 77 KIVA review types is intake/completeness/prescreen/acceptance (only regex matches: FIRE PREVENTION REVIEW, COMPRESSED GAS REVIEW, HISTORIC PRESERVATION PLAN REVIEW - false positives)",
+   "text_hits": {
+    "prescreen/log-in meeting/completeness phrases": 1679
+   },
+   "key_quotes": [
+    "Prior to building plan log-in, your submittal must be prescreened at a meeting with your Team Leader and Site Planner.  The purpose of the meeting is to screen the submittal for completeness as outlined in the BUILDING SAFETY section of this report (row 3716af11, project 1288809)",
+    "plans may not be logged in for plan check without the authorization of the Team. To obtain authorization, please schedule an appointment with the Site Plan Reviewer ... No log-ins will be authorized without a scheduled appointment. (ef63f5fd, SITE PLAN REVIEW)"
+   ],
+   "F2": "Log-in/prescreen authorization by Team Leader + Site Plan Reviewer (discipline staff), but for the building construction submittal that follows site plan approval.",
+   "F3": "No comments attributable to an intake stage; all KIVA notes are plan-review cycle comments (PR 1/2/3, C=corrections, S, OUT).",
+   "F6": "NEGATIVE at field level: 77 named review types and 8 action codes, none intake-type, across ~1.04M review notes.",
+   "read": "Moderate negative for a comment-issuing intake stage on the site plan itself: the stage model is rich and named, and no intake type exists. Caveat: an intake screen would not necessarily write KIVA action notes; and text shows a prescreen/log-in meeting gate for the subsequent building submittal (tier B-ish, F2 = site planner).",
+   "confidence": "medium"
+  },
+  {
+   "jurisdiction": "Georgetown",
+   "state": "TX",
+   "jurisdiction_id": "367a795f-9038-4431-991c-3190c0bb46ca",
+   "vendor": "MGO Connect (My Government Online)",
+   "rows": 27578,
+   "rows_estimated": false,
+   "category": "no_stage_field_technical_review_only",
+   "stage_key": "type (checklist/markup), section_type (SDP/PP/TIA), compliance_status - all from technical-review documents",
+   "stage_values_full_scan": {
+    "source_document": {
+     "P&Z Review Comments Checklist": 25728,
+     "P&Z Submitted Plans Comment Summary": 1850
+    }
+   },
+   "text_hits": {
+    "completeness": 18,
+    "of which about completeness stage": 1
+   },
+   "key_quotes": [
+    "Technical reviews 8.21.23 submittal Planning: 8.22.23 reviewing/waiting on completeness LP:SEE COMMENTS ENG:SEE COMMENTS (2023-28-FP, final plat)"
+   ],
+   "F6": "None: harvest is only technical-review checklists/markups.",
+   "read": "No usable signal either way (data only from technical review).",
+   "confidence": "n/a"
+  },
+  {
+   "jurisdiction": "Dallas",
+   "state": "TX",
+   "jurisdiction_id": "5dc7e659-a1af-4fb8-b286-4390b58802c5",
+   "vendor": "Accela",
+   "rows": 74673,
+   "rows_estimated": false,
+   "category": "no_stage_data",
+   "read": "Rows are Legistar zoning staff reports, BOA decisions, POSSE certificates of appropriateness, and CPC plat conditions (department = General/Street Light/Survey SPRG/Paving & Drainage...). No site-plan permit review data; no completeness/intake hits beyond boilerplate.",
+   "stage_key": null,
+   "confidence": "n/a"
+  },
+  {
+   "jurisdiction": "Cedar Park",
+   "state": "TX",
+   "jurisdiction_id": "7a715641-c0af-4d03-96b3-78cb57518367",
+   "vendor": "MGO Connect",
+   "rows": 1135,
+   "rows_estimated": false,
+   "category": "no_stage_data",
+   "read": "1,135 rows all Council/agenda staff_recommendation + condition. Zero completeness/intake hits.",
+   "stage_key": null,
+   "confidence": "n/a"
+  },
+  {
+   "jurisdiction": "New Braunfels",
+   "state": "TX",
+   "jurisdiction_id": "ad3bbbaf-d252-46ac-806a-f75d64a84adc",
+   "vendor": "CityWorks PLL / ProjectDox",
+   "rows": 670,
+   "rows_estimated": false,
+   "category": "no_stage_data",
+   "read": "670 rows Planning Commission staff reports (+4 BOA). Zero hits.",
+   "stage_key": null,
+   "confidence": "n/a"
+  },
+  {
+   "jurisdiction": "Travis County",
+   "state": "TX",
+   "jurisdiction_id": "4bca1a70-dd5a-4ca4-87ae-cab8100bc913",
+   "vendor": "MyPermitNow (TNR Development Services); CivicClerk (Commissioners Court agendas)",
+   "rows": 2019,
+   "rows_estimated": false,
+   "category": "no_stage_data",
+   "read": "2,019 TNR agenda requests (Commissioners Court). One useful hint: 'The review schedule imposed by HB 3167 requires that a subdivision application, once found to be complete in completeness check and ready for a 30-day technical review period, must be scheduled for Court consideration within 30 days' - subdivisions, statutory.",
+   "stage_key": null,
+   "confidence": "n/a"
+  },
+  {
+   "jurisdiction": "Fort Worth",
+   "state": "TX",
+   "jurisdiction_id": "6fa01be1-f45e-4fa0-a993-6ceebb8d3f83",
+   "vendor": "Accela",
+   "rows": 3518,
+   "rows_estimated": false,
+   "category": "no_stage_data",
+   "read": "3,518 rows agenda packets/appeals/env RTC. Zero hits.",
+   "stage_key": null,
+   "confidence": "n/a"
+  },
+  {
+   "jurisdiction": "Orange Park",
+   "state": "FL",
+   "jurisdiction_id": "cb538d87-2d57-42f4-b195-1592633b3778",
+   "vendor": "iWorQ",
+   "rows": 2492,
+   "rows_estimated": false,
+   "category": "no_stage_data",
+   "read": "2,492 rows mostly FDEP/WMD environmental permit RTC (state agency 'application is not complete' letters - not the town). No town site-plan review data.",
+   "stage_key": null,
+   "confidence": "n/a"
+  },
+  {
+   "jurisdiction": "Harris County",
+   "state": "TX",
+   "jurisdiction_id": "d9eb87fa-2b5d-4723-a13f-999285c9f529",
+   "vendor": "in-house (Engineering/Permit Office Plat Search) + Legistar (Commissioners Court)",
+   "rows": 55091,
+   "rows_estimated": false,
+   "category": "no_stage_data_plat_only",
+   "read": "55,091 rows = plat recordation requirements (review_category Title Report, Tax Certificate, Traffic UVE...). Recordation checklist, not site plan intake.",
+   "stage_key": null,
+   "confidence": "n/a"
+  },
+  {
+   "jurisdiction": "Colorado Springs",
+   "state": "CO",
+   "jurisdiction_id": "60bda215-a7a8-4382-aaba-84b35fe16aac",
+   "vendor": "Accela",
+   "rows": 219468,
+   "rows_estimated": false,
+   "category": "no_stage_field_text_hint",
+   "read": "219k review letters (LUIS). 'Justification addressing the review criteria has always been an application completeness item.'; 'Initial project intake days are Monday thru Thursday only.' Weak tier-B hint; no stage field.",
+   "stage_key": null,
+   "confidence": "n/a"
+  },
+  {
+   "jurisdiction": "Los Angeles",
+   "state": "CA",
+   "jurisdiction_id": "1b463ab9-7591-4c83-973d-7ea4b3f1a499",
+   "vendor": "PCIS + Avolve ProjectDox (ePlanLA); Clariti+Unisys (BuildLA) selected Nov 2024",
+   "rows": 97635,
+   "rows_estimated": false,
+   "category": "no_stage_data",
+   "read": "Determination letters/EIR RTC; 'deemed complete' only in statutory recitals.",
+   "stage_key": null,
+   "confidence": "n/a"
+  },
+  {
+   "jurisdiction": "New York",
+   "state": "NY",
+   "jurisdiction_id": "f7d6de7d-c0cc-4c78-8786-91b4333d41f3",
+   "vendor": "in-house",
+   "rows": 498540,
+   "rows_estimated": false,
+   "category": "not_scanned",
+   "read": "498k rows LPC/CPC/BSA/CEQR; vein list shows no permit plan-review stage data; not scanned for text.",
+   "stage_key": null,
+   "confidence": "n/a"
+  },
+  {
+   "jurisdiction": "Boston",
+   "state": "MA",
+   "jurisdiction_id": "6814ad2c-b0f8-461f-a575-9e2e12e1962c",
+   "vendor": "City of Boston in-house (permitfinder + ISD online permits); Accela retired 2026-06",
+   "rows": 12142,
+   "rows_estimated": false,
+   "category": "no_stage_data",
+   "read": "BOA/BPDA hearings and public comment; no intake stage.",
+   "stage_key": null,
+   "confidence": "n/a"
+  },
+  {
+   "jurisdiction": "McKinney",
+   "state": "TX",
+   "jurisdiction_id": "13c7fd71-2e8f-4818-adf2-464f23ba0958",
+   "vendor": "Tyler EnerGov",
+   "rows": 5177,
+   "rows_estimated": false,
+   "category": "no_stage_data",
+   "read": "All 5,177 rows are food inspection reports (mis-scoped vein).",
+   "stage_key": null,
+   "confidence": "n/a"
+  },
+  {
+   "jurisdiction": "Waxahachie",
+   "state": "TX",
+   "jurisdiction_id": "778b3707-5191-46d2-81fe-888dfc32e446",
+   "vendor": "Tyler EnerGov (Civic Access)",
+   "rows": 3372,
+   "rows_estimated": false,
+   "category": "no_stage_data",
+   "read": "Staff/committee conditions; one hint: 'the Plat Application fee must be paid for reviewing the application for completeness' (plats).",
+   "stage_key": null,
+   "confidence": "n/a"
+  },
+  {
+   "jurisdiction": "Lewisville",
+   "state": "TX",
+   "jurisdiction_id": "c9ff72b4-407a-4edf-9825-f8f13f5b7ad3",
+   "vendor": "MyGovernmentOnline (MGO Connect)",
+   "rows": 2566,
+   "rows_estimated": false,
+   "category": "no_stage_data",
+   "read": "Agenda items; zero hits.",
+   "stage_key": null,
+   "confidence": "n/a"
+  },
+  {
+   "jurisdiction": "Benbrook",
+   "state": "TX",
+   "jurisdiction_id": "2d330999-645e-4f92-b730-8fbe0f9f5363",
+   "vendor": "CommunityCore (SAFEbuilt)",
+   "rows": 2451,
+   "rows_estimated": false,
+   "category": "no_stage_data",
+   "read": "Agenda items; zero hits.",
+   "stage_key": null,
+   "confidence": "n/a"
+  },
+  {
+   "jurisdiction": "Hays County",
+   "state": "TX",
+   "jurisdiction_id": "f2c30a6a-f884-4f80-9ba1-c0a4fecc05f7",
+   "vendor": "MyGovernmentOnline / MGOConnect (SCPDC)",
+   "rows": 1210,
+   "rows_estimated": false,
+   "category": "no_stage_data",
+   "read": "Commissioners Court items; zero hits.",
+   "stage_key": null,
+   "confidence": "n/a"
+  },
+  {
+   "jurisdiction": "Fulton County",
+   "state": "GA",
+   "jurisdiction_id": "bc589788-ef87-4bac-990f-390b8c17409e",
+   "vendor": "Legistar (BOC agenda; unincorporated land-use staff reports). Permitting/plan-review system for FIBD not publicly identified/exposed.",
+   "rows": 1169,
+   "rows_estimated": false,
+   "category": "no_stage_data",
+   "read": "Legistar staff reports; zero hits.",
+   "stage_key": null,
+   "confidence": "n/a"
+  },
+  {
+   "jurisdiction": "South Fulton",
+   "state": "GA",
+   "jurisdiction_id": "231d7a1b-d935-4d1e-b186-f47faabbfd10",
+   "vendor": "SagesGov",
+   "rows": 834,
+   "rows_estimated": false,
+   "category": "no_stage_data",
+   "read": "Staff reports; zero relevant hits.",
+   "stage_key": null,
+   "confidence": "n/a"
+  },
+  {
+   "jurisdiction": "West Lake Hills",
+   "state": "TX",
+   "jurisdiction_id": "17a165da-fd4e-4518-a8ba-fdceafbefc60",
+   "vendor": "My Government Online (MGO)",
+   "rows": 679,
+   "rows_estimated": false,
+   "category": "no_stage_data",
+   "read": "Meeting comments; a code recital 'deemed administratively complete'.",
+   "stage_key": null,
+   "confidence": "n/a"
+  },
+  {
+   "jurisdiction": "Millington",
+   "state": "TN",
+   "jurisdiction_id": "4375c44e-5f11-419e-a721-86790ff7ac15",
+   "vendor": "Accela (Shelby County Develop901) for building permits; in-house for site plan/plat review",
+   "rows": 634,
+   "rows_estimated": false,
+   "category": "no_stage_data",
+   "read": "Staff reports; 'Incomplete applications will not be placed on the Planning Commission agenda.'",
+   "stage_key": null,
+   "confidence": "n/a"
+  },
+  {
+   "jurisdiction": "Webster",
+   "state": "TX",
+   "jurisdiction_id": "eb964dac-d5cf-4008-912a-f6d9ada31e97",
+   "vendor": "OnCamino (Clariti Launch)",
+   "rows": 156,
+   "rows_estimated": false,
+   "category": "no_stage_data",
+   "read": "156 agenda rows; zero hits.",
+   "stage_key": null,
+   "confidence": "n/a"
+  },
+  {
+   "jurisdiction": "Round Rock",
+   "state": "TX",
+   "jurisdiction_id": "dbc0b489-9b86-47e9-8a70-125d86e1e865",
+   "vendor": "Cityworks PLL (Trimble)",
+   "rows": 0,
+   "category": "no_comments_in_library"
+  },
+  {
+   "jurisdiction": "Denver",
+   "state": "CO",
+   "jurisdiction_id": "258fba17-7189-482d-ad09-579917cf5d9d",
+   "vendor": "Accela",
+   "rows": 0,
+   "category": "no_comments_in_library"
+  },
+  {
+   "jurisdiction": "San Diego",
+   "state": "CA",
+   "jurisdiction_id": "1f992a2d-8ddf-4983-9b7d-5633880f4ba0",
+   "vendor": "Accela Citizen Access",
+   "rows": 0,
+   "category": "no_comments_in_library"
+  },
+  {
+   "jurisdiction": "San Jose",
+   "state": "CA",
+   "jurisdiction_id": "e87164ce-dad5-41c9-93e0-fab73e227568",
+   "vendor": "Accela",
+   "rows": 0,
+   "category": "no_comments_in_library"
+  }
+ ]
+}
