@@ -77,6 +77,7 @@ def load(out):
 
 
 def save(out, p):
+    """pass.json sits beside the runs, so it never carries the answer: the tiers live only in golden-set.json."""
     tiers.write_json(os.path.join(out, 'pass.json'), p)
 
 
@@ -111,7 +112,6 @@ def cmd_setup(a):
     head, branch = bureau_head(a.bureau)
     out = os.path.abspath(a.out)
     p = new_pass(out, 'F', a.set, head, branch, a.bureau)
-    G = tiers.golden()
     for gid in tiers.select(a.set):
         run = os.path.join(out, gid)
         if gid in p['runs']:
@@ -129,7 +129,7 @@ def cmd_setup(a):
         chk = conductor(run, 'check', '0-request', '--run', run)
         if chk.returncode != 0:
             raise SystemExit(f'{gid}: 0-request check failed\n{chk.stdout}\n{chk.stderr}')
-        p['runs'][gid] = {'dir': run, 'slug': slug, 'tier': G[gid]['tier'], 'state': 'set-up'}
+        p['runs'][gid] = {'dir': run, 'slug': slug, 'state': 'set-up'}
         save(out, p)
         say(f'{gid}: set up at {head[:10]} ({slug})')
     save(out, p)
@@ -139,7 +139,6 @@ def cmd_replay(a):
     head, branch = bureau_head(a.bureau)
     out = os.path.abspath(a.out)
     p = new_pass(out, 'R', 'replay', head, branch, a.bureau)
-    G = tiers.golden()
     for src in a.corpus:
         src = os.path.abspath(src).rstrip('/')
         req = tiers.read_json(os.path.join(src, '0-request', 'request.json'), {}) or {}
@@ -170,7 +169,7 @@ def cmd_replay(a):
         left = leaks(run, src)
         if left:
             raise SystemExit(f'{gid}: paths still name the original run:\n  ' + '\n  '.join(left[:20]))
-        p['runs'][gid] = {'dir': run, 'slug': jur['slug'], 'tier': G[gid]['tier'], 'state': 'set-up', 'source': src,
+        p['runs'][gid] = {'dir': run, 'slug': jur['slug'], 'state': 'set-up', 'source': src,
                           'rewritten': rewritten}
         save(out, p)
         say(f'{gid}: replay set up from {src} ({rewritten} files repointed)')
@@ -317,10 +316,11 @@ def cmd_status(a):
     out = os.path.abspath(a.out)
     p = load(out)
     st = states(p)
+    G = tiers.golden()
     say(f"{p['pass']} {p['kind']} at {p['head'][:10]} ({p['branch']})")
     for gid, s in st.items():
         r = p['runs'][gid]
-        say(f"  {gid:22} T{r['tier']}  {s:8} batch {r.get('batch', '–')}{'  resumed ' + str(r['resumed']) if r.get('resumed') else ''}")
+        say(f"  {gid:22} T{G[gid]['tier']}  {s:8} batch {r.get('batch', '–')}{'  resumed ' + str(r['resumed']) if r.get('resumed') else ''}")
 
 
 def cmd_usage(a):
