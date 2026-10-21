@@ -1,6 +1,6 @@
 # Intake classify by tier: the change and the build-and-test loop
 
-**Status:** Draft v1. This is a working doc for one implementation session: what changes and how
+**Status:** Draft v1.1 (adds §3.8: local lane, subscription billing, batched launches, D9–D10). This is a working doc for one implementation session: what changes and how
 the build-and-test loop runs. It is not a full design spec.
 **Date:** 2026-10-21
 **Parent:** `DESIGN-SPEC.md` in this folder (v1.1, winston#329): the tiers, the golden set, §6 how to score
@@ -175,7 +175,8 @@ can't show that. The 19 `extended` cities are **held out**: run once at the end,
 - **C3** D4, only if L0 showed it is needed.
 - Push; open the PR as a draft with the scorecard table (§3.7) empty.
 
-**L2: `p00`, the first full picture.** F on all 15 core, in batches of 5. Score it. Every miss
+**L2: `p00`, the first full picture.** F on all 15 core, as one pass started in batches (§3.8; the
+first batch is the 3-run probe). Score it. Every miss
 gets a one-line diagnosis in the scorecard, saying which kind it is:
 - **discovery**: the evidence was never found or captured
 - **judgment**: the evidence was there and the classifier read it wrong
@@ -206,9 +207,11 @@ data, and needs Will's call plus a new held-out set.
 
 1. Commit and push. Note the head SHA. Prompts are snapshotted when a run is set up, so a pass
    always starts **after** its commit lands.
-2. `launch_tiers.py` at that head into `~/noetic/working/intake-tiers/pNN/`, at most 5 runs at a
-   time. Launch with python `os.setsid` (nohup/setsid fail on macOS), `BUREAU=<worktree>`,
-   `CCS_PLAYWRIGHT_FROM=~/noetic/surveyor/package.json`, and `CONDUCTOR_SEAT` from the run `.env`.
+2. `launch_tiers.py` at that head into `~/noetic/working/intake-tiers/pNN/`. It **sets up every run
+   in the pass at once** (each run's prompts are copied at setup, so all of them carry this head),
+   then **starts them in batches** (§3.8). Launch with python `os.setsid` (nohup/setsid fail on
+   macOS), `BUREAU=<worktree>`, `CCS_PLAYWRIGHT_FROM=~/noetic/surveyor/package.json`, and
+   `CONDUCTOR_SEAT` in each run's `.env`.
 3. Watch `events.jsonl` (complete JSON lines only). A run is done when it parks at `1.5-scope`
    with exit 75. A run that fails before 1.4 is a **tool** failure:
    - fix it as a commit, and re-run that city in the same pass
@@ -235,16 +238,51 @@ The 15 core: Tier 1 is `austin-tx`, `fairfax-county-va`, `san-diego-ca`, `george
 - **Plateau**: three passes in a row with no gain on gate accuracy → stop, write up the remaining
   misses with their diagnosis, and ask Will.
 - **Key doubt**: a miss diagnosed as **key** → stop and ask. Never edit `golden-set.json` without Will.
-- **Spend**: a pass costing more than 2× `p00` → stop and ask.
+- **Spend**: a pass using more than 2× `p00`'s share of the 7-day window (§3.8) → stop and ask.
 - When Will is away, leave one inbox note per issue (`inbox add --to will --from intake-classify-loop
   --needs "…"`) and stop rather than guessing.
 
 ### 3.7 What gets recorded
 
 - **The PR body**: one table row per pass: `pass | head | kind (F15 / Fws / R15) | cities | gate
-  right / wrong / unknown | tier right on gated | $ | minutes | what changed next`.
+  right / wrong / unknown | tier right on gated | batches | 5h / 7d window used | list $ | minutes |
+  what changed next`.
 - **`~/noetic/working/intake-tiers/pNN/scorecard.{md,json}`**: the full detail; it survives disk cleanup.
 - **The IG report** at L6.
+
+### 3.8 Lane, billing and batches
+
+**D9: Every run is local lane, subscription billing.**
+- Each run's `.env` pins one seat with `CONDUCTOR_SEAT=<muni account>`, the El Paso recipe.
+  `muni usage` showed two accounts on 2026-10-21: `noetic` and `personal`.
+- No AI Gateway, no cloud.
+- **Check `muni accounts` before each pass for login expiry.** `personal`'s login expires
+  2026-10-22, the day after this spec.
+
+**D10: A pass is one group of runs, launched in batches.**
+- **One group.** Every run in a pass shares one pass dir and one head, and is scored as one
+  scorecard. Batching only changes when each run starts.
+- **Set up all at once, start in batches.** `launch_tiers.py` sets up every run first, so a later
+  batch can't pick up a newer commit. No commit lands on the branch until the whole pass is
+  scored.
+- **The first batch is a probe.** Start 3 runs: one Tier 1, one Tier 2, one Tier 3. Before
+  starting, record `muni usage --refresh` for the pinned seat. When the batch parks at
+  `1.5-scope`, record usage again and divide the change in the 5-hour and 7-day columns by 3. That
+  is the per-run cost, written in the scorecard.
+- **Later batches are sized from the probe.** Batch size = the runs that fit before the seat
+  reaches 85% of its 5-hour window, at most 5. When fewer than 1 fits, wait for the window to
+  reset (`muni usage` shows when), or switch the remaining runs to the other seat if it has room.
+- **Batches mix tiers**, so a pass stopped half-way still shows a spread.
+- **One batch at a time.** The next batch starts only when every run in the current one has
+  parked at `1.5-scope`, failed, or been stopped.
+- **A run cut off by the usage limit is resumed in place, never set up again.** Once the window
+  resets, resume it with `conductor` advance on the same run dir: it keeps the pass's prompts.
+  Count it in the pass row as `resumed`, not as a failure or a miss.
+- **Replays (R) batch the same way** but are far smaller (one session, no web). Their probe is a
+  replay batch of 5.
+- **Record usage, not only dollars.** Subscription billing has no invoice per run, so the
+  scorecard records the 5-hour and 7-day share each batch used. It also records the list-price
+  `$` conductor reports, for comparison with the Austin loop.
 
 ## 4. Risks
 
