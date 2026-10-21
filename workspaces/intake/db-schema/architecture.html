@@ -1153,8 +1153,8 @@ table.nx-rules td.o{color:var(--ink2);font-size:12.5px;white-space:nowrap}
 <header class="masthead">
   <div class="kicker">Intake · DB schema</div>
   <h1>Intake checklist DB schema and the bureau sync</h1>
-  <p>Bureau stays the source of truth for intake checklists. Every version carries a semver, and items and groups get permanent IDs built from the jurisdiction's code (<code>AUS_TX-0042</code>). A merge to main copies it into a read replica in the App DB. The DB also takes bounded investments where files are the wrong store: reference figures are built, group placement is the candidate next.</p>
-  <div class="meta"><span class="status">Draft v3</span><span>21 Oct 2026</span><span>Parent: intake north star, I1</span><span>Source of truth: <code>DESIGN-SPEC.md</code></span></div>
+  <p>Bureau stays the source of truth for intake checklists. Every version carries a semver, and items and groups get permanent IDs built from the jurisdiction's code (<code>AUS_TX-0042</code>). A merge to main copies it into a read replica in the App DB. The DB also takes bounded investments where files are the wrong store: reference figures are built, and groups are the second, read from the DB when it has rows for the jurisdiction and from the files otherwise.</p>
+  <div class="meta"><span class="status">Draft v3.1</span><span>21 Oct 2026</span><span>Parent: intake north star, I1</span><span>Source of truth: <code>DESIGN-SPEC.md</code></span></div>
   <a class="spec-link" href="DESIGN-SPEC.html">Read the spec →</a>
 </header>
 
@@ -1245,18 +1245,18 @@ table.nx-rules td.o{color:var(--ink2);font-size:12.5px;white-space:nowrap}
     <h3 class="claim">Figures are done; the files and linter land now; the replica waits for the intake loop <span class="src">§4, north-star D3</span></h3>
     <div class="sys-legend"><span><i class="box" style="border:2px solid var(--ink)"></i>lands next</span><span><i class="box"></i>waits</span><span>each card says what it waits on</span></div>
     <div class="plan" style="--cols:4">
-      <div class="plan-h"><span></span><span>Done</span><span>Now</span><span>After the Austin bar + a non-Austin run</span><span>On Q10</span></div>
+      <div class="plan-h"><span></span><span>Done</span><span>Now</span><span>After the Austin bar + a non-Austin run</span><span>The second investment</span></div>
       <div class="plan-row"><span class="plan-who">bureau</span>
         <div class="plan-cell"><div class="pc"><span class="pid">P2c · D17</span><b>Figures in the run</b><span class="pd">CLI, hydration, <code>--ref</code>, the prompt, the figure set on reviews; bureau#2138–#2175</span><span class="pa">merged 2026-10-16 to 10-20</span></div></div>
         <div class="plan-cell"><div class="pc key"><span class="pid">P2a · D1–D4, D12, D14–D16, D18, D20, D22 · S1, S3</span><b>Codes, files, linter, Austin sidecars, El Paso rename, amend fix</b><span class="pd"><code>code:</code> in conventions, <code>intake.yaml</code>, <code>version.yaml</code>, <code>intake-ids.tsv</code>, <code>intake-groups.tsv</code>, <code>lint:intake</code></span><span class="pa">waits on nothing</span></div></div>
         <div class="plan-cell"><div class="pc"><span class="pid">P2b · D5, D9–D11, D13 · S1</span><b>The sync job and the history stamp</b><span class="pd">builder, the <code>intake</code> job, <code>backfill-history.ts</code> stamping 22 reviews, then acceptance</span><span class="pa">after P1b is applied and P2a is merged</span></div></div>
-        <div class="plan-cell"><div class="pc"><span class="pid">P3 · D21, §2.4</span><b>Group placement overrides</b><span class="pd">1.4-resolve reads titles and order into <code>groups.json</code>; 2.9 uses them</span><span class="pa">only if Will says yes</span></div></div>
+        <div class="plan-cell"><div class="pc"><span class="pid">P3 · D21, §2.4</span><b>Live groups in the run</b><span class="pd">files unless the DB has rows; <code>groups.json</code> for titles and order; membership refused until P2a, then regenerated guide copies</span><span class="pa">titles and order wait on nothing; membership after P2a</span></div></div>
       </div>
       <div class="plan-row"><span class="plan-who">cityhall</span>
         <div class="plan-cell"><div class="pc"><span class="pid">P1a · D17, D20</span><b>intake_figures, the code column, the bucket</b><span class="pd">cityhall#411, #419; Austin and Cedar Park codes by data migration</span><span class="pa">applied 2026-10-16 and 10-19</span></div></div>
         <div class="plan-cell"></div>
         <div class="plan-cell"><div class="pc"><span class="pid">P1b · D6–D8, D10 · S2</span><b>Four replica tables and the write function</b><span class="pd">schemas, generated migration, allowlist, DB tests</span><span class="pa">after the loop meets the bar; El Paso's v1 is the non-Austin output once D22 lands</span></div></div>
-        <div class="plan-cell"><div class="pc"><span class="pid">P3 · D21</span><b>intake_group_overrides</b><span class="pd">one table, RLS, a CLI</span><span class="pa">only if Will says yes</span></div></div>
+        <div class="plan-cell"><div class="pc"><span class="pid">P3 · D21</span><b>intake_groups</b><span class="pd">one live table, RLS, <code>intake-group</code> CLI</span><span class="pa">waits on nothing (Q10)</span></div></div>
       </div>
     </div>
 
@@ -1645,7 +1645,7 @@ figures               = [{id, sha256}]   (unchanged)
   <!-- ============================== INVESTMENTS ============================== -->
   <section class="panel" id="invest">
     <h2>DB investments</h2>
-    <p class="lede">Bureau is the authority for checklist text. The DB takes bounded investments, one at a time, where files are the wrong store or where iterating in files costs a PR per try. Figures were the first, because bureau holds no binaries. Group placement is the candidate second (D21, §2.4, Q10).</p>
+    <p class="lede">Bureau is the authority for checklist text. The DB takes bounded investments, one at a time, where files are the wrong store or where iterating in files costs a PR per try. Figures were the first, because bureau holds no binaries. Groups are the second, under one rule: files unless the DB has rows for the jurisdiction, else the DB (D21, §2.4, Q10).</p>
 
     <h3>The rule, and the shape every investment shares</h3>
     <div class="doc">
@@ -1695,16 +1695,16 @@ figures               = [{id, sha256}]   (unchanged)
     </div>
     <p class="claim"><b>Reading:</b> the DB holds the image and a neutral description; the guide's Validation Methodology bullet cites the figure by id and says what it is for. Bureau still owns the usage, which is what keeps D19 true.</p>
 
-    <h3>The candidate second investment: group placement</h3>
+    <h3>The second investment: group placement, one rule</h3>
     <div class="spectable-scroll"><table class="spectable">
-      <thead><tr><th>Tune in the DB</th><th>What the run would read at 1.4-resolve</th><th>Cost</th></tr></thead>
+      <thead><tr><th>Attribute</th><th>With live rows, 1.4-resolve …</th><th>When it turns on</th></tr></thead>
       <tbody>
-        <tr><td><b>Group title</b></td><td>a <code>title</code> per guide stem, replacing the H1's words for 2.9-comments' section slug</td><td>small: one read, one field, the figures shape</td></tr>
-        <tr><td><b>Group order</b></td><td>a <code>position</code> per stem, taking over <code>true-comment-num-mapping.tsv</code>'s role</td><td>small, but comment numbers are customer-visible (Q4); old reviews keep theirs</td></tr>
-        <tr><td><b>Membership</b></td><td>a stem per item ref: 1.4-resolve would regroup the guide copies, or the fan-out would stop being per file</td><td>large: the run's guides would no longer be bureau's bytes, the tree hash would stop meaning what it means, and refs would change under the review</td></tr>
+        <tr><td><b>Group title</b></td><td><code>checklist/groups.json</code>; 2.9-comments takes the section title from it instead of the H1</td><td>turns on with the table</td></tr>
+        <tr><td><b>Group order</b></td><td>the same file; comments numbered by <code>position</code> instead of <code>true-comment-num-mapping.tsv</code></td><td>turns on with the table; a published review keeps its numbers (Q4)</td></tr>
+        <tr><td><b>Membership</b></td><td>1.4-resolve regenerates each guide copy from the group's <code>item_refs</code>: the H1, the item rows and their methodology bullets, pulled from bureau's files by item; a content hash of the generated files goes on the review</td><td>after P2a, when the ref is the stable id; until then a membership difference refuses the run, because refs would change under the review and amend and IG's comment map key on them</td></tr>
       </tbody>
     </table></div>
-    <p class="claim"><b>Proposed (§2.4, Q10):</b> one table, <code>intake_group_overrides</code> (code, stem, title, position, created_at, retired_at), read into <code>checklist/groups.json</code> and recorded on the review; titles and order only. Membership stays in the files until stable item IDs exist (P2a). When the replica lands, the sync refuses a version whose files disagree with a live override.</p>
+    <p class="claim"><b>Rule (§2.4, Will):</b> files unless the DB has live <code>intake_groups</code> rows for the jurisdiction, else the DB; one source at a time, no override layer. Titles and order turn on with the table. Membership turns on after P2a, when the ref can be the stable item ID; until then 1.4-resolve refuses a run whose live rows disagree with the files on membership. The sync mirrors the rule, and the review records the source and a hash of the group set.</p>
   </section>
 
   <!-- ============================== ROLLOUT ============================== -->
@@ -1730,7 +1730,7 @@ figures               = [{id, sha256}]   (unchanged)
       <p><b>Q6 · What should review counting answer?</b> For the review-linkage sibling.</p>
       <p><b>Q8 · When does the source manifest get a stable <code>source_id</code>?</b> Until then the citations jsonb carries <code>source_key</code> only.</p>
       <p><b>Q9 · Counties and cities that share a name:</b> default a <code>CO</code> suffix, <code>EPCO_TX</code>.</p>
-      <p><b>Q10 · Is group placement the second DB investment, and in what scope?</b> Recommended: titles and order now as overrides; membership only after stable item IDs. Alternatives: wait for the replica and build an editor on it, or keep titles and order in <code>intake-groups.tsv</code> only.</p>
+      <p><b>Q10 · Is the membership guard enough?</b> Live <code>intake_groups</code>, files unless the DB has rows, titles and order at once, membership after P2a. Open within it: whether group-level prose that stays with its file is acceptable when items move, or must first be made per-item.</p>
       <p><b>Closed:</b> Q2 (reviews record <code>intakeVersion</code>), Q7 (<code>workflow_run</code> reads buckets through bucket-wide policies; built for <code>intake-figures</code>).</p>
     </div>
   </section>

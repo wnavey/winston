@@ -1,7 +1,9 @@
 # Intake checklist DB schema and the bureau sync
 
-**Status:** Draft v3
+**Status:** Draft v3.1
 **Date:** 2026-10-21
+> **Revision note v3.1 (2026-10-21, Will):** §2.4 is rewritten. The second investment is a live `intake_groups` table with one rule, **files unless the DB has rows for the jurisdiction, else the DB**, not an overrides layer. Titles and order work under it at once; membership turns on when refs can be the stable item ID (P2a), and until then 1.4-resolve refuses a run whose live rows disagree with the files on membership. P3 and Q10 change to match; the sync mirrors the run (D9).
+>
 > **Revision note v3 (2026-10-21): the spec matches what exists, and says how the DB grows.** Checked against bureau main `f83e018a30`, cityhall main `acd1fdf`, winston main `5101394` and prod `mgxqsrjutswbciyrltwd` on 2026-10-21.
 > - **D6 is the five-table set** the 2026-10-16 audit proposed and Will accepted: `intake_figures` (built), `intake_checklists`, `intake_checklist_versions`, `intake_checklist_groups`, `intake_checklist_items`. The identity tables, `intake_checklist_version_commits`, `intake_checklist_citations` and `jurisdiction_intake` are gone from the design (citations are jsonb on items; the assignment table waits for the baseline sub-spec).
 > - **D17 is replaced by a record of what was built.** Figures are the first DB investment: `intake_figures` + the `intake-figures` bucket (cityhall#411, #419), the `intake-figure` CLI, hydration at 1.4-resolve, `vision.ts --ref` and the review prompt (bureau#2138, #2139, #2140, #2163). The specs are `../checklist-figures/`. There is no `figures.yaml`, no `next_figure`, and no figure lint rule; a guide cites a figure by id in its methodology bullet, so bureau still says how a figure is used.
@@ -294,23 +296,48 @@ Rule 2 keeps the sidecars from drifting: a PR that edits a synced version's guid
 
 ### 2.4 The next investment: group placement
 
-[Will, 2026-10-21, "just a thought"; written up here so Q10 can be answered]
+[Will, 2026-10-21; rewritten v3.1 on Will's rule]
 
 **What Will wants:** to play with group names, group order and which items sit in which group without a bureau PR per try.
 
-**What a group is to the run today** (D15): a group *is* a guide file. The fan-out is per guide; the ref's prefix is the stem; the section title is the H1; comment numbers follow guide order. So the three things split by cost:
+**The rule: files unless the DB has rows for the jurisdiction, else the DB.** One source per jurisdiction at a time. There is no override layer and no merge: when live `intake_groups` rows exist for a jurisdiction, they define its groups; when none exist, the guide files do, exactly as today. The review records which source it used and a hash of the group set it ran with, as it records the figure set.
 
-| Tune in the DB | What the run would read at 1.4-resolve | Cost |
+**The table,** DB-authored and live, in D21's shape (not the replica's per-version `intake_checklist_groups`, which the sync overwrites from bureau):
+
+```sql
+intake_groups
+  id                text PK          -- 'AUS_TX-G01'; minted max + 1 per jurisdiction; never reused
+  jurisdiction_slug text NOT NULL
+  jurisdiction_code text NOT NULL    -- FK (jurisdiction_slug, jurisdiction_code) → jurisdictions(slug, code)
+  stem              text NOT NULL    -- the guide file this group is, 'cc-1'
+  title             text NOT NULL    -- 'Intake & Core Submittal', no number
+  position          int NOT NULL     -- the display number and the comment-number order
+  item_refs         text[] NOT NULL  -- the items in this group, as refs today and stable ids after P2a
+  created_at        timestamptz NOT NULL DEFAULT now()
+  created_by        text NULL
+  retired_at        timestamptz NULL -- a changed group is a new row; the old one is retired
+  CHECK (id ~ '^[A-Z]{2,8}_[A-Z]{2}-G[0-9]{2,}$')
+  CHECK (split_part(id, '-', 1) = jurisdiction_code)
+  UNIQUE (jurisdiction_code, stem) WHERE retired_at IS NULL
+  UNIQUE (jurisdiction_code, position) WHERE retired_at IS NULL
+```
+
+Reads follow the `jurisdictions` policy; `workflow_run` reads all; only `service_role` writes, through a CLI `intake-group set|retire|list` in the shape of `intake-figure`. The whole live set for a jurisdiction is written together, because the rule is all-or-nothing per jurisdiction.
+
+**What the run does with it, by attribute.** To the runbook a group *is* a guide file today (D15): one review agent per file, the ref is `stem:ID`, the section slug comes from the H1, comment numbers follow guide order.
+
+| Attribute | With live rows, 1.4-resolve … | When it turns on |
 |---|---|---|
-| **Group title** | a `title` per stem, replacing the H1's words in `resolved.json` for 2.9-comments' section slug | small: one read, one field, same shape as figures |
-| **Group order** | a `position` per stem, driving `true-comment-num-mapping.tsv`'s role | small, but comment numbers are customer-visible (Q4), and old reviews keep their numbers |
-| **Membership** | a stem per item ref: 1.4-resolve would have to regroup the guide copies (move table rows between files) or the fan-out would have to stop being per file | large: the guides in the run would no longer be bureau's bytes, `checklistsTreeHash` would stop meaning what it means, and refs (`cc-2:X` → `cc-5:X`) would change under the review |
+| **Title** | writes `checklist/groups.json`; 2.9-comments takes the section title from it instead of the H1 | with the table |
+| **Order** | the same file; 2.9-comments numbers comments by `position` instead of `true-comment-num-mapping.tsv` | with the table (comment numbers are customer-visible, Q4; a published review keeps its numbers) |
+| **Membership** | regenerates each guide copy: the H1, then the item table rows and their methodology bullets for the group's `item_refs`, pulled from bureau's files by item; records a content hash of the generated files | **after P2a**, when the ref can be the stable item ID. Until then, 1.4-resolve **refuses the run** if the live rows' membership differs from the files, naming the items that moved |
 
-**Proposed shape, if Will says yes (D21's pattern):** one table, `intake_group_overrides` (`jurisdiction_code`, `stem`, `title`, `position`, `created_at`, `retired_at`), read at 1.4-resolve into `checklist/groups.json` and recorded on the review; titles and order only. Membership stays in the files until stable item IDs exist (P2a), because moving an item without a stable ID breaks every link to it. When the replica lands, the override table is the obvious seed for a later editor, and the sync would refuse a version whose files disagree with a live override, so the two never drift silently.
+- **Why membership waits for stable IDs:** moving an item between files changes its ref (`cc-2:X` → `cc-5:X`) between two reviews of the same bureau version. Amend matches comments by ref and Inspector General's comment map keys on it, so both would lose continuity. With stable IDs the ref is the ID and a regroup changes nothing a review stores.
+- **Provenance:** with live rows the tree hash no longer pins what the agents read, so the review records `groups: {source: 'db', hash}` beside `checklistsTreeHash` and the figure set, and amend compares it (D18).
+- **The sync mirrors the run (D9):** when live rows exist for a jurisdiction, the replica's `intake_checklist_groups` and each item's `group_id` and `position` are written from them, else from the files. Replica and run never disagree.
+- **Group-level prose** (anything in a guide outside the item table and the per-item bullets) stays with the file it is in; a regenerated guide carries the prose of the file whose stem it keeps. Q10 asks whether that is enough.
 
-**What it would not do:** change comment numbers on published reviews (they are frozen per review), or let a guide's text be generated from the DB (D21).
-
-**Open:** Q10.
+**What it does not do:** change comment numbers on published reviews, or let a guide's text be generated from the DB beyond moving rows and bullets between files (D21).
 
 ---
 
@@ -362,12 +389,12 @@ Rule 2 keeps the sidecars from drifting: a PR that edits a synced version's guid
 - **Door:** two-way (rows nothing reads; truncate and re-dispatch; the review stamp is one metadata key).
 - **Blast radius:** a failing job alerts but blocks nothing.
 
-**P3 (candidate): group placement overrides** — `cityhall` + `bureau`, only on Q10
-- **Blocked by:** Q10 answered yes; nothing technical.
-- **Delivers:** `intake_group_overrides`, its RLS and test; a CLI `intake-group set|clear|list`; 1.4-resolve reads live overrides into `checklist/groups.json` and 2.9-comments uses the title and position; the review records them; the jurisdiction page shows them. Lands §2.4's shape under D21.
-- **Tested at:** S2 (the table), the 1.4-resolve contract, 2.9's tests.
-- **Door:** two-way.
-- **Blast radius:** section titles and comment numbers on new reviews of the jurisdiction with overrides.
+**P3: live groups** — `cityhall` + `bureau`
+- **Blocked by:** nothing technical for titles and order; membership waits for P2a.
+- **Delivers:** `intake_groups`, its RLS, allowlist entry and test; `intake-group set|retire|list`; 1.4-resolve reads the live rows into `checklist/groups.json`, refuses a membership change until P2a, and records the source and hash on the review; 2.9-comments takes titles and order from the file when present; amend compares the group set; the sync mirrors the rule; the jurisdiction page shows the live groups. Lands §2.4 under D21. After P2a, a second PR turns membership on: regenerated guide copies keyed by stable ID.
+- **Tested at:** S2 (the table), the 1.4-resolve contract (files-only, DB-present, and the membership refusal), 2.9's tests, S3 (amend).
+- **Door:** two-way: retire the rows and the run falls back to the files.
+- **Blast radius:** section titles and comment numbers on new reviews of a jurisdiction with live rows.
 
 ---
 
@@ -382,7 +409,7 @@ Rule 2 keeps the sidecars from drifting: a PR that edits a synced version's guid
 - **Q7.** *Closed in v2.2:* `workflow_run` reads buckets through bucket-wide policies; `intake-figures` has one.
 - **Q8. When does the source manifest get a stable `source_id`?** Until then the `citations` jsonb carries `source_key` only (jurisdiction-pages spec).
 - **Q9. Counties and cities that share a name:** default a `CO` suffix (`EPCO_TX`).
-- **Q10. Is group placement the second DB investment, and in what scope?** §2.4's recommendation: titles and order now as overrides; membership only after stable item IDs (P2a). Alternatives: wait for the replica and build an editor on it (slower, but one store); or put titles and order in `intake-groups.tsv` only (a PR per try, which is what Will wants to avoid).
+- **Q10. Is group placement the second DB investment, and is the membership guard enough?** §2.4 is the proposal: live `intake_groups`, files unless the DB has rows, titles and order at once, membership after P2a. Open within it: whether group-level prose that stays with its file is acceptable when items move, or whether such prose must first be made per-item.
 
 ## 6. Not yet specified
 
