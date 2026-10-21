@@ -1,9 +1,28 @@
 # Intake tiers and the site-plan golden set (exploratory handoff)
 
-**Status:** Draft v1 — exploratory handoff, not an implementation spec (no testing seams or PR plan yet, by Will's call)
+**Status:** Draft v1.1 — exploratory handoff, not an implementation spec (no testing seams or PR plan yet, by Will's call)
 **Date:** 2026-10-21
 **Repos touched:** `winston` (this folder: the taxonomy, the golden set, its evidence)
 **Repos NOT touched:** `bureau` (the `intake-prospecting` runbook is unchanged; §6 says how to test it), `dsd` (Library DB read only), `cityhall`
+
+> **Revision note (v1.1, 2026-10-21, Will's rulings on v1's Q1–Q3):**
+> - **D9 (new, closes Q1 and Q2):** published hold wording counts, whatever the practice.
+>   Rockdale TX and Winchester MO stay Tier 1 high on code text.
+> - **D10 (new, refines D2/D5):** a list lifts a city above Tier 3 only when it checks
+>   **content** — what the plan or documents must show. Hold wording or a list that only names
+>   documents to submit, the fee, a signature or the number of copies does not.
+>   - "Make sure you upload these 5 docs" is nothing worth automating (Will).
+>   - Q3's "one generic item counts" applies only to content items.
+> - **D11 (new):** a gate whose published list only names documents is Tier 2 when other
+>   evidence shows it screens content, and Tier 3 otherwise.
+> - **Moves:**
+>   - Antis Twp PA → Tier 3. Its 5 items are documents to submit.
+>   - Union County NC stays Tier 2. Doc 1280, which Will retrieved, is an 11-item document list;
+>     the code shows information screening.
+>   - Wallace NC stays Tier 2. Its one item is a document; the code requires "sufficient detail".
+>   - San Antonio stays Tier 1 on the strength of IB 147's content checklist.
+>   - Greencastle, Bangor and Decorah stay Tier 3: their only hold wording is a formality.
+> - Q1–Q3 are removed from §7.
 
 This folder holds everything a later session needs to continue the work:
 
@@ -11,8 +30,8 @@ This folder holds everything a later session needs to continue the work:
 |---|---|
 | `DESIGN-SPEC.md` | this document |
 | `golden-set.json` | 34 jurisdictions, each with tier, confidence, set (`core` / `extended`), application, and the full research record (quotes, URLs, file pointers) |
-| `evidence/<id>/` | text of every source a quote cites (11 MB, 130 files; El Paso includes one Library `historic_comments` row), so each quote can be checked without the web |
-| `verify_quotes.py` | checks every quote against its evidence file: `python3 -I verify_quotes.py --misses` → `total checked 174, missing 0` on 2026-10-21 |
+| `evidence/<id>/` | text of every source a quote cites (11 MB, 131 files; El Paso includes one Library `historic_comments` row), so each quote can be checked without the web |
+| `verify_quotes.py` | checks every quote against its evidence file: `python3 -I verify_quotes.py --misses` → `total checked 179, missing 0` on 2026-10-21 |
 | `tools/` | `fetch-page.mjs` (Playwright, gets past amlegal/ecode360/municode bot walls), `ocr.swift` + `ocrpdf.sh` (macOS Vision OCR for scanned minutes; `swiftc ocr.swift -o ocr` first), `build_golden.py` (historical record of how the JSON was assembled) |
 
 ## 1. Problem
@@ -55,9 +74,9 @@ formal review, equals intake"; a refusal at a paper counter is "effectively the 
 
 | Tier | Definition | What the product does |
 |---|---|---|
-| **1** | Gate exists AND we find ANY city-written list of what it checks — even one short document (a completeness/submittal checklist, a required-items list on the application form, code that ties acceptance to an enumerated list) | Builds the checklist from the city's own material |
-| **2** | Evidence of the gate (hold + loop), but no city-written list of what it checks anywhere we can find | Future: applies a generic baseline checklist (§9) |
-| **3** | No gate: nothing holds the submission before formal review; gaps come back as review comments, or the commission tables or conditions the plan | Nothing to automate |
+| **1** | Gate exists AND we find ANY city-written list of what it checks that includes content — even one short document (a completeness/submittal checklist, a required-items list on the application form, code that ties acceptance to an enumerated list of what the plan must show) (D10) | Builds the checklist from the city's own material |
+| **2** | Evidence of a gate that screens content (hold + loop), but no city-written content list anywhere we can find (D11) | Future: applies a generic baseline checklist (§9) |
+| **3** | No gate: nothing holds the submission before formal review — or the only hold is a formality (documents to upload, fee, signature, copies) (D10); gaps come back as review comments, or the commission tables or conditions the plan | Nothing to automate |
 
 **D3: The Tier 1 / Tier 2 line measures what we can obtain, not only how the city works.** A
 city lands in Tier 2 because it never wrote a list, or because we did not find it. Will accepted
@@ -74,7 +93,9 @@ Austin and El Paso are both Tier 1; they differ only in list depth.
 
 | Case | Tier | Why |
 |---|---|---|
-| A short required-items list on the application form, even 5 items | 1 | A city-written list is a list; record the item count |
+| A short required-items list on the application form, even 1 item, when at least one item is about content (what the plan or a document must show) | 1 | A city-written list is a list; record the item count (D10) |
+| Hold wording or a list that only names documents to submit, the fee, a signature or the number of copies ("make sure you upload these 5 docs") | not enough for Tier 1; Tier 2 or 3 by D11 | Nothing worth automating in a presence check (D10). Greencastle PA (copies + fee), Bangor Twp MI (owner signature), Decorah IA (fee), Antis Twp PA (5 documents) |
+| Published hold wording that practice never enforces | counts | D9 (Antis Twp PA's wording counted — then fell to D10) |
 | Code enumerates site plan contents AND ties the gate to them ("shall not be deemed delivered until all required documents… filed", "will not be accepted for review", "the filing… shall include all information required by this Code") | 1 | The code is the list the gate uses |
 | Code enumerates contents only as what review needs; completeness is staff judgment ("substantially complete, as determined by the Administrator") | 2 (if a hold exists) | The list describes review, not the gate |
 | A list that survives only on the Internet Archive / was withdrawn | 2 | Not published today; note it (Fremont NE) |
@@ -104,13 +125,43 @@ it). Not plats. A golden-set entry must name the application: El Paso commercial
 also bounce missing site plans inside formal review ("NO REVIEW PERFORMED 1. Missing site plan"),
 while its site plan gate is the Accela "Pre-Application Review".
 
+**D9: Published hold wording counts, whatever the practice** (Will, 2026-10-21: "If publishing
+hold wording is present, let's respect it, regardless of convention"). Code text alone is enough:
+Rockdale TX and Winchester MO stay Tier 1 high although we found no form, letter or minutes
+showing the screen runs.
+
+**D10: Only content checks lift a city above Tier 3.** The product automates the back-and-forth
+over what a submission shows; Will (2026-10-21): "If the intake is 'make sure you upload these 5
+docs', then that's something a human doesn't really need to automate… to get above tier 3, there
+needs to be a published checklist that validates document content." So:
+- A content item is one about what the plan or a document must show or contain (a sheet shows
+  setbacks, the drainage report is sealed, the plan carries the FEMA panel note).
+- A formality is a document to upload, the fee, a signature or a number of copies. Formalities
+  never make a gate on their own, and never make a list a Tier 1 list.
+- One content item is enough for Tier 1 (Will: "even one generic required item counts", applied
+  to content items).
+
+Every core Tier 1 list checks content. San Antonio's IB 103 screen is document presence, but IB
+147 is "the minimum information needed on commercial plans to be accepted for review".
+
+**D11: A gate whose published list only names documents.** It is Tier 2 when other evidence
+shows the gate screens content — code requiring "information in sufficient detail" or "checklists
+of materials and information", or deficiency notices about information on the plan — and Tier 3
+otherwise.
+- Union County NC → Tier 2. Its 11-item list names documents only; its code requires
+  "checklists of materials and information".
+- Wallace NC → Tier 2. Its one item is a document; its code requires "sufficient detail".
+- Antis Twp PA → Tier 3. Its 5 items are documents, and there is no other evidence of content
+  screening.
+
 ## 3. Evidence bar
 
 High confidence (the `core` set) requires:
 
 - **Tier 1:** a verbatim quote proving the hold, and the list (title + URL + rough item count) with
-  evidence the gate uses it.
-- **Tier 2:** a verbatim hold quote, and proof of absence: the official site plan page and its
+  evidence the gate uses it and at least one content item (D10).
+- **Tier 2:** a verbatim hold quote, evidence the gate screens content (D11), and proof of absence
+  of a content list: the official site plan page and its
   forms enumerated in full, the application form read and shown to carry no required-items list,
   the code's submittal language shown not to be tied to the gate.
 - **Tier 3:** (a) positive no-hold evidence — the plan goes on receipt to the commission or
@@ -145,10 +196,11 @@ Quotes are verbatim, never paraphrased; each records URL, access date and an `ev
 - **Tier 1** is abundant; most cities with a gate publish something. Spares beyond the set:
   Chesterfield County VA, Mesquite TX, Raleigh NC, Louisville KY, Los Angeles County CA, Santa Fe
   NM, Wilmer TX, Defiance OH, The Colony TX, Clayton NC, Jacksonville NC.
-- **Tier 2 is rare once any city-written list counts (D2).** The re-sort moved every
+- **Tier 2 is rare once any city-written content list counts (D2, D10).** The re-sort moved every
   "code-enumerated contents" city but one into Tier 1 (Rockdale, Katy, Papillion, Winchester,
-  Sunset Valley, Heppner, Kenansville, Pink Hill), and West Sacramento too. Only Fremont NE is
-  high confidence.
+  Sunset Valley, Heppner, Kenansville, Pink Hill), and West Sacramento too; code lists of what a
+  site plan must show are content lists. Only Fremont NE is high confidence. Union County NC and
+  Wallace NC are Tier 2 only because their published lists name documents, not content (D11).
 - **Tier 3** lives in small places with old, simple codes where the clerk forwards the plan
   straight to the Planning Commission: Michigan townships (the Zoning Enabling Act sets no loop),
   Iowa, Wisconsin, Pennsylvania boroughs. States whose statutes mandate a pre-review deficiency
@@ -172,7 +224,8 @@ Quotes are verbatim, never paraphrased; each records URL, access date and an `ev
 **Tooling.** amlegal, ecode360, municode and some city sites block headless fetches;
 `tools/fetch-page.mjs` (Playwright from surveyor's `node_modules`, full Chromium,
 `--headless=new`) gets through. Scanned minutes need OCR; this Mac has no tesseract, so
-`tools/ocr.swift` uses macOS Vision. Akamai blocks every `unioncountync.gov` URL from this machine.
+`tools/ocr.swift` uses macOS Vision. Akamai blocks every `unioncountync.gov` URL from this machine;
+Will opened doc 1280 in a browser and uploaded it to `winston-file-sync/sir-inputs/2026-10-21-Union-County/`.
 Agent-written quotes were wrong about 1 time in 170 (Georgetown "no greater" for "not greater"),
 so `verify_quotes.py` is worth running after any edit.
 
@@ -181,7 +234,7 @@ so `verify_quotes.py` is worth running after any edit.
 `core` = high confidence, the set to score against. `extended` = medium/boundary cases, useful for
 exploring classifier behaviour, not for pass/fail. Full records are in `golden-set.json`.
 
-### 5.1 Tier 1 — gate + city-written list
+### 5.1 Tier 1 — gate + city-written content list
 
 | id | Application | The list | Depth |
 |---|---|---|---|
@@ -190,12 +243,13 @@ exploring classifier behaviour, not for pass/fail. Full records are in `golden-s
 | `san-diego-ca` | Site Development Permit (SDMC 126.0502), Pre-Screen / completeness review | Minimum Submittal Requirements Checklist; "Staff will review your documents against this checklist" | ~176, deep |
 | `georgetown-tx` | Site Development Plan | SDP Application Checklist (UDC Development Manual); UDC 3.02.020 "shall not be considered as officially submitted… until it has been determined to be complete", with a written notice listing missing items | ~40 documents + ~150 sheet items, deep |
 | `cedar-park-tx` | Site Development Permit | Application & Checklist (Rev. 01.30.2024); Code §14.03.006 "Incomplete applications shall not be accepted." | ~19 presence + ~70 content |
-| `montgomery-county-md` | Site Plan (M-NCPPC) | Site Plan Intake Checklist (3.31.26); Reg 12-23 "within 10 days, either accept the application, or provide initial comments" | ~70, mostly presence |
+| `montgomery-county-md` | Site Plan (M-NCPPC) | Site Plan Intake Checklist (3.31.26); Reg 12-23 "within 10 days, either accept the application, or provide initial comments" | ~70, mostly presence, some content (items on all sheets) |
 | `round-rock-tx` | Site Development Permit | SDP packet completeness checklist (Aug 2023) | 23 |
-| `el-paso-tx` | DSDP site plan (Accela "Pre-Application Review") | "Required Documentation" list | ~30, thin |
+| `el-paso-tx` | DSDP site plan (Accela "Pre-Application Review") | "Required Documentation" list | ~11 documents + 19 items the site plan must show, thin |
 
-Extended (thin or code-only lists — they test "any city-written list = Tier 1"): `san-antonio-tx`
-(no standalone site plan application), `katy-tx` (inside the commercial building permit; 13
+Extended (thin or code-only lists — they test "any city-written content list = Tier 1"):
+`san-antonio-tx` (no standalone site plan application; the IB 103 screen is document presence, IB
+147 is the content checklist), `katy-tx` (inside the commercial building permit; 13
 documents), `sunset-valley-tx` (code §150.325, ~46 items), `rockdale-tx` and `winchester-mo`
 (code-only lists, no form, no practice evidence), `papillion-ne` (15-item checklist, hold only
 implied), `west-sacramento-ca` (CUP packet's 13-item site plan checklist), `heppner-or`,
@@ -206,8 +260,8 @@ implied), `west-sacramento-ca` (CUP packet's 13-item site plan checklist), `hepp
 | id | Set | Hold | Why no list |
 |---|---|---|---|
 | `fremont-ne` | core | UDC: "If the application is not complete, the Planning Director shall notify the applicant of any deficiencies and shall not process the application until the deficiencies are remedied." | withdrawn: contents deferred to an unpublished "application requirements manual"; the "Site Development Application" link serves a Development Agreement form; the 2017–2023 checklist exists only on Wayback |
-| `wallace-nc` | extended | §3.2.A written notice | never_written: defers to an Administrative Manual never published. Tier 1 (1 item) if the Zoning Verification form's "plat map or other suitable diagram" counts |
-| `union-county-nc` | extended | UDO 80.010-D5: incomplete applications are "pulled from the processing cycle" | not_obtainable: checklists kept "in the planning department office"; county doc 1280 ("Commercial Development Plan Application", with a checklist) blocked by Akamai — Tier 1 if it opens and is the site plan application |
+| `wallace-nc` | extended | §3.2.A written notice "stating the information needed"; a complete application has "information in sufficient detail" | never_written: defers to an Administrative Manual never published; the only published item ("plat map or other suitable diagram") is a document, not content (D10, D11) |
+| `union-county-nc` | extended | UDO 80.010-D5: incomplete applications are "pulled from the processing cycle"; officials keep "checklists of materials and information" | not_obtainable for content: the published 2018 "Commercial Development Plan Application" (doc 1280) has an 11-item checklist that names documents only, with "All incomplete applications will be returned" (D11) |
 | `dardenne-prairie-mo` | extended | 2025 P&Z packet: staff "reviewed the items for completeness" before distribution | provisional |
 | `clinton-nc` | extended | LDO holds until "complete" (staff judgment) | low; may be Tier 3 |
 
@@ -225,11 +279,13 @@ Tier 2 is short of 5 high-confidence entries and probably will stay that way (§
 | `watertown-wi` | §550-145: ZA "Receive, file and forward"; rezonings/CUPs must be "certified as complete", site plans not | 2025-06-23 and 2025-08-11 Site Plan Review Committee approvals contingent on lighting / landscaping plans not yet submitted |
 
 Michigan holds three of six; Iowa, Pennsylvania and Wisconsin one each. Known risks are in each
-entry's `note` (Greencastle's form needs copies + fee "before the application will be accepted";
-the PC "accepts the submission").
+entry's `note`. Greencastle's form needs copies + fee "before the application will be accepted",
+Bangor's needs the owner's signature "prior to processing", and Decorah requires the filing fee:
+formalities, not gates (D10). Greencastle's PC also "accepts the submission" at its own meeting.
 
 Extended: `cohoctah-twp-mi`, `saukville-wi`, `southern-view-il` (no practice evidence),
-`carthage-tn`, `paris-tn` (Tier 3 as of 2026 only, D7), `antis-twp-pa` (Q1).
+`carthage-tn`, `paris-tn` (Tier 3 as of 2026 only, D7), `antis-twp-pa` (published hold wording and
+a 5-item list, but every item is a document to submit — D9, D10, D11).
 
 Ruled out as Tier 3 (they have a gate): Houston TX (permit-tech Pre-Screen with a "Pre-Screen
 Resubmit Task"), Colorado Springs CO (§7.5.405 "No application shall be reviewed… until it is
@@ -247,8 +303,9 @@ and the rejects listed in the research records.
   mostly search recall, not judgment (D3). Count "unknown"/`inconclusive` separately from wrong.
 - **Today's output can only measure "Tier 1 vs not Tier 1"**: `formal` ≈ Tier 1; `none_found` cannot
   tell Tier 2 from Tier 3. Expected hard cases for the current rule: Decorah (publishes a checklist,
-  no gate → likely `formal`, wrong), Fremont (archived checklist), Rockdale/Winchester (list only in
-  code).
+  no gate → likely `formal`, wrong), Union County and Antis (published lists that name only
+  documents → likely `formal`, wrong under D10), Fremont (archived checklist), Rockdale/Winchester
+  (list only in code).
 - The barred list in `1.4-classify/prompt.md:5` already keeps the classifier away from our own
   checklists; keep it that way for these runs.
 - Run ops for this runbook (python setsid launch, `CCS_PLAYWRIGHT_FROM=surveyor`, prompts snapshotted
@@ -256,33 +313,18 @@ and the rejects listed in the research records.
 
 ## 7. Open questions
 
-**Q1: Does hold wording that is never enforced count as a gate?** Antis Township PA: the planning
-page says "Complete proposals must be submitted at least ten days before the next Planning
-commission meeting… to be included on the agenda", and the form has a 5-item required list and
-warns of "refusals to process applications" (literally Tier 1). But 44 Supervisors and 13 PC
-minutes show no refusal, the 90-day clock runs from submission, and gaps are handled by tabling
-(Tier 3 in practice). Greencastle carries a milder version of the same risk.
-
-**Q2: Do the two code-only Tier 1 entries need practice evidence?** Rockdale TX and Winchester MO
-are high on code text alone (no form, no evidence the screen runs). If Tier 1 "high" should require
-evidence that the gate operates, they drop to medium. Both are `extended`, so the core set is
-unaffected.
-
-**Q3: Is a one-item form a list?** Wallace NC's Zoning Verification form requires only "plat map
-or other suitable diagram". D5 says a short list is a list; whether one generic item counts
-decides Wallace's tier.
+None open. v1's Q1–Q3 were decided on 2026-10-21 (D9, D10, D11).
 
 ## 8. Suggested next steps (loose, not a PR plan)
 
-1. Optional quick checks that could move entries: open Union County doc 1280 in a normal browser
-   (https://www.unioncountync.gov/home/showpublisheddocument/1280); decide Q1–Q3.
-2. Baseline run: the current classifier on the 15 `core` entries (§6), with a small script that
+1. Baseline run: the current classifier on the 15 `core` entries (§6), with a small script that
    reads each run's `basis.json` against `golden-set.json` and prints a confusion matrix plus every
    miss with its rationale. Publish the result to inspector-general.
-3. Change `1.4-classify` to output `gate` (yes / no / unknown, with its quote) and `tier`, keeping
+2. Change `1.4-classify` to output `gate` (yes / no / unknown, with its quote; a formality-only hold
+   is `no`, D10) and `tier`, keeping
    `basis` derived from the tier so the rest of the runbook is unchanged (Tier 1 continues to
    extraction; Tier 2 and 3 stop where `none_found` stops today). Re-run and compare.
-4. Grow Tier 3 outside Michigan if the classifier looks overfit to the township pattern; leads with
+3. Grow Tier 3 outside Michigan if the classifier looks overfit to the township pattern; leads with
    one missing piece are Saukville WI, Southern View IL, Carthage TN (until 2027), Cheatham County TN
    (practice is strong, but code §9.030 holds).
 

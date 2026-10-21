@@ -608,7 +608,7 @@
    "set": "extended",
    "application": "Commercial Project Application (BuildSA COM-PRJ-APP) incl. standalone Sitework permit; there is no stand-alone site plan permit",
    "as_of": "2026-10-20/21",
-   "note": "No standalone site plan application; ~35k \"Completeness Review\" comments in Library historic_comments.",
+   "note": "No standalone site plan application; ~35k \"Completeness Review\" comments in Library historic_comments. Stays Tier 1 under D10: IB 147 says \"A checklist and application has been developed to assist in the understanding of the minimum information needed on commercial plans to be accepted for review.\" (content), although the IB 103 screen is document presence.",
    "research": {
     "jurisdiction": "San Antonio",
     "state": "TX",
@@ -664,7 +664,13 @@
       "Traffic Impact Analysis Worksheet: Required for any project that may affect traffic flow into and out of a property"
      ]
     },
-    "caveats": "IB 103 calls these 'commonly required items', so the list is not exhaustive; the screen is a non-technical CAR-team review inside the commercial building permit, not a site-plan application."
+    "caveats": "IB 103 calls these 'commonly required items', so the list is not exhaustive; the screen is a non-technical CAR-team review inside the commercial building permit, not a site-plan application.",
+    "content_screening_evidence": [
+     {
+      "quote": "A checklist and application has been developed to assist in the understanding of the minimum information needed on commercial plans to be accepted for review.",
+      "file": "evidence/san-antonio-tx/sa_IB147.txt"
+     }
+    ]
    }
   },
   {
@@ -1131,7 +1137,7 @@
    "set": "extended",
    "application": "Site Plan Review (UDO § 3.12; Planning Director or Technical Review Committee; projects <=3 ac / <=10,000 sf, larger go to SUP). No site plan form is published; the only zoning intake form is the 'Zoning Verification/Compliance Certification Application'.",
    "as_of": "2026-10-20/21",
-   "note": "Tier 1 with item_count 1 if the Zoning Verification form (\"plat map or other suitable diagram\") counts as the site plan list.",
+   "note": "The only published item is the Zoning Verification form's \"plat map or other suitable diagram\" - a document to submit, not a content check, so not a Tier 1 list (D10). Tier 2 (D11) because the code shows the gate screens content: a complete application \"Includes information in sufficient detail to evaluate the application\" (§3.2.A.1(c)), and incomplete applicants get \"a written notice stating the information needed\"; the Administrative Manual that would list it was never published.",
    "research": {
     "jurisdiction": "Wallace",
     "state": "NC",
@@ -1157,7 +1163,13 @@
     "no_hold_evidence": null,
     "why_no_list": "not_obtainable",
     "reason": "The UDO codifies a completeness hold with a written deficiency notice (§ 3.2.A) that applies to site plan review, but never lists site plan submittals: every route defers to a staff-maintained Administrative Manual that the town does not publish (apparently never written), and completeness means 'information and materials established by the Planning Director'. Medium rather than high because the only zoning intake form carries a one-item requirement ('plat map or other suitable diagram') under a hold certification; if that form is treated as the site plan vehicle, Wallace would be Tier 1 with item_count 1.",
-    "quotes_verified": true
+    "quotes_verified": true,
+    "content_screening_evidence": [
+     {
+      "quote": "Includes information in sufficient detail to evaluate the application to determine whether it complies with the appropriate substantive standards of this Ordinance",
+      "file": "evidence/wallace-nc/s3-2.txt"
+     }
+    ]
    }
   },
   {
@@ -1170,7 +1182,7 @@
    "set": "extended",
    "application": "Commercial Site Plan (non-residential site plan under the UDO 80.140 Zoning Permit procedure, filed as an Evolve 'Upload Submission' for 'Commercial Site Plans')",
    "as_of": "2026-10-20/21",
-   "note": "Unread county doc 1280 (\"Commercial Development Plan Application\", with a checklist) - every unioncountync.gov URL returned Akamai 403. If it is the site plan application, Tier 1.",
+   "note": "2026-10-21: county doc 1280, the \"Commercial Development Plan Application\" (2018; Will opened it in a browser, since the county blocks scripted fetches, and uploaded it to winston-file-sync/sir-inputs/2026-10-21-Union-County/union-county-intake-doc.pdf), has an 11-item \"Submittal Checklist\" and \"All incomplete applications will be returned\" - but every item names a document to submit, none says what a document must show, so it does not lift the county to Tier 1 (D10). Tier 2 (D11) because the code shows the gate screens information: officials \"must maintain required forms and checklists of materials and information required to be submitted\", and the deficiency notice must \"describe the application's deficiencies\"; those checklists are kept in the planning office, not published.",
    "research": {
     "jurisdiction": "Union County",
     "state": "NC",
@@ -1196,7 +1208,30 @@
     "no_hold_evidence": null,
     "why_no_list": "not_obtainable",
     "reason": "UDO 80.010-D5 proves the hold (written deficiency notice; incomplete applications pulled from the cycle) and 80.140-D1 sends a site plan to TRC only on a complete application. The code delegates the contents list to administrator checklists kept 'in the planning department office', and no current page, form or Evolve page publishes one, so Tier 2 (list exists by code mandate but is not obtainable online). Medium, not high: an unlinked 2021-era 'Commercial Development Plan Application' with a checklist (doc 1280) may still be served by the county but could not be fetched (Akamai 403) - if a normal browser opens it and it is the site plan application, Union County becomes Tier 1.",
-    "quotes_verified": true
+    "quotes_verified": true,
+    "list_found_2026_10_21": {
+     "title": "Commercial Development Plan Application — Submittal Checklist",
+     "url": "https://www.unioncountync.gov/home/showpublisheddocument/1280",
+     "file": "evidence/union-county-nc/commercial_development_plan_application_2018.txt",
+     "item_count": 11,
+     "presence_or_content": "presence (sets of plans, calculations, permits, applications)",
+     "hold": [
+      {
+       "quote": "All incomplete applications will be returned",
+       "file": "evidence/union-county-nc/commercial_development_plan_application_2018.txt"
+      },
+      {
+       "quote": "5 sets of site plan/civil drawings including landscape plan",
+       "file": "evidence/union-county-nc/commercial_development_plan_application_2018.txt"
+      }
+     ]
+    },
+    "content_screening_evidence": [
+     {
+      "quote": "checklists of materials and information required to be submitted",
+      "file": "evidence/union-county-nc/udo_norm.txt"
+     }
+    ]
    }
   },
   {
@@ -1512,7 +1547,7 @@
    "set": "core",
    "application": "Site Plan Application to the Planning Commission (Zoning Ordinance Art. 18, Sec. 18.02; adopted 02/11/2025, effective 02/19/2025)",
    "as_of": "2026-10-20",
-   "note": null,
+   "note": "The form's \"Signature(s) of legal owner(s) required prior to processing\" is a formality - not a gate under D10.",
    "research": {
     "jurisdiction": "Charter Township of Bangor (Bay County)",
     "state": "MI",
@@ -1625,7 +1660,7 @@
    "set": "core",
    "application": "Site Plan Review (Zoning Code Ch. 17.36): zoning administrator + city engineer review, P&Z recommendation, City Council approval; filed on the 'Site Plan & C 3 Review Application'.",
    "as_of": "2026-10-20/21",
-   "note": "Publishes a site plan checklist but has no hold: a list without a hold is still Tier 3. Hard test for any \"checklist published\" classifier.",
+   "note": "Publishes a site plan checklist but has no hold: a list without a hold is still Tier 3. Hard test for any \"checklist published\" classifier. The filing-fee precondition is a formality - not a gate under D10.",
    "research": {
     "jurisdiction": "City of Decorah (Winneshiek County)",
     "state": "IA",
@@ -1731,7 +1766,7 @@
    "set": "core",
    "application": "Land development plan (preliminary / final) under SALDO Ch. 180, reviewed by the Borough Planning Commission, decided by Borough Council; form 'Planning Commission Application for Land Development Review' (Rev 10-1-22). Zoning §205-50 site development plans follow the same Commission route.",
    "as_of": "2026-10-20/21",
-   "note": "Risks: the form needs copies + fee \"before the application will be accepted\"; the PC \"accepts the submission\" at its own meeting.",
+   "note": "Risks: the form needs copies + fee \"before the application will be accepted\"; the PC \"accepts the submission\" at its own meeting. Formality wording only (plan copies + fee) - not a gate under D10.",
    "research": {
     "jurisdiction": "Borough of Greencastle (Franklin County)",
     "state": "PA",
@@ -2362,13 +2397,13 @@
    "id": "antis-twp-pa",
    "jurisdiction": "Antis Township (Blair County)",
    "state": "PA",
-   "tier": "open",
-   "gate": "open",
-   "confidence": "medium",
+   "tier": 3,
+   "gate": "no",
+   "confidence": "medium-high",
    "set": "extended",
    "application": "Preliminary/Final Land Development Plan under SALDO Ch. 155 (the township has no zoning chapter, so the land development plan is the site plan vehicle). PC is advisory; Board of Supervisors decides.",
    "as_of": "2026-10-20/21",
-   "note": "Open question Q1: page and form wording reads as a hold + 5-item list (Tier 1), but 57 sets of minutes show no refusal and gaps are tabled (Tier 3 in practice).",
+   "note": "2026-10-21: the planning page (\"Complete proposals must be submitted… to be included on the agenda\") and the form (\"refusals to process applications\") carry published hold wording (D9), but the 5 required items are 5 plan copies, a reduced copy, a narrative, a location map and the fee - documents to submit, no content check - and nothing else shows the gate screens content. So Tier 3 (D11). Practice agrees: 44 Supervisors + 13 PC minutes show no refusal; gaps are tabled in review.",
    "research": {
     "jurisdiction": "Antis Township (Blair County)",
     "state": "PA",
