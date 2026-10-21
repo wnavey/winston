@@ -1,0 +1,14 @@
+Run the intake classify-by-tier build-and-test loop end to end, unsupervised, exactly as specified in ~/noetic/winston/workspaces/intake/tiers-golden-set/CLASSIFY-LOOP-SPEC.md (v1.2, winston #331). Read that spec in full first, then its parent DESIGN-SPEC.md in the same folder, then the memory notes intake_golden_set, intake_prospecting_impl and intake_prospecting_el_paso_run.
+
+Will has pre-authorized the whole loop (spec D12). Do not ask before any pass, batch, commit, push, resume or disk cleanup. Work through L0 → L1 → L2 → L3 → L4 → L5 → L6 in order:
+- P1 is a winston PR with score_tiers.py and launch_tiers.py, tested on ~/noetic/working/intake-prospecting/el-paso. Open it; never merge it. Use the scorer from P1's branch.
+- P2 is ONE bureau PR on branch intake-classify-tiers, cut from origin/main in a worktree. Every change is a new commit on it. No stacked PRs, no history rewrites, no merges.
+- Every run is local lane, subscription billing, CONDUCTOR_SEAT=personal only (D9). Never use the noetic seat for runs. Request gates: human, publish: false.
+- A pass is all its runs set up at once at one head, then started in batches (D10). The first batch is a 3-run probe (one per tier) that measures the 5h/7d window use per run. Later batches are sized to stay under 85% of personal's 5-hour window, at most 5. When the window is full, schedule a wake-up for the reset and resume the cut-off runs in place.
+- Classify-only change → replay all 15. Discover/capture change → the working set plus 2 canaries, then all 15 (§3.2). One change per commit, with the misses it targets named in the commit message.
+- After every pass, write scorecard.md/json under ~/noetic/working/intake-tiers/pNN/ and add a row to the bureau PR body's pass table (§3.7). Those two are your record of state: re-read them after any context summary before acting.
+- Never put a golden-set jurisdiction's name in a bureau prompt, and never let a run read the winston golden-set folder (D5). Never edit golden-set.json.
+
+Stop rules (§3.6): plateau (3 passes with no gate gain), suspected golden-set error, a pass over 2× p00's 7-day window share, the personal seat unusable (login expired or 7-day window over 85%), disk under 5 GiB after cleanup, a repeated tool failure. On any of these, stop launching, leave no run half-started, file ONE inbox note (inbox add --to will --from intake-classify-loop --needs "<one line>", body on stdin, written for someone coming in cold; --priority high for seat and disk), and end.
+
+The goal is met when either: (a) the D11 bar is met in two consecutive full 15-city passes at one unchanged head, the 19 extended cities have run once as a held-out check (never tuned on), the loop report is published to inspector-general, the bureau PR is marked ready for review, and Will has an inbox note summarizing the result and asking for his go to merge; or (b) a stop rule fired and its inbox note is filed. Do not merge anything in either case.
