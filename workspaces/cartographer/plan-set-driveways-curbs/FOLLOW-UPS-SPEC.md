@@ -1,6 +1,6 @@
 # Driveways and curbs from plan sets: follow-ups after the Phase 1 acceptance run, and the Phase 2 kickoff
 
-**Status:** Draft v1
+**Status:** Draft v1 — PF1 SHIPPED 2026-10-21 (cartographer#48, cityhall#425, migration `20261021120000_geo_course_key`; Q-F1 = side labels); PF2 = the parent's v3.6, which also re-cuts Phase 2 (a ring-keyed fetch, a precedence rule D24, a smaller first pass); §3 below is superseded by the parent's §3 and §6.2
 **Date:** 2026-10-21
 **Parent:** `workspaces/cartographer/plan-set-driveways-curbs/DESIGN-SPEC.md` v3.5, as built (winston#326; v3.4 was winston#324). Phase 1 shipped as cityhall#421 and #423, cartographer#44–#47, bureau#2174, #2176 and #2177.
 **Repos touched:** `cartographer` (a stable course key for frontages and driveways, `feature_key` on every anchored row), `winston` (the parent's v3.6), then Phase 2 as the parent's §3 and §6.2 specify (`surveyor`, `cityhall-new`, `cartographer`, `bureau`)
