@@ -1,6 +1,6 @@
 # Intake classify by tier: the change and the build-and-test loop
 
-**Status:** Draft v1.1 (adds §3.8: local lane, subscription billing, batched launches, D9–D10). This is a working doc for one implementation session: what changes and how
+**Status:** Draft v1.2. This is a working doc for one implementation session: what changes and how
 the build-and-test loop runs. It is not a full design spec.
 **Date:** 2026-10-21
 **Parent:** `DESIGN-SPEC.md` in this folder (v1.1, winston#329): the tiers, the golden set, §6 how to score
@@ -9,6 +9,16 @@ the build-and-test loop runs. It is not a full design spec.
 - `winston`: this folder gains the scorer and the launcher.
 
 **Repos NOT touched:** `dsd` (the Library DB is not read; see D6), `cityhall`, `substation`
+
+> **Revision note (v1.2, 2026-10-21, Will's answers):**
+> - **Q1 → D11:** the §3.5 bar is accepted as written.
+> - **Q2 → D12:** the loop runs unsupervised. No pass waits for Will's approval; the §3.6 stop
+>   rules are the only brakes, and each one ends in an inbox note.
+> - **Q3 → §8:** the tier override at `1.5-scope` is not part of this work.
+> - **Seat (D9):** every run uses the `personal` account, never `noetic`. The v1.1 fallback of
+>   switching to the other seat is removed.
+>
+> **v1.1 (2026-10-21):** added §3.8: local lane, subscription billing, batched launches (D9, D10).
 
 ## 1. What we are doing
 
@@ -222,8 +232,9 @@ data, and needs Will's call plus a new held-out set.
 6. Clean up disk: once a pass is scored, delete superseded F runs, keeping the frozen corpus and
    every scorecard. Stop and clean if free space falls under 5 GiB (13 GiB free on 2026-10-21).
 
-### 3.5 The bar (proposed; Q1)
+### 3.5 The bar
 
+**D11: The bar** (Will, 2026-10-21; was Q1).
 On the 15 core cities, in two F passes in a row at one head:
 - **gate**: 0 wrong, at most 1 `unknown`
 - **tier**: Tier 1 vs Tier 2 right on all 9 gated cities (8 Tier 1 + Fremont)
@@ -233,14 +244,41 @@ The 15 core: Tier 1 is `austin-tx`, `fairfax-county-va`, `san-diego-ca`, `george
 `fremont-ne`. Tier 3 is `lenox-twp-mi`, `conway-twp-mi`, `bangor-twp-mi`, `decorah-ia`,
 `greencastle-pa` and `watertown-wi`.
 
-### 3.6 Stop and escalate
+### 3.6 Running unsupervised, and when to stop
 
-- **Plateau**: three passes in a row with no gain on gate accuracy → stop, write up the remaining
-  misses with their diagnosis, and ask Will.
-- **Key doubt**: a miss diagnosed as **key** → stop and ask. Never edit `golden-set.json` without Will.
-- **Spend**: a pass using more than 2× `p00`'s share of the 7-day window (§3.8) → stop and ask.
-- When Will is away, leave one inbox note per issue (`inbox add --to will --from intake-classify-loop
-  --needs "…"`) and stop rather than guessing.
+**D12: The loop runs without Will** (Will, 2026-10-21; was Q2): "I want this job to be long running
+without my supervision."
+- **No approvals.** L0 through L5 run without asking: every pass, every batch, every commit and
+  push to the bureau PR, every resume after a usage-window wait, disk cleanup.
+- **The driving session keeps itself going.**
+  - It watches runs in the background and is woken when a batch finishes; it doesn't poll in the
+    foreground.
+  - When the 5-hour window is full, it schedules a wake-up for the reset time `muni usage` shows,
+    then resumes.
+  - Its own context gets summarized as the loop grows long. So the PR body table (§3.7) and the
+    `pNN/` scorecards are the record of where the loop is; a summarized session re-reads them
+    before its next step.
+- **The stop rules are the only brakes.** Each one stops the loop, leaves no run half-started, and
+  files **one** inbox note for someone coming in cold: what happened, what was tried, the exact
+  decision or command needed, what happens if it is ignored. The note uses
+  `inbox add --to will --from intake-classify-loop --needs "<one line>"`, with the body on stdin.
+
+| Stop rule | Trigger | Note priority |
+|---|---|---|
+| **Plateau** | three passes in a row with no gain on gate accuracy; the note carries the remaining misses and their diagnosis | normal |
+| **Key doubt** | a miss diagnosed as **key**; never edit `golden-set.json` without Will | normal |
+| **Spend** | a pass using more than 2× `p00`'s share of the 7-day window (§3.8) | normal |
+| **Seat** | `personal` cannot run: its login has expired, or its 7-day window is above 85% | `--priority high` |
+| **Disk** | free space under 5 GiB after cleaning every superseded run | `--priority high` |
+| **Tool** | the same tool failure (not a classification miss) on a re-run after one fix attempt | normal |
+
+- **The loop stops at L6 and checks in.** When the bar is met and the held-out pass is written up:
+  - publish the IG report
+  - mark the bureau PR ready
+  - leave Will a note and stop
+  
+  Merging (the merge-prs loop with Foreman) starts on Will's go, as does merging the winston P1 PR.
+  Until P1 merges, the loop runs the scorer from P1's branch.
 
 ### 3.7 What gets recorded
 
@@ -252,12 +290,12 @@ The 15 core: Tier 1 is `austin-tx`, `fairfax-county-va`, `san-diego-ca`, `george
 
 ### 3.8 Lane, billing and batches
 
-**D9: Every run is local lane, subscription billing.**
-- Each run's `.env` pins one seat with `CONDUCTOR_SEAT=<muni account>`, the El Paso recipe.
-  `muni usage` showed two accounts on 2026-10-21: `noetic` and `personal`.
-- No AI Gateway, no cloud.
-- **Check `muni accounts` before each pass for login expiry.** `personal`'s login expires
-  2026-10-22, the day after this spec.
+**D9: Every run is local lane, subscription billing, on the `personal` account** (Will,
+2026-10-21).
+- Each run's `.env` pins `CONDUCTOR_SEAT=personal`, the El Paso recipe.
+- Never `noetic`, and no AI Gateway or cloud.
+- **Check `muni accounts` before each pass.** `personal`'s login expires 2026-10-22, the day after
+  this spec. An expired login is the **Seat** stop rule (§3.6).
 
 **D10: A pass is one group of runs, launched in batches.**
 - **One group.** Every run in a pass shares one pass dir and one head, and is scored as one
@@ -271,7 +309,7 @@ The 15 core: Tier 1 is `austin-tx`, `fairfax-county-va`, `san-diego-ca`, `george
   is the per-run cost, written in the scorecard.
 - **Later batches are sized from the probe.** Batch size = the runs that fit before the seat
   reaches 85% of its 5-hour window, at most 5. When fewer than 1 fits, wait for the window to
-  reset (`muni usage` shows when), or switch the remaining runs to the other seat if it has room.
+  reset (`muni usage` shows when) and continue on `personal`.
 - **Batches mix tiers**, so a pass stopped half-way still shows a spread.
 - **One batch at a time.** The next batch starts only when every run in the current one has
   parked at `1.5-scope`, failed, or been stopped.
@@ -300,11 +338,7 @@ The 15 core: Tier 1 is `austin-tx`, `fairfax-county-va`, `san-diego-ca`, `george
 
 ## 5. Open questions
 
-- **Q1:** Is §3.5 the right bar?
-- **Q2:** May the loop run passes without asking first, as the Austin loop did (#2112), bounded
-  by §3.6? Or does Will approve each F pass?
-- **Q3:** Does `1.5-scope`'s revise form gain a `tier` override beside `edits.basis`? Not needed
-  for the loop (runs park before 1.5 is answered); needed before a person uses the readout for real.
+None open. v1.1's Q1 and Q2 became D11 and D12; Q3 moved to §8 (2026-10-21).
 
 ## 6. Testing seams
 
@@ -331,7 +365,8 @@ The 15 core: Tier 1 is `austin-tx`, `fairfax-county-va`, `san-diego-ca`, `george
 - **Blast radius:** none.
 
 **P2: classify by tier** (`bureau`, one PR, commits C1–C3 then one per loop change)
-- **Blocked by:** P1 (nothing to score with otherwise).
+- **Blocked by:** P1 being built and tested. It does not have to merge; the loop runs the scorer
+  from P1's branch (D12).
 - **Delivers:** D1–D5, and the loop's tuned prompts.
 - **Tested at:** S2 in CI; S1 for the bar.
 - **Door:** two-way (revert).
@@ -343,6 +378,9 @@ The 15 core: Tier 1 is `austin-tx`, `fairfax-county-va`, `san-diego-ca`, `george
 - The Tier 2 baseline checklist, and what the runbook does after 1.5 for Tier 2 (today it stops
   where `none_found` stops).
 - How tier results reach the app or the jurisdiction page.
+- A `tier` override in `1.5-scope`'s revise form, beside `edits.basis` (v1.1's Q3; Will,
+  2026-10-21: not now). The loop doesn't need it, because runs park before 1.5 is answered. It's
+  needed before a person uses the readout for real.
 
 ## 9. Out of scope
 
