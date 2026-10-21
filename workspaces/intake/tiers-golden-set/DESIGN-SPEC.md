@@ -240,7 +240,7 @@ and the rejects listed in the research records.
 
 - The runbook's front half (`0-request` → `1.2-discover` → `1.3-capture` → `1.4-classify`) stops by
   itself at the `1.5-scope` human gate (exit 75). The classifier's answer is
-  `1.4-classify/basis.json`; nothing new is needed to collect it. Run each `core` jurisdiction (17
+  `1.4-classify/basis.json`; nothing new is needed to collect it. Run each `core` jurisdiction (15
   runs); run `extended` ones to explore.
 - **Score gate yes/no first and strictly** (Tier 1 or 2 vs Tier 3) — it is the question that
   matters for the product. Score Tier 1 vs Tier 2 only on gated cities, and read misses there as
@@ -276,7 +276,7 @@ decides Wallace's tier.
 
 1. Optional quick checks that could move entries: open Union County doc 1280 in a normal browser
    (https://www.unioncountync.gov/home/showpublisheddocument/1280); decide Q1–Q3.
-2. Baseline run: the current classifier on the 17 `core` entries (§6), with a small script that
+2. Baseline run: the current classifier on the 15 `core` entries (§6), with a small script that
    reads each run's `basis.json` against `golden-set.json` and prints a confusion matrix plus every
    miss with its rationale. Publish the result to inspector-general.
 3. Change `1.4-classify` to output `gate` (yes / no / unknown, with its quote) and `tier`, keeping
