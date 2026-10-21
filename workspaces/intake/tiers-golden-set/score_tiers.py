@@ -15,7 +15,7 @@ and writes scorecard.md + scorecard.json into the pass dir (the runs' common par
 A run that failed before 1.4 wrote its output is a tool failure: listed, never scored as a miss.
 The bar (D11) is judged only for a full (F) pass over all 15 core cities.
 """
-import argparse, json, os, sys
+import argparse, json, os, re, sys
 from collections import Counter
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -81,7 +81,7 @@ for run in sorted(runs):
     row = {'id': gid, 'run': run, 'set': truth['set'], 'state': state,
            'truth': {'gate': truth['gate'], 'tier': truth['tier']},
            'pred': pred, 'usd': usd, 'step_minutes': step_min, 'wall_minutes': wall_minutes(run, since),
-           'prospector': had_prospector(run, jur['slug']), 'resumed': bool(info.get('resumed')),
+           'prospector': had_prospector(run, jur['slug']), 'resumed': bool(info.get('resumed')), 'tool_reruns': info.get('tool_reruns', 0),
            'diagnosis': diagnoses.get(gid)}
     if pred and state not in ('running', 'set-up'):
         g = pred['gate']
@@ -135,11 +135,13 @@ for b, ph in sorted(batches.items(), key=lambda kv: str(kv[0])):
         window.append({'batch': b, 'runs': ph['before'].get('runs', []), **d})
 used_5h = sum(w.get('five_hour', 0) for w in window)
 used_7d = sum(w.get('seven_day', 0) for w in window)
-probe = next((w for w in window if str(w['batch']) == '1'), None)
+# The probe is batch 1 plus its re-runs (1r, 1r2, ...: a city re-run in place after a tool fix spends again).
+probe = [w for w in window if re.fullmatch(r'1(r\d*)?', str(w['batch']))]
+probe_runs = {r for w in probe if str(w['batch']) == '1' for r in w['runs']}
 per_run = None
-if probe and probe['runs']:
-    per_run = {'five_hour': round(probe.get('five_hour', 0) / len(probe['runs']), 2),
-               'seven_day': round(probe.get('seven_day', 0) / len(probe['runs']), 2)}
+if probe_runs:
+    per_run = {'five_hour': round(sum(w.get('five_hour', 0) for w in probe) / len(probe_runs), 2),
+               'seven_day': round(sum(w.get('seven_day', 0) for w in probe) / len(probe_runs), 2)}
 
 summary = {
     'pass': P.get('pass') or os.path.basename(out_dir), 'head': P.get('head'), 'kind': P.get('kind'),
@@ -149,6 +151,7 @@ summary = {
     'states': dict(Counter(r['state'] for r in rows)),
     'tool_failures': [r['id'] for r in rows if r['state'] == 'failed'],
     'resumed': [r['id'] for r in rows if r['resumed']],
+    'tool_reruns': [r['id'] for r in rows if r['tool_reruns']],
     'batches': len(window), 'window_used': {'five_hour': used_5h, 'seven_day': used_7d}, 'probe_per_run': per_run,
     'list_usd': round(sum(r['usd'] for r in rows), 2),
     'step_minutes': round(sum(r['step_minutes'] for r in rows), 1),
@@ -185,9 +188,9 @@ L += ['## Pass row (§3.7)', '',
       f"| {summary['pass']} | {cell((summary['head'] or '')[:10])} | {cell(summary['kind'])} | {summary['scored']}/{summary['cities']} "
       f"| {gate['right']} / {gate['wrong']} / {gate['unknown'] + gate['unmeasured']} | {tier_right}/{len(gated)} "
       f"| {summary['batches']} | {used_5h}% / {used_7d}% | {summary['list_usd']} | {summary['step_minutes']} | |", '']
-if summary['tool_failures'] or summary['resumed']:
-    L += [f"Tool failures (not scored): {', '.join(summary['tool_failures']) or 'none'} · resumed after the usage limit: "
-          f"{', '.join(summary['resumed']) or 'none'}", '']
+if summary['tool_failures'] or summary['resumed'] or summary['tool_reruns']:
+    L += [f"Tool failures (not scored): {', '.join(summary['tool_failures']) or 'none'} · re-run after a tool fix: "
+          f"{', '.join(summary['tool_reruns']) or 'none'} · resumed after the usage limit: {', '.join(summary['resumed']) or 'none'}", '']
 if per_run:
     L += [f"Probe (batch 1): {per_run['five_hour']}% of the 5-hour window and {per_run['seven_day']}% of the 7-day window per run.", '']
 

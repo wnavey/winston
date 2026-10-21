@@ -279,7 +279,9 @@ def _start(a, resume):
         r.update(pid=pid, log=log, batch=a.batch, started=time.strftime('%Y-%m-%dT%H:%M:%S%z'),
                  started_epoch=r.get('started_epoch') or time.time(), state='running')
         if resume:
-            r['resumed'] = r.get('resumed', 0) + 1
+            # limit: cut off by the usage window; tool: re-run in the same pass after a tool fix (§3.4 step 3)
+            key = 'resumed' if a.reason == 'limit' else 'tool_reruns'
+            r[key] = r.get(key, 0) + 1
         say(f'{gid}: {verb} pid {pid} log {log}')
     save(out, p)
 
@@ -333,6 +335,8 @@ s = sub.add_parser('setup'); s.add_argument('--set', required=True); s.add_argum
 s = sub.add_parser('replay'); s.add_argument('--corpus', nargs='+', required=True); s.add_argument('--bureau', required=True); s.add_argument('--out', required=True)
 for name in ('start', 'resume'):
     s = sub.add_parser(name); s.add_argument('--out', required=True); s.add_argument('--ids', required=True); s.add_argument('--batch', required=True)
+    if name == 'resume':
+        s.add_argument('--reason', choices=['limit', 'tool'], required=True)
 s = sub.add_parser('wait'); s.add_argument('--out', required=True); s.add_argument('--batch', required=True); s.add_argument('--every', type=int, default=30)
 s = sub.add_parser('status'); s.add_argument('--out', required=True)
 sub.add_parser('usage')
