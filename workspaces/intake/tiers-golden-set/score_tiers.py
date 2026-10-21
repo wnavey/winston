@@ -30,9 +30,11 @@ G = tiers.golden()
 runs = [os.path.abspath(r) for r in args.runs if os.path.isdir(os.path.join(r, '0-request'))]
 if not runs:
     raise SystemExit('no run dirs (a run dir holds 0-request/)')
-out_dir = os.path.abspath(args.out or os.path.commonpath([os.path.dirname(r) for r in runs]))
-P = tiers.pass_info(out_dir)
-diagnoses = tiers.read_json(os.path.join(out_dir, 'diagnoses.json'), {}) or {}
+pass_dir = os.path.commonpath([os.path.dirname(r) for r in runs])
+out_dir = os.path.abspath(args.out or pass_dir)
+os.makedirs(out_dir, exist_ok=True)
+P = tiers.pass_info(pass_dir)
+diagnoses = tiers.read_json(os.path.join(pass_dir, 'diagnoses.json'), {}) or {}
 
 
 def cost(run, since):
@@ -60,8 +62,12 @@ def wall_minutes(run, since):
 def had_prospector(run, slug):
     """Seeds from prospector, or a jurisdictions/<slug>/ folder in the run's worktree (spec §4 risk)."""
     seeds = tiers.read_json(os.path.join(run, '1.1-inputs', 'seeds.json'), {}) or {}
+    # Discovery itself writes prospector/intake/ (its ledger), so only prospector's own trained folders count.
     wt = os.path.join(run, '1.0-worktree', 'worktree', 'jurisdictions', slug)
-    return {'seeds': len(seeds.get('seeds') or []), 'folder': os.path.isdir(wt)}
+    kept = os.path.join(run, '1.0-worktree', 'kept', 'trained-folders.txt')   # a run reduced to evidence after scoring
+    have = set(open(kept).read().split()) if os.path.exists(kept) else {d for d in os.listdir(wt)} if os.path.isdir(wt) else set()
+    trained = [d for d in ('briefing', 'codes', 'approvals', 'regulatory') if d in have]
+    return {'seeds': len(seeds.get('seeds') or []), 'folder': bool(trained)}
 
 
 rows, unmapped = [], []
@@ -117,7 +123,7 @@ if full_core:
     bar['met'] = bar['gate_wrong'] == 0 and bar['gate_unknown'] <= 1 and bar['tier_right_on_gated'] == bar['gated']
 
 # Window use per batch: the change between a batch's before and after records (usage.jsonl).
-usage = tiers.jsonl(os.path.join(out_dir, 'usage.jsonl'))
+usage = tiers.jsonl(os.path.join(pass_dir, 'usage.jsonl'))
 batches = {}
 for u in usage:
     batches.setdefault(u.get('batch'), {})[u.get('phase')] = u

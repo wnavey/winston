@@ -303,6 +303,8 @@ def cmd_wait(a):
     while True:
         p = load(out)
         batch = [g for g, r in p['runs'].items() if str(r.get('batch')) == str(a.batch)]
+        if not batch:
+            raise SystemExit(f'no run in {out} is in batch {a.batch}: start it first')
         st = {g: tiers.run_state(p['runs'][g]['dir'], dict(p['runs'][g], kind=p['kind'])) for g in batch}
         if batch and all(s != 'running' for s in st.values()):
             break
