@@ -1153,8 +1153,8 @@ table.nx-rules td.o{color:var(--ink2);font-size:12.5px;white-space:nowrap}
 <header class="masthead">
   <div class="kicker">Cartographer · Plan-set driveways and curbs</div>
   <h1>Driveways and curbs from plan sets — existing and proposed, with widths, lengths and return radii, and the adjacent driveways the sheet leaves off</h1>
-  <p>Phase 1: how a site plan set gives up its proposed and existing curb lines with their arcs' radii, how each driveway is derived from the curbs that cross the lot's frontage — as it exists and as it will exist — and how the anchor run carries them to the county grid. Phase 2: how the driveways next door, the street, its Level and the curb inlets are fetched from the city's layers and joined to those rows.</p>
-  <div class="meta"><span class="status">v3.5 · as built</span><span>20 Oct 2026</span><span>Source of truth: <code>DESIGN-SPEC.md</code></span></div>
+  <p>Phase 1: how a site plan set gives up its proposed and existing curb lines with their arcs' radii, how each driveway is derived from the curbs that cross the lot's frontage — as it exists and as it will exist — and how the anchor run carries them to the county grid. Phase 2: how the driveways next door, the street, its Level and the right-of-way are fetched from the city's layers by a ring-keyed command and joined to those rows.</p>
+  <div class="meta"><span class="status">v3.6 · Phase 1 accepted · Phase 2 re-cut</span><span>21 Oct 2026</span><span>Source of truth: <code>DESIGN-SPEC.md</code></span></div>
   <a class="spec-link" href="DESIGN-SPEC.html">Read the spec →</a>
 </header>
 
@@ -1183,7 +1183,7 @@ table.nx-rules td.o{color:var(--ink2);font-size:12.5px;white-space:nowrap}
       <li><div><b>Phase 1a: same tracer, one more branch; the worker picks a set and takes it whole.</b> A polyline feature's candidate is a <i>set</i> of chains, by layer when the layers survived and by stroke style when they did not; per-chain trimming waits for the first runs to show what needs trimming (§10). Two of the three plan sets on disk are layer-less on the site plan. No geometric rule tells face from back on such a sheet (the best scored 12 of 17), so the pair is reported, never guessed. <span class="aside">§1.3, §1.4, D3, D4</span></div></li>
       <li><div><b>Phase 1b: the driveway is derived, twice, on the curbs 1a already anchored.</b> North star D14's fourth path: the polygon between two curb faces where they cross a frontage course the code found (no worker names the street until Phase 2), with width at the right-of-way line, throat width, return radii, angle and throat depth, computed once for the existing condition and once for the resulting condition, one row each. On White Water both give the same shared 33.2 ft opening — the removed curb begins 24.4 ft inside the lot — and only the throat changes. That is 1b's acceptance test. <span class="aside">D5, D6, §7.1b</span></div></li>
       <li><div><b>Phase 1a: lines enter through an expand, never a contract.</b> A <code>geometry</code> column beside <code>polygon</code>, backfilled, every reader moved over; dropping <code>polygon</code> is a later spec. <code>geo</code> needs no DDL: its geometry columns already take a line. No SIR is needed anywhere. <span class="aside">§1.1, D9, D10</span></div></li>
-      <li><div><b>Phase 2: off the sheet, the opening is derivable even where it is not labelled.</b> Austin's 2023 impervious layer has no <code>Driveways</code>-class polygon within 300 ft of the site, but 16 paved areas and 2 paved roads; the boundary between them is a driveway opening, at about ±2 ft. The layers are found by role in surveyor's layer-identity registry, Austin tagged by hand; making prospector tag every trained jurisdiction is its own spec. <span class="aside">§1.5, D15–D22</span></div></li>
+      <li><div><b>Phase 2: off the sheet, the opening is derivable even where it is not labelled.</b> Austin's 2023 impervious layer has no <code>Driveways</code>-class polygon within 300 ft of the site, but 16 paved areas and 2 paved roads; the boundary between them is a driveway opening, at about ±2 ft. The layers are found by role in surveyor's layer-identity registry, Austin tagged by hand; the fetch is a command keyed by a parcel ring, so the completeness check can call it on any project (v3.6); where the sheet and the City disagree, the sheet wins inside its survey reach and every City row says how old its imagery is (D24); making prospector tag every trained jurisdiction is its own spec. <span class="aside">§1.5, D15–D24</span></div></li>
     </ol>
   </div>
 
@@ -2072,7 +2072,7 @@ targets.json     <span class="c">the parcel ring(s), target_srid</span></pre></d
 <!-- ============================================================ PHASE 2 -->
 <section class="panel" id="phase2">
   <h2>Phase 2: adjacent</h2>
-  <p class="lede">Blocked by Phase 1's acceptance. One script step joins the anchor run and fetches the 300 ft context of every frontage from the jurisdiction's layers, found by role in surveyor's registry; publish writes the openings, inlets and right-of-way under the same anchor id as Phase 1's rows, so spacing is one join. Austin is tagged by hand; the prospector change that tags every trained jurisdiction is its own spec (§3, D15–D22).</p>
+  <p class="lede">Phase 1 is accepted. A command keyed by a parcel ring fetches the 300 ft context of every frontage from the jurisdiction's layers, found by role in surveyor's registry; the anchor runbook's new step is a thin caller of it; publish writes the openings, the right-of-way and the street under the same anchor id as Phase 1's rows, so spacing is one join. The first pass skips inlets, the sidewalk inventory and the orthophoto. Where the sheet and the City disagree the sheet wins inside its survey reach (D24). Austin is tagged by hand; two half-day checks come first (§3.5); the prospector change that tags every trained jurisdiction is its own spec (§3, D15–D24).</p>
 
   <h3 class="claim" data-view-of="p2" data-in="today">After Phase 1 the anchor run knows the parcel and the sheet, and nothing past the lot line <span class="src">§3</span></h3>
   <h3 class="claim" data-view-of="p2" data-in="after" hidden>After Phase 2 the city's layers reach geo under the same anchor id, found by role, never by name <span class="src">D15</span></h3>
@@ -2090,13 +2090,13 @@ targets.json     <span class="c">the parcel ring(s), target_srid</span></pre></d
     <div class="sys trig" id="p2-t2" style="grid-area:3/1"><span class="dot"></span><span class="t">Prospector trains a jurisdiction</span><span class="d">sources runbook</span></div>
 
     <div class="sys gap" id="p2-gap" data-in="today" style="grid-area:2/2">nothing reaches past the lot line</div>
-    <div class="sys ext new" id="p2-austin" data-in="after" style="grid-area:2/2"><a class="ref" href="#detail-frontage">D16 · D17 · D18 ↓</a><span class="k">external · keyless</span><span class="t">Austin layers + StratMap ortho</span><span class="d">streets, paved areas, inlets, ROW, 6 in pixels</span></div>
+    <div class="sys ext new" id="p2-austin" data-in="after" style="grid-area:2/2"><a class="ref" href="#detail-frontage">D16 · D17 · D18 ↓</a><span class="k">external · keyless</span><span class="t">Austin layers</span><span class="d">streets, ASMP, paved areas, ROW</span></div>
     <div class="sys" id="p2-anchor-t" data-in="today" style="grid-area:2/3"><span class="k">8 steps · ring fit</span><span class="t">anchor-geometry</span><span class="d">lines carried</span></div>
-    <div class="sys chg" id="p2-anchor-a" data-in="after" style="grid-area:2/3"><a class="ref" href="#detail-anchor2-steps">D16 ↓</a><span class="k">9 steps · ring fit</span><span class="t">anchor-geometry</span><span class="d">+ 1.3-frontage; the aerial under the overlay</span></div>
+    <div class="sys chg" id="p2-anchor-a" data-in="after" style="grid-area:2/3"><a class="ref" href="#detail-anchor2-steps">D16 ↓</a><span class="k">9 steps · ring fit</span><span class="t">anchor-geometry</span><span class="d">+ 1.3-frontage, a thin caller of carto frontage</span></div>
     <div class="sys store ext" id="p2-geo-t" data-in="today" style="grid-area:2/4"><span class="k">table</span><span class="t">geo</span><span class="d">anchored rows only</span></div>
     <div class="sys store ext chg" id="p2-geo-a" data-in="after" style="grid-area:2/4"><a class="ref" href="#detail-context">D19 · D20 ↓</a><span class="k">table</span><span class="t">geo</span><span class="d">+ city_gis rows; one join</span></div>
     <div class="sys store ext" id="p2-reg-t" data-in="today" style="grid-area:2/5"><span class="k">registry</span><span class="t">layer-identity.json</span><span class="d">roles: parcels, legal_description, locator</span></div>
-    <div class="sys store ext chg" id="p2-reg-a" data-in="after" style="grid-area:2/5"><a class="ref" href="#detail-roles">D15 ↓</a><span class="k">registry</span><span class="t">layer-identity.json</span><span class="d">+ 7 roles; Austin tagged by hand</span></div>
+    <div class="sys store ext chg" id="p2-reg-a" data-in="after" style="grid-area:2/5"><a class="ref" href="#detail-roles">D15 ↓</a><span class="k">registry</span><span class="t">layer-identity.json</span><span class="d">+ 4 roles; Austin tagged by hand</span></div>
     <div class="sys gap" id="p2-prosp" style="grid-area:3/5">no role tags written by prospector · its own spec</div>
 
     <a class="sys-edge gap" data-in="today" data-from="p2-gap" data-to="p2-anchor-t"></a>
@@ -2110,23 +2110,24 @@ targets.json     <span class="c">the parcel ring(s), target_srid</span></pre></d
   </div>
   <div class="sys-refs">
     <a class="refrow chg" data-ref="D15"><span class="chip">D15</span><span class="txt">the frontage layers are found through surveyor's layer-identity registry, by role; Austin tagged by hand</span></a>
-    <a class="refrow new" data-ref="D16"><span class="chip">D16</span><span class="txt">a new anchor step, 1.3-frontage, fetches the 300 ft context of every frontage</span></a>
+    <a class="refrow new" data-ref="D16"><span class="chip">D16</span><span class="txt">a ring-keyed command, carto frontage, fetches the 300 ft context of every frontage; the anchor step 1.3-frontage is a thin caller</span></a>
     <a class="refrow new" data-ref="D17"><span class="chip">D17</span><span class="txt">an opening is the boundary where a paved area meets the paved road; the window is 300 ft, the City's own number</span></a>
     <a class="refrow new" data-ref="D18"><span class="chip">D18</span><span class="txt">the Street Level is looked up, never defaulted</span></a>
     <a class="refrow chg" data-ref="D19"><span class="chip">D19</span><span class="txt">publish writes the context rows through a second RPC keyed by the anchor alone</span></a>
     <a class="refrow chg" data-ref="D20"><span class="chip">D20</span><span class="txt">the adjacency payoff is the join on anchor_id, with two honesty labels</span></a>
+    <a class="refrow new" data-ref="D24"><span class="chip">D24</span><span class="txt">the sheet wins inside its survey reach, the City beyond it; every City row carries a status and its imagery year</span></a>
   </div>
-  <p class="claim"><b>Reading:</b> the anchor fetch already finds the parcels layer through the same registry (winston#309 D6); Phase 2 adds roles to it, not a second registry. The prospector gap stays red in both views because closing it is D22's spec, not this one.</p>
+  <p class="claim"><b>Reading:</b> the anchor fetch already finds the parcels layer through the same registry (winston#309 D6); Phase 2 adds roles to it, not a second registry. The command takes a ring, not an anchor, so the completeness check can run it on the 57 projects that carry a parcel ring today; the rows stay keyed by the anchor until geo has a project owner (north star P0a, deferred). The prospector gap stays red in both views because closing it is D22's spec, the next after this one.</p>
 
   <h3 class="claim" id="detail-anchor2">A fetch of the city's layers goes in before correspond, and the solve stays exactly as it is <span class="src">D16</span></h3>
   <div class="bleed"><div class="sysmap rgraph" id="rg-anchor-p2" style="grid-template-columns:repeat(9,minmax(0,1fr));column-gap:24px">
     <div class="sys" id="c11" style="grid-area:1/1"><span class="k">gate · input</span><span class="t">1.1 inputs</span><span class="d">unchanged</span></div>
     <div class="sys" id="c12" style="grid-area:1/2"><span class="k">script</span><span class="t">1.2 fetch</span><span class="d">as after Phase 1</span></div>
-    <div class="sys new" id="c13" style="grid-area:1/3"><a class="ref" href="#detail-frontage">D16 ↓</a><span class="k">script · zero tokens</span><span class="t">1.3 frontage</span><span class="d">streets, openings, inlets, ROW, the ortho</span></div>
+    <div class="sys new" id="c13" style="grid-area:1/3"><a class="ref" href="#detail-frontage">D16 ↓</a><span class="k">script · zero tokens</span><span class="t">1.3 frontage</span><span class="d">calls carto frontage: streets, openings with D24 statuses, ROW</span></div>
     <div class="sys" id="c21" style="grid-area:1/4"><span class="k">agent</span><span class="t">2.1 correspond</span><span class="d">as after Phase 1</span></div>
     <div class="sys" id="c31" style="grid-area:1/5"><span class="k">script</span><span class="t">3.1 solve</span><span class="d">unchanged</span></div>
-    <div class="sys chg" id="c32" style="grid-area:1/6"><a class="ref" href="#detail-anchor2-steps">D21 ↓</a><span class="k">script</span><span class="t">3.2 render</span><span class="d">over the ortho; context rows outlined</span></div>
-    <div class="sys chg" id="c33" style="grid-area:1/7"><a class="ref" href="#detail-anchor2-steps">D21 ↓</a><span class="k">agent</span><span class="t">3.3 check</span><span class="d">+ two aerial questions; the frontage table</span></div>
+    <div class="sys chg" id="c32" style="grid-area:1/6"><a class="ref" href="#detail-anchor2-steps">D21 ↓</a><span class="k">script</span><span class="t">3.2 render</span><span class="d">context rows outlined</span></div>
+    <div class="sys chg" id="c33" style="grid-area:1/7"><a class="ref" href="#detail-anchor2-steps">D21 ↓</a><span class="k">agent</span><span class="t">3.3 check</span><span class="d">+ the frontage table</span></div>
     <div class="sys gate" id="c41" style="grid-area:1/8"><span class="k">human gate</span><span class="t">4.1 hitl</span><span class="d">unchanged</span></div>
     <div class="sys chg" id="c51" style="grid-area:1/9"><a class="ref" href="#detail-context">D19 ↓</a><span class="k">script · frozen</span><span class="t">5.1 publish</span><span class="d">+ context rows</span></div>
     <div class="sys exit" id="cstop" style="grid-area:2/8"><span class="t">SKIPPED.md</span><span class="d">reject · stop</span></div>
@@ -2146,9 +2147,9 @@ targets.json     <span class="c">the parcel ring(s), target_srid</span></pre></d
   <div class="sys-refs">
     <a class="refrow chg" data-ref="D21"><span class="chip">D21</span><span class="txt">the anchor run's render, check and readout gain the frontage</span></a>
   </div>
-  <p class="claim"><b>Claim (D16):</b> the step needs only the parcel ring and the target SRID, which fetch writes on either path; a layer that fails is an error in the file, a layer that answers nothing is recorded as nothing, and a jurisdiction with no tagged roles writes a none file and the run goes on.</p>
+  <p class="claim"><b>Claim (D16):</b> the command needs only a parcel ring, a target SRID and a jurisdiction, which fetch writes on either path and which a county ring in geo supplies without any run; a layer that fails is an error in the file, a layer that answers nothing is recorded as nothing, and a jurisdiction with no tagged roles writes a none file and the run goes on.</p>
 
-  <h3 class="claim" id="detail-anchor2-steps">Three steps change in Phase 2, and one is new <span class="src">D21</span></h3>
+  <h3 class="claim" id="detail-anchor2-steps">Three steps change in Phase 2, one is new, and the render keeps its picture <span class="src">D21</span></h3>
   <div class="ba">
     <div class="ba-col"><div class="ba-h">after Phase 1</div>
       <ol class="steps">
@@ -2161,15 +2162,15 @@ targets.json     <span class="c">the parcel ring(s), target_srid</span></pre></d
     <div class="ba-col"><div class="ba-h">after Phase 2</div>
       <ol class="steps">
         <li class="st" data-n="1.2"><span class="sk">script</span><span class="sn">fetch</span><span class="so">unchanged</span></li>
-        <li class="st new" data-n="1.3"><span class="sk">script</span><span class="sn">frontage</span><span class="so">per frontage: street, class, Level or null; openings from paved ∩ road within 300 ft, both sides; inlets; ROW; the 6 in ortho tile with its world file</span></li>
-        <li class="st chg" data-n="3.2"><span class="sk">script</span><span class="sn">render</span><span class="so">the tile underneath; context rows outlined</span></li>
-        <li class="st chg" data-n="3.3"><span class="sk">agent</span><span class="sn">check</span><span class="so">+ do the existing curbs sit on the aerial's curbs; does each opening sit on an apron; told that 2021 leaf-off imagery and a 2026 plan will disagree where the site changed; + the frontage table</span></li>
+        <li class="st new" data-n="1.3"><span class="sk">script</span><span class="sn">frontage</span><span class="so">carto frontage --ring --srid --jurisdiction: per frontage the street segment, class, Level or null; openings from paved ∩ road within 300 ft, both sides, each with a D24 status and its imagery year; the ROW polygon</span></li>
+        <li class="st chg" data-n="3.2"><span class="sk">script</span><span class="sn">render</span><span class="so">context rows outlined on the overlay it already draws</span></li>
+        <li class="st chg" data-n="3.3"><span class="sk">agent</span><span class="sn">check</span><span class="so">+ the frontage table: street, class, Level and its source, openings each side with widths, stations, vintage and status, the ROW, D20's numbers with both labels</span></li>
         <li class="st chg" data-n="5.1"><span class="sk">script</span><span class="sn">publish</span><span class="so">then cartographer_put_context_geo(frontage/*.json) under the same anchor_id</span></li>
       </ol>
     </div>
   </div>
   <div class="sys-legend"><span><i class="chg"></i>modified step</span><span><i class="new"></i>new step</span></div>
-  <p class="claim"><b>Claim (D21):</b> the aerial is the picture a checker sees under the overlay, never a source of coordinates in Phase 2; reading openings off it by vision is Q7.</p>
+  <p class="claim"><b>Claim (D21):</b> no orthophoto in the first pass: it is a picture for a worker to look at, not a source of anything; the tile, the aerial questions and reading openings off it by vision (Q7) are the later pass (§10).</p>
 
   <h3 class="claim" id="detail-roles">The layers are found by role in surveyor's registry, the one the anchor fetch already reads for parcels <span class="src">D15</span></h3>
   <div class="ba">
@@ -2189,31 +2190,31 @@ targets.json     <span class="c">the parcel ring(s), target_srid</span></pre></d
         <tbody>
           <tr><td><code>streets</code> <span class="w">NEW</span></td><td>name, class, speed</td><td>TRANSPORTATION_street_segment</td></tr>
           <tr><td><code>street_levels</code> <span class="w">NEW</span></td><td>name, level</td><td>TRANSPORTATION_asmp_street_network</td></tr>
-          <tr><td><code>paved_areas</code> <span class="w">NEW</span></td><td>feature, origin, source</td><td>impervious_cover_2023</td></tr>
-          <tr><td><code>sidewalk_inventory</code> <span class="w">NEW</span></td><td>type</td><td>TRANSPORTATION_sidewalks</td></tr>
-          <tr><td><code>curb_inlets</code> <span class="w">NEW</span></td><td>—</td><td>UTILITIESCOMMUNICATION_CurbInlet</td></tr>
+          <tr><td><code>paved_areas</code> <span class="w">NEW</span></td><td>feature, origin, source (the per-polygon imagery year)</td><td>impervious_cover_2023</td></tr>
           <tr><td><code>right_of_way</code> <span class="w">NEW</span></td><td>document</td><td>PLANNINGCADASTRE_right_of_way</td></tr>
-          <tr><td><code>orthoimagery</code> <span class="w">NEW</span></td><td>ImageServer URL, pixel size</td><td>StratMap21 CapArea, 6 in</td></tr>
+          <tr><td><code>curb_inlets</code>, <code>sidewalk_inventory</code>, <code>orthoimagery</code></td><td colspan="2">later pass (§10); the ImageServer needs a record shape the manifest lacks</td></tr>
         </tbody>
       </table></div>
     </div>
   </div>
   <div class="sys-legend"><span><i class="new"></i>new role</span></div>
-  <p class="claim"><b>Claim (D15, D22):</b> only two of 128 surveyor modules carry any role today, not even <code>parcels</code>, and prospector's sources runbooks mention none; tagging every trained jurisdiction, and backfilling, is the follow-up spec that also unblocks SIR-free anchoring outside Austin.</p>
+  <p class="claim"><b>Claim (D15, D22):</b> 4 of 187 surveyor manifests carry any role today, not even <code>parcels</code>, and prospector's sources runbooks mention none; surveyor exports nothing and runs nothing, locate.py reads the manifest straight out of the checkout; tagging every trained jurisdiction, and backfilling, is the next spec and also unblocks SIR-free anchoring outside Austin. Which Austin host to pin is Q15.</p>
 
-  <h3 class="claim" id="detail-frontage">Off the sheet, an opening is a paved area's boundary against the paved road, and the orthophoto is the check <span class="src">D17</span></h3>
+  <h3 class="claim" id="detail-frontage">Off the sheet, an opening is a paved area's boundary against the paved road; the sheet wins where it reaches <span class="src">D17 · D24</span></h3>
   <div class="dflow">
     <div class="dq"><span class="q">The jurisdiction's module carries the frontage roles?</span><span class="yes">no →</span><span class="out fail">frontage/none.json with why · the run continues (T8)</span></div>
     <div class="dno">yes ↓</div>
     <div class="dq"><span class="q">A streets segment runs within 60 ft of a lot edge and parallel to it?</span><span class="yes">yes →</span><span class="out">a frontage: name, class, speed; the ASMP Level within 60 ft, else null with level_source: absent from ASMP (D18)</span></div>
     <div class="dno">per frontage ↓</div>
     <div class="dq"><span class="q">A paved_areas polygon (Pavement, Paved Parking, or origin Driveways) comes within 3 ft of the Paved Road polygon's boundary, for ≥ 8 ft?</span><span class="yes">yes →</span><span class="out">an opening: width, station, side, on_subject, the abutting parcel, {source_layer, object_id, source_vintage}</span></div>
+    <div class="dno">per opening ↓</div>
+    <div class="dq"><span class="q">Inside the sheet's survey reach (sheet_extent_ft)?</span><span class="yes">yes →</span><span class="out">paired with the sheet's nearest derived opening: agrees (≤ 3 ft) or sheet_missing; a sheet opening with no City partner marks the frontage city_missing (D24)</span></div>
+    <div class="dno">no ↓</div>
+    <div class="dq"><span class="q">Beyond the reach: the City is the only source</span><span class="yes">→</span><span class="out warn">status city_only, with source_vintage; zero openings is "none mapped as of the vintage", never "no driveways"</span></div>
     <div class="dno">and ↓</div>
-    <div class="dq"><span class="q">sidewalk_inventory segments of type DRIVEWAY; curb_inlets within 300 ft; a right_of_way polygon touching the frontage?</span><span class="yes">yes →</span><span class="out">the cross-check list, the inlets as points, the right-of-way where the layer has one</span></div>
-    <div class="dno">then ↓</div>
-    <div class="dq end"><span class="q">exportImage · bbox the frontage ± 300 ft along, 150 across · imageSR = the target SRID</span><span class="yes"></span><span class="out warn">a 6 in georeferenced tile with its world file: under the overlay for 3.2, in front of the checker for 3.3; not a source of coordinates (Q7)</span></div>
+    <div class="dq end"><span class="q">A right_of_way polygon touches the frontage?</span><span class="yes">yes →</span><span class="out">the right-of-way row where the layer has one; the street segment itself is a row too</span></div>
   </div>
-  <p class="claim"><b>Claim (§1.5, D18):</b> within 300 ft of the site Austin's 2023 layer holds 0 <code>Driveways</code>-class polygons, 16 <code>Pavement</code>, 3 <code>Paved Parking</code> and 2 <code>Paved Road</code>; Brezza Lane is absent from the ASMP (which carries 29,256 Level 1 segments) and classed <code>A45 City Collector</code> by the street layer, so its Level is null and every Table 7-5 row is reported as unresolved.</p>
+  <p class="claim"><b>Claim (§1.5, D18, D24):</b> within 300 ft of the site Austin's 2023 layer holds 0 <code>Driveways</code>-class polygons, 16 <code>Pavement</code>, 3 <code>Paved Parking</code> and 2 <code>Paved Road</code>, and the site's own drive is not among its driveways, which is why the sheet wins inside its reach (R1 runs D17's wider rule before P8); Brezza Lane is absent from the ASMP (which carries 29,256 Level 1 segments) and classed <code>A45 City Collector</code> by the street layer, so its Level is null and every Table 7-5 row is reported as unresolved.</p>
 
   <h3 class="claim" id="detail-context">One more RPC writes the context rows under the anchor's id, and they go stale with the anchored rows <span class="src">D19</span></h3>
   <div class="ba">
@@ -2230,12 +2231,12 @@ targets.json     <span class="c">the parcel ring(s), target_srid</span></pre></d
         <div class="edge"><span class="el">①</span><span class="ar">→</span></div>
         <div class="node created"><span class="op">rpc</span><span class="nt">sir_put_anchored_geo</span><span class="nf">unchanged</span></div>
         <div class="edge"><span class="el">② NEW</span><span class="ar">→</span></div>
-        <div class="node created"><span class="op">rpc</span><span class="nt">cartographer_put_context_geo</span><span class="nf">openings · inlets · ROW<br>method city_gis · posture existing<br>no SIR, project or submission read</span></div>
+        <div class="node created"><span class="op">rpc</span><span class="nt">cartographer_put_context_geo</span><span class="nf">openings · ROW · street<br>method city_gis · posture existing<br>status + source_vintage on each<br>no SIR, project or submission read</span></div>
       </div></div></div>
     </div>
   </div>
   <div class="sys-legend"><span><i class="new"></i>the new call</span></div>
-  <p class="claim"><b>Claim (D19):</b> two short functions with one honest signature each beat one with a mode flag: the anchored RPC stamps <code>method: anchored</code> and the anchor's accuracy class on every row, and a context row has neither.</p>
+  <p class="claim"><b>Claim (D19):</b> two short functions with one honest signature each beat one with a mode flag: the anchored RPC stamps <code>method: anchored</code> and the anchor's accuracy class on every row, and a context row has neither. The anchor stays the key for now because the computation is ring-keyed (D16), so the owner is a publish decision only.</p>
 
   <h3>The adjacency payoff, as a join on one anchor_id</h3>
   <div class="prompt"><span class="ph">D20 · spacing to every opening on the same frontage, inside edge to inside edge (TCM Table 7-5)</span>select d.label, o.properties->>'street' as street, o.properties->>'street_level' as level, o.properties->>'level_source' as level_source,
@@ -2246,34 +2247,34 @@ where d.kind = 'driveway' and d.properties->>'condition' = 'resulting'
   and o.kind = 'driveway_opening' and o.properties->>'side' = 'same' and o.properties->>'on_subject' = 'false'
 order by spacing_ft;
 
--- plus: the nearest curb inlet (10 ft, 7.6.2(C)); the count per frontage (Table 7-4);
--- the opposing offset along the street centreline, throat edge to throat edge (80 ft, 7.6.3); the corner clearance.
--- "33.2 ft at the right-of-way line, vector, ring fit" vs "a 2023 digitized opening, about ±2 ft".</div>
-  <p class="claim"><b>Claim (D20):</b> the site's own driveway appears from both sources — the sheet's row at 0.01 ft and the city's opening with on_subject true at ±2 ft — and their agreement is Phase 2's first check.</p>
+-- plus: the count per frontage (Table 7-4); the opposing offset along the street row, throat edge to throat edge (80 ft, 7.6.3);
+-- the corner clearance. The inlet clearance (10 ft, 7.6.2(C)) waits for the curb_inlet rows (§10).
+-- "33.2 ft at the right-of-way line, vector, ring fit" vs "a 2021 digitized opening, about ±2 ft, city_only".</div>
+  <p class="claim"><b>Claim (D20, D24):</b> the site's own driveway, when the City has it, appears from both sources — the sheet's row at 0.01 ft and the city's opening with on_subject true at ±2 ft — and its status is Phase 2's first check: agrees calibrates the City layer on that frontage, city_missing says it is stale there; either is a pass, a silent zero is not.</p>
 
-  <h3 class="claim">Phase 2 ships as four PRs after Phase 1b's acceptance: the roles and the RPC in either order, then the scripts, then the step <span class="src">§6.2</span></h3>
+  <h3 class="claim">Phase 2 ships as two checks and four PRs: the roles and the RPC in either order, then the command, then the step <span class="src">§6.2</span></h3>
   <div class="plan" style="--cols:4">
     <div class="plan-h"><span></span><span>P6 · the roles</span><span>P7 · the context RPC</span><span>P8 · the scripts</span><span>P9 · the step</span></div>
     <div class="plan-row"><span class="plan-who">surveyor</span>
-      <div class="plan-cell"><div class="pc key"><span class="pid">P6 · D15 · S7</span><b>LayerRole + 7 roles; Austin tagged</b><span class="pd"><code>coa-gis/layer-identity.json</code>, <code>LAYER-IDENTITY.md</code></span><span class="pa">after §7.1b by policy; nothing consumes it before P8</span></div></div>
+      <div class="plan-cell"><div class="pc key"><span class="pid">P6 · D15 · S7</span><b>LayerRole + 4 roles; Austin tagged</b><span class="pd"><code>coa-gis/layer-identity.json</code>, <code>LAYER-IDENTITY.md</code></span><span class="pa">after R1 (§3.5: D17 at the three sites, the Transportation count; the host, Q15)</span></div></div>
       <div class="plan-cell"></div><div class="plan-cell"></div><div class="plan-cell"></div>
     </div>
     <div class="plan-row"><span class="plan-who">cityhall-new</span>
       <div class="plan-cell"></div>
-      <div class="plan-cell"><div class="pc"><span class="pid">P7 · D19 · S9</span><b>cartographer_put_context_geo</b><span class="pd">stale together with the anchored rows</span><span class="pa">after §7.1b by policy</span></div></div>
+      <div class="plan-cell"><div class="pc"><span class="pid">P7 · D19 · S9</span><b>cartographer_put_context_geo</b><span class="pd">openings, ROW, street; stale together with the anchored rows</span><span class="pa">nothing in code</span></div></div>
       <div class="plan-cell"></div><div class="plan-cell"></div>
     </div>
     <div class="plan-row"><span class="plan-who">cartographer</span>
       <div class="plan-cell"></div><div class="plan-cell"></div>
-      <div class="plan-cell"><div class="pc"><span class="pid">P8 · D16–D18 D21 · S8 S9</span><b>frontage.ts; render over the tile; the context publish</b><span class="pd">openings from paved ∩ road; Level or null</span><span class="pa">after P6, P7, P3 and P5</span></div></div>
+      <div class="plan-cell"><div class="pc"><span class="pid">P8 · D16–D18 D24 · S8 S9</span><b>carto frontage, keyed by a ring; the context publish</b><span class="pd">openings from paved ∩ road with statuses; Level or null; runs on a ring file with no run directory</span><span class="pa">after P6, P7, P3 and P5</span></div></div>
       <div class="plan-cell"></div>
     </div>
     <div class="plan-row"><span class="plan-who">bureau</span>
       <div class="plan-cell"></div><div class="plan-cell"></div><div class="plan-cell"></div>
-      <div class="plan-cell"><div class="pc risk"><span class="pid">P9 · D16 D21 · S9</span><b>1.3-frontage and its contract; the check prompts; the readout table</b><span class="pd">seven network calls more per Austin anchor run</span><span class="pa">after P8; a layer outage is an error in the file, never a failed run</span></div></div>
+      <div class="plan-cell"><div class="pc risk"><span class="pid">P9 · D16 D21 · S9</span><b>1.3-frontage and its contract; the check prompts; the readout table</b><span class="pd">four network calls more per Austin anchor run</span><span class="pa">after P8; a layer outage is an error in the file, never a failed run</span></div></div>
     </div>
   </div>
-  <p class="claim"><b>Claim (§6.2):</b> the prospector generalisation (D22) blocks nothing here; Phase 2 works for Austin with the roles tagged by hand.</p>
+  <p class="claim"><b>Claim (§6.2):</b> the prospector generalisation (D22) blocks nothing here and is the next spec; the completeness check's consumption of the rows is its own spec after P8; Phase 2 works for Austin with the roles tagged by hand.</p>
 </section>
 
 <!-- ============================================================ WHAT'S STORED -->
@@ -2325,7 +2326,7 @@ order by spacing_ft;
       <div class="eh"><span class="en">geo</span><span class="stereo">MODIFIED · row kinds</span></div>
       <div class="row"><span class="gut"></span><span class="b b-pk">PK</span><span class="nm">id</span><span class="ty">uuid</span></div>
       <div class="row"><span class="gut"></span><span class="nm">sir_id</span><span class="ty">uuid · nullable · null on every row this spec writes</span></div>
-      <div class="row mod"><span class="gut">~</span><span class="nm">kind</span><span class="ty">text · + curb, curb_return (1a); frontage, driveway (1b); + driveway_opening, curb_inlet (Phase 2) — the D23 table</span></div>
+      <div class="row mod"><span class="gut">~</span><span class="nm">kind</span><span class="ty">text · + curb, curb_return (1a); frontage, driveway (1b); + driveway_opening, right_of_way, street (Phase 2; curb_inlet later) — the D23 table</span></div>
       <div class="row mod"><span class="gut">~</span><span class="nm">method</span><span class="ty">text · + city_gis (Phase 2) · was: anchored, county_api, estimated</span></div>
       <div class="row mod"><span class="gut">~</span><span class="nm">geom_local</span><span class="ty">geometry · + ST_LineString rows · no DDL</span></div>
       <div class="row"><span class="gut"></span><span class="nm">posture</span><span class="ty">existing written by both RPCs</span></div>
@@ -2355,7 +2356,7 @@ order by spacing_ft;
 <!-- ============================================================ ROLLOUT -->
 <section class="panel" id="rollout">
   <h2>Rollout</h2>
-  <p class="lede">Phase 1: six seams, four PRs plus a one-line follow-up, one acceptance run on the file whose lot and building are already anchored. Phase 2: three seams, four PRs, a second anchor run on the same file. The car-wash plat and the building-only fixtures are the guards at every step (§5–§7).</p>
+  <p class="lede">Phase 1: six seams, four PRs plus a one-line follow-up, one acceptance run on the file whose lot and building are already anchored. Phase 2: two checks, three seams, four PRs, a re-extract and a second anchor run on the same file, and the command run alone on a county ring. The car-wash plat and the building-only fixtures are the guards at every step (§5–§7).</p>
 
   <h3>Testing seams</h3>
   <div class="spectable-scroll"><table class="spectable">
@@ -2367,9 +2368,9 @@ order by spacing_ft;
       <tr><td><span class="sn">S4</span> the extract scripts on a run dir · extended</td><td>D8, D9</td><td>(1a) lot + two curb sets + readings → MultiLineString at the origin, 894 ± 2 summed, arcs; publish --dry-run rows; (1b) two derived driveway figures; place by parents; the union's four refusals</td><td>bun test, CI</td></tr>
       <tr><td><span class="sn">S5</span> the extract runbook · existing</td><td>D1–D7, D13</td><td>(a) the car-wash plat byte-identical; (b) 1a · White Water run3: curb_proposed confirmed on sheet 12 and curb_existing on sheet 7, sets taken whole, five figures (face, back, unknown), the assemble.log lines, the curbs readout, anchor 53d65a90 stale; (c) 1b · run4: + three frontages (street null), the opening in both conditions, seven figures, anchor 3 stale</td><td>locally, conductor</td></tr>
       <tr><td><span class="sn">S6</span> the RPC, the migration, the anchor runbook · existing suites</td><td>D8–D12</td><td>the backfill; the CHECKs' refusals; a LineString accepted, a Point refused, yesterday's payload unchanged; 1a · anchor-3: carried lines by edge, metrics equal to anchor 2's, six anchored rows + 19 returns, source_* on each; 1b · anchor-4: + three frontage rows and both driveway rows carried, width verdicts unlabelled, the driveway numbers</td><td>cityhall-new tests/db; the runbook locally</td></tr>
-      <tr><td><span class="sn">S7</span> surveyor's layer-identity with the new roles · Phase 2</td><td>D15</td><td>coa-gis tagged with seven roles and fields; the guard still holds; a role lookup for austin-tx, none records elsewhere</td><td>surveyor tests, CI</td></tr>
-      <tr><td><span class="sn">S8</span> <code>frontage.ts</code> on recorded layer answers · Phase 2</td><td>D16–D18</td><td>recorded answers at the site point → Brezza Lane A45 City Collector, Level null (absent from ASMP); openings from paved ∩ road, the site's own on_subject; 3 inlets; 1 ROW polygon; a Driveways-class polygon → an opening; no roles → none.json, exit 0; a layer error → .err.json, non-zero</td><td>bun test, CI</td></tr>
-      <tr><td><span class="sn">S9</span> the context RPC and the anchor runbook with the step · Phase 2</td><td>D19–D21</td><td>context rows under the anchor's id, stale together, no SIR read; anchor-5 on White Water: the live answers, the tile, the aerial under the overlay; D20's numbers; the site's own opening from both sources within 3 ft</td><td>cityhall-new tests/db; the runbook locally</td></tr>
+      <tr><td><span class="sn">S7</span> surveyor's layer-identity with the new roles · Phase 2</td><td>D15</td><td>coa-gis tagged with four roles and fields; the guard still holds; locate.py's role lookup for austin-tx, nothing elsewhere</td><td>surveyor tests, CI</td></tr>
+      <tr><td><span class="sn">S8</span> <code>frontage.ts</code> on recorded layer answers · Phase 2</td><td>D16–D18, D24</td><td>the command on a ring file outside any run: Brezza Lane A45 City Collector, Level null (absent from ASMP), its street segment; openings from paved ∩ road with side, on_subject, source_vintage and status (agrees / sheet_missing / city_missing / city_only); the vintage beside a zero; 1 ROW polygon; a Driveways-class polygon → an opening; no roles → none.json, exit 0; a layer error → .err.json, non-zero</td><td>bun test, CI</td></tr>
+      <tr><td><span class="sn">S9</span> the context RPC and the anchor runbook with the step · Phase 2</td><td>D19–D21</td><td>context rows under the anchor's id, stale together, no SIR read; anchor-4 on White Water after v2-run4: the live answers; the street and ROW rows; D20's numbers; the site's own opening with a D24 status</td><td>cityhall-new tests/db; the runbook locally</td></tr>
     </tbody>
   </table></div>
 
@@ -2379,15 +2380,15 @@ order by spacing_ft;
     <li class="st"><span class="sk">Phase 1a · anchor-3</span><span class="sn">lot same_as, building within, the three line figures unmatched (why "carried"); metrics equal to anchor 2's; the overlay with lines by posture</span><span class="so">accept → six anchored rows and 19 curb_return rows under one anchor_id, every one with source_pages and a feature_key; D12's curb queries: 894 ft of face, 19 radii with tangent points</span></li>
     <li class="st"><span class="sk">Phase 1b · extract run4</span><span class="sn">(Q13: the existing layer does not redraw the removed 84 LF, so the demolish chains drop out of the resulting set) + three frontage candidates with street null, one opening on course 5 at 33.2 ft in both conditions, both edges retained, the throat altered, radii null at the line, the west edge shared from the note</span><span class="so">publish → ten figures (three frontage rows, street null); anchor 3 stale</span></li>
     <li class="st"><span class="sk">Phase 1b · anchor-4, measure</span><span class="sn">both driveway rows unmatched; D12's driveway queries: existing beside resulting; the driveway against the lot's side lines; the readout hands a person the finding with the street and the Level left to the reader</span><span class="so">plus the regression: the car-wash plat, the car-wash anchor, a building-only run, and 1a's curbs-only run unchanged; the radius-at-the-line path is proven synthetic-only and says so</span></li>
-    <li class="st"><span class="sk">Phase 2 · anchor-5</span><span class="sn">1.3-frontage: Brezza Lane A45 City Collector, Level null, absent from ASMP; the openings from paved ∩ road, the site's own on_subject; 3 inlets; 1 ROW polygon; the aerial under the overlay</span><span class="so">accept → the anchored rows and the context rows under one anchor_id</span></li>
-    <li class="st"><span class="sk">Phase 2 · measure</span><span class="sn">D20's queries: spacing_ft to each same-side opening with both labels and the Level reported as unresolved; inlet_ft; the count on the frontage; the site's own opening from both sources within 3 ft</span><span class="so">the frontage table says which numbers are ±2 ft and why the Table 7-5 row is unresolved</span></li>
+    <li class="st"><span class="sk">Phase 2 · v2-run4 + anchor-4</span><span class="sn">the figures republished with PF1's side keys; 1.3-frontage: Brezza Lane A45 City Collector, Level null, absent from ASMP, its street row; the openings from paved ∩ road with statuses, the site's own agrees or city_missing; 1 ROW polygon</span><span class="so">accept → the anchored rows and the context rows under one anchor_id</span></li>
+    <li class="st"><span class="sk">Phase 2 · measure</span><span class="sn">D20's queries: spacing_ft to each same-side opening with both labels and the Level reported as unresolved; the count on the frontage; the opposing offset along the street row; then carto frontage alone on a county ring of a project with no cartographer file</span><span class="so">the frontage table says which numbers are ±2 ft, which are city_only and from what year, and why the Table 7-5 row is unresolved</span></li>
   </ol>
 
   <h3>The seams this opens, against the sibling's list</h3>
   <div class="spectable-scroll"><table class="spectable">
     <thead><tr><th>sir-free §6</th><th>this spec</th></tr></thead>
     <tbody>
-      <tr><td>6.1 frame identity</td><td><span class="none">still shut</span> — curbs register to the lot's frame; the driveway is derived in it; Phase 2's context rows are keyed by anchor_id, not a frame. The sibling's D18 said driveways open this seam; they do not, because the right-of-way line is the lot's own course.</td></tr>
+      <tr><td>6.1 frame identity</td><td><span class="none">still shut</span> — curbs register to the lot's frame; the driveway is derived in it; Phase 2's context rows are keyed by anchor_id for now, not a frame, and the command that computes them is keyed by a ring. The sibling's D18 said driveways open this seam; they do not, because the right-of-way line is the lot's own course.</td></tr>
       <tr><td>6.2 fixed scale</td><td><span class="none">unchanged</span></td></tr>
       <tr><td>6.3 units</td><td><span class="none">not opened</span> — page points stay inside the tracer</td></tr>
       <tr><td>6.4 polygon-only</td><td><span class="w">opened, expand only</span> — geometry beside polygon; the contract is Q12</td></tr>
