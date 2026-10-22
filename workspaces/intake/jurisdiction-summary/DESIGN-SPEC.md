@@ -1,10 +1,16 @@
 # Intake summary on the jurisdiction page
 
-**Status:** Draft v1.1
+**Status:** Draft v1.2
 **Date:** 2026-10-22
 **Repos touched:** `bureau` (intake-prospecting 2.3-verify, 3.1-write and 4.2-publish, the 1.0 worktree's sparse set, the `cc-source-snapshots` sync, a backfill of El Paso's and Austin's `intake.yaml`), `cityhall` (`/intake-checklists` index and `/intake-checklists/[jurisdiction]` homepage, storage seed, e2e)
 **Repos NOT touched:** `substation`, `conductor2`, `cartographer`, `surveyor`, App DB schema (no migration)
 **Parents:** `../tiers-golden-set/DESIGN-SPEC.md` (the tiers), `../tiers-golden-set/CLASSIFY-LOOP-SPEC.md` (1.4-classify, bureau#2187), `../jurisdiction-pages/DESIGN-SPEC.md` (the homepage, D3 and D4), `../db-schema/DESIGN-SPEC.md` (D1, the `intake.yaml` file)
+
+> **Revision note v1.2 (2026-10-22, Will).**
+> - **Q3 closed:** anyone who can see the page sees all its data.
+> - **Q4 closed:** the evidence summary is not shown. D1 drops row 7 and its disclosure.
+> - **D9:** El Paso's `evidence.summary` is left as committed, with no sentence removed. Austin's file still carries a short hand-written summary because the schema requires one.
+> - The page shows nothing behind a disclosure.
 
 > **Revision note v1.1 (2026-10-22, audit by a fresh session + Will's rulings).** Every audit finding was verified and folded in.
 > - **Will:** Austin's `intake.yaml` is a hand backfill (Tier 1, no rerun), dated from the GitHub history of Austin's checklist: bureau#2175, `3c94bf3fab`, 2026-10-20. That closes **Q1**. **Q2** is closed (no deletion, per db-schema D13). **Q3** stays open as Will's call, now with evidence. **New Q4:** is the classifier's rationale fit to show as the page's evidence summary?
@@ -40,7 +46,7 @@
 
 ## 1. Problem
 
-Will wants each jurisdiction's intake page (`app.noeticbuild.com/intake-checklists/el-paso`, `/austin`) to open with a short **intake summary**: the tier, when we last assessed the city, the checklist version if there is one, the application type, the quote that decides the tier, why there is no list (Tier 2), and the evidence summary. The page's current content stays below it unchanged.
+Will wants each jurisdiction's intake page (`app.noeticbuild.com/intake-checklists/el-paso`, `/austin`) to open with a short **intake summary**: the tier, when we last assessed the city, the checklist version if there is one, the application type, the quote that decides the tier, and why there is no list (Tier 2). The page's current content stays below it unchanged.
 
 Today none of that summary reaches the page, and most of it never leaves the run dir.
 
@@ -77,7 +83,6 @@ Today none of that summary reaches the page, and most of it never leaves the run
 │                     division for completeness and shall not be processed      │
 │                     until any missing information is supplied…"               │
 │                     (El Paso Municipal Code § 20.04.150 ↗)                    │
-│  ▸ Evidence summary and all 6 quotes                                          │
 │                                                                               │
 │ Checklist v1     (unchanged: counts, commit, groups, sources below)           │
 └───────────────────────────────────────────────────────────────────────────────┘
@@ -99,9 +104,7 @@ A Tier 2 city shows `Why there is no list: never written`. A Tier 2 or Tier 3 ci
 4. **Checklist**: the `CURRENT_VERSION` label, the item count and `generated_at` from the citation file, linked to `/items`. With no published checklist it reads `None`.
 5. **Why we say so**: up to two deciding quotes (D3), each with its source label linked as D4 says.
 6. **Why there is no list** (Tier 2 only): `never written`, `not obtainable` or `withdrawn`, from `why_no_list`.
-7. **Evidence summary**: `evidence.summary`, every gate quote, and `classification.classified_by` / `classified_at`, behind one disclosure that is closed by default (Q4).
-
-The readout's "Need you?" open questions, `content_items` and the classifier's retypes are not shown (Will, 2026-10-22).
+The evidence summary (`evidence.summary`), the other gate quotes, `classified_by`/`classified_at`, the readout's "Need you?" open questions, `content_items` and the classifier's retypes are not shown (Will, 2026-10-22; Q4).
 
 **D2. `intake.yaml` gains a `classification` block, written by 3.1-write from `classification.json`.** It extends db-schema D1's shape, and nothing else in D1 changes:
 
@@ -187,17 +190,16 @@ Today most gate quotes take the live URL. §8 records the gap.
 - The rule-19 `BARRED` list (`runbooks/intake-prospecting/lib/rule19.ts:27`) does **not** gain `intake.yaml`. p03 El Paso's 1.2-discover ran `git log --oneline -3 -- jurisdictions/el-paso/prospector/intake jurisdictions/el-paso/intake.yaml`, which such a pattern fails, and the loop's tuned prompts would have to change to state the bar. The fence's remaining gaps are in §8.
 - **Order:** P1 merges before P3 backfills, so no worktree cloned from main after the backfill has the file on disk. Replay corpora were made before it and hold only El Paso's old file, which has no tier.
 
-**D9. Backfill El Paso and Austin.** One bureau PR (P3), reviewed by Will. That review is the human review of both summaries, which jurisdiction-pages D4 requires.
+**D9. Backfill El Paso and Austin.** One bureau PR (P3), reviewed by Will.
 - **El Paso:**
   - Add the `classification` block from p03's `tiers/p03/el-paso-tx/1.4-classify/classification.json`, with labels and URLs from that run's `1.2-discover/sources.json`.
   - `classified_by: "classify-loop pass p03 (winston#331)"`, `classified_at: 2026-10-22`.
   - Apply D6: `decided_by: "Will Navey"`, from the El Paso run's 1.5 decision.
-  - Remove the "Need you?" sentence from `evidence.summary`.
   - `basis`, `application_type`, the rest of `evidence` and `decided_at: 2026-10-15` stay as the 2026-10-15 run wrote them, because 1.5-scope approved that basis. p03's `application_type` matches.
 - **Austin, by hand** (Will, 2026-10-22: Tier 1 is known, so there is no rerun):
   - db-schema D1 and D5's values: `checklist: austin`, `basis: formal`, `path: completeness-check`, `next_item: 195`.
   - `application_type: "Consolidated Site Plan"`.
-  - `evidence.summary` hand-written for the page, not p03's rationale, which talks to the 1.5 reviewer ("see Need you?", "content_items is a gross, overlapping count…").
+  - `evidence.summary`: a short hand-written paragraph, since the schema requires one. The page does not show it (Q4), so p03's rationale, written for the 1.5 reviewer, is not copied.
   - `evidence.sources`: the Consolidated Site Plan completeness check application and the submittal checklist.
   - `decided_by: "Will Navey"`, `decided_at: 2026-10-20` (the checklist's last change, bureau#2175).
   - `classification`: gate `"yes"`, tier 1, `classified_by: "hand (winston#334)"`, `classified_at: 2026-10-20`, and the deciding `hold_text` and `practice` quotes taken from p03 Austin's classification.
@@ -267,12 +269,11 @@ Today most gate quotes take the live URL. §8 records the gap.
 
 - **Q1. Austin now, or with db-schema P2a?** **Closed (Will, 2026-10-22):** now, by hand (D9).
 - **Q2. Does a deleted `intake.yaml` need to be removed from the bucket?** **Closed:** no. The sync only ever upserts (`sync.mjs:100–110`), and db-schema D13 has a removed `intake.yaml` leave its row and flag it unreconciled. That is the same posture.
-- **Q3. Who sees the tier?** Any signed-in user who can see the jurisdiction row sees the page. The bucket policy (`cc-source-snapshots: select for authenticated`, cityhall `supabase/schemas/storage/tables/objects.sql:7–10`) lets **any** signed-in user read `intake.json` directly, whatever RLS says about the row, so a staff-only tier cannot live in this bucket.
+- **Q3. Who sees the tier?** **Closed (Will, 2026-10-22):** anyone who can see `/intake-checklists/<slug>` sees all of its data, the tier included. The facts behind the ruling: any signed-in user who can see the jurisdiction row sees the page. The bucket policy (`cc-source-snapshots: select for authenticated`, cityhall `supabase/schemas/storage/tables/objects.sql:7–10`) lets **any** signed-in user read `intake.json` directly, whatever RLS says about the row, so a staff-only tier cannot live in this bucket.
   - The precedents point to showing it: db-schema D7 treats intake data as reference data read under the `jurisdictions` policy, and Will's 2026-10-15 ruling on jurisdiction-pages Q3 kept today's visibility.
   - It is still a customer-facing claim about a city, Tier 3 especially.
-  - Recommendation: show it to every reader of the page, and keep anything non-public out of the file (D6).
-  - If Will wants it staff-only, D7 moves the file to a staff-only path or bucket and the page checks `is_noetic_member`.
-- **Q4. Is the classifier's rationale fit to show as the evidence summary?** For a run, `evidence.summary` is 1.4's `rationale`. The 1.5 reviewer reads and approves it, but it is written for that reviewer and can mention the readout ("see Need you?"). D1 shows it behind a disclosure, and D9 cleans the two backfills by hand. The alternatives are to hide it for runs until a page-facing summary exists, or to have 3.1-write trim it. Recommendation: show it as written, behind the disclosure.
+  - Because the bucket is readable more widely than the page, anything non-public stays out of the file (D6).
+- **Q4. Is the classifier's rationale fit to show as the evidence summary?** **Closed (Will, 2026-10-22):** it is not shown (D1). `evidence.summary` stays in `intake.yaml` as 3.1-write writes it today.
 
 ### 5.1 Asks of db-schema P2a
 
@@ -303,7 +304,7 @@ Today most gate quotes take the live URL. §8 records the gap.
 
 **S3: the intake-checklists pages, storage seed in → rendered page out** (existing)
 - **Proves:** D1, D3, D4 and D5.
-  - El Paso's page shows the summary above the unchanged sections, with its deciding quote.
+  - El Paso's page shows the summary above the unchanged sections, with its deciding quote and no evidence summary.
   - A seeded Tier 3 jurisdiction with only `intake.json` renders the summary with `Checklist: None` and no source sections, and the index lists it with its tier.
   - An `intake.json` with no `classification` block hides the Tier row.
   - A jurisdiction with neither file is still not found.
