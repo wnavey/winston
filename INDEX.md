@@ -80,6 +80,7 @@ never by hand; numbers are per prefix and never reused. Rows sorted by prefix th
 | FEAT-71 | feature | shipped | Driveways and curbs from plan sets — existing and proposed, with widths, lengths and return radii, and the adjacent driveways the sheet leaves off | `workspaces/cartographer/plan-set-driveways-curbs/DESIGN-SPEC.md` | 2026-10-20 |
 | FEAT-72 | feature | draft | Intake tiers and the site-plan golden set (exploratory handoff) | `workspaces/intake/tiers-golden-set/DESIGN-SPEC.md` | 2026-10-21 |
 | FEAT-73 | feature | draft | Intake summary on the jurisdiction page | `workspaces/intake/jurisdiction-summary/DESIGN-SPEC.md` | 2026-10-22 |
+| FEAT-74 | feature | draft | Frontage by outward search — which street each lot side faces, and its right-of-way | `workspaces/cartographer/frontage-outward-search/DESIGN-SPEC.md` | 2026-10-22 |
 | ARCH-1 | architecture | living | Jurisdiction Conventions — Source of Truth | `workspaces/architecture/jurisdiction-conventions/DESIGN-SPEC.md` | 2026-07-22 |
 | ARCH-2 | architecture | living | SIR Product Experience — North Star & Roadmap | `workspaces/diligence/sir-product-experience/DESIGN-SPEC.md` | 2026-07-27 |
 | ARCH-3 | architecture | living | RDS PDF Render Pipeline — How Noetic Generates Branded PDFs (and How to Replicate It) | `workspaces/report-design-system/pdf-render-pipeline/DESIGN-SPEC.md` | 2026-07-28 |
