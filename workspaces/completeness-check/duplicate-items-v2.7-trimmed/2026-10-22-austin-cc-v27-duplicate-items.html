@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Austin CC Duplicate Items</title>
+<style>
+:root{
+  --bg:#fbfaf7;--surface:#ffffff;--text:#1d1d1b;--muted:#5f5e58;--border:#e3e1da;
+  --accent:#2f5d8a;--strong:#a3361f;--strong-bg:#fbeee9;--partial:#8a6a12;--partial-bg:#fbf4e1;
+  --keep:#2f6b45;--keep-bg:#eaf4ed;--code-bg:#f2f0ea;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#161614;--surface:#1f1f1c;--text:#ecebe6;--muted:#a3a29b;--border:#34332f;
+    --accent:#8db6df;--strong:#f0a08c;--strong-bg:#3a221c;--partial:#e3c56f;--partial-bg:#332b16;
+    --keep:#8fd0a5;--keep-bg:#1b2e22;--code-bg:#2a2a26;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#161614;--surface:#1f1f1c;--text:#ecebe6;--muted:#a3a29b;--border:#34332f;
+  --accent:#8db6df;--strong:#f0a08c;--strong-bg:#3a221c;--partial:#e3c56f;--partial-bg:#332b16;
+  --keep:#8fd0a5;--keep-bg:#1b2e22;--code-bg:#2a2a26;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Helvetica,Arial,sans-serif}
+main{max-width:960px;margin:0 auto;padding:40px 16px 80px}
+h1{font-size:1.9rem;line-height:1.2;margin:0 0 6px}
+h2{font-size:1.35rem;margin:44px 0 10px;padding-top:8px;border-top:1px solid var(--border)}
+h3{font-size:1.08rem;margin:0 0 6px}
+p{margin:8px 0}
+.meta{color:var(--muted);font-size:.92rem}
+code,.id{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.86em;background:var(--code-bg);padding:1px 5px;border-radius:4px;white-space:nowrap}
+.summary{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px 20px;margin:22px 0}
+.summary ul{margin:6px 0 0;padding-left:20px}
+.stats{display:flex;flex-wrap:wrap;gap:10px;margin:16px 0 0}
+.stat{flex:1 1 150px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 14px}
+.stat b{display:block;font-size:1.5rem}
+.stat span{color:var(--muted);font-size:.85rem}
+.card{background:var(--surface);border:1px solid var(--border);border-left:4px solid var(--border);border-radius:8px;padding:16px 18px;margin:14px 0}
+.card.strong{border-left-color:var(--strong)}
+.card.partial{border-left-color:var(--partial)}
+.tag{display:inline-block;font-size:.72rem;font-weight:600;letter-spacing:.03em;text-transform:uppercase;padding:2px 8px;border-radius:99px;margin-right:6px;vertical-align:2px}
+.tag.strong{color:var(--strong);background:var(--strong-bg)}
+.tag.partial{color:var(--partial);background:var(--partial-bg)}
+.tag.keep{color:var(--keep);background:var(--keep-bg)}
+dl{margin:8px 0 0;display:grid;grid-template-columns:150px 1fr;gap:6px 14px}
+dt{color:var(--muted);font-size:.9rem}
+dd{margin:0}
+blockquote{margin:6px 0;padding:4px 12px;border-left:3px solid var(--border);color:var(--muted);font-size:.93rem}
+.tablewrap{overflow-x:auto;margin:10px 0}
+table{border-collapse:collapse;width:100%;font-size:.92rem;background:var(--surface)}
+th,td{border:1px solid var(--border);padding:7px 10px;text-align:left;vertical-align:top}
+th{background:var(--code-bg);font-weight:600}
+.rec{margin-top:10px;padding:8px 12px;background:var(--code-bg);border-radius:6px}
+@media (max-width:640px){dl{grid-template-columns:1fr}dt{margin-top:6px}}
+</style>
+</head>
+<body>
+<main>
+
+<h1>Austin Completeness Check v2.7-trimmed: Duplicate Items</h1>
+<p class="meta">Inspector General · 2026-10-22 · Scope: <code>bureau/jurisdictions/austin/completeness-check/v2.7-trimmed</code> (14 guides, 192 items) and its <code>source-citations.json</code> (cc-source-citations run <code>austin-v2.7-trimmed</code>, 2026-10-07)</p>
+
+<div class="summary">
+<p><strong>Bottom line.</strong> The checklist has no copy-pasted duplicates, but <strong>3 pairs are effectively the same check</strong>, and <strong>6 more overlap in part</strong>: one item's scope repeats another's, so one gap in a submission yields two or three findings. Every case has the same cause: the City's own sources list the requirement in more than one place. The Requirements page has a "Plan Set" list and a separate "Base Information Required on All Sheets" list, and Trees and Environmental each list "Tree protection plan (LDC 25-8-604)". Each guide was built from a different section, so the City's repetition carried through into our guides.</p>
+<ul>
+<li><strong>Merge (same check):</strong> <span class="id">CC-1-14</span> = <span class="id">CC-22-08</span> (TIA report) · <span class="id">CC-1-26</span> ⊇ <span class="id">CC-2-14</span> (all sheets sealed) · <span class="id">CC-15-02</span> = <span class="id">CC-15-14</span> (tree protection plan).</li>
+<li><strong>Rescope (partial overlap):</strong> the utilities cluster (<span class="id">CC-2-23/24</span> vs <span class="id">AE-02/03</span> vs <span class="id">CC-1-24</span>), easements (<span class="id">CC-1-25</span> / <span class="id">CC-2-21</span>), boundaries (<span class="id">CC-1-23</span> / <span class="id">CC-2-16</span>), the engineering report seal (<span class="id">CC-1-09</span> / <span class="id">CC-20-01</span>), the summary letter seal (<span class="id">CC-1-10/11</span> / <span class="id">CC-20-02</span>), watershed classification (<span class="id">CC-15-06</span> / <span class="id">CC-15-07</span>), and the License Agreement catch-all (<span class="id">CC-24-13</span> / <span class="id">CC-24-01…06</span>).</li>
+<li>About 20 other similar-looking pairs were checked and are distinct for a reason (see the last section).</li>
+</ul>
+<div class="stats">
+<div class="stat"><b>192</b><span>items reviewed</span></div>
+<div class="stat"><b>3</b><span>merge candidates</span></div>
+<div class="stat"><b>7</b><span>rescope candidates (incl. 2 low-priority)</span></div>
+<div class="stat"><b>~20</b><span>look-alikes kept</span></div>
+</div>
+</div>
+
+<h2>Method</h2>
+<p>I read every guide end to end: each item's text, condition, location, fail status and the guide's validation methodology. For every item I also read its <code>source-citations.json</code> entry: the source label, status, page, and the quoted span the locator found. Pairs whose titles looked similar were then checked three ways:</p>
+<ol>
+<li><strong>Source text.</strong> Do the two items cite the same line of the City's documents, or different lines? Checked against the snapshots in <code>bureau/jurisdictions/austin/codes/dsd-site-plan-submittal/contents/</code>.</li>
+<li><strong>Logic.</strong> Can one item fail while the other passes? If not, one item contains the other.</li>
+<li><strong>Behaviour.</strong> Verdicts on the same submission in past runs: WhiteWater v2.7 opus55 ×3 (<code>whitewater-cc-v27-opus55-3v</code>), WhiteWater runbook run 2 (<code>WWCW_rb2_run2_claude_vision</code>), and SA 2008 (<code>sa2008-control-main-cc1</code>, cc-1 only).</li>
+</ol>
+<p>The bar for a candidate: the two items test the same artifact with the same pass criterion, so one gap in a submission yields two findings. Items that share a topic but test different artifacts, depths or conditions were left alone.</p>
+
+<h2>Merge candidates: same check</h2>
+
+<div class="card strong">
+<h3><span class="tag strong">Merge</span>TIA report: <span class="id">CC-1-14</span> and <span class="id">CC-22-08</span></h3>
+<dl>
+<dt>CC-1-14</dt><dd>TIA report and technical addendum missing when TIA Determination Worksheet indicates TIA is required. Condition: TIA required. Fail.</dd>
+<dt>CC-22-08</dt><dd>TIA report and technical addendum not present when TIA Determination indicates required (Full TIA, Transportation Assessment, ZTA, or TIA Compliance). Condition: TIA required per worksheet. Fail.</dd>
+<dt>Sources</dt><dd>Both trace to one sentence, which appears on the Requirements page (Core Submittal) and on CC Submittal Checklist p.1:
+<blockquote>Completed and signed Traffic Impact Analysis (TIA) Determination Worksheet and, if required, a TIA (report and technical addendum).</blockquote>
+The Requirements quote cited for CC-22-08 is also about the worksheet. Its other two sources add nothing: "TIA Determination Worksheet p.2" has no snapshot (<code>no_snapshot</code>), and "TCM Section 10" is <code>document_level</code>.</dd>
+<dt>Past runs</dt><dd>WhiteWater, both runs: <strong>both items fail</strong> on the same missing "Cityview at Double Creek" TIA compliance memo, so the applicant gets two findings for one missing document.</dd>
+<dt>Distinction?</dt><dd>Only that CC-22-08 lists the study types (Full TIA / TA / ZTA / Compliance Letter). That is guidance for the reviewer, not a separate requirement. Both guides already point at each other in their methodology ("TIA Determination Worksheet result must be checked against presence/absence of TIA report").</dd>
+</dl>
+<div class="rec"><strong>Proposal:</strong> keep one item and retire the other. CC-1-14 has the stronger citation. CC-22-08 sits with the transportation reviewer, whose department owns the TIA. Either way, move CC-22-08's list of study types into the item that stays.</div>
+</div>
+
+<div class="card strong">
+<h3><span class="tag strong">Merge</span>All sheets sealed: <span class="id">CC-1-26</span> contains <span class="id">CC-2-14</span> (and <span class="id">CC-1-21</span>)</h3>
+<dl>
+<dt>CC-1-26</dt><dd>Sheets not sealed by an active TX PE, or missing the dated signature or <em>firm registration number</em>; architectural sheets excluded. Fail.</dd>
+<dt>CC-2-14</dt><dd>Engineer's seal, signature or date missing from one or more plan sheets; architectural sheets excluded. Fail.</dd>
+<dt>Sources</dt><dd>The same requirement appears twice on the Requirements page. The Plan Set list (p.4, and CC Submittal Checklist p.1) has "All sheets sealed by an active licensed State of Texas professional engineer (PE) with the engineering firm registration number included". The Base Information Required on All Sheets list (p.16) has "Seal and signature of the engineer preparing plans, and the date the plans were signed by the engineer (not required for small projects)". The CC-2 guide itself says CC-2-14 is "indirectly referenced by the CC Submittal Checklist's all-sheets-sealed requirement".</dd>
+<dt>Logic</dt><dd>Anything that fails CC-2-14 also fails CC-1-26, which checks the same things plus the firm number. Both guides carry the same architectural-sheet exemption paragraph, word for word.</dd>
+<dt>Past runs</dt><dd>WhiteWater, both runs: <strong>both fail</strong> on Sheet 30 (geotechnical placeholder, empty seal box). The explanations are almost word-for-word the same.</dd>
+<dt>Distinction?</dt><dd>One small one: the p.16 source exempts small projects ("not required for small projects"). Neither item encodes that exemption today (both are "Always").</dd>
+</dl>
+<div class="rec"><strong>Proposal:</strong> retire CC-2-14. If the small-project exemption matters, add it to CC-1-26 (CC-1-12 already detects small projects). Optional: <span class="id">CC-1-21</span> (cover sheet signed and sealed) is also covered by CC-1-26, since the cover sheet is a sheet. Its source is a separate checklist line ("One set of plans including cover sheet with signature and seal"), so keeping it is defensible. It always passed in the runs above, so it costs little.</div>
+</div>
+
+<div class="card strong">
+<h3><span class="tag strong">Merge</span>Tree protection plan: <span class="id">CC-15-02</span> and <span class="id">CC-15-14</span></h3>
+<dl>
+<dt>CC-15-02 (TRE-04)</dt><dd>Tree protection plan per LDC 25-8-604 not present in plan set. Methodology: pass on <em>any</em> tree-protection content (a plan, a CRZ plan, or the City's tree protection notes and details). Fail only if there is none at all.</dd>
+<dt>CC-15-14 (ENV-18b)</dt><dd>Tree Protection Plan (or Tree Preservation Plan) <em>sheet</em> not present in plan set. Methodology: any title is fine; it needs a sheet with tree protection content.</dd>
+<dt>Sources</dt><dd>The Requirements page lists the line twice: under City Arborist (line 167, "Tree protection plan per Land Development Code (LDC 25-8-604)") and under Environmental (line 198, "Tree protection plan (LDC 25-8-604)"). CC-15-14's third citation, LDC 25-8-181, is <code>not_found</code>, because that section covers erosion and sedimentation, not trees. That is a leftover from splitting the old combined ENV-18 "Erosion/Sedimentation Control and Tree Protection Plan" item.</dd>
+<dt>Past runs</dt><dd>WhiteWater, both runs: <strong>both pass on the same evidence</strong> (Sheet 10 TP fencing and legend, notes on Sheet 8, details on Sheet 11).</dd>
+<dt>Distinction?</dt><dd>Only how strict each one is, and the two conflict. A plan set with City tree protection notes and details but no plan view passes CC-15-02 and fails CC-15-14. That looks accidental: CC-15-02's lenient bar was a deliberate decision ("Do not fail because fencing is not drawn on a plan view").</dd>
+</dl>
+<div class="rec"><strong>Proposal:</strong> merge into one tree protection item and pick one bar. Keep <span class="id">CC-15-09</span> (Erosion &amp; Sedimentation Control sheet) separate; that split from ENV-18 is deliberate and documented.</div>
+</div>
+
+<h2>Rescope candidates: partial overlap</h2>
+<p>In these cases each item has some content no other item covers, so deleting one would lose coverage. The fix is to narrow one item so it stops repeating the other.</p>
+
+<div class="card partial">
+<h3><span class="tag partial">Rescope</span>Utility lines: <span class="id">CC-2-23</span> / <span class="id">CC-2-24</span> vs <span class="id">AE-02</span> / <span class="id">AE-03</span> (and <span class="id">CC-1-24</span>)</h3>
+<dl>
+<dt>Items</dt><dd><span class="id">CC-2-23</span> overhead utility lines, existing and proposed (fail) · <span class="id">CC-2-24</span> underground utility lines, existing and proposed (warn) · <span class="id">AE-02</span> existing electric facilities, overhead and underground · <span class="id">AE-03</span> proposed electric facilities · <span class="id">CC-1-24</span> existing utilities and crossovers.</dd>
+<dt>Sources</dt><dd>These are separate lines in the source: Base Information has "Location of all existing and proposed electric utility facilities…" (→ AE-02/03) and "Exact locations and types of all utility lines, underground and overhead, existing and proposed" (→ CC-2-23/24). So by source, CC-2-23/24 cover <em>all</em> utility types.</dd>
+<dt>The problem</dt><dd>CC-2's validation methodology only talks about electric: "Existing electric utilities… Proposed electric utilities… Electrical Site Plan, or Franchise Utility Plan / Joint Trench Plan". In practice, CC-2-23/24 run as a second copy of AE-02/03.</dd>
+<dt>Past runs</dt><dd>WhiteWater, both runs: one gap ("no proposed electric service on any sheet") produced <strong>three findings</strong>: CC-2-23 fail, AE-03 fail, and CC-2-24 warn ("no existing or proposed underground electric").</dd>
+</dl>
+<div class="rec"><strong>Proposal:</strong> rewrite the CC-2-23/24 methodology to cover all utility types (water, wastewater, storm, gas, telecom), as the source line does, and leave electric to AE-02/03. Alternatively, merge CC-2-23 and CC-2-24 into one "all utility lines" item. CC-1-24's "existing utilities and crossovers" then overlaps only the existing half, which is acceptable.</div>
+</div>
+
+<div class="card partial">
+<h3><span class="tag partial">Rescope</span>Existing easements: <span class="id">CC-1-25</span> and <span class="id">CC-2-21</span></h3>
+<dl>
+<dt>Items</dt><dd><span class="id">CC-1-25</span> existing easements <em>and setbacks</em> not identified (no special methodology) · <span class="id">CC-2-21</span> known existing easement not shown (fail) / not on the applicable sheets (warn), with a detailed per-easement procedure that uses facts.md.</dd>
+<dt>Sources</dt><dd>Checklist p.1 / Plan Set: "All existing easements and setbacks clearly identified". Base Information: "All existing and future dedicated easements". The CC-2 guide itself credits CC-2-21 to the Checklist p.1 line that CC-1-25 cites.</dd>
+<dt>Past runs</dt><dd>WhiteWater, both runs: <strong>CC-1-25 pass, CC-2-21 warn</strong> on the same easements. CC-2-21's procedure caught adjoining drainage easement 2020129003 missing from the site and utility sheets; CC-1-25 has no procedure, so it passed. The same question got two different answers.</dd>
+</dl>
+<div class="rec"><strong>Proposal:</strong> narrow CC-1-25 to setbacks only and leave easements to CC-2-21. If CC-1-25 has to keep easements, point it at CC-2-21's procedure so the two can't disagree.</div>
+</div>
+
+<div class="card partial">
+<h3><span class="tag partial">Rescope</span>Boundary bearings and dimensions: <span class="id">CC-1-23</span> and <span class="id">CC-2-16</span></h3>
+<dl>
+<dt>Items</dt><dd><span class="id">CC-1-23</span> limits of construction (including access drives) <em>or</em> property boundaries not shown, or missing bearings and dimensions · <span class="id">CC-2-16</span> boundary lines with bearings and dimensions not shown on Existing Conditions or Overall Site Plan.</dd>
+<dt>Sources</dt><dd>Same wording in two lists: Plan Set / Checklist p.1 "Limits of construction and property boundaries with bearings and dimensions", and Base Information "Boundary lines with bearings and dimensions".</dd>
+<dt>Past runs</dt><dd>WhiteWater: both pass on Sheets 7 and 12.</dd>
+</dl>
+<div class="rec"><strong>Proposal:</strong> narrow CC-1-23 to limits of construction only, or retire CC-2-16. Low stakes, because they agree whenever both are evaluated, but one missing bearing table would currently produce two findings.</div>
+</div>
+
+<div class="card partial">
+<h3><span class="tag partial">Rescope</span>Engineering report front-page seal: <span class="id">CC-1-09</span> and <span class="id">CC-20-01</span></h3>
+<dl>
+<dt>Items</dt><dd><span class="id">CC-1-09</span> bound Engineering Report missing, or front page lacks signature, seal or date (condition: not a utility, extension, CUP, transportation or parking project) · <span class="id">CC-20-01</span> engineer's signature, seal and date missing from the front page of bound WQ/drainage documents, <em>or seal bears "preliminary"/"draft"</em> (condition: always).</dd>
+<dt>Sources</dt><dd>Checklist p.1 "Engineer's Report bound with signature, seal and date" vs Requirements Section 30 "Engineer's signature, seal, and date without qualifiers on the front page of bound documents containing engineering work".</dd>
+<dt>Past runs</dt><dd>WhiteWater: both pass, citing the same Engineers Report cover page (TX PE 86951, 07/07/2026).</dd>
+<dt>Distinction?</dt><dd>The "no qualifier" check is unique to CC-20-01. The conditions also differ: CC-20-01 can fail a parking-only project that CC-1-09 exempts.</dd>
+</dl>
+<div class="rec"><strong>Proposal:</strong> add the no-qualifier clause to CC-1-09 and retire CC-20-01, or narrow CC-20-01 to the qualifier check alone.</div>
+</div>
+
+<div class="card partial">
+<h3><span class="tag partial">Rescope</span>Engineer's Summary Letter: <span class="id">CC-1-10</span> / <span class="id">CC-1-11</span> and <span class="id">CC-20-02</span></h3>
+<dl>
+<dt>Items</dt><dd><span class="id">CC-1-10</span> ESL missing as a separate document · <span class="id">CC-1-11</span> ESL not signed, sealed and dated by a TX PE · <span class="id">CC-20-02</span> letter "not present, <em>or</em> not signed/sealed/dated, <em>or</em> does not discuss 2-yr peak flow control and WQ compliance".</dd>
+<dt>Overlap</dt><dd>The first two clauses of CC-20-02 repeat CC-1-10 and CC-1-11. Only the 2-yr / WQ discussion is unique to it. In SA 2008, CC-1-11 failed (signed but no PE seal), and a full run would fail CC-20-02 as well for the same reason.</dd>
+</dl>
+<div class="rec"><strong>Proposal:</strong> narrow CC-20-02 to the content check: "Engineer's Summary Letter does not discuss 2-yr peak flow control and WQ compliance".</div>
+</div>
+
+<div class="card partial">
+<h3><span class="tag partial">Rescope</span>Watershed classification: <span class="id">CC-15-06</span> and <span class="id">CC-15-07</span></h3>
+<dl>
+<dt>Items</dt><dd><span class="id">CC-15-06</span> watershed name and classification not on the cover sheet · <span class="id">CC-15-07</span> watershed classification <em>and standard environmental notes</em> not in the plan set (location: cover sheet).</dd>
+<dt>Sources</dt><dd>Environmental cover-sheet list "Name of watershed and classification" (→ 06) vs Environmental "Watershed classification and standard notes" (→ 07). The page also has a third variant, "Watershed status and standard notes".</dd>
+<dt>Past runs</dt><dd>WhiteWater: both pass, both citing cover sheet Block 8 for the classification.</dd>
+</dl>
+<div class="rec"><strong>Proposal:</strong> narrow CC-15-07 to the standard environmental notes, since the classification is already checked by CC-15-06. <span class="id">CC-2-02</span> (watershed in the ESL) checks a different document; keep it.</div>
+</div>
+
+<div class="card partial">
+<h3><span class="tag partial">Rescope</span>License Agreement catch-all: <span class="id">CC-24-13</span> and <span class="id">CC-24-01…06</span></h3>
+<dl>
+<dt>Items</dt><dd><span class="id">CC-24-13</span> required License <em>or Encroachment</em> Agreement not submitted or referenced (warn) · <span class="id">CC-24-01…06</span> License Agreement for tower crane, excavation support, streetscape, trees and landscaping, dining, lighting.</dd>
+<dt>Overlap</dt><dd>Every failure of 01–06 also triggers CC-24-13. The only scope unique to CC-24-13 is Encroachment Agreements, whose type-specific items (CC-24-07…12) were removed in the trim. The 1700 S Lamar forced-outcomes file already treats them as one cluster ("addressed separately under CC-24-03/04/13").</dd>
+</dl>
+<div class="rec"><strong>Proposal:</strong> narrow CC-24-13 to Encroachment Agreements plus any License Agreement type not listed in 01–06.</div>
+</div>
+
+<div class="card partial">
+<h3><span class="tag partial">Low priority</span>Fire flow at 20 PSI: <span class="id">AW-03</span> and <span class="id">AW-25</span></h3>
+<p>AW-03 (Project Information / Demand Data table complete, including "fire flow") and AW-25 (available fire flow at 20 PSI shown) cite the same AW Completeness Checklist sentence, "All plans shall provide available fire demand at 20 PSI…". In WhiteWater, AW-25's evidence was "Sheet 5 demand data table shows available fire flow at 20 psi", i.e. a cell inside the table AW-03 checks. On the AW General Info Sheet, "fire demand" and "available fire flow" may be separate fields, so this may be a wording issue in AW-03 rather than a true overlap. <strong>Proposal:</strong> confirm on the template; if they are the same cell, drop "fire flow" from AW-03's list.</p>
+</div>
+
+<div class="card partial">
+<h3><span class="tag partial">Low priority</span>Floodplain delineation across disciplines: <span class="id">CC-15-13</span>, <span class="id">CC-19-03</span>, <span class="id">CC-19-04</span>, <span class="id">AW-38a</span></h3>
+<p>Four items ask for floodplain lines to be drawn: Environmental (CWQZ/WQTZ plus 100-yr), Floodplain (FEMA 100-yr; fully developed 25- and 100-yr), and Austin Water (25/100-yr per Atlas 14 plus CWQZ plus erosion hazard zones). A site with an undrawn floodplain could get three or four findings. They are listed as low priority, not rescope, because each one comes from a different department's own checklist and each has a component the others lack (FEMA vs fully developed, WQTZ, EHZ). In both WhiteWater runs all four were n/a. <strong>Proposal:</strong> keep them. Revisit only if city comment reports show Austin issues a single floodplain comment rather than one per discipline.</p>
+</div>
+
+<h2>Checked and kept: look-alikes that are distinct</h2>
+<div class="tablewrap">
+<table>
+<thead><tr><th>Items</th><th>Why they look alike</th><th>Why they stay separate</th></tr></thead>
+<tbody>
+<tr><td><span class="id">CC-1-31</span> / <span class="id">CC-19-14</span></td><td>Both require the S.M.A.R.T. Housing certification letter</td><td>Different triggers (fee and review-time benefits vs RSMP payment). Both fire only when a project claims both. If that turns out common, consider having CC-19-14 defer to CC-1-31.</td></tr>
+<tr><td><span class="id">CC-1-22</span> / <span class="id">AW-37</span></td><td>Proof of legal lot</td><td>CC-1-22 accepts a legal description or Land Status Report. AW-37 wants a copy of the recorded plat or an LSR, and allows an approved, unrecorded plat with Pipeline Engineering approval.</td></tr>
+<tr><td><span class="id">CC-19-15</span> / <span class="id">CC-19-17</span></td><td>"Modeling files (zipped)"</td><td>Different RSMP paths in the source ("DCM 8 Only" vs "Construction of Drainage Infrastructure Improvements Only"). <em>Side finding:</em> CC-19-15's condition was flattened to "If RSMP participation proposed"; the source says DCM 8 only.</td></tr>
+<tr><td><span class="id">CC-19-11</span> / <span class="id">CC-21-04</span></td><td>Existing vs proposed flow table</td><td>Already split on purpose, and documented in both guides: presence for RSMP vs values for all projects.</td></tr>
+<tr><td><span class="id">CC-20-20/22</span> / <span class="id">CC-21-09</span></td><td>Pond WSEs</td><td>Presence vs values; the cross-reference is documented.</td></tr>
+<tr><td><span class="id">CC-19-19</span> / <span class="id">CC-21-02</span></td><td>Drainage area maps</td><td>CC-21-02 checks only that the map exists. CC-19-19 requires analysis points, contours, spot elevations and flow arrows, for RSMP infrastructure only.</td></tr>
+<tr><td><span class="id">CC-19-20</span> / <span class="id">CC-23-03</span></td><td>Grading plan</td><td>CC-19-20 is an RSMP deliverable that only applies in a narrow case. When it applies, CC-23-03 covers it too, but the cost is small.</td></tr>
+<tr><td><span class="id">AW-10</span> / <span class="id">CC-24-15</span> / <span class="id">CC-24-16</span></td><td>AULCC</td><td>Different artifacts and thresholds: the AW sheet checkbox and UCC number (&gt;300 LF of W/WW) vs an AULCC submittal triggered by 25/300 LF of any excavation, or by a License Agreement or crane. The verdicts correlate (see the 1700 S Lamar forced outcomes), but the items are distinct.</td></tr>
+<tr><td><span class="id">AW-21</span> / <span class="id">AW-22</span></td><td>Both cite the same AW checklist sentence</td><td>AW-21 covers mains, existing and proposed, including reclaimed, their relation to easements, and ≥24" double lines. AW-22 covers existing mains <em>plus lines and services</em>. They overlap on existing mains only; WhiteWater run 2 split them (AW-21 failed on double-lining).</td></tr>
+<tr><td><span class="id">AW-11</span> / <span class="id">AW-12</span> / <span class="id">AW-25</span></td><td>Fire flow</td><td>Test data vs map vs available flow: three separate fields on the template.</td></tr>
+<tr><td><span class="id">AW-13</span> / <span class="id">AW-16</span></td><td>SER</td><td>SER placed on page 2 of the AW sheet vs SER design in the plan set.</td></tr>
+<tr><td><span class="id">AW-19</span> / <span class="id">CC-1-19</span></td><td>Location map</td><td>In-plan map with the Mapsco grid vs a separate PDF with the site marked in red.</td></tr>
+<tr><td><span class="id">AW-28</span> / <span class="id">CC-23-08</span> / <span class="id">CC-23-09</span></td><td>Retaining walls</td><td>Components (geogrid, tie-backs) vs top and bottom elevations vs sealed structural drawings in ROW.</td></tr>
+<tr><td><span class="id">AW-53</span> / <span class="id">CC-3-24</span></td><td>Numbers on the cover sheet</td><td>Subdivision or other permit numbers vs the DSD approval block.</td></tr>
+<tr><td><span class="id">CC-1-04</span> / <span class="id">CC-1-06</span> / <span class="id">CC-1-02</span></td><td>Owner signature</td><td>Section 14 signature (an agent may sign) vs proof that the owner authorized the agent. CC-1-02's methodology also mentions the Section 3 owner signature; that overlaps CC-1-06 slightly, but no run has shown them diverging.</td></tr>
+<tr><td><span class="id">ADR-04</span> / <span class="id">ADR-05</span>; <span class="id">CC-22-25</span> / <span class="id">CC-22-27</span></td><td>One source sentence each</td><td>Each pair is one source sentence split into separate checks, not a duplicate.</td></tr>
+<tr><td><span class="id">CC-15-09</span> / <span class="id">CC-15-14</span></td><td>Old combined ENV-18 sheet</td><td>Split on purpose (reviewer convention), and documented.</td></tr>
+<tr><td><span class="id">DAT-02</span> / <span class="id">CC-15-15</span></td><td>Impervious cover</td><td>Data table vs ECM Q-2 worksheet; the guides cross-reference them for consistency.</td></tr>
+<tr><td><span class="id">AE-01</span> / <span class="id">AW-20</span> / <span class="id">AF-01</span> / <span class="id">CC-3-21</span></td><td>Standard notes</td><td>Four different departments' note sets.</td></tr>
+<tr><td><span class="id">CMP-03</span> / <span class="id">CC-1-25</span></td><td>Setbacks</td><td>Setbacks next to residential land under compatibility vs existing setbacks in general.</td></tr>
+</tbody>
+</table>
+</div>
+
+<h2>Caveats</h2>
+<ul>
+<li>The comment-number maps (<code>true-comment-num-mapping.tsv</code>, <code>pape-dawson-comment-num-mapping.tsv</code>) are ordinal, so they can't show whether the City issues one comment or two for the same gap. A City MCR that issues one comment for one of the pairs above would be the strongest confirmation.</li>
+<li>The behavioural evidence comes from two submissions (WhiteWater for all groups, SA 2008 for cc-1 only). Most rescope candidates were n/a or agreed there; the logic and source checks carry them, not the run data.</li>
+<li>Merging items renumbers them, which breaks the item-ID continuity that cc-compare, the comment numbering maps (2.9) and amend-in-place rely on. Retiring an item, as was done with CC-20-03 in v2.6, avoids that.</li>
+</ul>
+
+</main>
+</body>
+</html>
