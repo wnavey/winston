@@ -1,5 +1,7 @@
 # Structured-Output Retry Storm in CRC `review` Step
 
+**ID:** BUG-1
+
 > **Status:** Open, non-blocking. Filed 2026-06-20 from the first end-to-end smoke run. **Two fixes in flight as of 2026-06-25 (conductor #197 + bureau #459) — see "Update — 2026-06-25" at the bottom.** The originally-proposed prompt mitigations #1–3 were **never shipped**; the actual 06-24 intervention was a different lever (lenient emit schema) that shifted the failure rather than closing it.
 > **Surface:** `bureau/workflows/comment-resolution-check/` (`review` step + `crc.schema.json` + `prompts/review.md`).
 > **Severity:** Low correctness impact (all 183 findings eventually produced and persisted to Supabase), measurable cost & wall-clock waste.

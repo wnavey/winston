@@ -1,5 +1,6 @@
 # CRC UI — Filter by Parsed Comment-Response Believed Status
 
+**ID:** FEAT-30  
 **Status:** Draft v1
 **Date:** 2026-07-24
 **Repos touched:** `substation` (new `GET /api/crc/comment-responses` endpoint + service), `cityhall` (concurrent fetch on the CRC review page, client-side join, new dropdown filter)

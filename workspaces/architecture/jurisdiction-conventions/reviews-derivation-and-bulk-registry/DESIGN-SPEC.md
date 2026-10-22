@@ -1,5 +1,6 @@
 # Reviews Derive Jurisdiction + Bulk Registry Population
 
+**ID:** FEAT-33  
 **Status:** Draft v1
 **Date:** 2026-07-30
 **Sibling of:** `workspaces/architecture/jurisdiction-conventions/DESIGN-SPEC.md` (winston#185). This spec extends that body of work; decisions continue that spec's numbering (parent ends at **D35**; this spec starts at **D36**). Parent decisions/assumptions are cited as "parent D30", "parent A1", etc.

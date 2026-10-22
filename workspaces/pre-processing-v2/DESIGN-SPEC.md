@@ -1,5 +1,6 @@
 # Pre-Processing v2 — Flag-Gated Mechanical Strip (Phase 1) + Full Plan
 
+**ID:** FEAT-40  
 **Status:** Draft v2 — **Phase 1 SHIPPED (substation #206/#207/#208, 2026-08-17); Phase 2 next.**
 **Date:** 2026-08-17
 **Repos touched (Phase 1):** `substation` (read a flag, stamp it into the `process-file` event, branch the function to skip the AI calls; add failure logging to BetterStack)

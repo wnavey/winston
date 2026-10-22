@@ -1,5 +1,6 @@
 # Comment Response Validation PDF ("Comment Response Review")
 
+**ID:** FEAT-27  
 **Status:** Draft v1
 **Date:** 2026-07-17
 **Repos touched:** `claude-plugins` (new skill `parse-crc-comment-response-pdf`), `substation` (comparison data assembly + PDF route + RDS template), `cityhall` (download button + proxy route)

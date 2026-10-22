@@ -1,5 +1,7 @@
 # `el` feasibility-guide slug holds Environmental content, not Electrical — every SIR `el` discipline runs without its lens
 
+**ID:** BUG-11
+
 > **Status:** Diagnosed 2026-08-04, fix NOT implemented. Root cause lives in **Bureau** (`bureau/jurisdictions/<slug>/feasibility-guides/el.md`), not in the SIR pipeline code. Discovered on the Louisville/Jefferson County SIR run `~/noetic/working/sir/hutton/car-wash-louisville-ky/2026-08-01-083311` — step **4.1** discipline **`el`** returned `domain-mismatch`, forcing `guide_coverage=mismatch-flagged` and `status: degraded`. **Presents as a per-run "degraded" flag — it is not a per-run defect; it is a systemic Bureau content bug affecting 45 of 46 jurisdictions.** The SIR pipeline already documents the swap as a known caveat in `bureau/pipelines/sir/4.1-disciplines/disciplines.json` (`_guide_filename_caveat`) but no one has fixed the guides.
 
 ## Summary

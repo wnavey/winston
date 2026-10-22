@@ -1,5 +1,6 @@
 # Block names: a drafter-style name on every content block
 
+**ID:** FEAT-59  
 **Status:** Draft v3
 **Date:** 2026-09-29
 **Companion:** `block-names.html` (same folder): the diagrams for everything below.

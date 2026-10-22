@@ -1,5 +1,7 @@
 # CC Verdict Override Refactor — Design Spec
 
+**ID:** FEAT-21
+
 > **Status:** Draft, 2026-07-07.
 > The Completeness Check follow-on anticipated by
 > [CRC comment-triage-rework DESIGN-SPEC §10](../../comment-resolution-check/crc-workflow/comment-triage-rework/DESIGN-SPEC.md).

@@ -1,5 +1,6 @@
 # Anchoring without a SIR — a loose PDF from upload to the map
 
+**ID:** FEAT-65  
 **Status:** Approved v1.5 — ready to implement
 **Date:** 2026-10-14
 **Start here:** nothing is open; every decision below is final and every question in §7 is answered. Implement from **§3** (the pieces, in deploy order, substation first) and prove it with **§5** (the acceptance run on White Water).

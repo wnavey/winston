@@ -1,5 +1,6 @@
 # Building footprints from plan sets — the first proposed feature through extract-geometry-v2 and anchor-geometry
 
+**ID:** FEAT-68  
 **Status:** Draft v1
 **Date:** 2026-10-16
 **Repos touched:** `bureau` (`extract-geometry-v2` steps 1.1, 1.2, 2.1, 2.2, three new steps 1.3, 3.4 and 3.5, 4.2, 6.1 and their contracts; `anchor-geometry` steps 2.1, 3.2, 3.3, 5.1), `cartographer` (new `src/lib/geometry/sheet.ts` and `src/lib/features/registry.ts`; new `runbooks/extract-geometry/scripts/trace.ts` and `contour.ts`; `crop.ts`, `assemble.ts`, `place.ts`, `publish.ts`, `lib/evidence.ts`; `runbooks/anchor-geometry/scripts/{render,publish}.ts`; `/anchored`, `/anchor/[id]`, `/geometry/[id]` colour by posture), `cityhall-new` (the schema: one declarative change to `supabase/schemas/public/tables/{cartographer_geometries,cartographer_geometry_evidence,geo}.sql` and `functions/sir_put_anchored_geo.sql`, with the migration `supabase db schema declarative sync` writes from it)

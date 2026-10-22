@@ -1,5 +1,7 @@
 # `transcribe-mcr-text` — Design Spec
 
+**ID:** FEAT-8
+
 > **Status:** Draft, 2026-06-25. Cross-cutting feature spec spanning
 > [`generate-crc-guides`](../generate-crc-guides/DESIGN-SPEC.md),
 > [`generate-crc-guides-from-redlines`](../generate-crc-guides-from-redlines/DESIGN-SPEC.md),

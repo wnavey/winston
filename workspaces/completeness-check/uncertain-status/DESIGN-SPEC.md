@@ -1,5 +1,7 @@
 # Completeness Check `uncertain` Status — Design Spec
 
+**ID:** FEAT-20
+
 > **Status:** Draft, 2026-07-06. Ports the CRC uncertain-status concept
 > ([../../comment-resolution-check/crc-workflow/uncertain-status/DESIGN-SPEC.md](../../comment-resolution-check/crc-workflow/uncertain-status/DESIGN-SPEC.md))
 > to the completeness-check workflow. Decisions locked in the 2026-07-06

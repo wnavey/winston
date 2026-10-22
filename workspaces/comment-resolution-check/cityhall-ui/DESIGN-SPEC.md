@@ -1,5 +1,7 @@
 # Cityhall CRC UI — Design Spec
 
+**ID:** FEAT-3
+
 > **Status:** Draft, 2026-06-22 (revised same day after spec review — see §2
 > "Spec-review clarifications" C1–C8). Iteration-1 of the
 > [CRC spec](../SPEC.md) §11 "Iteration 3 (DB + UI)", pulled forward. Drives

@@ -6,7 +6,7 @@
 <title>Cartographer — anchoring extracted geometries to the county parcel</title>
 <style>
 /* ============================================================
-   spec-kit v5.1  —  winston HTML spec design system
+   spec-kit v6.8  —  winston HTML spec design system
    Inline the ENTIRE contents of this file into the spec's style block.
    Canonical source: ~/.claude/skills/winston-spec/assets/spec-kit.css
    When you change this file, bump the version above and in COMPONENTS.md.
@@ -16,8 +16,21 @@
        + spec reader page (body.reader; DESIGN-SPEC.md rendered by marked, built by inline-kit.py --spec)
    v5.1: pass-2 friction fixes — long identifiers wrap (.sys .t, .uc .nt, .ent .ty), .sysmap-scroll for
        6+ columns, state-neutral .sm pills, .dflow jump outcomes, legend 'new trigger' dot
+   v5.2: + two-lane activity flow (.af) — an agent and the tools it calls, prompt fragment per step
+   v5.3: + before/after pair (.ba), + mass diagram (.mass), + cross-section (.xsec),
+       + call-graph collapse (.cg), + interactive state machine (.smx, driven by spec-kit.js),
+       .sm pills take .new/.chg change state
        Colour rule: fill/border = change state only; kind = badge text + shape; legend is the
        complete list of colour meanings on the page.
+   v6.0: readability + "pick the diagram from the question" (v6.5 later set git-diff colours);
+       kind badge becomes a quiet word; node detail 12.5px sans (nothing under 10.5px);
+       + lanes (.sysmap.lanes), + delta map (.sysmap.delta, Today/After toggle in one map),
+       + runbook graph (.sysmap.rgraph: diamonds, gate, fan-out, exits), + step list (.steps),
+       + phase lanes (.plan), + claim-as-title (.claim.lead), compact ref footer,
+       path highlighting on hover, .dfg chains go vertical instead of wrapping.
+   v6.8: + runbook page (.nx-*): the runbook graph, then one "graph node explained" step
+       block per node, each drawn with one of 14 step templates (T1–T14); spec-kit.js
+       fills each step's locator strip (.nx-loc).
    ============================================================ */
 
 :root{
@@ -26,11 +39,12 @@
   --p500:#517e9e;--p600:#3f6582;--p700:#35526b;--p800:#2d4559;--p900:#273b4b;--p950:#182530;
   --bg:#f9f9f9;--card:#ffffff;--divider:#dfdfdf;--ink:#1f2937;--muted:#6b7280;--ember:#bb4d00;
   /* semantic: new / changed / retired */
-  --new:#15803d;--newbg:#f0fdf4;--newbd:#bbf7d0;
-  --chg:#b45309;--chgbg:#fffbeb;--chgbd:#fde68a;
-  --ret:#b91c1c;--retbg:#fef2f2;--retbd:#fecaca;
+  --new:#1a7f37;--newbg:#dafbe1;--newbd:#aceebb;--newink:#116329;
+  --chg:#bf8700;--chgbg:#fff8c5;--chgbd:#eac54f;--chgink:#7d4e00;
+  --ret:#cf222e;--retbg:#ffebe9;--retbd:#ffcecb;--retink:#a40e26;
   --sans:'Lexend',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
   --serif:'Lora',Georgia,'Times New Roman',serif;
+  --ink2:#4b5361;--line:#c5ccd6;--lane:#f4f6f9;--wire:#8a919c;
   --mono:'Fira Code','SF Mono',ui-monospace,Menlo,Consolas,monospace;
 }
 *{box-sizing:border-box}
@@ -86,7 +100,7 @@ code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px s
 .swatch{width:26px;height:14px;border-radius:3px;display:inline-block;border:1px solid rgba(0,0,0,.15)}
 
 /* ---------- shared field badges (used by entity rows + legend) ---------- */
-.b{font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.04em;padding:1px 4px;border-radius:3px;text-transform:uppercase;white-space:nowrap}
+.b{font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.04em;padding:1px 4px;border-radius:3px;text-transform:uppercase;white-space:nowrap}
 .b-pk{background:#fef3c7;color:#92600a;border:1px solid #fde68a}
 .b-fk{background:#e0edfb;color:#2456a8;border:1px solid #c3d8f2}
 .b-nn{background:#eef1f4;color:#4b5563;border:1px solid #d7dde3}
@@ -99,7 +113,7 @@ code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px s
 .ent{border:1px solid var(--divider);border-radius:9px;overflow:hidden;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.05);min-width:236px;flex:0 1 auto}
 .ent .eh{padding:7px 12px;color:#fff;display:flex;justify-content:space-between;align-items:baseline;gap:10px}
 .ent .eh .en{font-family:var(--mono);font-size:12.5px;font-weight:700;letter-spacing:.02em}
-.ent .eh .stereo{font-size:9.5px;font-family:var(--mono);opacity:.85;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}
+.ent .eh .stereo{font-size:11px;font-family:var(--mono);opacity:.85;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}
 .ent.exist .eh{background:var(--p700)}
 .ent.newt .eh{background:var(--new)}
 .ent.changed .eh{background:var(--chg)}
@@ -108,10 +122,10 @@ code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px s
 .ent .row{display:flex;align-items:center;gap:7px;padding:4px 11px;font-size:11.5px;border-top:1px solid #eef1f4}
 .ent .row:first-of-type{border-top:0}
 .ent .row .nm{font-family:var(--mono);font-size:11.5px;color:var(--p900);font-weight:600}
-.ent .row .ty{font-family:var(--mono);font-size:10px;color:var(--muted);margin-left:auto;text-align:right;max-width:60%;overflow-wrap:anywhere}
+.ent .row .ty{font-family:var(--mono);font-size:11px;color:var(--muted);margin-left:auto;text-align:right;max-width:60%;overflow-wrap:anywhere}
 .ent .row.hi{background:#fff9f2}
 .ent .row.strk .nm{text-decoration:line-through;color:var(--muted)}
-.ent .note{padding:5px 11px;font-size:10px;color:var(--muted);font-style:italic;border-top:1px dashed #e5e9ee;background:#fbfcfd}
+.ent .note{padding:5px 11px;font-size:11px;color:var(--muted);font-style:italic;border-top:1px dashed #e5e9ee;background:#fbfcfd}
 /* diff rows — show a table modification (column added / removed), git-style.
    Put a "+"/"−" marker in a .gut span at the start of the row. */
 .ent .row .gut{flex:0 0 10px;width:10px;text-align:center;font-family:var(--mono);font-size:11px;font-weight:700;color:var(--muted)}
@@ -139,7 +153,7 @@ code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px s
 .uc .uch{display:flex;align-items:center;gap:13px;padding:11px 16px;background:linear-gradient(135deg,var(--p700),var(--p600));color:#fff}
 .uc .uch .ucn{flex:0 0 30px;height:30px;border-radius:50%;background:rgba(255,255,255,.2);font-family:var(--mono);font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center}
 .uc .uch .uctxt{flex:1}
-.uc .uch .actor{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--p100);display:block;margin-bottom:1px}
+.uc .uch .actor{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--p100);display:block;margin-bottom:1px}
 .uc .uch .uct{font-weight:600;font-size:15.5px;font-family:var(--serif)}
 .uc .ucsub{padding:9px 16px;font-size:12.5px;color:var(--p800);background:var(--p50);border-bottom:1px solid var(--p100)}
 .uc .ucdiag{padding:20px 16px 14px}
@@ -157,15 +171,15 @@ code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px s
    ============================================================ */
 .dfg{display:flex;flex-wrap:wrap;align-items:stretch;gap:8px 0;margin:0}
 .node{flex:0 0 auto;width:156px;background:#fff;border:1.5px solid var(--p300);border-radius:8px;padding:9px 11px;display:flex;flex-direction:column;gap:3px}
-.node .op{align-self:flex-start;font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:1px 6px;border-radius:3px;border:1px solid;color:#fff;margin-bottom:2px}
+.node .op{align-self:flex-start;font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:1px 6px;border-radius:3px;border:1px solid;color:#fff;margin-bottom:2px}
 .node .nt{display:block;font-family:var(--mono);font-weight:700;font-size:12px;color:var(--p900);line-height:1.3;overflow-wrap:anywhere}
-.node .nf{display:block;font-family:var(--mono);font-size:10px;color:var(--muted);line-height:1.45;word-break:break-word}
+.node .nf{display:block;font-family:var(--mono);font-size:11px;color:var(--muted);line-height:1.45;word-break:break-word}
 .node.created{border-color:var(--new);background:var(--newbg)} .node.created .op{background:var(--new);border-color:var(--new)}
 .node.read{border-color:var(--p400);background:#eef4fb} .node.read .op{background:var(--p500);border-color:var(--p500)}
 .node.event{border-color:var(--ember);background:#fdf6f0} .node.event .op{background:var(--ember);border-color:var(--ember)}
 .node.store{border-style:dashed;border-color:var(--p500);background:#eef3f7} .node.store .op{background:var(--p700);border-color:var(--p700)}
 .edge{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:70px;max-width:104px;padding:0 4px}
-.edge .el{font-size:9px;color:var(--p600);font-family:var(--mono);text-align:center;line-height:1.3;margin-bottom:2px}
+.edge .el{font-size:10.5px;color:var(--p600);font-family:var(--mono);text-align:center;line-height:1.3;margin-bottom:2px}
 .edge .ar{color:var(--p400);font-size:20px;font-weight:700;line-height:1}
 
 /* ============================================================
@@ -183,7 +197,7 @@ code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px s
    ============================================================ */
 .sm{display:flex;flex-wrap:wrap;gap:7px;align-items:center;margin:14px 0}
 .sm .s{border:1px solid var(--p300);background:var(--p50);border-radius:20px;padding:5px 12px;font-size:11.5px;font-weight:600;color:var(--p800);font-family:var(--mono)}
-.sm .s .who{display:block;font-size:9px;font-family:var(--mono);color:var(--muted);font-weight:400;text-transform:uppercase;letter-spacing:.03em}
+.sm .s .who{display:block;font-size:10.5px;font-family:var(--mono);color:var(--muted);font-weight:400;text-transform:uppercase;letter-spacing:.03em}
 .sm .s.client{border-color:var(--newbd);background:var(--newbg)}
 .sm .s.cc{border-color:#f0cba8;background:#fdf6f0}
 .sm .s.spec{border-color:var(--chgbd);background:var(--chgbg)}
@@ -207,7 +221,7 @@ code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px s
 .uci .utxt b{color:var(--p900)}
 .uci .star{color:var(--ember);font-weight:700;font-size:12px;flex:0 0 auto;letter-spacing:-1px}
 .uci.later{opacity:.66}
-.utag{font-family:var(--mono);font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;text-transform:uppercase;letter-spacing:.03em;white-space:nowrap;flex:0 0 auto}
+.utag{font-family:var(--mono);font-size:10.5px;font-weight:700;padding:1px 5px;border-radius:3px;text-transform:uppercase;letter-spacing:.03em;white-space:nowrap;flex:0 0 auto}
 .utag.t-orig{background:#e0edfb;color:#2456a8;border:1px solid #c3d8f2}
 .utag.t-add{background:var(--newbg);color:var(--new);border:1px solid var(--newbd)}
 
@@ -220,7 +234,7 @@ code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px s
 .foot{margin-top:44px;padding-top:18px;border-top:1px solid var(--divider);color:var(--muted);font-size:12px;font-family:var(--mono)}
 
 /* actor / repo chips (optional, for inline actor tags in prose) */
-.rc{display:inline-block;font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;padding:1px 6px;border-radius:5px;border:1px solid;vertical-align:middle;white-space:nowrap}
+.rc{display:inline-block;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;padding:1px 6px;border-radius:5px;border:1px solid;vertical-align:middle;white-space:nowrap}
 .r-ch{background:#eef4fb;color:#2456a8;border-color:#c3d8f2}
 .r-sub{background:#f3eefb;color:#6b3fa0;border-color:#dcccf0}
 .r-fa{background:#e9f7f2;color:#0f7a5f;border-color:#bfe8db}
@@ -246,15 +260,15 @@ code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px s
 .seq-head,.seq-body{display:grid;grid-template-columns:30px repeat(6,minmax(104px,1fr))}
 .seq-head{background:linear-gradient(135deg,var(--p800),var(--p700));padding:11px 12px}
 .seq-h{display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;padding:0 4px}
-.seq-h .role{font-family:var(--mono);font-size:8.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--p200)}
+.seq-h .role{font-family:var(--mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--p200)}
 .seq-h .who{font-family:var(--mono);font-size:11px;font-weight:700;color:#fff;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.24);border-radius:6px;padding:3px 9px}
 .seq-body{position:relative;row-gap:11px;padding:16px 12px 20px}
 .seq-life{width:2px;background:var(--p100);justify-self:center;border-radius:2px;z-index:0}
-.seq-num{grid-column:1;justify-self:center;align-self:center;font-family:var(--mono);font-size:10px;font-weight:700;color:#fff;background:var(--p600);min-width:19px;height:19px;padding:0 3px;border-radius:10px;display:flex;align-items:center;justify-content:center;z-index:1}
+.seq-num{grid-column:1;justify-self:center;align-self:center;font-family:var(--mono);font-size:11px;font-weight:700;color:#fff;background:var(--p600);min-width:19px;height:19px;padding:0 3px;border-radius:10px;display:flex;align-items:center;justify-content:center;z-index:1}
 .seq-msg{align-self:center;display:flex;flex-direction:row;align-items:center;gap:8px;justify-content:space-between;background:#fff;border:1.5px solid var(--p300);border-radius:7px;padding:5px 10px;z-index:1;min-width:0}
 .seq-msg .mt{display:flex;flex-direction:column;gap:1px;min-width:0}
 .seq-msg .m{font-family:var(--mono);font-size:10.5px;color:var(--p900);font-weight:700;line-height:1.32;word-break:break-word}
-.seq-msg .m2{font-family:var(--mono);font-size:9.5px;color:var(--muted);line-height:1.3;word-break:break-word}
+.seq-msg .m2{font-family:var(--mono);font-size:11px;color:var(--muted);line-height:1.3;word-break:break-word}
 .seq-msg .dir{font-size:14px;font-weight:700;color:var(--p500);flex:0 0 auto}
 .seq-msg.write{border-color:var(--new);background:var(--newbg)} .seq-msg.write .dir{color:var(--new)}
 .seq-msg.event{border-color:var(--ember);background:#fdf6f0} .seq-msg.event .dir{color:var(--ember)}
@@ -271,7 +285,7 @@ code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px s
    ============================================================ */
 .spectable-scroll{overflow-x:auto;margin:14px 0}
 .spectable{width:100%;border-collapse:collapse;font-size:12.5px;background:#fff;border:1px solid var(--divider);border-radius:10px;overflow:hidden}
-.spectable thead th{background:var(--p700);color:#fff;font-family:var(--mono);font-size:10px;letter-spacing:.04em;text-transform:uppercase;text-align:left;padding:8px 12px;font-weight:700;white-space:nowrap}
+.spectable thead th{background:var(--p700);color:#fff;font-family:var(--mono);font-size:11px;letter-spacing:.04em;text-transform:uppercase;text-align:left;padding:8px 12px;font-weight:700;white-space:nowrap}
 .spectable tbody td{padding:7px 12px;border-top:1px solid #eef1f4;vertical-align:top;line-height:1.5}
 .spectable tbody tr:nth-child(even){background:#fbfcfd}
 .spectable td .sn{font-family:var(--mono);font-weight:700;color:#fff;background:var(--p600);border-radius:9px;padding:1px 7px;font-size:10.5px}
@@ -285,7 +299,7 @@ code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px s
    White-space preserved; scrolls horizontally inside itself.
    ============================================================ */
 .prompt{background:#fbfcfd;border:1px solid var(--p200);border-left:4px solid var(--p500);border-radius:8px;padding:12px 15px;margin:12px 0;font-family:var(--mono);font-size:11.5px;line-height:1.6;color:var(--p900);white-space:pre-wrap;overflow-x:auto}
-.prompt .ph{display:block;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--p600);font-weight:700;margin-bottom:6px}
+.prompt .ph{display:block;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--p600);font-weight:700;margin-bottom:6px}
 
 
 /* ============================================================
@@ -301,11 +315,11 @@ code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px s
    ============================================================ */
 .sysmap{position:relative;display:grid;gap:40px 64px;padding:28px 16px 22px;background:#fff;border:1px solid var(--divider);border-radius:12px;margin:14px 0 6px}
 .sysmap-scroll{overflow-x:auto;margin:14px 0 6px} .sysmap-scroll .sysmap{margin:0;min-width:max-content} /* 6+ columns: use grid-template-columns:repeat(N,minmax(150px,1fr)) inside .sysmap-scroll */
-.sysmap .colh{font-family:var(--mono);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--p500);text-align:center;padding-bottom:6px;border-bottom:1px dashed var(--p200);align-self:end}
+.sysmap .colh{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--p500);text-align:center;padding-bottom:6px;border-bottom:1px dashed var(--p200);align-self:end}
 .sys{position:relative;z-index:2;background:#fff;border:1.5px solid var(--p300);border-radius:9px;padding:9px 11px 8px;min-height:64px;display:flex;flex-direction:column;gap:2px;align-self:center}
-.sys .k{align-self:flex-start;font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:1px 6px;border-radius:3px;color:#fff;background:var(--p500);margin-bottom:2px}
+.sys .k{align-self:flex-start;font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:1px 6px;border-radius:3px;color:#fff;background:var(--p500);margin-bottom:2px}
 .sys .t{font-weight:600;font-size:12.5px;line-height:1.3;color:var(--p900);overflow-wrap:anywhere}
-.sys .d{font-family:var(--mono);font-size:9.5px;color:var(--muted);line-height:1.4}
+.sys .d{font-family:var(--mono);font-size:11px;color:var(--muted);line-height:1.4}
 .sys.ext{border-style:dashed}
 .sys.store{border-radius:4px 4px 14px 14px}
 .sys.new{border-color:var(--new);background:var(--newbg);box-shadow:0 0 0 3px #dcfce7}.sys.new .k{background:var(--new)}
@@ -316,10 +330,10 @@ code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px s
 .sys.trig.new .dot{background:var(--new);box-shadow:0 0 0 1.5px var(--new)}
 .sys.trig.chg .dot{background:var(--chg);box-shadow:0 0 0 1.5px var(--chg)}
 .sys.trig .t{font-size:11.5px;font-weight:600;color:var(--p800);line-height:1.25}
-.sys.trig .d{font-size:9.5px}
+.sys.trig .d{font-size:11px}
 .sys.gap{border:1.5px dashed var(--ret);background:var(--retbg);color:var(--ret);align-items:center;justify-content:center;text-align:center;font-family:var(--mono);font-size:10.5px;min-height:40px}
 /* floating spec-reference tag above the box; an <a href="#detail-id"> deep-link to the zoom-in diagram */
-.sys .ref{position:absolute;top:-11px;right:8px;text-decoration:none;font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.04em;padding:1px 7px;border-radius:10px;background:#fff;border:1px solid var(--p300);color:var(--p700);white-space:nowrap}
+.sys .ref{position:absolute;top:-11px;right:8px;text-decoration:none;font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.04em;padding:1px 7px;border-radius:10px;background:#fff;border:1px solid var(--p300);color:var(--p700);white-space:nowrap}
 .sys.chg .ref{border-color:var(--chg);color:var(--chg)}.sys.new .ref{border-color:var(--new);color:var(--new)}
 .sys .ref:hover{background:var(--p50)}
 .sys-edge{display:none} /* authored edge; rendered as SVG by spec-kit.js */
@@ -329,7 +343,7 @@ code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px s
 .sysmap svg .e.chg{stroke:var(--chg);stroke-width:2}
 .sysmap svg .e.gap{stroke:var(--ret);stroke-dasharray:5 4}
 .sysmap svg .e.loop{stroke:var(--p400);stroke-dasharray:4 3}
-.sysmap svg .lbl{font:9.5px var(--mono);fill:var(--p700)}
+.sysmap svg .lbl{font:11.5px var(--mono);fill:var(--p700)}
 .sysmap svg .lbl.new{fill:var(--new);font-weight:700}.sysmap svg .lbl.chg{fill:var(--chg);font-weight:700}.sysmap svg .lbl.gap{fill:var(--ret)}
 .sysmap svg .lblbg{fill:#fff;stroke:none;opacity:.94}
 /* reference footer: stacked CHIP ROWS, one per reference, each a link into the spec reader page.
@@ -342,7 +356,7 @@ code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px s
 .sys-refs .refrow.chg .chip{color:var(--chg);border-color:var(--chgbd);background:var(--chgbg)}
 .sys-refs .refrow.new .chip{color:var(--new);border-color:var(--newbd);background:var(--newbg)}
 .sys-refs .refrow .txt{flex:1}
-.sys-refs .refrow .go{flex:0 0 auto;font-family:var(--mono);font-size:10px;color:var(--p500)}
+.sys-refs .refrow .go{flex:0 0 auto;font-family:var(--mono);font-size:11px;color:var(--p500)}
 .sys-refs .refrow[href] .go::after{content:"read §"}
 .sys-refs .refrow:not([href]) .go::after{content:"no spec reader";color:var(--muted)}
 /* citation links inside claims and ref tags (filled in by spec-kit.js) */
@@ -372,11 +386,11 @@ header.masthead a.spec-link:hover{background:rgba(255,255,255,.24)}
 .dflow{margin:14px 0;border:1px solid var(--divider);border-radius:12px;background:#fff;padding:14px 16px 10px}
 .dflow .dq{display:grid;grid-template-columns:minmax(200px,1.4fr) auto minmax(160px,1fr);gap:10px;align-items:center}
 .dflow .dq .q{font-size:12.5px;font-weight:600;color:var(--p900);border:1.5px solid var(--p300);border-radius:8px;padding:7px 11px;background:#fff}
-.dflow .dq .yes{font-family:var(--mono);font-size:10px;font-weight:700;color:var(--new);white-space:nowrap}
+.dflow .dq .yes{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--new);white-space:nowrap}
 .dflow .dq .out{font-family:var(--mono);font-size:11px;color:var(--p800);border:1.5px solid var(--newbd);background:var(--newbg);border-radius:8px;padding:6px 10px}
 .dflow .dq .out.warn{border-color:var(--chgbd);background:var(--chgbg)}
 .dflow .dq .out.fail{border-color:var(--retbd);background:var(--retbg);color:var(--ret)}
-.dflow .dno{font-family:var(--mono);font-size:9.5px;color:var(--muted);padding:3px 0 3px 18px}
+.dflow .dno{font-family:var(--mono);font-size:11px;color:var(--muted);padding:3px 0 3px 18px}
 .dflow .dq.end .q{border-style:dashed;font-weight:500;color:var(--p700)}
 .dflow .dq .out a,.dflow .dq a.out{color:inherit;text-decoration:underline dotted;text-underline-offset:2px}
 .dflow .dq .out.jump::after{content:" ↗";color:var(--p500)} /* an outcome that jumps to another step/diagram */
@@ -423,9 +437,717 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 .reader-body strong.tok:target{background:#fff1cc;border-radius:3px;padding:0 3px;box-shadow:0 0 0 2px #fde68a}
 .reader-body .anchor:target + h2,.reader-body .anchor:target + h3{background:#fff8ec;box-shadow:-12px 0 0 #fff8ec,12px 0 0 #fff8ec;border-radius:3px}
 
+/* ============================================================
+   Two-lane activity flow (.af)  —  v5.2
+   An agent (left lane) and the deterministic tools it calls (right
+   lane), read top to bottom. One row = one exchange: the left box says
+   what the caller decides / types / writes, the right box what the tool
+   derives / checks; the middle column carries the call (▸, solid) and
+   the return (◂, dashed) labels. Rows inside .af-loop repeat (dashed
+   frame + label). .af-sec is a full-width "only when…" divider.
+   Notes inside a box: .cc = what this spec changes (amber), .gap = a
+   defect found (red dashed). .af-box.key = where the important value is
+   produced (heavier border, weight only, no colour).
+   Columns stack under 820px.
+   ============================================================ */
+.af{margin:16px 0;border:1px solid var(--divider);border-radius:12px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.05);padding-bottom:8px;overflow:hidden}
+.af-head,.af-row{display:grid;grid-template-columns:26px minmax(0,1.2fr) minmax(110px,.42fr) minmax(0,1fr);gap:0 12px}
+.af-head{background:linear-gradient(135deg,var(--p800),var(--p700));padding:10px 14px;color:#fff;align-items:end}
+.af-h{font-family:var(--mono);font-size:11.5px;font-weight:700;line-height:1.3}
+.af-h .role{display:block;font-size:10.5px;font-weight:400;color:var(--p200);text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px}
+.af-row{align-items:center;padding:8px 14px}
+.af-row + .af-row{border-top:1px solid #eef1f4}
+.af-n{align-self:start;margin-top:8px;font-family:var(--mono);font-size:11px;font-weight:700;color:#fff;background:var(--p600);min-width:20px;height:20px;padding:0 4px;border-radius:10px;display:flex;align-items:center;justify-content:center}
+.af-box{border:1.5px solid var(--p300);border-radius:8px;padding:8px 11px;background:#fff;display:flex;flex-direction:column;gap:5px;min-width:0}
+.af-box.key{border-width:3px;border-color:var(--p700)}
+.af-box .t{font-size:13px;font-weight:600;color:var(--p900);line-height:1.35}
+.af-box .t code{font-size:11.5px}
+.af-box .q{font-family:var(--serif);font-style:italic;font-size:12.5px;color:var(--p700);border-left:3px solid var(--p200);padding-left:9px;line-height:1.45}
+.af-box .io{font-size:12px;color:var(--ink);line-height:1.5;overflow-wrap:anywhere}
+.af-box .io > b:first-child{display:inline-block;font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--p600);background:var(--p50);border:1px solid var(--p100);border-radius:3px;padding:0 4px;margin-right:5px;vertical-align:1px}
+.af-box .io code{font-size:11px}
+.af-box .cc{font-size:11.5px;line-height:1.45;color:#7c4a03;background:var(--chgbg);border:1px solid var(--chgbd);border-radius:6px;padding:4px 8px}
+.af-box .gap{font-size:11.5px;line-height:1.45;color:var(--ret);background:var(--retbg);border:1.5px dashed var(--retbd);border-radius:6px;padding:4px 8px}
+.af-box .cc code,.af-box .gap code{font-size:10.5px}
+.af-none{font-family:var(--mono);font-size:10.5px;color:var(--muted);font-style:italic;padding:0 4px}
+.af-x{display:flex;flex-direction:column;gap:9px;justify-content:center;min-width:0}
+.af-x .c,.af-x .r{display:flex;flex-direction:column;gap:1px}
+.af-x .l{font-family:var(--mono);font-size:11px;line-height:1.3;color:var(--p800);overflow-wrap:anywhere}
+.af-x .r .l{color:var(--muted)}
+.af-x .ln{display:flex;align-items:center;font-size:13px;line-height:1;color:var(--p500)}
+.af-x .c .ln::before{content:"";flex:1;border-top:1.5px solid var(--p400);margin-right:-3px}
+.af-x .r .ln::after{content:"";flex:1;border-top:1.5px dashed var(--p400);margin-left:-3px}
+.af-loop{margin:6px 10px;border:1.5px dashed var(--p400);border-radius:10px;padding:2px 0}
+.af-loop .af-row{padding-left:4px;padding-right:4px}
+.af-lh{font-family:var(--mono);font-size:10.5px;font-weight:700;color:var(--p700);padding:6px 10px 2px}
+.af-sec{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--p600);background:var(--p50);border-top:1px solid var(--p100);border-bottom:1px solid var(--p100);padding:5px 14px 5px 52px}
+.af-legend{display:flex;flex-wrap:wrap;gap:8px 16px;font-size:11.5px;color:var(--p800);padding:8px 14px 0;align-items:center}
+.af-legend span{display:inline-flex;align-items:center;gap:6px}
+.af-legend i{display:inline-block;width:22px;height:13px;border-radius:3px;border:1.5px solid var(--p300);background:#fff}
+.af-legend i.key{border-width:3px;border-color:var(--p700)} .af-legend i.cc{background:var(--chgbg);border-color:var(--chgbd)}
+.af-legend i.gap{background:var(--retbg);border:1.5px dashed var(--retbd)} .af-legend i.loop{border:1.5px dashed var(--p400)}
+@media(max-width:820px){
+  .af-head,.af-row{grid-template-columns:26px minmax(0,1fr)}
+  .af-head > :nth-child(3),.af-head > :nth-child(4){display:none}
+  .af-row > :not(.af-n){grid-column:2}
+  .af-row > .af-x{flex-direction:row;padding:6px 0}
+}
+
+/* ============================================================
+   Before/after pair (.ba)  —  v5.3
+   The same zoom-in drawn twice, Today then After, side by side (stacked
+   under 820px, or always with .ba.stack for wide diagrams). Holds any
+   kit diagram. An amber node's zoom-in uses one so the change shows.
+   ============================================================ */
+.ba{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin:14px 0 6px;align-items:start}
+.ba.stack{grid-template-columns:minmax(0,1fr)}
+.ba-col{min-width:0}
+.ba-h{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--p600);font-weight:700;padding:0 2px 6px;border-bottom:1px dashed var(--p200)}
+.ba-col > :nth-child(2){margin-top:10px}
+@media(max-width:820px){.ba{grid-template-columns:minmax(0,1fr)}}
+
+/* sm pills carry change state too (v5.3); .cur = the live state in an .smx (weight, no colour) */
+.sm .s.new{border-color:var(--new);background:var(--newbg)}
+.sm .s.chg{border-color:var(--chg);background:var(--chgbg)}
+.sm .s.cur{box-shadow:0 0 0 2.5px var(--p950)}
+
+/* ============================================================
+   Mass diagram (.mass)  —  v5.3
+   One row per module: a solid bar for its interface (entry points,
+   params, rules a caller must know) over an outlined bar for its
+   implementation (what it hides). Lengths are relative units 1–12 set
+   with style="--u:N" (the one inline style this component allows).
+   Shallow = the two bars nearly equal; deep = short interface, long body.
+   ============================================================ */
+.mass{margin:14px 0;border:1px solid var(--divider);border-radius:12px;background:#fff;padding:10px 12px 8px;display:flex;flex-direction:column;gap:4px}
+.mass-m{display:grid;grid-template-columns:minmax(120px,.34fr) minmax(0,1fr);gap:4px 14px;align-items:center;padding:7px 8px;border:1.5px solid transparent;border-radius:8px}
+.mass-m + .mass-m{border-top-color:#eef1f4}
+.mass-m .t{grid-row:1/3;font-weight:600;font-size:12.5px;color:var(--p900);line-height:1.3;overflow-wrap:anywhere}
+.mass-m .t .d{display:block;font-family:var(--mono);font-size:11px;font-weight:400;color:var(--muted);margin-top:2px}
+.mass-bar{display:block;height:10px;border-radius:3px;width:calc(var(--u,1) / 12 * 100%);min-width:6px;max-width:100%}
+.mass-bar.if{background:var(--p600)}
+.mass-bar.impl{height:22px;background:var(--p50);border:1.5px solid var(--p400)}
+.mass-m.chg{border-color:var(--chg);background:var(--chgbg)}
+.mass-m.new{border-color:var(--new);background:var(--newbg)}
+.mass-legend{display:flex;flex-wrap:wrap;gap:8px 16px;font-size:11.5px;color:var(--p800);padding:6px 8px 0;border-top:1px solid #eef1f4;margin-top:4px}
+.mass-legend span{display:inline-flex;align-items:center;gap:6px}
+.mass-legend i{display:inline-block;width:22px;border-radius:2px}
+.mass-legend i.if{height:6px;background:var(--p600)} .mass-legend i.impl{height:12px;background:var(--p50);border:1.5px solid var(--p400)}
+
+/* ============================================================
+   Cross-section (.xsec)  —  v5.3
+   Stacked bands, top to bottom, for the layers one call passes through;
+   the line down the left is the call. .thin = a pass-through layer that
+   adds nothing, .thick = the one layer that now owns the work (weight,
+   no colour). Bands take .chg / .new / .gap like system-map nodes.
+   ============================================================ */
+.xsec{position:relative;margin:14px 0;border:1px solid var(--divider);border-radius:12px;background:#fff;padding:10px 14px 18px 40px;display:flex;flex-direction:column;gap:6px}
+.xsec::before{content:"";position:absolute;left:21px;top:34px;bottom:20px;border-left:2px solid var(--p400)}
+.xsec::after{content:"";position:absolute;left:16px;bottom:12px;border:6px solid transparent;border-top:8px solid var(--p400);border-bottom:0}
+.xs-h{font-family:var(--mono);font-size:10.5px;font-weight:700;color:var(--p700);margin:0 0 2px -26px;display:flex;align-items:center;gap:8px}
+.xs-h::before{content:"";width:12px;height:12px;border-radius:50%;background:var(--p700);border:2.5px solid #fff;box-shadow:0 0 0 1.5px var(--p700)}
+.xs-b{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 12px;border:1.5px solid var(--p300);border-left-width:4px;border-radius:6px;padding:8px 12px;background:#fff}
+.xs-b .t{font-family:var(--mono);font-weight:700;font-size:12px;color:var(--p900);overflow-wrap:anywhere}
+.xs-b .d{font-size:12px;color:var(--muted);flex:1;min-width:160px}
+.xs-b.thin{padding:3px 12px;border-style:dashed;border-left-style:solid}
+.xs-b.thin .t{font-weight:500;color:var(--p600)}
+.xs-b.thick{padding:16px 14px;border-width:3px;border-left-width:6px;border-color:var(--p700)}
+.xs-b.chg{border-color:var(--chg);background:var(--chgbg)}
+.xs-b.new{border-color:var(--new);background:var(--newbg)}
+.xs-b.gap{border:1.5px dashed var(--ret);border-left:4px solid var(--ret);background:var(--retbg)} .xs-b.gap .t{color:var(--ret)}
+
+/* ============================================================
+   Call-graph collapse (.cg)  —  v5.3
+   Nested boxes = who calls whom. .cg-f.deep is one module that now owns
+   a subtree: heavy border (weight, no colour), and the calls inside it
+   render faded and dashed because they are internal now. Boxes take
+   .chg / .new. Pair a Today tree with an After tree in a .ba.
+   ============================================================ */
+.cg{margin:14px 0;border:1px solid var(--divider);border-radius:12px;background:#fff;padding:8px 14px 14px}
+.cg-f{border:1.5px solid var(--p300);border-radius:7px;padding:6px 10px 7px;margin-top:7px;background:#fff;min-width:0}
+.cg-f .cg-f{margin-left:16px}
+.cg-f > .t{font-family:var(--mono);font-size:11.5px;font-weight:700;color:var(--p900);overflow-wrap:anywhere}
+.cg-f > .d{font-size:11px;color:var(--muted);margin-left:8px}
+.cg-f.deep{border-width:3px;border-color:var(--p700);padding:9px 12px 11px}
+.cg-f.deep .cg-f{border-style:dashed;border-color:var(--p200);background:var(--p50)}
+.cg-f.deep .cg-f > .t{color:var(--p500);font-weight:500}
+.cg-f.chg{border-color:var(--chg);background:var(--chgbg)}
+.cg-f.new{border-color:var(--new);background:var(--newbg)}
+
+/* ============================================================
+   Interactive state machine (.smx)  —  v5.3
+   An .sm row of states (each .s carries data-state) plus hidden
+   <a class="smx-t" data-ev data-from data-to data-note>label</a>
+   transitions and optional <div class="smx-walk" data-name data-steps>
+   walkthroughs. spec-kit.js adds the controls: the moves available from
+   the current state, walkthrough buttons, a reset, the path taken, and
+   a collapsed list of every transition. Static without JS: the pills.
+   ============================================================ */
+.smx{margin:14px 0;border:1px solid var(--divider);border-radius:12px;background:#fff;padding:10px 16px 12px}
+.smx > .sm{margin:4px 0 10px}
+.smx-t,.smx-walk{display:none}
+.smx-bar{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;padding:9px 0 6px;border-top:1px solid #eef1f4}
+.smx-now{font-family:var(--mono);font-size:11px;color:var(--muted)} .smx-now b{color:var(--p900)}
+.smx-moves,.smx-ctl{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.smx-ctl{margin-left:auto}
+.smx button{appearance:none;font-family:var(--mono);font-size:11px;border:1.5px solid var(--p300);background:#fff;color:var(--p800);border-radius:7px;padding:4px 10px;cursor:pointer}
+.smx button:hover:not(:disabled){border-color:var(--p600);background:var(--p50)}
+.smx button:disabled{opacity:.5;cursor:default}
+.smx .smx-btn{font-weight:700}
+.smx .smx-btn.new{border-color:var(--new);color:var(--new);background:var(--newbg)}
+.smx .smx-btn.chg{border-color:var(--chg);color:var(--chg);background:var(--chgbg)}
+.smx .smx-walkb.on{border-color:var(--p700);box-shadow:inset 0 0 0 1px var(--p700)}
+.smx-wi,.smx-end{font-family:var(--mono);font-size:10.5px;color:var(--muted)}
+.smx-log{margin:4px 0;padding-left:22px;font-size:12px;color:var(--p800)}
+.smx-log li{margin:3px 0}
+.smx-log li b{font-family:var(--mono);font-size:11px;color:var(--p900)}
+.smx-log li .n{display:block;font-size:11px;color:var(--muted)}
+.smx-log li.new b{color:var(--new)} .smx-log li.chg b{color:var(--chg)}
+.smx-log li.smx-empty{list-style:none;margin-left:-22px;color:var(--muted);font-style:italic}
+.smx-all{margin-top:6px;font-size:11.5px;color:var(--p800)}
+.smx-all summary{cursor:pointer;font-family:var(--mono);font-size:10.5px;color:var(--p600)}
+.smx-row{padding:4px 0 4px 14px;border-top:1px solid #f1f4f7;line-height:1.45}
+.smx-row code{font-size:10.5px}
+.smx-row.new{box-shadow:inset 3px 0 0 var(--new)} .smx-row.chg{box-shadow:inset 3px 0 0 var(--chg)}
+
+
+/* ============================================================
+   v6.0 layer — readability. Later rules win over the v5 rules above;
+   fold them in place when this graduates out of the test run.
+   ============================================================ */
+/* system-map nodes: the name is the loudest thing, kind is a quiet word */
+.sysmap .colh{font-family:var(--sans);font-size:12.5px;font-weight:600;letter-spacing:0;text-transform:none;color:var(--ink2);text-align:left;border-bottom:0;padding:0 2px 2px}
+.sys{border:1px solid var(--line);border-radius:8px;padding:10px 12px;min-height:72px;gap:1px}
+.sys .k{background:none;color:var(--muted);padding:0;margin:0 0 1px;font-family:var(--sans);font-size:10.5px;font-weight:600;letter-spacing:.06em;border-radius:0}
+.sys .t{font-size:14px;font-weight:600;color:var(--ink);line-height:1.3}
+.sys .d{font-family:var(--sans);font-size:12.5px;color:var(--ink2);line-height:1.4}
+.sys.ext{border:1.5px dashed var(--wire)}
+.sys.new{border:1.5px solid var(--new);background:var(--newbg);box-shadow:none}.sys.new .k{background:none;color:var(--newink)}
+.sys.chg{border:1.5px solid var(--chg);background:var(--chgbg)}.sys.chg .k{background:none;color:var(--chgink)}
+.sys .ref{font-family:var(--sans);font-size:11px;font-weight:600;padding:1px 8px;top:-12px}
+.sys.chg .ref{color:var(--chgink)}.sys.new .ref{color:var(--newink)}
+.sys.trig .t{font-size:13.5px;color:var(--ink)}.sys.trig .d{font-family:var(--sans);font-size:12px;color:var(--ink2)}
+.sys.gap{border:1.5px dashed #c2341c;background:#fff4f2;color:#9b2615;font-family:var(--sans);font-size:13px;font-weight:600;line-height:1.4;text-align:left;justify-content:center;padding:10px 14px}
+.sysmap svg .e{stroke:var(--wire);stroke-width:1.5}
+.sysmap svg .e.new{stroke:var(--new);stroke-width:2}
+.sysmap svg .e.chg{stroke:var(--chg);stroke-width:2}
+.sysmap svg .e.gap{stroke:#c2341c;stroke-dasharray:5 5;stroke-width:1.5}
+.sysmap svg .e.loop{stroke:var(--ink2);stroke-dasharray:6 4;stroke-width:1.75}
+.sysmap svg .e.happy{stroke:var(--ink);stroke-width:2.25}
+.sysmap svg .e.exit{stroke:var(--wire);stroke-dasharray:5 5}
+.sysmap svg .lbl{font:500 11.5px var(--sans);fill:var(--ink2)}
+.sysmap svg .lbl.new{fill:var(--newink);font-weight:700}.sysmap svg .lbl.chg{fill:var(--chgink);font-weight:700}.sysmap svg .lbl.gap{fill:#9b2615}
+.sysmap svg .lbl.happy{fill:var(--ink);font-weight:700}.sysmap svg .lbl.loop{fill:var(--ink2);font-weight:700}
+.sys-legend{font-size:12.5px;color:var(--ink2);gap:8px 18px;margin:4px 2px 8px}
+.sys-legend i{background:var(--wire)} .sys-legend i.chg{background:var(--chg)} .sys-legend i.new{background:var(--new)}
+.sys-legend i.box{width:18px;height:12px;border-radius:3px;border:1px solid var(--line);background:#fff}
+.sys-legend i.box.new{border:1.5px solid var(--new);background:var(--newbg)} .sys-legend i.box.chg{border:1.5px solid var(--chg);background:var(--chgbg)}
+.sys-legend i.box.gap{border:1.5px dashed #c2341c;background:#fff4f2} .sys-legend i.box.ext{border:1.5px dashed var(--wire)}
+.sys-legend i.happy{height:3px;background:var(--ink)} .sys-legend i.exit{background:repeating-linear-gradient(90deg,var(--wire) 0 5px,transparent 5px 9px)}
+.sys-legend i.loop{background:repeating-linear-gradient(90deg,var(--ink2) 0 6px,transparent 6px 10px)}
+.sys-legend i.dia{width:14px;height:14px;background:#e3e7ed;clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%)} .sys-legend i.dia.gate{background:var(--ink)}
+.sys-legend i.fan{width:16px;height:11px;border-radius:2px;border:1px solid var(--line);background:#fff;box-shadow:3px 3px 0 -1px #fff,3px 3px 0 0 var(--line)}
+/* reference footer: compact chips in a grid, not a stack of full-width rows */
+.sys-refs{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:6px;margin:10px 0 0}
+.sys-refs .refrow{padding:6px 10px;font-size:12.5px;gap:10px;align-items:center}
+.sys-refs .refrow .chip{font-family:var(--sans);font-size:11.5px;min-width:40px;padding:1px 6px}
+.sys-refs .refrow .go{display:none}
+/* claim as the diagram's title: put .claim.lead BEFORE the diagram */
+.claim.lead{font-size:18px;line-height:1.4;font-weight:600;color:var(--ink);border:0;background:none;padding:0;margin:6px 0 12px;max-width:900px}
+.claim.lead b{display:block;font-size:11.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:2px}
+.claim.lead b a.cite{color:inherit}
+.claim.lead + .how,.how{font-size:13px;color:var(--ink2);margin:-6px 0 10px}
+/* full-bleed for wide diagrams: break out of the 1140px column, still inside the viewport */
+.bleed{width:min(1320px,calc(100vw - 32px));margin-left:calc((100% - min(1320px,100vw - 32px))/2)}
+/* path highlighting (spec-kit.js): hover a node, everything off its path dims */
+.sysmap .sys,.sysmap svg .e,.sysmap svg .lbl,.sysmap svg .lblbg{transition:opacity .15s}
+.sysmap.focus .sys:not(.on){opacity:.22}
+.sysmap.focus svg .e:not(.on),.sysmap.focus svg .lbl:not(.on),.sysmap.focus svg .lblbg:not(.on){opacity:.1}
+.sysmap.focus .lane{opacity:.6}
+
+/* ---------- lanes: rows are lanes, the trigger is the lane's label (.sysmap.lanes) ---------- */
+.sysmap.lanes{row-gap:28px;padding:22px 18px 18px}
+.sysmap.lanes .lane{background:var(--lane);border-radius:10px;margin:-10px -8px;z-index:0;position:relative}
+.sysmap.lanes .sys.trig .dot{display:none}
+.sysmap.lanes .sys.trig{align-self:center;padding-left:4px;max-width:170px}
+
+/* ---------- delta map: one grid, a Today/After toggle (.sysmap.delta[data-view]) ----------
+   Elements carry data-in="today" | "after"; no data-in = in both views. Positions never move
+   between views, so the reader sees the change in place. In the After view, boxes the spec does
+   not change fade, so only the coloured ones stand out. */
+.sysmap.delta[data-view="today"] [data-in="after"],.sysmap.delta[data-view="after"] [data-in="today"]{display:none}
+[data-view-of][hidden]{display:none}
+.sysmap.delta[data-view="after"] .sys:not(.new):not(.chg):not(.gap):not(.trig){opacity:.55}
+.dview{display:inline-flex;gap:0;border:1px solid var(--line);border-radius:9px;overflow:hidden;margin:4px 0 10px;background:#fff}
+.dview button{appearance:none;border:0;background:#fff;font:600 13px var(--sans);color:var(--ink2);padding:7px 16px;cursor:pointer;min-height:36px}
+.dview button + button{border-left:1px solid var(--line)}
+.dview button[aria-pressed="true"]{background:var(--ink);color:#fff}
+
+/* ---------- runbook graph (.sysmap.rgraph): for runbooks that branch, fan out or loop ----------
+   The happy path is one row left to right; exits drop below; loops go over the top.
+   Node shapes: .dec automatic decision (grey diamond), .gate human gate (black diamond),
+   .fan step that runs ×N in parallel (stacked cards), .exit an end that isn't the goal (dashed pill). */
+.sysmap.rgraph{row-gap:44px;column-gap:44px;padding:56px 20px 22px} /* no .colh row: step numbers go in the kind word, the top strip is where loops route */
+.sys.dec,.sys.gate{border:0;border-radius:0;background:#e3e7ed;clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%);min-height:118px;padding:18px 26px;align-items:center;justify-content:center;text-align:center}
+.sys.dec .t,.sys.gate .t{font-size:13px;line-height:1.25}
+.sys.gate{background:var(--ink)} .sys.gate .t{color:#fff} .sys.gate .k{color:#c5ccd6;align-self:center}
+.sys.dec .k{align-self:center}
+.sys.fan{--stk:#fff;--stkbd:var(--line);box-shadow:6px 6px 0 -1px var(--stk),6px 6px 0 0 var(--stkbd),12px 12px 0 -1px var(--stk),12px 12px 0 0 var(--stkbd)}  /* the stack overflows into the gap; no margin, so row centres stay aligned */
+.sys.fan.new{--stk:var(--newbg);--stkbd:var(--new)} .sys.fan.chg{--stk:var(--chgbg);--stkbd:var(--chg)}
+.sys.exit{border:1.5px dashed var(--wire);border-radius:999px;min-height:52px;align-items:center;justify-content:center;text-align:center;background:#fff;padding:8px 16px}
+.sys.exit .t{font-size:13px} .sys.exit .d{font-size:12px}
+
+/* ---------- step list (.steps): a runbook that is a straight line ---------- */
+.steps{list-style:none;counter-reset:st;margin:14px 0;padding:16px 18px 6px;background:#fff;border:1px solid var(--divider);border-radius:12px}
+.steps .st{counter-increment:st;position:relative;display:grid;grid-template-columns:34px minmax(0,1fr);column-gap:14px;padding:0 0 16px;margin:0}
+.steps .st::before{content:attr(data-n);grid-row:1/4;width:28px;height:28px;border-radius:50%;background:var(--ink);color:#fff;font:600 12.5px var(--sans);display:flex;align-items:center;justify-content:center;z-index:1}
+.steps .st:not([data-n])::before{content:counter(st)}
+.steps .st::after{content:"";position:absolute;left:13.5px;top:30px;bottom:2px;border-left:1.5px solid var(--line)}
+.steps .st:last-child::after{display:none}
+.steps .sk{font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);line-height:1.4}
+.steps .sn{font-size:14.5px;font-weight:600;color:var(--ink);line-height:1.4}
+.steps .so{font-size:13px;color:var(--ink2);line-height:1.5}
+.steps .st.new::before{background:var(--new)} .steps .st.chg::before{background:var(--chg)}
+.steps .st.gate::before{border-radius:4px;transform:rotate(45deg) scale(.86)}
+
+/* ---------- phase lanes (.plan): build order. Rows = the repo that owns the work, columns = phases.
+   Dependencies are words on the card ("after P0a"), never wires. ---------- */
+.plan{margin:14px 0;display:flex;flex-direction:column;gap:10px}
+.plan-h,.plan-row{display:grid;grid-template-columns:128px repeat(var(--cols,4),minmax(0,1fr));column-gap:12px}
+.plan-h{font-size:12.5px;font-weight:600;color:var(--ink2);padding:0 0 0}
+.plan-row{background:var(--lane);border-radius:10px;padding:12px 0;align-items:start}
+.plan-who{padding:8px 14px;font-size:14px;font-weight:600;color:var(--ink)}
+.plan-cell{display:flex;flex-direction:column;gap:8px;min-width:0}
+.pc{display:flex;flex-direction:column;gap:2px;padding:10px 12px;background:#fff;border:1px solid var(--line);border-radius:8px;min-width:0}
+.pc .pid{font-family:var(--mono);font-size:11.5px;color:var(--muted)}
+.pc b{font-size:14px;font-weight:600;line-height:1.3;color:var(--ink)}
+.pc .pd{font-size:12.5px;line-height:1.4;color:var(--ink2)}
+.pc .pa{font-size:12px;line-height:1.4;color:var(--muted);margin-top:2px}
+.pc.key{border:2px solid var(--ink)}
+.pc.risk{border:1.5px solid #c2341c} .pc.risk .pid{color:#9b2615}
+@media(max-width:820px){.plan-h{display:none}.plan-row{grid-template-columns:1fr;row-gap:8px;padding:12px}.plan-who{padding:0}}
+
+/* ---------- chains (.dfg) that would wrap go vertical instead (class set by spec-kit.js) ---------- */
+.dfg.vert{flex-direction:column;align-items:flex-start;flex-wrap:nowrap}
+.dfg.vert .node{width:min(420px,100%)}
+.dfg.vert .edge{flex-direction:row;max-width:none;min-width:0;padding:6px 0 6px 64px;gap:10px;align-items:center}
+.dfg.vert .edge .ar{transform:rotate(90deg);order:-1}
+.dfg.vert .edge .el br{display:none}
+
+/* descriptive text in diagrams reads as prose, not code */
+.node .nf,.edge .el,.seq-msg .m2,.dflow .out,.dflow .dno,.dflow .yes{font-family:var(--sans)}
+.node .nf{font-size:12px;color:var(--ink2)} .dflow .out{font-size:13px} .dflow .dq .q{font-size:13.5px}
+.ent .row{font-size:12.5px} .ent .row .ty{font-size:11.5px}
+
+/* ============================================================
+   v6.1 — one type system for the whole page.
+   Five sizes, two text colours, one family (mono only for code identifiers):
+     --fs-title 28   tab title (h2)               ink
+     --fs-sec   19   section heading = its claim   ink
+     --fs-body  15   prose, lede, callouts         ink / ink2
+     --fs-small 13   legend, captions, box detail  ink2
+     --fs-micro 11   kind words, column heads      ink2
+   No eyebrow, no sub line, no letter badges, no coloured rules on prose.
+   ============================================================ */
+:root{--fs-title:28px;--fs-sec:19px;--fs-body:15px;--fs-small:13px;--fs-micro:11px;--muted:#4b5361}
+body{color:var(--ink);font-size:var(--fs-body)}
+h2{font-family:var(--sans);font-size:var(--fs-title);font-weight:650;letter-spacing:-.015em;line-height:1.2;color:var(--ink);margin:8px 0 8px}
+h2 .eyebrow,h2 .sub{display:none}
+h3{display:block;font-size:var(--fs-sec);font-weight:600;line-height:1.35;color:var(--ink);margin:44px 0 10px;max-width:880px}
+h3 .hn{display:none}
+h4{font-size:var(--fs-body);color:var(--ink)}
+h2 code,h3 code,.claim code{font-size:.9em;background:none;border:0;padding:0;color:inherit}
+.lede{font-size:16px;line-height:1.55;color:var(--ink2);border-left:0;padding-left:0;margin:4px 0 8px;max-width:860px}
+/* a section heading IS the claim of the diagram under it; the citation trails it, small and grey */
+h3.claim{border:0;background:none;padding:0;font-size:var(--fs-sec);font-weight:600;color:var(--ink);margin:44px 0 10px}
+h3.claim .src{font-size:var(--fs-small);font-weight:400;color:var(--ink2);margin-left:6px;white-space:nowrap}
+h3.claim .src a.cite{color:inherit;text-decoration:underline dotted;text-underline-offset:2px}
+/* a claim that is not a heading (a caption under a table) */
+p.claim{font-size:var(--fs-small);color:var(--ink2);border-left:0;background:none;padding:0;margin:8px 0 24px}
+p.claim b{color:var(--ink);font-weight:600}
+/* legend + view toggle share one row directly under the heading */
+.sys-legend{font-size:var(--fs-small);color:var(--ink2);margin:0 0 10px;align-items:center}
+.dview{margin:0 16px 10px 0;vertical-align:middle}
+.dview + .sys-legend{display:inline-flex;vertical-align:middle}
+.how{display:none}
+/* callouts: one style, label in the body face */
+.callout,.callout.ember,.callout.new{background:#fff;border:1px solid var(--divider);border-left:1px solid var(--divider);border-radius:10px;padding:14px 18px;font-size:var(--fs-body);color:var(--ink)}
+.callout .lab,.callout.ember .lab,.callout.new .lab{font-family:var(--sans);font-size:var(--fs-small);letter-spacing:0;text-transform:none;color:var(--ink2);font-weight:600;margin-bottom:4px}
+.callout.ember{border-color:#f2cf8e;background:#fffaf0}
+/* diagram chrome in the same scale */
+.sysmap .colh,.plan-h{font-size:var(--fs-micro);font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink2)}
+.sys .k,.steps .sk,.pc .pid{font-size:var(--fs-micro);color:var(--ink2)}
+.sys .d,.pc .pd,.steps .so,.node .nf{font-size:var(--fs-small);color:var(--ink2)}
+.pc .pa{font-size:var(--fs-small);color:var(--ink2)}
+.sys-refs .refrow{font-size:var(--fs-small);color:var(--ink2)}
+.card{font-size:var(--fs-body);color:var(--ink)} .card b{color:var(--ink)}
+.catgrp .cath{font-family:var(--sans);font-size:var(--fs-body);font-weight:600;background:#fff;color:var(--ink);border-bottom:1px solid var(--divider)}
+.catgrp .cath .cgl{background:var(--lane);color:var(--ink2)}
+.uci{font-size:var(--fs-small)} .uci .uid{color:var(--ink2)}
+.uc .uch{background:#fff;color:var(--ink);border-bottom:1px solid var(--divider)}
+.uc .uch .uct{font-family:var(--sans);font-size:var(--fs-body);font-weight:600}
+.uc .uch .actor{font-family:var(--sans);font-size:var(--fs-micro);color:var(--ink2);font-weight:600;letter-spacing:.06em}
+.uc .uch .ucn{background:var(--lane);color:var(--ink2)}
+.uc .ucsub{font-size:var(--fs-small);color:var(--ink2);background:#fff}
+.spectable{font-size:var(--fs-small)}
+.spectable thead th{font-family:var(--sans);font-size:var(--fs-micro);background:#fff;color:var(--ink2);border-bottom:1px solid var(--divider)}
+.xref,.foot{font-family:var(--sans);font-size:var(--fs-small);color:var(--ink2);background:none;border-color:var(--divider)}
+.callout .lab::first-letter{text-transform:uppercase}
+.pc .pid{font-family:var(--sans);font-weight:600;letter-spacing:.02em}
+
+/* ============================================================
+   v6.2 — linked entity diagram (.erd.linked): the relationships are
+   drawn between the entity cards by spec-kit.js (same <a class="sys-edge">
+   markup as a system map), labelled in words, arrow from the one to the
+   many. Replaces the crow's-foot .rels text panel.
+   ============================================================ */
+.erd.linked{position:relative;display:grid;gap:64px 80px;align-items:center;padding:28px 24px}
+.erd.linked .ent{position:relative;z-index:2;min-width:0;align-self:center}
+.erd.linked svg.edges{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1;overflow:visible}
+.erd.linked svg .e{fill:none;stroke:var(--wire);stroke-width:1.5}
+.erd.linked svg .e.new{stroke:var(--new);stroke-width:2}
+.erd.linked svg .e.chg{stroke:var(--chg);stroke-width:2}
+.erd.linked svg .lbl{font:600 12px var(--sans);fill:var(--ink2)}
+.erd.linked svg .lbl.new{fill:var(--newink)}
+.erd.linked svg .lblbg{fill:#fbfcfd;stroke:none}
+.erd.linked .ent,.erd.linked svg .e,.erd.linked svg .lbl{transition:opacity .15s}
+.erd.linked.focus .ent:not(.on){opacity:.25}
+.erd.linked.focus svg .e:not(.on),.erd.linked.focus svg .lbl:not(.on),.erd.linked.focus svg .lblbg:not(.on){opacity:.1}
+.ent .eh .stereo{font-family:var(--sans);font-size:var(--fs-micro);font-weight:600;letter-spacing:.06em}
+
+/* ============================================================
+   v6.2 — written content (.doc): goals, rationale, non-goals read as a
+   document — numbered paragraphs with a bold lead phrase — not as cards.
+   Cards are only for things the reader compares side by side.
+   ============================================================ */
+.doc{max-width:780px;font-size:16px;line-height:1.65;color:var(--ink)}
+.doc p{margin:0 0 14px}
+.doc ol.goals{list-style:none;counter-reset:g;padding:0;margin:14px 0 18px}
+.doc ol.goals > li{counter-increment:g;display:grid;grid-template-columns:44px minmax(0,1fr);margin:0 0 14px}
+.doc ol.goals > li::before{content:"G" counter(g);font-weight:600;color:var(--ink2);font-size:var(--fs-body);line-height:1.65}
+.doc ol.goals > li b:first-child{color:var(--ink)}
+.doc .aside{color:var(--ink2);font-size:var(--fs-small)}
+.doc code{font-size:.88em}
+/* entity cards on the page type system: change state is fill + border (like system-map boxes),
+   the column name is the only mono text, its description sits under it in grey sans */
+.ent{border:1px solid var(--line);border-radius:10px;box-shadow:none}
+.ent .eh,.ent.exist .eh{background:#fff;color:var(--ink);border-bottom:1px solid var(--divider);padding:9px 12px}
+.ent.newt{border:1.5px solid var(--new)} .ent.newt .eh{background:var(--newbg)} .ent.newt .eh .stereo{color:var(--newink)}
+.ent.changed{border:1.5px solid var(--chg)} .ent.changed .eh{background:var(--chgbg)} .ent.changed .eh .stereo{color:var(--chgink)}
+.ent .eh .en{font-size:13.5px;color:var(--ink)} .ent .eh .stereo{color:var(--ink2);opacity:1}
+.ent .row{flex-wrap:wrap;row-gap:1px;padding:6px 12px;font-size:var(--fs-small)}
+.ent .row .nm{font-size:12.5px;color:var(--ink)}
+.ent .row .ty{flex:1 0 100%;margin-left:0;max-width:none;text-align:left;font-family:var(--sans);font-size:var(--fs-small);color:var(--ink2);overflow-wrap:normal}
+.ent .row .gut + .b ~ .ty,.ent .row .gut ~ .ty{padding-left:17px}
+.ent .b{background:none;border:0;padding:0;font-family:var(--sans);font-size:10.5px;color:var(--ink2);letter-spacing:.04em}
+.ent .b-new{color:var(--newink)}
+.ent .row.hi{background:var(--lane)}
+.ent .row.add .nm{color:var(--newink)}
+.ent .note{font-family:var(--sans);font-style:normal;font-size:var(--fs-small);color:var(--ink2);background:#fff;padding:8px 12px}
+/* v6.2: figure captions match p.claim; step markers grow for 2.11-style numbers */
+figure.concept figcaption{font-size:var(--fs-small);color:var(--ink2);border-left:0;background:none;padding:0;margin-top:10px}
+figure.concept figcaption b{color:var(--ink);font-weight:600}
+.steps .st::before{width:auto;min-width:28px;padding:0 6px;border-radius:14px;box-sizing:border-box;justify-self:start}
+
+/* ============================================================
+   v6.3 — masthead and tabs on the page type system.
+   The masthead is a document title block, not a banner: light ground,
+   sans throughout, aligned to the content column, one primary action.
+     .kicker   project · topic           13px, grey, sentence case
+     h1        the spec's title          34px, ink
+     p         what the spec is about    17px, grey, ≤ 2 sentences
+     .meta     status pill, date, companion file
+     a.spec-link   "Read the spec"        the one button
+   Tabs: a light underline bar, no numbers.
+   ============================================================ */
+header.masthead{background:#fff;color:var(--ink);padding:44px max(26px,calc((100% - 1088px)/2)) 30px;border-bottom:1px solid var(--divider);overflow:visible}
+header.masthead::after{display:none}
+header.masthead .kicker{font-family:var(--sans);font-size:var(--fs-small);font-weight:600;letter-spacing:0;text-transform:none;color:var(--ink2)}
+header.masthead h1{font-family:var(--sans);font-size:34px;font-weight:700;letter-spacing:-.02em;line-height:1.15;color:var(--ink);margin:8px 0 12px;max-width:900px}
+header.masthead p{color:var(--ink2);font-size:17px;line-height:1.55;max-width:780px;margin:0}
+header.masthead p code{background:var(--lane);border:0;color:var(--ink)}
+header.masthead .meta{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;margin-top:18px;font-family:var(--sans);font-size:var(--fs-small);color:var(--ink2)}
+header.masthead .meta .status{font-weight:600;color:var(--chgink);background:var(--chgbg);border:1px solid var(--chgbd);border-radius:999px;padding:2px 10px}
+header.masthead .meta code{font-size:12px;background:none;border:0;padding:0;color:var(--ink2)}
+header.masthead a.spec-link{display:inline-flex;align-items:center;gap:6px;margin-top:20px;font:600 14px var(--sans);color:#fff;background:var(--ink);border:0;border-radius:8px;padding:10px 16px;min-height:40px;box-sizing:border-box}
+header.masthead a.spec-link:hover{background:#000}
+nav.tabs{background:#fff;box-shadow:none;border-bottom:1px solid var(--divider);gap:4px;padding:0 max(14px,calc((100% - 1088px)/2 - 12px))}
+nav.tabs button{color:var(--ink2);font-size:14.5px;font-weight:500;padding:14px 12px 12px;border-bottom:2px solid transparent;transition:color .12s,border-color .12s}
+nav.tabs button .n{display:none}
+nav.tabs button:hover{color:var(--ink);background:none}
+nav.tabs button.active{color:var(--ink);font-weight:600;border-bottom-color:var(--ink);background:none}
+nav.tabs button:focus-visible{outline:2px solid var(--new);outline-offset:-2px}
+nav.tabs{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none} nav.tabs::-webkit-scrollbar{display:none}
+nav.tabs button{white-space:nowrap;flex:0 0 auto}
+@media(max-width:640px){header.masthead{padding:28px 16px 22px} header.masthead h1{font-size:27px}}
+
+/* ============================================================
+   v6.4 — request, activity, response (.rar)
+   One call that hides work. Caller on the left, the called thing on the
+   right; the request crosses at the top, the steps run down the right,
+   the response crosses back at the bottom. A child process / sub-call
+   nests as .rar-step.child (dashed) with its own .rar-sub steps.
+   Markup: see COMPONENTS.md → Request, activity, response.
+   ============================================================ */
+.rar{display:grid;grid-template-columns:minmax(0,.9fr) 92px minmax(0,1.35fr);grid-template-rows:auto auto 1fr auto;margin:14px 0;padding:22px 22px 24px;background:#fff;border:1px solid var(--divider);border-radius:12px;align-items:start}
+.rar-h{display:flex;flex-direction:column;gap:2px;padding-bottom:14px}
+.rar-h .k{font-size:var(--fs-micro);font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink2)}
+.rar-h b{font-size:16px;font-weight:600;color:var(--ink)} .rar-h .d{font-size:var(--fs-small);color:var(--ink2)}
+.rar-h.caller{grid-area:1/1} .rar-h.called{grid-area:1/3}
+.rar-req,.rar-res{display:flex;flex-direction:column;gap:8px;padding:14px 16px;border-radius:10px}
+.rar-req{grid-area:2/1;background:var(--newbg);border:1.5px solid var(--new)}
+.rar-res{grid-area:4/1;background:var(--lane);border:1.5px solid var(--ink);align-self:end}
+.rar-req .lab,.rar-res .lab{font-size:var(--fs-micro);font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink2)}
+.rar-req .lab{color:var(--newink)}
+.rar pre{margin:0;padding:10px 12px;background:#fff;border-radius:8px;font-family:var(--mono);font-size:12px;line-height:1.55;white-space:pre-wrap;color:var(--ink);overflow-x:auto}
+.rar .note{font-size:var(--fs-small);color:var(--ink2);line-height:1.45}
+.rar-wait{grid-area:3/1;align-self:stretch;display:flex;flex-direction:column;align-items:center;gap:8px;padding:10px 0;min-height:60px}
+.rar-wait::before,.rar-wait::after{content:"";flex:1;border-left:2px dashed var(--line)}
+.rar-wait span{font-size:var(--fs-small);color:var(--ink2);text-align:center;max-width:220px}
+.rar-arrow{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:12px;font-weight:600;padding-top:30px}
+.rar-arrow.in{grid-area:2/2;color:var(--newink)} .rar-arrow.out{grid-area:4/2;color:var(--ink);align-self:end;padding-bottom:30px}
+.rar-arrow i{display:block;width:70px;height:2px;background:currentColor;position:relative}
+.rar-arrow.in i::after{content:"";position:absolute;right:-2px;top:-5px;border:6px solid transparent;border-left:9px solid currentColor;border-right:0}
+.rar-arrow.out i::before{content:"";position:absolute;left:-2px;top:-5px;border:6px solid transparent;border-right:9px solid currentColor;border-left:0}
+.rar-steps{grid-area:2/3/5/4;list-style:none;margin:0;padding:0;counter-reset:rs;display:flex;flex-direction:column}
+.rar-step{counter-increment:rs;position:relative;display:grid;grid-template-columns:28px minmax(0,1fr);column-gap:12px;padding:14px 16px;border:1px solid var(--line);border-radius:10px;background:#fff;margin-bottom:34px}
+.rar-step:last-child{margin-bottom:0}
+.rar-step::before{content:counter(rs);grid-row:1/20;width:28px;height:28px;border-radius:14px;background:var(--ink);color:#fff;font:600 12.5px var(--sans);display:flex;align-items:center;justify-content:center}
+.rar-step::after{content:"";position:absolute;left:50%;bottom:-30px;height:24px;border-left:2px solid var(--wire)}
+.rar-step:last-child::after{display:none}
+.rar-step > *{grid-column:2;min-width:0}
+.rar-step b{font-size:14.5px;font-weight:600;color:var(--ink)}
+.rar-step > span{font-size:13.5px;line-height:1.5;color:var(--ink2)}
+.rar-step pre{margin-top:8px;background:var(--lane)}
+.rar-step .branch{justify-self:start;margin-top:6px;font-size:12px;font-weight:600;color:var(--chgink);background:var(--chgbg);border:1px solid var(--chgbd);border-radius:999px;padding:2px 10px}
+.rar-step.child{border:1.5px dashed var(--ink);background:#fafbfc}
+.rar-sub{grid-column:2;list-style:none;margin:10px 0 0;padding:12px 14px;border-left:3px solid var(--ink);background:#fff;border-radius:0 8px 8px 0;display:flex;flex-direction:column;gap:22px}
+.rar-sub li{position:relative;padding:8px 10px;border:1px solid var(--line);border-radius:8px;font-size:13px;color:var(--ink2)}
+.rar-sub li b{display:block;font-size:13.5px;color:var(--ink)}
+.rar-sub li + li::before{content:"";position:absolute;left:50%;top:-20px;height:16px;border-left:2px solid var(--wire)}
+@media(max-width:820px){.rar{grid-template-columns:minmax(0,1fr);grid-template-rows:none}.rar-h.caller,.rar-h.called,.rar-req,.rar-res,.rar-steps,.rar-arrow,.rar-wait{grid-area:auto}.rar-wait{display:none}.rar-arrow{flex-direction:row;padding:8px 0}}
+
+/* ============================================================
+   v6.5 — git-diff colours (Will's call, 2026-10-14): green = added / new,
+   yellow = modified, red = deleted / dropped. Tokens: --new*, --chg*, --ret*.
+   Entity cards gain a modified row (.row.mod, "~", shows "was: …") and a
+   dropped table (.ent.dropped: red, dashed, name struck through, faded).
+   ============================================================ */
+.ent .row.mod{background:var(--chgbg);box-shadow:inset 3px 0 0 var(--chg)}
+.ent .row.mod .gut{color:var(--chgink)} .ent .row.mod .nm{color:var(--chgink)}
+.ent .row.add .nm{color:var(--newink)}
+.ent .row.del{background:var(--retbg);box-shadow:inset 3px 0 0 var(--ret)} .ent .row.del .gut,.ent .row.del .nm{color:var(--retink)}
+.ent.dropped{border:1.5px dashed var(--ret);opacity:.85}
+.ent.dropped .eh{background:var(--retbg)} .ent.dropped .eh .stereo{color:var(--retink)}
+.ent.dropped .eh .en,.ent.dropped .row .nm{text-decoration:line-through;color:var(--retink)}
+.sys-legend i.box.del{border:1.5px dashed var(--ret);background:var(--retbg)}
+/* v6.6 — composite primary key: the key's rows sit in a .pkgroup with a "{" down their left
+   edge and a small label, so "these columns together identify a row" reads at a glance. */
+.ent .pkgroup{position:relative;padding-left:18px;border-top:1px solid #eef1f4}
+.ent .pkgroup:first-child{border-top:0}
+.ent .pkgroup::before{content:"";position:absolute;left:8px;top:28px;bottom:8px;width:8px;border:2px solid var(--ink);border-right:0;border-radius:9px 0 0 9px}
+.ent .pkgroup::after{content:"";position:absolute;left:2px;top:calc(50% + 10px);width:7px;border-top:2px solid var(--ink)}
+.ent .pkgroup .pklabel{display:block;padding:7px 12px 0 4px;font-size:var(--fs-micro);font-weight:600;letter-spacing:.04em;color:var(--ink2)}
+.ent .pkgroup .row{border-top:0;padding-left:6px}
+.ent .pkgroup .row + .row{border-top:1px solid #eef1f4}  /* dividers between key rows, starting right of the brace */
+/* v6.7 — the composite-key brace sits OUTSIDE the card, in the gutter, so key rows align with
+   every other row; each column shows its DB type on the right of its name (.dt). */
+.ent{overflow:visible}
+.ent > :first-child{border-radius:9px 9px 0 0}
+.ent > :last-child{border-radius:0 0 9px 9px}
+.ent .pkgroup{padding-left:0}
+.ent .pkgroup::before{left:-16px;top:30px;bottom:8px;width:9px}
+.ent .pkgroup::after{left:-22px;width:7px}
+.ent .pkgroup .row{padding-left:12px}
+.ent .pkgroup .pklabel{padding:7px 12px 0 12px}
+.ent .row .dt{margin-left:auto;padding-left:10px;font-family:var(--mono);font-size:12px;color:var(--ink2);white-space:nowrap}
+.ent .row .dt i{font-style:normal;color:#8a919c}
+.erd.linked{padding-left:44px}
+
+/* ============================================================
+   v6.8 — runbook page: "graph node explained" (.nx-*)
+   A runbook tab = the runbook graph (.sysmap.rgraph) first, then one .nx-step per
+   graph node in graph order: header (badge shape = executor, kind line, name,
+   locator strip, template chip) → 2–3 sentence summary → the step's template
+   diagram → hr.nx-div. 14 templates (T1–T14), one per KIND of step; T5, T8, T11
+   and T13 reuse kit primitives (.rgraph, .dflow, .uc). Colour stays reserved for
+   change state; executor kind is a word + shape. COMPONENTS.md → Runbook page.
+   ============================================================ */
+
+/* ---- step block: header + summary + diagram, then a divider ---- */
+.nx-step{padding:6px 0 4px}
+.nx-hd{display:grid;grid-template-columns:auto minmax(0,1fr) auto;column-gap:16px;align-items:start}
+.nx-id{font:650 15px var(--mono);color:#fff;background:var(--ink);border-radius:8px;padding:7px 10px;line-height:1;margin-top:3px}
+.nx-id.gate{border-radius:3px}
+.nx-id.agent{background:#fff;color:var(--ink);box-shadow:inset 0 0 0 2px var(--ink)}
+.nx-id.fan{background:#fff;color:var(--ink);box-shadow:inset 0 0 0 2px var(--ink),4px 4px 0 -1px #fff,4px 4px 0 0 var(--ink)}
+.nx-k{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink2)}
+.nx-t{margin:2px 0 0;font-size:21px;font-weight:650;line-height:1.25;color:var(--ink)}
+.nx-tpl{font-size:12px;color:var(--ink2);border:1px solid var(--line);border-radius:999px;padding:4px 11px;background:#fff;white-space:nowrap;margin-top:4px}
+.nx-tpl b{color:var(--ink);font-weight:600}
+.nx-loc{display:flex;flex-wrap:wrap;gap:4px;margin:10px 0 0}
+.nx-loc span,.nx-loc a{font:500 11px var(--mono);color:var(--ink2);background:var(--lane);border-radius:5px;padding:2px 6px}
+.nx-loc .on{background:var(--ink);color:#fff}
+.nx-sum{font-size:15.5px;line-height:1.6;color:var(--ink);margin:14px 0 16px;max-width:900px}
+.nx-sum code{font-size:.88em}
+hr.nx-div{border:0;border-top:1px solid var(--divider);margin:36px 0 30px}
+
+/* shared atoms */
+.nx-card{background:#fff;border:1px solid var(--divider);border-radius:12px;padding:18px 20px}
+.nx-lab{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink2);margin-bottom:8px;display:block}
+.nx-arrow{display:flex;align-items:center;justify-content:center;color:var(--wire);font-size:22px}
+.nx-pill{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;border:1px solid var(--line);border-radius:999px;padding:3px 10px;background:#fff;color:var(--ink);line-height:1.4}
+.nx-pill i{font-style:normal;font-size:10px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--ink2)}
+.nx-block{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.05em;color:#fff;background:var(--ink);border-radius:4px;padding:1px 6px;margin-right:6px;vertical-align:1px}
+.nx-soft{display:inline-block;font-size:10px;font-weight:600;letter-spacing:.05em;color:var(--ink2);border:1px solid var(--line);border-radius:4px;padding:0 5px;margin-right:6px;vertical-align:1px}
+.nx-note{font-size:13px;color:var(--ink2);margin-top:12px;line-height:1.5}
+.nx-note b{color:var(--ink)}
+ul.nx-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:7px}
+ul.nx-list li{font-size:13.5px;line-height:1.45;color:var(--ink)}
+ul.nx-list li .d{display:block;font-size:12.5px;color:var(--ink2)}
+.nx-tree{font:12.5px/1.75 var(--mono);color:var(--ink);white-space:pre;margin:0}
+.nx-tree .c{color:var(--ink2)}
+
+/* T1 input gate: the request as a form, beside its contract */
+.nx-form{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:16px}
+.nx-field{display:grid;grid-template-columns:150px minmax(0,1fr);gap:10px;padding:7px 0;border-top:1px solid #eef1f4;font-size:13px}
+.nx-field:first-of-type{border-top:0}
+.nx-field .n{font-family:var(--mono);font-size:12.5px;color:var(--ink)}
+.nx-field .v{color:var(--ink2)}
+.nx-wait{margin-top:12px;display:flex;gap:10px;align-items:center;font-size:13px;color:var(--ink2)}
+.nx-wait b{font-family:var(--mono);font-size:12px;color:#fff;background:var(--ink2);border-radius:5px;padding:1px 6px}
+
+/* T2 stage: sources → what lands on disk; checks below */
+.nx-stage{display:grid;grid-template-columns:minmax(0,.9fr) 44px minmax(0,1.2fr);gap:0 8px;align-items:stretch}
+.nx-src{display:flex;flex-direction:column;gap:8px}
+.nx-src .nx-pill{border-radius:10px;justify-content:space-between;padding:7px 12px}
+.nx-checks-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+
+/* T3 roster planner */
+.nx-roster{display:grid;grid-template-columns:minmax(0,1fr) 44px minmax(0,1.3fr);gap:0 8px}
+.nx-chips{display:flex;flex-wrap:wrap;gap:6px}
+.nx-chips span{font:12px var(--mono);background:#fff;border:1px solid var(--line);border-radius:6px;padding:3px 8px}
+.nx-chips span.more{border-style:dashed;color:var(--ink2)}
+
+/* T4 agent fan-out: roster → one worker zoomed → contracts */
+.nx-fan{display:grid;grid-template-columns:150px 30px minmax(0,1fr) 30px 230px;align-items:stretch}
+.nx-stack{display:flex;flex-direction:column;gap:6px;position:relative}
+.nx-stack span{font:12px var(--mono);background:#fff;border:1px solid var(--line);border-radius:8px;padding:7px 10px}
+.nx-stack span.on{border:2px solid var(--ink);font-weight:600}
+.nx-stack span.more{border-style:dashed;color:var(--ink2)}
+.nx-stack .x{font-size:12px;color:var(--ink2);margin-top:4px}
+.nx-stack span.nx-lab,.nx-stack span.x{font-family:var(--sans);background:none;border:0;padding:0;border-radius:0}
+.nx-stack span.nx-lab{font-size:11px}
+.nx-worker{border:2px solid var(--ink);border-radius:14px;background:#fff;padding:16px 18px;display:flex;flex-direction:column;gap:12px}
+.nx-worker .wh{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+.nx-worker .wh b{font-size:15px}
+.nx-worker .wh span{font-size:12px;color:var(--ink2)}
+.nx-belt{display:flex;flex-wrap:wrap;gap:6px}
+.nx-belt span{font:12px var(--mono);background:var(--lane);border:1px solid var(--line);border-radius:6px;padding:3px 8px}
+.nx-belt span::before{content:"⚙ ";color:var(--ink2)}
+ol.nx-reads{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(var(--n,4),minmax(0,1fr));gap:8px;counter-reset:r}
+ol.nx-reads li{counter-increment:r;background:var(--lane);border-radius:10px;padding:10px 12px;font-size:13px;line-height:1.4;position:relative}
+ol.nx-reads li::before{content:counter(r);display:inline-flex;width:20px;height:20px;border-radius:50%;background:var(--ink);color:#fff;font:600 11px var(--sans);align-items:center;justify-content:center;margin-right:6px;vertical-align:1px}
+ol.nx-reads li b{font-weight:600}
+ol.nx-reads li .d{display:block;font-size:12px;color:var(--ink2);margin-top:3px}
+.nx-out{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:12.5px;color:var(--ink2)}
+.nx-out code{font-size:12px;background:#fff;border:1px solid var(--ink);border-radius:6px;padding:2px 7px;color:var(--ink)}
+.nx-contracts{display:flex;flex-direction:column;gap:10px}
+.nx-contracts .nx-card{padding:12px 14px}
+.nx-contracts ul.nx-list li{font-size:12.5px}
+
+/* T5 convergence loop sits on the kit runbook graph (.sysmap.rgraph) */
+
+/* T6 single-agent judgment: reads → decides → writes */
+.nx-judge{display:grid;grid-template-columns:minmax(0,1fr) 30px minmax(0,1.15fr) 30px minmax(0,1fr);align-items:stretch}
+.nx-judge .mid{border:2px solid var(--ink)}
+
+/* T7 session chain */
+.nx-chain{display:flex;align-items:stretch;gap:0;flex-wrap:nowrap}
+.nx-sess{flex:1 1 0;min-width:0;background:#fff;border:2px solid var(--ink);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:4px}
+.nx-sess .k{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink2)}
+.nx-sess b{font-size:14px}
+.nx-sess .d{font-size:12.5px;color:var(--ink2);line-height:1.4}
+.nx-sess.ghost{border-style:dashed;border-color:var(--line);background:transparent}
+.nx-hand{flex:0 0 112px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:11.5px;color:var(--ink2);text-align:center;gap:2px;padding:0 4px}
+.nx-hand .ar{font-size:20px;color:var(--wire);line-height:1}
+.nx-ends{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:14px}
+.nx-end{border:1.5px dashed var(--wire);border-radius:999px;padding:8px 16px;font-size:13px;background:#fff;text-align:center}
+.nx-end b{font-family:var(--mono);font-size:12px}
+.nx-ledger{margin-top:12px;display:flex;gap:10px;align-items:center;background:var(--lane);border-radius:10px;padding:10px 14px;font-size:13px;color:var(--ink2)}
+.nx-ledger b{color:var(--ink)}
+
+/* T9 fan-in: N folders → one rule → one output, with the accounting */
+.nx-funnel{display:grid;grid-template-columns:200px 30px minmax(0,1fr) 30px 230px;align-items:center}
+.nx-rule{border:2px solid var(--ink);border-radius:14px;background:#fff;padding:16px 18px}
+.nx-rule ol{margin:6px 0 0;padding-left:20px;font-size:13.5px;line-height:1.55}
+.nx-rule ol li{margin:3px 0}
+.nx-rule ol li .d{color:var(--ink2);font-size:12.5px}
+.nx-acct{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:14px;font-size:13px;color:var(--ink2)}
+.nx-acct span{background:#fff;border:1px solid var(--line);border-radius:8px;padding:4px 10px;color:var(--ink)}
+.nx-acct span b{font-family:var(--mono)}
+.nx-acct em{font-style:normal;font-weight:600;color:var(--ink2)}
+
+/* T10 deterministic checks */
+table.nx-rules{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--divider);border-radius:12px;overflow:hidden;font-size:13.5px}
+table.nx-rules th{text-align:left;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink2);background:var(--lane);padding:9px 14px}
+table.nx-rules td{padding:9px 14px;border-top:1px solid #eef1f4;vertical-align:top;line-height:1.45}
+table.nx-rules td.o{color:var(--ink2);font-size:12.5px;white-space:nowrap}
+
+/* T12 human gate: readout → decision → one row per outcome */
+.nx-gate{display:grid;grid-template-columns:minmax(0,.95fr) 120px minmax(0,1.3fr);gap:0 18px;align-items:center}
+.nx-dia{width:104px;height:104px;background:var(--ink);clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%);display:flex;align-items:center;justify-content:center;color:#fff;font-size:12.5px;font-weight:600;text-align:center;justify-self:center}
+.nx-outs{display:flex;flex-direction:column;gap:10px}
+.nx-o{display:grid;grid-template-columns:170px minmax(0,1fr);gap:12px;align-items:start;background:#fff;border:1px solid var(--divider);border-radius:12px;padding:11px 14px}
+.nx-o .v{font:600 12.5px var(--mono);color:var(--ink)}
+.nx-o .w{font-size:13px;line-height:1.45;color:var(--ink)}
+.nx-o .w .d{display:block;font-size:12px;color:var(--ink2);margin-top:2px}
+.nx-o.loop{border:1.5px dashed var(--ink2)}
+.nx-o.loop .v::before{content:"↺ ";color:var(--ink2)}
+.nx-o.go .v::before{content:"→ ";color:var(--ink2)}
+.nx-o.stop .v::before{content:"■ ";color:var(--ink2);font-size:10px}
+
+/* T13 publish: kit .uc chain + refusals */
+.nx-refuse{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:12px;font-size:13px;color:var(--ink2)}
+.nx-refuse code{font-size:12px;background:#fff;border:1.5px dashed var(--ink2);border-radius:6px;padding:2px 8px;color:var(--ink)}
+.nx-lanes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:12px}
+
+/* T14 side sink */
+.nx-sink{display:grid;grid-template-columns:minmax(0,1fr) 30px minmax(0,1fr) 30px minmax(0,1fr);align-items:stretch}
+.nx-sink .nx-card.dash{border:1.5px dashed var(--ink2)}
+
+/* template catalogue */
+.nx-cat{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.nx-tcard{background:#fff;border:1px solid var(--divider);border-radius:12px;padding:16px 18px;display:flex;flex-direction:column;gap:8px}
+.nx-tcard .top{display:flex;gap:10px;align-items:baseline}
+.nx-tcard .num{font:650 12px var(--mono);color:#fff;background:var(--ink);border-radius:6px;padding:3px 7px}
+.nx-tcard h4{margin:0;font-size:16.5px;font-weight:650}
+.nx-tcard .q{font-size:13.5px;color:var(--ink);line-height:1.45}
+.nx-tcard .slots{font-size:12.5px;color:var(--ink2);line-height:1.5}
+.nx-tcard .slots b{color:var(--ink);font-weight:600}
+.nx-tcard .use{display:flex;flex-wrap:wrap;gap:5px}
+.nx-tcard .use span{font:11.5px var(--mono);border-radius:5px;padding:2px 6px;background:var(--lane);color:var(--ink)}
+.nx-tcard .use span i{font-style:normal;color:var(--ink2)}
+.nx-tcard .base{font-size:12px;color:var(--ink2)}
+.nx-tcard .base code{font-size:11.5px}
+.nx-loc a{text-decoration:none} .nx-loc a:hover{background:var(--p100);color:var(--ink)}
+.nx-step[id]{scroll-margin-top:74px}
+/* narrow screens: every template stacks to one column and drops its arrows */
+@media (max-width:820px){
+  .nx-form,.nx-stage,.nx-roster,.nx-fan,.nx-judge,.nx-funnel,.nx-gate,.nx-sink,.nx-cat,.nx-lanes{grid-template-columns:minmax(0,1fr);gap:10px}
+  .nx-form>.nx-arrow,.nx-stage>.nx-arrow,.nx-roster>.nx-arrow,.nx-fan>.nx-arrow,.nx-judge>.nx-arrow,.nx-funnel>.nx-arrow,.nx-sink>.nx-arrow{transform:rotate(90deg);height:24px}
+  .nx-chain{flex-direction:column} .nx-hand{flex-basis:auto;flex-direction:row;padding:6px 0}
+  .nx-hand .ar{transform:rotate(90deg)}
+  .nx-ends{grid-template-columns:minmax(0,1fr)}
+  ol.nx-reads{grid-template-columns:minmax(0,1fr)}
+  .nx-hd{grid-template-columns:auto minmax(0,1fr)} .nx-tpl{grid-column:1/-1;justify-self:start}
+  .nx-o{grid-template-columns:minmax(0,1fr)}
+  .nx-dia{width:84px;height:84px}
+}
+
 </style>
 </head>
-<body class="reader" data-back="architecture.html" data-spec-sha="bb26caae7c8c68bd">
+<body class="reader" data-back="architecture.html" data-spec-sha="bddcb17dc0271baa">
 
 <header class="masthead">
   <div class="kicker">SPEC · READER</div>
@@ -442,6 +1164,7 @@ body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom
 <script type="text/markdown" id="spec-md">
 # Cartographer — anchoring extracted geometries to the county parcel
 
+**ID:** FEAT-56  
 **Status:** Draft v2 (P0a–P2 merged except cartographer#30, held for the prod apply; P2 exit runs pending)
 **Date:** 2026-09-25 (v1 2026-09-24)
 **Repos touched:** `surveyor` (read and report each layer's native spatial reference; `native_sr` recorded in each module's `layer-identity.json`), `bureau` (`site-research` resolve-site records `native_sr`; `arcgis_query.py`; new `anchor-geometry` runbook), `substation` (`sir_add_parcel_geo` fills `geom_local`; `cartographer_files` gets a link to where the document came from; new `cartographer_anchors` table; RPC that writes anchored geometries into `geo`), `cartographer` (`src/lib/geometry/anchor.ts` solvers; extraction records basis-of-bearings, units and scale factor; **`VISION.md` updated to include anchoring**, §3.9)
@@ -929,13 +1652,13 @@ if(__exports != exports)module.exports = exports;return module.exports}));
 
 </script>
 <script data-reader>
-/* spec-kit v5 — spec reader. Renders the embedded markdown (#spec-md) with marked, assigns
+/* spec-kit v5.3 — spec reader. Renders the embedded markdown (#spec-md) with marked, assigns
    deep-link ids, builds the TOC, and highlights the :target.
    ids assigned:
      headings   → GitHub-style slug of the text, PLUS an alias  s<number> for numbered headings
                   ("### 3.2 Piece A" → #s3-2, "## 1. Problem" → #s1)
-     tokens     → the first <strong> whose text starts with P0a / D12 / Q6 gets id="P0a" etc.
-   So a companion page can link to  SPEC.html#s3-2 , #D12 , #P0a , #Q6 . */
+     tokens     → the first <strong> whose text starts with P0a / D12 / Q6 / S2 gets id="P0a" etc.
+   So a companion page can link to  SPEC.html#s3-2 , #D12 , #P0a , #Q6 , #S2 . */
 (function(){
   const raw=document.getElementById('spec-md').textContent.replace(/<\\\/script/g,'</script').trim();
   const body=document.getElementById('spec-body');
@@ -953,9 +1676,9 @@ if(__exports != exports)module.exports = exports;return module.exports}));
     const m=text.match(/^(\d+(?:\.\d+)*)\.?\s/);
     if(m){const a=document.createElement('span');a.id=uniq('s'+m[1].replace(/\./g,'-'));a.className='anchor';h.before(a);}
   });
-  // tokens: **D4.** / **P0a …** / **Q6.**
+  // tokens: **D4.** / **P0a …** / **Q6.** / **S2: …**
   body.querySelectorAll('strong,b').forEach(s=>{
-    const m=s.textContent.trim().match(/^(P\d[a-z]?|D\d+|Q\d+)\b/);
+    const m=s.textContent.trim().match(/^(P\d[a-z]?|D\d+|Q\d+|S\d+)\b/);
     if(m&&!used.has(m[1])){s.id=m[1];used.add(m[1]);s.classList.add('tok');}
   });
   // tables scroll instead of the page

@@ -1,5 +1,6 @@
 # Design Spec: Migrating the CC "Download Report" PDF to the RDS Renderer
 
+**ID:** FEAT-22  
 **Date:** 2026-07-08
 **Status:** IMPLEMENTED — v2.0, 2026-07-16. All six workstreams shipped and §9 parity QA
 passed on production data. The only remaining step is the cutover itself (setting

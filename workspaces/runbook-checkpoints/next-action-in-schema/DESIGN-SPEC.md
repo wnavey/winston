@@ -1,5 +1,6 @@
 # Report back is a branch of the decision schema — kill the card's hardcoded "Then:" radio
 
+**ID:** FEAT-54  
 **Status:** Draft v1
 **Date:** 2026-09-23
 **Repos touched:** `substation` (derive `next_action` from the matched schema branch; stop reading it from the answer body), `cityhall` (delete the Proceed / Report back radio and the `next_action` field of the post), `bureau` (`ask --options` carries a per-option `next_action`; `answer --next-action` and `--no-report-back` retire; smoke's gate gains an `approved_then_pause` branch), `claude-plugins` (conductor skill §6)

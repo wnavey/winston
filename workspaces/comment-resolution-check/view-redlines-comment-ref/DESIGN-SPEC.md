@@ -1,5 +1,7 @@
 # `view-redlines-comment-ref` — Design Spec
 
+**ID:** FEAT-12
+
 > **Status:** Draft v1, 2026-06-29. Companion to
 > [`view-mcr-pdf`](../view-mcr-pdf/DESIGN-SPEC.md) for redline-sourced CRC
 > rows. Whereas the MCR viewer is "open the source PDF in the browser's

@@ -1,5 +1,6 @@
 # West Sacramento Walmart SIR — Paid Document Pulls
 
+**ID:** NOTE-3  
 **Status:** Draft v1
 **Date:** 2026-07-25
 **Repos touched:** none (this is an execution runbook for a fresh session, not a code change)

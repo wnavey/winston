@@ -1,5 +1,7 @@
 # `generate-crc-guides-from-redlines` — Design Spec
 
+**ID:** FEAT-4
+
 > **Status:** Draft revised 2026-06-23 (second revision same-day, after grounding Phase 4 field names against an actual navalbase enriched JSON). Companion to [`generate-crc-guides/DESIGN-SPEC.md`](../generate-crc-guides/DESIGN-SPEC.md). Drives implementation of a sibling Claude Code skill that turns a navalbase step-3 (or refined step-3) result for a single redline PDF into a per-department crc-guide file for the Comment Resolution Check workflow.
 >
 > Read [`../SPEC.md`](../SPEC.md) for the parent CRC architecture, [`../generate-crc-guides/DESIGN-SPEC.md`](../generate-crc-guides/DESIGN-SPEC.md) for the MCR-sourced sibling, and [`../crc-workflow/DESIGN-SPEC.md`](../crc-workflow/DESIGN-SPEC.md) for the Conductor workflow that consumes the emitted guide. This document only specifies what's *different* from the MCR-sourced sibling.

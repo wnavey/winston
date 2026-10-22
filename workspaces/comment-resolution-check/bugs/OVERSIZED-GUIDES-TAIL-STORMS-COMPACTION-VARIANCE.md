@@ -1,5 +1,7 @@
 # Oversized CRC guides are one root cause behind four symptoms: the wall-clock tail, both retry storms, both context compactions, and the chronic-variance cluster
 
+**ID:** BUG-6
+
 > **Status:** Diagnosed 2026-07-16 from the v5 game-day audit, fix NOT implemented. Root cause lives in **guide partitioning** (`generate-crc-guides` output — how many/which atomic items land in one guide file), not in conductor, the schema, or the model — it presents as four apparently-unrelated runtime pathologies; it isn't four bugs. Discovered on review `ed5e7ba9-ba03-4000-abb4-1021ebec0631` (1700 S Lamar v5, 2026-07-14, sonnet-4-6, 5×24 cells). Audit detail: `1700-S-Lamar/crc-run-audits/run-6-audit/crc-audit-agent-1-performance-stability.md` §5–§8 + `crc-audit-agent-2-high-variance-writeup.md`. Related: `STRUCT-OUTPUT-UNPARSED-EMIT-VARIANT.md` (symptom 2 in depth), winston#162/#164/#167 (guide-generation specs), claude-plugins#135 (census-first Phase 6 v2).
 
 ## Summary

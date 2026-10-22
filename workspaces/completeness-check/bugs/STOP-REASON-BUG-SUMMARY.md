@@ -1,5 +1,7 @@
 # Completeness Check — stop_reason=tool_use Guard Bug (2026-07-06 outage)
 
+**ID:** BUG-4
+
 > **Status:** Resolved. Filed 2026-07-07; fix merged and verified same day.
 > **Fix:** conductor PR #211 (`isInterruptedToolUseResult`).
 > **Trigger:** conductor PR #209 (Dependabot bump of `@anthropic-ai/claude-agent-sdk` 0.3.183 → 0.3.201, merged 2026-07-06 10:19 CDT).

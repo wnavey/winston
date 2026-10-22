@@ -1,5 +1,6 @@
 # CC checklist source UI: where each completeness-check item came from
 
+**ID:** FEAT-62  
 **Status:** Approved (v2, 2026-10-07)
 **Date:** 2026-10-07
 **Repos touched:** `bureau` (new `cc-source-citations` runbook; per-jurisdiction source manifest, per-version citations and overrides; URL-map fixes; one path-filtered sync workflow), `cityhall-new` (new `cc-source-snapshots` bucket + read policy migration; two pages; a Source link on CC findings)

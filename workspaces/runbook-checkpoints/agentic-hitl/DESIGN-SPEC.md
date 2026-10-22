@@ -1,5 +1,6 @@
 # Agentic HITL — the agent's inputs and outputs at a runbook gate
 
+**ID:** FEAT-49  
 **Status:** Draft v1
 **Date:** 2026-09-18
 **Repos touched:** none (as-built architecture record; the reduction it recommends is spec'd elsewhere)

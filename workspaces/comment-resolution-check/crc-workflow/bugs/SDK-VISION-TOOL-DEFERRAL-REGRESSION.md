@@ -1,5 +1,7 @@
 # CRC vision tool goes nearly unused after a claude-agent-sdk upgrade — tools get deferred behind "tool search" and the review agent never calls them
 
+**ID:** BUG-17
+
 > **Status:** Diagnosed 2026-09-17. **Stopgap fix shipped** as conductor **PR #295** (pin `@anthropic-ai/claude-agent-sdk` to `0.3.214`). Root cause lives in the **conductor ⇄ claude-agent-sdk tool-registration boundary**, exposed by an SDK version bump (`^0.3.235` → `^0.3.258`, conductor #288, 2026-09-10). Discovered while auditing CRC review `1eeddd0a-880d-4698-9fe6-93acb53c93c3` (workflow_run `e9fc8220-6692-4214-ade3-79d4a5e7c8a2`, Lamar+Collier svn8/U1, project `23301a8a-4cdb-4751-ac0c-93b97f0f5c12`). **Presents as a "the model stopped using vision" quality regression — it is actually a tool-availability/registration regression in the SDK.** A verified fix-forward (§10) exists but is deliberately deferred; the pin is the verified path.
 
 ---

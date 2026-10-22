@@ -1,5 +1,6 @@
 # Cloud Captain — an Agent SDK captain inside the Vercel Sandbox
 
+**ID:** FEAT-51  
 **Status:** Draft v3
 **Date:** 2026-09-21
 **Repos touched:** `bureau` (the captain entrypoint; `runbook_hitl_cli.py` bearer transport), `substation` (launch the captain as the carrier; two run-bearer gate routes; the per-run subscription token; billing defaults), `claude-plugins` (`/conductor` SKILL.md — every captain question becomes a DB row, on **both** lanes, D9), `conductor2` (nothing — §4, D4)

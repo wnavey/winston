@@ -1,5 +1,6 @@
 # SIR Viewing — dashboard SIR widget + file detail view (cityhall)
 
+**ID:** FEAT-35  
 **Status:** Draft v2
 **Date:** 2026-07-31
 **Type:** Implementable spec. This is the **read/view companion** to the publish-side spec `../sir-product-uploading/DESIGN-SPEC.md` (winston#203) — #203 writes `site_intelligence_report` + `sir_artifact` rows and uploads bytes to the private `sir-artifacts` bucket; this spec surfaces them in the app. It is the near-term, document-grade slice of the north-star `../sir-product-experience/DESIGN-SPEC.md` (winston#192) **Surface B1 "Document-grade delivery"** (§8, P1) — narrowed to: *promote the project dashboard to core, and show a SIR-artifact widget + per-file detail view that opens files in a new tab.* It deliberately does **not** build the web report viewer, report chat, findings layer, or map viewer (those are later #192 surfaces — see §11 non-goals).

@@ -1,5 +1,6 @@
 # generate-crc-guides Phase 6 v2 — Census-First Figure Extraction (Implementation Spec)
 
+**ID:** FEAT-25  
 **Status:** Draft v2
 **Date:** 2026-07-13 (v1: 2026-07-11)
 

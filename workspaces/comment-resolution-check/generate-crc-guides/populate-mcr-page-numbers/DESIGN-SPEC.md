@@ -1,5 +1,7 @@
 # Populate MCR Page Numbers (source-map parent bboxes) — Design Spec
 
+**ID:** FEAT-15
+
 > **Status:** Draft, 2026-07-01. Feature spec for closing a gap surfaced during the Lamar + Collier Gen 6 rerun.
 > Extends the parent [`generate-crc-guides` DESIGN-SPEC](../DESIGN-SPEC.md) — specifically Phase 10 (source-map emit).
 > **All questions in this draft are OPEN.** The author invited the spec to ship with unresolved decisions surfaced inline so downstream reviewers can weigh in without a second round of clarifying questions.

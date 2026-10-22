@@ -1,5 +1,7 @@
 # `expose-crc-pdf-metadata` — Design Spec
 
+**ID:** FEAT-14
+
 > **Status:** Draft, 2026-07-01. Cross-cutting design that touches both CRC
 > generation skills (`generate-crc-guides`, `generate-crc-guides-from-redlines`),
 > the substation API, and cityhall's CRC review page. Adds a per-review widget

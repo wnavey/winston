@@ -1,5 +1,6 @@
 # Lamar + Collier v5 Game Day — Submission Versioning Walkthrough + CRC Run Plan
 
+**ID:** NOTE-1  
 **Status:** Draft v1
 **Date:** 2026-07-09 (game day: 2026-07-10)
 **Repos touched:** none — this is an operational plan (winston only)

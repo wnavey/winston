@@ -1,5 +1,7 @@
 # `generate-crc-guides` — Instability Fix Design Spec
 
+**ID:** BUG-2
+
 > **Status:** Design ready for implementation. 2026-06-26.
 > **Pairs with:** [INSTABILITY-PROBLEMS-AND-FIX-PROPOSAL-SPEC.md](INSTABILITY-PROBLEMS-AND-FIX-PROPOSAL-SPEC.md) — the proposal is the *why*, this spec is the *what*.
 > **Scope:** Moderate re-investment in the existing skill. More patch than redesign. No conductor migration this round; that's a future batch.

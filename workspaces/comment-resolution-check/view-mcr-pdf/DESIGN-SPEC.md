@@ -1,5 +1,7 @@
 # `view-mcr-pdf` — Design Spec
 
+**ID:** FEAT-10
+
 > **Status:** Draft, 2026-06-27. Scoped MVP that satisfies the
 > [`transcribe-mcr-text`](../transcribe-mcr-text/DESIGN-SPEC.md) §9.3 use
 > case (open the source MCR PDF from a CRC review row) with the smallest

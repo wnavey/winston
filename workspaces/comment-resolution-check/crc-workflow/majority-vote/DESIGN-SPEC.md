@@ -1,5 +1,7 @@
 # CRC Majority Vote (medly) — Design Spec
 
+**ID:** FEAT-5
+
 > **Status:** Implementation in flight (2026-06-23). Bureau PR [noetic-inc/bureau#447](https://github.com/noetic-inc/bureau/pull/447) and cityhall PR [noetic-inc/cityhall#514](https://github.com/noetic-inc/cityhall/pull/514) opened on the same day. Refinements to this doc landed on branch `crc-medly-spec-refinements`.
 > **Implementation target:** `bureau/workflows/comment-resolution-check/` (workflow.yaml + scripts) + the three cityhall touches in §9.
 > **Successor work:** picked up by a fresh session via `bd ready` against the bead linked at the bottom of this spec.

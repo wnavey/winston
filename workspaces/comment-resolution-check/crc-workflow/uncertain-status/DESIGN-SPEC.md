@@ -1,5 +1,7 @@
 # CRC `uncertain` Status — Design Spec
 
+**ID:** FEAT-7
+
 > **Status:** Draft, 2026-06-25. Iteration on top of the
 > [CRC SPEC](../../SPEC.md), the
 > [crc-workflow DESIGN-SPEC](../DESIGN-SPEC.md), and the

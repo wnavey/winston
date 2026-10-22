@@ -1,5 +1,6 @@
 # Reference images for intake checklist items
 
+**ID:** FEAT-69  
 **Status:** Draft v1
 **Date:** 2026-10-16
 **Parent:** `../db-schema/DESIGN-SPEC.md` (v2.2, its Step 1) and `../db-schema/AUDIT-2026-10-16-tables.md` §3. Revises `../../completeness-check/vision-reference-images/DESIGN-SPEC.md` (winston#312) D2 and P2: the figures live in the App DB and Storage, not in a `figures/` folder in bureau.

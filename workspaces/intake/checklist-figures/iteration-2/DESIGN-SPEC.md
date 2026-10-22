@@ -1,5 +1,6 @@
 # Checklist figures, iteration 2: the guide says how a figure is used
 
+**ID:** FEAT-70  
 **Status:** Draft v1
 **Date:** 2026-10-19
 **Parent:** `../DESIGN-SPEC.md` (Draft v1, built as P1–P4) and `../IMPLEMENTATION-DETAILS.md` (what was built). This spec replaces that file's §13 proposal (one `guidance` field). It changes parent decisions D2, D6, D8, D9 and D11; those are named per decision below.

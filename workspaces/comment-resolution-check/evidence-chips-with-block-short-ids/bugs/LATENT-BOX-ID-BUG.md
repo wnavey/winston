@@ -1,5 +1,7 @@
 # Latent box↔text mispairing in `content_block` (wrong evidence-chip highlights)
 
+**ID:** BUG-5
+
 > **Status:** Diagnosed 2026-07-09. Root cause in substation's block
 > extraction; fix not yet implemented. Discovered via CRC run
 > `47eca23e-a010-4f87-ac3b-1cf6f4c481ae` (Lamar + Collier v4), finding

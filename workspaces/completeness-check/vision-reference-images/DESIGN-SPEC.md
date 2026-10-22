@@ -1,5 +1,6 @@
 # Completeness-check vision: how it works today, and reference images
 
+**ID:** ARCH-4  
 **Status:** Draft v1 (exploratory — a map of the current system and a first sketch of the change, not a build plan)
 **Date:** 2026-10-14
 **Repos touched:** `bureau` (the CC runbook's vision CLI, the CC guide folder layout, the review prompt)

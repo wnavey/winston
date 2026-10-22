@@ -1,5 +1,6 @@
 # CC Verdict / Triage Split and Appeal
 
+**ID:** FEAT-61  
 **Status:** Draft v1.2
 **Date:** 2026-10-05
 **Repos touched:** `cityhall-new` (phase 1: declarative schema with one trigger, one RPC, one column; `set-triage` split; `TriageCard`; CC landing + Overall results; CC PDF override wording), `dsd` (phase 2: RDS `StatusSummary` + `ChecklistFinding` for appeals), then `cityhall-new` again (phase 2: CC PDF appeals)

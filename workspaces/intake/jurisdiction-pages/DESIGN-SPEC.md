@@ -1,5 +1,6 @@
 # Intake checklist pages per jurisdiction: a homepage and a page per source
 
+**ID:** FEAT-67  
 **Status:** Draft v1.2
 **Date:** 2026-10-15
 

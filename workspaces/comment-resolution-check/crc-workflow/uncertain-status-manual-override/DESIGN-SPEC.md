@@ -1,5 +1,7 @@
 # CRC `uncertain` Manual Override — Design Spec
 
+**ID:** FEAT-6
+
 > **Status: SUPERSEDED, 2026-06-29.** This spec has been subsumed by the
 > [comment-triage-rework DESIGN-SPEC](../comment-triage-rework/DESIGN-SPEC.md).
 >

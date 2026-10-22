@@ -1,5 +1,6 @@
 # SIR Product Experience — North Star & Roadmap
 
+**ID:** ARCH-2  
 **Status:** Draft v1 (§5 revised 2026-07-28)
 **Date:** 2026-07-27
 **Author:** Will (with Jason's product briefing + Sal's viewer prototype as inputs)

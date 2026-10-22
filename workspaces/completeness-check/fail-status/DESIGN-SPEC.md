@@ -1,5 +1,6 @@
 # Design Spec: First-Class `warn` Status via the Fail Status Column
 
+**ID:** FEAT-16  
 **Status:** Implemented — bureau [#496](https://github.com/noetic-inc/bureau/pull/496), completion-officer [#19](https://github.com/noetic-inc/completion-officer/pull/19)
 **Date:** 2026-07-02
 **Scope:** Completeness-check workflow (bureau `workflows/completeness-check/` + jurisdiction guides), with a port of guide changes to completion-officer

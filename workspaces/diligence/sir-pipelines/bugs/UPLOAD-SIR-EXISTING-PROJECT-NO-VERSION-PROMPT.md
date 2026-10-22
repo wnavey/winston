@@ -1,5 +1,7 @@
 # `upload-sir` never offers to version an existing SIR — the existing-project branch silently attaches a parallel v0 when the project already holds a near-identical report
 
+**ID:** BUG-12
+
 > **Status:** Diagnosed 2026-08-04, fix NOT implemented. Root cause is in the **`upload-sir` skill** (`claude-plugins/plugins/noetic-tools/skills/upload-sir/SKILL.md` §3 "Choose the project" + § "Re-run & versioning", and its reader `scripts/publish.ts`). Discovered on the Hutton / Louisville car-wash SIR run `~/noetic/working/sir/hutton/car-wash-louisville-ky/2026-08-01-083311` — publishing that run created a **second `current_version = 0` SIR** under a project that **already contained a v0 SIR for the same site**, with no prompt to the operator. Sibling of [[ROLLUP-REQUIRES-DOWNSTREAM-PUBLISH-GATE]] and [[LOUISVILLE-EL-FEASIBILITY-GUIDE-DISCIPLINE-SWAP]]. **Presents as "the operator (me) should have version-bumped" — it isn't operator error: the skill has no branch that surfaces the choice, and no reader that could even detect the duplicate.**
 
 ## Summary

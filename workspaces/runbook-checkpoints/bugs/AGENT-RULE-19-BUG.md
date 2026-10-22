@@ -1,5 +1,7 @@
 # A city-written document filed as an applicant document: AGENTS-core rule 19 bars it, preprocessing reads it anyway (sometimes), and the reading layer already holds it
 
+**ID:** BUG-18
+
 > **Status:** diagnosed 2026-09-28, **not fixed. Deliberately left in place** so a re-run reproduces it (Will, 2026-09-25). This doc is the input to a brainstorming session on a robust solution, not a fix plan.
 > **Root cause lives in:** the *data*, not in any one runbook. City-authored documents are stored as ordinary applicant documents (`document.kind = 'document'`), so every consumer that trusts `kind` treats the city's review comments as part of the applicant's submission. Bureau's rule 19 (`runbooks/lib/AGENTS-core.md:37`) is the only thing that notices, and it notices by model judgement.
 > **Discovered on:** four `preprocessing-v4` (PPv4) cloud runs on **Valley View Townhomes** (project `63cead15-41f8-418c-b0ef-bd5c2b44719a`), submission `8fea702d-952c-4aa0-ab00-f848d8abf5b6`, `version_number` 3 (`submission_version` `31d7c595-39de-47ed-b7b7-a108d1b03e20`), 2026-09-24 → 2026-09-28.

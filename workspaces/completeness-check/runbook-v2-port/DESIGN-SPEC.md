@@ -1,5 +1,6 @@
 # Completeness Check → Runbook v2 (feature-parity port)
 
+**ID:** FEAT-60  
 **Status:** Implemented 2026-10-03 (v2.2). All six PRs merged and the bucket migration applied; parity not yet shown. Start at **§13 Next steps**, and see **§12 As built** for where the code departs from §3–§7.
 **Date:** 2026-10-02
 **Repos touched:** `bureau` (new `runbooks/completeness-check/`, two agent-tool CLIs, a tool-usage step, `publish_review_cli.py` lane B flags, the `cc-compare` evaluation runbook), `conductor2` (opt-in per-step persistence to Storage), `cityhall-new` (new `POST /api/runs/:runId/step-files` signing route)

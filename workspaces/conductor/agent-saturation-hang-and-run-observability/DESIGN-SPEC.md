@@ -1,5 +1,6 @@
 # Conductor Agent-Saturation Hang + Cloud-Run Observability
 
+**ID:** FEAT-31  
 **Status:** Draft v2
 **Date:** 2026-07-27
 **Repos touched:** `conductor` (per-agent timeout, maxWorkers clamp, orchestration heartbeat, resource-sampling sidecar, logger run-scoping), `substation` (timeout → mark-run-failed reconciliation, log harvest-before-kill, orphaned-run reaper, sandbox sizing), `bureau`/docs + `CLAUDE.md` (concurrency ceiling docs, hung-run runbook)

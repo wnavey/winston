@@ -1,5 +1,6 @@
 # Comment Observability & Debugging Page for CC and CRC in Inspector General
 
+**ID:** FEAT-24  
 **Status:** Draft v2.2
 **Date:** 2026-07-13
 **Repos touched:** `inspector-general` (post-processing, ingest, new debug route), `conductor` (D8 contract test; Phase 2: additive tool-call logging), `bureau` (Phase 2: script-tool attribution)

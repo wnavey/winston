@@ -1,5 +1,7 @@
 # `generate-crc-guides` — Design Spec
 
+**ID:** FEAT-1
+
 > **Status:** Draft, 2026-06-18. Iteration-1 of the [CRC spec](../SPEC.md) §4-A and §5.
 > Drives implementation of the first of three CRC components: the Claude Code skill
 > that turns an MCR PDF into per-department crc-guide markdown files.

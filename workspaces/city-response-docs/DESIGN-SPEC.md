@@ -1,5 +1,6 @@
 # City Response Documents
 
+**ID:** FEAT-43  
 **Status:** Draft v1
 **Date:** 2026-09-03
 **Repos touched:** `substation` (migration: new `document.city_response_type` column + `'city_response'` kind convention, RLS unchanged; new commit endpoint), `cityhall` (submission-page footer button + City Response section; document-page simplified viewer branch)

@@ -1,5 +1,6 @@
 # Reconciling the two Runbook Control Plane workstreams
 
+**ID:** NOTE-4  
 **Status:** Draft v3
 **Date:** 2026-09-09
 **Repos touched (proposed):** `substation` (rename A's tables + graft B's fields; one decide controller behind two routes), `bureau` (re-target the local captain CLI), `cityhall` (re-target the console)

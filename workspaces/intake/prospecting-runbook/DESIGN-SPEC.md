@@ -1,5 +1,6 @@
 # The intake-prospecting runbook
 
+**ID:** ARCH-5  
 **Status:** Draft v1.2.2
 **Date:** 2026-10-16
 > **Revision note v1.2.2 (2026-10-16, db-schema v2.1):** IDs use the jurisdiction code (db-schema D20).

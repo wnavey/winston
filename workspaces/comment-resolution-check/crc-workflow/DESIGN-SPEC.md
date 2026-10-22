@@ -1,5 +1,7 @@
 # `comment-resolution-check` Conductor Workflow — Design Spec
 
+**ID:** FEAT-2
+
 > **Status:** Draft, 2026-06-19; §6 revised 2026-06-22 to drop
 > `review_sections` writes, set `output_schema = '2026-06-crc'`, and embed
 > sections inside `reviews.output_json.sections` (precondition for the

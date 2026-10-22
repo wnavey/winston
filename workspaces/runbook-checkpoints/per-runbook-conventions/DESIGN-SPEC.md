@@ -1,5 +1,6 @@
 # Per-runbook conventions: runbooks choose the parts of AGENTS-core they get, and the run declares its answer-key posture
 
+**ID:** FEAT-58  
 **Status:** Draft v1
 **Date:** 2026-09-28
 **Companion:** `conventions.html` (same folder): the diagrams for everything below.

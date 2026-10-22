@@ -1,5 +1,6 @@
 # Sandbox API tokens — a per-run bearer for a subset of substation routes
 
+**ID:** FEAT-47  
 **Status:** Draft v1
 **Date:** 2026-09-11
 **Repos touched:** `substation` (generalize the per-run bearer into a route-allowlisted middleware; add the read + checkpoint routes under `/api/runs/:id/*`; inject the bearer into the runbook sandbox env), `conductor2` (a substation control-plane client that reads the stored token and emits a checkpoint at each step transition + can GET run state), `claude-plugins` + `bureau` (deferred: retire the LLM-driven `post-checkpoint`/`ask`/`await-answer` shell-outs once conductor2 owns them)

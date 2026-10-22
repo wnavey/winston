@@ -1,5 +1,6 @@
 # Jurisdiction Conventions — Source of Truth
 
+**ID:** ARCH-1  
 **Status:** Draft v2 — ✅ **DEV COMPLETE. All 7 phases done** (Phase 7's step 5 cancelled by decision — see D24/D35 revision) (see [Implementation Status](#implementation-status))
 **Date:** 2026-07-22 (impl status updated 2026-07-30)
 **Supersedes:** winston#182 "Path B" (the deferred jurisdictions-table work). Inherits #182's D1 (canonical id = Bureau slug) and D8 (named-token labeling schemes) unchanged.

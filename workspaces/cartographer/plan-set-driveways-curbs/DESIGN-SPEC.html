@@ -1147,7 +1147,7 @@ table.nx-rules td.o{color:var(--ink2);font-size:12.5px;white-space:nowrap}
 
 </style>
 </head>
-<body class="reader" data-back="architecture.html" data-spec-sha="41a337a6702b2e81">
+<body class="reader" data-back="architecture.html" data-spec-sha="f1d03234c6ad43a3">
 
 <header class="masthead">
   <div class="kicker">SPEC · READER</div>
@@ -1164,6 +1164,7 @@ table.nx-rules td.o{color:var(--ink2);font-size:12.5px;white-space:nowrap}
 <script type="text/markdown" id="spec-md">
 # Driveways and curbs from plan sets — existing and proposed, with widths, lengths and return radii, and the adjacent driveways the sheet leaves off
 
+**ID:** FEAT-71  
 **Status:** v3.6 — Phase 1 shipped and accepted (2026-10-21, anchor 3); PF1 shipped; Phase 2 re-cut (§3), not started
 **Date:** 2026-10-21
 **Phases:** **Phase 1a — curbs** (§2.1–2.3, §2.5–2.6; D1–D4, D8–D11): every proposed and existing curb line on the sheet with its arcs, paired, measured and carried through `extract-geometry-v2` and `anchor-geometry` as lines; ships on its own (§7.1a; v3.5: accepted together with 1b in one run). **Phase 1b — driveways** (§2.4, §2.7; D5–D7, D12): the lot's frontage edges found by code and every driveway derived from the curbs that cross them, as it exists and as it will exist; blocked by 1a's acceptance (§7.1b; v3.5: shipped without waiting for it, both accepted in one run). **Phase 2 — adjacent** (§3): the driveways next door, the street and its Level, and the right-of-way, fetched from the jurisdiction's public layers by a command that takes a parcel ring (not an anchor) and joined to Phase 1's rows on the grid; the first pass is openings, right-of-way and the street, with curb inlets, the sidewalk inventory and the orthophoto deferred (§10); blocked by two half-day checks (§3.5) and by surveyor's layer-role registry.

@@ -1,5 +1,6 @@
 # Cartographer — evidence and crops for an extracted geometry
 
+**ID:** FEAT-53  
 **Status:** Draft v2
 **Date:** 2026-09-23
 **Repos touched:** `cartographer` (runbook: transcribe/crop/tile contracts, a new `evidence.json`, `publish.ts`; a new per-geometry route in the app), `substation` (one migration — two new tables, plus `image/jpeg` on the `cartographer-files` bucket)

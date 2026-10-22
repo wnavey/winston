@@ -1,5 +1,6 @@
 # Cartographer — anchoring extracted geometries to the county parcel
 
+**ID:** FEAT-56  
 **Status:** Draft v2 (P0a–P2 merged except cartographer#30, held for the prod apply; P2 exit runs pending)
 **Date:** 2026-09-25 (v1 2026-09-24)
 **Repos touched:** `surveyor` (read and report each layer's native spatial reference; `native_sr` recorded in each module's `layer-identity.json`), `bureau` (`site-research` resolve-site records `native_sr`; `arcgis_query.py`; new `anchor-geometry` runbook), `substation` (`sir_add_parcel_geo` fills `geom_local`; `cartographer_files` gets a link to where the document came from; new `cartographer_anchors` table; RPC that writes anchored geometries into `geo`), `cartographer` (`src/lib/geometry/anchor.ts` solvers; extraction records basis-of-bearings, units and scale factor; **`VISION.md` updated to include anchoring**, §3.9)

@@ -1,5 +1,6 @@
 # Comment markings for the completeness-check runbook
 
+**ID:** FEAT-63  
 **Status:** Approved v3.2 (D22 page numbers move out of the verdict step, 2026-10-08)
 **Date:** 2026-10-08
 **Repos touched (proposed):** `bureau` (shared annotate kit lifted out of `runbooks/review/scripts/`; a new `2.12-annotate` step family in `runbooks/completeness-check/`; the stager writes block boxes; lane B of `publish_review.py` validates and stamps markings), `cityhall` (the CC adapter reads `annotations` / `annotation_disposition` the way the August adapter does; v2: the pdf.js document viewer draws markings on a page; v3: per-sheet marker/outline switch, colours by `marking_type`), `conductor2` (v3, D23: a step-level `after_retries: pass` key)

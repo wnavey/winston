@@ -1,5 +1,7 @@
 # `generate-crc-guides` — Instability Problems and Fix Proposal
 
+**ID:** BUG-3
+
 > **Status:** Draft, 2026-06-26. Diagnostic write-up of a gen-4 CRC run on the 1700 S Lamar U0 MCR (project `23301a8a…`, version 4) that completed without errors but silently skipped or undercut several pipeline phases. Proposes a phase-contract + execution-log overhaul to move enforcement off the skill prompt's prose imperatives and onto the filesystem.
 
 ---

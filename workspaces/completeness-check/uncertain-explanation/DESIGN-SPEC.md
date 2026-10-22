@@ -1,5 +1,7 @@
 # Completeness Check `uncertainExplanation` — Design Spec
 
+**ID:** FEAT-18
+
 > **Status:** Draft, 2026-07-06. Builds on the
 > [uncertain-status DESIGN-SPEC](../uncertain-status/DESIGN-SPEC.md)
 > (shipped: bureau #509, cityhall #565) and the

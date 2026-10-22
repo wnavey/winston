@@ -1,5 +1,6 @@
 # Seat resolution — spending the right person's subscription account on a cloud run
 
+**ID:** FEAT-52  
 **Status:** Draft v12 (as-built — implemented 2026-09-22; see the revision note)
 **Date:** 2026-09-22
 **Repos touched:** `substation` (the `subscription_seat` and `personal_api_key` tables, a `seat` column on `runbook_runs`, sealing the stored token, the `/api/seats` routes, personal-key auth, resolution and ownership enforcement at launch, recording who launched a run, the per-pass token fetch), `cityhall` (a **Settings** item in the profile menu and a `/settings` page whose first section, **Keys**, creates and reveals the person's own API key — §3.4c), `conductor2` (`init` sends the operator's identity as `x-on-behalf-of` from `NOETIC_USER_ID` — local attribution only; a cloud launch never goes through `init`), `claude-plugins` (the `register-seat` skill and its upload script), `bureau` (nothing beyond what `../cloud-captain/` already names)

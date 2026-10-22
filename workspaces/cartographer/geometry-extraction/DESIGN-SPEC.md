@@ -1,5 +1,6 @@
 # Cartographer — geometry extraction runbook (`extract-geometry`)
 
+**ID:** FEAT-48  
 **Status:** Draft v1
 **Date:** 2026-09-18
 **Repos touched:** `cartographer` (the runbook + prompts + scripts, and the `/processed` UI), `substation` (one migration — `cartographer_geometries`)

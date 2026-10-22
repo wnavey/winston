@@ -1,5 +1,6 @@
 # Intake checklist DB schema and the bureau sync
 
+**ID:** FEAT-66  
 **Status:** Draft v3.1
 **Date:** 2026-10-21
 > **Revision note v3.1 (2026-10-21, Will):** §2.4 is rewritten. The second investment is a live `intake_groups` table with one rule, **files unless the DB has rows for the jurisdiction, else the DB**, not an overrides layer. Titles and order work under it at once; membership turns on when refs can be the stable item ID (P2a), and until then 1.4-resolve refuses a run whose live rows disagree with the files on membership. P3 and Q10 change to match; the sync mirrors the run (D9).

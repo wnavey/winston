@@ -1,5 +1,7 @@
 # Completeness Check `uncertain` Status — Report Rendering — Design Spec
 
+**ID:** FEAT-19
+
 > **Status:** Draft, 2026-07-06 (rev 2 — added the substation PDF
 > surface, §3.6). Follow-up to the
 > [uncertain-status DESIGN-SPEC](../uncertain-status/DESIGN-SPEC.md)

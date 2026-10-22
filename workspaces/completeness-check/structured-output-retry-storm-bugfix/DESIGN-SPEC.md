@@ -1,5 +1,7 @@
 # Completeness Check — Structured-Output Retry-Storm Bugfix
 
+**ID:** FEAT-17
+
 > **Status:** Draft spec, ready for review. Filed 2026-07-02.
 > **Surface:** `bureau/workflows/completeness-check/` only (`workflow.yaml`, `schemas/`, `prompts/review.md`, both experiment prompt overlays). **Zero conductor changes.**
 > **Prior art:** `winston/workspaces/comment-resolution-check/crc-workflow/bugs/STRUCT-OUTPUT-RETRY-STORM.md` (the CRC bug history this port draws from), `winston/workspaces/workflow-triad-audit/audit.md` (recommendation #1).

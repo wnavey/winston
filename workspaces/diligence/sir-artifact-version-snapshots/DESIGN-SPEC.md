@@ -1,5 +1,6 @@
 # SIR artifact versions must be complete snapshots, not deltas
 
+**ID:** FEAT-36  
 **Status:** Draft v1
 **Date:** 2026-08-04
 **Type:** Implementable spec. **Amends** the publish-side spec `../sir-product-uploading/DESIGN-SPEC.md` (winston#203) §4.5 + §7 (the version-bump artifact model) and reinforces the read-side `../sir-product-viewing/DESIGN-SPEC.md` D3/§8 (current-version-only, no fallback). The two existing specs are each internally coherent but **jointly** cause silent document loss on any partial version bump; this spec closes that seam.

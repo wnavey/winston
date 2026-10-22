@@ -1,5 +1,6 @@
 # Hard Cap on `maxWorkers` for Completeness-Check and Comment-Resolution-Check
 
+**ID:** FEAT-32  
 **Status:** Draft v2
 **Date:** 2026-07-27
 

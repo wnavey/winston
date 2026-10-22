@@ -1,5 +1,6 @@
 # SIR Chat — Ask-Questions AI Chat on the Site Intelligence Report Page
 
+**ID:** FEAT-38  
 **Status:** Draft v2
 **Date:** 2026-08-06 (v2: 2026-08-06)
 **Repos touched:** `cityhall` (chat route, reset route, SIR-page UI + loader gate, shared availability helper, inline system prompt), `substation` (one additive migration: `conversations` columns + CHECK + index), `claude-plugins` (the `upload-sir` skill's `scripts/publish.ts` — DOCX→text extraction in the publish path **and** a one-off `backfill-text` subcommand for existing SIRs)

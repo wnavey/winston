@@ -1,5 +1,6 @@
 # RDS PDF Render Pipeline — How Noetic Generates Branded PDFs (and How to Replicate It)
 
+**ID:** ARCH-3  
 **Status:** Draft v1 (reference / architecture spec — documents the *existing* implementation)
 **Date:** 2026-07-28
 **Repos described:** `dsd` (`web/` — the Report Design System + the render pipeline + the two published packages), `substation` (`src/pdf/` — a serverless consumer)

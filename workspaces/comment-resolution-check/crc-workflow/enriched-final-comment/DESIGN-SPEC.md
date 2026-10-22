@@ -1,5 +1,7 @@
 # CRC `enrichedFinalComment` — Design Spec
 
+**ID:** FEAT-13
+
 > **Status:** Draft, 2026-06-30. Iteration on top of the
 > [CRC SPEC](../../SPEC.md), the
 > [crc-workflow DESIGN-SPEC](../DESIGN-SPEC.md), the

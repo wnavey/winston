@@ -1,5 +1,6 @@
 # SIR Publishing — `upload-sir` skill + `diligence-report` integration
 
+**ID:** FEAT-34  
 **Status:** Draft v1
 **Date:** 2026-07-31
 **Type:** Implementable spec. This is the **publish step** the companion data-model spec (`../sir-product-experience/data-model.md`, winston#… "SIR Data Model") repeatedly defers to — it resolves that spec's Q1 (`created_by`) and Q2 (`title`/`description`), and it **supersedes data-model §5's "publish endpoint (service-role backed)" for the MVP** (see D1). It is the P0 "run-sync bridge" of the north-star `../sir-product-experience/DESIGN-SPEC.md` (winston#192), narrowed to the near-term local-run operating model.

@@ -1,5 +1,6 @@
 # ReportContentsFlowing — a multi-page table of contents for RDS Report mode
 
+**ID:** FEAT-29  
 **Status:** Draft v1
 **Date:** 2026-07-21
 **Repos touched:** `dsd` (new RDS layout component + renderer `@page` rule + gallery sample + DOCX dispatch entry + render fixture; RDS package version bump), `substation` (CRV PDF swaps to the new component; RDS dependency + lockfile sync)

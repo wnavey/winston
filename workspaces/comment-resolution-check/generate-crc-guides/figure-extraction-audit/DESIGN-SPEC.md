@@ -1,5 +1,6 @@
 # Figure Extraction Audit — generate-crc-guides gen 6 (Lamar + Collier v4) + Robustness Redesign
 
+**ID:** NOTE-2  
 **Status:** Draft v1.1
 **Date:** 2026-07-10
 

@@ -1,5 +1,6 @@
 # Browser handoff — a hosted browser a person takes over at a HITL gate, and the agent gets back
 
+**ID:** FEAT-57  
 **Status:** Draft v2.1
 **Date:** 2026-09-25
 **Repos touched:** `substation` (owns the browser pointer: a JSON column on the question row, an open-browser route that reuses or creates a hosted browser and navigates it, a `hands` answer written as `hands-done.json`), `conductor2` (`noetic-browser hold` / `release` / `attach`; `reap` honours a hold; the park callback carries each hands item's page URL and held browser), `bureau` (site-research's acquire step holds and attaches; a smoke fixture behind `directives.hands`), `cityhall` (one row per item on the hands card with its own embed, open button and done/declined; `frame-src`), `claude-plugins` (the `agent-browser` skill's hosted-browser section names the new verbs)

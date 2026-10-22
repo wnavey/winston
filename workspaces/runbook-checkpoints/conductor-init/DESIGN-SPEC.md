@@ -1,5 +1,6 @@
 # `conductor init` — one local run-initialization verb
 
+**ID:** FEAT-46  
 **Status:** Draft v1
 **Date:** 2026-09-10
 **Repos touched:** `conductor2` (new `init` verb + a control-plane HTTP client), `substation` (`POST /api/runs` accepts projectless runs), `bureau` (`runbook_hitl_cli.py` drops `run-start`), `claude-plugins` (the `conductor` skill kicks off with `init` and drops its §6 DB register verb)

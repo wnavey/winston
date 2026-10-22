@@ -1,5 +1,7 @@
 # Structured-output retry storm, variant 2: the model writes unescaped inch-mark quotes (`24"+`) inside JSON strings — large findings emits arrive unparseable and the repair path is blind to them
 
+**ID:** BUG-8
+
 > **Status**: Diagnosed 2026-07-16, fix NOT implemented. **Rev 2 (2026-07-16): root cause CORRECTED** — rev 1 attributed the unparseable emits to *stream truncation*; a deeper log dive disproved that and identified **model-authored invalid JSON**: unescaped `"` inch marks quoted verbatim from dimensioned plan content (tree calipers, sq-ft callouts). Rev 1's truncation evidence is retracted in "What rev 1 got wrong" below. Root cause lives in the **emit content × the CLI's unhelpful parse-error feedback**, not in the schema, the envelope prompt, conductor's repair logic, or stream delivery. Discovered by the `audit-crc-run` skill on the v5 game-day run: review `ed5e7ba9-ba03-4000-abb4-1021ebec0631`, workflow_run `87370792`, 1700 S Lamar, 2026-07-14, sonnet-4-6. Sibling of `crc-workflow/bugs/STRUCT-OUTPUT-RETRY-STORM.md` (variant 1, double-wrap — whose fixes this run shows are fully effective: 0 wrapper signatures in 120 cells). That doc's zero-`coercion_failed` closure criterion is NOT met (2 events), but by a failure mode it never described. Audit detail: `1700-S-Lamar/crc-run-audits/run-6-audit/crc-audit-agent-1-performance-stability.md` §5.
 
 ## Summary

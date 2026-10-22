@@ -1,5 +1,7 @@
 # Semantic-search hybrid mode silently dead on cloud runs: `workflow_run` role lacks USAGE on schema `extensions`
 
+**ID:** BUG-7
+
 > **Status**: Diagnosed 2026-07-16, fix NOT implemented. Root cause lives in **substation's DB migrations** (a missing one-line grant), not in the search script, the RPC, or the CRC workflow — it presents as a "semantic search returns nothing" tool bug; it isn't one. Discovered by the `audit-crc-run` skill (Agent 3) on the v5 game-day run: review `ed5e7ba9-ba03-4000-abb4-1021ebec0631`, workflow_run `87370792-9453-4dbd-8141-8b812f29717a`, project 1700 S Lamar (`23301a8a-4cdb-4751-ac0c-93b97f0f5c12`), 2026-07-14. Audit reports: `workspaces/comment-resolution-check/1700-S-Lamar/crc-run-audits/run-6-audit/` (see `crc-audit-agent-3-observability-report.md`). Related: bureau#574 (Sec Wave 9 Round 1), winston#166 (run-token flag spec).
 
 ## Summary

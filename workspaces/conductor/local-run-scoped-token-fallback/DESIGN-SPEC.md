@@ -1,5 +1,6 @@
 # Conductor Local-Run Fallback for Sec Wave 9 Scoped Run Tokens
 
+**ID:** FEAT-26  
 **Status:** Draft v1
 **Date:** 2026-07-13
 **Repos touched:** `conductor` (CLI bootstrap alias + tests + `.env.example` docs)

@@ -1,5 +1,7 @@
 # CRC Comment Triage Rework — Design Spec
 
+**ID:** FEAT-11
+
 > **Status:** Draft, 2026-06-29.
 > Iteration on top of the [CRC SPEC](../../SPEC.md), the
 > [crc-workflow DESIGN-SPEC](../DESIGN-SPEC.md), the

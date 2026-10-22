@@ -1,5 +1,6 @@
 # Pre-Processing Clarifying Questions — HITL Prompts During File Upload / Triage
 
+**ID:** FEAT-41  
 **Status:** Draft v1
 **Date:** 2026-08-17
 **Repos touched:** `substation` (raise a clarifying question when pre-processing hits an ambiguous decision; pause + resume), `cityhall` (surface the question, collect the answer, route it back). Optional new table.

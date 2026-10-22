@@ -1,5 +1,6 @@
 # Ground Truth Evals Revamp for CC and CRC
 
+**ID:** FEAT-23  
 **Status:** Draft v2 — revised after codebase/DB audit
 **Date:** 2026-07-08
 **Repos touched:** `inspector-general` (compute, UI, Inngest, DAL), `substation` (SQL migrations)

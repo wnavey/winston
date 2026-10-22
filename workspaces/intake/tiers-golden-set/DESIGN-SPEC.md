@@ -1,5 +1,6 @@
 # Intake tiers and the site-plan golden set (exploratory handoff)
 
+**ID:** FEAT-72  
 **Status:** Draft v1.1 — exploratory handoff, not an implementation spec (no testing seams or PR plan yet, by Will's call)
 **Date:** 2026-10-21
 **Repos touched:** `winston` (this folder: the taxonomy, the golden set, its evidence)

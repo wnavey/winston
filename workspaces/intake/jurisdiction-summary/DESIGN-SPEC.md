@@ -1,5 +1,6 @@
 # Intake summary on the jurisdiction page
 
+**ID:** FEAT-73  
 **Status:** Draft v1.2
 **Date:** 2026-10-22
 **Repos touched:** `bureau` (intake-prospecting 2.3-verify, 3.1-write and 4.2-publish, the 1.0 worktree's sparse set, the `cc-source-snapshots` sync, a backfill of El Paso's and Austin's `intake.yaml`), `cityhall` (`/intake-checklists` index and `/intake-checklists/[jurisdiction]` homepage, storage seed, e2e)

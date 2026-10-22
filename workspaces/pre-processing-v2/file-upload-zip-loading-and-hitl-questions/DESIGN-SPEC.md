@@ -1,5 +1,6 @@
 # File-Upload Jobs — Streamed Loading UX + HITL "Version / Replace / Separate / Discard" Questions
 
+**ID:** FEAT-42  
 **Status:** Draft
 **Date:** 2026-08-25
 **Repos touched:** `substation` (new `file_upload_job` + `file_upload_decision` tables; write job/decision rows through the upload → classify → process → zip-fan-out pipeline; a **flavor-routed** similarity step — text-layer Jaccard for text-native documents, the reused `sharp` `computeSheetSimilarity`/`matchSheets` comparator for plan sheets and scanned/image-only PDFs; an exact-duplicate content-hash pre-check; a decision-resolve endpoint), `cityhall` (subscribe to jobs/decisions over Supabase Realtime; render a per-job/zip-tree loading surface + a submission-level "Pending" section for open decisions; render decisions via a `question_type → component` registry)

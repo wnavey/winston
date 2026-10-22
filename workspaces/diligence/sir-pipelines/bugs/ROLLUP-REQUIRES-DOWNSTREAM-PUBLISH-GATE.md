@@ -1,5 +1,7 @@
 # SIR rollup (5.6) requires the downstream Publish gate (5.8) to be `confirmed` — a circular dependency that fails every run's rollup
 
+**ID:** BUG-13
+
 > **Status:** Diagnosed 2026-08-04, fix NOT implemented. Root cause is in the **SIR pipeline** (`bureau/pipelines/sir/5.6-rollup/rollup.py`). Discovered on the Hutton/Louisville SIR run `~/noetic/working/sir/hutton/car-wash-louisville-ky/2026-08-01-083311` — step **5.6 Rollup** exited 1 with `checks.hitl = gates-undecided`, naming gate **5.8** as the undecided one. **Presents as an operator-decision failure ("a gate was skipped!") — it is not one.** All *analysis* gates were decided; the "undecided" gate is a **post-deliverable Publish checkpoint that the pipeline's own lineage places AFTER the rollup**, so it is structurally impossible to decide before the rollup runs. Worked around this run with a recorded operator override on `overrides.checks.hitl`. Sibling of [[LOUISVILLE-EL-FEASIBILITY-GUIDE-DISCIPLINE-SWAP]].
 
 ## Summary

@@ -1,5 +1,7 @@
 # crc-vision-check: a supporting-document UUID passed WITH `sheetNum` is routed down the plan-set lookup and always crashes — the agent is told only "File could not be loaded."
 
+**ID:** BUG-10
+
 > **Status:** Diagnosed 2026-07-16, fix NOT implemented. Root cause lives in **conductor's shared vision file resolver** (`src/shared/vision-file.ts`) plus an error-opacity gap in `src/tools/crc-vision-check/index.ts` — it presents as flaky vision-tool failures on specific checklist items; it isn't flakiness. Discovered on review `ed5e7ba9-ba03-4000-abb4-1021ebec0631` (v5 game day, 2026-07-14), 3 failed calls in `crc-SP-1` cells. Successor to the run-4 audit's "filename-as-UUID" error-opacity finding (same class — opaque vision errors hiding an input-shape problem — new costume: last time input validation, this time **document-type routing**). Audit detail: run-6 `crc-audit-agent-3-observability-report.md` §Errors.
 
 ## Summary

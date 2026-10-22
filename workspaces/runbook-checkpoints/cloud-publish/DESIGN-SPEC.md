@@ -1,5 +1,6 @@
 # Cloud Publish: Substation publishes a runbook's approved deliverable
 
+**ID:** FEAT-55  
 **Status:** Draft v3
 **Date:** 2026-09-24
 **Repos touched:** `substation` (two run-bearer routes with a per-runbook publisher registry; one migration: `runbook_publishes` + `publish_preprocessing_run` + `publish_sir`), `bureau` (`preprocessing-v4/scripts/publish_step.py` and `sir/bin/publish.ts` choose a lane; the local lane calls the same functions; `runbooks/lib/app_client.py` gains the publish client)

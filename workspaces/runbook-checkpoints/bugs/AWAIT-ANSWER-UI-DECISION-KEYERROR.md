@@ -1,5 +1,7 @@
 # `await-answer` crashes with `KeyError: 'choice'` on any gate answered in the cityhall UI
 
+**ID:** BUG-16
+
 > **Status:** Diagnosed 2026-09-11, fix NOT yet implemented. Root cause is in **bureau** (`runbooks/lib/app_client.py:402` `project_decision_json`). Discovered driving the `smoke` runbook end-to-end through the DB/console HITL lane (run `592eceab-31f7-4546-954e-a9228181de91`, gate `2.3-hitl`, question `fa97767f-6e93-48c4-80da-94040a185e3a`, org noetic). Related: `workspaces/runbook-checkpoints/DESIGN-SPEC.md` §6 (two-part HITL), §5.2 (canonical answer route). The fix already exists, correct and idempotent, in **substation** (`src/lib/decision.ts` `projectDecision`) — this is a Python↔TypeScript drift, not a new design problem.
 
 ## Summary

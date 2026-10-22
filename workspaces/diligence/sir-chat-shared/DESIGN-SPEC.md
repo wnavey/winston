@@ -1,5 +1,6 @@
 # SIR Chat on the Shareable (Logged-Out) Link
 
+**ID:** FEAT-39  
 **Status:** Draft v1
 **Date:** 2026-08-10
 **Repos touched:** `cityhall` (new token-gated chat route, share-page panel + loader gate, `SirChatPanel` prop refactor, admin toggle control + mutation, `lookupShareLink` extended), `substation` (one additive migration: `sir_share_link.chat_enabled`)

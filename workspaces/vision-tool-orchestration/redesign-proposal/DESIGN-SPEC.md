@@ -1,5 +1,7 @@
 # Tool Architecture Redesign — Standard Contract + Decoupling from Conductor
 
+**ID:** FEAT-9
+
 > **Status:** Draft / RFC · **Date:** 2026-06-26 · **Owner:** Winston
 > **Scope:** How agent-facing tools (vision, semantic-search, measure-distance, …) are defined, hosted, observed, and tested across the site-plan-review, completeness-check, and comment-resolution-check workflows.
 

@@ -1,5 +1,7 @@
 # Tool attribution is agent-supplied and unvalidated: phantom parent checklist IDs in vision tags, and `tools_used` self-reports that diverge from sidecar ground truth
 
+**ID:** BUG-9
+
 > **Status:** Diagnosed 2026-07-16, fix NOT implemented. Root cause lives in **how tool→item attribution is produced** (the model volunteers `checklistItemIds[]` on vision calls and `tools_used[]` in findings; no layer validates either against the guide's atomic item list or the tool-call ledger) — it presents as inconsistencies in audit TSVs and per-item tool analytics; verdicts are NOT affected. Discovered on review `ed5e7ba9-ba03-4000-abb4-1021ebec0631` (v5 game day). This is a data-fidelity bug in the observability layer that winston#163 built — the capture is now excellent; the *labeling* is the weak link. Audit detail: run-6 `crc-audit-agent-3-observability-report.md` §Traceability, recs #4.
 
 ## Summary

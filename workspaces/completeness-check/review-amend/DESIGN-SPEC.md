@@ -1,5 +1,6 @@
 # CC review amend — re-run part of a completeness-check run and update its published review in place
 
+**ID:** FEAT-64  
 **Status:** Draft v1.1
 **Date:** 2026-10-12
 **Repos touched:** `bureau` (`runbooks/lib/publish_review_cli.py` + `publish_review.py` gain an amend lane; `runbooks/completeness-check/scripts/cc.py` passes it; `steps/1.1-inputs/contract.test.ts` accepts the request key; tests)

@@ -1,5 +1,6 @@
 # Runbook Checkpoints + HITL Questions + cityhall UI
 
+**ID:** FEAT-45  
 **Status:** Draft v2
 **Date:** 2026-09-08
 **Repos touched:** `substation` (3 new tables + RLS + a **launch route + a reconcile cron** that replace the Inngest launcher + readout export + shared zod schemas), `cityhall` (internal runbook-runs console: list + detail + answer endpoints + rich-card renderer), `bureau` (`runbooks/lib/app_client.py` HITL verbs for the local lane; the decision-schema export for gate contracts; optional `audience:` on gate `step.yaml` — later phase)

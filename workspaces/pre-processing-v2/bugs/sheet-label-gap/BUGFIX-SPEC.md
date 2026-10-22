@@ -1,5 +1,7 @@
 # Pre-Processing V2 runbook never publishes the AI sheet label to `sheet.label` — app sheet headings stay stuck on the "Sheet N" seed
 
+**ID:** BUG-15
+
 > **Status:** Diagnosed 2026-08-19, fix NOT yet implemented. **Root cause is in the bureau pre-processing runbook's publisher** (`bureau/runbooks/preprocessing/scripts/publish.ts`) — it updates `sheet_version.label` but never `sheet.label`. Presents as a **cityhall UI bug** (the sheet-detail `<h1>` shows "Sheet 6" instead of the real title) — it is **not** a cityhall bug; cityhall renders the field it always has.
 >
 > **Discovered on:** project `ed9e7ec4-bdb4-4dcc-85fa-bb06ab70eaa9` ("Wills Pre-Processing V2 Test Project"), plan set `3560309c-1fe4-4628-b867-d00d65662472`, sheet 6 — the sanctioned Pre-Processing V2 test project. This project was processed by the new bureau pre-processing runbook (AI reading stripped from the sandbox per Phase 1).

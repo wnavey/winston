@@ -1,5 +1,6 @@
 # Jurisdiction Resolution Correction + City Submission Labeling
 
+**ID:** FEAT-28  
 **Status:** Draft v2
 **Date:** 2026-07-20
 **Repos touched (Path A):**

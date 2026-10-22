@@ -1,5 +1,6 @@
 # Cartographer — placing extracted figures relative to each other (`extract-geometry` placement phase)
 
+**ID:** FEAT-50  
 **Status:** Draft v1
 **Date:** 2026-09-21
 **Repos touched:** `cartographer` (runbook: one new phase + prompt + script, transcribe/assemble schema; `/processed` rendering), `substation` (one additive migration on `cartographer_geometries`)
