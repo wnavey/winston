@@ -9,7 +9,7 @@
 **Repos eventually touched:** `bureau` (the CC runbook's 2.8-format, 2.9-comments and lane B of `publish_review.py`; amend), `cityhall-new` (the CC adapter, the checklist landing, the CC PDF, three migrations), `inspector-general` (its comment map, only if it stops reading `sourceFindings`)
 **Repos NOT touched:** `conductor` and `workflows/completeness-check` (frozen legacy lane; the runbook shells to its scripts and that is the thing to retire, not edit), `substation` (archived), `dsd` (the RDS renderer is fine as is)
 **Verified:** 2026-10-23 against `bureau@f191145ec0`, `cityhall-new@dc5a87d`, prod `mgxqsrjutswbciyrltwd`
-**Amended by:** none yet
+**Amended by:** none yet. In flight: FEAT-75 (`wave-1/DESIGN-SPEC.md`, draft) carries S1, S2 and S5.
 
 > **Revision note v1.2 (2026-10-23, Will):** new §7.1 records how the seven slices interleave with FEAT-66's steps (P2a now, in parallel with S2 and S3; P1b, P2b and P3 before S7) and names the one open tension as Q10: FEAT-66 D3 gates the replica sync on the intake-prospecting loop, and S7 needs that sync. FEAT-66 §4 points here.
 >
@@ -334,11 +334,11 @@ A proposed order, by what each slice unlocks per unit of work. Each becomes a fe
 
 | # | Slice | Delivers | Unlocks | Size | Depends on |
 |---|---|---|---|---|---|
-| S1 | **`item_id` on the row** (D1, D4's backfill) | nullable typed id, partial unique index, label-scoped CHECK, best-effort backfill of 12,651 rows; lane B and amend write it; the read model falls back to the JSON ref | H1; FEAT-66 review linkage; per-item counting | small: one migration, two readers | nothing |
-| S2 | **Runbook owns 2.9 and lane B** (D14, D15) | the envelope code moves under `CC/`; 1.4-resolve names inputs | every bureau-side change below; H13, H14 | medium: a move plus the contract tests | nothing |
+| S1 (FEAT-75) | **`item_id` on the row** (D1, D4's backfill) | nullable typed id, partial unique index, label-scoped CHECK, best-effort backfill of 12,651 rows; lane B and amend write it; the read model falls back to the JSON ref | H1; FEAT-66 review linkage; per-item counting | small: one migration, two readers | nothing |
+| S2 (FEAT-75) | **Runbook owns 2.9 and lane B** (D14, D15) | the envelope code moves under `CC/`; 1.4-resolve names inputs | every bureau-side change below; H13, H14 | medium: a move plus the contract tests | nothing |
 | S3 | **Deterministic title, order, number** (D5, D6, D7) | 2.8 stops writing titles; checklist order; one numbering default | H4, H5, H6; stable handles for customers | medium | S2 |
 | S4 | **The new schema and the slim review row** (D2, D3, D8) | `2026-10-completeness-check`; no comment copies; `group_id`; registry entry; IG reads rows | H2, H3, H7; halves the bytes a landing loads | medium-large: publisher, adapter expand/contract, amend, cc-compare, an IG PR | S1, S2, S3 |
-| S5 | **One read model + SQL counts** (D10, D11) | the PDF parser goes; counts RPC; delta by item | H11, H12; every later UI change is one edit | medium | S1 |
+| S5 (FEAT-75) | **One read model + SQL counts** (D10, D11) | the PDF parser goes; counts RPC; delta by item | H11, H12; every later UI change is one edit | medium | S1 |
 | S6 | **Archive and delete** (D12, D13) | archived adapters; triage fold materialised; CC section page gone; `unclear` gone | H9, H10; fewer branches in every count and render | small-medium, mostly deletion | S5 for the fold (counts must agree); Q2 |
 | S7 | **Read-time presentation** (D9, P2, P3) | titles, groups, order resolve from the replica and live groups | G2 in full; titles in minutes | medium | S4; FEAT-66 P2a, P2b, P3 |
 
