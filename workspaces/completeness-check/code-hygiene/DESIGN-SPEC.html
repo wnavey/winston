@@ -1,0 +1,1664 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Completeness Check Code Hygiene: how a CC review is produced and shown, and where to clean it up</title>
+<style>
+/* ============================================================
+   spec-kit v6.8  —  winston HTML spec design system
+   Inline the ENTIRE contents of this file into the spec's style block.
+   Canonical source: ~/.claude/skills/winston-spec/assets/spec-kit.css
+   When you change this file, bump the version above and in COMPONENTS.md.
+   v4: + sequence diagram (.seq*), + data table (.spectable), + prompt block (.prompt)
+   v5: + system map (.sysmap/.sys, edges drawn by spec-kit.js), + decision flow (.dflow),
+       + concept figure (figure.concept), + claim caption (.claim), + reference chip rows (.sys-refs),
+       + spec reader page (body.reader; DESIGN-SPEC.md rendered by marked, built by inline-kit.py --spec)
+   v5.1: pass-2 friction fixes — long identifiers wrap (.sys .t, .uc .nt, .ent .ty), .sysmap-scroll for
+       6+ columns, state-neutral .sm pills, .dflow jump outcomes, legend 'new trigger' dot
+   v5.2: + two-lane activity flow (.af) — an agent and the tools it calls, prompt fragment per step
+   v5.3: + before/after pair (.ba), + mass diagram (.mass), + cross-section (.xsec),
+       + call-graph collapse (.cg), + interactive state machine (.smx, driven by spec-kit.js),
+       .sm pills take .new/.chg change state
+       Colour rule: fill/border = change state only; kind = badge text + shape; legend is the
+       complete list of colour meanings on the page.
+   v6.0: readability + "pick the diagram from the question" (v6.5 later set git-diff colours);
+       kind badge becomes a quiet word; node detail 12.5px sans (nothing under 10.5px);
+       + lanes (.sysmap.lanes), + delta map (.sysmap.delta, Today/After toggle in one map),
+       + runbook graph (.sysmap.rgraph: diamonds, gate, fan-out, exits), + step list (.steps),
+       + phase lanes (.plan), + claim-as-title (.claim.lead), compact ref footer,
+       path highlighting on hover, .dfg chains go vertical instead of wrapping.
+   v6.8: + runbook page (.nx-*): the runbook graph, then one "graph node explained" step
+       block per node, each drawn with one of 14 step templates (T1–T14); spec-kit.js
+       fills each step's locator strip (.nx-loc).
+   ============================================================ */
+
+:root{
+  /* steel-blue ramp (matches cityhall / Noetic report surfaces) */
+  --p50:#f0f5f9;--p100:#dce8f1;--p200:#b9d2e5;--p300:#8cb4d1;--p400:#6397b8;
+  --p500:#517e9e;--p600:#3f6582;--p700:#35526b;--p800:#2d4559;--p900:#273b4b;--p950:#182530;
+  --bg:#f9f9f9;--card:#ffffff;--divider:#dfdfdf;--ink:#1f2937;--muted:#6b7280;--ember:#bb4d00;
+  /* semantic: new / changed / retired */
+  --new:#1a7f37;--newbg:#dafbe1;--newbd:#aceebb;--newink:#116329;
+  --chg:#bf8700;--chgbg:#fff8c5;--chgbd:#eac54f;--chgink:#7d4e00;
+  --ret:#cf222e;--retbg:#ffebe9;--retbd:#ffcecb;--retink:#a40e26;
+  --sans:'Lexend',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  --serif:'Lora',Georgia,'Times New Roman',serif;
+  --ink2:#4b5361;--line:#c5ccd6;--lane:#f4f6f9;--wire:#8a919c;
+  --mono:'Fira Code','SF Mono',ui-monospace,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.55;font-size:15px}
+
+/* ---------- masthead ---------- */
+header.masthead{background:linear-gradient(135deg,var(--p800),var(--p600));color:#fff;padding:34px 32px 30px;position:relative;overflow:hidden}
+header.masthead::after{content:"";position:absolute;inset:0;background-image:repeating-linear-gradient(115deg,rgba(255,255,255,.06) 0 1px,transparent 1px 26px);pointer-events:none}
+header.masthead .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--p200)}
+header.masthead h1{font-family:var(--serif);font-weight:600;margin:.35em 0 .2em;font-size:29px;position:relative}
+header.masthead p{margin:0;color:var(--p100);max-width:880px;font-size:15px}
+header.masthead .meta{margin-top:14px;font-size:12.5px;color:var(--p200);font-family:var(--mono)}
+
+/* ---------- tabs ---------- */
+nav.tabs{position:sticky;top:0;z-index:20;display:flex;gap:2px;background:var(--p950);padding:0 20px;box-shadow:0 2px 8px rgba(0,0,0,.12);flex-wrap:wrap}
+nav.tabs button{appearance:none;border:0;background:transparent;color:var(--p200);font-family:var(--sans);font-size:14px;font-weight:500;padding:14px 18px;cursor:pointer;border-bottom:3px solid transparent;transition:all .15s}
+nav.tabs button .n{font-family:var(--mono);font-size:11px;opacity:.7;margin-right:7px}
+nav.tabs button:hover{color:#fff;background:rgba(255,255,255,.04)}
+nav.tabs button.active{color:#fff;border-bottom-color:var(--ember);background:rgba(255,255,255,.06)}
+
+/* ---------- layout ---------- */
+main{max-width:1140px;margin:0 auto;padding:30px 26px 90px}
+.panel{display:none;animation:fade .25s ease}
+main [id]{scroll-margin-top:74px} /* deep-link targets clear the sticky tab bar */
+.panel.active{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* Section heading: the h2 text is the PLAIN NAME of the thing the tab is about (v5.1 — it used to
+   carry a tagline while the small eyebrow carried the name; that was backwards). .eyebrow = the
+   tab number / section label, small. .sub = one plain sentence saying what is on the tab. */
+h2{font-family:var(--serif);font-weight:700;font-size:30px;line-height:1.15;letter-spacing:-.01em;margin:34px 0 10px;color:var(--p950)}
+h2:first-child{margin-top:4px}
+h2 .eyebrow{display:block;font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--p500);font-weight:400;margin-bottom:6px}
+h2 .sub{display:block;font-family:var(--sans);font-size:14px;font-weight:400;letter-spacing:0;line-height:1.5;color:var(--muted);margin-top:6px}
+h3{font-size:16px;font-weight:600;margin:28px 0 8px;color:var(--p800);display:flex;align-items:center;gap:9px}
+h3 .hn{font-family:var(--mono);font-size:12px;color:#fff;background:var(--p600);border-radius:5px;padding:2px 8px}
+h4{font-size:14px;font-weight:600;margin:18px 0 6px;color:var(--p800)}
+p{margin:.55em 0}
+.lede{font-size:15px;color:var(--p800);border-left:3px solid var(--ember);padding-left:16px;margin:12px 0 20px}
+ul{margin:.4em 0;padding-left:22px}li{margin:.28em 0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--p50);border:1px solid var(--p100);border-radius:4px;padding:1px 5px;color:var(--p800)}
+
+/* ---------- callout ---------- */
+.callout{background:var(--p50);border:1px solid var(--p200);border-left:4px solid var(--p500);border-radius:8px;padding:13px 17px;margin:16px 0}
+.callout.ember{background:#fdf6f0;border-color:#f0cba8;border-left-color:var(--ember)}
+.callout.new{background:var(--newbg);border-color:var(--newbd);border-left-color:var(--new)}
+.callout .lab{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--p600);font-weight:600;display:block;margin-bottom:3px}
+.callout.ember .lab{color:var(--ember)} .callout.new .lab{color:var(--new)}
+
+/* ---------- legend ---------- */
+.legend{display:flex;flex-wrap:wrap;gap:9px 16px;background:#fff;border:1px solid var(--divider);border-radius:10px;padding:12px 16px;margin:16px 0;font-size:12px;align-items:center}
+.legend .k{display:inline-flex;align-items:center;gap:6px}
+.swatch{width:26px;height:14px;border-radius:3px;display:inline-block;border:1px solid rgba(0,0,0,.15)}
+
+/* ---------- shared field badges (used by entity rows + legend) ---------- */
+.b{font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.04em;padding:1px 4px;border-radius:3px;text-transform:uppercase;white-space:nowrap}
+.b-pk{background:#fef3c7;color:#92600a;border:1px solid #fde68a}
+.b-fk{background:#e0edfb;color:#2456a8;border:1px solid #c3d8f2}
+.b-nn{background:#eef1f4;color:#4b5563;border:1px solid #d7dde3}
+.b-new{background:var(--newbg);color:var(--new);border:1px solid var(--newbd)}
+
+/* ============================================================
+   ER / UML entity boxes
+   ============================================================ */
+.erd{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start;margin:16px 0;background:#fbfcfd;border:1px solid var(--divider);border-radius:12px;padding:18px}
+.ent{border:1px solid var(--divider);border-radius:9px;overflow:hidden;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.05);min-width:236px;flex:0 1 auto}
+.ent .eh{padding:7px 12px;color:#fff;display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.ent .eh .en{font-family:var(--mono);font-size:12.5px;font-weight:700;letter-spacing:.02em}
+.ent .eh .stereo{font-size:11px;font-family:var(--mono);opacity:.85;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}
+.ent.exist .eh{background:var(--p700)}
+.ent.newt .eh{background:var(--new)}
+.ent.changed .eh{background:var(--chg)}
+.ent.retired .eh{background:#9ca3af}
+.ent.retired{opacity:.72}
+.ent .row{display:flex;align-items:center;gap:7px;padding:4px 11px;font-size:11.5px;border-top:1px solid #eef1f4}
+.ent .row:first-of-type{border-top:0}
+.ent .row .nm{font-family:var(--mono);font-size:11.5px;color:var(--p900);font-weight:600}
+.ent .row .ty{font-family:var(--mono);font-size:11px;color:var(--muted);margin-left:auto;text-align:right;max-width:60%;overflow-wrap:anywhere}
+.ent .row.hi{background:#fff9f2}
+.ent .row.strk .nm{text-decoration:line-through;color:var(--muted)}
+.ent .note{padding:5px 11px;font-size:11px;color:var(--muted);font-style:italic;border-top:1px dashed #e5e9ee;background:#fbfcfd}
+/* diff rows — show a table modification (column added / removed), git-style.
+   Put a "+"/"−" marker in a .gut span at the start of the row. */
+.ent .row .gut{flex:0 0 10px;width:10px;text-align:center;font-family:var(--mono);font-size:11px;font-weight:700;color:var(--muted)}
+.ent .row.add{background:var(--newbg);box-shadow:inset 3px 0 0 var(--new)}
+.ent .row.add .gut{color:var(--new)}
+.ent .row.add .nm{color:#166534}
+.ent .row.del{background:var(--retbg);box-shadow:inset 3px 0 0 var(--ret)}
+.ent .row.del .gut{color:var(--ret)}
+.ent .row.del .nm{color:var(--ret);text-decoration:line-through}
+
+/* relationships panel — crow's-foot text notation */
+.rels{background:#fff;border:1px solid var(--divider);border-radius:10px;padding:12px 16px;margin:14px 0;font-family:var(--mono);font-size:12px;line-height:1.9}
+.rels .rl{display:block;color:var(--p800)}
+.rels .rl b{color:var(--ember)}
+.rels .cf{color:var(--p500);font-weight:700}
+.rels .cmt{color:var(--muted);font-style:normal;font-family:var(--sans);font-size:11.5px}
+.rels .tag-new{color:var(--new);font-weight:700}
+.rels .tag-ret{color:var(--ret);font-weight:700}
+.rels-h{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--p600);font-weight:700;margin-bottom:6px}
+
+/* ============================================================
+   Use-case scene  (an action + its boxes-and-arrows diagram)
+   ============================================================ */
+.uc{margin:16px 0 22px;border:1px solid var(--divider);border-radius:12px;overflow:hidden;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.uc .uch{display:flex;align-items:center;gap:13px;padding:11px 16px;background:linear-gradient(135deg,var(--p700),var(--p600));color:#fff}
+.uc .uch .ucn{flex:0 0 30px;height:30px;border-radius:50%;background:rgba(255,255,255,.2);font-family:var(--mono);font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.uc .uch .uctxt{flex:1}
+.uc .uch .actor{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--p100);display:block;margin-bottom:1px}
+.uc .uch .uct{font-weight:600;font-size:15.5px;font-family:var(--serif)}
+.uc .ucsub{padding:9px 16px;font-size:12.5px;color:var(--p800);background:var(--p50);border-bottom:1px solid var(--p100)}
+.uc .ucdiag{padding:20px 16px 14px}
+.ucnote{padding:2px 16px 14px;font-size:11.5px;color:var(--muted)}
+.ucnote b{color:var(--p700);font-family:var(--mono);font-size:10.5px}
+
+/* ============================================================
+   Boxes-and-arrows flow
+   Robustness rules baked in:
+   - .dfg WRAPS (flex-wrap:wrap) so long chains never clip / never
+     need horizontal scroll. Arrows reflow with the nodes.
+   - .node is a flex COLUMN: the op-badge is an in-flow header row
+     (never position:absolute), and .nt / .nf are block-level, so a
+     table name and its fields can never smush onto one line.
+   ============================================================ */
+.dfg{display:flex;flex-wrap:wrap;align-items:stretch;gap:8px 0;margin:0}
+.node{flex:0 0 auto;width:156px;background:#fff;border:1.5px solid var(--p300);border-radius:8px;padding:9px 11px;display:flex;flex-direction:column;gap:3px}
+.node .op{align-self:flex-start;font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:1px 6px;border-radius:3px;border:1px solid;color:#fff;margin-bottom:2px}
+.node .nt{display:block;font-family:var(--mono);font-weight:700;font-size:12px;color:var(--p900);line-height:1.3;overflow-wrap:anywhere}
+.node .nf{display:block;font-family:var(--mono);font-size:11px;color:var(--muted);line-height:1.45;word-break:break-word}
+.node.created{border-color:var(--new);background:var(--newbg)} .node.created .op{background:var(--new);border-color:var(--new)}
+.node.read{border-color:var(--p400);background:#eef4fb} .node.read .op{background:var(--p500);border-color:var(--p500)}
+.node.event{border-color:var(--ember);background:#fdf6f0} .node.event .op{background:var(--ember);border-color:var(--ember)}
+.node.store{border-style:dashed;border-color:var(--p500);background:#eef3f7} .node.store .op{background:var(--p700);border-color:var(--p700)}
+.edge{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:70px;max-width:104px;padding:0 4px}
+.edge .el{font-size:10.5px;color:var(--p600);font-family:var(--mono);text-align:center;line-height:1.3;margin-bottom:2px}
+.edge .ar{color:var(--p400);font-size:20px;font-weight:700;line-height:1}
+
+/* ============================================================
+   Card grid  (keep / change / drop comparisons)
+   ============================================================ */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:820px){.grid2{grid-template-columns:1fr}.erd{padding:12px}}
+.card{background:var(--card);border:1px solid var(--divider);border-radius:9px;padding:14px 16px}
+.card.keep{border-top:3px solid var(--new)} .card.change{border-top:3px solid var(--chg)} .card.drop{border-top:3px solid var(--ret)}
+.card strong{display:block;margin-bottom:4px;font-size:13.5px}
+.card ul{font-size:12.5px;margin:2px 0}
+
+/* ============================================================
+   Lifecycle / state machine
+   ============================================================ */
+.sm{display:flex;flex-wrap:wrap;gap:7px;align-items:center;margin:14px 0}
+.sm .s{border:1px solid var(--p300);background:var(--p50);border-radius:20px;padding:5px 12px;font-size:11.5px;font-weight:600;color:var(--p800);font-family:var(--mono)}
+.sm .s .who{display:block;font-size:10.5px;font-family:var(--mono);color:var(--muted);font-weight:400;text-transform:uppercase;letter-spacing:.03em}
+.sm .s.client{border-color:var(--newbd);background:var(--newbg)}
+.sm .s.cc{border-color:#f0cba8;background:#fdf6f0}
+.sm .s.spec{border-color:var(--chgbd);background:var(--chgbg)}
+.sm .a{color:var(--p400);font-weight:700}
+/* state-neutral variants (v5.1): terminal-good / terminal-stop / dimmed. The .client/.cc/.spec
+   colours mean "whose court" and need a legend if used. */
+.sm .s.ok{border-color:var(--newbd);background:var(--newbg);color:var(--new)}
+.sm .s.stop{border-color:var(--retbd);background:var(--retbg);color:var(--ret)}
+.sm .s.dim{opacity:.6;border-style:dashed}
+
+/* ============================================================
+   Use-case catalog — grouped list of candidate use cases
+   (a scoped list, NOT a diagram — for "what would we build" inventories)
+   ============================================================ */
+.catgrp{border:1px solid var(--divider);border-radius:10px;overflow:hidden;margin:14px 0;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.catgrp .cath{background:var(--p700);color:#fff;padding:8px 14px;font-family:var(--serif);font-weight:600;font-size:14.5px;display:flex;align-items:center;gap:10px}
+.catgrp .cath .cgl{font-family:var(--mono);font-size:12px;font-weight:700;background:rgba(255,255,255,.2);border-radius:5px;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;flex:0 0 22px}
+.uci{display:flex;gap:9px;align-items:baseline;padding:7px 13px;border-top:1px solid #eef1f4;font-size:13px}
+.uci .uid{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--p600);flex:0 0 26px}
+.uci .utxt{flex:1;color:var(--ink);line-height:1.45}
+.uci .utxt b{color:var(--p900)}
+.uci .star{color:var(--ember);font-weight:700;font-size:12px;flex:0 0 auto;letter-spacing:-1px}
+.uci.later{opacity:.66}
+.utag{font-family:var(--mono);font-size:10.5px;font-weight:700;padding:1px 5px;border-radius:3px;text-transform:uppercase;letter-spacing:.03em;white-space:nowrap;flex:0 0 auto}
+.utag.t-orig{background:#e0edfb;color:#2456a8;border:1px solid #c3d8f2}
+.utag.t-add{background:var(--newbg);color:var(--new);border:1px solid var(--newbd)}
+
+/* ============================================================
+   Misc: storage strip, cross-reference box
+   ============================================================ */
+.storage{background:#eef3f7;border:1px dashed var(--p300);border-radius:8px;padding:9px 13px;font-family:var(--mono);font-size:12px;color:var(--p800);margin:12px 0}
+.storage b{color:var(--ember)}
+.xref{font-size:12px;color:var(--p600);background:var(--p50);border:1px solid var(--p100);border-radius:6px;padding:8px 12px;margin:10px 0}
+.foot{margin-top:44px;padding-top:18px;border-top:1px solid var(--divider);color:var(--muted);font-size:12px;font-family:var(--mono)}
+
+/* actor / repo chips (optional, for inline actor tags in prose) */
+.rc{display:inline-block;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;padding:1px 6px;border-radius:5px;border:1px solid;vertical-align:middle;white-space:nowrap}
+.r-ch{background:#eef4fb;color:#2456a8;border-color:#c3d8f2}
+.r-sub{background:#f3eefb;color:#6b3fa0;border-color:#dcccf0}
+.r-fa{background:#e9f7f2;color:#0f7a5f;border-color:#bfe8db}
+.r-db{background:#eaeef2;color:#2d4559;border-color:#c7d2dd}
+.r-store{background:#e6eef3;color:#35526b;border-color:#bcd0dd}
+.r-user{background:#eefaf0;color:#15803d;border-color:#bbf7d0}
+.r-mcp{background:#fdf0e6;color:#b5590d;border-color:#f2d3b3}
+
+/* ============================================================
+   Sequence diagram — swimlane message flow
+   A CSS grid: col 1 = step number, then one column per actor lane.
+   Each message is a grid item that SPANS grid-columns from its
+   source lane to its target lane, so it always sits under the right
+   headers and never smushes. Continuous lifelines are grid items
+   spanning all rows (grid-row:1/-1) — so set .seq-body's
+   grid-template-rows to repeat(STEP_COUNT, auto) for -1 to resolve.
+   Wide diagrams scroll inside .seq-scroll, never the page body.
+   Direction is an in-flow glyph (.dir ◂/▸) pushed to the target edge
+   by justify-content:space-between — never position:absolute.
+   ============================================================ */
+.seq-scroll{overflow-x:auto;margin:16px 0;border:1px solid var(--divider);border-radius:12px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.seq{min-width:840px}
+.seq-head,.seq-body{display:grid;grid-template-columns:30px repeat(6,minmax(104px,1fr))}
+.seq-head{background:linear-gradient(135deg,var(--p800),var(--p700));padding:11px 12px}
+.seq-h{display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;padding:0 4px}
+.seq-h .role{font-family:var(--mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--p200)}
+.seq-h .who{font-family:var(--mono);font-size:11px;font-weight:700;color:#fff;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.24);border-radius:6px;padding:3px 9px}
+.seq-body{position:relative;row-gap:11px;padding:16px 12px 20px}
+.seq-life{width:2px;background:var(--p100);justify-self:center;border-radius:2px;z-index:0}
+.seq-num{grid-column:1;justify-self:center;align-self:center;font-family:var(--mono);font-size:11px;font-weight:700;color:#fff;background:var(--p600);min-width:19px;height:19px;padding:0 3px;border-radius:10px;display:flex;align-items:center;justify-content:center;z-index:1}
+.seq-msg{align-self:center;display:flex;flex-direction:row;align-items:center;gap:8px;justify-content:space-between;background:#fff;border:1.5px solid var(--p300);border-radius:7px;padding:5px 10px;z-index:1;min-width:0}
+.seq-msg .mt{display:flex;flex-direction:column;gap:1px;min-width:0}
+.seq-msg .m{font-family:var(--mono);font-size:10.5px;color:var(--p900);font-weight:700;line-height:1.32;word-break:break-word}
+.seq-msg .m2{font-family:var(--mono);font-size:11px;color:var(--muted);line-height:1.3;word-break:break-word}
+.seq-msg .dir{font-size:14px;font-weight:700;color:var(--p500);flex:0 0 auto}
+.seq-msg.write{border-color:var(--new);background:var(--newbg)} .seq-msg.write .dir{color:var(--new)}
+.seq-msg.event{border-color:var(--ember);background:#fdf6f0} .seq-msg.event .dir{color:var(--ember)}
+.seq-msg.ret{border-style:dashed;background:#f6f9fb} .seq-msg.ret .m{font-weight:500;color:var(--p600)}
+.seq-msg.self{border-style:dashed;border-color:var(--p400);background:#eef3f7}
+.seq-foot{display:flex;flex-wrap:wrap;gap:8px 15px;padding:9px 14px;border-top:1px solid var(--divider);background:#fbfcfd;font-size:10.5px;font-family:var(--mono);color:var(--muted);align-items:center}
+.seq-foot .sw{display:inline-block;width:20px;height:11px;border-radius:3px;border:1.5px solid var(--p300);vertical-align:middle;margin-right:5px}
+.seq-foot .sw.write{border-color:var(--new);background:var(--newbg)} .seq-foot .sw.event{border-color:var(--ember);background:#fdf6f0}
+.seq-foot .sw.ret{border-style:dashed;background:#f6f9fb} .seq-foot .sw.self{border-style:dashed;border-color:var(--p400);background:#eef3f7}
+
+/* ============================================================
+   Data table — for step→entity maps and any tabular spec content.
+   Wrap in .spectable-scroll so wide tables scroll, not the page.
+   ============================================================ */
+.spectable-scroll{overflow-x:auto;margin:14px 0}
+.spectable{width:100%;border-collapse:collapse;font-size:12.5px;background:#fff;border:1px solid var(--divider);border-radius:10px;overflow:hidden}
+.spectable thead th{background:var(--p700);color:#fff;font-family:var(--mono);font-size:11px;letter-spacing:.04em;text-transform:uppercase;text-align:left;padding:8px 12px;font-weight:700;white-space:nowrap}
+.spectable tbody td{padding:7px 12px;border-top:1px solid #eef1f4;vertical-align:top;line-height:1.5}
+.spectable tbody tr:nth-child(even){background:#fbfcfd}
+.spectable td .sn{font-family:var(--mono);font-weight:700;color:#fff;background:var(--p600);border-radius:9px;padding:1px 7px;font-size:10.5px}
+.spectable td code{font-size:11px}
+.spectable td .none{color:var(--muted);font-style:italic;font-family:var(--sans)}
+.spectable td .w{color:var(--new);font-weight:700} /* write */
+.spectable td .r{color:var(--p500);font-weight:700} /* read/return */
+
+/* ============================================================
+   Prompt / code block — a readable mono block (LLM prompts, snippets).
+   White-space preserved; scrolls horizontally inside itself.
+   ============================================================ */
+.prompt{background:#fbfcfd;border:1px solid var(--p200);border-left:4px solid var(--p500);border-radius:8px;padding:12px 15px;margin:12px 0;font-family:var(--mono);font-size:11.5px;line-height:1.6;color:var(--p900);white-space:pre-wrap;overflow-x:auto}
+.prompt .ph{display:block;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--p600);font-weight:700;margin-bottom:6px}
+
+
+/* ============================================================
+   System map (.sysmap)  —  the Overview diagram.  v5
+   A CSS grid of nodes placed with grid-area:row/col. Column 1 is
+   always the TRIGGER (a start-dot, no box). Edges are authored as
+   hidden <a class="sys-edge" data-from data-to>label</a> and drawn as
+   SVG by spec-kit.js after layout (no hand-typed coordinates).
+   COLOUR = CHANGE STATE ONLY: white exists · amber .chg · green .new ·
+   red-dashed .gap. KIND = badge TEXT + shape (.ext dashed, .store
+   cylinder bottom, .trig dot). Badges are one colour except on
+   changed/new nodes, where they take the node's change colour.
+   ============================================================ */
+.sysmap{position:relative;display:grid;gap:40px 64px;padding:28px 16px 22px;background:#fff;border:1px solid var(--divider);border-radius:12px;margin:14px 0 6px}
+.sysmap-scroll{overflow-x:auto;margin:14px 0 6px} .sysmap-scroll .sysmap{margin:0;min-width:max-content} /* 6+ columns: use grid-template-columns:repeat(N,minmax(150px,1fr)) inside .sysmap-scroll */
+.sysmap .colh{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--p500);text-align:center;padding-bottom:6px;border-bottom:1px dashed var(--p200);align-self:end}
+.sys{position:relative;z-index:2;background:#fff;border:1.5px solid var(--p300);border-radius:9px;padding:9px 11px 8px;min-height:64px;display:flex;flex-direction:column;gap:2px;align-self:center}
+.sys .k{align-self:flex-start;font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:1px 6px;border-radius:3px;color:#fff;background:var(--p500);margin-bottom:2px}
+.sys .t{font-weight:600;font-size:12.5px;line-height:1.3;color:var(--p900);overflow-wrap:anywhere}
+.sys .d{font-family:var(--mono);font-size:11px;color:var(--muted);line-height:1.4}
+.sys.ext{border-style:dashed}
+.sys.store{border-radius:4px 4px 14px 14px}
+.sys.new{border-color:var(--new);background:var(--newbg);box-shadow:0 0 0 3px #dcfce7}.sys.new .k{background:var(--new)}
+.sys.chg{border-color:var(--chg);background:var(--chgbg)}.sys.chg .k{background:var(--chg)}
+/* trigger: a start-dot + label, never a box. Declared AFTER .new/.chg so it wins on order. */
+.sys.trig{border:none;background:none;box-shadow:none;padding:0;min-height:0;align-items:flex-start;justify-self:start;gap:5px;max-width:150px}
+.sys.trig .dot{width:16px;height:16px;border-radius:50%;background:var(--p700);border:3px solid #fff;box-shadow:0 0 0 1.5px var(--p700)}
+.sys.trig.new .dot{background:var(--new);box-shadow:0 0 0 1.5px var(--new)}
+.sys.trig.chg .dot{background:var(--chg);box-shadow:0 0 0 1.5px var(--chg)}
+.sys.trig .t{font-size:11.5px;font-weight:600;color:var(--p800);line-height:1.25}
+.sys.trig .d{font-size:11px}
+.sys.gap{border:1.5px dashed var(--ret);background:var(--retbg);color:var(--ret);align-items:center;justify-content:center;text-align:center;font-family:var(--mono);font-size:10.5px;min-height:40px}
+/* floating spec-reference tag above the box; an <a href="#detail-id"> deep-link to the zoom-in diagram */
+.sys .ref{position:absolute;top:-11px;right:8px;text-decoration:none;font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.04em;padding:1px 7px;border-radius:10px;background:#fff;border:1px solid var(--p300);color:var(--p700);white-space:nowrap}
+.sys.chg .ref{border-color:var(--chg);color:var(--chg)}.sys.new .ref{border-color:var(--new);color:var(--new)}
+.sys .ref:hover{background:var(--p50)}
+.sys-edge{display:none} /* authored edge; rendered as SVG by spec-kit.js */
+.sysmap svg.edges{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1;overflow:visible}
+.sysmap svg .e{fill:none;stroke:var(--p400);stroke-width:1.6}
+.sysmap svg .e.new{stroke:var(--new);stroke-width:2.2}
+.sysmap svg .e.chg{stroke:var(--chg);stroke-width:2}
+.sysmap svg .e.gap{stroke:var(--ret);stroke-dasharray:5 4}
+.sysmap svg .e.loop{stroke:var(--p400);stroke-dasharray:4 3}
+.sysmap svg .lbl{font:11.5px var(--mono);fill:var(--p700)}
+.sysmap svg .lbl.new{fill:var(--new);font-weight:700}.sysmap svg .lbl.chg{fill:var(--chg);font-weight:700}.sysmap svg .lbl.gap{fill:var(--ret)}
+.sysmap svg .lblbg{fill:#fff;stroke:none;opacity:.94}
+/* reference footer: stacked CHIP ROWS, one per reference, each a link into the spec reader page.
+   Markup: <div class="sys-refs"><a class="refrow" data-ref="P0a"><span class="chip">P0a</span><span class="txt">…</span></a>…</div>
+   spec-kit.js fills href = <main data-spec>#<token>. */
+.sys-refs{display:flex;flex-direction:column;gap:6px;margin:12px 0 0}
+.sys-refs .refrow{display:flex;align-items:baseline;gap:12px;padding:7px 12px;border:1px solid var(--divider);border-radius:9px;background:#fff;text-decoration:none;color:var(--p800);font-size:12.5px;line-height:1.45;transition:border-color .12s,background .12s}
+.sys-refs .refrow:hover{border-color:var(--p400);background:var(--p50)}
+.sys-refs .refrow .chip{flex:0 0 auto;font-family:var(--mono);font-size:10.5px;font-weight:700;color:var(--p700);background:var(--p50);border:1px solid var(--p200);border-radius:6px;padding:2px 8px;min-width:44px;text-align:center}
+.sys-refs .refrow.chg .chip{color:var(--chg);border-color:var(--chgbd);background:var(--chgbg)}
+.sys-refs .refrow.new .chip{color:var(--new);border-color:var(--newbd);background:var(--newbg)}
+.sys-refs .refrow .txt{flex:1}
+.sys-refs .refrow .go{flex:0 0 auto;font-family:var(--mono);font-size:11px;color:var(--p500)}
+.sys-refs .refrow[href] .go::after{content:"read §"}
+.sys-refs .refrow:not([href]) .go::after{content:"no spec reader";color:var(--muted)}
+/* citation links inside claims and ref tags (filled in by spec-kit.js) */
+.claim a.cite,.sys .ref a{color:inherit;text-decoration:underline dotted;text-underline-offset:2px}
+.claim a.cite:hover{color:var(--ember)}
+/* "read the spec" masthead link */
+header.masthead a.spec-link{display:inline-block;margin-top:12px;font-family:var(--mono);font-size:12px;color:#fff;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);border-radius:7px;padding:5px 11px;text-decoration:none;position:relative}
+header.masthead a.spec-link:hover{background:rgba(255,255,255,.24)}
+
+/* legend for a system map: the COMPLETE list of colour meanings on the page */
+.sys-legend{display:flex;flex-wrap:wrap;gap:14px;font-size:11.5px;color:var(--p800);margin:8px 4px 0}
+.sys-legend i{display:inline-block;width:22px;height:3px;vertical-align:middle;margin-right:5px;background:var(--p400)}
+.sys-legend i.new{background:var(--new)} .sys-legend i.dot{width:10px;height:10px;border-radius:50%;background:var(--p700)} .sys-legend i.dot.new{background:var(--new)}.sys-legend i.chg{background:var(--chg)}.sys-legend i.gap{background:var(--ret)}.sys-legend i.loop{background:repeating-linear-gradient(90deg,var(--p400) 0 4px,transparent 4px 7px)}
+
+/* ============================================================
+   Claim caption  —  under every diagram. Cites the spec section or
+   decision it paraphrases. "Reading:" for the author's own observation.
+   ============================================================ */
+.claim{font-size:12.5px;color:var(--p800);margin:8px 0 26px;padding:8px 12px;border-left:3px solid var(--ember);background:#fff}
+.claim b{color:var(--p900)}
+
+/* ============================================================
+   Decision flow (.dflow)  —  "try X, else Y, else Z" / gate outcomes.
+   A vertical list of question rows; "yes" exits right to an outcome,
+   "no" falls through to the next row. Text-first, no SVG.
+   ============================================================ */
+.dflow{margin:14px 0;border:1px solid var(--divider);border-radius:12px;background:#fff;padding:14px 16px 10px}
+.dflow .dq{display:grid;grid-template-columns:minmax(200px,1.4fr) auto minmax(160px,1fr);gap:10px;align-items:center}
+.dflow .dq .q{font-size:12.5px;font-weight:600;color:var(--p900);border:1.5px solid var(--p300);border-radius:8px;padding:7px 11px;background:#fff}
+.dflow .dq .yes{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--new);white-space:nowrap}
+.dflow .dq .out{font-family:var(--mono);font-size:11px;color:var(--p800);border:1.5px solid var(--newbd);background:var(--newbg);border-radius:8px;padding:6px 10px}
+.dflow .dq .out.warn{border-color:var(--chgbd);background:var(--chgbg)}
+.dflow .dq .out.fail{border-color:var(--retbd);background:var(--retbg);color:var(--ret)}
+.dflow .dno{font-family:var(--mono);font-size:11px;color:var(--muted);padding:3px 0 3px 18px}
+.dflow .dq.end .q{border-style:dashed;font-weight:500;color:var(--p700)}
+.dflow .dq .out a,.dflow .dq a.out{color:inherit;text-decoration:underline dotted;text-underline-offset:2px}
+.dflow .dq .out.jump::after{content:" ↗";color:var(--p500)} /* an outcome that jumps to another step/diagram */
+
+/* ============================================================
+   Concept figure  —  a hand-drawn inline SVG for the one mechanism
+   prose can't carry (a transform, a timeline, a shape). One figure,
+   one claim in the figcaption. See COMPONENTS.md for SVG rules.
+   ============================================================ */
+figure.concept{margin:16px 0;padding:16px 16px 10px;background:#fff;border:1px solid var(--divider);border-radius:12px;color:var(--p800)}
+figure.concept svg{display:block;max-width:100%;height:auto;margin:0 auto}
+figure.concept figcaption{font-size:12.5px;color:var(--p800);margin-top:10px;padding:8px 12px;border-left:3px solid var(--ember);background:#fbfcfd}
+figure.concept figcaption b{color:var(--p900)}
+
+
+/* ============================================================
+   Spec reader page (body.reader) — DESIGN-SPEC.md rendered by marked,
+   generated by inline-kit.py --spec. Sticky TOC + body; :target glow.
+   ============================================================ */
+body.reader header.masthead a.back{color:#fff;text-decoration:none;border-bottom:1px solid rgba(255,255,255,.4)}
+.reader-wrap{display:grid;grid-template-columns:250px minmax(0,1fr);gap:34px;max-width:1240px;margin:0 auto;padding:28px 26px 90px}
+@media(max-width:900px){.reader-wrap{grid-template-columns:1fr}.toc{position:static}}
+.toc{position:sticky;top:18px;align-self:start;max-height:calc(100vh - 36px);overflow:auto;font-size:12.5px;border-right:1px solid var(--divider);padding-right:14px}
+.toc .toc-h{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--p600);font-weight:700;margin-bottom:8px}
+.toc a{display:block;color:var(--p800);text-decoration:none;padding:3px 0;line-height:1.35}
+.toc a.toc-h3{padding-left:14px;font-size:12px;color:var(--p700)}
+.toc a:hover{color:var(--ember)}
+.reader-body{max-width:860px;font-size:15px;line-height:1.6}
+.reader-body h2{margin-top:44px;padding-top:18px;border-top:1px solid var(--divider)}
+.reader-body h3{display:block;margin-top:30px;font-size:17px}
+.reader-body h4{margin-top:22px}
+.reader-body blockquote{margin:14px 0;padding:10px 16px;border-left:4px solid var(--p500);background:var(--p50);border-radius:0 8px 8px 0;color:var(--p800)}
+.reader-body blockquote p{margin:.3em 0}
+.reader-body pre{background:#fbfcfd;border:1px solid var(--p200);border-left:4px solid var(--p500);border-radius:8px;padding:12px 15px;font-family:var(--mono);font-size:11.5px;line-height:1.55;overflow-x:auto}
+.reader-body pre code{background:none;border:0;padding:0;font-size:inherit}
+.reader-body a{color:var(--p600)}
+.reader-body hr{border:0;border-top:1px solid var(--divider);margin:26px 0}
+.reader-body .spectable-scroll{margin:12px 0}
+.reader-body .spectable td code{white-space:normal}
+.reader-body .anchor{display:block;position:relative;top:-14px;height:0}
+.reader-body strong.tok{scroll-margin-top:24px}
+.reader-body :target{scroll-margin-top:18px}
+.reader-body h2:target,.reader-body h3:target,.reader-body h4:target{background:#fff8ec;box-shadow:-12px 0 0 #fff8ec,12px 0 0 #fff8ec;border-radius:3px}
+.reader-body strong.tok:target{background:#fff1cc;border-radius:3px;padding:0 3px;box-shadow:0 0 0 2px #fde68a}
+.reader-body .anchor:target + h2,.reader-body .anchor:target + h3{background:#fff8ec;box-shadow:-12px 0 0 #fff8ec,12px 0 0 #fff8ec;border-radius:3px}
+
+/* ============================================================
+   Two-lane activity flow (.af)  —  v5.2
+   An agent (left lane) and the deterministic tools it calls (right
+   lane), read top to bottom. One row = one exchange: the left box says
+   what the caller decides / types / writes, the right box what the tool
+   derives / checks; the middle column carries the call (▸, solid) and
+   the return (◂, dashed) labels. Rows inside .af-loop repeat (dashed
+   frame + label). .af-sec is a full-width "only when…" divider.
+   Notes inside a box: .cc = what this spec changes (amber), .gap = a
+   defect found (red dashed). .af-box.key = where the important value is
+   produced (heavier border, weight only, no colour).
+   Columns stack under 820px.
+   ============================================================ */
+.af{margin:16px 0;border:1px solid var(--divider);border-radius:12px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.05);padding-bottom:8px;overflow:hidden}
+.af-head,.af-row{display:grid;grid-template-columns:26px minmax(0,1.2fr) minmax(110px,.42fr) minmax(0,1fr);gap:0 12px}
+.af-head{background:linear-gradient(135deg,var(--p800),var(--p700));padding:10px 14px;color:#fff;align-items:end}
+.af-h{font-family:var(--mono);font-size:11.5px;font-weight:700;line-height:1.3}
+.af-h .role{display:block;font-size:10.5px;font-weight:400;color:var(--p200);text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px}
+.af-row{align-items:center;padding:8px 14px}
+.af-row + .af-row{border-top:1px solid #eef1f4}
+.af-n{align-self:start;margin-top:8px;font-family:var(--mono);font-size:11px;font-weight:700;color:#fff;background:var(--p600);min-width:20px;height:20px;padding:0 4px;border-radius:10px;display:flex;align-items:center;justify-content:center}
+.af-box{border:1.5px solid var(--p300);border-radius:8px;padding:8px 11px;background:#fff;display:flex;flex-direction:column;gap:5px;min-width:0}
+.af-box.key{border-width:3px;border-color:var(--p700)}
+.af-box .t{font-size:13px;font-weight:600;color:var(--p900);line-height:1.35}
+.af-box .t code{font-size:11.5px}
+.af-box .q{font-family:var(--serif);font-style:italic;font-size:12.5px;color:var(--p700);border-left:3px solid var(--p200);padding-left:9px;line-height:1.45}
+.af-box .io{font-size:12px;color:var(--ink);line-height:1.5;overflow-wrap:anywhere}
+.af-box .io > b:first-child{display:inline-block;font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--p600);background:var(--p50);border:1px solid var(--p100);border-radius:3px;padding:0 4px;margin-right:5px;vertical-align:1px}
+.af-box .io code{font-size:11px}
+.af-box .cc{font-size:11.5px;line-height:1.45;color:#7c4a03;background:var(--chgbg);border:1px solid var(--chgbd);border-radius:6px;padding:4px 8px}
+.af-box .gap{font-size:11.5px;line-height:1.45;color:var(--ret);background:var(--retbg);border:1.5px dashed var(--retbd);border-radius:6px;padding:4px 8px}
+.af-box .cc code,.af-box .gap code{font-size:10.5px}
+.af-none{font-family:var(--mono);font-size:10.5px;color:var(--muted);font-style:italic;padding:0 4px}
+.af-x{display:flex;flex-direction:column;gap:9px;justify-content:center;min-width:0}
+.af-x .c,.af-x .r{display:flex;flex-direction:column;gap:1px}
+.af-x .l{font-family:var(--mono);font-size:11px;line-height:1.3;color:var(--p800);overflow-wrap:anywhere}
+.af-x .r .l{color:var(--muted)}
+.af-x .ln{display:flex;align-items:center;font-size:13px;line-height:1;color:var(--p500)}
+.af-x .c .ln::before{content:"";flex:1;border-top:1.5px solid var(--p400);margin-right:-3px}
+.af-x .r .ln::after{content:"";flex:1;border-top:1.5px dashed var(--p400);margin-left:-3px}
+.af-loop{margin:6px 10px;border:1.5px dashed var(--p400);border-radius:10px;padding:2px 0}
+.af-loop .af-row{padding-left:4px;padding-right:4px}
+.af-lh{font-family:var(--mono);font-size:10.5px;font-weight:700;color:var(--p700);padding:6px 10px 2px}
+.af-sec{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--p600);background:var(--p50);border-top:1px solid var(--p100);border-bottom:1px solid var(--p100);padding:5px 14px 5px 52px}
+.af-legend{display:flex;flex-wrap:wrap;gap:8px 16px;font-size:11.5px;color:var(--p800);padding:8px 14px 0;align-items:center}
+.af-legend span{display:inline-flex;align-items:center;gap:6px}
+.af-legend i{display:inline-block;width:22px;height:13px;border-radius:3px;border:1.5px solid var(--p300);background:#fff}
+.af-legend i.key{border-width:3px;border-color:var(--p700)} .af-legend i.cc{background:var(--chgbg);border-color:var(--chgbd)}
+.af-legend i.gap{background:var(--retbg);border:1.5px dashed var(--retbd)} .af-legend i.loop{border:1.5px dashed var(--p400)}
+@media(max-width:820px){
+  .af-head,.af-row{grid-template-columns:26px minmax(0,1fr)}
+  .af-head > :nth-child(3),.af-head > :nth-child(4){display:none}
+  .af-row > :not(.af-n){grid-column:2}
+  .af-row > .af-x{flex-direction:row;padding:6px 0}
+}
+
+/* ============================================================
+   Before/after pair (.ba)  —  v5.3
+   The same zoom-in drawn twice, Today then After, side by side (stacked
+   under 820px, or always with .ba.stack for wide diagrams). Holds any
+   kit diagram. An amber node's zoom-in uses one so the change shows.
+   ============================================================ */
+.ba{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin:14px 0 6px;align-items:start}
+.ba.stack{grid-template-columns:minmax(0,1fr)}
+.ba-col{min-width:0}
+.ba-h{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--p600);font-weight:700;padding:0 2px 6px;border-bottom:1px dashed var(--p200)}
+.ba-col > :nth-child(2){margin-top:10px}
+@media(max-width:820px){.ba{grid-template-columns:minmax(0,1fr)}}
+
+/* sm pills carry change state too (v5.3); .cur = the live state in an .smx (weight, no colour) */
+.sm .s.new{border-color:var(--new);background:var(--newbg)}
+.sm .s.chg{border-color:var(--chg);background:var(--chgbg)}
+.sm .s.cur{box-shadow:0 0 0 2.5px var(--p950)}
+
+/* ============================================================
+   Mass diagram (.mass)  —  v5.3
+   One row per module: a solid bar for its interface (entry points,
+   params, rules a caller must know) over an outlined bar for its
+   implementation (what it hides). Lengths are relative units 1–12 set
+   with style="--u:N" (the one inline style this component allows).
+   Shallow = the two bars nearly equal; deep = short interface, long body.
+   ============================================================ */
+.mass{margin:14px 0;border:1px solid var(--divider);border-radius:12px;background:#fff;padding:10px 12px 8px;display:flex;flex-direction:column;gap:4px}
+.mass-m{display:grid;grid-template-columns:minmax(120px,.34fr) minmax(0,1fr);gap:4px 14px;align-items:center;padding:7px 8px;border:1.5px solid transparent;border-radius:8px}
+.mass-m + .mass-m{border-top-color:#eef1f4}
+.mass-m .t{grid-row:1/3;font-weight:600;font-size:12.5px;color:var(--p900);line-height:1.3;overflow-wrap:anywhere}
+.mass-m .t .d{display:block;font-family:var(--mono);font-size:11px;font-weight:400;color:var(--muted);margin-top:2px}
+.mass-bar{display:block;height:10px;border-radius:3px;width:calc(var(--u,1) / 12 * 100%);min-width:6px;max-width:100%}
+.mass-bar.if{background:var(--p600)}
+.mass-bar.impl{height:22px;background:var(--p50);border:1.5px solid var(--p400)}
+.mass-m.chg{border-color:var(--chg);background:var(--chgbg)}
+.mass-m.new{border-color:var(--new);background:var(--newbg)}
+.mass-legend{display:flex;flex-wrap:wrap;gap:8px 16px;font-size:11.5px;color:var(--p800);padding:6px 8px 0;border-top:1px solid #eef1f4;margin-top:4px}
+.mass-legend span{display:inline-flex;align-items:center;gap:6px}
+.mass-legend i{display:inline-block;width:22px;border-radius:2px}
+.mass-legend i.if{height:6px;background:var(--p600)} .mass-legend i.impl{height:12px;background:var(--p50);border:1.5px solid var(--p400)}
+
+/* ============================================================
+   Cross-section (.xsec)  —  v5.3
+   Stacked bands, top to bottom, for the layers one call passes through;
+   the line down the left is the call. .thin = a pass-through layer that
+   adds nothing, .thick = the one layer that now owns the work (weight,
+   no colour). Bands take .chg / .new / .gap like system-map nodes.
+   ============================================================ */
+.xsec{position:relative;margin:14px 0;border:1px solid var(--divider);border-radius:12px;background:#fff;padding:10px 14px 18px 40px;display:flex;flex-direction:column;gap:6px}
+.xsec::before{content:"";position:absolute;left:21px;top:34px;bottom:20px;border-left:2px solid var(--p400)}
+.xsec::after{content:"";position:absolute;left:16px;bottom:12px;border:6px solid transparent;border-top:8px solid var(--p400);border-bottom:0}
+.xs-h{font-family:var(--mono);font-size:10.5px;font-weight:700;color:var(--p700);margin:0 0 2px -26px;display:flex;align-items:center;gap:8px}
+.xs-h::before{content:"";width:12px;height:12px;border-radius:50%;background:var(--p700);border:2.5px solid #fff;box-shadow:0 0 0 1.5px var(--p700)}
+.xs-b{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 12px;border:1.5px solid var(--p300);border-left-width:4px;border-radius:6px;padding:8px 12px;background:#fff}
+.xs-b .t{font-family:var(--mono);font-weight:700;font-size:12px;color:var(--p900);overflow-wrap:anywhere}
+.xs-b .d{font-size:12px;color:var(--muted);flex:1;min-width:160px}
+.xs-b.thin{padding:3px 12px;border-style:dashed;border-left-style:solid}
+.xs-b.thin .t{font-weight:500;color:var(--p600)}
+.xs-b.thick{padding:16px 14px;border-width:3px;border-left-width:6px;border-color:var(--p700)}
+.xs-b.chg{border-color:var(--chg);background:var(--chgbg)}
+.xs-b.new{border-color:var(--new);background:var(--newbg)}
+.xs-b.gap{border:1.5px dashed var(--ret);border-left:4px solid var(--ret);background:var(--retbg)} .xs-b.gap .t{color:var(--ret)}
+
+/* ============================================================
+   Call-graph collapse (.cg)  —  v5.3
+   Nested boxes = who calls whom. .cg-f.deep is one module that now owns
+   a subtree: heavy border (weight, no colour), and the calls inside it
+   render faded and dashed because they are internal now. Boxes take
+   .chg / .new. Pair a Today tree with an After tree in a .ba.
+   ============================================================ */
+.cg{margin:14px 0;border:1px solid var(--divider);border-radius:12px;background:#fff;padding:8px 14px 14px}
+.cg-f{border:1.5px solid var(--p300);border-radius:7px;padding:6px 10px 7px;margin-top:7px;background:#fff;min-width:0}
+.cg-f .cg-f{margin-left:16px}
+.cg-f > .t{font-family:var(--mono);font-size:11.5px;font-weight:700;color:var(--p900);overflow-wrap:anywhere}
+.cg-f > .d{font-size:11px;color:var(--muted);margin-left:8px}
+.cg-f.deep{border-width:3px;border-color:var(--p700);padding:9px 12px 11px}
+.cg-f.deep .cg-f{border-style:dashed;border-color:var(--p200);background:var(--p50)}
+.cg-f.deep .cg-f > .t{color:var(--p500);font-weight:500}
+.cg-f.chg{border-color:var(--chg);background:var(--chgbg)}
+.cg-f.new{border-color:var(--new);background:var(--newbg)}
+
+/* ============================================================
+   Interactive state machine (.smx)  —  v5.3
+   An .sm row of states (each .s carries data-state) plus hidden
+   <a class="smx-t" data-ev data-from data-to data-note>label</a>
+   transitions and optional <div class="smx-walk" data-name data-steps>
+   walkthroughs. spec-kit.js adds the controls: the moves available from
+   the current state, walkthrough buttons, a reset, the path taken, and
+   a collapsed list of every transition. Static without JS: the pills.
+   ============================================================ */
+.smx{margin:14px 0;border:1px solid var(--divider);border-radius:12px;background:#fff;padding:10px 16px 12px}
+.smx > .sm{margin:4px 0 10px}
+.smx-t,.smx-walk{display:none}
+.smx-bar{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;padding:9px 0 6px;border-top:1px solid #eef1f4}
+.smx-now{font-family:var(--mono);font-size:11px;color:var(--muted)} .smx-now b{color:var(--p900)}
+.smx-moves,.smx-ctl{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.smx-ctl{margin-left:auto}
+.smx button{appearance:none;font-family:var(--mono);font-size:11px;border:1.5px solid var(--p300);background:#fff;color:var(--p800);border-radius:7px;padding:4px 10px;cursor:pointer}
+.smx button:hover:not(:disabled){border-color:var(--p600);background:var(--p50)}
+.smx button:disabled{opacity:.5;cursor:default}
+.smx .smx-btn{font-weight:700}
+.smx .smx-btn.new{border-color:var(--new);color:var(--new);background:var(--newbg)}
+.smx .smx-btn.chg{border-color:var(--chg);color:var(--chg);background:var(--chgbg)}
+.smx .smx-walkb.on{border-color:var(--p700);box-shadow:inset 0 0 0 1px var(--p700)}
+.smx-wi,.smx-end{font-family:var(--mono);font-size:10.5px;color:var(--muted)}
+.smx-log{margin:4px 0;padding-left:22px;font-size:12px;color:var(--p800)}
+.smx-log li{margin:3px 0}
+.smx-log li b{font-family:var(--mono);font-size:11px;color:var(--p900)}
+.smx-log li .n{display:block;font-size:11px;color:var(--muted)}
+.smx-log li.new b{color:var(--new)} .smx-log li.chg b{color:var(--chg)}
+.smx-log li.smx-empty{list-style:none;margin-left:-22px;color:var(--muted);font-style:italic}
+.smx-all{margin-top:6px;font-size:11.5px;color:var(--p800)}
+.smx-all summary{cursor:pointer;font-family:var(--mono);font-size:10.5px;color:var(--p600)}
+.smx-row{padding:4px 0 4px 14px;border-top:1px solid #f1f4f7;line-height:1.45}
+.smx-row code{font-size:10.5px}
+.smx-row.new{box-shadow:inset 3px 0 0 var(--new)} .smx-row.chg{box-shadow:inset 3px 0 0 var(--chg)}
+
+
+/* ============================================================
+   v6.0 layer — readability. Later rules win over the v5 rules above;
+   fold them in place when this graduates out of the test run.
+   ============================================================ */
+/* system-map nodes: the name is the loudest thing, kind is a quiet word */
+.sysmap .colh{font-family:var(--sans);font-size:12.5px;font-weight:600;letter-spacing:0;text-transform:none;color:var(--ink2);text-align:left;border-bottom:0;padding:0 2px 2px}
+.sys{border:1px solid var(--line);border-radius:8px;padding:10px 12px;min-height:72px;gap:1px}
+.sys .k{background:none;color:var(--muted);padding:0;margin:0 0 1px;font-family:var(--sans);font-size:10.5px;font-weight:600;letter-spacing:.06em;border-radius:0}
+.sys .t{font-size:14px;font-weight:600;color:var(--ink);line-height:1.3}
+.sys .d{font-family:var(--sans);font-size:12.5px;color:var(--ink2);line-height:1.4}
+.sys.ext{border:1.5px dashed var(--wire)}
+.sys.new{border:1.5px solid var(--new);background:var(--newbg);box-shadow:none}.sys.new .k{background:none;color:var(--newink)}
+.sys.chg{border:1.5px solid var(--chg);background:var(--chgbg)}.sys.chg .k{background:none;color:var(--chgink)}
+.sys .ref{font-family:var(--sans);font-size:11px;font-weight:600;padding:1px 8px;top:-12px}
+.sys.chg .ref{color:var(--chgink)}.sys.new .ref{color:var(--newink)}
+.sys.trig .t{font-size:13.5px;color:var(--ink)}.sys.trig .d{font-family:var(--sans);font-size:12px;color:var(--ink2)}
+.sys.gap{border:1.5px dashed #c2341c;background:#fff4f2;color:#9b2615;font-family:var(--sans);font-size:13px;font-weight:600;line-height:1.4;text-align:left;justify-content:center;padding:10px 14px}
+.sysmap svg .e{stroke:var(--wire);stroke-width:1.5}
+.sysmap svg .e.new{stroke:var(--new);stroke-width:2}
+.sysmap svg .e.chg{stroke:var(--chg);stroke-width:2}
+.sysmap svg .e.gap{stroke:#c2341c;stroke-dasharray:5 5;stroke-width:1.5}
+.sysmap svg .e.loop{stroke:var(--ink2);stroke-dasharray:6 4;stroke-width:1.75}
+.sysmap svg .e.happy{stroke:var(--ink);stroke-width:2.25}
+.sysmap svg .e.exit{stroke:var(--wire);stroke-dasharray:5 5}
+.sysmap svg .lbl{font:500 11.5px var(--sans);fill:var(--ink2)}
+.sysmap svg .lbl.new{fill:var(--newink);font-weight:700}.sysmap svg .lbl.chg{fill:var(--chgink);font-weight:700}.sysmap svg .lbl.gap{fill:#9b2615}
+.sysmap svg .lbl.happy{fill:var(--ink);font-weight:700}.sysmap svg .lbl.loop{fill:var(--ink2);font-weight:700}
+.sys-legend{font-size:12.5px;color:var(--ink2);gap:8px 18px;margin:4px 2px 8px}
+.sys-legend i{background:var(--wire)} .sys-legend i.chg{background:var(--chg)} .sys-legend i.new{background:var(--new)}
+.sys-legend i.box{width:18px;height:12px;border-radius:3px;border:1px solid var(--line);background:#fff}
+.sys-legend i.box.new{border:1.5px solid var(--new);background:var(--newbg)} .sys-legend i.box.chg{border:1.5px solid var(--chg);background:var(--chgbg)}
+.sys-legend i.box.gap{border:1.5px dashed #c2341c;background:#fff4f2} .sys-legend i.box.ext{border:1.5px dashed var(--wire)}
+.sys-legend i.happy{height:3px;background:var(--ink)} .sys-legend i.exit{background:repeating-linear-gradient(90deg,var(--wire) 0 5px,transparent 5px 9px)}
+.sys-legend i.loop{background:repeating-linear-gradient(90deg,var(--ink2) 0 6px,transparent 6px 10px)}
+.sys-legend i.dia{width:14px;height:14px;background:#e3e7ed;clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%)} .sys-legend i.dia.gate{background:var(--ink)}
+.sys-legend i.fan{width:16px;height:11px;border-radius:2px;border:1px solid var(--line);background:#fff;box-shadow:3px 3px 0 -1px #fff,3px 3px 0 0 var(--line)}
+/* reference footer: compact chips in a grid, not a stack of full-width rows */
+.sys-refs{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:6px;margin:10px 0 0}
+.sys-refs .refrow{padding:6px 10px;font-size:12.5px;gap:10px;align-items:center}
+.sys-refs .refrow .chip{font-family:var(--sans);font-size:11.5px;min-width:40px;padding:1px 6px}
+.sys-refs .refrow .go{display:none}
+/* claim as the diagram's title: put .claim.lead BEFORE the diagram */
+.claim.lead{font-size:18px;line-height:1.4;font-weight:600;color:var(--ink);border:0;background:none;padding:0;margin:6px 0 12px;max-width:900px}
+.claim.lead b{display:block;font-size:11.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:2px}
+.claim.lead b a.cite{color:inherit}
+.claim.lead + .how,.how{font-size:13px;color:var(--ink2);margin:-6px 0 10px}
+/* full-bleed for wide diagrams: break out of the 1140px column, still inside the viewport */
+.bleed{width:min(1320px,calc(100vw - 32px));margin-left:calc((100% - min(1320px,100vw - 32px))/2)}
+/* path highlighting (spec-kit.js): hover a node, everything off its path dims */
+.sysmap .sys,.sysmap svg .e,.sysmap svg .lbl,.sysmap svg .lblbg{transition:opacity .15s}
+.sysmap.focus .sys:not(.on){opacity:.22}
+.sysmap.focus svg .e:not(.on),.sysmap.focus svg .lbl:not(.on),.sysmap.focus svg .lblbg:not(.on){opacity:.1}
+.sysmap.focus .lane{opacity:.6}
+
+/* ---------- lanes: rows are lanes, the trigger is the lane's label (.sysmap.lanes) ---------- */
+.sysmap.lanes{row-gap:28px;padding:22px 18px 18px}
+.sysmap.lanes .lane{background:var(--lane);border-radius:10px;margin:-10px -8px;z-index:0;position:relative}
+.sysmap.lanes .sys.trig .dot{display:none}
+.sysmap.lanes .sys.trig{align-self:center;padding-left:4px;max-width:170px}
+
+/* ---------- delta map: one grid, a Today/After toggle (.sysmap.delta[data-view]) ----------
+   Elements carry data-in="today" | "after"; no data-in = in both views. Positions never move
+   between views, so the reader sees the change in place. In the After view, boxes the spec does
+   not change fade, so only the coloured ones stand out. */
+.sysmap.delta[data-view="today"] [data-in="after"],.sysmap.delta[data-view="after"] [data-in="today"]{display:none}
+[data-view-of][hidden]{display:none}
+.sysmap.delta[data-view="after"] .sys:not(.new):not(.chg):not(.gap):not(.trig){opacity:.55}
+.dview{display:inline-flex;gap:0;border:1px solid var(--line);border-radius:9px;overflow:hidden;margin:4px 0 10px;background:#fff}
+.dview button{appearance:none;border:0;background:#fff;font:600 13px var(--sans);color:var(--ink2);padding:7px 16px;cursor:pointer;min-height:36px}
+.dview button + button{border-left:1px solid var(--line)}
+.dview button[aria-pressed="true"]{background:var(--ink);color:#fff}
+
+/* ---------- runbook graph (.sysmap.rgraph): for runbooks that branch, fan out or loop ----------
+   The happy path is one row left to right; exits drop below; loops go over the top.
+   Node shapes: .dec automatic decision (grey diamond), .gate human gate (black diamond),
+   .fan step that runs ×N in parallel (stacked cards), .exit an end that isn't the goal (dashed pill). */
+.sysmap.rgraph{row-gap:44px;column-gap:44px;padding:56px 20px 22px} /* no .colh row: step numbers go in the kind word, the top strip is where loops route */
+.sys.dec,.sys.gate{border:0;border-radius:0;background:#e3e7ed;clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%);min-height:118px;padding:18px 26px;align-items:center;justify-content:center;text-align:center}
+.sys.dec .t,.sys.gate .t{font-size:13px;line-height:1.25}
+.sys.gate{background:var(--ink)} .sys.gate .t{color:#fff} .sys.gate .k{color:#c5ccd6;align-self:center}
+.sys.dec .k{align-self:center}
+.sys.fan{--stk:#fff;--stkbd:var(--line);box-shadow:6px 6px 0 -1px var(--stk),6px 6px 0 0 var(--stkbd),12px 12px 0 -1px var(--stk),12px 12px 0 0 var(--stkbd)}  /* the stack overflows into the gap; no margin, so row centres stay aligned */
+.sys.fan.new{--stk:var(--newbg);--stkbd:var(--new)} .sys.fan.chg{--stk:var(--chgbg);--stkbd:var(--chg)}
+.sys.exit{border:1.5px dashed var(--wire);border-radius:999px;min-height:52px;align-items:center;justify-content:center;text-align:center;background:#fff;padding:8px 16px}
+.sys.exit .t{font-size:13px} .sys.exit .d{font-size:12px}
+
+/* ---------- step list (.steps): a runbook that is a straight line ---------- */
+.steps{list-style:none;counter-reset:st;margin:14px 0;padding:16px 18px 6px;background:#fff;border:1px solid var(--divider);border-radius:12px}
+.steps .st{counter-increment:st;position:relative;display:grid;grid-template-columns:34px minmax(0,1fr);column-gap:14px;padding:0 0 16px;margin:0}
+.steps .st::before{content:attr(data-n);grid-row:1/4;width:28px;height:28px;border-radius:50%;background:var(--ink);color:#fff;font:600 12.5px var(--sans);display:flex;align-items:center;justify-content:center;z-index:1}
+.steps .st:not([data-n])::before{content:counter(st)}
+.steps .st::after{content:"";position:absolute;left:13.5px;top:30px;bottom:2px;border-left:1.5px solid var(--line)}
+.steps .st:last-child::after{display:none}
+.steps .sk{font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);line-height:1.4}
+.steps .sn{font-size:14.5px;font-weight:600;color:var(--ink);line-height:1.4}
+.steps .so{font-size:13px;color:var(--ink2);line-height:1.5}
+.steps .st.new::before{background:var(--new)} .steps .st.chg::before{background:var(--chg)}
+.steps .st.gate::before{border-radius:4px;transform:rotate(45deg) scale(.86)}
+
+/* ---------- phase lanes (.plan): build order. Rows = the repo that owns the work, columns = phases.
+   Dependencies are words on the card ("after P0a"), never wires. ---------- */
+.plan{margin:14px 0;display:flex;flex-direction:column;gap:10px}
+.plan-h,.plan-row{display:grid;grid-template-columns:128px repeat(var(--cols,4),minmax(0,1fr));column-gap:12px}
+.plan-h{font-size:12.5px;font-weight:600;color:var(--ink2);padding:0 0 0}
+.plan-row{background:var(--lane);border-radius:10px;padding:12px 0;align-items:start}
+.plan-who{padding:8px 14px;font-size:14px;font-weight:600;color:var(--ink)}
+.plan-cell{display:flex;flex-direction:column;gap:8px;min-width:0}
+.pc{display:flex;flex-direction:column;gap:2px;padding:10px 12px;background:#fff;border:1px solid var(--line);border-radius:8px;min-width:0}
+.pc .pid{font-family:var(--mono);font-size:11.5px;color:var(--muted)}
+.pc b{font-size:14px;font-weight:600;line-height:1.3;color:var(--ink)}
+.pc .pd{font-size:12.5px;line-height:1.4;color:var(--ink2)}
+.pc .pa{font-size:12px;line-height:1.4;color:var(--muted);margin-top:2px}
+.pc.key{border:2px solid var(--ink)}
+.pc.risk{border:1.5px solid #c2341c} .pc.risk .pid{color:#9b2615}
+@media(max-width:820px){.plan-h{display:none}.plan-row{grid-template-columns:1fr;row-gap:8px;padding:12px}.plan-who{padding:0}}
+
+/* ---------- chains (.dfg) that would wrap go vertical instead (class set by spec-kit.js) ---------- */
+.dfg.vert{flex-direction:column;align-items:flex-start;flex-wrap:nowrap}
+.dfg.vert .node{width:min(420px,100%)}
+.dfg.vert .edge{flex-direction:row;max-width:none;min-width:0;padding:6px 0 6px 64px;gap:10px;align-items:center}
+.dfg.vert .edge .ar{transform:rotate(90deg);order:-1}
+.dfg.vert .edge .el br{display:none}
+
+/* descriptive text in diagrams reads as prose, not code */
+.node .nf,.edge .el,.seq-msg .m2,.dflow .out,.dflow .dno,.dflow .yes{font-family:var(--sans)}
+.node .nf{font-size:12px;color:var(--ink2)} .dflow .out{font-size:13px} .dflow .dq .q{font-size:13.5px}
+.ent .row{font-size:12.5px} .ent .row .ty{font-size:11.5px}
+
+/* ============================================================
+   v6.1 — one type system for the whole page.
+   Five sizes, two text colours, one family (mono only for code identifiers):
+     --fs-title 28   tab title (h2)               ink
+     --fs-sec   19   section heading = its claim   ink
+     --fs-body  15   prose, lede, callouts         ink / ink2
+     --fs-small 13   legend, captions, box detail  ink2
+     --fs-micro 11   kind words, column heads      ink2
+   No eyebrow, no sub line, no letter badges, no coloured rules on prose.
+   ============================================================ */
+:root{--fs-title:28px;--fs-sec:19px;--fs-body:15px;--fs-small:13px;--fs-micro:11px;--muted:#4b5361}
+body{color:var(--ink);font-size:var(--fs-body)}
+h2{font-family:var(--sans);font-size:var(--fs-title);font-weight:650;letter-spacing:-.015em;line-height:1.2;color:var(--ink);margin:8px 0 8px}
+h2 .eyebrow,h2 .sub{display:none}
+h3{display:block;font-size:var(--fs-sec);font-weight:600;line-height:1.35;color:var(--ink);margin:44px 0 10px;max-width:880px}
+h3 .hn{display:none}
+h4{font-size:var(--fs-body);color:var(--ink)}
+h2 code,h3 code,.claim code{font-size:.9em;background:none;border:0;padding:0;color:inherit}
+.lede{font-size:16px;line-height:1.55;color:var(--ink2);border-left:0;padding-left:0;margin:4px 0 8px;max-width:860px}
+/* a section heading IS the claim of the diagram under it; the citation trails it, small and grey */
+h3.claim{border:0;background:none;padding:0;font-size:var(--fs-sec);font-weight:600;color:var(--ink);margin:44px 0 10px}
+h3.claim .src{font-size:var(--fs-small);font-weight:400;color:var(--ink2);margin-left:6px;white-space:nowrap}
+h3.claim .src a.cite{color:inherit;text-decoration:underline dotted;text-underline-offset:2px}
+/* a claim that is not a heading (a caption under a table) */
+p.claim{font-size:var(--fs-small);color:var(--ink2);border-left:0;background:none;padding:0;margin:8px 0 24px}
+p.claim b{color:var(--ink);font-weight:600}
+/* legend + view toggle share one row directly under the heading */
+.sys-legend{font-size:var(--fs-small);color:var(--ink2);margin:0 0 10px;align-items:center}
+.dview{margin:0 16px 10px 0;vertical-align:middle}
+.dview + .sys-legend{display:inline-flex;vertical-align:middle}
+.how{display:none}
+/* callouts: one style, label in the body face */
+.callout,.callout.ember,.callout.new{background:#fff;border:1px solid var(--divider);border-left:1px solid var(--divider);border-radius:10px;padding:14px 18px;font-size:var(--fs-body);color:var(--ink)}
+.callout .lab,.callout.ember .lab,.callout.new .lab{font-family:var(--sans);font-size:var(--fs-small);letter-spacing:0;text-transform:none;color:var(--ink2);font-weight:600;margin-bottom:4px}
+.callout.ember{border-color:#f2cf8e;background:#fffaf0}
+/* diagram chrome in the same scale */
+.sysmap .colh,.plan-h{font-size:var(--fs-micro);font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink2)}
+.sys .k,.steps .sk,.pc .pid{font-size:var(--fs-micro);color:var(--ink2)}
+.sys .d,.pc .pd,.steps .so,.node .nf{font-size:var(--fs-small);color:var(--ink2)}
+.pc .pa{font-size:var(--fs-small);color:var(--ink2)}
+.sys-refs .refrow{font-size:var(--fs-small);color:var(--ink2)}
+.card{font-size:var(--fs-body);color:var(--ink)} .card b{color:var(--ink)}
+.catgrp .cath{font-family:var(--sans);font-size:var(--fs-body);font-weight:600;background:#fff;color:var(--ink);border-bottom:1px solid var(--divider)}
+.catgrp .cath .cgl{background:var(--lane);color:var(--ink2)}
+.uci{font-size:var(--fs-small)} .uci .uid{color:var(--ink2)}
+.uc .uch{background:#fff;color:var(--ink);border-bottom:1px solid var(--divider)}
+.uc .uch .uct{font-family:var(--sans);font-size:var(--fs-body);font-weight:600}
+.uc .uch .actor{font-family:var(--sans);font-size:var(--fs-micro);color:var(--ink2);font-weight:600;letter-spacing:.06em}
+.uc .uch .ucn{background:var(--lane);color:var(--ink2)}
+.uc .ucsub{font-size:var(--fs-small);color:var(--ink2);background:#fff}
+.spectable{font-size:var(--fs-small)}
+.spectable thead th{font-family:var(--sans);font-size:var(--fs-micro);background:#fff;color:var(--ink2);border-bottom:1px solid var(--divider)}
+.xref,.foot{font-family:var(--sans);font-size:var(--fs-small);color:var(--ink2);background:none;border-color:var(--divider)}
+.callout .lab::first-letter{text-transform:uppercase}
+.pc .pid{font-family:var(--sans);font-weight:600;letter-spacing:.02em}
+
+/* ============================================================
+   v6.2 — linked entity diagram (.erd.linked): the relationships are
+   drawn between the entity cards by spec-kit.js (same <a class="sys-edge">
+   markup as a system map), labelled in words, arrow from the one to the
+   many. Replaces the crow's-foot .rels text panel.
+   ============================================================ */
+.erd.linked{position:relative;display:grid;gap:64px 80px;align-items:center;padding:28px 24px}
+.erd.linked .ent{position:relative;z-index:2;min-width:0;align-self:center}
+.erd.linked svg.edges{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1;overflow:visible}
+.erd.linked svg .e{fill:none;stroke:var(--wire);stroke-width:1.5}
+.erd.linked svg .e.new{stroke:var(--new);stroke-width:2}
+.erd.linked svg .e.chg{stroke:var(--chg);stroke-width:2}
+.erd.linked svg .lbl{font:600 12px var(--sans);fill:var(--ink2)}
+.erd.linked svg .lbl.new{fill:var(--newink)}
+.erd.linked svg .lblbg{fill:#fbfcfd;stroke:none}
+.erd.linked .ent,.erd.linked svg .e,.erd.linked svg .lbl{transition:opacity .15s}
+.erd.linked.focus .ent:not(.on){opacity:.25}
+.erd.linked.focus svg .e:not(.on),.erd.linked.focus svg .lbl:not(.on),.erd.linked.focus svg .lblbg:not(.on){opacity:.1}
+.ent .eh .stereo{font-family:var(--sans);font-size:var(--fs-micro);font-weight:600;letter-spacing:.06em}
+
+/* ============================================================
+   v6.2 — written content (.doc): goals, rationale, non-goals read as a
+   document — numbered paragraphs with a bold lead phrase — not as cards.
+   Cards are only for things the reader compares side by side.
+   ============================================================ */
+.doc{max-width:780px;font-size:16px;line-height:1.65;color:var(--ink)}
+.doc p{margin:0 0 14px}
+.doc ol.goals{list-style:none;counter-reset:g;padding:0;margin:14px 0 18px}
+.doc ol.goals > li{counter-increment:g;display:grid;grid-template-columns:44px minmax(0,1fr);margin:0 0 14px}
+.doc ol.goals > li::before{content:"G" counter(g);font-weight:600;color:var(--ink2);font-size:var(--fs-body);line-height:1.65}
+.doc ol.goals > li b:first-child{color:var(--ink)}
+.doc .aside{color:var(--ink2);font-size:var(--fs-small)}
+.doc code{font-size:.88em}
+/* entity cards on the page type system: change state is fill + border (like system-map boxes),
+   the column name is the only mono text, its description sits under it in grey sans */
+.ent{border:1px solid var(--line);border-radius:10px;box-shadow:none}
+.ent .eh,.ent.exist .eh{background:#fff;color:var(--ink);border-bottom:1px solid var(--divider);padding:9px 12px}
+.ent.newt{border:1.5px solid var(--new)} .ent.newt .eh{background:var(--newbg)} .ent.newt .eh .stereo{color:var(--newink)}
+.ent.changed{border:1.5px solid var(--chg)} .ent.changed .eh{background:var(--chgbg)} .ent.changed .eh .stereo{color:var(--chgink)}
+.ent .eh .en{font-size:13.5px;color:var(--ink)} .ent .eh .stereo{color:var(--ink2);opacity:1}
+.ent .row{flex-wrap:wrap;row-gap:1px;padding:6px 12px;font-size:var(--fs-small)}
+.ent .row .nm{font-size:12.5px;color:var(--ink)}
+.ent .row .ty{flex:1 0 100%;margin-left:0;max-width:none;text-align:left;font-family:var(--sans);font-size:var(--fs-small);color:var(--ink2);overflow-wrap:normal}
+.ent .row .gut + .b ~ .ty,.ent .row .gut ~ .ty{padding-left:17px}
+.ent .b{background:none;border:0;padding:0;font-family:var(--sans);font-size:10.5px;color:var(--ink2);letter-spacing:.04em}
+.ent .b-new{color:var(--newink)}
+.ent .row.hi{background:var(--lane)}
+.ent .row.add .nm{color:var(--newink)}
+.ent .note{font-family:var(--sans);font-style:normal;font-size:var(--fs-small);color:var(--ink2);background:#fff;padding:8px 12px}
+/* v6.2: figure captions match p.claim; step markers grow for 2.11-style numbers */
+figure.concept figcaption{font-size:var(--fs-small);color:var(--ink2);border-left:0;background:none;padding:0;margin-top:10px}
+figure.concept figcaption b{color:var(--ink);font-weight:600}
+.steps .st::before{width:auto;min-width:28px;padding:0 6px;border-radius:14px;box-sizing:border-box;justify-self:start}
+
+/* ============================================================
+   v6.3 — masthead and tabs on the page type system.
+   The masthead is a document title block, not a banner: light ground,
+   sans throughout, aligned to the content column, one primary action.
+     .kicker   project · topic           13px, grey, sentence case
+     h1        the spec's title          34px, ink
+     p         what the spec is about    17px, grey, ≤ 2 sentences
+     .meta     status pill, date, companion file
+     a.spec-link   "Read the spec"        the one button
+   Tabs: a light underline bar, no numbers.
+   ============================================================ */
+header.masthead{background:#fff;color:var(--ink);padding:44px max(26px,calc((100% - 1088px)/2)) 30px;border-bottom:1px solid var(--divider);overflow:visible}
+header.masthead::after{display:none}
+header.masthead .kicker{font-family:var(--sans);font-size:var(--fs-small);font-weight:600;letter-spacing:0;text-transform:none;color:var(--ink2)}
+header.masthead h1{font-family:var(--sans);font-size:34px;font-weight:700;letter-spacing:-.02em;line-height:1.15;color:var(--ink);margin:8px 0 12px;max-width:900px}
+header.masthead p{color:var(--ink2);font-size:17px;line-height:1.55;max-width:780px;margin:0}
+header.masthead p code{background:var(--lane);border:0;color:var(--ink)}
+header.masthead .meta{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;margin-top:18px;font-family:var(--sans);font-size:var(--fs-small);color:var(--ink2)}
+header.masthead .meta .status{font-weight:600;color:var(--chgink);background:var(--chgbg);border:1px solid var(--chgbd);border-radius:999px;padding:2px 10px}
+header.masthead .meta code{font-size:12px;background:none;border:0;padding:0;color:var(--ink2)}
+header.masthead a.spec-link{display:inline-flex;align-items:center;gap:6px;margin-top:20px;font:600 14px var(--sans);color:#fff;background:var(--ink);border:0;border-radius:8px;padding:10px 16px;min-height:40px;box-sizing:border-box}
+header.masthead a.spec-link:hover{background:#000}
+nav.tabs{background:#fff;box-shadow:none;border-bottom:1px solid var(--divider);gap:4px;padding:0 max(14px,calc((100% - 1088px)/2 - 12px))}
+nav.tabs button{color:var(--ink2);font-size:14.5px;font-weight:500;padding:14px 12px 12px;border-bottom:2px solid transparent;transition:color .12s,border-color .12s}
+nav.tabs button .n{display:none}
+nav.tabs button:hover{color:var(--ink);background:none}
+nav.tabs button.active{color:var(--ink);font-weight:600;border-bottom-color:var(--ink);background:none}
+nav.tabs button:focus-visible{outline:2px solid var(--new);outline-offset:-2px}
+nav.tabs{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none} nav.tabs::-webkit-scrollbar{display:none}
+nav.tabs button{white-space:nowrap;flex:0 0 auto}
+@media(max-width:640px){header.masthead{padding:28px 16px 22px} header.masthead h1{font-size:27px}}
+
+/* ============================================================
+   v6.4 — request, activity, response (.rar)
+   One call that hides work. Caller on the left, the called thing on the
+   right; the request crosses at the top, the steps run down the right,
+   the response crosses back at the bottom. A child process / sub-call
+   nests as .rar-step.child (dashed) with its own .rar-sub steps.
+   Markup: see COMPONENTS.md → Request, activity, response.
+   ============================================================ */
+.rar{display:grid;grid-template-columns:minmax(0,.9fr) 92px minmax(0,1.35fr);grid-template-rows:auto auto 1fr auto;margin:14px 0;padding:22px 22px 24px;background:#fff;border:1px solid var(--divider);border-radius:12px;align-items:start}
+.rar-h{display:flex;flex-direction:column;gap:2px;padding-bottom:14px}
+.rar-h .k{font-size:var(--fs-micro);font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink2)}
+.rar-h b{font-size:16px;font-weight:600;color:var(--ink)} .rar-h .d{font-size:var(--fs-small);color:var(--ink2)}
+.rar-h.caller{grid-area:1/1} .rar-h.called{grid-area:1/3}
+.rar-req,.rar-res{display:flex;flex-direction:column;gap:8px;padding:14px 16px;border-radius:10px}
+.rar-req{grid-area:2/1;background:var(--newbg);border:1.5px solid var(--new)}
+.rar-res{grid-area:4/1;background:var(--lane);border:1.5px solid var(--ink);align-self:end}
+.rar-req .lab,.rar-res .lab{font-size:var(--fs-micro);font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink2)}
+.rar-req .lab{color:var(--newink)}
+.rar pre{margin:0;padding:10px 12px;background:#fff;border-radius:8px;font-family:var(--mono);font-size:12px;line-height:1.55;white-space:pre-wrap;color:var(--ink);overflow-x:auto}
+.rar .note{font-size:var(--fs-small);color:var(--ink2);line-height:1.45}
+.rar-wait{grid-area:3/1;align-self:stretch;display:flex;flex-direction:column;align-items:center;gap:8px;padding:10px 0;min-height:60px}
+.rar-wait::before,.rar-wait::after{content:"";flex:1;border-left:2px dashed var(--line)}
+.rar-wait span{font-size:var(--fs-small);color:var(--ink2);text-align:center;max-width:220px}
+.rar-arrow{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:12px;font-weight:600;padding-top:30px}
+.rar-arrow.in{grid-area:2/2;color:var(--newink)} .rar-arrow.out{grid-area:4/2;color:var(--ink);align-self:end;padding-bottom:30px}
+.rar-arrow i{display:block;width:70px;height:2px;background:currentColor;position:relative}
+.rar-arrow.in i::after{content:"";position:absolute;right:-2px;top:-5px;border:6px solid transparent;border-left:9px solid currentColor;border-right:0}
+.rar-arrow.out i::before{content:"";position:absolute;left:-2px;top:-5px;border:6px solid transparent;border-right:9px solid currentColor;border-left:0}
+.rar-steps{grid-area:2/3/5/4;list-style:none;margin:0;padding:0;counter-reset:rs;display:flex;flex-direction:column}
+.rar-step{counter-increment:rs;position:relative;display:grid;grid-template-columns:28px minmax(0,1fr);column-gap:12px;padding:14px 16px;border:1px solid var(--line);border-radius:10px;background:#fff;margin-bottom:34px}
+.rar-step:last-child{margin-bottom:0}
+.rar-step::before{content:counter(rs);grid-row:1/20;width:28px;height:28px;border-radius:14px;background:var(--ink);color:#fff;font:600 12.5px var(--sans);display:flex;align-items:center;justify-content:center}
+.rar-step::after{content:"";position:absolute;left:50%;bottom:-30px;height:24px;border-left:2px solid var(--wire)}
+.rar-step:last-child::after{display:none}
+.rar-step > *{grid-column:2;min-width:0}
+.rar-step b{font-size:14.5px;font-weight:600;color:var(--ink)}
+.rar-step > span{font-size:13.5px;line-height:1.5;color:var(--ink2)}
+.rar-step pre{margin-top:8px;background:var(--lane)}
+.rar-step .branch{justify-self:start;margin-top:6px;font-size:12px;font-weight:600;color:var(--chgink);background:var(--chgbg);border:1px solid var(--chgbd);border-radius:999px;padding:2px 10px}
+.rar-step.child{border:1.5px dashed var(--ink);background:#fafbfc}
+.rar-sub{grid-column:2;list-style:none;margin:10px 0 0;padding:12px 14px;border-left:3px solid var(--ink);background:#fff;border-radius:0 8px 8px 0;display:flex;flex-direction:column;gap:22px}
+.rar-sub li{position:relative;padding:8px 10px;border:1px solid var(--line);border-radius:8px;font-size:13px;color:var(--ink2)}
+.rar-sub li b{display:block;font-size:13.5px;color:var(--ink)}
+.rar-sub li + li::before{content:"";position:absolute;left:50%;top:-20px;height:16px;border-left:2px solid var(--wire)}
+@media(max-width:820px){.rar{grid-template-columns:minmax(0,1fr);grid-template-rows:none}.rar-h.caller,.rar-h.called,.rar-req,.rar-res,.rar-steps,.rar-arrow,.rar-wait{grid-area:auto}.rar-wait{display:none}.rar-arrow{flex-direction:row;padding:8px 0}}
+
+/* ============================================================
+   v6.5 — git-diff colours (Will's call, 2026-10-14): green = added / new,
+   yellow = modified, red = deleted / dropped. Tokens: --new*, --chg*, --ret*.
+   Entity cards gain a modified row (.row.mod, "~", shows "was: …") and a
+   dropped table (.ent.dropped: red, dashed, name struck through, faded).
+   ============================================================ */
+.ent .row.mod{background:var(--chgbg);box-shadow:inset 3px 0 0 var(--chg)}
+.ent .row.mod .gut{color:var(--chgink)} .ent .row.mod .nm{color:var(--chgink)}
+.ent .row.add .nm{color:var(--newink)}
+.ent .row.del{background:var(--retbg);box-shadow:inset 3px 0 0 var(--ret)} .ent .row.del .gut,.ent .row.del .nm{color:var(--retink)}
+.ent.dropped{border:1.5px dashed var(--ret);opacity:.85}
+.ent.dropped .eh{background:var(--retbg)} .ent.dropped .eh .stereo{color:var(--retink)}
+.ent.dropped .eh .en,.ent.dropped .row .nm{text-decoration:line-through;color:var(--retink)}
+.sys-legend i.box.del{border:1.5px dashed var(--ret);background:var(--retbg)}
+/* v6.6 — composite primary key: the key's rows sit in a .pkgroup with a "{" down their left
+   edge and a small label, so "these columns together identify a row" reads at a glance. */
+.ent .pkgroup{position:relative;padding-left:18px;border-top:1px solid #eef1f4}
+.ent .pkgroup:first-child{border-top:0}
+.ent .pkgroup::before{content:"";position:absolute;left:8px;top:28px;bottom:8px;width:8px;border:2px solid var(--ink);border-right:0;border-radius:9px 0 0 9px}
+.ent .pkgroup::after{content:"";position:absolute;left:2px;top:calc(50% + 10px);width:7px;border-top:2px solid var(--ink)}
+.ent .pkgroup .pklabel{display:block;padding:7px 12px 0 4px;font-size:var(--fs-micro);font-weight:600;letter-spacing:.04em;color:var(--ink2)}
+.ent .pkgroup .row{border-top:0;padding-left:6px}
+.ent .pkgroup .row + .row{border-top:1px solid #eef1f4}  /* dividers between key rows, starting right of the brace */
+/* v6.7 — the composite-key brace sits OUTSIDE the card, in the gutter, so key rows align with
+   every other row; each column shows its DB type on the right of its name (.dt). */
+.ent{overflow:visible}
+.ent > :first-child{border-radius:9px 9px 0 0}
+.ent > :last-child{border-radius:0 0 9px 9px}
+.ent .pkgroup{padding-left:0}
+.ent .pkgroup::before{left:-16px;top:30px;bottom:8px;width:9px}
+.ent .pkgroup::after{left:-22px;width:7px}
+.ent .pkgroup .row{padding-left:12px}
+.ent .pkgroup .pklabel{padding:7px 12px 0 12px}
+.ent .row .dt{margin-left:auto;padding-left:10px;font-family:var(--mono);font-size:12px;color:var(--ink2);white-space:nowrap}
+.ent .row .dt i{font-style:normal;color:#8a919c}
+.erd.linked{padding-left:44px}
+
+/* ============================================================
+   v6.8 — runbook page: "graph node explained" (.nx-*)
+   A runbook tab = the runbook graph (.sysmap.rgraph) first, then one .nx-step per
+   graph node in graph order: header (badge shape = executor, kind line, name,
+   locator strip, template chip) → 2–3 sentence summary → the step's template
+   diagram → hr.nx-div. 14 templates (T1–T14), one per KIND of step; T5, T8, T11
+   and T13 reuse kit primitives (.rgraph, .dflow, .uc). Colour stays reserved for
+   change state; executor kind is a word + shape. COMPONENTS.md → Runbook page.
+   ============================================================ */
+
+/* ---- step block: header + summary + diagram, then a divider ---- */
+.nx-step{padding:6px 0 4px}
+.nx-hd{display:grid;grid-template-columns:auto minmax(0,1fr) auto;column-gap:16px;align-items:start}
+.nx-id{font:650 15px var(--mono);color:#fff;background:var(--ink);border-radius:8px;padding:7px 10px;line-height:1;margin-top:3px}
+.nx-id.gate{border-radius:3px}
+.nx-id.agent{background:#fff;color:var(--ink);box-shadow:inset 0 0 0 2px var(--ink)}
+.nx-id.fan{background:#fff;color:var(--ink);box-shadow:inset 0 0 0 2px var(--ink),4px 4px 0 -1px #fff,4px 4px 0 0 var(--ink)}
+.nx-k{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink2)}
+.nx-t{margin:2px 0 0;font-size:21px;font-weight:650;line-height:1.25;color:var(--ink)}
+.nx-tpl{font-size:12px;color:var(--ink2);border:1px solid var(--line);border-radius:999px;padding:4px 11px;background:#fff;white-space:nowrap;margin-top:4px}
+.nx-tpl b{color:var(--ink);font-weight:600}
+.nx-loc{display:flex;flex-wrap:wrap;gap:4px;margin:10px 0 0}
+.nx-loc span,.nx-loc a{font:500 11px var(--mono);color:var(--ink2);background:var(--lane);border-radius:5px;padding:2px 6px}
+.nx-loc .on{background:var(--ink);color:#fff}
+.nx-sum{font-size:15.5px;line-height:1.6;color:var(--ink);margin:14px 0 16px;max-width:900px}
+.nx-sum code{font-size:.88em}
+hr.nx-div{border:0;border-top:1px solid var(--divider);margin:36px 0 30px}
+
+/* shared atoms */
+.nx-card{background:#fff;border:1px solid var(--divider);border-radius:12px;padding:18px 20px}
+.nx-lab{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink2);margin-bottom:8px;display:block}
+.nx-arrow{display:flex;align-items:center;justify-content:center;color:var(--wire);font-size:22px}
+.nx-pill{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;border:1px solid var(--line);border-radius:999px;padding:3px 10px;background:#fff;color:var(--ink);line-height:1.4}
+.nx-pill i{font-style:normal;font-size:10px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--ink2)}
+.nx-block{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.05em;color:#fff;background:var(--ink);border-radius:4px;padding:1px 6px;margin-right:6px;vertical-align:1px}
+.nx-soft{display:inline-block;font-size:10px;font-weight:600;letter-spacing:.05em;color:var(--ink2);border:1px solid var(--line);border-radius:4px;padding:0 5px;margin-right:6px;vertical-align:1px}
+.nx-note{font-size:13px;color:var(--ink2);margin-top:12px;line-height:1.5}
+.nx-note b{color:var(--ink)}
+ul.nx-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:7px}
+ul.nx-list li{font-size:13.5px;line-height:1.45;color:var(--ink)}
+ul.nx-list li .d{display:block;font-size:12.5px;color:var(--ink2)}
+.nx-tree{font:12.5px/1.75 var(--mono);color:var(--ink);white-space:pre;margin:0}
+.nx-tree .c{color:var(--ink2)}
+
+/* T1 input gate: the request as a form, beside its contract */
+.nx-form{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:16px}
+.nx-field{display:grid;grid-template-columns:150px minmax(0,1fr);gap:10px;padding:7px 0;border-top:1px solid #eef1f4;font-size:13px}
+.nx-field:first-of-type{border-top:0}
+.nx-field .n{font-family:var(--mono);font-size:12.5px;color:var(--ink)}
+.nx-field .v{color:var(--ink2)}
+.nx-wait{margin-top:12px;display:flex;gap:10px;align-items:center;font-size:13px;color:var(--ink2)}
+.nx-wait b{font-family:var(--mono);font-size:12px;color:#fff;background:var(--ink2);border-radius:5px;padding:1px 6px}
+
+/* T2 stage: sources → what lands on disk; checks below */
+.nx-stage{display:grid;grid-template-columns:minmax(0,.9fr) 44px minmax(0,1.2fr);gap:0 8px;align-items:stretch}
+.nx-src{display:flex;flex-direction:column;gap:8px}
+.nx-src .nx-pill{border-radius:10px;justify-content:space-between;padding:7px 12px}
+.nx-checks-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+
+/* T3 roster planner */
+.nx-roster{display:grid;grid-template-columns:minmax(0,1fr) 44px minmax(0,1.3fr);gap:0 8px}
+.nx-chips{display:flex;flex-wrap:wrap;gap:6px}
+.nx-chips span{font:12px var(--mono);background:#fff;border:1px solid var(--line);border-radius:6px;padding:3px 8px}
+.nx-chips span.more{border-style:dashed;color:var(--ink2)}
+
+/* T4 agent fan-out: roster → one worker zoomed → contracts */
+.nx-fan{display:grid;grid-template-columns:150px 30px minmax(0,1fr) 30px 230px;align-items:stretch}
+.nx-stack{display:flex;flex-direction:column;gap:6px;position:relative}
+.nx-stack span{font:12px var(--mono);background:#fff;border:1px solid var(--line);border-radius:8px;padding:7px 10px}
+.nx-stack span.on{border:2px solid var(--ink);font-weight:600}
+.nx-stack span.more{border-style:dashed;color:var(--ink2)}
+.nx-stack .x{font-size:12px;color:var(--ink2);margin-top:4px}
+.nx-stack span.nx-lab,.nx-stack span.x{font-family:var(--sans);background:none;border:0;padding:0;border-radius:0}
+.nx-stack span.nx-lab{font-size:11px}
+.nx-worker{border:2px solid var(--ink);border-radius:14px;background:#fff;padding:16px 18px;display:flex;flex-direction:column;gap:12px}
+.nx-worker .wh{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+.nx-worker .wh b{font-size:15px}
+.nx-worker .wh span{font-size:12px;color:var(--ink2)}
+.nx-belt{display:flex;flex-wrap:wrap;gap:6px}
+.nx-belt span{font:12px var(--mono);background:var(--lane);border:1px solid var(--line);border-radius:6px;padding:3px 8px}
+.nx-belt span::before{content:"⚙ ";color:var(--ink2)}
+ol.nx-reads{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(var(--n,4),minmax(0,1fr));gap:8px;counter-reset:r}
+ol.nx-reads li{counter-increment:r;background:var(--lane);border-radius:10px;padding:10px 12px;font-size:13px;line-height:1.4;position:relative}
+ol.nx-reads li::before{content:counter(r);display:inline-flex;width:20px;height:20px;border-radius:50%;background:var(--ink);color:#fff;font:600 11px var(--sans);align-items:center;justify-content:center;margin-right:6px;vertical-align:1px}
+ol.nx-reads li b{font-weight:600}
+ol.nx-reads li .d{display:block;font-size:12px;color:var(--ink2);margin-top:3px}
+.nx-out{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:12.5px;color:var(--ink2)}
+.nx-out code{font-size:12px;background:#fff;border:1px solid var(--ink);border-radius:6px;padding:2px 7px;color:var(--ink)}
+.nx-contracts{display:flex;flex-direction:column;gap:10px}
+.nx-contracts .nx-card{padding:12px 14px}
+.nx-contracts ul.nx-list li{font-size:12.5px}
+
+/* T5 convergence loop sits on the kit runbook graph (.sysmap.rgraph) */
+
+/* T6 single-agent judgment: reads → decides → writes */
+.nx-judge{display:grid;grid-template-columns:minmax(0,1fr) 30px minmax(0,1.15fr) 30px minmax(0,1fr);align-items:stretch}
+.nx-judge .mid{border:2px solid var(--ink)}
+
+/* T7 session chain */
+.nx-chain{display:flex;align-items:stretch;gap:0;flex-wrap:nowrap}
+.nx-sess{flex:1 1 0;min-width:0;background:#fff;border:2px solid var(--ink);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:4px}
+.nx-sess .k{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink2)}
+.nx-sess b{font-size:14px}
+.nx-sess .d{font-size:12.5px;color:var(--ink2);line-height:1.4}
+.nx-sess.ghost{border-style:dashed;border-color:var(--line);background:transparent}
+.nx-hand{flex:0 0 112px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:11.5px;color:var(--ink2);text-align:center;gap:2px;padding:0 4px}
+.nx-hand .ar{font-size:20px;color:var(--wire);line-height:1}
+.nx-ends{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:14px}
+.nx-end{border:1.5px dashed var(--wire);border-radius:999px;padding:8px 16px;font-size:13px;background:#fff;text-align:center}
+.nx-end b{font-family:var(--mono);font-size:12px}
+.nx-ledger{margin-top:12px;display:flex;gap:10px;align-items:center;background:var(--lane);border-radius:10px;padding:10px 14px;font-size:13px;color:var(--ink2)}
+.nx-ledger b{color:var(--ink)}
+
+/* T9 fan-in: N folders → one rule → one output, with the accounting */
+.nx-funnel{display:grid;grid-template-columns:200px 30px minmax(0,1fr) 30px 230px;align-items:center}
+.nx-rule{border:2px solid var(--ink);border-radius:14px;background:#fff;padding:16px 18px}
+.nx-rule ol{margin:6px 0 0;padding-left:20px;font-size:13.5px;line-height:1.55}
+.nx-rule ol li{margin:3px 0}
+.nx-rule ol li .d{color:var(--ink2);font-size:12.5px}
+.nx-acct{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:14px;font-size:13px;color:var(--ink2)}
+.nx-acct span{background:#fff;border:1px solid var(--line);border-radius:8px;padding:4px 10px;color:var(--ink)}
+.nx-acct span b{font-family:var(--mono)}
+.nx-acct em{font-style:normal;font-weight:600;color:var(--ink2)}
+
+/* T10 deterministic checks */
+table.nx-rules{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--divider);border-radius:12px;overflow:hidden;font-size:13.5px}
+table.nx-rules th{text-align:left;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink2);background:var(--lane);padding:9px 14px}
+table.nx-rules td{padding:9px 14px;border-top:1px solid #eef1f4;vertical-align:top;line-height:1.45}
+table.nx-rules td.o{color:var(--ink2);font-size:12.5px;white-space:nowrap}
+
+/* T12 human gate: readout → decision → one row per outcome */
+.nx-gate{display:grid;grid-template-columns:minmax(0,.95fr) 120px minmax(0,1.3fr);gap:0 18px;align-items:center}
+.nx-dia{width:104px;height:104px;background:var(--ink);clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%);display:flex;align-items:center;justify-content:center;color:#fff;font-size:12.5px;font-weight:600;text-align:center;justify-self:center}
+.nx-outs{display:flex;flex-direction:column;gap:10px}
+.nx-o{display:grid;grid-template-columns:170px minmax(0,1fr);gap:12px;align-items:start;background:#fff;border:1px solid var(--divider);border-radius:12px;padding:11px 14px}
+.nx-o .v{font:600 12.5px var(--mono);color:var(--ink)}
+.nx-o .w{font-size:13px;line-height:1.45;color:var(--ink)}
+.nx-o .w .d{display:block;font-size:12px;color:var(--ink2);margin-top:2px}
+.nx-o.loop{border:1.5px dashed var(--ink2)}
+.nx-o.loop .v::before{content:"↺ ";color:var(--ink2)}
+.nx-o.go .v::before{content:"→ ";color:var(--ink2)}
+.nx-o.stop .v::before{content:"■ ";color:var(--ink2);font-size:10px}
+
+/* T13 publish: kit .uc chain + refusals */
+.nx-refuse{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:12px;font-size:13px;color:var(--ink2)}
+.nx-refuse code{font-size:12px;background:#fff;border:1.5px dashed var(--ink2);border-radius:6px;padding:2px 8px;color:var(--ink)}
+.nx-lanes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:12px}
+
+/* T14 side sink */
+.nx-sink{display:grid;grid-template-columns:minmax(0,1fr) 30px minmax(0,1fr) 30px minmax(0,1fr);align-items:stretch}
+.nx-sink .nx-card.dash{border:1.5px dashed var(--ink2)}
+
+/* template catalogue */
+.nx-cat{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.nx-tcard{background:#fff;border:1px solid var(--divider);border-radius:12px;padding:16px 18px;display:flex;flex-direction:column;gap:8px}
+.nx-tcard .top{display:flex;gap:10px;align-items:baseline}
+.nx-tcard .num{font:650 12px var(--mono);color:#fff;background:var(--ink);border-radius:6px;padding:3px 7px}
+.nx-tcard h4{margin:0;font-size:16.5px;font-weight:650}
+.nx-tcard .q{font-size:13.5px;color:var(--ink);line-height:1.45}
+.nx-tcard .slots{font-size:12.5px;color:var(--ink2);line-height:1.5}
+.nx-tcard .slots b{color:var(--ink);font-weight:600}
+.nx-tcard .use{display:flex;flex-wrap:wrap;gap:5px}
+.nx-tcard .use span{font:11.5px var(--mono);border-radius:5px;padding:2px 6px;background:var(--lane);color:var(--ink)}
+.nx-tcard .use span i{font-style:normal;color:var(--ink2)}
+.nx-tcard .base{font-size:12px;color:var(--ink2)}
+.nx-tcard .base code{font-size:11.5px}
+.nx-loc a{text-decoration:none} .nx-loc a:hover{background:var(--p100);color:var(--ink)}
+.nx-step[id]{scroll-margin-top:74px}
+/* narrow screens: every template stacks to one column and drops its arrows */
+@media (max-width:820px){
+  .nx-form,.nx-stage,.nx-roster,.nx-fan,.nx-judge,.nx-funnel,.nx-gate,.nx-sink,.nx-cat,.nx-lanes{grid-template-columns:minmax(0,1fr);gap:10px}
+  .nx-form>.nx-arrow,.nx-stage>.nx-arrow,.nx-roster>.nx-arrow,.nx-fan>.nx-arrow,.nx-judge>.nx-arrow,.nx-funnel>.nx-arrow,.nx-sink>.nx-arrow{transform:rotate(90deg);height:24px}
+  .nx-chain{flex-direction:column} .nx-hand{flex-basis:auto;flex-direction:row;padding:6px 0}
+  .nx-hand .ar{transform:rotate(90deg)}
+  .nx-ends{grid-template-columns:minmax(0,1fr)}
+  ol.nx-reads{grid-template-columns:minmax(0,1fr)}
+  .nx-hd{grid-template-columns:auto minmax(0,1fr)} .nx-tpl{grid-column:1/-1;justify-self:start}
+  .nx-o{grid-template-columns:minmax(0,1fr)}
+  .nx-dia{width:84px;height:84px}
+}
+
+</style>
+</head>
+<body class="reader" data-back="architecture.html" data-spec-sha="972431facf78fe51">
+
+<header class="masthead">
+  <div class="kicker">SPEC · READER</div>
+  <h1 id="reader-title">Completeness Check Code Hygiene: how a CC review is produced and shown, and where to clean it up</h1>
+  <p><a class="back" href="architecture.html">← back to the diagrams</a> · rendered from <code>DESIGN-SPEC.md</code> · the markdown is the source of truth</p>
+  <div class="meta" id="reader-meta"></div>
+</header>
+
+<div class="reader-wrap">
+  <nav class="toc" id="toc"><div class="toc-h">Contents</div></nav>
+  <main class="reader-body" id="spec-body"></main>
+</div>
+
+<script type="text/markdown" id="spec-md">
+# Completeness Check Code Hygiene: how a CC review is produced and shown, and where to clean it up
+
+**ID:** ARCH-7  
+**Kind:** architecture
+**Status:** living
+**Version:** 1
+**Date:** 2026-10-23
+**Repos touched:** none yet. This is the map of the current system and the target shape. Slices of it ship as feature specs that amend this one.
+**Repos eventually touched:** `bureau` (the CC runbook's 2.8-format, 2.9-comments and lane B of `publish_review.py`; amend), `cityhall-new` (the CC adapter, the checklist landing, the CC PDF, three migrations), `inspector-general` (its comment map, only if it stops reading `sourceFindings`)
+**Repos NOT touched:** `conductor` and `workflows/completeness-check` (frozen legacy lane; the runbook shells to its scripts and that is the thing to retire, not edit), `substation` (archived), `dsd` (the RDS renderer is fine as is)
+**Verified:** 2026-10-23 against `bureau@f191145ec0`, `cityhall-new@dc5a87d`, prod `mgxqsrjutswbciyrltwd`
+**Amended by:** none yet
+**Parent:** `workspaces/intake/north-star/NORTH-STAR-SPEC.md` (ARCH-6). Sibling of `workspaces/intake/db-schema/DESIGN-SPEC.md` (FEAT-66), whose §6 named a `review-linkage` sub-spec; this spec is that design, widened to the whole review side.
+
+Paths are relative to the repo named. `CC` = `bureau/runbooks/completeness-check`, `LEG` = `bureau/workflows/completeness-check/scripts`, `LIB` = `bureau/runbooks/lib`. Prod numbers are from the three projects Will named, read 2026-10-23: **2008 San Antonio St** (`7746ac2f`), **WhiteWater Express Car Wash** (`7a697ef1`), **Lamar + Collier** (`23301a8a`).
+
+---
+
+## 1. What this spec is
+
+Three systems cooperate to show a customer one completeness-check comment: the bureau checklist files and their side TSVs, the CC runbook that turns them into a `review-comments.json` envelope, and cityhall, which reads that envelope out of two tables and draws a checklist. Each was built in a hurry on top of the one before it, and the seams show: the item's identity lives in a JSON string, the group is a slugified heading, the title is written by an agent, the comment number changes from run to run, every comment is stored twice, and the app carries adapters for four review formats nothing produces anymore.
+
+This document does three things:
+
+1. **§2 says how it works today,** with the source of every visible field. This is the part that stays fresh.
+2. **§3 lists the hygiene findings,** H1 to H14, each with its evidence and what it blocks.
+3. **§4 to §6 say where it should end up:** a review is a set of verdicts keyed by a stable item id, presentation resolves from the checklist at read time, the app has one read model for the page and the PDF, and the two review UIs stay separate but share their skeleton. §7 ranks the slices.
+
+It is not a build plan. Each slice becomes a feature spec with its own seams and PRs, and that spec adds itself to **Amended by** above.
+
+### 1.1 The goals
+
+- **G1. An item is a row you can join on.** `review_comments` carries the checklist item id in a typed column, and nothing has to parse `output_json` to find it.
+- **G2. Presentation is data, not output.** Title, group, group order, item order and comment number come from the checklist the review ran against, resolved when the page is read, so changing any of them is a checklist edit, not a run.
+- **G3. One copy of each comment.** The review row describes the review; the comment rows describe the comments. Nothing is stored in both.
+- **G4. One read model.** The checklist landing, the issue panel, the sheets screen, search and the PDF read a CC review through one adapter.
+- **G5. The app carries only formats it still produces,** plus a frozen path for archived ones.
+- **G6. Bifurcated UIs, shared skeleton.** Formal review and CC keep their own pages, but the pieces that are the same (sections on the review row, a per-comment identifier, SQL counts, typed references) are the same code.
+
+---
+
+## 2. How it works today
+
+Facts in this section hold at the **Verified** line's commits and date. A slice that changes a subsection refreshes that subsection and the line.
+
+### 2.1 The pipeline, from guide file to row
+
+The runbook is a feature-parity port of the legacy workflow (`CC/runbook.yaml:1-9`): its script steps shell to `LEG/*` unchanged through `CC/scripts/cc.py:111-116`, "so the intermediate files, the review-comments.json envelope and the DB rows are the legacy ones."
+
+| Step | Kind | What it does to the output | Legacy script |
+|---|---|---|---|
+| 1.4-resolve | script | copies the whole guide dir into the run, TSVs and `source-citations.json` included (`cc.py:374-377`); hydrates figures | none |
+| 2.1-review | agent × guide × run | one `findings.json` per cell; every ID must appear, in any order (`steps/2.1-review/steps/review/contract.test.ts:61-70`) | n/a |
+| 2.2-consolidate | script | votes across runs; **item order = run 1's emit order** (`LEG/cross-run-consolidate-cc.ts:323-340`) | `cross-run-consolidate-cc.ts` |
+| 2.3-forced-outcomes | script + LLM | patches status from the request's TSV | `apply-forced-outcomes.ts` |
+| 2.4 to 2.6 | script, agent, script | uncertain explanations | three scripts |
+| 2.7-enrich | script | joins findings to guide rows by position-parsed table (`LEG/checklist-policy.ts:44-116`); **section title = H1 after `CC-N:`** (`LEG/enrich-findings.ts:110-113`); **section order = digits in the filename** (`:141-147`) | `enrich-findings.ts` |
+| 2.8-format | **agent** | writes `rephrased-items.json`: the title per item, looked up in `cc-item-title-mappings.tsv`, rephrased when missing (`steps/2.8-format/prompt.md:28-47`) | n/a |
+| 2.9-comments | script | builds `review-comments.json`; comment number from the request's map or sequential (`LEG/build-review-comments.ts:109-128`) | `build-review-comments.ts` |
+| 2.12 / 2.13 | agent, script | markings folded into a copy of the envelope | `annotate-merge.ts` |
+| 3.1-publish | script | lane B of `LIB/publish_review_cli.py`: one `reviews` row, one bulk `review_comments` insert | n/a |
+
+### 2.2 The envelope and the rows
+
+`review-comments.json` is `{reviewData: {metadata, sections: [{sectionNumber, sectionName, comments: [...]}]}}` (`LEG/build-review-comments.ts:418-441`), validated by `LIB/review_comments_v2.py:91-160`.
+
+**The review row** gets the whole `reviewData` plus `sheet_map` as `output_json` (`LIB/publish_review.py:1977-1979`): keys `metadata`, `sections`, `sheet_map`. The sections carry full copies of every comment.
+
+**Each comment row** gets exactly three fields (`LIB/publish_review.py:1963-1971`): `comment_number`, `output_schema = '2026-03-completeness-check'`, and `output_json = {**comment, section: slugify(sectionName)}`. The slug rule is the old `review-saver.ts` one, kept "because City Hall regroups comments into sections by this string" (`:1885-1897`, `:1934-1940`). Lane B never writes `sheet_references`, `document_references`, `source_findings` or `agent_trace`, so those typed columns sit at their defaults on every runbook-era row.
+
+Per-comment keys, all always present unless bracketed (`build-review-comments.ts:317-401`): `commentNumber, title, status, [tentativeStatus], [voteBreakdown], [uncertainExplanation], [agentTraceUncertainExplanation], comment, issue, citation, citationType, agentTrace, sheets, applicableArea, resolution, resolutionDetails, confidence, runCount, totalRuns, isCrossDepartment, crossDepartmentNote, isReviewerAttention, reviewerAttentionNote, sheetReferences, documentReferences, sourceFindings[{ref, confidence, runCount, totalRuns, perRunFindings[...]}]`, plus `annotations` and `annotation_disposition` from 2.13 and `section` from the publisher.
+
+### 2.3 Where each thing a customer sees comes from
+
+| On the page | Source of truth | Set by | Stored at | Read by cityhall at |
+|---|---|---|---|---|
+| **Item identity** | guide table `ID` cell + file stem | 2.1 agent emits `checklistItemId`; 2.9 writes `ref = "{stem}:{id}"` | `review_comments.output_json.sourceFindings[0].ref` only | `adapters/checklist.ts:309-315` (first ref matching `/^[^\s:/]+:[^\s/]+$/`) for the Source link |
+| **Title** | `cc-item-title-mappings.tsv` (189 rows, one per item since bureau#2196 deduped the checklist to 189 on 2026-10-23) else the guide's `Item` cell | the **2.8 agent** reads the TSV and writes `rephrased-items.json`; 2.9 copies it (`build-review-comments.ts:240`) | `output_json.title` | `checklist.ts:349` |
+| **Group name** | guide H1 after `CC-N:` | 2.7 `extractTitle`; 2.9 copies it into `sectionName` and every comment's `applicableArea` and every run's `applicableAreas` | `reviews.output_json.sections[].sectionName`; `output_json.applicableArea` | `adapters/sections.ts:35` (sectionName only; `applicableArea` is never a title source) |
+| **Group identity** | none | publisher slugifies the name | `output_json.section` | `sections.ts:45` groups rows by this string |
+| **Group order** | digits in the guide filename | 2.7 sorts findings files; 2.9 numbers `sectionNumber = idx+1` | `sections[].sectionNumber` | `sections.ts:36, 64`; PDF by array index |
+| **Item order in a group** | none pinned | 2.2 keeps run 1's emit order; 2.9 keeps it | `comment_number` ascending | `rows.ts:58` `ORDER BY comment_number`, no re-sort |
+| **Comment number** | the request's `commentNumberingMap`, else sequential | 2.9 (`:109-128`, `:304-315`); the runbook has no default (`cc.py:169`) | `comment_number` and `output_json.commentNumber` | landing prints the column; PDF prints `section.relative` (`2.1`, `cc-report-logic.ts:272-277`) |
+| **Verdict** | votes across runs, forced outcomes, then a human override | 2.2, 2.3; `set_verdict_override` RPC | `output_json.status`; `comment_triage.verdict_override` | `rows.ts:130-144` (`verdict_override ?? status` after the cutover) |
+| **Agent trace, votes** | 2.1 per-run findings | 2.9 copies run 1's observation/reasoning to `agentTrace`, every run to `sourceFindings[0].perRunFindings` | `output_json` | `agent-trace.ts:27-70`; promote (`promote-run.ts`) |
+| **Citation** | guide `Requirement Source` / `Source Type` cells | 2.7, 2.9 | `output_json.citation`, `citationType` | `citation` only (`checklist.ts:344`) |
+| **Sheet and document refs** | 2.1 agent | 2.9; `doc_pages.py` adds `pageNumber` | `output_json.sheetReferences / documentReferences`; typed columns empty | JSON fallback (`checklist.ts:360-364`) |
+| **Markings** | 2.12 agent | 2.13 | `output_json.annotations`, `annotation_disposition` | `adapters/annotations.ts` |
+
+Three copies of the group titles exist in bureau before a run starts: the guide H1s, `source-citations.json`'s `groups` block, and after the run the envelope. The checklist's own `source-citations.json` and `citation-overrides.json` ride into every run and are read by nothing in the runbook.
+
+### 2.4 How cityhall reads it
+
+- **One predicate picks the CC page:** `review_type === 'completeness_check' && output_schema === '2026-03-completeness-check'` (`src/lib/reviews/registry.ts:178-180`). True → the one-page checklist landing (`components/reviews/checklist-landing.tsx`), groups folded in place, items opened in the side panel by `?comment=<number>`. False → `DisciplineList` plus `OverallResults`.
+- **Two adapters over the same rows:** `adaptCompletenessCheck` drops N/A and feeds the panel, sheets and search; `adaptChecklist` keeps N/A and feeds the landing (`adapters/checklist.ts:137-145`, `:200-220`). Both regroup flat rows by `output_json.section` and order groups by `reviews.output_json.sections[].sectionNumber` (`adapters/sections.ts:23-65`).
+- **The select is the same on every screen:** `id, comment_number, output_schema, output_json, sheet_references, comment_triage(verdict_override, triage_status)` ordered by `comment_number` (`rows.ts:49-58`).
+- **Fields read:** `status, title, comment, resolution, section, applicableArea (as location), citation, sourceFindings[].ref, sourceFindings[].perRunFindings[], agentTrace, uncertainExplanation, agentTraceUncertainExplanation, tentativeStatus, voteBreakdown, promotion, sheetReferences, documentReferences, annotations, annotation_disposition.sheets`.
+- **Fields ignored by every reader:** `issue, sheets, commentNumber (JSON), citationType, confidence, runCount, totalRuns, isCrossDepartment, crossDepartmentNote, isReviewerAttention, reviewerAttentionNote, resolutionDetails, annotation_disposition.documents`.
+- **The section page still exists for CC** (`review/[reviewId]/[discipline]/page.tsx`), reachable only by typing it or via an old link (`old-link.ts`), and it draws the formal-review filter row (`discipline-page.tsx:50-204`).
+- **The PDF parses on its own.** `src/pdf/cc-report-data.ts` has its own `CcReviewComment`/`CcSection` types, its own `buildSectionSlugs` ("mirrors cityhall's slugify", `:59-84`), `normalizeStatus` coercing unknown to `fail` (`:86-88`) and `parseSheetReferences` (`cc-report-logic.ts:24-46`). It shares one helper and one constant with the app.
+- **Counts are computed on read.** `reviews.metadata` holds pre-triage counts the PDF says are wrong (`cc-report-data.ts:250-252`); the landing builds the whole view to count, and fetches the prior review's items for the delta (`review-landing.tsx:54-82`). Formal review counts in SQL.
+
+### 2.5 What the app can write
+
+- `comment_triage`: `setTriage` and the `set_verdict_override` RPC.
+- `review_comments`: **one writer**, `promoteRunVote`, which rewrites `output_json`, `sheet_references` and `document_references` for one comment (`lib/reviews/promote-run-vote.ts:67-76`).
+- `reviews`: `release_review` flips `is_current` and `released_at`.
+- **Nothing can change a title, a section, an item's order, a section's title or section order.** All five are bureau-written at publish and bureau-rewritten by amend, which still needs 2.1 to 2.9 to run (`LIB/review_amend.py`, FEAT-64).
+
+### 2.6 The three projects in prod
+
+Prod holds 64 CC reviews, all `2026-03-completeness-check`, 13,205 comment rows, none using `prior_comment_id`. The stored reviews have 192 comments because they ran before bureau#2196 deduplicated the checklist to 189 items (2026-10-23); the next run will have 189.
+
+| Project | CC reviews | Current | What they show |
+|---|---|---|---|
+| 2008 San Antonio St | 10, all on one submission version, 2026-10-01 to 10-20 | `0bc96434` (10-09, released, 1 amendment, 23 triage rows, 6 overrides) | 192 comments in 14 sections; review blob **415 KB**, comment rows **513 KB**; `sheet_references` filled on 1 row, `agent_trace` on 0; 30 comments carry markings |
+| WhiteWater Express Car Wash | 6 on one version, 10-05 to 10-22 | `28b83857` (10-22) | 545 KB blob + 639 KB rows; 47 marked. **`cc-13:AW-05` is comment 41 in the 10-12 run (Pape-Dawson map) and comment 75 in the 10-22 run (sequential)** |
+| Lamar + Collier | 32 across 4 versions, 2026-04-20 to 10-01, checklists v2.1 through v2.7-trimmed (151 to 194 items) | three, one per version | the April and May rows have `agent_trace` filled (lane A era); comment maps per run; the only project with map-numbered reviews on every current row |
+
+The comment copies inside `reviews.output_json.sections[]` differ from the rows by exactly one key: the row has `section`, the copy does not. Human triage vocabulary across CC: `to-fix` 54, `incorrect` 42, `na` 32 (all pre-cutover words), `new` 56, `formal-note` 3; verdict overrides 23.
+
+### 2.7 Formal review, for comparison
+
+Lane A (`bureau/runbooks/review/steps/4.1-publish`) publishes through the same CLI but a different shape (`LIB/publish_review.py:580-700`): a **declared section table** of eleven fixed disciplines (`:60-73`), each `{slug, label, number, code}` on the review row with no comment copies; a **`ref`** handle per comment; typed **`sheet_references`** and **`source_findings`** written (`:693-696`, `:1856`); a schema label picked from content (`2026-08-plan-review`, `2026-08-dual-view`, `2026-09-annotated`, `:383-413`); writes through an RPC per schema. In cityhall the August adapter reads `sheet_references` first, counts in SQL (`august_review_discipline_counts`), shows an `identifier` instead of a number, has `kind`/`certainty` badges, `withdrawn[]`, markdown prose and a stored PDF. Neither lane stores a checklist item id in a typed column.
+
+---
+
+## 3. Hygiene findings
+
+Each finding: what is wrong, the evidence, what it costs or blocks. Ordered by how much they block §4.
+
+**H1. The item id is a string inside JSON.** `sourceFindings[0].ref` is the only place a comment says which checklist item it is. Amend matches on it (`review_amend.py:39-56`), cc-compare keys on it (`cc-compare/scripts/compare.ts:15-16`), Inspector General copies it into `review_checklist_comment_map.checklist_item_id` (prod: `comment_ref = 'comment-N'`), cityhall regexes it for the Source link. No join, no index, no constraint. Blocks: per-item outcome counts across reviews, FEAT-66's review linkage, any UI keyed by item.
+
+**H2. Groups have no identity; the slug is the heading.** `section = slugify(H1)`. Renaming a group changes the slug on every future review and nothing links the old slug to the new. The slug is recomputed independently in the publisher (`publish_review.py:1885`), the app (`sections.ts:105-110`) and the PDF (`cc-report-data.ts:67-84`), with a comment on each that it must match the others. Blocks: FEAT-66's live `intake_groups`; moving an item between groups without breaking the app's regroup.
+
+**H3. Every comment is stored twice.** 192 comment copies inside `reviews.output_json.sections[]` next to 192 rows, 415 KB beside 513 KB on one review. The app reads the review-level copy only for `sectionName` and `sectionNumber`. Amend rewrites both (`publish_review_cli.py:557-561`); promote rewrites only the row, so the two drift after a promotion. Costs: every landing load pulls a 400 to 550 KB row it uses 1 KB of; two sources of truth for a comment.
+
+**H4. The title is an agent artifact.** 2.8-format is an agent that reads the TSV and writes every title, authored ones verbatim and missing ones rephrased (`prompt.md:39-43`). The deterministic 2.9 reads only the agent's file. Since bureau#2196 (2026-10-23) the TSV covers every one of the 189 items, so the rephrase path is dead code on Austin and the agent is in the title path for nothing. A title fix is a bureau PR plus a full run (or an amend, which still runs 2.1 to 2.9). Blocks: G2; anyone editing titles in minutes.
+
+**H5. Comment numbers are not stable across runs of one project.** `commentNumberingMap` is a per-request option with no default; two of the three projects' current reviews are sequential, WhiteWater's previous run was map-numbered, and AW-05 moved from 41 to 75 between them. The customer's handle for an item changes between runs. The PDF already prints a different number (`2.1` relative) than the page (`75` absolute).
+
+**H6. Item order within a group is the agent's emit order in run 1.** Not the table order, not pinned by any contract (`cross-run-consolidate-cc.ts:323-340`; the 2.1 contract requires presence only). Two runs on the same checklist can order a group differently, and with sequential numbering that reorders the numbers too.
+
+**H7. The envelope carries legacy constants and duplicates.** Always `issue: ''`, `isCrossDepartment: false`, `crossDepartmentNote: null`, `isReviewerAttention: false`, `reviewerAttentionNote: null` (`build-review-comments.ts:347-361`); `sheets` is a text rendering of `sheetReferences`; `confidence/runCount/totalRuns` appear at the comment and again inside `sourceFindings[0]`; `applicableArea` is copied onto every comment and every per-run finding; `codeCitations` per run is the same citation repeated. Cityhall reads none of the constants. Costs: a schema nobody can describe from its fields; validators that check fields nothing uses.
+
+**H8. The typed columns are dead on lane B.** `sheet_references`, `document_references`, `source_findings`, `agent_trace` were lane A's and are `[]`/`NULL` on every runbook-published CC row; `prior_comment_id` is unused on all 13,205. Cityhall reads `sheet_references` first then falls back to JSON, so the fallback is the live path. The one filled row on `0bc96434` is the promoted comment: `promoteRunVote` writes the column (`promote-run-vote.ts:73`), so a column is filled exactly when a human promoted a run. Across all CC rows 1,234 have it filled, almost all from the lane A era. A column that is sometimes filled is worse than one that never is.
+
+**H9. The app carries four formats it no longer produces.** `legacy` (142 reviews, last 2026-04-15), `2026-04-simplified` (168, last 07-27), the `unclear` status word (removed from the agent contract), and the pre-cutover triage fold (`incorrect`/`na` → N/A for reviews completed before 2026-07-07T21:00Z, `rows.ts:130-144`, mirrored in the PDF `cc-report-logic.ts:181-196`). Each has an adapter, tests and a branch in counts. `old-link.ts` translates three retired URL shapes because Inspector General still mints one of them.
+
+**H10. The CC section page is a formal-review page in disguise.** CC's home is the one-page landing, but `[discipline]/page.tsx` still renders for CC, with severity chips, a Kind menu that is always empty for CC, and the five-status filter. Nothing links to it except old links.
+
+**H11. The PDF has its own parser.** `cc-report-data.ts` and `cc-report-logic.ts` re-implement section slugging, status normalisation, sheet-reference parsing and effective-verdict logic beside the app adapters, sharing one helper and one constant. A field added to the row has to be read twice.
+
+**H12. Counts are computed by building the page.** `reviews.metadata` counts are pre-triage and ignored; the landing adapts every row to count, then fetches the prior review to show the delta. Formal review does this in one RPC.
+
+**H13. Three steps in the runbook exist to carry files the run does not use.** 1.4-resolve copies `source-citations.json`, `citation-overrides.json` and both numbering TSVs into every run; only the TSV the request names is read. The checklist dir is the run's input contract, but nothing says which files are.
+
+**H14. The legacy workflow is still the implementation.** Every script step from 2.2 to 2.10, and 2.13, shells to `workflows/completeness-check/scripts/*` (`cc.py:111-116`); only 1.4-resolve, 2.11, 3.1 and 3.2 are native to the runbook. The runbook can't change the envelope without editing the frozen lane, and the frozen lane's tests pin the legacy shape. FEAT-60 chose parity on purpose; the parity test has since passed, so the reason to keep the shim is gone.
+
+---
+
+## 4. The target shape
+
+### 4.1 Principles
+
+**P1. A review is verdicts keyed by item.** What a run produces that is *about this submission* is: per item, a verdict, the evidence (observation, reasoning, votes, refs, markings) and the prose (comment, resolution). Everything else on today's comment is *about the checklist* and is resolved from it.
+
+**P2. Presentation resolves at read time against the review's pinned checklist version.** Title, group, group title, group order, item order and comment number are a function of `(checklist version, item id)`, overlaid by FEAT-66 D21's live investments (`intake_groups` today). A review pins a version (`intakeVersion`, FEAT-66 D5) and **follows the latest PATCH of that MINOR**: FEAT-66 D14, as amended by this spec, defines PATCH as the changes that do not alter what an item checks (titles, group placement and order, prose), so re-reading them is safe by construction. A MINOR or MAJOR bump never retro-applies. Two consequences this spec decides rather than leaves open: **renumbering is MINOR, not PATCH** (FEAT-66 D14 lists comment numbers under PATCH and its Q4 defaults to PATCH; FEAT-66 closes Q4 as MINOR in its next revision, recorded there: a comment number is customer-visible, so a MINOR's numbering never moves, and D7's stability holds). **Numbers come from the pinned MINOR's replica, never from the live overlay:** a live `intake_groups` change (FEAT-66 §2.4, which has no version) re-resolves display grouping and order on every review but assigns no new `comment_number` to a new run of the same MINOR; and **amend's gate becomes FEAT-66 D18's content hash over the MINOR-affecting columns**, not the guide tree hash it compares today (`review_amend.py:87-92`), so a PATCH does not make every review on the previous PATCH un-amendable. D18 is not built yet; until it is, a PATCH blocks amend, which is today's behaviour.
+
+**P3. The published snapshot is kept, as a fallback and an audit.** The row keeps the title, section slug and number it was published with. The app shows the resolved value; when the two differ on a released review the issue panel shows the published value to staff beside it (the "as published" row, D9). Reviews whose version has no replica row (everything before FEAT-66 P2b syncs) show the snapshot, which is what they show today.
+
+**P6. Released reviews resolve live too, and that is a decision.** A verdict override already changes a released review and its PDF the moment it is written (the PDF renders with `no-store`, `pdf/[kind]/route.ts:130-132`); resolved titles and groups are the same class of change. The record of what a customer saw is the row's snapshot, the pinned version and `released_at`. The alternative, freezing presentation at release and restamping on re-release (§8, alternative 3), was considered and rejected because it reintroduces a run per edit. What a PATCH may change is bounded by FEAT-66 D14's definition; an edit that changes what an item checks is MINOR and never retro-applies. The gap this accepts: an override is a per-review act with a note and an RPC audit, a PATCH is a bureau PR that touches every review on the MINOR with no per-review record, so the snapshot says what was published, not what a customer saw on a given day between PATCHes. The bureau PR and the sync log are that record.
+
+**P4. The comment number is a handle, not a position.** It is assigned once at publish from the checklist's `comment_number` for that version and never changes for that row, because customers write it into notes and appeals. Display order may differ from number order, as it already does under the landing's filters.
+
+**P5. One read model, two UIs.** A `ccReadModel(reviewId)` in cityhall produces the groups, items, verdicts, refs, markings and counts once, from rows plus the checklist replica, and the landing, panel, sheets screen, search and PDF consume it. Formal review keeps its own read model; the two share the review-row section table, the typed reference columns and the counting RPC shape.
+
+### 4.2 Decisions
+
+Every decision carries a status tag. All fifteen are `proposed` in v1; the feature spec that ships one changes its tag to `shipped by FEAT-N` and adds itself to **Amended by**, so a reader can tell which half of this document is current.
+
+**D1. `review_comments` gains `item_id` and `group_id` typed columns.** [proposed] `item_id text` holds the stable id (`AUS_TX-42` once FEAT-66 P2a lands; until then the composite ref `cc-1:CC-1-01`, which the P2a backfill rewrites through `intake-ids.tsv`). `group_id text NULL` holds the group the run placed it in (`AUS_TX-G1`), nullable because pre-P2a reviews have none. A plain index on `(review_id, item_id)` in S1, made unique only for rows on the new schema (D3), because the April reviews predate the one-finding-per-row contract and may hold duplicate refs; S1 runs the duplicate query first. Backfill: every existing CC row from `output_json.sourceFindings[0].ref`, 13,205 rows, one statement, writing the composite ref; a second backfill rewrites to stable ids through `intake-ids.tsv` when FEAT-66 P2a lands. Until then an item that moved guides between two reviews has two refs, and the prior-review delta (D11) misses it, as today's number matching does. This is FEAT-66 §6's "2.9-comments adding each finding's itemId", landed in the DB rather than the JSON.
+
+**D2. The review row describes the review; comments live only in rows.** [proposed] `reviews.output_json` becomes `{metadata, sections: [{group_id, slug, label, number}], sheet_map}` on the new schema, the formal-review shape (`publish_review.py:60-73`) with a `group_id` added. The comment copies go. Expand → migrate → contract: cityhall's `sections.ts` reads `sections[].group_id` when present and the old `sectionName` path otherwise; the publisher stops writing copies on the new schema; a one-time script strips copies from the 64 existing review rows after the app no longer reads them. Amend's `reviews.output_json` PATCH shrinks to metadata and sections (FEAT-64 D8 step 3). **Inspector General reads the copies:** its DB fallback loader reads `reviews.output_json` and `review_comments.output_json` (`inspector-general/src/lib/ingest/supabase-loader.ts:409-415`) and `audit-scores.svelte.ts:13` documents CC as comments nested under `sections`; its primary path is the storage envelope, which S4 keeps writing in full. S4 therefore ships an IG PR that reads rows, and adds the new label to IG's pinned schema ids (`audit-scores.svelte.ts:13-20`, pinned across four repos). The storage envelope `review-comments.json` keeps today's per-comment shape for one generation so IG's auditors, which read it, are not cut over in the same slice (Q9).
+
+**D3. A new schema label, `2026-11-completeness-check`, with a trimmed comment.** [proposed] The per-comment `output_json` keeps: `title, comment, resolution, status, tentativeStatus, uncertainExplanation, agentTraceUncertainExplanation, voteBreakdown, citation, runs[]` (`title` and `citation` are checklist data kept as the published snapshot; both resolve from the checklist after S7, D9) (today's `sourceFindings[0].perRunFindings`, renamed because a comment has exactly one source finding), `annotations, annotation_disposition, promotion`, and the published snapshot `section, commentNumber`. It drops `issue, sheets, isCrossDepartment, crossDepartmentNote, isReviewerAttention, reviewerAttentionNote, resolutionDetails, citationType, applicableArea, confidence, runCount, totalRuns, sourceFindings` (replaced by `item_id` + `runs`), `agentTrace` (replaced by `runs[0]`'s observation and reasoning, which it was a copy of), and per-run `applicableAreas` and `codeCitations`. `applicableArea` goes from the CC envelope only: CRC's PDFs read it as their section source (`crv-report-data.ts:275`) and CRC is out of scope. The typed columns `sheet_references` and `document_references` are written (D4). The registry gains the label beside the old one; `2026-03-completeness-check` stays readable forever and is never written again.
+
+**D4. Lane B writes the typed columns it has.** [proposed] `sheet_references`, `document_references`, `item_id`, `group_id`. `source_findings` and `agent_trace` are not revived: `runs[]` in `output_json` is the trace, and the formal-review meaning of `source_findings` (library sources) does not apply to CC. Cityhall's JSON fallback for `sheetReferences` is deleted once every CC row has the column filled (backfill from JSON, one statement).
+
+**D5. Titles are deterministic.** [proposed] 2.9-comments reads the title from the checklist (the TSV today, the replica's `title` after FEAT-66 P2b) and writes it; 2.8-format stops producing titles and keeps only the reports it also writes. A missing title is a lint failure in bureau (FEAT-66 D12 rule 2 extended), not a rephrase; on Austin the TSV already covers all 189 items. Whether 2.8-format survives at all once it writes no titles is Q8.
+
+**D6. Item order within a group is the checklist's order.** [proposed] 2.9 sorts each group's comments by the guide table row order (the replica's `position` after P2b). 2.2's emit order stops mattering. The 2.1 contract is unchanged.
+
+**D7. Comment numbering has one default.** [proposed] `comment_number` = the checklist MINOR's `comment_number` for the item (`true-comment-num-mapping.tsv` today, the replica column after P2b), which is the sequential number in group-then-table order at the MINOR's first PATCH; a renumbering is a MINOR bump, and live group changes never renumber (P2). The request option `commentNumberingMap` survives only for the Pape-Dawson overlay, named explicitly, and is recorded on the review as today (`metadata.numbering`). Sequential-because-no-map (`reason: 'map-not-provided'`) stops being a silent mode: with no map named, the checklist's numbering is the map. Per P2 and P4 the number is then stable across runs of one checklist MINOR on one project. A named map that does not exist already throws (`build-review-comments.ts:113-117`); only the absent case was silent.
+
+**D8. Group identity comes from the checklist, and the slug is derived once.** [proposed] With `group_id` on the row (D1) and on the review's `sections[]` (D2), cityhall groups by `group_id` when present, else by the snapshot slug. The publisher keeps writing the snapshot slug for the old readers (cc-compare, Inspector General) until they move. The three independent slugify implementations collapse to one, in cityhall's `sections.ts`, used by the PDF through the read model (D10).
+
+**D9. The read-time resolver.** [proposed] `resolveCcPresentation(review, rows)` in cityhall: looks up `reviews.metadata.intakeVersion`, picks the latest PATCH of that MINOR from `intake_checklist_versions` (P2), joins `intake_checklist_items` on `item_id` for title, group and position, overlays live `intake_groups` rows (FEAT-66 §2.4) for group title, order and membership, and falls back to the row's snapshot per field when the replica has no row. Output is the `ChecklistGroup[]` the landing already consumes, plus per item the published snapshot where it differs, which the issue panel shows to staff on a released review (P3). The resolver is the one place P2, P3 and P6 are implemented.
+
+**D10. One CC read model feeds the page and the PDF.** [proposed] `src/lib/reviews/cc/read-model.ts` replaces the two adapters' shared core and `src/pdf/cc-report-data.ts`'s parser: rows → resolved presentation (D9) → effective verdicts → counts → groups. `adaptCompletenessCheck` and `adaptChecklist` become projections of it (drop N/A or keep it). The PDF's own `CcReviewComment`, `buildSectionSlugs`, `normalizeStatus` and `parseSheetReferences` go. The PDF keeps its relative numbering as a projection.
+
+**D11. Counts move to SQL.** [proposed] A `cc_review_counts(review_id)` RPC in the shape of `august_review_discipline_counts`, computing effective verdicts (`verdict_override ?? status`) and per-group totals, and the prior-review delta by `item_id` rather than by `comment_number` (`check-results.ts` today matches on number, which H5 shows is unstable). `reviews.metadata` counts stay as the run's record and are never displayed.
+
+**D12. Archived formats are frozen, not deleted.** [proposed] `legacy` and `2026-04-simplified` adapters move to `src/lib/reviews/adapters/archived/`, keep their tests, and get no new features; the registry marks them `archived` so the landing shows an "archived review" note and the PDF link. The `unclear` word cannot be deleted: 65 CC rows carry it, 8 of them on three current, released April reviews (`928c0820`, `d09d30ff`, `d7fb7cc6`), so it becomes a one-line alias to `uncertain` in the read model and leaves the adapters and the PDF. The pre-cutover triage fold is narrower than it looks: it applies only to `status = 'fail'` rows with `triage_status in ('incorrect', 'na')` (`rows.ts:140-144`), 63 rows with no override yet, on 9 of the 42 pre-cutover reviews: 34 on five current released reviews, 29 on four superseded; no post-cutover row uses those words. It is materialised once: a migration writes `verdict_override = 'not-applicable'` and `verdict_override_note = 'materialised from pre-cutover triage'` on exactly those rows (the note is the audit trail the RPC would have left), then `CC_VERDICT_TRIAGE_CUTOVER_AT` and both fold branches are deleted. This reverses FEAT-61 D13's "no existing data is modified" (Q2); the alternative is computing the fold in `cc_review_counts` forever.
+
+**D13. The CC section page is retired.** [proposed] `[discipline]/page.tsx` redirects, never 404s, for `isChecklistLanding` reviews: to the submission reviews page (`reviewLandingHref`, with `&review=<id>`, so it does not bounce twice) carrying the same `?comment=`, which the issue panel reads on the server render (`issue-panel-switch.tsx:27, 40`), so Inspector General's numeric links (`old-link.ts:7-10`) keep working. The file itself stays until Inspector General stops minting numeric links (Q4). `discipline-page.tsx` loses the CC-only status list and becomes formal-review-only (`hasKinds` stays: it is format-generic).
+
+**D14. The runbook owns its envelope.** [proposed] The scripts 2.9-comments and 3.1-publish stop shelling to `LEG/` for the parts D3 to D7 change: `build-review-comments.ts` and the lane B section of `publish_review.py` move under `CC/scripts/` and are edited there. The rest of the shim (2.2, 2.3, 2.7, 2.10) stays until it is touched. `LEG/` is deleted when nothing shells to it (H14).
+
+**D15. 1.4-resolve names its inputs.** [proposed] The run copies the guides, the sidecars and the one numbering overlay the request names; `source-citations.json` and `citation-overrides.json` stay in bureau. `resolved.json` lists the files the run read, and amend's content hash (FEAT-66 D18, not built) is over that list; until D18 ships, amend keeps the tree hash and D15 only narrows what is copied.
+
+### 4.3 What a row looks like after
+
+```diff
+ review_comments
+   id                    uuid PK
+   review_id             uuid FK
+   comment_number        int            -- the published handle (P4); never changes for the row
++  item_id               text NOT NULL  -- 'AUS_TX-42' (D1); composite ref on pre-P2a rows until the backfill
++  group_id              text NULL      -- 'AUS_TX-G1' as placed at publish (D1)
+   output_schema         text           -- '2026-11-completeness-check' (D3)
+   output_json           jsonb          -- title, comment, resolution, status, votes, runs[], markings, snapshot {section, commentNumber}
+~  sheet_references      jsonb          -- now written by lane B (D4)
+~  document_references   jsonb          -- now written by lane B (D4)
+-  source_findings       jsonb          -- stays, unused by CC (D4); dropped only if formal review also stops
+-  agent_trace           jsonb          -- stays, unused by CC (D4)
+   prior_comment_id      uuid NULL      -- unused by CC; CRC's
++  INDEX (review_id, item_id); UNIQUE for rows on the new schema (D1)
+
+ reviews.output_json
+   metadata                             -- unchanged
+~  sections[]            {group_id, slug, label, number}   -- declared, no comment copies (D2)
+   sheet_map                            -- unchanged
+```
+
+The `-` rows are not dropped by this spec; they are marked so the reader knows CC leaves them empty on purpose.
+
+### 4.4 What changes without a run, before and after
+
+| Change | Today | After (and which spec gives it) |
+|---|---|---|
+| Item title | bureau PR to the TSV, then a full run or an amend (2.1 to 2.9) | bureau PR to the TSV (PATCH bump), sync; every review on that MINOR shows it (P2, D5, D9). A live `intake_items` investment would make it a CLI call (Q1) |
+| Item moved between groups | bureau PR moving the row between guides, then a run; old reviews keep the old slug | `intake-group set` (FEAT-66 P3, after P2a), live rows; every review re-resolves its display (D9); comment numbers unchanged (P2) |
+| Group title or order | bureau PR editing the H1 or renaming the file, then a run; slug changes | `intake-group set` (FEAT-66 P3), live rows (D9) |
+| Item order in a group | not controllable (H6) | checklist table order (D6); position in the replica |
+| Comment number | the request's map or sequential, per run (H5) | fixed at publish from the checklist (D7); stable across runs on one MINOR |
+| Verdict | `set_verdict_override` RPC | unchanged |
+| Comment prose, refs, markings | promote one run's vote; or amend | unchanged; amend upserts by `(review_id, item_id)` instead of parsing refs |
+| Release | `release_review` RPC | unchanged |
+
+### 4.5 Diff tree of the read path
+
+```diff
+ cityhall-new/src/lib/reviews/
+ ├── registry.ts                       # + '2026-11-completeness-check' (D3); legacy + simplified marked archived (D12)
+ ├── adapters/
+~│   ├── checklist.ts                  # two projections of the read model (D10)
+~│   ├── sections.ts                   # groups by group_id when present (D8); the one slugify
++│   ├── archived/{legacy,simplified}.ts   # frozen (D12)
+ │   └── august.ts                     # unchanged
++├── cc/
++│   ├── read-model.ts                 # rows + replica → groups, items, verdicts, counts (D10)
++│   └── resolve-presentation.ts       # pinned MINOR, latest PATCH, live groups overlay (D9)
+~└── check-results.ts                  # delta by item_id (D11)
+ cityhall-new/src/pdf/
+~├── cc-report-data.ts                 # reads the read model; own parser deleted (D10)
+~└── cc-report-logic.ts                # relative numbering stays; cutover + fold deleted (D12)
+ cityhall-new/src/app/project/[projectId]/review/[reviewId]/
+~├── [discipline]/page.tsx             # 404 for CC (D13)
+~└── [discipline]/old-link.ts          # CC old links → landing (D13)
+ cityhall-new/supabase/schemas/public/
+~├── tables/review_comments.sql        # + item_id, group_id, partial unique (D1)
++└── functions/cc_review_counts.sql    # (D11)
+```
+
+---
+
+## 5. The API surface
+
+What the app and the runbook expose for changing a review, after §4. "Run" means a runbook run (full or amend).
+
+| Operation | Owner | Interface | Run needed? |
+|---|---|---|---|
+| Publish a review | bureau 3.1-publish | `publish_review_cli.py` lane B, `--schema 2026-11-completeness-check` | yes |
+| Amend part of a review | bureau | `publish_review_cli.py --amend`, matching rows on `(review_id, item_id)` | yes (partial) |
+| Override a verdict | cityhall | `set_verdict_override(review_comment_id, verdict, note)` RPC | no |
+| Promote one run's vote | cityhall | `promoteRunVote` server action | no |
+| Triage, appeal, formal note | cityhall | `setTriage` server action | no |
+| Release, supersede | cityhall | `release_review` RPC | no |
+| Edit an item's title | bureau | TSV / replica title + PATCH bump; sync | no |
+| Move an item, rename or reorder a group | bureau CLI | `intake-group set|retire|list` (FEAT-66 P3) | no |
+| Read a review for the page or the PDF | cityhall | `ccReadModel(reviewId)` (D10), `cc_review_counts` RPC (D11) | no |
+| Count outcomes per item across reviews | cityhall / IG | `intake_item_review_outcomes` view over `review_comments.item_id` (FEAT-66 §6) | no |
+
+What stays deliberately absent: an app page that edits checklist text. FEAT-66 D19 keeps bureau the authority for text, and this spec adds no second editor.
+
+---
+
+## 6. What formal review lends, and what stays bifurcated
+
+**Borrowed (G6):**
+- the declared `sections[]` table on the review row (D2);
+- a per-comment identifier shown to the reader (`item_id` plays formal review's `identifier`);
+- typed `sheet_references` written at publish (D4);
+- counts in one RPC (D11);
+- a schema label per shape, with the registry choosing the adapter (D3 keeps this; CC gets a label per shape instead of one label forever).
+
+**Not borrowed:**
+- fixed sections: CC's groups come from the checklist and change per jurisdiction;
+- `kind` / `certainty` / `severity`: CC's verdict scale is pass/warn/fail/uncertain/N/A and the triage card is built on it;
+- the stored PDF: the CC PDF renders live so overrides and relative numbers are current;
+- markdown prose: CC prose is one or two sentences and the landing's finding line depends on that (Q5).
+
+**Stays CC-only:** the checklist landing, the split triage card and verdict correction, run promotion, document markers and document mode on the sheets screen, the Source link to `/intake-checklists`, N/A as a first-class verdict, `OverallResults` with the prior-review delta.
+
+---
+
+## 7. Priorities
+
+A proposed order, by what each slice unlocks per unit of work. Each becomes a feature spec; the IDs below are placeholders until allocated.
+
+| # | Slice | Delivers | Unlocks | Size | Depends on |
+|---|---|---|---|---|---|
+| S1 | **`item_id` on the row** (D1, D4's backfill) | typed id, plain index, 13,205-row backfill after a duplicate check; amend and the Source link read the column | H1; FEAT-66 review linkage; per-item counting | small: one migration, two readers | nothing |
+| S2 | **Runbook owns 2.9 and lane B** (D14, D15) | the envelope code moves under `CC/`; 1.4-resolve names inputs | every bureau-side change below; H13, H14 | medium: a move plus the contract tests | nothing |
+| S3 | **Deterministic title, order, number** (D5, D6, D7) | 2.8 stops writing titles; checklist order; one numbering default | H4, H5, H6; stable handles for customers | medium | S2 |
+| S4 | **The new schema and the slim review row** (D2, D3, D8) | `2026-11-completeness-check`; no comment copies; `group_id`; registry entry; IG reads rows | H2, H3, H7; halves the bytes a landing loads | medium-large: publisher, adapter expand/contract, amend, cc-compare, an IG PR | S1, S2, S3 |
+| S5 | **One read model + SQL counts** (D10, D11) | the PDF parser goes; counts RPC; delta by item | H11, H12; every later UI change is one edit | medium | S1 |
+| S6 | **Archive and delete** (D12, D13) | archived adapters; triage fold materialised; CC section page gone; `unclear` gone | H9, H10; fewer branches in every count and render | small-medium, mostly deletion | S5 for the fold (counts must agree); Q2 |
+| S7 | **Read-time presentation** (D9, P2, P3) | titles, groups, order resolve from the replica and live groups | G2 in full; titles in minutes | medium | S4; FEAT-66 P2a, P2b, P3 |
+
+S1, S2 and S5 can start now and in parallel. S7 is the payoff and is the one that waits on the intake DB work.
+
+---
+
+## 8. Alternatives considered
+
+Raised by the adversarial review of v1 and weighed here, so they are not re-litigated.
+
+1. **Keep the blob canonical and derive the rows** (the inverse of D2). Amend already writes the blob wholesale and the storage envelope agrees with it. Rejected: triage, promote, the IG tables and the comment map all key on `review_comments.id`, and promote already writes the row, so the row is the live truth today; inverting moves the drift rather than removing it.
+2. **A `review_items` table for CC** beside `review_comments`, typed from day one. Rejected for now: every FK points at `review_comments`, and a second table doubles the join surface for the PDF and the read model. Revisit if `review_comments` is retired for CC.
+3. **Resolve presentation in the publisher** (a restamp lane on release) instead of at read time. Reproducible PDFs and a meaningful amend gate, but a run per edit, which is what G2 exists to remove. Rejected; P6 takes the live path with the verdict-override precedent.
+4. **A materialised `cc_review_presentation` table** refreshed by the sync and by `intake-group set`. One table to read, "as published" and "resolved" as two columns. Deferred: another derived table to keep fresh; it is the fallback if the read-time join is too slow.
+5. **A generated column for `item_id`** from the JSON path. No backfill, cannot drift. Rejected: it pins the `sourceFindings` path D3 deletes and cannot become the stable id without a rewrite.
+6. **Show `item_id` and drop `comment_number` as the handle.** Stable by construction, but customers and the city talk in numbers and the PDF's relative numbering exists because the city asked. Rejected; numbers stay and P2 defines them.
+
+## 9. Open questions
+
+- **Q1. Is a live item-title investment wanted, or is a PATCH bump plus sync fast enough?** FEAT-66 D21 allows a third investment in the shape of `intake_groups`; a `title` override on a live `intake_items` row would make a title edit a CLI call with no PR. Default: not yet; see whether the PATCH path is fast enough after S7.
+- **Q2. Materialise the pre-cutover fold?** D12 writes `verdict_override` on rows the fold applies to, reversing FEAT-61 D13. The alternative is carrying the cutover constant forever. Will's call.
+- **Q3.** *Answered 2026-10-23:* 65 rows, 8 on current released reviews; `unclear` becomes an alias (D12).
+- **Q4. When does Inspector General stop minting numeric section links?** Until then `old-link.ts` stays.
+- **Q5. Should CC prose become markdown?** The landing's finding line is the first sentence of `comment`; markdown would need a plain-text projection.
+- **Q6.** *Closed:* `comment_number` is stable per `(project, checklist MINOR)` by P2 and D7, with no constraint; a constraint would need the Pape-Dawson overlay settled first (FEAT-66 Q8).
+- **Q7. Does cc-compare move to `item_id` in S1 or S4?** It keys on `sourceFindings[0].ref` from both the storage envelope (`cc-compare/scripts/lib.ts:194`) and `review_comments.output_json` through PostgREST (`fetch.py:131-152`); moving it in S1 removes one `sourceFindings` reader early.
+- **Q8. Does 2.8-format survive?** Once it writes no titles it writes only reports; S3 checks whether `steps/2.9-comments/step.yaml` or anything else reads them and deletes the step if not.
+- **Q9. When does the storage envelope `review-comments.json` adopt the slim shape?** D2 keeps it full for one generation because Inspector General's auditors read it; the cutover is an IG slice.
+
+## 10. Not yet specified
+
+- How amend treats a review whose pinned MINOR has moved on when the run is on a newer MINOR: refuse, as today's tree-hash check does, or re-pin.
+- The `intake_item_review_outcomes` view's exact columns (FEAT-66 Q6).
+- Whether the formal-review landing adopts the shared read-model shape once CC has one (G6 says share the skeleton, not when).
+
+## 11. Out of scope
+
+- **Checklist text editing in the app.** FEAT-66 D19 keeps bureau authoritative.
+- **The intake rename** (`completeness_check`, `completeness-check/` paths). ARCH-6's rename sub-spec; this spec's new schema label keeps the `completeness-check` word so the rename can land independently.
+- **Changing what the 2.1 review agent emits.** The verdict step's contract is untouched; everything here is downstream of `findings.json`.
+- **CRC.** Different envelope, different adapter.
+- **Inspector General's eval tables** (`bureau_checklist_*`, `ig_*`) and its auditors' envelope reads. S4 carries the one IG PR that D2 needs (rows instead of the blob, the new schema id); everything else in IG is its own spec.
+
+## Appendix A: evidence pointers
+
+- bureau: `runbooks/completeness-check/runbook.yaml`, `scripts/cc.py`, `steps/2.8-format/prompt.md`, `steps/2.1-review/steps/review/contract.test.ts`; `workflows/completeness-check/scripts/{build-review-comments,enrich-findings,cross-run-consolidate-cc,checklist-policy}.ts`; `runbooks/lib/{publish_review,publish_review_cli,review_comments_v2,review_amend}.py`; `runbooks/cc-compare/scripts/{fetch.py,compare.ts}`
+- cityhall-new: `src/lib/reviews/{registry,rows,view-model,check-results,counts}.ts`, `src/lib/reviews/adapters/{checklist,sections,annotations,sheet-refs,august}.ts`, `src/components/reviews/{checklist-landing,checklist-fold,review-landing,discipline-page,overall-results}.tsx`, `src/app/project/[projectId]/submission/[submissionId]/reviews/page.tsx`, `src/app/project/[projectId]/review/[reviewId]/{read.ts,actions.ts,[discipline]/page.tsx,[discipline]/old-link.ts,pdf/[kind]/route.ts}`, `src/pdf/{cc-report-data,cc-report-logic}.ts`, `src/lib/operations/{set-triage,set-verdict}.ts`, `src/lib/reviews/{promote-run,promote-run-vote}.ts`, `supabase/schemas/public/functions/{review_comment_links,set_verdict_override}.sql`
+- prod `mgxqsrjutswbciyrltwd`: `reviews` (64 CC), `review_comments` (13,205 CC), `comment_triage`, `review_checklist_comment_map`; reviews `0bc96434`, `28b83857`, `31fb1daa`, `85fd5bd2`, `54d5c002`, `d09d30ff`
+- related specs: ARCH-6 (intake north star), FEAT-66 (intake DB schema), FEAT-60 (runbook v2 port), FEAT-61 (verdict/triage split), FEAT-62 (checklist source UI), FEAT-63 (comment markings), FEAT-64 (review amend), FEAT-22 (CC PDF on RDS)
+
+</script>
+<script data-marked>
+/**
+ * marked v15.0.12 - a markdown parser
+ * Copyright (c) 2011-2025, Christopher Jeffrey. (MIT Licensed)
+ * https://github.com/markedjs/marked
+ */
+
+/**
+ * DO NOT EDIT THIS FILE
+ * The code in this file is generated from files in ./src/
+ */
+(function(g,f){if(typeof exports=="object"&&typeof module<"u"){module.exports=f()}else if("function"==typeof define && define.amd){define("marked",f)}else {g["marked"]=f()}}(typeof globalThis < "u" ? globalThis : typeof self < "u" ? self : this,function(){var exports={};var __exports=exports;var module={exports};
+"use strict";var H=Object.defineProperty;var be=Object.getOwnPropertyDescriptor;var Te=Object.getOwnPropertyNames;var we=Object.prototype.hasOwnProperty;var ye=(l,e)=>{for(var t in e)H(l,t,{get:e[t],enumerable:!0})},Re=(l,e,t,n)=>{if(e&&typeof e=="object"||typeof e=="function")for(let s of Te(e))!we.call(l,s)&&s!==t&&H(l,s,{get:()=>e[s],enumerable:!(n=be(e,s))||n.enumerable});return l};var Se=l=>Re(H({},"__esModule",{value:!0}),l);var kt={};ye(kt,{Hooks:()=>L,Lexer:()=>x,Marked:()=>E,Parser:()=>b,Renderer:()=>$,TextRenderer:()=>_,Tokenizer:()=>S,defaults:()=>w,getDefaults:()=>z,lexer:()=>ht,marked:()=>k,options:()=>it,parse:()=>pt,parseInline:()=>ct,parser:()=>ut,setOptions:()=>ot,use:()=>lt,walkTokens:()=>at});module.exports=Se(kt);function z(){return{async:!1,breaks:!1,extensions:null,gfm:!0,hooks:null,pedantic:!1,renderer:null,silent:!1,tokenizer:null,walkTokens:null}}var w=z();function N(l){w=l}var I={exec:()=>null};function h(l,e=""){let t=typeof l=="string"?l:l.source,n={replace:(s,i)=>{let r=typeof i=="string"?i:i.source;return r=r.replace(m.caret,"$1"),t=t.replace(s,r),n},getRegex:()=>new RegExp(t,e)};return n}var m={codeRemoveIndent:/^(?: {1,4}| {0,3}\t)/gm,outputLinkReplace:/\\([\[\]])/g,indentCodeCompensation:/^(\s+)(?:```)/,beginningSpace:/^\s+/,endingHash:/#$/,startingSpaceChar:/^ /,endingSpaceChar:/ $/,nonSpaceChar:/[^ ]/,newLineCharGlobal:/\n/g,tabCharGlobal:/\t/g,multipleSpaceGlobal:/\s+/g,blankLine:/^[ \t]*$/,doubleBlankLine:/\n[ \t]*\n[ \t]*$/,blockquoteStart:/^ {0,3}>/,blockquoteSetextReplace:/\n {0,3}((?:=+|-+) *)(?=\n|$)/g,blockquoteSetextReplace2:/^ {0,3}>[ \t]?/gm,listReplaceTabs:/^\t+/,listReplaceNesting:/^ {1,4}(?=( {4})*[^ ])/g,listIsTask:/^\[[ xX]\] /,listReplaceTask:/^\[[ xX]\] +/,anyLine:/\n.*\n/,hrefBrackets:/^<(.*)>$/,tableDelimiter:/[:|]/,tableAlignChars:/^\||\| *$/g,tableRowBlankLine:/\n[ \t]*$/,tableAlignRight:/^ *-+: *$/,tableAlignCenter:/^ *:-+: *$/,tableAlignLeft:/^ *:-+ *$/,startATag:/^<a /i,endATag:/^<\/a>/i,startPreScriptTag:/^<(pre|code|kbd|script)(\s|>)/i,endPreScriptTag:/^<\/(pre|code|kbd|script)(\s|>)/i,startAngleBracket:/^</,endAngleBracket:/>$/,pedanticHrefTitle:/^([^'"]*[^\s])\s+(['"])(.*)\2/,unicodeAlphaNumeric:/[\p{L}\p{N}]/u,escapeTest:/[&<>"']/,escapeReplace:/[&<>"']/g,escapeTestNoEncode:/[<>"']|&(?!(#\d{1,7}|#[Xx][a-fA-F0-9]{1,6}|\w+);)/,escapeReplaceNoEncode:/[<>"']|&(?!(#\d{1,7}|#[Xx][a-fA-F0-9]{1,6}|\w+);)/g,unescapeTest:/&(#(?:\d+)|(?:#x[0-9A-Fa-f]+)|(?:\w+));?/ig,caret:/(^|[^\[])\^/g,percentDecode:/%25/g,findPipe:/\|/g,splitPipe:/ \|/,slashPipe:/\\\|/g,carriageReturn:/\r\n|\r/g,spaceLine:/^ +$/gm,notSpaceStart:/^\S*/,endingNewline:/\n$/,listItemRegex:l=>new RegExp(`^( {0,3}${l})((?:[	 ][^\\n]*)?(?:\\n|$))`),nextBulletRegex:l=>new RegExp(`^ {0,${Math.min(3,l-1)}}(?:[*+-]|\\d{1,9}[.)])((?:[ 	][^\\n]*)?(?:\\n|$))`),hrRegex:l=>new RegExp(`^ {0,${Math.min(3,l-1)}}((?:- *){3,}|(?:_ *){3,}|(?:\\* *){3,})(?:\\n+|$)`),fencesBeginRegex:l=>new RegExp(`^ {0,${Math.min(3,l-1)}}(?:\`\`\`|~~~)`),headingBeginRegex:l=>new RegExp(`^ {0,${Math.min(3,l-1)}}#`),htmlBeginRegex:l=>new RegExp(`^ {0,${Math.min(3,l-1)}}<(?:[a-z].*>|!--)`,"i")},$e=/^(?:[ \t]*(?:\n|$))+/,_e=/^((?: {4}| {0,3}\t)[^\n]+(?:\n(?:[ \t]*(?:\n|$))*)?)+/,Le=/^ {0,3}(`{3,}(?=[^`\n]*(?:\n|$))|~{3,})([^\n]*)(?:\n|$)(?:|([\s\S]*?)(?:\n|$))(?: {0,3}\1[~`]* *(?=\n|$)|$)/,O=/^ {0,3}((?:-[\t ]*){3,}|(?:_[ \t]*){3,}|(?:\*[ \t]*){3,})(?:\n+|$)/,ze=/^ {0,3}(#{1,6})(?=\s|$)(.*)(?:\n+|$)/,F=/(?:[*+-]|\d{1,9}[.)])/,ie=/^(?!bull |blockCode|fences|blockquote|heading|html|table)((?:.|\n(?!\s*?\n|bull |blockCode|fences|blockquote|heading|html|table))+?)\n {0,3}(=+|-+) *(?:\n+|$)/,oe=h(ie).replace(/bull/g,F).replace(/blockCode/g,/(?: {4}| {0,3}\t)/).replace(/fences/g,/ {0,3}(?:`{3,}|~{3,})/).replace(/blockquote/g,/ {0,3}>/).replace(/heading/g,/ {0,3}#{1,6}/).replace(/html/g,/ {0,3}<[^\n>]+>\n/).replace(/\|table/g,"").getRegex(),Me=h(ie).replace(/bull/g,F).replace(/blockCode/g,/(?: {4}| {0,3}\t)/).replace(/fences/g,/ {0,3}(?:`{3,}|~{3,})/).replace(/blockquote/g,/ {0,3}>/).replace(/heading/g,/ {0,3}#{1,6}/).replace(/html/g,/ {0,3}<[^\n>]+>\n/).replace(/table/g,/ {0,3}\|?(?:[:\- ]*\|)+[\:\- ]*\n/).getRegex(),Q=/^([^\n]+(?:\n(?!hr|heading|lheading|blockquote|fences|list|html|table| +\n)[^\n]+)*)/,Pe=/^[^\n]+/,U=/(?!\s*\])(?:\\.|[^\[\]\\])+/,Ae=h(/^ {0,3}\[(label)\]: *(?:\n[ \t]*)?([^<\s][^\s]*|<.*?>)(?:(?: +(?:\n[ \t]*)?| *\n[ \t]*)(title))? *(?:\n+|$)/).replace("label",U).replace("title",/(?:"(?:\\"?|[^"\\])*"|'[^'\n]*(?:\n[^'\n]+)*\n?'|\([^()]*\))/).getRegex(),Ee=h(/^( {0,3}bull)([ \t][^\n]+?)?(?:\n|$)/).replace(/bull/g,F).getRegex(),v="address|article|aside|base|basefont|blockquote|body|caption|center|col|colgroup|dd|details|dialog|dir|div|dl|dt|fieldset|figcaption|figure|footer|form|frame|frameset|h[1-6]|head|header|hr|html|iframe|legend|li|link|main|menu|menuitem|meta|nav|noframes|ol|optgroup|option|p|param|search|section|summary|table|tbody|td|tfoot|th|thead|title|tr|track|ul",K=/<!--(?:-?>|[\s\S]*?(?:-->|$))/,Ce=h("^ {0,3}(?:<(script|pre|style|textarea)[\\s>][\\s\\S]*?(?:</\\1>[^\\n]*\\n+|$)|comment[^\\n]*(\\n+|$)|<\\?[\\s\\S]*?(?:\\?>\\n*|$)|<![A-Z][\\s\\S]*?(?:>\\n*|$)|<!\\[CDATA\\[[\\s\\S]*?(?:\\]\\]>\\n*|$)|</?(tag)(?: +|\\n|/?>)[\\s\\S]*?(?:(?:\\n[ 	]*)+\\n|$)|<(?!script|pre|style|textarea)([a-z][\\w-]*)(?:attribute)*? */?>(?=[ \\t]*(?:\\n|$))[\\s\\S]*?(?:(?:\\n[ 	]*)+\\n|$)|</(?!script|pre|style|textarea)[a-z][\\w-]*\\s*>(?=[ \\t]*(?:\\n|$))[\\s\\S]*?(?:(?:\\n[ 	]*)+\\n|$))","i").replace("comment",K).replace("tag",v).replace("attribute",/ +[a-zA-Z:_][\w.:-]*(?: *= *"[^"\n]*"| *= *'[^'\n]*'| *= *[^\s"'=<>`]+)?/).getRegex(),le=h(Q).replace("hr",O).replace("heading"," {0,3}#{1,6}(?:\\s|$)").replace("|lheading","").replace("|table","").replace("blockquote"," {0,3}>").replace("fences"," {0,3}(?:`{3,}(?=[^`\\n]*\\n)|~{3,})[^\\n]*\\n").replace("list"," {0,3}(?:[*+-]|1[.)]) ").replace("html","</?(?:tag)(?: +|\\n|/?>)|<(?:script|pre|style|textarea|!--)").replace("tag",v).getRegex(),Ie=h(/^( {0,3}> ?(paragraph|[^\n]*)(?:\n|$))+/).replace("paragraph",le).getRegex(),X={blockquote:Ie,code:_e,def:Ae,fences:Le,heading:ze,hr:O,html:Ce,lheading:oe,list:Ee,newline:$e,paragraph:le,table:I,text:Pe},re=h("^ *([^\\n ].*)\\n {0,3}((?:\\| *)?:?-+:? *(?:\\| *:?-+:? *)*(?:\\| *)?)(?:\\n((?:(?! *\\n|hr|heading|blockquote|code|fences|list|html).*(?:\\n|$))*)\\n*|$)").replace("hr",O).replace("heading"," {0,3}#{1,6}(?:\\s|$)").replace("blockquote"," {0,3}>").replace("code","(?: {4}| {0,3}	)[^\\n]").replace("fences"," {0,3}(?:`{3,}(?=[^`\\n]*\\n)|~{3,})[^\\n]*\\n").replace("list"," {0,3}(?:[*+-]|1[.)]) ").replace("html","</?(?:tag)(?: +|\\n|/?>)|<(?:script|pre|style|textarea|!--)").replace("tag",v).getRegex(),Oe={...X,lheading:Me,table:re,paragraph:h(Q).replace("hr",O).replace("heading"," {0,3}#{1,6}(?:\\s|$)").replace("|lheading","").replace("table",re).replace("blockquote"," {0,3}>").replace("fences"," {0,3}(?:`{3,}(?=[^`\\n]*\\n)|~{3,})[^\\n]*\\n").replace("list"," {0,3}(?:[*+-]|1[.)]) ").replace("html","</?(?:tag)(?: +|\\n|/?>)|<(?:script|pre|style|textarea|!--)").replace("tag",v).getRegex()},Be={...X,html:h(`^ *(?:comment *(?:\\n|\\s*$)|<(tag)[\\s\\S]+?</\\1> *(?:\\n{2,}|\\s*$)|<tag(?:"[^"]*"|'[^']*'|\\s[^'"/>\\s]*)*?/?> *(?:\\n{2,}|\\s*$))`).replace("comment",K).replace(/tag/g,"(?!(?:a|em|strong|small|s|cite|q|dfn|abbr|data|time|code|var|samp|kbd|sub|sup|i|b|u|mark|ruby|rt|rp|bdi|bdo|span|br|wbr|ins|del|img)\\b)\\w+(?!:|[^\\w\\s@]*@)\\b").getRegex(),def:/^ *\[([^\]]+)\]: *<?([^\s>]+)>?(?: +(["(][^\n]+[")]))? *(?:\n+|$)/,heading:/^(#{1,6})(.*)(?:\n+|$)/,fences:I,lheading:/^(.+?)\n {0,3}(=+|-+) *(?:\n+|$)/,paragraph:h(Q).replace("hr",O).replace("heading",` *#{1,6} *[^
+]`).replace("lheading",oe).replace("|table","").replace("blockquote"," {0,3}>").replace("|fences","").replace("|list","").replace("|html","").replace("|tag","").getRegex()},qe=/^\\([!"#$%&'()*+,\-./:;<=>?@\[\]\\^_`{|}~])/,ve=/^(`+)([^`]|[^`][\s\S]*?[^`])\1(?!`)/,ae=/^( {2,}|\\)\n(?!\s*$)/,De=/^(`+|[^`])(?:(?= {2,}\n)|[\s\S]*?(?:(?=[\\<!\[`*_]|\b_|$)|[^ ](?= {2,}\n)))/,D=/[\p{P}\p{S}]/u,W=/[\s\p{P}\p{S}]/u,ce=/[^\s\p{P}\p{S}]/u,Ze=h(/^((?![*_])punctSpace)/,"u").replace(/punctSpace/g,W).getRegex(),pe=/(?!~)[\p{P}\p{S}]/u,Ge=/(?!~)[\s\p{P}\p{S}]/u,He=/(?:[^\s\p{P}\p{S}]|~)/u,Ne=/\[[^[\]]*?\]\((?:\\.|[^\\\(\)]|\((?:\\.|[^\\\(\)])*\))*\)|`[^`]*?`|<[^<>]*?>/g,ue=/^(?:\*+(?:((?!\*)punct)|[^\s*]))|^_+(?:((?!_)punct)|([^\s_]))/,je=h(ue,"u").replace(/punct/g,D).getRegex(),Fe=h(ue,"u").replace(/punct/g,pe).getRegex(),he="^[^_*]*?__[^_*]*?\\*[^_*]*?(?=__)|[^*]+(?=[^*])|(?!\\*)punct(\\*+)(?=[\\s]|$)|notPunctSpace(\\*+)(?!\\*)(?=punctSpace|$)|(?!\\*)punctSpace(\\*+)(?=notPunctSpace)|[\\s](\\*+)(?!\\*)(?=punct)|(?!\\*)punct(\\*+)(?!\\*)(?=punct)|notPunctSpace(\\*+)(?=notPunctSpace)",Qe=h(he,"gu").replace(/notPunctSpace/g,ce).replace(/punctSpace/g,W).replace(/punct/g,D).getRegex(),Ue=h(he,"gu").replace(/notPunctSpace/g,He).replace(/punctSpace/g,Ge).replace(/punct/g,pe).getRegex(),Ke=h("^[^_*]*?\\*\\*[^_*]*?_[^_*]*?(?=\\*\\*)|[^_]+(?=[^_])|(?!_)punct(_+)(?=[\\s]|$)|notPunctSpace(_+)(?!_)(?=punctSpace|$)|(?!_)punctSpace(_+)(?=notPunctSpace)|[\\s](_+)(?!_)(?=punct)|(?!_)punct(_+)(?!_)(?=punct)","gu").replace(/notPunctSpace/g,ce).replace(/punctSpace/g,W).replace(/punct/g,D).getRegex(),Xe=h(/\\(punct)/,"gu").replace(/punct/g,D).getRegex(),We=h(/^<(scheme:[^\s\x00-\x1f<>]*|email)>/).replace("scheme",/[a-zA-Z][a-zA-Z0-9+.-]{1,31}/).replace("email",/[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+(@)[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+(?![-_])/).getRegex(),Je=h(K).replace("(?:-->|$)","-->").getRegex(),Ve=h("^comment|^</[a-zA-Z][\\w:-]*\\s*>|^<[a-zA-Z][\\w-]*(?:attribute)*?\\s*/?>|^<\\?[\\s\\S]*?\\?>|^<![a-zA-Z]+\\s[\\s\\S]*?>|^<!\\[CDATA\\[[\\s\\S]*?\\]\\]>").replace("comment",Je).replace("attribute",/\s+[a-zA-Z:_][\w.:-]*(?:\s*=\s*"[^"]*"|\s*=\s*'[^']*'|\s*=\s*[^\s"'=<>`]+)?/).getRegex(),q=/(?:\[(?:\\.|[^\[\]\\])*\]|\\.|`[^`]*`|[^\[\]\\`])*?/,Ye=h(/^!?\[(label)\]\(\s*(href)(?:(?:[ \t]*(?:\n[ \t]*)?)(title))?\s*\)/).replace("label",q).replace("href",/<(?:\\.|[^\n<>\\])+>|[^ \t\n\x00-\x1f]*/).replace("title",/"(?:\\"?|[^"\\])*"|'(?:\\'?|[^'\\])*'|\((?:\\\)?|[^)\\])*\)/).getRegex(),ke=h(/^!?\[(label)\]\[(ref)\]/).replace("label",q).replace("ref",U).getRegex(),ge=h(/^!?\[(ref)\](?:\[\])?/).replace("ref",U).getRegex(),et=h("reflink|nolink(?!\\()","g").replace("reflink",ke).replace("nolink",ge).getRegex(),J={_backpedal:I,anyPunctuation:Xe,autolink:We,blockSkip:Ne,br:ae,code:ve,del:I,emStrongLDelim:je,emStrongRDelimAst:Qe,emStrongRDelimUnd:Ke,escape:qe,link:Ye,nolink:ge,punctuation:Ze,reflink:ke,reflinkSearch:et,tag:Ve,text:De,url:I},tt={...J,link:h(/^!?\[(label)\]\((.*?)\)/).replace("label",q).getRegex(),reflink:h(/^!?\[(label)\]\s*\[([^\]]*)\]/).replace("label",q).getRegex()},j={...J,emStrongRDelimAst:Ue,emStrongLDelim:Fe,url:h(/^((?:ftp|https?):\/\/|www\.)(?:[a-zA-Z0-9\-]+\.?)+[^\s<]*|^email/,"i").replace("email",/[A-Za-z0-9._+-]+(@)[a-zA-Z0-9-_]+(?:\.[a-zA-Z0-9-_]*[a-zA-Z0-9])+(?![-_])/).getRegex(),_backpedal:/(?:[^?!.,:;*_'"~()&]+|\([^)]*\)|&(?![a-zA-Z0-9]+;$)|[?!.,:;*_'"~)]+(?!$))+/,del:/^(~~?)(?=[^\s~])((?:\\.|[^\\])*?(?:\\.|[^\s~\\]))\1(?=[^~]|$)/,text:/^([`~]+|[^`~])(?:(?= {2,}\n)|(?=[a-zA-Z0-9.!#$%&'*+\/=?_`{\|}~-]+@)|[\s\S]*?(?:(?=[\\<!\[`*~_]|\b_|https?:\/\/|ftp:\/\/|www\.|$)|[^ ](?= {2,}\n)|[^a-zA-Z0-9.!#$%&'*+\/=?_`{\|}~-](?=[a-zA-Z0-9.!#$%&'*+\/=?_`{\|}~-]+@)))/},nt={...j,br:h(ae).replace("{2,}","*").getRegex(),text:h(j.text).replace("\\b_","\\b_| {2,}\\n").replace(/\{2,\}/g,"*").getRegex()},B={normal:X,gfm:Oe,pedantic:Be},P={normal:J,gfm:j,breaks:nt,pedantic:tt};var st={"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"},fe=l=>st[l];function R(l,e){if(e){if(m.escapeTest.test(l))return l.replace(m.escapeReplace,fe)}else if(m.escapeTestNoEncode.test(l))return l.replace(m.escapeReplaceNoEncode,fe);return l}function V(l){try{l=encodeURI(l).replace(m.percentDecode,"%")}catch{return null}return l}function Y(l,e){let t=l.replace(m.findPipe,(i,r,o)=>{let a=!1,c=r;for(;--c>=0&&o[c]==="\\";)a=!a;return a?"|":" |"}),n=t.split(m.splitPipe),s=0;if(n[0].trim()||n.shift(),n.length>0&&!n.at(-1)?.trim()&&n.pop(),e)if(n.length>e)n.splice(e);else for(;n.length<e;)n.push("");for(;s<n.length;s++)n[s]=n[s].trim().replace(m.slashPipe,"|");return n}function A(l,e,t){let n=l.length;if(n===0)return"";let s=0;for(;s<n;){let i=l.charAt(n-s-1);if(i===e&&!t)s++;else if(i!==e&&t)s++;else break}return l.slice(0,n-s)}function de(l,e){if(l.indexOf(e[1])===-1)return-1;let t=0;for(let n=0;n<l.length;n++)if(l[n]==="\\")n++;else if(l[n]===e[0])t++;else if(l[n]===e[1]&&(t--,t<0))return n;return t>0?-2:-1}function me(l,e,t,n,s){let i=e.href,r=e.title||null,o=l[1].replace(s.other.outputLinkReplace,"$1");n.state.inLink=!0;let a={type:l[0].charAt(0)==="!"?"image":"link",raw:t,href:i,title:r,text:o,tokens:n.inlineTokens(o)};return n.state.inLink=!1,a}function rt(l,e,t){let n=l.match(t.other.indentCodeCompensation);if(n===null)return e;let s=n[1];return e.split(`
+`).map(i=>{let r=i.match(t.other.beginningSpace);if(r===null)return i;let[o]=r;return o.length>=s.length?i.slice(s.length):i}).join(`
+`)}var S=class{options;rules;lexer;constructor(e){this.options=e||w}space(e){let t=this.rules.block.newline.exec(e);if(t&&t[0].length>0)return{type:"space",raw:t[0]}}code(e){let t=this.rules.block.code.exec(e);if(t){let n=t[0].replace(this.rules.other.codeRemoveIndent,"");return{type:"code",raw:t[0],codeBlockStyle:"indented",text:this.options.pedantic?n:A(n,`
+`)}}}fences(e){let t=this.rules.block.fences.exec(e);if(t){let n=t[0],s=rt(n,t[3]||"",this.rules);return{type:"code",raw:n,lang:t[2]?t[2].trim().replace(this.rules.inline.anyPunctuation,"$1"):t[2],text:s}}}heading(e){let t=this.rules.block.heading.exec(e);if(t){let n=t[2].trim();if(this.rules.other.endingHash.test(n)){let s=A(n,"#");(this.options.pedantic||!s||this.rules.other.endingSpaceChar.test(s))&&(n=s.trim())}return{type:"heading",raw:t[0],depth:t[1].length,text:n,tokens:this.lexer.inline(n)}}}hr(e){let t=this.rules.block.hr.exec(e);if(t)return{type:"hr",raw:A(t[0],`
+`)}}blockquote(e){let t=this.rules.block.blockquote.exec(e);if(t){let n=A(t[0],`
+`).split(`
+`),s="",i="",r=[];for(;n.length>0;){let o=!1,a=[],c;for(c=0;c<n.length;c++)if(this.rules.other.blockquoteStart.test(n[c]))a.push(n[c]),o=!0;else if(!o)a.push(n[c]);else break;n=n.slice(c);let p=a.join(`
+`),u=p.replace(this.rules.other.blockquoteSetextReplace,`
+    $1`).replace(this.rules.other.blockquoteSetextReplace2,"");s=s?`${s}
+${p}`:p,i=i?`${i}
+${u}`:u;let d=this.lexer.state.top;if(this.lexer.state.top=!0,this.lexer.blockTokens(u,r,!0),this.lexer.state.top=d,n.length===0)break;let g=r.at(-1);if(g?.type==="code")break;if(g?.type==="blockquote"){let T=g,f=T.raw+`
+`+n.join(`
+`),y=this.blockquote(f);r[r.length-1]=y,s=s.substring(0,s.length-T.raw.length)+y.raw,i=i.substring(0,i.length-T.text.length)+y.text;break}else if(g?.type==="list"){let T=g,f=T.raw+`
+`+n.join(`
+`),y=this.list(f);r[r.length-1]=y,s=s.substring(0,s.length-g.raw.length)+y.raw,i=i.substring(0,i.length-T.raw.length)+y.raw,n=f.substring(r.at(-1).raw.length).split(`
+`);continue}}return{type:"blockquote",raw:s,tokens:r,text:i}}}list(e){let t=this.rules.block.list.exec(e);if(t){let n=t[1].trim(),s=n.length>1,i={type:"list",raw:"",ordered:s,start:s?+n.slice(0,-1):"",loose:!1,items:[]};n=s?`\\d{1,9}\\${n.slice(-1)}`:`\\${n}`,this.options.pedantic&&(n=s?n:"[*+-]");let r=this.rules.other.listItemRegex(n),o=!1;for(;e;){let c=!1,p="",u="";if(!(t=r.exec(e))||this.rules.block.hr.test(e))break;p=t[0],e=e.substring(p.length);let d=t[2].split(`
+`,1)[0].replace(this.rules.other.listReplaceTabs,Z=>" ".repeat(3*Z.length)),g=e.split(`
+`,1)[0],T=!d.trim(),f=0;if(this.options.pedantic?(f=2,u=d.trimStart()):T?f=t[1].length+1:(f=t[2].search(this.rules.other.nonSpaceChar),f=f>4?1:f,u=d.slice(f),f+=t[1].length),T&&this.rules.other.blankLine.test(g)&&(p+=g+`
+`,e=e.substring(g.length+1),c=!0),!c){let Z=this.rules.other.nextBulletRegex(f),te=this.rules.other.hrRegex(f),ne=this.rules.other.fencesBeginRegex(f),se=this.rules.other.headingBeginRegex(f),xe=this.rules.other.htmlBeginRegex(f);for(;e;){let G=e.split(`
+`,1)[0],C;if(g=G,this.options.pedantic?(g=g.replace(this.rules.other.listReplaceNesting,"  "),C=g):C=g.replace(this.rules.other.tabCharGlobal,"    "),ne.test(g)||se.test(g)||xe.test(g)||Z.test(g)||te.test(g))break;if(C.search(this.rules.other.nonSpaceChar)>=f||!g.trim())u+=`
+`+C.slice(f);else{if(T||d.replace(this.rules.other.tabCharGlobal,"    ").search(this.rules.other.nonSpaceChar)>=4||ne.test(d)||se.test(d)||te.test(d))break;u+=`
+`+g}!T&&!g.trim()&&(T=!0),p+=G+`
+`,e=e.substring(G.length+1),d=C.slice(f)}}i.loose||(o?i.loose=!0:this.rules.other.doubleBlankLine.test(p)&&(o=!0));let y=null,ee;this.options.gfm&&(y=this.rules.other.listIsTask.exec(u),y&&(ee=y[0]!=="[ ] ",u=u.replace(this.rules.other.listReplaceTask,""))),i.items.push({type:"list_item",raw:p,task:!!y,checked:ee,loose:!1,text:u,tokens:[]}),i.raw+=p}let a=i.items.at(-1);if(a)a.raw=a.raw.trimEnd(),a.text=a.text.trimEnd();else return;i.raw=i.raw.trimEnd();for(let c=0;c<i.items.length;c++)if(this.lexer.state.top=!1,i.items[c].tokens=this.lexer.blockTokens(i.items[c].text,[]),!i.loose){let p=i.items[c].tokens.filter(d=>d.type==="space"),u=p.length>0&&p.some(d=>this.rules.other.anyLine.test(d.raw));i.loose=u}if(i.loose)for(let c=0;c<i.items.length;c++)i.items[c].loose=!0;return i}}html(e){let t=this.rules.block.html.exec(e);if(t)return{type:"html",block:!0,raw:t[0],pre:t[1]==="pre"||t[1]==="script"||t[1]==="style",text:t[0]}}def(e){let t=this.rules.block.def.exec(e);if(t){let n=t[1].toLowerCase().replace(this.rules.other.multipleSpaceGlobal," "),s=t[2]?t[2].replace(this.rules.other.hrefBrackets,"$1").replace(this.rules.inline.anyPunctuation,"$1"):"",i=t[3]?t[3].substring(1,t[3].length-1).replace(this.rules.inline.anyPunctuation,"$1"):t[3];return{type:"def",tag:n,raw:t[0],href:s,title:i}}}table(e){let t=this.rules.block.table.exec(e);if(!t||!this.rules.other.tableDelimiter.test(t[2]))return;let n=Y(t[1]),s=t[2].replace(this.rules.other.tableAlignChars,"").split("|"),i=t[3]?.trim()?t[3].replace(this.rules.other.tableRowBlankLine,"").split(`
+`):[],r={type:"table",raw:t[0],header:[],align:[],rows:[]};if(n.length===s.length){for(let o of s)this.rules.other.tableAlignRight.test(o)?r.align.push("right"):this.rules.other.tableAlignCenter.test(o)?r.align.push("center"):this.rules.other.tableAlignLeft.test(o)?r.align.push("left"):r.align.push(null);for(let o=0;o<n.length;o++)r.header.push({text:n[o],tokens:this.lexer.inline(n[o]),header:!0,align:r.align[o]});for(let o of i)r.rows.push(Y(o,r.header.length).map((a,c)=>({text:a,tokens:this.lexer.inline(a),header:!1,align:r.align[c]})));return r}}lheading(e){let t=this.rules.block.lheading.exec(e);if(t)return{type:"heading",raw:t[0],depth:t[2].charAt(0)==="="?1:2,text:t[1],tokens:this.lexer.inline(t[1])}}paragraph(e){let t=this.rules.block.paragraph.exec(e);if(t){let n=t[1].charAt(t[1].length-1)===`
+`?t[1].slice(0,-1):t[1];return{type:"paragraph",raw:t[0],text:n,tokens:this.lexer.inline(n)}}}text(e){let t=this.rules.block.text.exec(e);if(t)return{type:"text",raw:t[0],text:t[0],tokens:this.lexer.inline(t[0])}}escape(e){let t=this.rules.inline.escape.exec(e);if(t)return{type:"escape",raw:t[0],text:t[1]}}tag(e){let t=this.rules.inline.tag.exec(e);if(t)return!this.lexer.state.inLink&&this.rules.other.startATag.test(t[0])?this.lexer.state.inLink=!0:this.lexer.state.inLink&&this.rules.other.endATag.test(t[0])&&(this.lexer.state.inLink=!1),!this.lexer.state.inRawBlock&&this.rules.other.startPreScriptTag.test(t[0])?this.lexer.state.inRawBlock=!0:this.lexer.state.inRawBlock&&this.rules.other.endPreScriptTag.test(t[0])&&(this.lexer.state.inRawBlock=!1),{type:"html",raw:t[0],inLink:this.lexer.state.inLink,inRawBlock:this.lexer.state.inRawBlock,block:!1,text:t[0]}}link(e){let t=this.rules.inline.link.exec(e);if(t){let n=t[2].trim();if(!this.options.pedantic&&this.rules.other.startAngleBracket.test(n)){if(!this.rules.other.endAngleBracket.test(n))return;let r=A(n.slice(0,-1),"\\");if((n.length-r.length)%2===0)return}else{let r=de(t[2],"()");if(r===-2)return;if(r>-1){let a=(t[0].indexOf("!")===0?5:4)+t[1].length+r;t[2]=t[2].substring(0,r),t[0]=t[0].substring(0,a).trim(),t[3]=""}}let s=t[2],i="";if(this.options.pedantic){let r=this.rules.other.pedanticHrefTitle.exec(s);r&&(s=r[1],i=r[3])}else i=t[3]?t[3].slice(1,-1):"";return s=s.trim(),this.rules.other.startAngleBracket.test(s)&&(this.options.pedantic&&!this.rules.other.endAngleBracket.test(n)?s=s.slice(1):s=s.slice(1,-1)),me(t,{href:s&&s.replace(this.rules.inline.anyPunctuation,"$1"),title:i&&i.replace(this.rules.inline.anyPunctuation,"$1")},t[0],this.lexer,this.rules)}}reflink(e,t){let n;if((n=this.rules.inline.reflink.exec(e))||(n=this.rules.inline.nolink.exec(e))){let s=(n[2]||n[1]).replace(this.rules.other.multipleSpaceGlobal," "),i=t[s.toLowerCase()];if(!i){let r=n[0].charAt(0);return{type:"text",raw:r,text:r}}return me(n,i,n[0],this.lexer,this.rules)}}emStrong(e,t,n=""){let s=this.rules.inline.emStrongLDelim.exec(e);if(!s||s[3]&&n.match(this.rules.other.unicodeAlphaNumeric))return;if(!(s[1]||s[2]||"")||!n||this.rules.inline.punctuation.exec(n)){let r=[...s[0]].length-1,o,a,c=r,p=0,u=s[0][0]==="*"?this.rules.inline.emStrongRDelimAst:this.rules.inline.emStrongRDelimUnd;for(u.lastIndex=0,t=t.slice(-1*e.length+r);(s=u.exec(t))!=null;){if(o=s[1]||s[2]||s[3]||s[4]||s[5]||s[6],!o)continue;if(a=[...o].length,s[3]||s[4]){c+=a;continue}else if((s[5]||s[6])&&r%3&&!((r+a)%3)){p+=a;continue}if(c-=a,c>0)continue;a=Math.min(a,a+c+p);let d=[...s[0]][0].length,g=e.slice(0,r+s.index+d+a);if(Math.min(r,a)%2){let f=g.slice(1,-1);return{type:"em",raw:g,text:f,tokens:this.lexer.inlineTokens(f)}}let T=g.slice(2,-2);return{type:"strong",raw:g,text:T,tokens:this.lexer.inlineTokens(T)}}}}codespan(e){let t=this.rules.inline.code.exec(e);if(t){let n=t[2].replace(this.rules.other.newLineCharGlobal," "),s=this.rules.other.nonSpaceChar.test(n),i=this.rules.other.startingSpaceChar.test(n)&&this.rules.other.endingSpaceChar.test(n);return s&&i&&(n=n.substring(1,n.length-1)),{type:"codespan",raw:t[0],text:n}}}br(e){let t=this.rules.inline.br.exec(e);if(t)return{type:"br",raw:t[0]}}del(e){let t=this.rules.inline.del.exec(e);if(t)return{type:"del",raw:t[0],text:t[2],tokens:this.lexer.inlineTokens(t[2])}}autolink(e){let t=this.rules.inline.autolink.exec(e);if(t){let n,s;return t[2]==="@"?(n=t[1],s="mailto:"+n):(n=t[1],s=n),{type:"link",raw:t[0],text:n,href:s,tokens:[{type:"text",raw:n,text:n}]}}}url(e){let t;if(t=this.rules.inline.url.exec(e)){let n,s;if(t[2]==="@")n=t[0],s="mailto:"+n;else{let i;do i=t[0],t[0]=this.rules.inline._backpedal.exec(t[0])?.[0]??"";while(i!==t[0]);n=t[0],t[1]==="www."?s="http://"+t[0]:s=t[0]}return{type:"link",raw:t[0],text:n,href:s,tokens:[{type:"text",raw:n,text:n}]}}}inlineText(e){let t=this.rules.inline.text.exec(e);if(t){let n=this.lexer.state.inRawBlock;return{type:"text",raw:t[0],text:t[0],escaped:n}}}};var x=class l{tokens;options;state;tokenizer;inlineQueue;constructor(e){this.tokens=[],this.tokens.links=Object.create(null),this.options=e||w,this.options.tokenizer=this.options.tokenizer||new S,this.tokenizer=this.options.tokenizer,this.tokenizer.options=this.options,this.tokenizer.lexer=this,this.inlineQueue=[],this.state={inLink:!1,inRawBlock:!1,top:!0};let t={other:m,block:B.normal,inline:P.normal};this.options.pedantic?(t.block=B.pedantic,t.inline=P.pedantic):this.options.gfm&&(t.block=B.gfm,this.options.breaks?t.inline=P.breaks:t.inline=P.gfm),this.tokenizer.rules=t}static get rules(){return{block:B,inline:P}}static lex(e,t){return new l(t).lex(e)}static lexInline(e,t){return new l(t).inlineTokens(e)}lex(e){e=e.replace(m.carriageReturn,`
+`),this.blockTokens(e,this.tokens);for(let t=0;t<this.inlineQueue.length;t++){let n=this.inlineQueue[t];this.inlineTokens(n.src,n.tokens)}return this.inlineQueue=[],this.tokens}blockTokens(e,t=[],n=!1){for(this.options.pedantic&&(e=e.replace(m.tabCharGlobal,"    ").replace(m.spaceLine,""));e;){let s;if(this.options.extensions?.block?.some(r=>(s=r.call({lexer:this},e,t))?(e=e.substring(s.raw.length),t.push(s),!0):!1))continue;if(s=this.tokenizer.space(e)){e=e.substring(s.raw.length);let r=t.at(-1);s.raw.length===1&&r!==void 0?r.raw+=`
+`:t.push(s);continue}if(s=this.tokenizer.code(e)){e=e.substring(s.raw.length);let r=t.at(-1);r?.type==="paragraph"||r?.type==="text"?(r.raw+=`
+`+s.raw,r.text+=`
+`+s.text,this.inlineQueue.at(-1).src=r.text):t.push(s);continue}if(s=this.tokenizer.fences(e)){e=e.substring(s.raw.length),t.push(s);continue}if(s=this.tokenizer.heading(e)){e=e.substring(s.raw.length),t.push(s);continue}if(s=this.tokenizer.hr(e)){e=e.substring(s.raw.length),t.push(s);continue}if(s=this.tokenizer.blockquote(e)){e=e.substring(s.raw.length),t.push(s);continue}if(s=this.tokenizer.list(e)){e=e.substring(s.raw.length),t.push(s);continue}if(s=this.tokenizer.html(e)){e=e.substring(s.raw.length),t.push(s);continue}if(s=this.tokenizer.def(e)){e=e.substring(s.raw.length);let r=t.at(-1);r?.type==="paragraph"||r?.type==="text"?(r.raw+=`
+`+s.raw,r.text+=`
+`+s.raw,this.inlineQueue.at(-1).src=r.text):this.tokens.links[s.tag]||(this.tokens.links[s.tag]={href:s.href,title:s.title});continue}if(s=this.tokenizer.table(e)){e=e.substring(s.raw.length),t.push(s);continue}if(s=this.tokenizer.lheading(e)){e=e.substring(s.raw.length),t.push(s);continue}let i=e;if(this.options.extensions?.startBlock){let r=1/0,o=e.slice(1),a;this.options.extensions.startBlock.forEach(c=>{a=c.call({lexer:this},o),typeof a=="number"&&a>=0&&(r=Math.min(r,a))}),r<1/0&&r>=0&&(i=e.substring(0,r+1))}if(this.state.top&&(s=this.tokenizer.paragraph(i))){let r=t.at(-1);n&&r?.type==="paragraph"?(r.raw+=`
+`+s.raw,r.text+=`
+`+s.text,this.inlineQueue.pop(),this.inlineQueue.at(-1).src=r.text):t.push(s),n=i.length!==e.length,e=e.substring(s.raw.length);continue}if(s=this.tokenizer.text(e)){e=e.substring(s.raw.length);let r=t.at(-1);r?.type==="text"?(r.raw+=`
+`+s.raw,r.text+=`
+`+s.text,this.inlineQueue.pop(),this.inlineQueue.at(-1).src=r.text):t.push(s);continue}if(e){let r="Infinite loop on byte: "+e.charCodeAt(0);if(this.options.silent){console.error(r);break}else throw new Error(r)}}return this.state.top=!0,t}inline(e,t=[]){return this.inlineQueue.push({src:e,tokens:t}),t}inlineTokens(e,t=[]){let n=e,s=null;if(this.tokens.links){let o=Object.keys(this.tokens.links);if(o.length>0)for(;(s=this.tokenizer.rules.inline.reflinkSearch.exec(n))!=null;)o.includes(s[0].slice(s[0].lastIndexOf("[")+1,-1))&&(n=n.slice(0,s.index)+"["+"a".repeat(s[0].length-2)+"]"+n.slice(this.tokenizer.rules.inline.reflinkSearch.lastIndex))}for(;(s=this.tokenizer.rules.inline.anyPunctuation.exec(n))!=null;)n=n.slice(0,s.index)+"++"+n.slice(this.tokenizer.rules.inline.anyPunctuation.lastIndex);for(;(s=this.tokenizer.rules.inline.blockSkip.exec(n))!=null;)n=n.slice(0,s.index)+"["+"a".repeat(s[0].length-2)+"]"+n.slice(this.tokenizer.rules.inline.blockSkip.lastIndex);let i=!1,r="";for(;e;){i||(r=""),i=!1;let o;if(this.options.extensions?.inline?.some(c=>(o=c.call({lexer:this},e,t))?(e=e.substring(o.raw.length),t.push(o),!0):!1))continue;if(o=this.tokenizer.escape(e)){e=e.substring(o.raw.length),t.push(o);continue}if(o=this.tokenizer.tag(e)){e=e.substring(o.raw.length),t.push(o);continue}if(o=this.tokenizer.link(e)){e=e.substring(o.raw.length),t.push(o);continue}if(o=this.tokenizer.reflink(e,this.tokens.links)){e=e.substring(o.raw.length);let c=t.at(-1);o.type==="text"&&c?.type==="text"?(c.raw+=o.raw,c.text+=o.text):t.push(o);continue}if(o=this.tokenizer.emStrong(e,n,r)){e=e.substring(o.raw.length),t.push(o);continue}if(o=this.tokenizer.codespan(e)){e=e.substring(o.raw.length),t.push(o);continue}if(o=this.tokenizer.br(e)){e=e.substring(o.raw.length),t.push(o);continue}if(o=this.tokenizer.del(e)){e=e.substring(o.raw.length),t.push(o);continue}if(o=this.tokenizer.autolink(e)){e=e.substring(o.raw.length),t.push(o);continue}if(!this.state.inLink&&(o=this.tokenizer.url(e))){e=e.substring(o.raw.length),t.push(o);continue}let a=e;if(this.options.extensions?.startInline){let c=1/0,p=e.slice(1),u;this.options.extensions.startInline.forEach(d=>{u=d.call({lexer:this},p),typeof u=="number"&&u>=0&&(c=Math.min(c,u))}),c<1/0&&c>=0&&(a=e.substring(0,c+1))}if(o=this.tokenizer.inlineText(a)){e=e.substring(o.raw.length),o.raw.slice(-1)!=="_"&&(r=o.raw.slice(-1)),i=!0;let c=t.at(-1);c?.type==="text"?(c.raw+=o.raw,c.text+=o.text):t.push(o);continue}if(e){let c="Infinite loop on byte: "+e.charCodeAt(0);if(this.options.silent){console.error(c);break}else throw new Error(c)}}return t}};var $=class{options;parser;constructor(e){this.options=e||w}space(e){return""}code({text:e,lang:t,escaped:n}){let s=(t||"").match(m.notSpaceStart)?.[0],i=e.replace(m.endingNewline,"")+`
+`;return s?'<pre><code class="language-'+R(s)+'">'+(n?i:R(i,!0))+`</code></pre>
+`:"<pre><code>"+(n?i:R(i,!0))+`</code></pre>
+`}blockquote({tokens:e}){return`<blockquote>
+${this.parser.parse(e)}</blockquote>
+`}html({text:e}){return e}heading({tokens:e,depth:t}){return`<h${t}>${this.parser.parseInline(e)}</h${t}>
+`}hr(e){return`<hr>
+`}list(e){let t=e.ordered,n=e.start,s="";for(let o=0;o<e.items.length;o++){let a=e.items[o];s+=this.listitem(a)}let i=t?"ol":"ul",r=t&&n!==1?' start="'+n+'"':"";return"<"+i+r+`>
+`+s+"</"+i+`>
+`}listitem(e){let t="";if(e.task){let n=this.checkbox({checked:!!e.checked});e.loose?e.tokens[0]?.type==="paragraph"?(e.tokens[0].text=n+" "+e.tokens[0].text,e.tokens[0].tokens&&e.tokens[0].tokens.length>0&&e.tokens[0].tokens[0].type==="text"&&(e.tokens[0].tokens[0].text=n+" "+R(e.tokens[0].tokens[0].text),e.tokens[0].tokens[0].escaped=!0)):e.tokens.unshift({type:"text",raw:n+" ",text:n+" ",escaped:!0}):t+=n+" "}return t+=this.parser.parse(e.tokens,!!e.loose),`<li>${t}</li>
+`}checkbox({checked:e}){return"<input "+(e?'checked="" ':"")+'disabled="" type="checkbox">'}paragraph({tokens:e}){return`<p>${this.parser.parseInline(e)}</p>
+`}table(e){let t="",n="";for(let i=0;i<e.header.length;i++)n+=this.tablecell(e.header[i]);t+=this.tablerow({text:n});let s="";for(let i=0;i<e.rows.length;i++){let r=e.rows[i];n="";for(let o=0;o<r.length;o++)n+=this.tablecell(r[o]);s+=this.tablerow({text:n})}return s&&(s=`<tbody>${s}</tbody>`),`<table>
+<thead>
+`+t+`</thead>
+`+s+`</table>
+`}tablerow({text:e}){return`<tr>
+${e}</tr>
+`}tablecell(e){let t=this.parser.parseInline(e.tokens),n=e.header?"th":"td";return(e.align?`<${n} align="${e.align}">`:`<${n}>`)+t+`</${n}>
+`}strong({tokens:e}){return`<strong>${this.parser.parseInline(e)}</strong>`}em({tokens:e}){return`<em>${this.parser.parseInline(e)}</em>`}codespan({text:e}){return`<code>${R(e,!0)}</code>`}br(e){return"<br>"}del({tokens:e}){return`<del>${this.parser.parseInline(e)}</del>`}link({href:e,title:t,tokens:n}){let s=this.parser.parseInline(n),i=V(e);if(i===null)return s;e=i;let r='<a href="'+e+'"';return t&&(r+=' title="'+R(t)+'"'),r+=">"+s+"</a>",r}image({href:e,title:t,text:n,tokens:s}){s&&(n=this.parser.parseInline(s,this.parser.textRenderer));let i=V(e);if(i===null)return R(n);e=i;let r=`<img src="${e}" alt="${n}"`;return t&&(r+=` title="${R(t)}"`),r+=">",r}text(e){return"tokens"in e&&e.tokens?this.parser.parseInline(e.tokens):"escaped"in e&&e.escaped?e.text:R(e.text)}};var _=class{strong({text:e}){return e}em({text:e}){return e}codespan({text:e}){return e}del({text:e}){return e}html({text:e}){return e}text({text:e}){return e}link({text:e}){return""+e}image({text:e}){return""+e}br(){return""}};var b=class l{options;renderer;textRenderer;constructor(e){this.options=e||w,this.options.renderer=this.options.renderer||new $,this.renderer=this.options.renderer,this.renderer.options=this.options,this.renderer.parser=this,this.textRenderer=new _}static parse(e,t){return new l(t).parse(e)}static parseInline(e,t){return new l(t).parseInline(e)}parse(e,t=!0){let n="";for(let s=0;s<e.length;s++){let i=e[s];if(this.options.extensions?.renderers?.[i.type]){let o=i,a=this.options.extensions.renderers[o.type].call({parser:this},o);if(a!==!1||!["space","hr","heading","code","table","blockquote","list","html","paragraph","text"].includes(o.type)){n+=a||"";continue}}let r=i;switch(r.type){case"space":{n+=this.renderer.space(r);continue}case"hr":{n+=this.renderer.hr(r);continue}case"heading":{n+=this.renderer.heading(r);continue}case"code":{n+=this.renderer.code(r);continue}case"table":{n+=this.renderer.table(r);continue}case"blockquote":{n+=this.renderer.blockquote(r);continue}case"list":{n+=this.renderer.list(r);continue}case"html":{n+=this.renderer.html(r);continue}case"paragraph":{n+=this.renderer.paragraph(r);continue}case"text":{let o=r,a=this.renderer.text(o);for(;s+1<e.length&&e[s+1].type==="text";)o=e[++s],a+=`
+`+this.renderer.text(o);t?n+=this.renderer.paragraph({type:"paragraph",raw:a,text:a,tokens:[{type:"text",raw:a,text:a,escaped:!0}]}):n+=a;continue}default:{let o='Token with "'+r.type+'" type was not found.';if(this.options.silent)return console.error(o),"";throw new Error(o)}}}return n}parseInline(e,t=this.renderer){let n="";for(let s=0;s<e.length;s++){let i=e[s];if(this.options.extensions?.renderers?.[i.type]){let o=this.options.extensions.renderers[i.type].call({parser:this},i);if(o!==!1||!["escape","html","link","image","strong","em","codespan","br","del","text"].includes(i.type)){n+=o||"";continue}}let r=i;switch(r.type){case"escape":{n+=t.text(r);break}case"html":{n+=t.html(r);break}case"link":{n+=t.link(r);break}case"image":{n+=t.image(r);break}case"strong":{n+=t.strong(r);break}case"em":{n+=t.em(r);break}case"codespan":{n+=t.codespan(r);break}case"br":{n+=t.br(r);break}case"del":{n+=t.del(r);break}case"text":{n+=t.text(r);break}default:{let o='Token with "'+r.type+'" type was not found.';if(this.options.silent)return console.error(o),"";throw new Error(o)}}}return n}};var L=class{options;block;constructor(e){this.options=e||w}static passThroughHooks=new Set(["preprocess","postprocess","processAllTokens"]);preprocess(e){return e}postprocess(e){return e}processAllTokens(e){return e}provideLexer(){return this.block?x.lex:x.lexInline}provideParser(){return this.block?b.parse:b.parseInline}};var E=class{defaults=z();options=this.setOptions;parse=this.parseMarkdown(!0);parseInline=this.parseMarkdown(!1);Parser=b;Renderer=$;TextRenderer=_;Lexer=x;Tokenizer=S;Hooks=L;constructor(...e){this.use(...e)}walkTokens(e,t){let n=[];for(let s of e)switch(n=n.concat(t.call(this,s)),s.type){case"table":{let i=s;for(let r of i.header)n=n.concat(this.walkTokens(r.tokens,t));for(let r of i.rows)for(let o of r)n=n.concat(this.walkTokens(o.tokens,t));break}case"list":{let i=s;n=n.concat(this.walkTokens(i.items,t));break}default:{let i=s;this.defaults.extensions?.childTokens?.[i.type]?this.defaults.extensions.childTokens[i.type].forEach(r=>{let o=i[r].flat(1/0);n=n.concat(this.walkTokens(o,t))}):i.tokens&&(n=n.concat(this.walkTokens(i.tokens,t)))}}return n}use(...e){let t=this.defaults.extensions||{renderers:{},childTokens:{}};return e.forEach(n=>{let s={...n};if(s.async=this.defaults.async||s.async||!1,n.extensions&&(n.extensions.forEach(i=>{if(!i.name)throw new Error("extension name required");if("renderer"in i){let r=t.renderers[i.name];r?t.renderers[i.name]=function(...o){let a=i.renderer.apply(this,o);return a===!1&&(a=r.apply(this,o)),a}:t.renderers[i.name]=i.renderer}if("tokenizer"in i){if(!i.level||i.level!=="block"&&i.level!=="inline")throw new Error("extension level must be 'block' or 'inline'");let r=t[i.level];r?r.unshift(i.tokenizer):t[i.level]=[i.tokenizer],i.start&&(i.level==="block"?t.startBlock?t.startBlock.push(i.start):t.startBlock=[i.start]:i.level==="inline"&&(t.startInline?t.startInline.push(i.start):t.startInline=[i.start]))}"childTokens"in i&&i.childTokens&&(t.childTokens[i.name]=i.childTokens)}),s.extensions=t),n.renderer){let i=this.defaults.renderer||new $(this.defaults);for(let r in n.renderer){if(!(r in i))throw new Error(`renderer '${r}' does not exist`);if(["options","parser"].includes(r))continue;let o=r,a=n.renderer[o],c=i[o];i[o]=(...p)=>{let u=a.apply(i,p);return u===!1&&(u=c.apply(i,p)),u||""}}s.renderer=i}if(n.tokenizer){let i=this.defaults.tokenizer||new S(this.defaults);for(let r in n.tokenizer){if(!(r in i))throw new Error(`tokenizer '${r}' does not exist`);if(["options","rules","lexer"].includes(r))continue;let o=r,a=n.tokenizer[o],c=i[o];i[o]=(...p)=>{let u=a.apply(i,p);return u===!1&&(u=c.apply(i,p)),u}}s.tokenizer=i}if(n.hooks){let i=this.defaults.hooks||new L;for(let r in n.hooks){if(!(r in i))throw new Error(`hook '${r}' does not exist`);if(["options","block"].includes(r))continue;let o=r,a=n.hooks[o],c=i[o];L.passThroughHooks.has(r)?i[o]=p=>{if(this.defaults.async)return Promise.resolve(a.call(i,p)).then(d=>c.call(i,d));let u=a.call(i,p);return c.call(i,u)}:i[o]=(...p)=>{let u=a.apply(i,p);return u===!1&&(u=c.apply(i,p)),u}}s.hooks=i}if(n.walkTokens){let i=this.defaults.walkTokens,r=n.walkTokens;s.walkTokens=function(o){let a=[];return a.push(r.call(this,o)),i&&(a=a.concat(i.call(this,o))),a}}this.defaults={...this.defaults,...s}}),this}setOptions(e){return this.defaults={...this.defaults,...e},this}lexer(e,t){return x.lex(e,t??this.defaults)}parser(e,t){return b.parse(e,t??this.defaults)}parseMarkdown(e){return(n,s)=>{let i={...s},r={...this.defaults,...i},o=this.onError(!!r.silent,!!r.async);if(this.defaults.async===!0&&i.async===!1)return o(new Error("marked(): The async option was set to true by an extension. Remove async: false from the parse options object to return a Promise."));if(typeof n>"u"||n===null)return o(new Error("marked(): input parameter is undefined or null"));if(typeof n!="string")return o(new Error("marked(): input parameter is of type "+Object.prototype.toString.call(n)+", string expected"));r.hooks&&(r.hooks.options=r,r.hooks.block=e);let a=r.hooks?r.hooks.provideLexer():e?x.lex:x.lexInline,c=r.hooks?r.hooks.provideParser():e?b.parse:b.parseInline;if(r.async)return Promise.resolve(r.hooks?r.hooks.preprocess(n):n).then(p=>a(p,r)).then(p=>r.hooks?r.hooks.processAllTokens(p):p).then(p=>r.walkTokens?Promise.all(this.walkTokens(p,r.walkTokens)).then(()=>p):p).then(p=>c(p,r)).then(p=>r.hooks?r.hooks.postprocess(p):p).catch(o);try{r.hooks&&(n=r.hooks.preprocess(n));let p=a(n,r);r.hooks&&(p=r.hooks.processAllTokens(p)),r.walkTokens&&this.walkTokens(p,r.walkTokens);let u=c(p,r);return r.hooks&&(u=r.hooks.postprocess(u)),u}catch(p){return o(p)}}}onError(e,t){return n=>{if(n.message+=`
+Please report this to https://github.com/markedjs/marked.`,e){let s="<p>An error occurred:</p><pre>"+R(n.message+"",!0)+"</pre>";return t?Promise.resolve(s):s}if(t)return Promise.reject(n);throw n}}};var M=new E;function k(l,e){return M.parse(l,e)}k.options=k.setOptions=function(l){return M.setOptions(l),k.defaults=M.defaults,N(k.defaults),k};k.getDefaults=z;k.defaults=w;k.use=function(...l){return M.use(...l),k.defaults=M.defaults,N(k.defaults),k};k.walkTokens=function(l,e){return M.walkTokens(l,e)};k.parseInline=M.parseInline;k.Parser=b;k.parser=b.parse;k.Renderer=$;k.TextRenderer=_;k.Lexer=x;k.lexer=x.lex;k.Tokenizer=S;k.Hooks=L;k.parse=k;var it=k.options,ot=k.setOptions,lt=k.use,at=k.walkTokens,ct=k.parseInline,pt=k,ut=b.parse,ht=x.lex;
+
+if(__exports != exports)module.exports = exports;return module.exports}));
+
+</script>
+<script data-reader>
+/* spec-kit v5.3 — spec reader. Renders the embedded markdown (#spec-md) with marked, assigns
+   deep-link ids, builds the TOC, and highlights the :target.
+   ids assigned:
+     headings   → GitHub-style slug of the text, PLUS an alias  s<number> for numbered headings
+                  ("### 3.2 Piece A" → #s3-2, "## 1. Problem" → #s1)
+     tokens     → the first <strong> whose text starts with P0a / D12 / Q6 / S2 gets id="P0a" etc.
+   So a companion page can link to  SPEC.html#s3-2 , #D12 , #P0a , #Q6 , #S2 . */
+(function(){
+  const raw=document.getElementById('spec-md').textContent.replace(/<\\\/script/g,'</script').trim();
+  const body=document.getElementById('spec-body');
+  marked.use({gfm:true,breaks:false});
+  // a run of **Label:** lines (the spec header block) is meant to stack: give each a hard break
+  const md=raw.replace(/^(\*\*[^*\n]+:\*\*[^\n]*)$/gm,'$1  ');
+  body.innerHTML=marked.parse(md);
+  const used=new Set();
+  const slug=t=>t.toLowerCase().replace(/[^\w\s-]/g,'').trim().replace(/\s+/g,'-');
+  const uniq=id=>{let i=id,n=1;while(used.has(i))i=id+'-'+(n++);used.add(i);return i;};
+  // headings
+  body.querySelectorAll('h1,h2,h3,h4').forEach(h=>{
+    const text=h.textContent.trim();
+    h.id=uniq(slug(text));
+    const m=text.match(/^(\d+(?:\.\d+)*)\.?\s/);
+    if(m){const a=document.createElement('span');a.id=uniq('s'+m[1].replace(/\./g,'-'));a.className='anchor';h.before(a);}
+  });
+  // tokens: **D4.** / **P0a …** / **Q6.** / **S2: …**
+  body.querySelectorAll('strong,b').forEach(s=>{
+    const m=s.textContent.trim().match(/^(P\d[a-z]?|D\d+|Q\d+|S\d+)\b/);
+    if(m&&!used.has(m[1])){s.id=m[1];used.add(m[1]);s.classList.add('tok');}
+  });
+  // tables scroll instead of the page
+  body.querySelectorAll('table').forEach(t=>{t.classList.add('spectable');const w=document.createElement('div');w.className='spectable-scroll';t.before(w);w.appendChild(t);});
+  // title + meta
+  const h1=body.querySelector('h1'); if(h1){document.getElementById('reader-title').textContent=h1.textContent;document.title=h1.textContent;h1.remove();}
+  const status=raw.match(/\*\*Status:\*\*\s*([^\n]+)/),date=raw.match(/\*\*Date:\*\*\s*([^\n]+)/);
+  document.getElementById('reader-meta').textContent=[status&&status[1],date&&date[1]].filter(Boolean).join(' · ');
+  // TOC from h2/h3
+  const toc=document.getElementById('toc');
+  body.querySelectorAll('h2,h3').forEach(h=>{const a=document.createElement('a');a.href='#'+h.id;a.textContent=h.textContent;a.className='toc-'+h.tagName.toLowerCase();toc.appendChild(a);});
+  // sibling .md links stay .md (GitHub renders them; a reader for them may not be built). If a
+  // sibling reader IS built, link to it explicitly from the markdown as .html.
+  // scroll to :target after ids exist
+  if(location.hash){const t=document.getElementById(decodeURIComponent(location.hash.slice(1)));if(t)t.scrollIntoView({block:'start'});}
+})();
+
+</script>
+</body>
+</html>

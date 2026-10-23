@@ -1147,7 +1147,7 @@ table.nx-rules td.o{color:var(--ink2);font-size:12.5px;white-space:nowrap}
 
 </style>
 </head>
-<body class="reader" data-back="architecture.html" data-spec-sha="e368aa63547e617a">
+<body class="reader" data-back="architecture.html" data-spec-sha="b0bbd52ad5c48d59">
 
 <header class="masthead">
   <div class="kicker">SPEC · READER</div>
@@ -1167,12 +1167,14 @@ table.nx-rules td.o{color:var(--ink2);font-size:12.5px;white-space:nowrap}
 **ID:** ARCH-6  
 **Kind:** architecture
 **Status:** living
-**Version:** 1.7
+**Version:** 1.8
 **Date:** 2026-10-23
 **Repos touched:** none. This is a plan of a plan. It records the 2026-10-14 discussion with Will, names where intake should end up, and lists the sub-specs that will carry out the work.
 **Repos eventually touched:** `bureau` (checklist files, the intake-prospecting runbook, the prospector workstream, the sync), `cityhall` (App-DB tables and migrations), `dsd` (the `metro_ahj_coverage` view and the prospector dashboard, for `intake_ready`), `completion-officer` (retired)
 **Repos NOT touched:** `conductor` (legacy), `substation` (on the deprecation path)
 
+> **Revision note v1.8 (2026-10-23):** the review-linkage sub-spec is ARCH-7, the Completeness Check Code Hygiene architecture spec; its P2 makes renumbering a MINOR bump (db-schema Q4).
+>
 > **Revision note v1.7 (2026-10-23, Will; db-schema v3.2):** D6's counters are unpadded: `AUS_TX-42`, `AUS_TX-G1`, `AUS_TX-F1`, never `AUS_TX-0042`. Each number has one spelling, and nothing orders by ID (db-schema D23). The three live figures are renamed from `F0001…F0003` under db-schema P1c and P2d.
 >
 > **Revision note v1.6 (2026-10-21, db-schema v3):** facts and one principle. The first DB table for intake exists: `intake_figures` (cityhall#411, #419), with three live Austin figures hydrated into CC runs and cited by id from the guides (`workspaces/intake/checklist-figures/`). D7's pointer to "db-schema D17 (image bytes in Storage by sha256)" now means that build: the DB holds a figure's image and description, bureau's guide says how it is used. db-schema v3 adds D21, **how the DB grows**: bureau stays the authority for checklist text; the DB takes bounded investments, one at a time, where files are the wrong store (binaries first) or where iterating in files costs a PR per try, each read by the run at 1.4-resolve and recorded on the review. The candidate second investment is group placement (db-schema §2.4, Q10). `jurisdictions.code` exists in prod for Austin and Cedar Park ahead of its declared source in `conventions.yaml` (db-schema D20); El Paso's items merged as `el-paso-NNNN` and are renamed `EP_TX-NNNN` before any review cites them (db-schema D22). The sub-spec table gains the figures row.
@@ -1202,7 +1204,7 @@ table.nx-rules td.o{color:var(--ink2);font-size:12.5px;white-space:nowrap}
 | The intake-prospecting runbook | `workspaces/intake/prospecting-runbook/DESIGN-SPEC.md` | Draft v1.2 (audited against prospector) |
 | The generic baseline checklist | `workspaces/intake/baseline/` | not started |
 | Intake in the prospector flow | `workspaces/intake/prospector-workstream/` | not started |
-| Linking reviews to items, and counting | `workspaces/intake/review-linkage/` | not started (db-schema §6) |
+| Linking reviews to items, and counting | `workspaces/completeness-check/code-hygiene/` (ARCH-7) | living (2026-10-23): the review side of intake, widened to CC code hygiene; renumbering is MINOR (its P2) |
 | Keeping checklists current | `workspaces/intake/refresh/` | not started (db-schema §6) |
 | DB as the source of truth | `workspaces/intake/db-source-of-truth/` | **not planned** (db-schema D19 triggers) |
 | Renaming completeness-check to intake | `workspaces/intake/rename/` | later |

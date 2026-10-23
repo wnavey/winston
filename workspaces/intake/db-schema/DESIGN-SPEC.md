@@ -441,7 +441,7 @@ Reads follow the `jurisdictions` policy; `workflow_run` reads all; only `service
 - **Q1. Backfill older Austin labels?** 40 of the 63 CC reviews ran on 8 other labels or Cedar Park. D5's stamp could walk those folders the same way. Not now (Will, 2026-10-14).
 - **Q2.** *Closed in v2:* a review records its exact version as `intakeVersion`.
 - **Q3. Cedar Park v1.** 21 guides, 220 items, no `Fail Status`, no maps, one row with an unescaped `|` that rule 7 rejects. It has a code now (`CP_TX`) and one review. Give it `intake.yaml` and sidecars in P2a as a sparse second fixture, or wait for intake-prospecting to regenerate it?
-- **Q4. Are regrouping and renumbering PATCH or MINOR?** Comment numbers are customer-visible. Default PATCH. If Q10 moves order to the DB, this question moves with it.
+- **Q4. Are regrouping and renumbering PATCH or MINOR?** Comment numbers are customer-visible. Default PATCH. If Q10 moves order to the DB, this question moves with it. *ARCH-7 P2 (2026-10-23) decides renumbering is MINOR and that live `intake_groups` changes never renumber a new run; this closes as MINOR in the next revision, with D14's PATCH list losing "comment numbers".*
 - **Q5. Where do semvers start?** Default `1.0.0` for each checklist's first synced content.
 - **Q6. What should review counting answer?** For the review-linkage sibling.
 - **Q7.** *Closed in v2.2:* `workflow_run` reads buckets through bucket-wide policies; `intake-figures` has one.
@@ -451,7 +451,7 @@ Reads follow the `jurisdictions` policy; `workflow_run` reads all; only `service
 
 ## 6. Not yet specified
 
-- **Review linkage (`intake/review-linkage`):** 1.4-resolve stamping `intakeChecklist` and `intakeVersion`; 2.9-comments adding each finding's `itemId`; sections keyed on `group_id`; a view `intake_item_review_outcomes`; versioned item links in `/intake-checklists`. The counting rules go there, pending Q6.
+- **Review linkage (`intake/review-linkage`):** 1.4-resolve stamping `intakeChecklist` and `intakeVersion`; 2.9-comments adding each finding's `itemId`; sections keyed on `group_id`; a view `intake_item_review_outcomes`; versioned item links in `/intake-checklists`. The counting rules go there, pending Q6. *2026-10-23: this is now ARCH-7 (`workspaces/completeness-check/code-hygiene/`), which also decides that renumbering is MINOR (its P2, answering Q4) and that amend's gate becomes D18's content hash.*
 - **Refresh (`intake/refresh`):** re-fetch sources, re-extract, match to stable IDs, compute the bump, open a bureau PR. Figures with `derived_from` are re-cut when their snapshot changes.
 - **The baseline (`intake/baseline`):** filling `intake/baseline/`, the `GENERIC` row, and what the CC runbook does for a `none_found` jurisdiction.
 - **The figures view in the app** (checklist-figures P5) and an upload page: the first app-side service-role write, when someone who doesn't run a CLI needs it.

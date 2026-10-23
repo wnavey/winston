@@ -87,6 +87,7 @@ never by hand; numbers are per prefix and never reused. Rows sorted by prefix th
 | ARCH-4 | architecture | living | Completeness-check vision: how it works today, and reference images | `workspaces/completeness-check/vision-reference-images/DESIGN-SPEC.md` | 2026-10-14 |
 | ARCH-5 | architecture | living | The intake-prospecting runbook | `workspaces/intake/prospecting-runbook/DESIGN-SPEC.md` | 2026-10-14 |
 | ARCH-6 | architecture | draft | Intake north star: a checklist for every jurisdiction | `workspaces/intake/north-star/NORTH-STAR-SPEC.md` | 2026-10-23 |
+| ARCH-7 | architecture | draft | Completeness Check Code Hygiene: how a CC review is produced and shown, and where to clean it up | `workspaces/completeness-check/code-hygiene/DESIGN-SPEC.md` | 2026-10-23 |
 | BUG-1 | bug | fixed | Structured-Output Retry Storm in CRC `review` Step | `workspaces/comment-resolution-check/crc-workflow/bugs/STRUCT-OUTPUT-RETRY-STORM.md` | 2026-06-20 |
 | BUG-2 | bug | open | `generate-crc-guides` — Instability Fix Design Spec | `workspaces/comment-resolution-check/generate-crc-guides/bugs/INSTABILITY-FIX-DESIGN-SPEC.md` | 2026-06-26 |
 | BUG-3 | bug | open | `generate-crc-guides` — Instability Problems and Fix Proposal | `workspaces/comment-resolution-check/generate-crc-guides/bugs/INSTABILITY-PROBLEMS-AND-FIX-PROPOSAL-SPEC.md` | 2026-06-26 |
