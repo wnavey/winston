@@ -1147,7 +1147,7 @@ table.nx-rules td.o{color:var(--ink2);font-size:12.5px;white-space:nowrap}
 
 </style>
 </head>
-<body class="reader" data-back="architecture.html" data-spec-sha="10644038cb5592a9">
+<body class="reader" data-back="architecture.html" data-spec-sha="6ea0cf42693a4c07">
 
 <header class="masthead">
   <div class="kicker">SPEC · READER</div>
@@ -1167,7 +1167,7 @@ table.nx-rules td.o{color:var(--ink2);font-size:12.5px;white-space:nowrap}
 **ID:** ARCH-7  
 **Kind:** architecture
 **Status:** living
-**Version:** 1.2
+**Version:** 1.3
 **Date:** 2026-10-23
 **Repos touched:** none yet. This is the map of the current system and the target shape. Slices of it ship as feature specs that amend this one.
 **Repos eventually touched:** `bureau` (the CC runbook's 2.8-format, 2.9-comments and lane B of `publish_review.py`; amend), `cityhall-new` (the CC adapter, the checklist landing, the CC PDF, three migrations), `inspector-general` (its comment map, only if it stops reading `sourceFindings`)
@@ -1175,6 +1175,8 @@ table.nx-rules td.o{color:var(--ink2);font-size:12.5px;white-space:nowrap}
 **Verified:** 2026-10-23 against `bureau@f191145ec0`, `cityhall-new@dc5a87d`, prod `mgxqsrjutswbciyrltwd`
 **Amended by:** none yet. In flight: FEAT-75 (`wave-1/DESIGN-SPEC.md`, draft) carries S1, S2 and S5.
 
+> **Revision note v1.3 (2026-10-23, Will):** H14 gains the inventory of legacy scripts the runbook still shells to, and §7 gains **S8, retire the legacy folder**: FEAT-75 copies only the 2.9 builder; six scripts and the review agent's search tool stay on the shim until S8, which follows S4.
+>
 > **Revision note v1.2 (2026-10-23, Will):** new §7.1 records how the seven slices interleave with FEAT-66's steps (P2a now, in parallel with S2 and S3; P1b, P2b and P3 before S7) and names the one open tension as Q10: FEAT-66 D3 gates the replica sync on the intake-prospecting loop, and S7 needs that sync. FEAT-66 §4 points here.
 >
 > **Revision note v1.1 (2026-10-23, Will):** the new schema label is `2026-10-completeness-check` (labels date the shape's design, as `2026-03`, `2026-08` and `2026-09` do). D1 is settled after a pass over what formal review writes (§2.7): `item_id` is **nullable with a CHECK scoped to the new label**, so the constraint governs only rows published from S4 on and never depends on the backfill; the backfill is best-effort (554 rows on the two 2026-03-27 UFCU reviews have no ref at all) and readers keep a one-line fallback to the JSON ref. Formal review has no item: its `ref` is a per-report prose handle and its `sources` are run-scoped finding ids, so its rows stay null by design; CRC may adopt the column under its own label.
@@ -1323,7 +1325,21 @@ Each finding: what is wrong, the evidence, what it costs or blocks. Ordered by h
 
 **H13. Three steps in the runbook exist to carry files the run does not use.** 1.4-resolve copies `source-citations.json`, `citation-overrides.json` and both numbering TSVs into every run; only the TSV the request names is read. The checklist dir is the run's input contract, but nothing says which files are.
 
-**H14. The legacy workflow is still the implementation.** Every script step from 2.2 to 2.10, and 2.13, shells to `workflows/completeness-check/scripts/*` (`cc.py:111-116`); only 1.4-resolve, 2.11, 3.1 and 3.2 are native to the runbook. The runbook can't change the envelope without editing the frozen lane, and the frozen lane's tests pin the legacy shape. FEAT-60 chose parity on purpose; the parity test has since passed, so the reason to keep the shim is gone.
+**H14. The legacy workflow is still the implementation.** Every script step from 2.2 to 2.10, and 2.13, shells to `workflows/completeness-check/scripts/*` (`cc.py:111-116`); only 1.4-resolve, 2.11, 3.1 and 3.2 are native to the runbook. The runbook can't change the envelope without editing the frozen lane, and the frozen lane's tests pin the legacy shape. FEAT-60 chose parity on purpose; the parity test has since passed, so the reason to keep the shim is gone. The inventory, from `cc.py`'s `legacy(...)` calls and `bin/search.sh`:
+
+| Legacy script | Called by | Leaves the shim in |
+|---|---|---|
+| `build-review-comments.ts` + `block-number-gate.ts` | 2.9-comments (`cc.py:652`) | FEAT-75 (S2) |
+| `cross-run-consolidate-cc.ts` + `consolidate-logic.ts` | 2.2-consolidate (`:518`) | S8 |
+| `apply-forced-outcomes.ts` | 2.3-forced-outcomes (`:545`) | S8 |
+| `prepare-uncertain-explanation-inputs.ts` | 2.4-uncertain-inputs (`:564`) | S8 |
+| `collect-uncertain-explanations.ts` | 2.6-uncertain-collect (`:600`) | S8 |
+| `enrich-findings.ts` + `checklist-policy.ts` | 2.7-enrich (`:615`) | S8 (S3 edits the copy if it lands first) |
+| `validate-output.ts` | 2.10-validate (`:683`, through `bin/legacy.sh`) | S8 |
+| `semantic-search-blocks.ts` | the 2.1 review agent's search tool (`bin/search.sh:33`) | S8 |
+| `inspect-drawing.ts`, `inspect-drawing-impl.py` | nothing in the runbook (unverified; the vision CLI replaced it) | S8 deletes it with the folder |
+
+The folder's own tests (`consolidate-logic.test.ts`, `uncertain-explanation.test.ts`) move with their scripts.
 
 ---
 
@@ -1505,6 +1521,7 @@ A proposed order, by what each slice unlocks per unit of work. Each becomes a fe
 | S5 (FEAT-75) | **One read model + SQL counts** (D10, D11) | the PDF parser goes; counts RPC; delta by item | H11, H12; every later UI change is one edit | medium | S1 |
 | S6 | **Archive and delete** (D12, D13) | archived adapters; triage fold materialised; CC section page gone; `unclear` gone | H9, H10; fewer branches in every count and render | small-medium, mostly deletion | S5 for the fold (counts must agree); Q2 |
 | S7 | **Read-time presentation** (D9, P2, P3) | titles, groups, order resolve from the replica and live groups | G2 in full; titles in minutes | medium | S4; FEAT-66 P2a, P2b, P3 |
+| S8 | **Retire the legacy folder** (D14's second half) | the six remaining scripts and the search tool copied under the runbook with their tests, each step calling its copy; `bin/legacy.sh` and `run_legacy` deleted; `workflows/completeness-check/scripts` deleted once conductor-1's CC lane is confirmed unused | H14 closed; one place to edit for every step | small-medium, mostly moves, each gated by a replay diff | S4 (so the moves don't race the envelope change); confirmation that no conductor-1 CC run is still launched |
 
 S1, S2 and S5 can start now and in parallel. S7 is the payoff and is the one that waits on the intake DB work.
 
@@ -1516,7 +1533,7 @@ FEAT-66 owns the checklist side and this spec the review side (§4.1, ARCH-6 D3)
 |---|---|---|
 | Now, in parallel | S1 `item_id` (cityhall); S2 runbook owns the envelope (bureau); S5 read model (cityhall) | **P2a** codes, `intake.yaml`, `intake-ids.tsv`, `intake-groups.tsv`, linter, El Paso rename (bureau); P2d first PR, figures accept unpadded ids (bureau) |
 | Next | S3 deterministic title, order, number (after S2) | P1c figures rename (cityhall); P2d second PR (bureau) |
-| Then | S4 new label and slim row (after S1, S2, S3); S6 archive and delete (after S5; Q2) | |
+| Then | S4 new label and slim row (after S1, S2, S3); S6 archive and delete (after S5; Q2); S8 retire the legacy folder (after S4) | |
 | Then | | **P1b** replica tables, **P2b** sync (gated by FEAT-66 D3, see Q10); **P3** live groups (FEAT-66 Q10) |
 | Last | **S7** read-time presentation (after S4, P2a, P2b, P3) | |
 

@@ -173,7 +173,7 @@ Frontier at the start: P1 and P5 together, P3 after P2.
 
 - **Deterministic titles, order and numbers** (ARCH-7 S3): the next wave. This wave's 2.9 copy keeps reading the 2.8 agent's file.
 - **The new schema label and the slim row** (S4), **archiving formats and the fold** (S6), **read-time presentation** (S7).
-- **Deleting `workflows/completeness-check/scripts`**: only after nothing shells to it (ARCH-7 H14).
+- **The other legacy scripts.** This wave copies only `build-review-comments.ts` and `block-number-gate.ts`. Still shimmed after it: `cross-run-consolidate-cc.ts` (2.2), `apply-forced-outcomes.ts` (2.3), `prepare-uncertain-explanation-inputs.ts` (2.4), `collect-uncertain-explanations.ts` (2.6), `enrich-findings.ts` + `checklist-policy.ts` (2.7), `validate-output.ts` (2.10) and `semantic-search-blocks.ts` (the 2.1 agent's search tool via `bin/search.sh`). They move in ARCH-7 S8 after S4, and the folder is deleted there. The implementing agent does not widen this wave to them.
 - **Rewriting composite refs to stable ids**: the second backfill, after FEAT-66 P2a.
 - **Inspector General**: nothing this wave changes is read by it; the blob and the storage envelope are untouched.
 
