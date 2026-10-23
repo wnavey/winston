@@ -1,14 +1,18 @@
 # Intake north star: a checklist for every jurisdiction
 
-**Status:** Draft v1.6
-**Date:** 2026-10-21
+**Kind:** architecture
+**Status:** living
+**Version:** 1.7
+**Date:** 2026-10-23
 **Repos touched:** none. This is a plan of a plan. It records the 2026-10-14 discussion with Will, names where intake should end up, and lists the sub-specs that will carry out the work.
 **Repos eventually touched:** `bureau` (checklist files, the intake-prospecting runbook, the prospector workstream, the sync), `cityhall` (App-DB tables and migrations), `dsd` (the `metro_ahj_coverage` view and the prospector dashboard, for `intake_ready`), `completion-officer` (retired)
 **Repos NOT touched:** `conductor` (legacy), `substation` (on the deprecation path)
 
+> **Revision note v1.7 (2026-10-23, Will; db-schema v3.2):** D6's counters are unpadded: `AUS_TX-42`, `AUS_TX-G1`, `AUS_TX-F1`, never `AUS_TX-0042`. Each number has one spelling, and nothing orders by ID (db-schema D23). The three live figures are renamed from `F0001…F0003` under db-schema P1c and P2d.
+>
 > **Revision note v1.6 (2026-10-21, db-schema v3):** facts and one principle. The first DB table for intake exists: `intake_figures` (cityhall#411, #419), with three live Austin figures hydrated into CC runs and cited by id from the guides (`workspaces/intake/checklist-figures/`). D7's pointer to "db-schema D17 (image bytes in Storage by sha256)" now means that build: the DB holds a figure's image and description, bureau's guide says how it is used. db-schema v3 adds D21, **how the DB grows**: bureau stays the authority for checklist text; the DB takes bounded investments, one at a time, where files are the wrong store (binaries first) or where iterating in files costs a PR per try, each read by the run at 1.4-resolve and recorded on the review. The candidate second investment is group placement (db-schema §2.4, Q10). `jurisdictions.code` exists in prod for Austin and Cedar Park ahead of its declared source in `conventions.yaml` (db-schema D20); El Paso's items merged as `el-paso-NNNN` and are renamed `EP_TX-NNNN` before any review cites them (db-schema D22). The sub-spec table gains the figures row.
 >
-> **Revision note v1.5 (2026-10-16, Will):** D6 amended. Item IDs use a permanent jurisdiction code, `{ABBR}_{ST}` (`AUS_TX-0042`), declared in `conventions.yaml` and synced to `jurisdictions.code` (db-schema D20). The state suffix answers the collision concern that originally ruled codes out. Groups and figures get their own counters (`AUS_TX-G01`, `AUS_TX-F0001`).
+> **Revision note v1.5 (2026-10-16, Will):** D6 amended. Item IDs use a permanent jurisdiction code, `{ABBR}_{ST}` (`AUS_TX-0042`), declared in `conventions.yaml` and synced to `jurisdictions.code` (db-schema D20). The state suffix answers the collision concern that originally ruled codes out. Groups and figures get their own counters (`AUS_TX-G1`, `AUS_TX-F1`; unpadded since v1.7).
 >
 > **Revision note v1.4 (2026-10-16, db-schema v2):** D7 is amended. Bureau stays the source of truth with no flip planned, and the DB is a read replica (db-schema D19, audit A18). Making the DB the source is no longer the end goal: it is reconsidered only on D19's triggers. §4.5 and the sub-spec table change to match: `db-source-of-truth` is not planned, and two siblings are added, `review-linkage` and `refresh`. D1's rename no longer waits on a flip (Q4). Reference images follow db-schema D17.
 >
@@ -28,7 +32,7 @@
 
 | Sub-spec | Path | Status |
 |---|---|---|
-| Intake checklist DB schema + bureau sync | `workspaces/intake/db-schema/DESIGN-SPEC.md` | Draft v3 (five tables; D21 how the DB grows); P2a next, P1b/P2b after the loop (D3) |
+| Intake checklist DB schema + bureau sync | `workspaces/intake/db-schema/DESIGN-SPEC.md` | Draft v3.2 (five tables; D21 how the DB grows; D23 unpadded IDs); P2a next, figures rename P2d/P1c, P1b/P2b after the loop (D3) |
 | Reference figures for checklist items (the first DB investment) | `workspaces/intake/checklist-figures/` | **built** (P1–P4 + iteration 2); the app view (P5) not built |
 | The intake-prospecting runbook | `workspaces/intake/prospecting-runbook/DESIGN-SPEC.md` | Draft v1.2 (audited against prospector) |
 | The generic baseline checklist | `workspaces/intake/baseline/` | not started |
@@ -199,12 +203,12 @@ together with the evidence and sources behind that basis.
 Moving a jurisdiction off the baseline later means it gets its own checklist with new IDs. Its old reviews keep their baseline references, and nothing is migrated. Never work out a review's jurisdiction from an item ID prefix; go through review → project.
 
 **D6. Stable short IDs.** [Will: a jurisdiction code prefix (v1.5; was the slug); proposed: the rest]
-- An item ID is `{owner code}-{NNNN}`, for example `AUS_TX-0042`, `NB_TX-0007` or `GENERIC-0012`.
+- An item ID is `{owner code}-{N}`, for example `AUS_TX-42`, `NB_TX-7` or `GENERIC-12`. The number is unpadded (`AUS_TX-1`, `AUS_TX-10`, `AUS_TX-100`; db-schema D23, v1.7).
   - The owner code is the jurisdiction's permanent code, `{ABBR}_{ST}`. It is declared in `conventions.yaml` and synced to a new `jurisdictions.code` column (db-schema D20). The baseline's is `GENERIC`.
   - The state suffix keeps codes from colliding across the ~2,000 Library jurisdictions. Uniqueness is linted.
   - `jurisdictions.short_name` is not reused: it holds display names and is NULL on all but 7 rows.
   - A code never changes once a checklist uses it.
-- `NNNN` is a counter scoped to its owner. It encodes nothing.
+- `N` is a counter scoped to its owner. It encodes nothing, and nothing sorts by it as text.
 - Group, display order and comment number are attributes of an item within a checklist version, not part of its ID.
 - An edit keeps the ID and makes a new revision. A split creates new IDs that record what they came from.
 - Every Austin item keeps its legacy ref (`cc-1:CC-1-01`), so existing reviews resolve.

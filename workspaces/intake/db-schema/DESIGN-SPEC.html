@@ -1147,7 +1147,7 @@ table.nx-rules td.o{color:var(--ink2);font-size:12.5px;white-space:nowrap}
 
 </style>
 </head>
-<body class="reader" data-back="architecture.html" data-spec-sha="59bbb8140235ca89">
+<body class="reader" data-back="architecture.html" data-spec-sha="14f5ef7387077091">
 
 <header class="masthead">
   <div class="kicker">SPEC · READER</div>
@@ -1165,8 +1165,12 @@ table.nx-rules td.o{color:var(--ink2);font-size:12.5px;white-space:nowrap}
 # Intake checklist DB schema and the bureau sync
 
 **ID:** FEAT-66  
-**Status:** Draft v3.1
-**Date:** 2026-10-21
+**Kind:** feature
+**Status:** draft
+**Version:** 3.2
+**Date:** 2026-10-23
+> **Revision note v3.2 (2026-10-23, Will): stable IDs drop the zero padding.** An item is `AUS_TX-1`, `AUS_TX-10`, `AUS_TX-100`; a group `AUS_TX-G1`; a figure `AUS_TX-F1`. No leading zeros, so every number has one spelling, and nothing ever orders by ID (new D23). D4, D5, D6, D15, D20, D22 and §2.4 change their patterns and examples. Figures are the one built case: `intake_figures` holds three padded ids in prod, the cityhall CHECK and the bureau minter, the 1.4-resolve contract and two guide citations all say four digits, and three reviews recorded the padded ids in `metadata.figures`. D17 gains the fix; the PR plan gains P1c (cityhall: relax the CHECK, rename the three rows) and P2d (bureau: expand then contract, with amend comparing figure ids by number so the three reviews stay amendable). S2 and a new S4 test it. intake-prospecting's item schema (`schemas.ts:206, 208`) follows in P2d.
+>
 > **Revision note v3.1 (2026-10-21, Will):** §2.4 is rewritten. The second investment is a live `intake_groups` table with one rule, **files unless the DB has rows for the jurisdiction, else the DB**, not an overrides layer. Titles and order work under it at once; membership turns on when refs can be the stable item ID (P2a), and until then 1.4-resolve refuses a run whose live rows disagree with the files on membership. P3 and Q10 change to match; the sync mirrors the run (D9).
 >
 > **Revision note v3 (2026-10-21): the spec matches what exists, and says how the DB grows.** Checked against bureau main `f83e018a30`, cityhall main `acd1fdf`, winston main `5101394` and prod `mgxqsrjutswbciyrltwd` on 2026-10-21.
@@ -1226,7 +1230,7 @@ Intake (completeness-check) checklist items exist only as markdown tables in bur
 
 ## 1. The design at a glance
 
-**Bureau is the source of truth for checklist text; the App DB holds a read replica, plus bounded investments where files are the wrong store** (D19, D21). Every checklist version carries a semver that bureau declares and the linter checks (D14). Items and groups have stable IDs built from the jurisdiction's permanent code (`AUS_TX-0042`, `AUS_TX-G01`) that never encode position (D4, D15, D20). Figures are the first investment, already built (D17).
+**Bureau is the source of truth for checklist text; the App DB holds a read replica, plus bounded investments where files are the wrong store** (D19, D21). Every checklist version carries a semver that bureau declares and the linter checks (D14). Items and groups have stable IDs built from the jurisdiction's permanent code (`AUS_TX-42`, `AUS_TX-G1`, unpadded, D23) that never encode position (D4, D15, D20). Figures are the first investment, already built (D17).
 
 ```diff
  bureau/
@@ -1247,12 +1251,12 @@ Intake (completeness-check) checklist items exist only as markdown tables in bur
  ├── jurisdictions/el-paso/
 ~│   ├── conventions.yaml                   # + code: EP_TX (D22)
 ~│   ├── intake.yaml                        # checklist: EP_TX (was el-paso)
-~│   └── completeness-check/v1/intake-ids.tsv   # EP_TX-0001 … (was el-paso-0001 …)
+~│   └── completeness-check/v1/intake-ids.tsv   # EP_TX-1 … (was el-paso-0001 …; D22, D23)
  ├── runbooks/completeness-check/
  │   ├── scripts/cc.py                      # 1.4-resolve hydrates figures (built, D17)
-~│   └── …/review_amend.py                  # + amend ignores the intake-only files (D18); figure set compared (built)
+~│   └── …/review_amend.py                  # + amend ignores the intake-only files (D18); figure ids compared by number (D17, P2d)
  ├── tooling/src/
- │   ├── lib/intake-figures/, cli/intake-figure.ts   # built (D17)
+~│   ├── lib/intake-figures/, cli/intake-figure.ts   # built (D17); minter stops padding (P2d)
 +│   ├── lib/intake/                        # schema, lint, bump, snapshot builder, sync, history stamp
 +│   └── cli/{lint-intake,sync-intake,intake-mint}.ts
  └── .github/workflows/
@@ -1313,17 +1317,17 @@ decided_at: 2026-10-14
 
 **D3. An item sidecar per version: `<version>/intake-ids.tsv`.** Columns `ref` (`cc-1:CC-1-01`, the composite ref reviews store), `id` (`AUS_TX-0001`, D4), `derived_from` (optional, comma-separated). Per version because refs change between versions. New jurisdictions put the stable ID directly in the guide's ID column, so the sidecar maps `cc-1:EP_TX-0007 → EP_TX-0007`. El Paso's v1 already has this file (D22).
 
-**D4. Item ID format and minting.** [north-star D6] `{checklist id}-{NNNN}`, matching `^([A-Z]{2,8}_[A-Z]{2}|GENERIC)-[0-9]{4,}$`. A new item takes `next_item` from `intake.yaml` (or the baseline's `checklist.yaml`) and the same PR increments it; `bun run intake:mint <checklist> [n]` does both. Edits keep the ID; a split or merge mints new IDs and records `derived_from`; a move keeps the ID. Concurrent PRs are caught by `lint:intake` on `main`, by the sync refusing an ID whose first appearance differs between versions, and by the mint helper re-reading `origin/main`.
+**D4. Item ID format and minting.** [north-star D6] `{checklist id}-{N}`, matching `^([A-Z]{2,8}_[A-Z]{2}|GENERIC)-[1-9][0-9]*$`: `AUS_TX-1`, `AUS_TX-10`, `AUS_TX-100`, never padded (D23). A new item takes `next_item` from `intake.yaml` (or the baseline's `checklist.yaml`) and the same PR increments it; `bun run intake:mint <checklist> [n]` does both. Edits keep the ID; a split or merge mints new IDs and records `derived_from`; a move keeps the ID. Concurrent PRs are caught by `lint:intake` on `main`, by the sync refusing an ID whose first appearance differs between versions, and by the mint helper re-reading `origin/main`.
 
 **D5. Backfill Austin v2.7-trimmed's history by stamping the reviews, not with a lookup table.** [audit 2026-10-16 T2; replaces v2's commit table]
 - The label v2.7-trimmed has named 20 commits of edits, and the 22 v2.7 reviews ran on several folder states. A single backfilled version would resolve none of them.
 - **How:** `tooling/src/lib/intake/backfill-history.ts`, run once: walk `git log -- jurisdictions/austin/completeness-check/v2.7-trimmed`, build the version rows for each distinct content state in commit order, assign each a semver under D14 starting at `1.0.0` (Q5), and sync them. Then, for each of the 22 reviews, resolve its `bureauCommitHash` to the newest folder commit that is its ancestor, and **write `intakeVersion` into `reviews.metadata`** once. From P2a on, 1.4-resolve stamps it at run time (review-linkage sibling), so no commit lookup is ever needed again.
-- **IDs:** `AUS_TX-0001` … `AUS_TX-0192` in today's `true-comment-num-mapping.tsv` order. Day one is a coincidence: nothing may derive a comment number from an ID. The two items that left on 07-09 get `0193` and `0194`, retired in the version that dropped them; `next_item` starts at 195.
+- **IDs:** `AUS_TX-1` … `AUS_TX-192` in today's `true-comment-num-mapping.tsv` order. Day one is a coincidence: nothing may derive a comment number from an ID. The two items that left on 07-09 get `193` and `194`, retired in the version that dropped them; `next_item` starts at 195.
 - **Scope:** the other 10 Austin dirs are not backfilled (Q1).
 
 **D14. Every version declares a semver in `<version>/version.yaml`** (`version`, `format`, optional `generated_by`). The folder label stays as the version's `label`. The linter computes the smallest bump by diffing against `origin/main`: MAJOR when an item ID leaves; MINOR when an item is added or what it checks changes (`item_text`, `condition`, `location`, `location_binding`, `requirement_source`, `source_type`, `fail_status`); PATCH for anything else (titles, citations, group placement and order, group titles, comment numbers, prose, a figure citation in a bullet). Q4 asks whether regrouping is PATCH. A revert is a new version. Reviews record the version as `intakeVersion` (review-linkage sibling). `format` is an integer.
 
-**D15. Groups have stable IDs, apart from their guide file and their number.** The ID is `{checklist}-G{NN}`, minted from `next_group`. `<version>/intake-groups.tsv` maps each guide stem to `group_id` and `title` (the H1 without its `CC-N:` number). In the DB, moving an item changes only its `group_id` and `position` in the new version. The runbook still keys sections on the H1 and refs on the stem; moving it to `group_id` is the review-linkage sibling's job. See also D21 and §2.4 for making group placement a DB investment.
+**D15. Groups have stable IDs, apart from their guide file and their number.** The ID is `{checklist}-G{N}` (`AUS_TX-G1`, `AUS_TX-G14`, unpadded, D23), minted from `next_group`. `<version>/intake-groups.tsv` maps each guide stem to `group_id` and `title` (the H1 without its `CC-N:` number). In the DB, moving an item changes only its `group_id` and `position` in the new version. The runbook still keys sections on the H1 and refs on the stem; moving it to `group_id` is the review-linkage sibling's job. See also D21 and §2.4 for making group placement a DB investment.
 
 **D16. A version records the run that generated it** in `version.yaml`'s `generated_by` block (`runbook`, `run_id` = the `runbook_runs` uuid, `run_name`, `runbook_commit`). Hand edits leave it out. The sync derives each item's `minted_in_version` and `retired_in_version` from version history when a reader wants them (a view, not columns).
 
@@ -1332,6 +1336,7 @@ decided_at: 2026-10-14
 - **Where the authority sits:** the DB holds the image and a neutral description. **The guide's Validation Methodology bullet cites the figure by id and says what it is for** (iteration-2 D1). `item_refs` is for people to read; the run does not check it.
 - **Not versioned with the checklist.** A figure is live from `created_at` to `retired_at`; a review pins the set it saw by hash. The replica (D6) carries no figure rows and no figure counts.
 - **Not built:** the figures view on the intake-checklists pages (checklist-figures P5).
+- **The padding fix (v3.2, D23).** Figures were minted as `AUS_TX-F0001`, and that four-digit shape is the one place the old format is built: the cityhall CHECK (`intake_figures.sql:18`, `-F[0-9]{4,}$`), the bureau minter (`tooling/src/lib/intake-figures/figure.ts:137`, `padStart(4, '0')`), the 1.4-resolve contract (`steps/1.4-resolve/contract.test.ts:10`), the vision and `cc.py` tests, the two guide bullets that cite figures (`cc-15.md:69` cites `AUS_TX-F0001`; `cc-13.md:55` cites `AUS_TX-F0002` and `F0003`), and `metadata.figures` on the three reviews of 2026-10-17 to 10-20. The three rows become `AUS_TX-F1`, `F2`, `F3`. Storage paths are keyed by sha256, so no bytes move. The run reads `figures.json` from the DB at 1.4-resolve, so a guide bullet must cite the id the DB holds on the day the run starts: the rename lands expand → contract (P2d then P1c then P2d's second PR). **Amend compares figure ids by number:** `figure_map()` in `review_amend.py:72` normalises `F0001` and `F1` to the same key, so the three reviews that recorded padded ids still amend against a run that saw unpadded ones. Nothing else reads a figure id from a review.
 - **Specs:** `../checklist-figures/DESIGN-SPEC.md` (v1, as planned), `IMPLEMENTATION-DETAILS.md` (as built, with the divergences), `iteration-2/DESIGN-SPEC.md` (the one-column change, built).
 
 **D18. Review amend ignores the intake-only files.** [audit A8] Amend compares `checklistsTreeHash` (`cc.py`, `review_amend.py`). Adding `intake-ids.tsv` would make every pre-sidecar v2.7 review un-amendable. From P2a, 1.4-resolve also records `checklistsContentHash`: a sha256 over the files a run reads, sorted by path, excluding `intake-ids.tsv`, `intake-groups.tsv` and `version.yaml`. Amend compares content hashes when the review has one, else recomputes the content hash of the review's own commit. The figure set is compared separately, as built.
@@ -1342,7 +1347,7 @@ decided_at: 2026-10-14
 - **Format:** `^[A-Z]{2,8}_[A-Z]{2}$`. Austin `AUS_TX`, El Paso `EP_TX`, New Braunfels `NB_TX`, Cedar Park `CP_TX`; a county takes a distinguishing abbreviation (`EPCO_TX`, Q9); `GENERIC` is the baseline.
 - **Where it lives today:** `jurisdictions.code` (nullable, UNIQUE, the format CHECK, `UNIQUE (slug, code)`) exists in prod with two rows set by a data migration. No `conventions.yaml` declares it.
 - **Where it lives after P2a:** `code:` in each jurisdiction's `conventions.yaml` is the source. The conventions schema requires it for any jurisdiction that has an `intake.yaml` or a figure; `lint:conventions` refuses a code that differs from the column's existing value (permanence), a change to the code of any jurisdiction that has intake IDs, and a code another jurisdiction uses. `sync-conventions` writes `code` only when the file declares it, so a declared value must match prod's or the lint fails first, and an undeclared one leaves the column alone.
-- **Uses:** `intake_checklists.id` is the code; items `AUS_TX-0042`, groups `AUS_TX-G01`, figures `AUS_TX-F0001`; the composite FK `(jurisdiction_slug, id) → jurisdictions(slug, code)`, which `intake_figures` already uses. Slugs stay as the `jurisdictions` key, in paths and URLs.
+- **Uses:** `intake_checklists.id` is the code; items `AUS_TX-42`, groups `AUS_TX-G1`, figures `AUS_TX-F1` (D23); the composite FK `(jurisdiction_slug, id) → jurisdictions(slug, code)`, which `intake_figures` already uses. Slugs stay as the `jurisdictions` key, in paths and URLs.
 
 **D21. How the DB grows: bounded investments, one at a time, with bureau as the authority.** [Will, 2026-10-21]
 - **Bureau is the authority for checklist text** (D19). The DB is not a second place to edit it.
@@ -1352,9 +1357,15 @@ decided_at: 2026-10-14
 - **Order:** figures (built) → the candidate in §2.4 on Will's call (Q10) → the replica when something reads it (P1b, P2b).
 
 **D22. El Paso's item IDs are renamed to the code form before any review cites them.** [v3; corrects what bureau#2123 merged]
-- `jurisdictions/el-paso/intake.yaml` gets `checklist: EP_TX` and `decided_by` set to the run's `runbook_runs` uuid (or a person), `conventions.yaml` gets `code: EP_TX`, and `completeness-check/v1/intake-ids.tsv` plus the guides' ID columns are rewritten `el-paso-NNNN → EP_TX-NNNN`, keeping the numbers. The jurisdiction-pages bucket copy (`cc-source-snapshots/el-paso/…`) republishes on merge, so its item keys change too.
+- `jurisdictions/el-paso/intake.yaml` gets `checklist: EP_TX` and `decided_by` set to the run's `runbook_runs` uuid (or a person), `conventions.yaml` gets `code: EP_TX`, and `completeness-check/v1/intake-ids.tsv` plus the guides' ID columns are rewritten `el-paso-NNNN → EP_TX-N`, keeping the numbers and dropping the padding (`el-paso-0001 → EP_TX-1`, D23). The jurisdiction-pages bucket copy (`cc-source-snapshots/el-paso/…`) republishes on merge, so its item keys change too.
 - One PR, in P2a, with the `EP_TX` row added to `jurisdictions.code` by the same conventions-sync change. No CC review cites an El Paso item, so nothing resolves through the old IDs.
-- intake-prospecting's `3.1-write` must mint the code form from then on (prospecting-runbook spec).
+- intake-prospecting's `3.1-write` must mint the code form, unpadded, from then on (prospecting-runbook spec; its `scripts/schemas.ts:206, 208` item and ref patterns change in P2d).
+
+**D23. ID numbers are unpadded, and nothing orders by ID.** [Will, 2026-10-23]
+- Every counter in an intake ID (`AUS_TX-1`, `AUS_TX-G1`, `AUS_TX-F1`, `GENERIC-12`) is the plain decimal number: `[1-9][0-9]*`. A leading zero is a lint and CHECK failure, so each number has exactly one spelling and `AUS_TX-01` can never be mistaken for a second item.
+- Unpadded IDs do not sort as text (`AUS_TX-10` < `AUS_TX-2`). That is allowed because an ID encodes nothing (D4, north-star D6): display order is `position`, comment order is `comment_number`, and a list of IDs is sorted, when it must be, by the numeric suffix. No `ORDER BY id`, no `sort()` on an ID list, in any repo. The minters already parse the suffix as a number (`figure.ts:132-135`).
+- Why not two digits: `AUS_TX-01` has the same rollover at 100 that four digits has at 10,000, and buys nothing an unpadded number doesn't.
+- Applies to items (D4), groups (D15, §2.4) and figures (D17); the CHECKs in D6 and §2.4 and the lint in D12 rule 3 are the enforcement.
 
 ### 2.2 Tables in cityhall
 
@@ -1362,7 +1373,7 @@ decided_at: 2026-10-14
 
 ```sql
 -- the investment (built): figures
-intake_figures            -- as built, see D17; keyed by id 'AUS_TX-F0001'; FK (jurisdiction_slug, jurisdiction_code) → jurisdictions(slug, code)
+intake_figures            -- as built, see D17; keyed by id 'AUS_TX-F1' (unpadded from P1c; CHECK '-F[1-9][0-9]*$'); FK (jurisdiction_slug, jurisdiction_code) → jurisdictions(slug, code)
 
 -- the replica (to build)
 intake_checklists
@@ -1399,7 +1410,7 @@ intake_checklist_versions
 
 intake_checklist_groups
   checklist_id, version              FK → intake_checklist_versions
-  group_id          text             -- 'AUS_TX-G01'   CHECK (group_id ~ ('^' || checklist_id || '-G[0-9]{2,}$'))
+  group_id          text             -- 'AUS_TX-G1'    CHECK (group_id ~ ('^' || checklist_id || '-G[1-9][0-9]*$'))
   position          int NOT NULL     -- the display number comes from here
   title             text NOT NULL    -- 'Intake & Core Submittal', no number
   guide_path        text NOT NULL    -- 'cc-1.md'
@@ -1407,7 +1418,7 @@ intake_checklist_groups
 
 intake_checklist_items
   checklist_id, version              FK → intake_checklist_versions
-  item_id           text             -- 'AUS_TX-0042'   CHECK (item_id ~ ('^' || checklist_id || '-[0-9]{4,}$'))
+  item_id           text             -- 'AUS_TX-42'    CHECK (item_id ~ ('^' || checklist_id || '-[1-9][0-9]*$'))
   group_id          text             FK (checklist_id, version, group_id) → intake_checklist_groups
   position          int NOT NULL     -- across the version (guides by number, then table order)
   comment_number    int NOT NULL
@@ -1425,7 +1436,7 @@ intake_checklist_items
 ```
 
 - **What left since v2.1, and why** (`AUDIT-2026-10-16-tables.md`): the identity tables held nothing a view can't derive (`minted_in_version` = the first version containing the id; `retired_in_version` = the first version after its last appearance). The commit lookup served 22 reviews, which get stamped instead (D5); `commits text[]` keeps the audit trail. Citations as rows had no reader: the jurisdiction page reads them from the bucket. The assignment table waits for the baseline; until then every checklist jurisdiction is `formal`, so the assignment columns sit on `intake_checklists`. The figure tables became the one built table.
-- **No row has a uuid.** A version is `('AUS_TX', '1.4.2')` and an item in it is `('AUS_TX', '1.4.2', 'AUS_TX-0042')`. The anchored CHECKs keep an ID inside its own checklist.
+- **No row has a uuid.** A version is `('AUS_TX', '1.4.2')` and an item in it is `('AUS_TX', '1.4.2', 'AUS_TX-42')`. The anchored CHECKs keep an ID inside its own checklist and refuse a leading zero (D23).
 - **"Items for jurisdiction X"** is `WHERE checklist_id = (SELECT code FROM jurisdictions WHERE slug = X)`, one subquery; Will's earlier `jurisdiction_slug` column on items went with the identity table.
 - **`fail_status` stores the runtime's value** (`checklist-policy.ts` treats a missing column as `fail`), with `fail_status_declared = false` on the 71 Austin rows that have no column.
 - **Citations become rows** only when a cross-item query exists (the jurisdiction-pages spec's "every region on snapshot X" is the candidate).
@@ -1448,7 +1459,7 @@ intake_checklist_items
 **D12. `lint:intake` runs in CI on every PR and on every push to `main`,** beside `lint:conventions`, and fails on:
 1. an `intake.yaml`, `checklist.yaml` or `version.yaml` that doesn't parse, breaks the D1 basis rule, or declares an unknown `format`;
 2. a mismatch, in either direction, between `intake-ids.tsv`'s refs and the guide rows, or between `intake-groups.tsv`'s stems and the guide files;
-3. an item or group ID that is duplicated within a version, doesn't match D4's or D15's pattern, or doesn't carry its checklist's code;
+3. an item or group ID that is duplicated within a version, doesn't match D4's or D15's pattern (a leading zero included, D23), or doesn't carry its checklist's code;
 4. an ID number ≥ `next_item` / `next_group`, or a high-water mark lower than on `origin/main`;
 5. a `derived_from` ID that belongs to another checklist, or is not lower-numbered than the item that names it;
 6. a declared semver smaller than the computed bump against `origin/main` (D14);
@@ -1471,7 +1482,7 @@ Rule 2 keeps the sidecars from drifting: a PR that edits a synced version's guid
 
 ```sql
 intake_groups
-  id                text PK          -- 'AUS_TX-G01'; minted max + 1 per jurisdiction; never reused
+  id                text PK          -- 'AUS_TX-G1'; minted max + 1 per jurisdiction (numeric suffix, D23); never reused
   jurisdiction_slug text NOT NULL
   jurisdiction_code text NOT NULL    -- FK (jurisdiction_slug, jurisdiction_code) → jurisdictions(slug, code)
   stem              text NOT NULL    -- the guide file this group is, 'cc-1'
@@ -1481,7 +1492,7 @@ intake_groups
   created_at        timestamptz NOT NULL DEFAULT now()
   created_by        text NULL
   retired_at        timestamptz NULL -- a changed group is a new row; the old one is retired
-  CHECK (id ~ '^[A-Z]{2,8}_[A-Z]{2}-G[0-9]{2,}$')
+  CHECK (id ~ '^[A-Z]{2,8}_[A-Z]{2}-G[1-9][0-9]*$')
   CHECK (split_part(id, '-', 1) = jurisdiction_code)
   UNIQUE (jurisdiction_code, stem) WHERE retired_at IS NULL
   UNIQUE (jurisdiction_code, position) WHERE retired_at IS NULL
@@ -1509,19 +1520,24 @@ Reads follow the `jurisdictions` policy; `workflow_run` reads all; only `service
 ## 3. Testing seams
 
 **S1: the snapshot builder and linter, given a bureau tree** (new)
-- **Proves:** D3, D4, D15, D20, D22: sidecar and ID rules for items and groups, concurrent minting caught on `main`, a changed code refused once intake IDs exist, El Paso's renamed tree lints clean. D9: column mapping, a version with no title map and no citations, a table without `Fail Status`, a stale citation. D14: the computed bump for each kind of change; a revert still bumps forward. D12 rules 1–8, each with a failing fixture. The golden check against `checklist-policy.ts`. The real Austin v2.7 tree builds 192 items, 14 groups and comment numbers 1–192; the history stamp resolves all 22 v2.7 reviews' commits (D5).
+- **Proves:** D3, D4, D15, D20, D22, D23: sidecar and ID rules for items and groups (a padded `AUS_TX-0042` and a zero-led `AUS_TX-01` both refused; `AUS_TX-10` after `AUS_TX-9` when a list is sorted), concurrent minting caught on `main`, a changed code refused once intake IDs exist, El Paso's renamed tree lints clean. D9: column mapping, a version with no title map and no citations, a table without `Fail Status`, a stale citation. D14: the computed bump for each kind of change; a revert still bumps forward. D12 rules 1–8, each with a failing fixture. The golden check against `checklist-policy.ts`. The real Austin v2.7 tree builds 192 items, 14 groups and comment numbers 1–192; the history stamp resolves all 22 v2.7 reviews' commits (D5).
 - **Prior art:** `bureau/tooling/src/lib/conventions/sync-conventions.test.ts`.
 - **Runs:** `cd tooling && bun run test:intake` locally, and in `ci.yml` beside `test:conventions`.
 
 **S2: `intake_sync_version()` and the four replica tables** (new)
-- **Proves:** D6 constraints reject a baseline with a slug, an item ID with another checklist's code, a checklist whose id isn't its jurisdiction's code. D8: everything in a version lands together and an invalid row rolls back the whole version; the same semver with the same hash returns `created: false`; a different hash raises `version_hash_mismatch`; a retired id reappearing raises `id_reused`. D11: `is_current` moves. D7: the `jurisdictions`-policy read for `authenticated`, `USING (true)` for `workflow_run`, nothing for `anon`; `authenticated` cannot execute the function.
+- **Proves:** D6 constraints reject a baseline with a slug, an item ID with another checklist's code, a padded or zero-led item or group ID (D23), a checklist whose id isn't its jurisdiction's code. P1c: `intake_figures` accepts `AUS_TX-F1` and refuses `AUS_TX-F01` and `AUS_TX-F0001`; the three renamed rows keep their sha256 and storage paths. D8: everything in a version lands together and an invalid row rolls back the whole version; the same semver with the same hash returns `created: false`; a different hash raises `version_hash_mismatch`; a retired id reappearing raises `id_reused`. D11: `is_current` moves. D7: the `jurisdictions`-policy read for `authenticated`, `USING (true)` for `workflow_run`, nothing for `anon`; `authenticated` cannot execute the function.
 - **Prior art:** `cityhall/tests/db/intake-figures.test.ts` (the figures table's RLS and CHECKs, built), `tests/db/verdict-triage-split.test.ts`, `tests/db/child-table-rls.test.ts:104-122` (`writeAs("workflow_run", …)`).
 - **Runs:** `pnpm test:db` in cityhall, on the local Supabase stack, in the `check` CI job.
 
 **S3: amend in the CC runbook** (existing seam, new case)
-- **Proves:** D18: a v2.7 review recorded before P2a still amends after `intake-ids.tsv` lands; a real guide change still refuses; the figure-set refusal (built) still holds.
+- **Proves:** D18: a v2.7 review recorded before P2a still amends after `intake-ids.tsv` lands; a real guide change still refuses; the figure-set refusal (built) still holds. D17's padding fix: a review that recorded `AUS_TX-F0001` amends against a run whose `figures.json` lists `AUS_TX-F1` with the same sha256, and still refuses on a different sha256 or a figure only one side had.
 - **Prior art:** amend's tests beside `runbooks/lib/review_amend.py`; `steps/1.4-resolve/contract.test.ts`.
 - **Runs:** the CC runbook's contract tests and `runbooks/lib` tests, locally and in bureau CI.
+
+**S4: the figure tooling and the 1.4-resolve contract** (existing seam, new cases)
+- **Proves:** D17's padding fix and D23 for figures: `nextFigureId` returns `AUS_TX-F1` on an empty set and `AUS_TX-F4` after `F0001, F0002, F0003` (it reads the suffix as a number, so padded and unpadded ids mix during the expand window); the contract accepts `AUS_TX-F1`; `vision.ts --ref AUS_TX-F1` loads the file 1.4-resolve wrote; D12 rule 8 accepts a bullet that cites `AUS_TX-F1` and refuses `AUS_TX-F01`.
+- **Prior art:** `tooling/src/lib/intake-figures/figure.test.ts:110-116`, `runbooks/completeness-check/bin/vision.test.ts:220-290`, `steps/1.4-resolve/contract.test.ts`, `scripts/test_cc.py:124-200`.
+- **Runs:** `cd tooling && bun test` and the CC runbook's tests, locally and in bureau CI.
 
 **Acceptance (not a seam):** after P2b merges, `workflow_dispatch` the workflow, then against prod: `intake_checklist_versions` for `AUS_TX` holds one row per distinct v2.7 folder state, the newest current; `intake_checklist_items` for it holds 192 rows; each of the 22 v2.7 reviews has `metadata.intakeVersion`; `intake_checklists` holds `AUS_TX | formal` and `EP_TX | formal`. Dispatch again: no new versions.
 
@@ -1532,6 +1548,27 @@ Reads follow the `jurisdictions` policy; `workflow_run` reads all; only `service
 **Done:**
 - **P1a (cityhall#411, #419):** `jurisdictions.code` with Austin's and Cedar Park's values, `intake_figures`, the `intake-figures` bucket and policies. Lands D20's DB half and D17.
 - **P2c (bureau#2138, #2139, #2140, #2163, #2175):** the figure CLI, hydration, `--ref`, the prompt, the figure set on reviews, three figures cited from CC-15 and CC-13. Lands D17.
+
+**P2d, first PR: bureau accepts both figure id forms and mints unpadded** — `bureau`
+- **Blocked by:** nothing (can start now).
+- **Delivers:** `nextFigureId` returns `AUS_TX-F{max+1}` unpadded; the 1.4-resolve contract, `intake-figure`'s id validation and D12 rule 8 accept `-F[1-9][0-9]*$` **or** the legacy `-F0[0-9]{3,}$` for the length of the window; `figure_map()` in `review_amend.py` keys figures by `(code, number)` so `F0001` and `F1` compare equal; intake-prospecting's `schemas.ts` item and ref patterns become `{code}-[1-9][0-9]*` with the tests' `testville-0001` fixtures renamed. Lands D23 for figures and the prospecting runbook, and D17's amend half.
+- **Tested at:** S3, S4.
+- **Door:** two-way.
+- **Blast radius:** none; prod still holds padded ids and the guides still cite them.
+
+**P1c: `intake_figures` unpadded** — `cityhall`
+- **Blocked by:** P2d's first PR deployed (the runbook must accept the new ids before the rows carry them).
+- **Delivers:** one hand-written migration: drop and re-add `intake_figures_id_check` as `^[A-Z]{2,8}_[A-Z]{2}-F[1-9][0-9]*$`, then `UPDATE intake_figures SET id = 'AUS_TX-F1' WHERE id = 'AUS_TX-F0001'` and the same for `F2`, `F3` (storage paths and sha256 untouched); `tests/db/intake-figures.test.ts` gains the D23 cases; the schema file and the migration comment in `20261016210200_jurisdiction_codes.sql` updated. Lands D17's DB half of the fix.
+- **Tested at:** S2.
+- **Door:** one-way in effect: the reverse is the same migration backwards, but any figure minted after it as `F4` has no padded twin, so revert by re-padding every row, not by reverting the PR. Backup: the three rows' `(id, sha256, storage_path)` recorded in the migration's comment. Apply: the implementing session, as the figures work did (iteration-2 D8).
+- **Blast radius:** from apply until P2d's second PR merges, a CC run's `figures.json` lists `AUS_TX-F1…F3` while `cc-15.md` and `cc-13.md` cite `F0001…F0003`, so `--ref AUS_TX-F0001` fails with `not a reference figure of this run` and those three items run without their figures. Keep the window to one day: merge P2d's second PR as soon as the migration is applied.
+
+**P2d, second PR: bureau cites the new ids and contracts the pattern** — `bureau`
+- **Blocked by:** P1c applied to prod.
+- **Delivers:** `cc-15.md:69` and `cc-13.md:55` cite `AUS_TX-F1`, `F2`, `F3`; the contract, `intake-figure` and rule 8 accept only `-F[1-9][0-9]*$`; the tests' `AUS_TX-F0001` fixtures renamed. Closes D17's fix.
+- **Tested at:** S4, and one CC run on a project that exercises CC-15-01 with `vision.ts --ref AUS_TX-F1` in its log.
+- **Door:** two-way.
+- **Blast radius:** the two guide bullets; amend of the three padded reviews is covered by the first PR.
 
 **P2a: codes in conventions, the intake files, the linter, the Austin sidecars, the El Paso rename, the amend fix** — `bureau`
 - **Blocked by:** nothing (P1a is applied).
