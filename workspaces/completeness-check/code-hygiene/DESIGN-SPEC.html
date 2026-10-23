@@ -1147,7 +1147,7 @@ table.nx-rules td.o{color:var(--ink2);font-size:12.5px;white-space:nowrap}
 
 </style>
 </head>
-<body class="reader" data-back="architecture.html" data-spec-sha="a07221b4e59fff31">
+<body class="reader" data-back="architecture.html" data-spec-sha="8fbb40072d2410bb">
 
 <header class="masthead">
   <div class="kicker">SPEC · READER</div>
@@ -1167,7 +1167,7 @@ table.nx-rules td.o{color:var(--ink2);font-size:12.5px;white-space:nowrap}
 **ID:** ARCH-7  
 **Kind:** architecture
 **Status:** living
-**Version:** 1.1
+**Version:** 1.2
 **Date:** 2026-10-23
 **Repos touched:** none yet. This is the map of the current system and the target shape. Slices of it ship as feature specs that amend this one.
 **Repos eventually touched:** `bureau` (the CC runbook's 2.8-format, 2.9-comments and lane B of `publish_review.py`; amend), `cityhall-new` (the CC adapter, the checklist landing, the CC PDF, three migrations), `inspector-general` (its comment map, only if it stops reading `sourceFindings`)
@@ -1175,6 +1175,8 @@ table.nx-rules td.o{color:var(--ink2);font-size:12.5px;white-space:nowrap}
 **Verified:** 2026-10-23 against `bureau@f191145ec0`, `cityhall-new@dc5a87d`, prod `mgxqsrjutswbciyrltwd`
 **Amended by:** none yet
 
+> **Revision note v1.2 (2026-10-23, Will):** new §7.1 records how the seven slices interleave with FEAT-66's steps (P2a now, in parallel with S2 and S3; P1b, P2b and P3 before S7) and names the one open tension as Q10: FEAT-66 D3 gates the replica sync on the intake-prospecting loop, and S7 needs that sync. FEAT-66 §4 points here.
+>
 > **Revision note v1.1 (2026-10-23, Will):** the new schema label is `2026-10-completeness-check` (labels date the shape's design, as `2026-03`, `2026-08` and `2026-09` do). D1 is settled after a pass over what formal review writes (§2.7): `item_id` is **nullable with a CHECK scoped to the new label**, so the constraint governs only rows published from S4 on and never depends on the backfill; the backfill is best-effort (554 rows on the two 2026-03-27 UFCU reviews have no ref at all) and readers keep a one-line fallback to the JSON ref. Formal review has no item: its `ref` is a per-report prose handle and its `sources` are run-scoped finding ids, so its rows stay null by design; CRC may adopt the column under its own label.
 **Parent:** `workspaces/intake/north-star/NORTH-STAR-SPEC.md` (ARCH-6). Sibling of `workspaces/intake/db-schema/DESIGN-SPEC.md` (FEAT-66), whose §6 named a `review-linkage` sub-spec; this spec is that design, widened to the whole review side.
 
@@ -1506,6 +1508,22 @@ A proposed order, by what each slice unlocks per unit of work. Each becomes a fe
 
 S1, S2 and S5 can start now and in parallel. S7 is the payoff and is the one that waits on the intake DB work.
 
+### 7.1 How the slices interleave with FEAT-66
+
+FEAT-66 owns the checklist side and this spec the review side (§4.1, ARCH-6 D3). Neither finishes without the other, and one FEAT-66 step is on this spec's critical path. The combined order:
+
+| When | ARCH-7 | FEAT-66 |
+|---|---|---|
+| Now, in parallel | S1 `item_id` (cityhall); S2 runbook owns the envelope (bureau); S5 read model (cityhall) | **P2a** codes, `intake.yaml`, `intake-ids.tsv`, `intake-groups.tsv`, linter, El Paso rename (bureau); P2d first PR, figures accept unpadded ids (bureau) |
+| Next | S3 deterministic title, order, number (after S2) | P1c figures rename (cityhall); P2d second PR (bureau) |
+| Then | S4 new label and slim row (after S1, S2, S3); S6 archive and delete (after S5; Q2) | |
+| Then | | **P1b** replica tables, **P2b** sync (gated by FEAT-66 D3, see Q10); **P3** live groups (FEAT-66 Q10) |
+| Last | **S7** read-time presentation (after S4, P2a, P2b, P3) | |
+
+- **P2a goes now, not after S3.** It is bureau-only and touches different files from S2 and S3. Three things wait on it: S1's second backfill from composite refs to stable ids, the `group_id` S4 stamps on new rows, and all of S7. It is the smallest thing on the path to S7.
+- **Where the legacy-to-stable item mapping lives:** `<version>/intake-ids.tsv` (FEAT-66 D3), keyed by the composite ref every review row stores, written once by P2a's backfill in `true-comment-num-mapping.tsv` order and kept correct by `lint:intake` rule 2 and `intake:mint`. P2b syncs it into `intake_checklist_items.legacy_ref`; S1's backfill and 2.9-comments read it. New jurisdictions put the stable id straight in the guide's ID column, so their file is the identity map.
+- **S1 through S6 earn their keep without the DB.** Deterministic titles and numbers (S3), one copy per comment (S4) and one read model (S5) do not need the replica. Only S7 does.
+
 ---
 
 ## 8. Alternatives considered
@@ -1530,6 +1548,7 @@ Raised by the adversarial review of v1 and weighed here, so they are not re-liti
 - **Q7. Does cc-compare move to `item_id` in S1 or S4?** It keys on `sourceFindings[0].ref` from both the storage envelope (`cc-compare/scripts/lib.ts:194`) and `review_comments.output_json` through PostgREST (`fetch.py:131-152`); moving it in S1 removes one `sourceFindings` reader early.
 - **Q8. Does 2.8-format survive?** Once it writes no titles it writes only reports; S3 checks whether `steps/2.9-comments/step.yaml` or anything else reads them and deletes the step if not.
 - **Q9. When does the storage envelope `review-comments.json` adopt the slim shape?** D2 keeps it full for one generation because Inspector General's auditors read it; the cutover is an IG slice.
+- **Q10. Does S7 wait on the intake-prospecting loop?** FEAT-66 D3 (ARCH-6 D3) holds P1b and P2b, the replica and its sync, until the prospecting loop has met the Austin bar and a non-Austin run has produced output in the format, because north-star Q1 and Q2 may still change the table shape. S7 needs P2b. Either S7 is last and waits (the default; S1 to S6 do not need it), or D3 is relaxed to sync Austin's replica early and accept a possible second migration. Will's call.
 
 ## 10. Not yet specified
 

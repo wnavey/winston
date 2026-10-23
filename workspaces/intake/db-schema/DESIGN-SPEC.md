@@ -381,6 +381,8 @@ Reads follow the `jurisdictions` policy; `workflow_run` reads all; only `service
 
 ## 4. PR plan
 
+*How these PRs interleave with the review-side slices (S1–S7) is in ARCH-7 §7.1: P2a runs now beside its S2 and S3; P1b, P2b and P3 precede its S7; whether S7 waits on D3's prospecting gate is its Q10.*
+
 **Done:**
 - **P1a (cityhall#411, #419):** `jurisdictions.code` with Austin's and Cedar Park's values, `intake_figures`, the `intake-figures` bucket and policies. Lands D20's DB half and D17.
 - **P2c (bureau#2138, #2139, #2140, #2163, #2175):** the figure CLI, hydration, `--ref`, the prompt, the figure set on reviews, three figures cited from CC-15 and CC-13. Lands D17.
