@@ -3,13 +3,15 @@
 **ID:** ARCH-7  
 **Kind:** architecture
 **Status:** living
-**Version:** 1
+**Version:** 1.1
 **Date:** 2026-10-23
 **Repos touched:** none yet. This is the map of the current system and the target shape. Slices of it ship as feature specs that amend this one.
 **Repos eventually touched:** `bureau` (the CC runbook's 2.8-format, 2.9-comments and lane B of `publish_review.py`; amend), `cityhall-new` (the CC adapter, the checklist landing, the CC PDF, three migrations), `inspector-general` (its comment map, only if it stops reading `sourceFindings`)
 **Repos NOT touched:** `conductor` and `workflows/completeness-check` (frozen legacy lane; the runbook shells to its scripts and that is the thing to retire, not edit), `substation` (archived), `dsd` (the RDS renderer is fine as is)
 **Verified:** 2026-10-23 against `bureau@f191145ec0`, `cityhall-new@dc5a87d`, prod `mgxqsrjutswbciyrltwd`
 **Amended by:** none yet
+
+> **Revision note v1.1 (2026-10-23, Will):** the new schema label is `2026-10-completeness-check` (labels date the shape's design, as `2026-03`, `2026-08` and `2026-09` do). D1 is settled after a pass over what formal review writes (§2.7): `item_id` is **nullable with a CHECK scoped to the new label**, so the constraint governs only rows published from S4 on and never depends on the backfill; the backfill is best-effort (554 rows on the two 2026-03-27 UFCU reviews have no ref at all) and readers keep a one-line fallback to the JSON ref. Formal review has no item: its `ref` is a per-report prose handle and its `sources` are run-scoped finding ids, so its rows stay null by design; CRC may adopt the column under its own label.
 **Parent:** `workspaces/intake/north-star/NORTH-STAR-SPEC.md` (ARCH-6). Sibling of `workspaces/intake/db-schema/DESIGN-SPEC.md` (FEAT-66), whose §6 named a `review-linkage` sub-spec; this spec is that design, widened to the whole review side.
 
 Paths are relative to the repo named. `CC` = `bureau/runbooks/completeness-check`, `LEG` = `bureau/workflows/completeness-check/scripts`, `LIB` = `bureau/runbooks/lib`. Prod numbers are from the three projects Will named, read 2026-10-23: **2008 San Antonio St** (`7746ac2f`), **WhiteWater Express Car Wash** (`7a697ef1`), **Lamar + Collier** (`23301a8a`).
@@ -121,7 +123,7 @@ The comment copies inside `reviews.output_json.sections[]` differ from the rows 
 
 ### 2.7 Formal review, for comparison
 
-Lane A (`bureau/runbooks/review/steps/4.1-publish`) publishes through the same CLI but a different shape (`LIB/publish_review.py:580-700`): a **declared section table** of eleven fixed disciplines (`:60-73`), each `{slug, label, number, code}` on the review row with no comment copies; a **`ref`** handle per comment; typed **`sheet_references`** and **`source_findings`** written (`:693-696`, `:1856`); a schema label picked from content (`2026-08-plan-review`, `2026-08-dual-view`, `2026-09-annotated`, `:383-413`); writes through an RPC per schema. In cityhall the August adapter reads `sheet_references` first, counts in SQL (`august_review_discipline_counts`), shows an `identifier` instead of a number, has `kind`/`certainty` badges, `withdrawn[]`, markdown prose and a stored PDF. Neither lane stores a checklist item id in a typed column.
+Lane A (`bureau/runbooks/review/steps/4.1-publish`) publishes through the same CLI but a different shape (`LIB/publish_review.py:580-700`): a **declared section table** of eleven fixed disciplines (`:60-73`), each `{slug, label, number, code}` on the review row with no comment copies; a **`ref`** handle per comment; typed **`sheet_references`** and **`source_findings`** written (`:693-696`, `:1856`); a schema label picked from content (`2026-08-plan-review`, `2026-08-dual-view`, `2026-09-annotated`, `:383-413`); writes through an RPC per schema. In cityhall the August adapter reads `sheet_references` first, counts in SQL (`august_review_discipline_counts`), shows an `identifier` instead of a number, has `kind`/`certainty` badges, `withdrawn[]`, markdown prose and a stored PDF. Neither lane stores a checklist item id in a typed column, and formal review has none to store: `ref` is a prose handle the agent mints per report (`zoning-west-alley-improvements`; Take 5's three annotated runs each carry a different set) and `sources` are run-scoped finding ids from 3.1-guides and 3.2-disciplines (`ZLU-18`, `EL-1`; 2,632 over 2,264 comments, one to five per comment), which the section contract only requires to be findings the synthesis kept (`steps/3.5-comments/steps/section/contract.test.ts:80-101`). The review guides do carry stable topic ids (`ELC-03`, `contract_prefix` per guide) but nothing attaches one to a finding or comment in a typed field. The conductor-era `legacy` formal reviews (120, 30,254 rows) used the CC shape with grouping item refs (`el-9:EL-9.15`) copied into typed `source_findings`, which is why that column holds 30,010 rows. CRC (15 reviews, 3,592 rows) has a per-item identity like CC's: `sourceFindings[0].ref = "crc-CA:CA-06.2"` and `crc.atomicItemId`.
 
 ---
 
@@ -179,11 +181,20 @@ Each finding: what is wrong, the evidence, what it costs or blocks. Ordered by h
 
 Every decision carries a status tag. All fifteen are `proposed` in v1; the feature spec that ships one changes its tag to `shipped by FEAT-N` and adds itself to **Amended by**, so a reader can tell which half of this document is current.
 
-**D1. `review_comments` gains `item_id` and `group_id` typed columns.** [proposed] `item_id text` holds the stable id (`AUS_TX-42` once FEAT-66 P2a lands; until then the composite ref `cc-1:CC-1-01`, which the P2a backfill rewrites through `intake-ids.tsv`). `group_id text NULL` holds the group the run placed it in (`AUS_TX-G1`), nullable because pre-P2a reviews have none. A plain index on `(review_id, item_id)` in S1, made unique only for rows on the new schema (D3), because the April reviews predate the one-finding-per-row contract and may hold duplicate refs; S1 runs the duplicate query first. Backfill: every existing CC row from `output_json.sourceFindings[0].ref`, 13,205 rows, one statement, writing the composite ref; a second backfill rewrites to stable ids through `intake-ids.tsv` when FEAT-66 P2a lands. Until then an item that moved guides between two reviews has two refs, and the prior-review delta (D11) misses it, as today's number matching does. This is FEAT-66 §6's "2.9-comments adding each finding's itemId", landed in the DB rather than the JSON.
+**D1. `review_comments` gains `item_id` and `group_id` typed columns, nullable, with a CHECK scoped to the new label.** [proposed; shape settled with Will 2026-10-23] `item_id text NULL` holds the stable id (`AUS_TX-42` once FEAT-66 P2a lands; until then the composite ref `cc-1:CC-1-01`). `group_id text NULL` holds the group the run placed it in (`AUS_TX-G1`). Both are null on formal review, which has no item (§2.7), and may be filled by CRC under its own label later. The constraint is
+
+```sql
+alter table review_comments add column item_id text null, add column group_id text null;
+create unique index review_comments_review_item on review_comments (review_id, item_id) where item_id is not null;
+alter table review_comments add constraint review_comments_item_id_required
+  check (output_schema <> '2026-10-completeness-check' or item_id is not null);
+```
+
+so it governs only rows published from S4 on and never depends on the backfill. No row carries the new label today, which makes the label the date guard; an explicit `created_at` guard was considered and dropped because the label does the same job without a magic date. **The backfill is best-effort:** one idempotent statement copies `output_json.sourceFindings[0].ref` into `item_id` on the 12,651 CC rows that have one; the 554 rows on the two 2026-03-27 UFCU reviews (checklist v1, superseded) have `sourceFindings: []` and stay null. No review has two rows with the same ref, so the partial unique index holds from the start. A second backfill rewrites composite refs to stable ids through `intake-ids.tsv` when FEAT-66 P2a lands. Until nulls are gone the read model resolves an item as `coalesce(item_id, output_json->'sourceFindings'->0->>'ref')`, one expression in one place. Lane B writes both columns on every new row and amend's upsert carries them; promote leaves untouched columns alone. This is FEAT-66 §6's "2.9-comments adding each finding's itemId", landed in the DB rather than the JSON.
 
 **D2. The review row describes the review; comments live only in rows.** [proposed] `reviews.output_json` becomes `{metadata, sections: [{group_id, slug, label, number}], sheet_map}` on the new schema, the formal-review shape (`publish_review.py:60-73`) with a `group_id` added. The comment copies go. Expand → migrate → contract: cityhall's `sections.ts` reads `sections[].group_id` when present and the old `sectionName` path otherwise; the publisher stops writing copies on the new schema; a one-time script strips copies from the 64 existing review rows after the app no longer reads them. Amend's `reviews.output_json` PATCH shrinks to metadata and sections (FEAT-64 D8 step 3). **Inspector General reads the copies:** its DB fallback loader reads `reviews.output_json` and `review_comments.output_json` (`inspector-general/src/lib/ingest/supabase-loader.ts:409-415`) and `audit-scores.svelte.ts:13` documents CC as comments nested under `sections`; its primary path is the storage envelope, which S4 keeps writing in full. S4 therefore ships an IG PR that reads rows, and adds the new label to IG's pinned schema ids (`audit-scores.svelte.ts:13-20`, pinned across four repos). The storage envelope `review-comments.json` keeps today's per-comment shape for one generation so IG's auditors, which read it, are not cut over in the same slice (Q9).
 
-**D3. A new schema label, `2026-11-completeness-check`, with a trimmed comment.** [proposed] The per-comment `output_json` keeps: `title, comment, resolution, status, tentativeStatus, uncertainExplanation, agentTraceUncertainExplanation, voteBreakdown, citation, runs[]` (`title` and `citation` are checklist data kept as the published snapshot; both resolve from the checklist after S7, D9) (today's `sourceFindings[0].perRunFindings`, renamed because a comment has exactly one source finding), `annotations, annotation_disposition, promotion`, and the published snapshot `section, commentNumber`. It drops `issue, sheets, isCrossDepartment, crossDepartmentNote, isReviewerAttention, reviewerAttentionNote, resolutionDetails, citationType, applicableArea, confidence, runCount, totalRuns, sourceFindings` (replaced by `item_id` + `runs`), `agentTrace` (replaced by `runs[0]`'s observation and reasoning, which it was a copy of), and per-run `applicableAreas` and `codeCitations`. `applicableArea` goes from the CC envelope only: CRC's PDFs read it as their section source (`crv-report-data.ts:275`) and CRC is out of scope. The typed columns `sheet_references` and `document_references` are written (D4). The registry gains the label beside the old one; `2026-03-completeness-check` stays readable forever and is never written again.
+**D3. A new schema label, `2026-10-completeness-check`, with a trimmed comment.** [proposed] The per-comment `output_json` keeps: `title, comment, resolution, status, tentativeStatus, uncertainExplanation, agentTraceUncertainExplanation, voteBreakdown, citation, runs[]` (`title` and `citation` are checklist data kept as the published snapshot; both resolve from the checklist after S7, D9) (today's `sourceFindings[0].perRunFindings`, renamed because a comment has exactly one source finding), `annotations, annotation_disposition, promotion`, and the published snapshot `section, commentNumber`. It drops `issue, sheets, isCrossDepartment, crossDepartmentNote, isReviewerAttention, reviewerAttentionNote, resolutionDetails, citationType, applicableArea, confidence, runCount, totalRuns, sourceFindings` (replaced by `item_id` + `runs`), `agentTrace` (replaced by `runs[0]`'s observation and reasoning, which it was a copy of), and per-run `applicableAreas` and `codeCitations`. `applicableArea` goes from the CC envelope only: CRC's PDFs read it as their section source (`crv-report-data.ts:275`) and CRC is out of scope. The typed columns `sheet_references` and `document_references` are written (D4). The registry gains the label beside the old one; `2026-03-completeness-check` stays readable forever and is never written again.
 
 **D4. Lane B writes the typed columns it has.** [proposed] `sheet_references`, `document_references`, `item_id`, `group_id`. `source_findings` and `agent_trace` are not revived: `runs[]` in `output_json` is the trace, and the formal-review meaning of `source_findings` (library sources) does not apply to CC. Cityhall's JSON fallback for `sheetReferences` is deleted once every CC row has the column filled (backfill from JSON, one statement).
 
@@ -216,16 +227,16 @@ Every decision carries a status tag. All fifteen are `proposed` in v1; the featu
    id                    uuid PK
    review_id             uuid FK
    comment_number        int            -- the published handle (P4); never changes for the row
-+  item_id               text NOT NULL  -- 'AUS_TX-42' (D1); composite ref on pre-P2a rows until the backfill
++  item_id               text NULL      -- 'AUS_TX-42' (D1); NOT NULL by CHECK on the new label; null on formal review, and on 554 archived CC rows
 +  group_id              text NULL      -- 'AUS_TX-G1' as placed at publish (D1)
-   output_schema         text           -- '2026-11-completeness-check' (D3)
+   output_schema         text           -- '2026-10-completeness-check' (D3)
    output_json           jsonb          -- title, comment, resolution, status, votes, runs[], markings, snapshot {section, commentNumber}
 ~  sheet_references      jsonb          -- now written by lane B (D4)
 ~  document_references   jsonb          -- now written by lane B (D4)
 -  source_findings       jsonb          -- stays, unused by CC (D4); dropped only if formal review also stops
 -  agent_trace           jsonb          -- stays, unused by CC (D4)
    prior_comment_id      uuid NULL      -- unused by CC; CRC's
-+  INDEX (review_id, item_id); UNIQUE for rows on the new schema (D1)
++  UNIQUE (review_id, item_id) WHERE item_id IS NOT NULL; CHECK item_id present when output_schema = '2026-10-completeness-check' (D1)
 
  reviews.output_json
    metadata                             -- unchanged
@@ -252,7 +263,7 @@ The `-` rows are not dropped by this spec; they are marked so the reader knows C
 
 ```diff
  cityhall-new/src/lib/reviews/
- ├── registry.ts                       # + '2026-11-completeness-check' (D3); legacy + simplified marked archived (D12)
+ ├── registry.ts                       # + '2026-10-completeness-check' (D3); legacy + simplified marked archived (D12)
  ├── adapters/
 ~│   ├── checklist.ts                  # two projections of the read model (D10)
 ~│   ├── sections.ts                   # groups by group_id when present (D8); the one slugify
@@ -281,7 +292,7 @@ What the app and the runbook expose for changing a review, after §4. "Run" mean
 
 | Operation | Owner | Interface | Run needed? |
 |---|---|---|---|
-| Publish a review | bureau 3.1-publish | `publish_review_cli.py` lane B, `--schema 2026-11-completeness-check` | yes |
+| Publish a review | bureau 3.1-publish | `publish_review_cli.py` lane B, `--schema 2026-10-completeness-check` | yes |
 | Amend part of a review | bureau | `publish_review_cli.py --amend`, matching rows on `(review_id, item_id)` | yes (partial) |
 | Override a verdict | cityhall | `set_verdict_override(review_comment_id, verdict, note)` RPC | no |
 | Promote one run's vote | cityhall | `promoteRunVote` server action | no |
@@ -321,10 +332,10 @@ A proposed order, by what each slice unlocks per unit of work. Each becomes a fe
 
 | # | Slice | Delivers | Unlocks | Size | Depends on |
 |---|---|---|---|---|---|
-| S1 | **`item_id` on the row** (D1, D4's backfill) | typed id, plain index, 13,205-row backfill after a duplicate check; amend and the Source link read the column | H1; FEAT-66 review linkage; per-item counting | small: one migration, two readers | nothing |
+| S1 | **`item_id` on the row** (D1, D4's backfill) | nullable typed id, partial unique index, label-scoped CHECK, best-effort backfill of 12,651 rows; lane B and amend write it; the read model falls back to the JSON ref | H1; FEAT-66 review linkage; per-item counting | small: one migration, two readers | nothing |
 | S2 | **Runbook owns 2.9 and lane B** (D14, D15) | the envelope code moves under `CC/`; 1.4-resolve names inputs | every bureau-side change below; H13, H14 | medium: a move plus the contract tests | nothing |
 | S3 | **Deterministic title, order, number** (D5, D6, D7) | 2.8 stops writing titles; checklist order; one numbering default | H4, H5, H6; stable handles for customers | medium | S2 |
-| S4 | **The new schema and the slim review row** (D2, D3, D8) | `2026-11-completeness-check`; no comment copies; `group_id`; registry entry; IG reads rows | H2, H3, H7; halves the bytes a landing loads | medium-large: publisher, adapter expand/contract, amend, cc-compare, an IG PR | S1, S2, S3 |
+| S4 | **The new schema and the slim review row** (D2, D3, D8) | `2026-10-completeness-check`; no comment copies; `group_id`; registry entry; IG reads rows | H2, H3, H7; halves the bytes a landing loads | medium-large: publisher, adapter expand/contract, amend, cc-compare, an IG PR | S1, S2, S3 |
 | S5 | **One read model + SQL counts** (D10, D11) | the PDF parser goes; counts RPC; delta by item | H11, H12; every later UI change is one edit | medium | S1 |
 | S6 | **Archive and delete** (D12, D13) | archived adapters; triage fold materialised; CC section page gone; `unclear` gone | H9, H10; fewer branches in every count and render | small-medium, mostly deletion | S5 for the fold (counts must agree); Q2 |
 | S7 | **Read-time presentation** (D9, P2, P3) | titles, groups, order resolve from the replica and live groups | G2 in full; titles in minutes | medium | S4; FEAT-66 P2a, P2b, P3 |
@@ -341,7 +352,7 @@ Raised by the adversarial review of v1 and weighed here, so they are not re-liti
 2. **A `review_items` table for CC** beside `review_comments`, typed from day one. Rejected for now: every FK points at `review_comments`, and a second table doubles the join surface for the PDF and the read model. Revisit if `review_comments` is retired for CC.
 3. **Resolve presentation in the publisher** (a restamp lane on release) instead of at read time. Reproducible PDFs and a meaningful amend gate, but a run per edit, which is what G2 exists to remove. Rejected; P6 takes the live path with the verdict-override precedent.
 4. **A materialised `cc_review_presentation` table** refreshed by the sync and by `intake-group set`. One table to read, "as published" and "resolved" as two columns. Deferred: another derived table to keep fresh; it is the fallback if the read-time join is too slow.
-5. **A generated column for `item_id`** from the JSON path. No backfill, cannot drift. Rejected: it pins the `sourceFindings` path D3 deletes and cannot become the stable id without a rewrite.
+5. **A generated column for `item_id`** from the JSON path. No backfill, cannot drift. Rejected: it pins the `sourceFindings` path D3 deletes, cannot become the stable id without a rewrite, and would need a CASE for the 554 rows with no ref.
 6. **Show `item_id` and drop `comment_number` as the handle.** Stable by construction, but customers and the city talk in numbers and the PDF's relative numbering exists because the city asked. Rejected; numbers stay and P2 defines them.
 
 ## 9. Open questions

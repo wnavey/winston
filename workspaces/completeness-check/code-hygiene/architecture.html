@@ -1154,7 +1154,7 @@ table.nx-rules td.o{color:var(--ink2);font-size:12.5px;white-space:nowrap}
   <div class="kicker">Completeness check · Code hygiene</div>
   <h1>Completeness Check Code Hygiene: how a CC review is produced and shown, and where to clean it up</h1>
   <p>Bureau checklist files, the CC runbook and cityhall cooperate to show one completeness-check comment. The item's identity lives in a JSON string, the group is a slugified heading, the title is written by an agent, and every comment is stored twice. This page maps how it works and where it should end up.</p>
-  <div class="meta"><span class="status">Living v1</span><span>23 Oct 2026</span><span>ARCH-7 · child of ARCH-6, sibling of FEAT-66</span><span>Source of truth: <code>DESIGN-SPEC.md</code></span></div>
+  <div class="meta"><span class="status">Living v1.1</span><span>23 Oct 2026</span><span>ARCH-7 · child of ARCH-6, sibling of FEAT-66</span><span>Source of truth: <code>DESIGN-SPEC.md</code></span></div>
   <a class="spec-link" href="DESIGN-SPEC.html">Read the spec →</a>
 </header>
 
@@ -1238,7 +1238,7 @@ table.nx-rules td.o{color:var(--ink2);font-size:12.5px;white-space:nowrap}
     <div class="plan" style="--cols:4">
       <div class="plan-h"><span></span><span>Now</span><span>After S2</span><span>After S1 + S3</span><span>After FEAT-66 P2a, P2b, P3</span></div>
       <div class="plan-row"><span class="plan-who">cityhall</span>
-        <div class="plan-cell"><div class="pc key"><span class="pid">S1 · D1, D4</span><b>item_id on the row</b><span class="pd">migration, index, 13,205-row backfill after a duplicate check; amend and the Source link read the column</span><span class="pa">waits on nothing</span></div></div>
+        <div class="plan-cell"><div class="pc key"><span class="pid">S1 · D1, D4</span><b>item_id on the row</b><span class="pd">nullable column, partial unique, label-scoped CHECK, best-effort backfill; lane B and amend write it</span><span class="pa">waits on nothing</span></div></div>
         <div class="plan-cell"><div class="pc key"><span class="pid">S5 · D10, D11</span><b>One read model + SQL counts</b><span class="pd">the PDF parser goes; <code>cc_review_counts</code>; delta by item</span><span class="pa">waits on nothing (S1 helps)</span></div></div>
         <div class="plan-cell"><div class="pc"><span class="pid">S6 · D12, D13</span><b>Archive and delete</b><span class="pd">archived adapters; fold materialised; CC section page gone; <code>unclear</code> gone</span><span class="pa">after S5; Q2</span></div></div>
         <div class="plan-cell"><div class="pc"><span class="pid">S7 · D9</span><b>Read-time presentation</b><span class="pd">titles, groups, order from the replica and live groups</span><span class="pa">after S4 and FEAT-66 P2a, P2b, P3</span></div></div>
@@ -1246,7 +1246,7 @@ table.nx-rules td.o{color:var(--ink2);font-size:12.5px;white-space:nowrap}
       <div class="plan-row"><span class="plan-who">bureau</span>
         <div class="plan-cell"><div class="pc key"><span class="pid">S2 · D14, D15</span><b>Runbook owns 2.9 and lane B</b><span class="pd">envelope code moves under the runbook; 1.4-resolve names its inputs</span><span class="pa">waits on nothing</span></div></div>
         <div class="plan-cell"><div class="pc"><span class="pid">S3 · D5–D7</span><b>Deterministic title, order, number</b><span class="pd">2.8 stops writing titles; checklist order; one numbering default</span><span class="pa">after S2</span></div></div>
-        <div class="plan-cell"><div class="pc"><span class="pid">S4 · D2, D3, D8</span><b>New schema, slim review row</b><span class="pd"><code>2026-11-completeness-check</code>; no comment copies; group_id; registry entry; an IG PR reads rows</span><span class="pa">after S1, S2, S3</span></div></div>
+        <div class="plan-cell"><div class="pc"><span class="pid">S4 · D2, D3, D8</span><b>New schema, slim review row</b><span class="pd"><code>2026-10-completeness-check</code>; no comment copies; group_id; registry entry; an IG PR reads rows</span><span class="pa">after S1, S2, S3</span></div></div>
         <div class="plan-cell"></div>
       </div>
     </div>
@@ -1284,7 +1284,7 @@ table.nx-rules td.o{color:var(--ink2);font-size:12.5px;white-space:nowrap}
         <ol class="steps">
           <li class="st" data-n="2.8"><span class="sk">agent</span><span class="sn">Reports only; a missing title fails bureau lint</span><span class="so">no title file</span></li>
           <li class="st chg" data-n="2.9"><span class="sk">script · under the runbook</span><span class="sn">Title, group id, position and comment number from the checklist (TSV now, replica later); comments sorted by position</span><span class="so">one numbering default; the Pape-Dawson overlay only when named</span></li>
-          <li class="st chg" data-n="3.1"><span class="sk">script · under the runbook</span><span class="sn">reviews.output_json = metadata + declared sections + sheet_map; rows carry item_id, group_id, sheet_references, document_references</span><span class="so">schema 2026-11-completeness-check</span></li>
+          <li class="st chg" data-n="3.1"><span class="sk">script · under the runbook</span><span class="sn">reviews.output_json = metadata + declared sections + sheet_map; rows carry item_id, group_id, sheet_references, document_references</span><span class="so">schema 2026-10-completeness-check</span></li>
         </ol>
       </div>
     </div>
@@ -1322,7 +1322,7 @@ table.nx-rules td.o{color:var(--ink2);font-size:12.5px;white-space:nowrap}
         <div class="eh"><span class="en">reviews</span><span class="stereo">MODIFIED</span></div>
         <div class="row"><span class="gut"></span><span class="b b-pk">PK</span><span class="nm">id</span><span class="ty">uuid</span></div>
         <div class="row"><span class="gut"></span><span class="nm">review_type</span><span class="ty">text · 'completeness_check'</span></div>
-        <div class="row mod"><span class="gut">~</span><span class="nm">output_schema</span><span class="ty">text · was: 2026-03-… · now 2026-11-…</span></div>
+        <div class="row mod"><span class="gut">~</span><span class="nm">output_schema</span><span class="ty">text · was: 2026-03-… · now 2026-10-…</span></div>
         <div class="row"><span class="gut"></span><span class="nm">metadata</span><span class="ty">jsonb · intakeVersion, numbering, figures, counts (never shown)</span></div>
         <div class="row mod"><span class="gut">~</span><span class="nm">output_json</span><span class="ty">jsonb · was: metadata + sections with comment copies + sheet_map · now sections = {group_id, slug, label, number}</span></div>
         <div class="row"><span class="gut"></span><span class="nm">is_current, released_at</span><span class="ty">the release RPC's</span></div>
@@ -1333,15 +1333,15 @@ table.nx-rules td.o{color:var(--ink2);font-size:12.5px;white-space:nowrap}
         <div class="row"><span class="gut"></span><span class="b b-pk">PK</span><span class="nm">id</span><span class="ty">uuid</span></div>
         <div class="row"><span class="gut"></span><span class="b b-fk">FK</span><span class="nm">review_id</span><span class="ty">uuid → reviews</span></div>
         <div class="row"><span class="gut"></span><span class="nm">comment_number</span><span class="ty">int · the published handle, never changes (P4)</span></div>
-        <div class="row add"><span class="gut">+</span><span class="b b-new">NEW</span><span class="nm">item_id</span><span class="ty">text NOT NULL · 'AUS_TX-42'; composite ref until FEAT-66 P2a</span></div>
+        <div class="row add"><span class="gut">+</span><span class="b b-new">NEW</span><span class="nm">item_id</span><span class="ty">text NULL · 'AUS_TX-42'; required by CHECK on the new label; null on formal review</span></div>
         <div class="row add"><span class="gut">+</span><span class="b b-new">NEW</span><span class="nm">group_id</span><span class="ty">text NULL · 'AUS_TX-G1' as placed at publish</span></div>
         <div class="row mod"><span class="gut">~</span><span class="nm">output_json</span><span class="ty">jsonb · was: 27 keys · now title, comment, resolution, status, votes, runs[], markings, snapshot</span></div>
         <div class="row mod"><span class="gut">~</span><span class="nm">sheet_references</span><span class="ty">jsonb · now written by lane B</span></div>
         <div class="row mod"><span class="gut">~</span><span class="nm">document_references</span><span class="ty">jsonb · now written by lane B</span></div>
         <div class="row"><span class="gut"></span><span class="nm">source_findings</span><span class="ty">jsonb · [] on CC, left alone</span></div>
         <div class="row"><span class="gut"></span><span class="nm">agent_trace</span><span class="ty">jsonb · NULL on CC, left alone</span></div>
-        <div class="row add"><span class="gut">+</span><span class="nm">INDEX (review_id, item_id)</span><span class="ty">unique only on the new schema (D1)</span></div>
-        <div class="note">13,205 CC rows backfilled from sourceFindings[0].ref in one statement (D1)</div>
+        <div class="row add"><span class="gut">+</span><span class="nm">UNIQUE (review_id, item_id)</span><span class="ty">partial; CHECK item_id present on the new label (D1)</span></div>
+        <div class="note">best-effort backfill from sourceFindings[0].ref: 12,651 rows; 554 archived rows have no ref and stay null (D1)</div>
       </div>
       <div class="ent exist" id="ent-items" style="grid-area:1/3">
         <div class="eh"><span class="en">intake_checklist_items</span><span class="stereo">FEAT-66 P1b</span></div>
