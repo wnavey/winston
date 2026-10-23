@@ -1147,7 +1147,7 @@ table.nx-rules td.o{color:var(--ink2);font-size:12.5px;white-space:nowrap}
 
 </style>
 </head>
-<body class="reader" data-back="architecture.html" data-spec-sha="bcc7e7e273403b4c">
+<body class="reader" data-back="architecture.html" data-spec-sha="20d31e253e3b2342">
 
 <header class="masthead">
   <div class="kicker">SPEC · READER</div>
@@ -1166,12 +1166,15 @@ table.nx-rules td.o{color:var(--ink2);font-size:12.5px;white-space:nowrap}
 
 **ID:** FEAT-74  
 **Kind:** feature
-**Status:** draft
-**Version:** 2
-**Date:** 2026-10-22
+**Status:** accepted (P1–P5 shipped 2026-10-23; next: P6, the White Water acceptance run)
+**Version:** 2.1
+**Date:** 2026-10-23
+**Implementation:** P1 + P5 bureau#2194, P2 cartographer#53, P3 cityhall#428 (migration applied to prod as `20261023123114 cartographer_context_curb`), P4 cartographer#54, all merged 2026-10-23. **Next:** P6: back up `fbd39936`'s 54 `geo` rows, re-anchor White Water (publish only on Will's accept at `4.1-hitl`), then compute-only on 2008 San Antonio and Lamar + Collier. Status goes to `shipped` when P6 is accepted.
 **Repos touched:** `cartographer` (`runbooks/anchor-geometry/scripts/lib/frontage-context.ts` and its test and fixture; `frontage-layers.ts`; `scripts/frontage.ts`), `bureau` (`runbooks/anchor-geometry/scripts/{frontage.py,locate.py}`, `steps/1.3-frontage/contract.test.ts`, `scripts/test_frontage.py`), `cityhall` (`supabase/schemas/public/functions/cartographer_put_context_geo.sql`: accept a `curb` kind; no table change)
 **Repos NOT touched:** `surveyor` (Austin's `parcels` role is already tagged), `conductor2`, `prospector`, `claude-plugins`
 **Amends:** `workspaces/cartographer/plan-set-driveways-curbs/DESIGN-SPEC.md` (FEAT-71): D16's frontage test ("a `streets` segment within 60 ft of an edge and parallel to it") and "the `right_of_way` polygon(s) touching the frontage"; D24's "the sheet wins inside its survey reach" for the street's curbs and right-of-way (D14 here)
+
+> **Revision note (v2.1, 2026-10-23):** implementation status. P1–P5 merged (header **Implementation** line, and a **Shipped** line on each PR plan entry). D12 gains an **As built** note: P4 samples the union's boundary along D11's rays rather than splitting the whole boundary by the centreline, because White Water's service-road centreline is digitized in front of its pavement. No decision changed.
 
 > **Revision note (v2, 2026-10-22, Will):** the street's curbs come from the City, not the plan set. Plan sets often arrive without the right-of-way width or the distance to the adjacent curb dimensioned. The v1 rays already cross everything between the lot and the parcel across the street, so they now also measure the street's cross-section and publish the City's curb lines. New §5 in the Problem; new D11 (cross-section), D12 (City curb rows), D13 (the far side, and an extension query when the box is not enough), D14 (the City is the reference for the street's curbs and right-of-way; reverses FEAT-71 D24 for those two, openings unchanged). D3 now says the parcel stop decides the frontage and D11 carries the ray past the street. D10 gains the curb and cross-section expectations. New Q5–Q6, seam S5, PR plan P1–P6 (cityhall joins as P3). `cityhall` moves from "not touched" to "touched". Out of scope: the pedestrian line now notes that the cross-section records the sidewalk's span.
 
@@ -1330,6 +1333,8 @@ A non-frontage side is a written answer ("W faces parcel 0436110203"), never a m
 
 Each is one `curb` row, a LineString or MultiLineString, with `properties: {edge: 'edge_of_pavement', side, frontage, course_key, street, source_layer, object_id: [...], source_vintage, accuracy_class: 'digitized', cross_section}`. The `near` row carries D11's numbers. `cartographer_put_context_geo` (cityhall) adds `curb` to its kinds, as a line kind; no table changes, since `geo.kind` is free text and the sheet's curbs already use `curb` with `method: 'anchored'`. A tool tells the two apart by `method`.
 
+*As built (P4, cartographer#54):* the union's boundary is taken where D11's rays cross it, not split from the whole outline. A ray every foot from the course's line, extended through the window, on rays that cross this street's centreline. The first `Paved Road` span (slivers ≤ `SPAN_GAP_FT` merged) is this street's roadway: its entry is the near edge and its exit the far edge, so a second roadway (I-35's main lanes) is never published and the line agrees with D11 by construction. Splitting the outline by the centreline put White Water's service-road near edge on the far side, since that centreline lies in front of the pavement. Each point goes to the nearest course along the street (E1–E3 do not overlap). A ray starting on pavement (a cross street's mouth) or a jump of more than a foot (a curb return) breaks the line, and runs under 8 ft (`OPENING_MIN_FT`) are dropped. `feature_key` is `curb/<ring course>/<near|far>`: `reconcileFrame` can give two ring courses one sheet name (White Water's ring E1 and E2 are both the sheet's E1).
+
 **D13. The far side is found in the box, or by one extension query beyond it.** The 450 ft box (`frontage.py` `WINDOW_FT`) already holds the parcel across the street on White Water: Brezza's at 92 ft, I-35's at about 400 ft against a box edge at 472–488 ft. When more than half of a frontage's rays reach the box edge with no far-side parcel, `frontage.py` makes one more envelope query for `parcels`, `right_of_way` and `paved_areas`. The box runs along that frontage and outward from it to `EXTEND_FT` (Q6). It files the answers as `layers/<role>.ext.json` and `.ext.native.json` and runs the compute once more. Still not reached means `far_side: not_reached` and null widths, written, never guessed.
 
 **D14. For the street's curbs and right-of-way, the City is the reference and the sheet is checked against it.** This reverses FEAT-71 D24 ("the sheet wins inside its survey reach") for these two; D24 stands for openings. In `reconcileFrame`, each frontage's sheet existing-curb chains that run along the course are compared with D11's `near_curb_ft`, using the median offset of the sheet chain nearest the street. The frontage records `sheet_curb_ft`, `city_curb_ft` and a status:
@@ -1396,6 +1401,7 @@ The sheet's own curb rows are still published as the sheet's (`method: 'anchored
 - **Tested at:** S3.
 - **Door:** two-way (revert the PR).
 - **Blast radius:** one extra keyless query per anchor run; nothing reads the file until P2.
+- **Shipped:** bureau#2194, merged 2026-10-23 (with P5).
 
 **P2: frontage by outward search, with the cross-section** — `cartographer`
 - **Blocked by:** nothing. It reads `parcels` when present and falls back to D3's cap when not, so it can merge before or after P1. Its fixture is recorded by hand from the TCAD layer.
@@ -1403,6 +1409,7 @@ The sheet's own curb rows are still published as the sheet's (`method: 'anchored
 - **Tested at:** S1, S2.
 - **Door:** two-way.
 - **Blast radius:** the frontage context of every anchor run from now on. Only White Water and the car-wash plat have run `1.3-frontage` so far, and published rows change only when an anchor is re-run and accepted.
+- **Shipped:** cartographer#53, merged 2026-10-23.
 
 **P3: the context RPC accepts City curb lines** — `cityhall`
 - **Blocked by:** nothing (can start now).
@@ -1410,6 +1417,7 @@ The sheet's own curb rows are still published as the sheet's (`method: 'anchored
 - **Tested at:** S5.
 - **Door:** two-way (a function replace; the previous body is in the migration history). Will or Jason applies it to prod.
 - **Blast radius:** the one RPC; an existing caller sends no `curb` rows, so nothing changes until P4.
+- **Shipped:** cityhall#428, merged 2026-10-23; migration applied to prod first, recorded as `20261023123114`.
 
 **P4: publish the City curb rows** — `cartographer`
 - **Blocked by:** P2 (merged), P3 (applied in prod). An accepted anchor publishing a `curb` row before P3 is live would fail the whole context write.
@@ -1417,6 +1425,7 @@ The sheet's own curb rows are still published as the sheet's (`method: 'anchored
 - **Tested at:** S1 (payload), S5.
 - **Door:** two-way.
 - **Blast radius:** the context rows of every anchor accepted after it merges.
+- **Shipped:** cartographer#54, merged 2026-10-23 (see D12's as-built note).
 
 **P5: the extension query** — `bureau`
 - **Blocked by:** P2 (merged), which reports `far_side: not_reached`.
@@ -1424,6 +1433,7 @@ The sheet's own curb rows are still published as the sheet's (`method: 'anchored
 - **Tested at:** S3.
 - **Door:** two-way.
 - **Blast radius:** runs only on frontages along corridors wider than the box; none at White Water.
+- **Shipped:** bureau#2194, merged 2026-10-23 (with P1).
 
 **P6: acceptance runs** — no repo
 - **Blocked by:** P1–P5.
@@ -1431,6 +1441,7 @@ The sheet's own curb rows are still published as the sheet's (`method: 'anchored
 - **Tested at:** S4.
 - **Door:** two-way for the compute-only pass. The White Water publish writes a new anchor and marks `fbd39936` stale; its 54 `geo` rows stay until Will deletes them (the auto-mode classifier refuses an agent's `geo` DELETE). Back them up first, as for anchors 1–3.
 - **Blast radius:** White Water's rows on `/anchored` and in any query keyed on its anchor.
+- **Status:** next. Not started.
 
 ## Not yet specified
 
